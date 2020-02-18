@@ -1,0 +1,33 @@
+name: Python package
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 2
+      matrix:
+        python-version: [3.6, 3.7]
+
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies and package
+      run: |
+        python -m pip install --upgrade pip
+        pip install .
+    - name: Lint with pylint
+      run: |
+        pip install pylint
+        # Error out only in actual errors
+        pylint src/*/*.py -E
+        pylint src/*/*.py --exit-zero
+    - name: Test with pytest
+      run: |
+        pip install pytest
+        pytest
