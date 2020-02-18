@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 
 
-def run(shots=1024, backend=None):
+def run(model, shots=1024, backend=None):
     """
     Prepares model and executes for a given backend.
     Args:
@@ -12,5 +12,5 @@ def run(shots=1024, backend=None):
         dict: the result object
     """
     if backend is None:
-        from qibo.backends import tensorflow as backend
-    return backend.execute(shots)
+        from src.qibo.backends import tensorflow as backend
+    return backend.execute(model, shots)

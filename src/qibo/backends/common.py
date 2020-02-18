@@ -78,10 +78,11 @@ class Backend(object):
         pass
 
     @abstractmethod
-    def execute(self, shots):
+    def execute(self, model, shots):
         """Executes the circuit on a given backend.
 
         Args:
+            model: (qibo.models.Circuit): The circuit to be executed.
             shots (int): number of trials.
         """
         pass
