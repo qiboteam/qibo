@@ -75,20 +75,20 @@ class TensorflowBackend(common.Backend):
         """The identity gate."""
         raise NotImplementedError
 
-    def RX(self, q: int, theta: float):
-        """The measure gate X."""
+    def RX(self, id: int, theta: float):
+        """The rotation around X-axis gate."""
         raise NotImplementedError
 
-    def RY(self, q: int, theta: float):
-        """The measure gate Y."""
+    def RY(self, id: int, theta: float):
+        """The rotation around Y-axis gate."""
         raise NotImplementedError
 
-    def RZ(self, q: int, theta: float):
-        """The measure gate Z."""
+    def RZ(self, id: int, theta: float):
+        """The rotation around Z-axis gate."""
         phase = np.exp(1j * theta)
         rz = tf.eye(2, dtype=self.dtype)
         rz = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
-        self._apply_gate(rz, [q])
+        self._apply_gate(rz, [id])
 
     def MX(self, **args):
         """The measure gate X."""
