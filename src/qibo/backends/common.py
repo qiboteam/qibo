@@ -74,6 +74,11 @@ class Backend(object):
         pass
 
     @abstractmethod
+    def CRZ(self, **args):
+        """The controlled rotation around Z-axis gate."""
+        pass
+
+    @abstractmethod
     def MX(self, **args):
         """The measure gate X."""
         pass

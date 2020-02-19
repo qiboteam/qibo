@@ -27,7 +27,7 @@ class CNOT(Gate):
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
         self.args = {"id0": q0, "id1": q1}
-        self.name = "cnot"
+        self.name = "CNOT"
 
 
 class H(Gate):
@@ -172,6 +172,9 @@ class MZ(Gate):
 class RX(Gate):
     """Rotation X-axis.
 
+    [[g·c, -i·g·s], [-i·g·s, g·c]]
+    where c = cos(π theta / 2), s = sin(π theta / 2), g = exp(i π theta / 2).
+
     Args:
         q (int): the qubit id number.
         theta (float): the rotation angle.
@@ -184,7 +187,10 @@ class RX(Gate):
 
 
 class RY(Gate):
-    """Rotation Y-axis.
+    """Rotation Y-axis defined as:
+
+    [[g·c, -g·s], [g·s, g·c]]
+    where c = cos(π theta / 2), s = sin(π theta / 2), g = exp(i π theta / 2).
 
     Args:
         q (int): the qubit id number.
@@ -200,6 +206,8 @@ class RY(Gate):
 class RZ(Gate):
     """Rotation Z-axis.
 
+    Convention is [[1, 0], [0, exp(i π theta)]].
+
     Args:
         q (int): the qubit id number.
         theta (float): the rotation angle.
@@ -209,6 +217,22 @@ class RZ(Gate):
         super(RZ, self).__init__()
         self.args = {"id": q, "theta": theta}
         self.name = "RZ"
+
+
+class CRZ(Gate):
+    """Controlled Rotation Z-axis.
+
+    Convention is the same as RZ.
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+
+    def __init__(self, q0, q1, theta):
+        super(CRZ, self).__init__()
+        self.args = {"id0": q0, "id1": q1, "theta": theta}
+        self.name = "CRZ"
 
 
 class Flatten(Gate):
