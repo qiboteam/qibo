@@ -1,8 +1,14 @@
 # Logging level
 LOG_LEVEL = 3
 
-# Default backend
+# Default values
 BACKEND_NAME = "tensorflow"
+LEAST_SIGNIFICANT_QUBIT = 0
+
+
+if LEAST_SIGNIFICANT_QUBIT != 0:
+    raise NotImplementedError("The least significant qubit should be 0.")
+
 
 if BACKEND_NAME == "tensorflow":
     import os
@@ -19,4 +25,4 @@ if BACKEND_NAME == "tensorflow":
         return tensorflow.TensorflowBackend()
 
 else:
-    raise NotImplementedError
+    raise NotImplementedError("Only Tensorflow backend is implemented.")

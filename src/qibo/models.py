@@ -69,4 +69,8 @@ class Circuit(object):
         return len(self.queue)
 
     def run(self):
+        """
+        Return:
+            final wavefunction state vector with shape (2^nqubits,).
+        """
         return self.backend.execute(self)

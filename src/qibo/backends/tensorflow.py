@@ -12,10 +12,10 @@ class TensorflowBackend(common.Backend):
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __init__(self):
+    def __init__(self, dtype=tf.complex128):
         """Initializes the class attributes"""
         self._output = {'virtual_machine': None, 'wave_func': None, 'measure': []}
-        self.dtype = config.DTYPECPX
+        self.dtype = dtype
 
         self.nqubits = None
         self.state = None
@@ -123,10 +123,25 @@ class TensorflowBackend(common.Backend):
         return self._output['wave_func']
 
     def _apply_gate(self, matrix: tf.Tensor, qubits: List[int]):
+        """Applies gate represented by matrix to `self.state`.
+
+        Args:
+            matrix: The matrix that represents the gate to be applied.
+                This is (2, 2) for 1-qubit gates and (4, 4) for 2-qubit gates.
+            qubits: List with the qubits that the gate is applied to.
+        """
         einsum_str = self._create_einsum_str(qubits)
         self.state = tf.einsum(einsum_str, self.state, matrix)
 
     def _create_einsum_str(self, qubits: List[int]) -> str:
+        """Creates index string for `tf.einsum`.
+
+        Args:
+            qubits: List with the qubit indices that the gate is applied to.
+
+        Returns:
+            String formated as {input state}{gate matrix}->{output state}.
+        """
         if len(qubits) + self.nqubits > len(self._chars):
           raise NotImplementedError("Not enough einsum characters.")
 
