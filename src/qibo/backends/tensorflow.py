@@ -132,6 +132,14 @@ class TensorflowBackend(common.Backend):
         rz = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
         self._apply_gate(rz, [id])
 
+    def CRZ(self, id0: int, id1: int, theta: float):
+        """The controlled rotation around Z-axis gate."""
+        phase = tf.exp(1j * np.pi * theta)
+        crz = tf.eye(4, dtype=self.dtype)
+        crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
+        crz = tf.reshape(crz, 4 * (2,))
+        self._apply_gate(crz, [id0, id1])
+
     def MX(self, **args):
         """The measure gate X."""
         raise NotImplementedError

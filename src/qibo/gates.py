@@ -219,6 +219,22 @@ class RZ(Gate):
         self.name = "RZ"
 
 
+class CRZ(Gate):
+    """Controlled Rotation Z-axis.
+
+    Convention is the same as RZ.
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+
+    def __init__(self, q0, q1, theta):
+        super(CRZ, self).__init__()
+        self.args = {"id0": q0, "id1": q1, "theta": theta}
+        self.name = "CRZ"
+
+
 class Flatten(Gate):
     """Custom coefficients
 

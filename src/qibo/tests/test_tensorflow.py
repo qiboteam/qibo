@@ -90,6 +90,22 @@ def test_ry():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_crz():
+    """Check CRZ gate is working properly on |11>."""
+    theta = 0.1234
+
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CRZ(0, 1, theta))
+    final_state = c.run()
+
+    phase = np.exp(1j * np.pi * theta)
+    target_state = np.zeros_like(final_state)
+    target_state[-1] = phase
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_cnot_no_effect():
     """Check CNOT gate is working properly on |00>."""
     c = models.Circuit(2)
