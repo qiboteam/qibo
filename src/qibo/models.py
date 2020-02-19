@@ -82,5 +82,6 @@ class Circuit(object):
         """
         if self._backend is None:
             from qibo.backends import config
+
             self._backend = config.new_backend()
         return self._backend

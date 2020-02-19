@@ -13,7 +13,7 @@ class TensorflowBackend(common.Backend):
 
     def __init__(self, dtype=tf.complex128):
         """Initializes the class attributes"""
-        self._output = {'virtual_machine': None, 'wave_func': None, 'measure': []}
+        self._output = {"virtual_machine": None, "wave_func": None, "measure": []}
         self.dtype = dtype
 
         self.nqubits = None
@@ -104,10 +104,12 @@ class TensorflowBackend(common.Backend):
 
     def Flatten(self, coefficients):
         """Set wave function coefficients"""
-        if len(coefficients) != 2**self.nqubits:
-            raise ValueError("Circuit was created with {} qubits but the "
-                             "flatten layer state has {} coefficients."
-                             "".format(self.nqubits, coefficients))
+        if len(coefficients) != 2 ** self.nqubits:
+            raise ValueError(
+                "Circuit was created with {} qubits but the "
+                "flatten layer state has {} coefficients."
+                "".format(self.nqubits, coefficients)
+            )
         _state = np.array(coefficients).reshape(self.nqubits * (2,))
         self.state = tf.convert_to_tensor(_state, dtype=self.dtype)
 
@@ -127,14 +129,14 @@ class TensorflowBackend(common.Backend):
         compiled_execute = tf.function(_execute)
 
         # Initialize in |000...0> state
-        initial_state = np.zeros(2**self.nqubits)
+        initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1
         initial_state = initial_state.reshape(self.nqubits * (2,))
         initial_state = tf.convert_to_tensor(initial_state, dtype=self.dtype)
 
         final_state = compiled_execute(initial_state)
-        self._output['wave_func'] = final_state.numpy().ravel()
-        return self._output['wave_func']
+        self._output["wave_func"] = final_state.numpy().ravel()
+        return self._output["wave_func"]
 
     def _apply_gate(self, matrix: tf.Tensor, qubits: List[int]):
         """Applies gate represented by matrix to `self.state`.
@@ -157,15 +159,15 @@ class TensorflowBackend(common.Backend):
             String formated as {input state}{gate matrix}->{output state}.
         """
         if len(qubits) + self.nqubits > len(self._chars):
-          raise NotImplementedError("Not enough einsum characters.")
+            raise NotImplementedError("Not enough einsum characters.")
 
-        input_state = list(self._chars[:self.nqubits])
+        input_state = list(self._chars[: self.nqubits])
         output_state = input_state[:]
-        gate_chars = list(self._chars[self.nqubits: self.nqubits + len(qubits)])
+        gate_chars = list(self._chars[self.nqubits : self.nqubits + len(qubits)])
 
         for i, q in enumerate(qubits):
-          gate_chars.append(input_state[q])
-          output_state[q] = gate_chars[i]
+            gate_chars.append(input_state[q])
+            output_state[q] = gate_chars[i]
 
         input_str = "".join(input_state)
         gate_str = "".join(gate_chars)

@@ -26,7 +26,7 @@ class CNOT(Gate):
 
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
-        self.args = {'id0': q0, 'id1': q1}
+        self.args = {"id0": q0, "id1": q1}
         self.name = "cnot"
 
 
@@ -39,7 +39,7 @@ class H(Gate):
 
     def __init__(self, q):
         super(H, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "H"
 
 
@@ -52,7 +52,7 @@ class X(Gate):
 
     def __init__(self, q):
         super(X, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "X"
 
 
@@ -65,7 +65,7 @@ class Y(Gate):
 
     def __init__(self, q):
         super(Y, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "Y"
 
 
@@ -78,7 +78,7 @@ class Z(Gate):
 
     def __init__(self, q):
         super(Z, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "Z"
 
 
@@ -87,7 +87,7 @@ class Barrier(Gate):
 
     def __init__(self, q):
         super(Barrier, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "barrier"
 
 
@@ -100,7 +100,7 @@ class S(Gate):
 
     def __init__(self, q):
         super(S, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "S"
 
 
@@ -113,7 +113,7 @@ class T(Gate):
 
     def __init__(self, q):
         super(T, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "T"
 
 
@@ -126,7 +126,7 @@ class Iden(Gate):
 
     def __init__(self, q):
         super(Iden, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "Iden"
 
 
@@ -139,7 +139,7 @@ class MX(Gate):
 
     def __init__(self, q):
         super(MX, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "MX"
 
 
@@ -152,7 +152,7 @@ class MY(Gate):
 
     def __init__(self, q):
         super(MY, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "MY"
 
 
@@ -165,7 +165,7 @@ class MZ(Gate):
 
     def __init__(self, q):
         super(MZ, self).__init__()
-        self.args = {'id': q}
+        self.args = {"id": q}
         self.name = "measure"
 
 
@@ -179,7 +179,7 @@ class RX(Gate):
 
     def __init__(self, q, theta):
         super(RX, self).__init__()
-        self.args = {'id': q, 'theta': theta}
+        self.args = {"id": q, "theta": theta}
         self.name = "RX"
 
 
@@ -193,7 +193,7 @@ class RY(Gate):
 
     def __init__(self, q, theta):
         super(RY, self).__init__()
-        self.args = {'id': q, 'theta': theta}
+        self.args = {"id": q, "theta": theta}
         self.name = "RY"
 
 
@@ -207,7 +207,7 @@ class RZ(Gate):
 
     def __init__(self, q, theta):
         super(RZ, self).__init__()
-        self.args = {'id': q, 'theta': theta}
+        self.args = {"id": q, "theta": theta}
         self.name = "RZ"
 
 
@@ -220,5 +220,5 @@ class Flatten(Gate):
 
     def __init__(self, coefficients):
         super(Flatten, self).__init__()
-        self.args = {'coefficients': coefficients}
-        self.name ='Flatten'
+        self.args = {"coefficients": coefficients}
+        self.name = "Flatten"

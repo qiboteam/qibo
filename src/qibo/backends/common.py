@@ -11,11 +11,7 @@ class Backend(object):
 
     def __init__(self):
         """Initializes the class attributes"""
-        self._output = {
-            'virtual_machine': None,
-            'wave_func': None,
-            'measure': []
-            }
+        self._output = {"virtual_machine": None, "wave_func": None, "measure": []}
 
     @abstractmethod
     def CNOT(self, **args):
