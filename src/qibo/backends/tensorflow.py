@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import functools
 import numpy as np
 import tensorflow as tf
 from qibo.backends import common, config
