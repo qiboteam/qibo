@@ -9,7 +9,7 @@ def test_circuit_sanity():
     """Check if the number of qbits is preserved."""
     c = models.Circuit(2)
     assert c.nqubits == 2
-    assert c.size() == 2
+    assert c.size == 2
 
 
 def test_circuit_add():
@@ -18,4 +18,4 @@ def test_circuit_add():
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
-    assert c.depth() == 3
+    assert c.depth == 3

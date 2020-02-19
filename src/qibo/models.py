@@ -33,7 +33,7 @@ class Circuit(object):
         if self.nqubits != c0.size():
             raise TypeError("Circuits of different size")
         newcircuit = Circuit(self.nqubits)
-        newgates = self.queue + c0.gates()
+        newgates = self.queue + c0.gates
         for gate in newgates:
             newcircuit.add(gate)
         return newcircuit
@@ -53,6 +53,7 @@ class Circuit(object):
         """
         return self.backend.execute(self)
 
+    @property
     def gates(self):
         """
         Return:
@@ -60,6 +61,7 @@ class Circuit(object):
         """
         return self.queue
 
+    @property
     def size(self):
         """
         Return:
@@ -67,6 +69,7 @@ class Circuit(object):
         """
         return self.nqubits
 
+    @property
     def depth(self):
         """
         Return:
