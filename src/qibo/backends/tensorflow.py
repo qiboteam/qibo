@@ -35,8 +35,9 @@ class TensorflowBackend(common.Backend):
         self._Z = tf.convert_to_tensor(_Z, dtype=self.dtype)
 
         _CNOT = np.eye(4)
-        _CNOT[1, 1], _CNOT[1, 2] = 0, 1
-        _CNOT[2, 1], _CNOT[2, 2] = 1, 0
+        _CNOT[2, 2], _CNOT[2, 3] = 0, 1
+        _CNOT[3, 2], _CNOT[3, 3] = 1, 0
+        _CNOT = _CNOT.reshape(4 * (2,))
         self._CNOT = tf.convert_to_tensor(_CNOT, dtype=self.dtype)
 
     def CNOT(self, id0: int, id1: int):

@@ -27,7 +27,7 @@ class CNOT(Gate):
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
         self.args = {"id0": q0, "id1": q1}
-        self.name = "cnot"
+        self.name = "CNOT"
 
 
 class H(Gate):

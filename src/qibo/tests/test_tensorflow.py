@@ -59,9 +59,21 @@ def test_rz_phase():
 
 
 def test_cnot_no_effect():
+    """Check CNOT gate is working properly on |00>."""
     c = models.Circuit(2)
     c.add(gates.CNOT(0, 1))
     final_state = c.run()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_cnot():
+    """Check CNOT gate is working properly on |10>."""
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.CNOT(0, 1))
+    final_state = c.run()
+    target_state = np.zeros_like(final_state)
+    target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
