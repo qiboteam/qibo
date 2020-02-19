@@ -184,7 +184,10 @@ class RX(Gate):
 
 
 class RY(Gate):
-    """Rotation Y-axis.
+    """Rotation Y-axis defined as:
+
+    [[g·c, -g·s], [g·s, g·c]]
+    where c = cos(π theta / 2), s = sin(π theta / 2), g = exp(i π theta / 2).
 
     Args:
         q (int): the qubit id number.
@@ -199,6 +202,8 @@ class RY(Gate):
 
 class RZ(Gate):
     """Rotation Z-axis.
+
+    Convention is [[1, 0], [0, exp(i π theta)]].
 
     Args:
         q (int): the qubit id number.
