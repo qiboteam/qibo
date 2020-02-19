@@ -109,7 +109,12 @@ class TensorflowBackend(common.Backend):
 
     def RX(self, id: int, theta: float):
         """The rotation around X-axis gate."""
-        raise NotImplementedError
+        phase = tf.exp(1j * np.pi * theta / 2.0)
+        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
+        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        mat = (phase * cos * self.matrices.I -
+               1j * phase * sin * self.matrices.X)
+        self._apply_gate(mat, [id])
 
     def RY(self, id: int, theta: float):
         """The rotation around Y-axis gate."""

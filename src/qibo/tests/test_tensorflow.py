@@ -58,6 +58,22 @@ def test_rz_phase():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_rx():
+    """Check RX gate is working properly."""
+    theta = 0.1234
+
+    c = models.Circuit(1)
+    c.add(gates.H(0))
+    c.add(gates.RX(0, theta))
+    final_state = c.run()
+
+    phase = np.exp(1j * np.pi * theta / 2.0)
+    gate = phase * np.array([[phase.real, -1j * phase.imag],
+                             [-1j * phase.imag, phase.real]])
+    target_state = gate.dot(np.ones(2)) / np.sqrt(2)
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_ry():
     """Check RY gate is working properly."""
     theta = 0.1234
