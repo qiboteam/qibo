@@ -58,6 +58,21 @@ class Backend(object):
         pass
 
     @abstractmethod
+    def RX(self, **args):
+        """The measure gate X."""
+        pass
+
+    @abstractmethod
+    def RY(self, **args):
+        """The measure gate Y."""
+        pass
+
+    @abstractmethod
+    def RZ(self, **args):
+        """The measure gate Z."""
+        pass
+
+    @abstractmethod
     def MX(self, **args):
         """The measure gate X."""
         pass

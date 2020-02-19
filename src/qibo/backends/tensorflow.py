@@ -75,6 +75,21 @@ class TensorflowBackend(common.Backend):
         """The identity gate."""
         raise NotImplementedError
 
+    def RX(self, q: int, theta: float):
+        """The measure gate X."""
+        raise NotImplementedError
+
+    def RY(self, q: int, theta: float):
+        """The measure gate Y."""
+        raise NotImplementedError
+
+    def RZ(self, q: int, theta: float):
+        """The measure gate Z."""
+        phase = np.exp(1j * theta)
+        rz = tf.eye(2, dtype=self.dtype)
+        rz = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
+        self._apply_gate(rz, [q])
+
     def MX(self, **args):
         """The measure gate X."""
         raise NotImplementedError
