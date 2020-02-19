@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 import os
+from qibo.backends import config
 
 
 class Circuit(object):
@@ -19,6 +20,7 @@ class Circuit(object):
     def __init__(self, nqubits):
         """Initialize properties."""
         self.nqubits = nqubits
+        self.backend = config.new_backend()
         self.queue = []
 
     def __add__(self, c0):
@@ -65,3 +67,6 @@ class Circuit(object):
             number of gates/operations in the circuit
         """
         return len(self.queue)
+
+    def run(self):
+        return self.backend.execute(self)
