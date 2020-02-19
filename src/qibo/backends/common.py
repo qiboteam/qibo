@@ -59,17 +59,17 @@ class Backend(object):
 
     @abstractmethod
     def RX(self, **args):
-        """The measure gate X."""
+        """The rotation around X-axis gate."""
         pass
 
     @abstractmethod
     def RY(self, **args):
-        """The measure gate Y."""
+        """The rotation around Y-axis gate."""
         pass
 
     @abstractmethod
     def RZ(self, **args):
-        """The measure gate Z."""
+        """The rotation around Z-axis gate."""
         pass
 
     @abstractmethod
