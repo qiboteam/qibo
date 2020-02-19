@@ -46,6 +46,13 @@ class Circuit(object):
         """
         self.queue.append(gate)
 
+    def run(self):
+        """
+        Return:
+            final wavefunction state vector with shape (2^nqubits,).
+        """
+        return self.backend.execute(self)
+
     def gates(self):
         """
         Return:
@@ -69,14 +76,11 @@ class Circuit(object):
 
     @property
     def backend(self):
+        """
+        Return:
+            Default backend instance.
+        """
         if self._backend is None:
             from qibo.backends import config
             self._backend = config.new_backend()
         return self._backend
-
-    def run(self):
-        """
-        Return:
-            final wavefunction state vector with shape (2^nqubits,).
-        """
-        return self.backend.execute(self)
