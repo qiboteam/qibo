@@ -1,9 +1,13 @@
+"""
+Testing tensorflow backend.
+"""
 import numpy as np
 from qibo import models
 from qibo import gates
 
 
 def test_hadamard():
+    """Check Hadamard gate is working properly."""
     c = models.Circuit(1)
     c.add(gates.H(0))
     final_state = c.run()
@@ -12,6 +16,7 @@ def test_hadamard():
 
 
 def test_flatten():
+    """Check flatten gate is working properly."""
     target_state = np.ones(4) / 2.0
     c = models.Circuit(2)
     c.add(gates.Flatten(target_state))
@@ -20,6 +25,7 @@ def test_flatten():
 
 
 def test_xgate():
+    """Check X gate is working properly."""
     c = models.Circuit(2)
     c.add(gates.X(0))
     final_state = c.run()
@@ -29,6 +35,7 @@ def test_xgate():
 
 
 def test_rz_no_effect():
+    """Check RZ gate is working properly."""
     c = models.Circuit(2)
     c.add(gates.RZ(0, 0.1234))
     final_state = c.run()
@@ -38,6 +45,7 @@ def test_rz_no_effect():
 
 
 def test_rz_phase():
+    """Check RZ gate is working properly."""
     theta = 0.1234
 
     c = models.Circuit(2)
