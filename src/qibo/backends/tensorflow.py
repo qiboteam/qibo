@@ -3,7 +3,7 @@
 import functools
 import numpy as np
 import tensorflow as tf
-from src.qibo.backends import common
+from qibo.backends import common, config
 from typing import List
 
 
@@ -12,10 +12,10 @@ class TensorflowBackend(common.Backend):
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __init__(self, dtype=tf.complex64):
+    def __init__(self):
         """Initializes the class attributes"""
         self._output = {'virtual_machine': None, 'wave_func': None, 'measure': []}
-        self.dtype = dtype
+        self.dtype = config.DTYPECPX
 
         self.nqubits = None
         self.state = None
@@ -23,7 +23,7 @@ class TensorflowBackend(common.Backend):
 
     def _create_gates(self):
         _H = np.ones((2, 2))
-        _H[1, 1] = 1
+        _H[1, 1] = -1
         _H = _H / np.sqrt(2)
         self._H = tf.convert_to_tensor(_H, dtype=self.dtype)
 
@@ -97,20 +97,20 @@ class TensorflowBackend(common.Backend):
         _state = np.array(coefficients).reshape(self.nqubits * (2,))
         self.state = tf.convert_to_tensor(_state, dtype=self.dtype)
 
-    def _execute(self, initial_state, model):
-        self.state = tf.cast(initial_state, dtype=self.dtype)
-        for gate in model.queue:
-            getattr(self, gate.name)(**gate.args)
-        return self.state
-
-    def execute(self, model, shots=None):
+    def execute(self, model):
         """Executes the circuit on tensorflow."""
         if self.state is not None or self.nqubits is not None:
             raise ValueError("Backend was already used.")
         self.nqubits = model.nqubits
 
+        def _execute(initial_state):
+            self.state = tf.cast(initial_state, dtype=self.dtype)
+            for gate in model.queue:
+                getattr(self, gate.name)(**gate.args)
+            return self.state
+
         # Compile model
-        compiled_execute = tf.function(functools.partial(self._execute, model=model))
+        compiled_execute = tf.function(_execute)
 
         # Initialize in |000...0> state
         initial_state = np.zeros(2**self.nqubits)
@@ -118,7 +118,9 @@ class TensorflowBackend(common.Backend):
         initial_state = initial_state.reshape(self.nqubits * (2,))
         initial_state = tf.convert_to_tensor(initial_state, dtype=self.dtype)
 
-        return compiled_execute(initial_state)
+        final_state = compiled_execute(initial_state)
+        self._output['wave_func'] = final_state.numpy().ravel()
+        return self._output['wave_func']
 
     def _apply_gate(self, matrix: tf.Tensor, qubits: List[int]):
         einsum_str = self._create_einsum_str(qubits)
