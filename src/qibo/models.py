@@ -19,6 +19,7 @@ class Circuit(object):
     def __init__(self, nqubits):
         """Initialize properties."""
         self.nqubits = nqubits
+        self._backend = None
         self.queue = []
 
     def __add__(self, c0):
@@ -32,7 +33,7 @@ class Circuit(object):
         if self.nqubits != c0.size():
             raise TypeError("Circuits of different size")
         newcircuit = Circuit(self.nqubits)
-        newgates = self.queue + c0.gates()
+        newgates = self.queue + c0.gates
         for gate in newgates:
             newcircuit.add(gate)
         return newcircuit
@@ -45,6 +46,14 @@ class Circuit(object):
         """
         self.queue.append(gate)
 
+    def run(self):
+        """
+        Return:
+            final wavefunction state vector with shape (2^nqubits,).
+        """
+        return self.backend.execute(self)
+
+    @property
     def gates(self):
         """
         Return:
@@ -52,6 +61,7 @@ class Circuit(object):
         """
         return self.queue
 
+    @property
     def size(self):
         """
         Return:
@@ -59,9 +69,22 @@ class Circuit(object):
         """
         return self.nqubits
 
+    @property
     def depth(self):
         """
         Return:
             number of gates/operations in the circuit
         """
         return len(self.queue)
+
+    @property
+    def backend(self):
+        """
+        Return:
+            Default backend instance.
+        """
+        if self._backend is None:
+            from qibo.backends import config
+
+            self._backend = config.new_backend()
+        return self._backend

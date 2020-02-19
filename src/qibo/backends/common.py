@@ -4,13 +4,14 @@ from abc import ABCMeta, abstractmethod
 
 
 class Backend(object):
-    """A common class with all the required abstract methods for the backend implementation"""
+    """A common class with all the required abstract methods
+    for the backend implementation"""
 
     __metaclass__ = ABCMeta
 
     def __init__(self):
         """Initializes the class attributes"""
-        self._output = {'virtual_machine': None, 'wave_func': None, 'measure': []}
+        self._output = {"virtual_machine": None, "wave_func": None, "measure": []}
 
     @abstractmethod
     def CNOT(self, **args):
@@ -58,6 +59,21 @@ class Backend(object):
         pass
 
     @abstractmethod
+    def RX(self, **args):
+        """The rotation around X-axis gate."""
+        pass
+
+    @abstractmethod
+    def RY(self, **args):
+        """The rotation around Y-axis gate."""
+        pass
+
+    @abstractmethod
+    def RZ(self, **args):
+        """The rotation around Z-axis gate."""
+        pass
+
+    @abstractmethod
     def MX(self, **args):
         """The measure gate X."""
         pass
@@ -78,10 +94,12 @@ class Backend(object):
         pass
 
     @abstractmethod
-    def execute(self, shots):
+    def execute(self, model):
         """Executes the circuit on a given backend.
 
         Args:
-            shots (int): number of trials.
+            model: (qibo.models.Circuit): The circuit to be executed.
+        Returns:
+            The final wave function.
         """
         pass

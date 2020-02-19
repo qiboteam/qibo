@@ -14,15 +14,15 @@ import os
 import sys
 from recommonmark.transform import AutoStructify
 
-sys.path.insert(0, os.path.abspath('..'))
+sys.path.insert(0, os.path.abspath(".."))
 import qibo
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'qibo'
-copyright = '2020, TII-Qilimanjaro'
-author = 'TII-Qilimanjaro team'
+project = "qibo"
+copyright = "2020, TII-Qilimanjaro"
+author = "TII-Qilimanjaro team"
 
 # The full version, including alpha/beta/rc tags
 release = qibo.__version__
@@ -31,33 +31,29 @@ release = qibo.__version__
 # -- General configuration ---------------------------------------------------
 #
 # https://stackoverflow.com/questions/56336234/build-fail-sphinx-error-contents-rst-not-found
-master_doc = 'index'
+master_doc = "index"
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.coverage',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'recommonmark',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.doctest",
+    "sphinx.ext.coverage",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "recommonmark",
 ]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # Markdown configuration
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
-source_suffix = {
-    '.rst': 'restructuredtext',
-    '.txt': 'markdown',
-    '.md': 'markdown',
-}
+source_suffix = {".rst": "restructuredtext", ".txt": "markdown", ".md": "markdown"}
 
 autosectionlabel_prefix_document = True
 # Allow to embed rst syntax in  markdown files.
@@ -74,32 +70,30 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = "sphinx_rtd_theme"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 
 # -- Intersphinx  -------------------------------------------------------------
 
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 
 # -- Doctest ------------------------------------------------------------------
 #
 
-doctest_path = [os.path.abspath('../examples')]
+doctest_path = [os.path.abspath("../examples")]
 
 # -- Autodoc ------------------------------------------------------------------
 #
-autodoc_member_order = 'bysource'
+autodoc_member_order = "bysource"
 
 # Adapted this from
 # https://github.com/readthedocs/recommonmark/blob/ddd56e7717e9745f11300059e4268e204138a6b1/docs/conf.py
 # app setup hook
 def setup(app):
-    app.add_config_value('recommonmark_config', {
-        'enable_eval_rst': True,
-    }, True)
+    app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
