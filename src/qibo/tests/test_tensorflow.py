@@ -35,7 +35,7 @@ def test_xgate():
 
 
 def test_rz_no_effect():
-    """Check RZ gate is working properly."""
+    """Check RZ gate is working properly when qubit is on |0>."""
     c = models.Circuit(2)
     c.add(gates.RZ(0, 0.1234))
     final_state = c.run()
@@ -45,7 +45,7 @@ def test_rz_no_effect():
 
 
 def test_rz_phase():
-    """Check RZ gate is working properly."""
+    """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
 
     c = models.Circuit(2)
@@ -55,4 +55,13 @@ def test_rz_phase():
 
     target_state = np.zeros_like(final_state)
     target_state[2] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_cnot_no_effect():
+    c = models.Circuit(2)
+    c.add(gates.CNOT(0, 1))
+    final_state = c.run()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
