@@ -15,14 +15,6 @@ class Gate(object):
         self.args = None
         self.name = None
 
-    def gate2qasm(self):
-        """Converts the gate properties to qasm syntax."""
-        try:
-            qasm = [self.name, self.args['id']]
-        except:
-            qasm = [self.name, self.args['id0'],self.args['id1']]
-        return qasm
-
 
 class CNOT(Gate):
     """The Controlled-NOT gate.
