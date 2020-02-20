@@ -12,6 +12,7 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
+        self.nqubits = None
 
     @abstractmethod
     def __call__(self, state):

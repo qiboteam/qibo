@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
+from qibo.base import gates as base_gates
 from qibo.config import matrices
 from typing import List
 # TODO: Inherit `base_gates` instead of redifining all __init__
@@ -16,11 +17,7 @@ class TensorflowGate:
         qubits: List with the qubits that the gate is applied to.
     """
 
-    matrix = None
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-    def __init__(self):
-        self.nqubits = None
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
@@ -56,108 +53,104 @@ class TensorflowGate:
         return "{},{}->{}".format(input_str, gate_str, output_str)
 
 
-class CNOT(TensorflowGate):
+class CNOT(TensorflowGate, base_gates.CNOT):
 
-    matrix = matrices.CNOT
-
-    def __init__(self, q0, q1):
-        super(CNOT, self).__init__()
-        self.name = "CNOT"
-        self.qubits = [q0, q1]
+    def __init__(self, *args):
+        base_gates.CNOT.__init__(self, *args)
+        self.matrix = matrices.CNOT
 
 
-class H(TensorflowGate):
+class H(TensorflowGate, base_gates.H):
 
-    matrix = matrices.H
+    def __init__(self, *args):
+        base_gates.H.__init__(self, *args)
+        self.matrix = matrices.H
+
+
+class X(TensorflowGate, base_gates.X):
+
+    def __init__(self, *args):
+        base_gates.X.__init__(self, *args)
+        self.matrix = matrices.X
+
+
+class Y(TensorflowGate, base_gates.Y):
+
+    def __init__(self, *args):
+        base_gates.Y.__init__(self, *args)
+        self.matrix = matrices.Y
+
+
+class Z(TensorflowGate, base_gates.Z):
+
+    def __init__(self, *args):
+        base_gates.Z.__init__(self, *args)
+        self.matrix = matrices.Z
+
+
+class Barrier(TensorflowGate, base_gates.Barrier):
+
+    def __init__(self):
+        raise NotImplementedError
+
+
+class S(TensorflowGate, base_gates.S):
+
+    def __init__(self):
+        raise NotImplementedError
+
+
+class T(TensorflowGate, base_gates.T):
+
+    def __init__(self):
+        raise NotImplementedError
+
+
+class Iden(TensorflowGate, base_gates.Iden):
 
     def __init__(self, q):
-        super(H, self).__init__()
-        self.name = "H"
-        self.qubits = [q]
+        TensorflowGate.__init__(self)
+        base_gates.Iden.__init__(self)
+        self.matrix = matrices.Iden
 
 
-class X(TensorflowGate):
-
-    matrix = matrices.X
-
-    def __init__(self, q):
-        super(X, self).__init__()
-        self.name = "X"
-        self.qubits = [q]
-
-
-class Y(TensorflowGate):
-
-    matrix = matrices.Y
-
-    def __init__(self, q):
-        super(Y, self).__init__()
-        self.name = "Y"
-        self.qubits = [q]
-
-
-class Z(TensorflowGate):
-
-    matrix = matrices.Z
-
-    def __init__(self, q):
-        super(Z, self).__init__()
-        self.name = "Z"
-        self.qubits = [q]
-
-
-class Barrier:
+class MX(TensorflowGate, base_gates.MX):
 
     def __init__(self):
         raise NotImplementedError
 
 
-class S:
+class MY(TensorflowGate, base_gates.MY):
 
     def __init__(self):
         raise NotImplementedError
 
 
-class T:
+class MZ(TensorflowGate, base_gates.MZ):
 
     def __init__(self):
         raise NotImplementedError
 
 
-class Iden(TensorflowGate):
+class RZ(TensorflowGate, base_gates.RZ):
 
-    matrix = matrices.I
+    def __init__(self, q, theta):
+        ensorflowGate.__init__(self)
+        base_gates.RZ.__init__(self)
 
-    def __init__(self, q):
-        super(Iden, self).__init__()
-        self.name = "Iden"
-        self.qubits = [q]
-
-
-class MX:
-
-    def __init__(self):
-        raise NotImplementedError
-
-
-class MY:
-
-    def __init__(self):
-        raise NotImplementedError
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+        phase = tf.exp(1j * np.pi * theta / 2.0)
+        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
+        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        mat = (phase * cos * self.matrices.I -
+               1j * phase * sin * self.matrices.X)
+        self._apply_gate(mat, [id])
 
 
-class MZ:
+class Flatten(TensorflowGate, base_gates.Flatten):
 
-    def __init__(self):
-        raise NotImplementedError
-
-
-class Flatten(TensorflowGate):
-
-    def __init__(self, coefficients):
-        super(Flatten, self).__init__()
-        self.name = "Flatten"
-        self.coefficients = coefficients
+    def __init__(self, *args):
+        base_gates.Flatten.__init__(self, *args)
 
     def __call__(self, state):
         if self.nqubits is None:
