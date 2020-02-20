@@ -2,11 +2,11 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-from qibo import base_circuit
+from qibo.base import circuit
 from typing import List, Optional
 
 
-class TensorflowCircuit(base_circuit.BaseCircuit):
+class TensorflowCircuit(circuit.BaseCircuit):
     """Implementation of circuit methods in Tensorflow."""
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
