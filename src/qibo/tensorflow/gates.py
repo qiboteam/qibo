@@ -5,7 +5,6 @@ import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import matrices
 from typing import List
-# TODO: Inherit `base_gates` instead of redifining all __init__
 
 
 class TensorflowGate:
@@ -162,6 +161,17 @@ class RZ(TensorflowGate, base_gates.RZ):
         phase = tf.exp(1j * np.pi * self.theta)
         rz = tf.eye(2, dtype=self.dtype)
         self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
+
+
+class CRZ(TensorflowGate, base_gates.CRZ):
+
+    def __init__(self, *args):
+        base_gates.CRZ.__init__(self, *args)
+
+        phase = tf.exp(1j * np.pi * self.theta)
+        crz = tf.eye(4, dtype=self.dtype)
+        crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
+        self.matrix = tf.reshape(crz, 4 * (2,))
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

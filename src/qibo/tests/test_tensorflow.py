@@ -127,7 +127,7 @@ def test_ry():
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_crz():
     """Check CRZ gate is working properly on |11>."""
     theta = 0.1234
