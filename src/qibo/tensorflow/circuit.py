@@ -3,18 +3,17 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
+from qibo.config import DTYPECPX
 from typing import Optional
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
     """Implementation of circuit methods in Tensorflow."""
 
-    def __init__(self, nqubits, dtype=tf.complex128):
+    def __init__(self, nqubits, dtype=DTYPECPX):
         """Initialize a Tensorflow circuit."""
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
-
-        self.output = {"wave_func": None}
         self.compiled_execute = None
 
     def compile(self):
@@ -38,8 +37,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             self.compile()
 
         final_state = self.compiled_execute(initial_state)
-        self.output["wave_func"] = final_state.numpy().ravel()
-        return self.output["wave_func"]
+        return tf.reshape(final_state, (2**self.nqubits,)).numpy()
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         return self.execute(initial_state)

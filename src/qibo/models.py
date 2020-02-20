@@ -1,0 +1,1 @@
+from qibo.config import Circuit

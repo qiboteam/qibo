@@ -2,7 +2,7 @@
 Testing tensorflow backend.
 """
 import numpy as np
-from qibo import Circuit
+from qibo.models import Circuit
 from qibo import gates
 import pytest
 
