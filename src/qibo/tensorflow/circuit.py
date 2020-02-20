@@ -37,7 +37,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             self.compile()
 
         final_state = self.compiled_execute(initial_state)
-        return tf.reshape(final_state, (2**self.nqubits,)).numpy()
+        return tf.reshape(final_state, (2**self.nqubits,))
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         return self.execute(initial_state)
