@@ -1,19 +1,23 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+from abc import abstractmethod
 
 
 class Gate(object):
     """The base class for gate implementation
 
     **Properties:**
-
-        * **args** *(dict)* - a dictionnary which holds the gate init arguments
         * **name** *(str)* - the gate string name
     """
 
     def __init__(self):
-        self.args = None
         self.name = None
+        self.nqubits = None
+
+    @abstractmethod
+    def __call__(self, state):
+        """Implements the `Gate` on a given state."""
+        pass
 
 
 class CNOT(Gate):
@@ -26,8 +30,8 @@ class CNOT(Gate):
 
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
-        self.args = {"id0": q0, "id1": q1}
         self.name = "CNOT"
+        self.qubits = [q0, q1]
 
 
 class H(Gate):
@@ -39,8 +43,8 @@ class H(Gate):
 
     def __init__(self, q):
         super(H, self).__init__()
-        self.args = {"id": q}
         self.name = "H"
+        self.qubits = [q]
 
 
 class X(Gate):
@@ -52,8 +56,8 @@ class X(Gate):
 
     def __init__(self, q):
         super(X, self).__init__()
-        self.args = {"id": q}
         self.name = "X"
+        self.qubits = [q]
 
 
 class Y(Gate):
@@ -65,8 +69,8 @@ class Y(Gate):
 
     def __init__(self, q):
         super(Y, self).__init__()
-        self.args = {"id": q}
         self.name = "Y"
+        self.qubits = [q]
 
 
 class Z(Gate):
@@ -78,8 +82,8 @@ class Z(Gate):
 
     def __init__(self, q):
         super(Z, self).__init__()
-        self.args = {"id": q}
         self.name = "Z"
+        self.qubits = [q]
 
 
 class Barrier(Gate):
@@ -87,8 +91,8 @@ class Barrier(Gate):
 
     def __init__(self, q):
         super(Barrier, self).__init__()
-        self.args = {"id": q}
         self.name = "barrier"
+        self.qubits = [q]
 
 
 class S(Gate):
@@ -100,8 +104,8 @@ class S(Gate):
 
     def __init__(self, q):
         super(S, self).__init__()
-        self.args = {"id": q}
         self.name = "S"
+        self.qubits = [q]
 
 
 class T(Gate):
@@ -113,8 +117,8 @@ class T(Gate):
 
     def __init__(self, q):
         super(T, self).__init__()
-        self.args = {"id": q}
         self.name = "T"
+        self.qubits = [q]
 
 
 class Iden(Gate):
@@ -126,8 +130,8 @@ class Iden(Gate):
 
     def __init__(self, q):
         super(Iden, self).__init__()
-        self.args = {"id": q}
         self.name = "Iden"
+        self.qubits = [q]
 
 
 class MX(Gate):
@@ -139,8 +143,8 @@ class MX(Gate):
 
     def __init__(self, q):
         super(MX, self).__init__()
-        self.args = {"id": q}
         self.name = "MX"
+        self.qubits = [q]
 
 
 class MY(Gate):
@@ -152,8 +156,8 @@ class MY(Gate):
 
     def __init__(self, q):
         super(MY, self).__init__()
-        self.args = {"id": q}
         self.name = "MY"
+        self.qubits = [q]
 
 
 class MZ(Gate):
@@ -165,8 +169,8 @@ class MZ(Gate):
 
     def __init__(self, q):
         super(MZ, self).__init__()
-        self.args = {"id": q}
         self.name = "measure"
+        self.qubits = [q]
 
 
 class RX(Gate):
@@ -182,8 +186,9 @@ class RX(Gate):
 
     def __init__(self, q, theta):
         super(RX, self).__init__()
-        self.args = {"id": q, "theta": theta}
         self.name = "RX"
+        self.qubits = [q]
+        self.theta = theta
 
 
 class RY(Gate):
@@ -199,8 +204,9 @@ class RY(Gate):
 
     def __init__(self, q, theta):
         super(RY, self).__init__()
-        self.args = {"id": q, "theta": theta}
         self.name = "RY"
+        self.qubits = [q]
+        self.theta = theta
 
 
 class RZ(Gate):
@@ -215,8 +221,9 @@ class RZ(Gate):
 
     def __init__(self, q, theta):
         super(RZ, self).__init__()
-        self.args = {"id": q, "theta": theta}
         self.name = "RZ"
+        self.qubits = [q]
+        self.theta = theta
 
 
 class CRZ(Gate):
@@ -231,8 +238,9 @@ class CRZ(Gate):
 
     def __init__(self, q0, q1, theta):
         super(CRZ, self).__init__()
-        self.args = {"id0": q0, "id1": q1, "theta": theta}
         self.name = "CRZ"
+        self.qubits = [q0, q1]
+        self.theta = theta
 
 
 class Flatten(Gate):
@@ -244,5 +252,5 @@ class Flatten(Gate):
 
     def __init__(self, coefficients):
         super(Flatten, self).__init__()
-        self.args = {"coefficients": coefficients}
         self.name = "Flatten"
+        self.coefficients = coefficients

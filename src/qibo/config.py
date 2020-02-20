@@ -1,5 +1,5 @@
 """
-Define the backend and constants, header style.
+Define the default circuit, constants and types.
 """
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
@@ -19,16 +19,18 @@ if BACKEND_NAME == "tensorflow":
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
-    from qibo.backends import tensorflow
 
     # Default types
     DTYPE = tf.float64
     DTYPEINT = tf.int32
     DTYPECPX = tf.complex128
 
-    def new_backend():
-        return tensorflow.TensorflowBackend()
+    from qibo.tensorflow import matrices as tensorflow_matrices
+    matrices = tensorflow_matrices.GateMatrices(DTYPECPX)
 
+    from qibo.tensorflow import gates
+    from qibo.tensorflow import circuit as tensorflow_circuit
+    Circuit = tensorflow_circuit.TensorflowCircuit
 
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
