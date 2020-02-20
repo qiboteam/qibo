@@ -16,28 +16,39 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.dtype = dtype
         self.compiled_execute = None
 
+    def _execute_func(self, initial_state: tf.Tensor) -> tf.Tensor:
+        """Simulates the circuit gates.
+
+        Can be compiled using `tf.function` or used as it is in Eager mode.
+        """
+        state = tf.cast(initial_state, dtype=self.dtype)
+        for gate in self.queue:
+            state = gate(state)
+        return tf.reshape(state, (2**self.nqubits,))
+
     def compile(self):
-        def _execute(initial_state):
-            state = tf.cast(initial_state, dtype=self.dtype)
-            for gate in self.queue:
-                state = gate(state)
-            return state
-
+        """Compiles `_execute_func` using `tf.function`."""
         if self.compiled_execute is not None:
-            raise RuntimeError("Tensorflow circuit is already compiled.")
-
-        self.compiled_execute = tf.function(_execute)
+            raise RuntimeError("Circuit is already compiled.")
+        self.compiled_execute = tf.function(lambda x: self._execute_func(x))
 
     def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
         if initial_state is None:
-            initial_state = self._default_initial_state()
+            state = self._default_initial_state()
+        else:
+            shape = tuple(initial_state.shape)
+            if len(shape) == self.nqubits:
+                state = tf.cast(initial_state, dtype=self.dtype)
+            elif len(shape) == 1:
+                state = tf.reshape(initial_state, self.nqubits * (2,))
+            else:
+                raise ValueError("Given initial state has unsupported shape "
+                                 "{}.".format(shape))
 
         if self.compiled_execute is None:
-            self.compile()
-
-        final_state = self.compiled_execute(initial_state)
-        return tf.reshape(final_state, (2**self.nqubits,))
+            return self._execute_func(state)
+        return self.compiled_execute(state)
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         return self.execute(initial_state)

@@ -169,3 +169,48 @@ def test_custom_circuit():
     tf_custom_circuit = tf.function(custom_circuit)
     r3 = tf_custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r2, r3)
+
+
+def test_compiled_circuit():
+    """Check that compiling with `Circuit.compile` does not break results."""
+    def create_circuit(theta = 0.1234):
+        c = Circuit(2)
+        c.add(gates.X(0))
+        c.add(gates.X(1))
+        c.add(gates.CRZ(0, 1, theta))
+        return c
+
+    # Run eager circuit
+    c1 = create_circuit()
+    r1 = c1.execute().numpy()
+
+    # Run compiled circuit
+    c2 = create_circuit()
+    c2.compile()
+    r2 = c2.execute().numpy()
+
+    np.testing.assert_allclose(r1, r2)
+
+
+def test_circuit_custom_compilation():
+    theta = 0.1234
+    init_state = np.ones(4) / 2.0
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CRZ(0, 1, theta))
+    r1 = c.execute(init_state).numpy()
+
+    def run_circuit(initial_state):
+        c = Circuit(2)
+        c.add(gates.X(0))
+        c.add(gates.X(1))
+        c.add(gates.CRZ(0, 1, theta))
+        return c.execute(initial_state)
+
+    import tensorflow as tf
+    compiled_circuit = tf.function(run_circuit)
+    r2 = compiled_circuit(init_state)
+
+    np.testing.assert_allclose(r1, r2)
