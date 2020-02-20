@@ -19,13 +19,17 @@ if BACKEND_NAME == "tensorflow":
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
-    from qibo import tensorflow_circuit
 
     # Default types
     DTYPE = tf.float64
     DTYPEINT = tf.int32
     DTYPECPX = tf.complex128
 
+    from qibo.tensorflow import matrices as tensorflow_matrices
+    matrices = tensorflow_matrices.GateMatrices(DTYPECPX)
+
+    from qibo.tensorflow import gates
+    from qibo.tensorflow import circuit as tensorflow_circuit
     Circuit = tensorflow_circuit.TensorflowCircuit
 
 else:
