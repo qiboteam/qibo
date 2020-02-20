@@ -3,13 +3,11 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from typing import List, Optional
+from typing import Optional
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
     """Implementation of circuit methods in Tensorflow."""
-
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     def __init__(self, nqubits, dtype=tf.complex128):
         """Initialize a Tensorflow circuit."""
