@@ -10,12 +10,12 @@ class GateMatrices:
     def __init__(self, dtype):
         self.dtype = dtype
 
-        self.I = tf.convert_to_tensor(self.npI, dtype=self.dtype)
-        self.H = tf.convert_to_tensor(self.npH, dtype=self.dtype)
-        self.X = tf.convert_to_tensor(self.npX, dtype=self.dtype)
-        self.Y = tf.convert_to_tensor(self.npY, dtype=self.dtype)
-        self.Z = tf.convert_to_tensor(self.npZ, dtype=self.dtype)
-        self.CNOT = tf.convert_to_tensor(self.npCNOT, dtype=self.dtype)
+        self.I = tf.convert_to_tensor(self._npI(), dtype=self.dtype)
+        self.H = tf.convert_to_tensor(self._npH(), dtype=self.dtype)
+        self.X = tf.convert_to_tensor(self._npX(), dtype=self.dtype)
+        self.Y = tf.convert_to_tensor(self._npY(), dtype=self.dtype)
+        self.Z = tf.convert_to_tensor(self._npZ(), dtype=self.dtype)
+        self.CNOT = tf.convert_to_tensor(self._npCNOT(), dtype=self.dtype)
 
     @property
     def nptype(self):
@@ -26,36 +26,30 @@ class GateMatrices:
         else:
             raise TypeError("Unknown complex type {}.".format(self.dtype))
 
-    @property
-    def npI(self):
+    def _npI(self):
         return np.eye(2, dtype=self.nptype)
 
-    @property
-    def npH(self):
+    def _npH(self):
         m = np.ones((2, 2), dtype=self.nptype)
         m[1, 1] = -1
         return m / np.sqrt(2)
 
-    @property
-    def npX(self):
+    def _npX(self):
         m = np.zeros((2, 2), dtype=self.nptype)
         m[0, 1], m[1, 0] = 1, 1
         return m
 
-    @property
-    def npY(self):
+    def _npY(self):
         m = np.zeros((2, 2), dtype=self.nptype)
         m[0, 1], m[1, 0] = -1j, 1j
         return m
 
-    @property
-    def npZ(self):
+    def _npZ(self):
         m = np.eye(2, dtype=self.nptype)
         m[1, 1] = -1
         return m
 
-    @property
-    def npCNOT(self):
+    def _npCNOT(self):
         m = np.eye(4, dtype=self.nptype)
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
