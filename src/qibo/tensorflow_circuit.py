@@ -2,8 +2,8 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-from qibo.backends import common, config
-from typing import List
+from qibo import base_circuit
+from typing import List, Optional
 
 
 class GateMatrices:
@@ -57,19 +57,20 @@ class GateMatrices:
         return m.reshape(4 * (2,))
 
 
-class TensorflowBackend(common.Backend):
-    """Implementation of all backend methods in Tensorflow."""
+class TensorflowCircuit(base_circuit.BaseCircuit):
+    """Implementation of circuit methods in Tensorflow."""
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __init__(self, dtype=tf.complex128):
-        """Initializes the class attributes"""
-        self._output = {"virtual_machine": None, "wave_func": None, "measure": []}
+    def __init__(self, nqubits, dtype=tf.complex128):
+        """Initialize a Tensorflow circuit."""
+        super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
-
-        self.nqubits = None
-        self.state = None
         self.matrices = GateMatrices(self.dtype)
+
+        self.output = {"wave_func": None}
+        self.state = None
+        self.compiled_execute = None
 
     def CNOT(self, id0: int, id1: int):
         """The Controlled-NOT gate."""
@@ -163,30 +164,39 @@ class TensorflowBackend(common.Backend):
         _state = np.array(coefficients).reshape(self.nqubits * (2,))
         self.state = tf.convert_to_tensor(_state, dtype=self.dtype)
 
-    def execute(self, model):
-        """Executes the circuit on tensorflow."""
-        if self.state is not None or self.nqubits is not None:
-            raise ValueError("Backend was already used.")
-        self.nqubits = model.nqubits
-
+    def compile(self):
         def _execute(initial_state):
             self.state = tf.cast(initial_state, dtype=self.dtype)
-            for gate in model.queue:
+            for gate in self.queue:
                 getattr(self, gate.name)(**gate.args)
             return self.state
 
-        # Compile model
-        compiled_execute = tf.function(_execute)
+        if self.compiled_execute is not None:
+            raise RuntimeError("Tensorflow circuit is already compiled.")
 
-        # Initialize in |000...0> state
+        self.compiled_execute = tf.function(_execute)
+
+    def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
+        """Executes the Tensorflow circuit."""
+        if initial_state is None:
+            initial_state = self._default_initial_state()
+
+        if self.compiled_execute is None:
+            self.compile()
+
+        final_state = self.compiled_execute(initial_state)
+        self.output["wave_func"] = final_state.numpy().ravel()
+        return self.output["wave_func"]
+
+    def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
+        return self.execute(initial_state)
+
+    def _default_initial_state(self) -> tf.Tensor:
+        """Creates the |000...0> state for default initialization."""
         initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1
         initial_state = initial_state.reshape(self.nqubits * (2,))
-        initial_state = tf.convert_to_tensor(initial_state, dtype=self.dtype)
-
-        final_state = compiled_execute(initial_state)
-        self._output["wave_func"] = final_state.numpy().ravel()
-        return self._output["wave_func"]
+        return tf.convert_to_tensor(initial_state, dtype=self.dtype)
 
     def _apply_gate(self, matrix: tf.Tensor, qubits: List[int]):
         """Applies gate represented by matrix to `self.state`.
