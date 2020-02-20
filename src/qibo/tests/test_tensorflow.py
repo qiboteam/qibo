@@ -142,3 +142,30 @@ def test_crz():
     target_state = np.zeros_like(final_state)
     target_state[-1] = phase
     np.testing.assert_allclose(final_state, target_state)
+
+
+def test_custom_circuit():
+    """Check consistency between Circuit and custom circuits"""
+    theta = 0.1234
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CRZ(0, 1, theta))
+    r1 = c.execute()
+
+    # custom circuit
+    def custom_circuit(initial_state, theta):
+        l1 = gates.X(0)(initial_state)
+        l2 = gates.X(1)(l1)
+        o = gates.CRZ(0, 1, theta)(l2)
+        return o
+
+    init = c._default_initial_state()
+    r2 = custom_circuit(init, theta).numpy().ravel()
+    np.testing.assert_allclose(r1, r2)
+
+    import tensorflow as tf
+    tf_custom_circuit = tf.function(custom_circuit)
+    r3 = tf_custom_circuit(init, theta).numpy().ravel()
+    np.testing.assert_allclose(r2, r3)
