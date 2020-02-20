@@ -188,6 +188,7 @@ class RX(Gate):
         super(RX, self).__init__()
         self.name = "RX"
         self.qubits = [q]
+        self.theta = theta
 
 
 class RY(Gate):
@@ -203,8 +204,9 @@ class RY(Gate):
 
     def __init__(self, q, theta):
         super(RY, self).__init__()
-        self.args = {"id": q, "theta": theta}
         self.name = "RY"
+        self.qubits = [q]
+        self.theta = theta
 
 
 class RZ(Gate):
@@ -219,8 +221,9 @@ class RZ(Gate):
 
     def __init__(self, q, theta):
         super(RZ, self).__init__()
-        self.args = {"id": q, "theta": theta}
         self.name = "RZ"
+        self.qubits = [q]
+        self.theta = theta
 
 
 class CRZ(Gate):
@@ -235,8 +238,9 @@ class CRZ(Gate):
 
     def __init__(self, q0, q1, theta):
         super(CRZ, self).__init__()
-        self.args = {"id0": q0, "id1": q1, "theta": theta}
         self.name = "CRZ"
+        self.qubits = [q0, q1]
+        self.theta = theta
 
 
 class Flatten(Gate):

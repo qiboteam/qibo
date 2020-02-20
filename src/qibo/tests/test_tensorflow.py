@@ -71,7 +71,7 @@ def test_cnot():
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_rz_no_effect():
     """Check RZ gate is working properly when qubit is on |0>."""
     c = Circuit(2)
@@ -81,7 +81,7 @@ def test_rz_no_effect():
     target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_rz_phase():
     """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
@@ -95,7 +95,7 @@ def test_rz_phase():
     target_state[2] = np.exp(1j * np.pi * theta)
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_rx():
     """Check RX gate is working properly."""
     theta = 0.1234
@@ -111,7 +111,7 @@ def test_rx():
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_ry():
     """Check RY gate is working properly."""
     theta = 0.1234

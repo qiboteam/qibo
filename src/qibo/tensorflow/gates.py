@@ -17,6 +17,7 @@ class TensorflowGate:
         qubits: List with the qubits that the gate is applied to.
     """
 
+    dtype = matrices.dtype
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
@@ -108,9 +109,8 @@ class T(TensorflowGate, base_gates.T):
 
 class Iden(TensorflowGate, base_gates.Iden):
 
-    def __init__(self, q):
-        TensorflowGate.__init__(self)
-        base_gates.Iden.__init__(self)
+    def __init__(self, *args):
+        base_gates.Iden.__init__(self, *args)
         self.matrix = matrices.Iden
 
 
@@ -132,19 +132,36 @@ class MZ(TensorflowGate, base_gates.MZ):
         raise NotImplementedError
 
 
-class RZ(TensorflowGate, base_gates.RZ):
+class RX(TensorflowGate, base_gates.RX):
 
-    def __init__(self, q, theta):
-        ensorflowGate.__init__(self)
-        base_gates.RZ.__init__(self)
+    def __init__(self, *args):
+        base_gates.RX.__init__(self, *args)
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        phase = tf.exp(1j * np.pi * theta / 2.0)
+        phase = tf.exp(1j * np.pi * self.theta / 2.0)
         cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
         sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
-        mat = (phase * cos * self.matrices.I -
-               1j * phase * sin * self.matrices.X)
-        self._apply_gate(mat, [id])
+        self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.X)
+
+
+class RY(TensorflowGate, base_gates.RY):
+
+    def __init__(self, *args):
+        base_gates.RY.__init__(self, *args)
+
+        phase = tf.exp(1j * np.pi * self.theta / 2.0)
+        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
+        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.Y)
+
+
+class RZ(TensorflowGate, base_gates.RZ):
+
+    def __init__(self, *args):
+        base_gates.RZ.__init__(self, *args)
+
+        phase = tf.exp(1j * np.pi * self.theta)
+        rz = tf.eye(2, dtype=self.dtype)
+        self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):
