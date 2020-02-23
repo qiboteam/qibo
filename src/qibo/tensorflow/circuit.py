@@ -33,7 +33,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Compiles `_execute_func` using `tf.function`."""
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
-        self.compiled_execute = tf.function(lambda x: self._execute_func(x))
+        self.compiled_execute = tf.function(self._execute_func)
 
     def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
