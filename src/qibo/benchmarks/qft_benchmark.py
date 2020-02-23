@@ -1,68 +1,64 @@
+"""
+Benchmark script for the Quantum Fourier Transform
+"""
 import argparse
 import os
 import time
-import numpy as np
-import h5py
 from qibo import gates, models
-from typing import Dict, List, Optional
+from qibo.benchmarks import utils
+from typing import List, Optional
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
+parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
-parser.add_argument("--log-dir", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
 
 
-def update_file(file_path: str, logs: Dict[str, List]):
-    file = h5py.File(file_path, "w")
-    for k, v in logs.items():
-        file[k] = np.array(v)
-    file.close()
-
-
-def random_state(nqubits: int) -> np.ndarray:
-    """Generates a random state."""
-    x = np.random.random(2**nqubits) + 1j * np.random.random(2**nqubits)
-    return x / np.sqrt((np.abs(x)**2).sum())
-
-
-def parse_nqubits(nqubits_str: str) -> List[int]:
-    if "-" in nqubits_str:
-        if "," in nqubits_str:
-            raise ValueError("String that specifies qubits cannot contain "
-                             "both , and -.")
-
-        nqubits_split = nqubits_str.split("-")
-        if len(nqubits_split) != 2:
-            raise ValueError("Invalid string that specifies nqubits "
-                             "{}.".format(nqubits_str))
-
-        n_start, n_end = nqubits_split
-        return list(range(int(n_start), int(n_end) + 1))
-
-    return [int(x) for x in nqubits_str.split(",")]
-
-
 def main(nqubits_list: List[int],
+         directory: Optional[str] = None,
          name: Optional[str] = None,
-         log_dir: Optional[str] = None,
          compile: bool = False):
-    if log_dir is not None:
+    """Runs benchmarks for the Quantum Fourier Transform.
+
+    If `directory` is specified this saves an `.h5` file that contains the
+    following keys:
+        * nqubits: List with the number of qubits that were simulated.
+        * simulation_time: List with simulation times for each number of qubits.
+        * compile_time (optional): List with compile times for each number of
+            qubits. This is saved only if `compile` is `True`.
+
+    Args:
+        nqubits_list: List with the number of qubits to run for.
+        directory: Directory to save the log files.
+            If `None` then logs are not saved.
+        name: Name of the run to be used when saving logs.
+            This should be specified if a directory in given. Otherwise it
+            is ignored.
+        compile: If `True` then the Tensorflow graph is compiled using
+            `circuit.compile()`. In this case the compile time is also logged.
+
+    Raises:
+        FileExistsError if the file with the `name` specified exists in the
+        given `directory`.
+    """
+    if directory is not None:
         if name is None:
             raise ValueError("A run name should be given in order to save "
                              "logs.")
 
         # Generate log file name
-        log_name = [__file__, name]
+        script_name = __file__.split(".")[0]
+        log_name = [script_name, name]
         if compile:
             log_name.append("compiled")
         log_name = "{}.h5".format("_".join(log_name))
         # Generate log file path
-        file_path = os.path.join(log_dir, log_name)
+        file_path = os.path.join(directory, log_name)
         if os.path.exists(file_path):
             raise FileExistsError("File {} already exists in {}."
-                                  "".format(log_name, log_dir))
+                                  "".format(log_name, directory))
 
         print("Saving logs in {}.".format(file_path))
 
@@ -73,7 +69,7 @@ def main(nqubits_list: List[int],
 
     for nqubits in nqubits_list:
         # Generate a random initial state
-        initial_state = random_state(nqubits)
+        initial_state = utils.random_state(nqubits)
 
         init_circuit = models.Circuit(nqubits)
         init_circuit.add(gates.Flatten(initial_state))
@@ -93,8 +89,8 @@ def main(nqubits_list: List[int],
         logs["nqubits"].append(nqubits)
 
         # Write updated logs in file
-        if log_dir is not None:
-            update_file(file_path, logs)
+        if directory is not None:
+            utils.update_file(file_path, logs)
 
         # Print results during run
         if compile:
@@ -104,5 +100,5 @@ def main(nqubits_list: List[int],
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
-    args["nqubits_list"] = parse_nqubits(args.pop("nqubits"))
+    args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
     main(**args)
