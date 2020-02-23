@@ -1,8 +1,19 @@
 from qibo.config import Circuit
-from qibo.config import gates
 
 
 def QFTCircuit(nqubits: int, with_swaps: bool = True) -> Circuit:
+    """Creates a circuit that implements the Quantum Fourier Transform.
+
+    Args:
+        nqubits: Number of qubits in the circuit.
+        with_swaps: Use SWAP gates at the end of the circuit so that the final
+            qubit ordering agrees with the initial state.
+
+    Returns:
+        A qibo.models.Circuit that implements the Quantum Fourier Transform.
+    """
+    from qibo.config import gates
+
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1))
