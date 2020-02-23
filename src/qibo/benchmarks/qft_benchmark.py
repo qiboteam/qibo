@@ -49,8 +49,7 @@ def main(nqubits_list: List[int],
                              "logs.")
 
         # Generate log file name
-        script_name = __file__.split(".")[0]
-        log_name = [script_name, name]
+        log_name = [name]
         if compile:
             log_name.append("compiled")
         log_name = "{}.h5".format("_".join(log_name))
