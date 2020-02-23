@@ -16,6 +16,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.dtype = dtype
         self.compiled_execute = None
 
+    def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
+        return TensorflowCircuit._circuit_addition(self, circuit)
+
     def _execute_func(self, initial_state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates.
 
