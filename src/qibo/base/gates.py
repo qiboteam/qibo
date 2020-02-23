@@ -232,7 +232,7 @@ class CRZ(Gate):
     Convention is the same as RZ.
 
     Args:
-        q (int): the qubit id number.
+        q0, q1 (ints): qubit id numbers.
         theta (float): the rotation angle.
     """
 
@@ -241,6 +241,20 @@ class CRZ(Gate):
         self.name = "CRZ"
         self.qubits = [q0, q1]
         self.theta = theta
+
+
+class SWAP(Gate):
+    """SWAPs two qubits.
+
+    Args:
+        q0, q1 (ints): id number of the qubits to be swapped
+            (order does not matter).
+    """
+
+    def __init__(self, q0, q1):
+        super(SWAP, self).__init__()
+        self.name = "SWAP"
+        self.qubits = [q0, q1]
 
 
 class Flatten(Gate):

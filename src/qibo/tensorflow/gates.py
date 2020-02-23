@@ -174,6 +174,13 @@ class CRZ(TensorflowGate, base_gates.CRZ):
         self.matrix = tf.reshape(crz, 4 * (2,))
 
 
+class SWAP(TensorflowGate, base_gates.SWAP):
+
+    def __init__(self, *args):
+        base_gates.SWAP.__init__(self, *args)
+        self.matrix = matrices.SWAP
+
+
 class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, *args):

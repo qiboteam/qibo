@@ -144,6 +144,20 @@ def test_crz():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_swap():
+    """Check SWAP gate is working properly on |+0>."""
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.SWAP(0, 1))
+    final_state = c.execute().numpy()
+
+    c2 = Circuit(2)
+    c2.add(gates.H(1))
+    target_state = c2.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
     theta = 0.1234
