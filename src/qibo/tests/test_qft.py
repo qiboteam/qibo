@@ -2,6 +2,7 @@
 Testing Quantum Fourier Transform (QFT) circuit.
 """
 import numpy as np
+import pytest
 from qibo import gates, models
 
 
@@ -27,10 +28,35 @@ def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
 
 
 def test_qft_sanity():
+    """Check QFT circuit size and depth."""
     c = models.QFTCircuit(4)
     assert c.size == 4
     assert c.depth == 12
 
 
-def test_qft_transformation():
-    pass
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_qft_transformation(nqubits):
+    """Check QFT transformation for |00...0>."""
+    c = models.QFTCircuit(nqubits)
+    final_state = c.execute().numpy()
+
+    initial_state = np.zeros_like(final_state)
+    initial_state[0] = 1.0
+    exact_state = exact_qft(initial_state)
+
+    np.testing.assert_allclose(final_state, exact_state)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
+def test_qft_transformation_random(nqubits):
+    """Check QFT transformation for random initial state."""
+    initial_state = np.random.random(2**4) + 1j * np.random.random(2**4)
+    initial_state = initial_state / np.sqrt((np.abs(initial_state)**2).sum())
+    exact_state = exact_qft(initial_state)
+
+    c_init = models.Circuit(4)
+    c_init.add(gates.Flatten(initial_state))
+    c = c_init + models.QFTCircuit(4)
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, exact_state)
