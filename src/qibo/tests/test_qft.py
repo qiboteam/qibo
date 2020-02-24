@@ -47,16 +47,32 @@ def test_qft_transformation(nqubits):
     np.testing.assert_allclose(final_state, exact_state)
 
 
+def random_state(nqubits):
+    x = np.random.random(2**nqubits) + 1j * np.random.random(2**nqubits)
+    return x / np.sqrt((np.abs(x)**2).sum())
+
+
 @pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
 def test_qft_transformation_random(nqubits):
     """Check QFT transformation for random initial state."""
-    initial_state = np.random.random(2**4) + 1j * np.random.random(2**4)
-    initial_state = initial_state / np.sqrt((np.abs(initial_state)**2).sum())
+    initial_state = random_state(nqubits)
     exact_state = exact_qft(initial_state)
 
-    c_init = models.Circuit(4)
+    c_init = models.Circuit(nqubits)
     c_init.add(gates.Flatten(initial_state))
-    c = c_init + models.QFTCircuit(4)
+    c = c_init + models.QFTCircuit(nqubits)
     final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, exact_state)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
+def test_qftgates_transformation_random(nqubits):
+    """Check QFT transformation of `QFTGates` for random initial state."""
+    initial_state = random_state(nqubits)
+    exact_state = exact_qft(initial_state)
+
+    initial_state = initial_state.reshape(nqubits * (2,))
+    final_state = models.QFTGates(initial_state)
 
     np.testing.assert_allclose(final_state, exact_state)
