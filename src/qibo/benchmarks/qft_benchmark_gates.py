@@ -1,5 +1,5 @@
 """
-Benchmark script for the Quantum Fourier Transform using `models.QFTCircuit`.
+Benchmark script for the Quantum Fourier Transform
 """
 import argparse
 import os
@@ -68,21 +68,20 @@ def main(nqubits_list: List[int],
 
     for nqubits in nqubits_list:
         # Generate a random initial state
-        initial_state = utils.random_state(nqubits)
-
-        init_circuit = models.Circuit(nqubits)
-        init_circuit.add(gates.Flatten(initial_state))
-        circuit = init_circuit + models.QFTCircuit(nqubits)
+        initial_state = utils.random_state(nqubits).reshape(nqubits * (2,))
 
         print("\nSimulating {} qubits...".format(nqubits))
 
         if compile:
+            import tensorflow as tf
             start_time = time.time()
-            circuit.compile()
+            qft_func = tf.function(models.QFTGates)
             logs["compile_time"].append(time.time() - start_time)
+        else:
+            qft_func = models.QFTGates
 
         start_time = time.time()
-        final_state = circuit.execute()
+        final_state = qft_func(initial_state)
         logs["simulation_time"].append(time.time() - start_time)
 
         logs["nqubits"].append(nqubits)
