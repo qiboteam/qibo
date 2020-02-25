@@ -77,6 +77,9 @@ def main(nqubits_list: List[int],
             start_time = time.time()
             qft_func = tf.function(models.QFTGates)
             logs["compile_time"].append(time.time() - start_time)
+            # Try executing here so that compile time is not included
+            # in the simulation time
+            final_state = qft_func(initial_state)
         else:
             qft_func = models.QFTGates
 
