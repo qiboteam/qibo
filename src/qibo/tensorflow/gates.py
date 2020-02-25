@@ -11,10 +11,10 @@ class TensorflowGate:
 
     def slice_generator(self, q: int, is_one: bool = False) -> int:
         s = (q + 1) * int(is_one)
-        while s < self.nqubits:
+        while s < self.nstates:
             for i in range(s, s + q + 1):
                 yield i
-            s += q + 2
+            s += 2 * q + 2
 
     def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
@@ -27,8 +27,13 @@ class TensorflowGate:
         slice0 = tuple(self.slice_generator(self.qubits[0], False))
         slice1 = tuple(self.slice_generator(self.qubits[0], True))
 
-        new0 = self._call_0(state[slice0], state[slice1])
-        new1 = self._call_1(state[slice0], state[slice1])
+        new0 = self._call_0(tf.gather(state, slice0),
+                            tf.gather(state, slice1))
+        new1 = self._call_1(tf.gather(state, slice0),
+                            tf.gather(state, slice1))
+
+        slice0 = tf.constant(slice0)[:, tf.newaxis]
+        slice1 = tf.constant(slice1)[:, tf.newaxis]
 
         new = tf.tensor_scatter_nd_update(state, slice0, new0)
         new = tf.tensor_scatter_nd_update(new, slice1, new1)

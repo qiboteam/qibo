@@ -25,10 +25,11 @@ def test_circuit_add():
 
 def test_hadamard():
     """Check Hadamard gate is working properly."""
-    c = Circuit(1)
+    c = Circuit(2)
     c.add(gates.H(0))
+    c.add(gates.H(1))
     final_state = c.execute().numpy()
-    target_state = np.ones_like(final_state) / np.sqrt(2)
+    target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
 
 @pytest.mark.skip
