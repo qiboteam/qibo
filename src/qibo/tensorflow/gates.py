@@ -87,18 +87,6 @@ class Barrier(TensorflowGate, base_gates.Barrier):
         raise NotImplementedError
 
 
-class S(TensorflowGate, base_gates.S):
-
-    def __init__(self):
-        raise NotImplementedError
-
-
-class T(TensorflowGate, base_gates.T):
-
-    def __init__(self):
-        raise NotImplementedError
-
-
 class Iden(TensorflowGate, base_gates.Iden):
 
     def __init__(self, *args):
@@ -163,6 +151,13 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         self.matrix = matrices.CNOT
 
 
+class SWAP(TensorflowGate, base_gates.SWAP):
+
+    def __init__(self, *args):
+        base_gates.SWAP.__init__(self, *args)
+        self.matrix = matrices.SWAP
+
+
 class CRZ(TensorflowGate, base_gates.CRZ):
 
     def __init__(self, *args):
@@ -172,6 +167,13 @@ class CRZ(TensorflowGate, base_gates.CRZ):
         crz = tf.eye(4, dtype=self.dtype)
         crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
         self.matrix = tf.reshape(crz, 4 * (2,))
+
+
+class Toffoli(TensorflowGate, base_gates.Toffoli):
+
+    def __init__(self, *args):
+        base_gates.Toffoli.__init__(self, *args)
+        self.matrix = matrices.Toffoli
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

@@ -16,6 +16,8 @@ class GateMatrices:
         self.Y = tf.convert_to_tensor(self._npY(), dtype=self.dtype)
         self.Z = tf.convert_to_tensor(self._npZ(), dtype=self.dtype)
         self.CNOT = tf.convert_to_tensor(self._npCNOT(), dtype=self.dtype)
+        self.SWAP = tf.convert_to_tensor(self._npSWAP(), dtype=self.dtype)
+        self.Toffoli = tf.convert_to_tensor(self._npToffoli(), dtype=self.dtype)
 
     @property
     def nptype(self):
@@ -54,3 +56,15 @@ class GateMatrices:
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
         return m.reshape(4 * (2,))
+
+    def _npSWAP(self):
+        m = np.eye(4, dtype=self.nptype)
+        m[1, 1], m[1, 2] = 0, 1
+        m[2, 1], m[2, 2] = 1, 0
+        return m.reshape(4 * (2,))
+
+    def _npToffoli(self):
+        m = np.eye(8, dtype=self.nptype)
+        m[-2, -2], m[-2, -1] = 0, 1
+        m[-1, -2], m[-1, -1] = 1, 0
+        return m.reshape(6 * (2,))
