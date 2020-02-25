@@ -61,3 +61,58 @@ def QFTGates(state, with_swaps: bool = True):
             state = gates.SWAP(i, nqubits - i - 1)(state)
 
     return tf.reshape(state, (2**nqubits,))
+
+
+class VQE(object):
+    """This class implements the variational quantum eigensolver algorithm.
+
+    Args:
+        ansatz (function): a python function which takes as input an array of parameters.
+        hamiltonian (qibo.hamiltonians): a hamiltonian object.
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import gates
+            from qibo.hamiltonians import XXZ
+            from qibo.models import VQE, Circuit
+            def ansatz(theta):
+                c = Circuit(2)
+                c.add(gates.RY(q, theta[0]))
+            v = VQE(ansats, XXZ(2))
+            initial_state = np.random.uniform(0, 2*np.pi, 1)
+            v.minimize(initial_state)
+    """
+    def __init__(self, ansatz, hamiltonian):
+        """Initialize ansatz and hamiltonian."""
+        self.ansatz = ansatz
+        self.hamiltonian = hamiltonian
+
+    def minimize(self, initial_state, method='BFGS', options=None):
+        """Search for parameters which minimizes the hamiltonian expectation.
+
+        Args:
+            initial_state (array): a initial guess for the circuit.
+            method (str): the desired minimization method.
+            options (dict): a dictionary with options for the different optimizers.
+
+        Return:
+            The final expectation value.
+            The corresponding best parameters.
+        """
+        def loss(params):
+            s = self.ansatz(params)
+            return self.hamiltonian.expectation(s)
+
+        if method is 'BFGS':
+            import numpy as np
+            from scipy.optimize import minimize
+            n = self.hamiltonian.nqubits
+            m = minimize(loss, initial_state,
+                         method=method, options=options)
+            result = m.fun
+            parameters = m.x
+        else:
+            raise NotImplementedError('Method not implemented')
+        return result, parameters
