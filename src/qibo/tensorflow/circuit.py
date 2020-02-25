@@ -24,28 +24,18 @@ class TensorflowCircuit(circuit.BaseCircuit):
         state = tf.cast(initial_state, dtype=self.dtype)
         for gate in self.queue:
             state = gate(state)
-        return tf.reshape(state, (2**self.nqubits,))
+        return state
 
     def compile(self):
         """Compiles `_execute_func` using `tf.function`."""
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
-        self.compiled_execute = tf.function(lambda x: self._execute_func(x))
+        self.compiled_execute = tf.function(self._execute_func)
 
     def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
         if initial_state is None:
             state = self._default_initial_state()
-        else:
-            shape = tuple(initial_state.shape)
-            if len(shape) == self.nqubits:
-                state = tf.cast(initial_state, dtype=self.dtype)
-            elif len(shape) == 1:
-                state = tf.reshape(initial_state, self.nqubits * (2,))
-            else:
-                raise ValueError("Given initial state has unsupported shape "
-                                 "{}.".format(shape))
-
         if self.compiled_execute is None:
             return self._execute_func(state)
         return self.compiled_execute(state)
@@ -57,5 +47,4 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Creates the |000...0> state for default initialization."""
         initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1
-        initial_state = initial_state.reshape(self.nqubits * (2,))
         return tf.convert_to_tensor(initial_state, dtype=self.dtype)

@@ -45,6 +45,7 @@ class BaseCircuit(object):
         Args:
             gate (qibo.gates): the specific gate (see :ref:`Gates`).
         """
+        gate.nqubits = self.nqubits
         self.queue.append(gate)
 
     @property

@@ -12,7 +12,21 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
-        self.nqubits = None
+        self._nqubits = None
+
+    @property
+    def nqubits(self):
+        if self._nqubits is None:
+            raise ValueError("Accessing number of qubits for gate {} but "
+                             "this is not yet set.".format(self))
+        return self._nqubits
+
+    @nqubits.setter
+    def nqubits(self, n: int):
+        if self._nqubits is not None and self._nqubits != n:
+            raise ValueError("Setting number of qubits as {} while it is "
+                             "already set as {}.".format(self._nqubits))
+        self._nqubits = n
 
     @abstractmethod
     def __call__(self, state):
