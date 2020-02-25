@@ -41,7 +41,7 @@ def test_flatten():
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_xgate():
     """Check X gate is working properly."""
     c = Circuit(2)

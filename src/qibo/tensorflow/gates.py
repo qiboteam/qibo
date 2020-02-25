@@ -27,10 +27,11 @@ class TensorflowGate:
         slice0 = tuple(self.slice_generator(self.qubits[0], False))
         slice1 = tuple(self.slice_generator(self.qubits[0], True))
 
-        new0 = self._call_0(tf.gather(state, slice0),
-                            tf.gather(state, slice1))
-        new1 = self._call_1(tf.gather(state, slice0),
-                            tf.gather(state, slice1))
+        state0 = tf.gather(state, slice0)
+        state1 = tf.gather(state, slice1)
+
+        new0 = self._call_0(state0, state1)
+        new1 = self._call_1(state0, state1)
 
         slice0 = tf.constant(slice0)[:, tf.newaxis]
         slice1 = tf.constant(slice1)[:, tf.newaxis]
@@ -54,8 +55,16 @@ class H(TensorflowGate, base_gates.H):
 
 class X(TensorflowGate, base_gates.X):
 
+    # TODO: Fix qubit ordering issue
+
     def __init__(self, *args):
         base_gates.X.__init__(self, *args)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state1
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
 
 
 class Y(TensorflowGate, base_gates.Y):
@@ -63,11 +72,23 @@ class Y(TensorflowGate, base_gates.Y):
     def __init__(self, *args):
         base_gates.Y.__init__(self, *args)
 
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return -1j * state1
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return 1j * state0
+
 
 class Z(TensorflowGate, base_gates.Z):
 
     def __init__(self, *args):
         base_gates.Z.__init__(self, *args)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return -state1
 
 
 class Barrier(TensorflowGate, base_gates.Barrier):
@@ -80,6 +101,12 @@ class Iden(TensorflowGate, base_gates.Iden):
 
     def __init__(self, *args):
         base_gates.Iden.__init__(self, *args)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state1
 
 
 class MX(TensorflowGate, base_gates.MX):
@@ -105,9 +132,15 @@ class RX(TensorflowGate, base_gates.RX):
     def __init__(self, *args):
         base_gates.RX.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta / 2.0)
-        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
-        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        self.phase = tf.exp(1j * np.pi * self.theta / 2.0)
+        self.cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
+        self.sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * (self.cos * state0 - 1j * self.sin * state1)
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * (- 1j * self.sin * state0 + self.cos * state1)
 
 
 class RY(TensorflowGate, base_gates.RY):
