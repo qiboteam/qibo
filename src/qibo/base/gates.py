@@ -20,20 +20,6 @@ class Gate(object):
         pass
 
 
-class CNOT(Gate):
-    """The Controlled-NOT gate.
-
-    Args:
-        q0 (int): the first qubit id number.
-        q1 (int): the second qubit id number.
-    """
-
-    def __init__(self, q0, q1):
-        super(CNOT, self).__init__()
-        self.name = "CNOT"
-        self.qubits = [q0, q1]
-
-
 class H(Gate):
     """The Hadamard gate.
 
@@ -226,13 +212,28 @@ class RZ(Gate):
         self.theta = theta
 
 
+class CNOT(Gate):
+    """The Controlled-NOT gate.
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super(CNOT, self).__init__()
+        self.name = "CNOT"
+        self.qubits = [q0, q1]
+
+
 class CRZ(Gate):
     """Controlled Rotation Z-axis.
 
     Convention is the same as RZ.
 
     Args:
-        q (int): the qubit id number.
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
 

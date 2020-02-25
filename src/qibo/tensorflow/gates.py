@@ -53,13 +53,6 @@ class TensorflowGate:
         return "{},{}->{}".format(input_str, gate_str, output_str)
 
 
-class CNOT(TensorflowGate, base_gates.CNOT):
-
-    def __init__(self, *args):
-        base_gates.CNOT.__init__(self, *args)
-        self.matrix = matrices.CNOT
-
-
 class H(TensorflowGate, base_gates.H):
 
     def __init__(self, *args):
@@ -161,6 +154,13 @@ class RZ(TensorflowGate, base_gates.RZ):
         phase = tf.exp(1j * np.pi * self.theta)
         rz = tf.eye(2, dtype=self.dtype)
         self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
+
+
+class CNOT(TensorflowGate, base_gates.CNOT):
+
+    def __init__(self, *args):
+        base_gates.CNOT.__init__(self, *args)
+        self.matrix = matrices.CNOT
 
 
 class CRZ(TensorflowGate, base_gates.CRZ):
