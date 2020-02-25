@@ -51,27 +51,6 @@ def test_xgate():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_cnot_no_effect():
-    """Check CNOT gate is working properly on |00>."""
-    c = Circuit(2)
-    c.add(gates.CNOT(0, 1))
-    final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_cnot():
-    """Check CNOT gate is working properly on |10>."""
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.CNOT(0, 1))
-    final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[3] = 1.0
-    np.testing.assert_allclose(final_state, target_state)
-
-
 def test_rz_no_effect():
     """Check RZ gate is working properly when qubit is on |0>."""
     c = Circuit(2)
@@ -125,6 +104,61 @@ def test_ry():
     gate = phase * np.array([[phase.real, -phase.imag],
                              [phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_cnot_no_effect():
+    """Check CNOT gate is working properly on |00>."""
+    c = Circuit(2)
+    c.add(gates.CNOT(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_cnot():
+    """Check CNOT gate is working properly on |10>."""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.CNOT(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[3] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_swap():
+    """Check SWAP gate is working properly on |01>."""
+    c = Circuit(2)
+    c.add(gates.X(1))
+    c.add(gates.SWAP(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_toffoli_no_effect():
+    """Check Toffoli gate is working properly on |010>."""
+    c = Circuit(3)
+    c.add(gates.X(1))
+    c.add(gates.Toffoli(0, 1, 2))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[2] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_toffoli():
+    """Check Toffoli gate is working properly on |110>."""
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.Toffoli(0, 1, 2))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
 

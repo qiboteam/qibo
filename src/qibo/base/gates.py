@@ -20,20 +20,6 @@ class Gate(object):
         pass
 
 
-class CNOT(Gate):
-    """The Controlled-NOT gate.
-
-    Args:
-        q0 (int): the first qubit id number.
-        q1 (int): the second qubit id number.
-    """
-
-    def __init__(self, q0, q1):
-        super(CNOT, self).__init__()
-        self.name = "CNOT"
-        self.qubits = [q0, q1]
-
-
 class H(Gate):
     """The Hadamard gate.
 
@@ -92,32 +78,6 @@ class Barrier(Gate):
     def __init__(self, q):
         super(Barrier, self).__init__()
         self.name = "barrier"
-        self.qubits = [q]
-
-
-class S(Gate):
-    """The swap gate.
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super(S, self).__init__()
-        self.name = "S"
-        self.qubits = [q]
-
-
-class T(Gate):
-    """The Toffoli gate.
-
-    Args:
-        q (int): the qubit id number
-    """
-
-    def __init__(self, q):
-        super(T, self).__init__()
-        self.name = "T"
         self.qubits = [q]
 
 
@@ -226,13 +186,41 @@ class RZ(Gate):
         self.theta = theta
 
 
+class CNOT(Gate):
+    """The Controlled-NOT gate.
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super(CNOT, self).__init__()
+        self.name = "CNOT"
+        self.qubits = [q0, q1]
+
+
+class SWAP(Gate):
+    """The swap gate.
+
+    Args:
+        q0, q1 (ints): id numbers of the qubits to be swapped.
+    """
+
+    def __init__(self, q0, q1):
+        super(SWAP, self).__init__()
+        self.name = "SWAP"
+        self.qubits = [q0, q1]
+
+
 class CRZ(Gate):
     """Controlled Rotation Z-axis.
 
     Convention is the same as RZ.
 
     Args:
-        q (int): the qubit id number.
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
 
@@ -241,6 +229,21 @@ class CRZ(Gate):
         self.name = "CRZ"
         self.qubits = [q0, q1]
         self.theta = theta
+
+
+class Toffoli(Gate):
+    """The Toffoli gate.
+
+    Args:
+        q0 (int): the first control qubit id number.
+        q1 (int): the second control qubit id number.
+        q2 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1, q2):
+        super(Toffoli, self).__init__()
+        self.name = "Toffoli"
+        self.qubits = [q0, q1, q2]
 
 
 class Flatten(Gate):
