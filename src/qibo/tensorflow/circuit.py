@@ -16,6 +16,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.dtype = dtype
         self.compiled_execute = None
 
+    def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
+        return TensorflowCircuit._circuit_addition(self, circuit)
+
     def _execute_func(self, initial_state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates.
 
@@ -30,7 +33,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Compiles `_execute_func` using `tf.function`."""
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
-        self.compiled_execute = tf.function(lambda x: self._execute_func(x))
+        self.compiled_execute = tf.function(self._execute_func)
 
     def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""

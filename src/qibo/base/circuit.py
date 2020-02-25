@@ -23,19 +23,24 @@ class BaseCircuit(object):
         self.nqubits = nqubits
         self.queue = []
 
-    def __add__(self, c0):
+    def __add__(self, circuit):
         """Add circuits.
 
         Args:
-            c0 (qibo.models.Circuit): the circuit to be added.
+            circuit: Circuit to be added to the current one.
         Return:
-            qibo.models.Circuit: a new circuit.
+            The resulting circuit from the addition.
         """
-        if self.nqubits != c0.size():
-            raise TypeError("Circuits of different size")
-        newcircuit = Circuit(self.nqubits)
-        newgates = self.queue + c0.gates
-        for gate in newgates:
+        return BaseCircuit._circuit_addition(self, circuit)
+
+    @classmethod
+    def _circuit_addition(cls, c1, c2):
+        if c1.nqubits != c2.nqubits:
+            raise ValueError("Circuits of different size.")
+        newcircuit = cls(c1.nqubits)
+        for gate in c1.queue:
+            newcircuit.add(gate)
+        for gate in c2.queue:
             newcircuit.add(gate)
         return newcircuit
 
@@ -64,7 +69,7 @@ class BaseCircuit(object):
         return len(self.queue)
 
     @abstractmethod
-    def execute(self, model):
+    def execute(self):
         """Executes the circuit on a given backend.
 
         Args:
@@ -72,4 +77,4 @@ class BaseCircuit(object):
         Returns:
             The final wave function.
         """
-        pass
+        raise NotImplementedError
