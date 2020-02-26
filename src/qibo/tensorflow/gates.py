@@ -10,6 +10,7 @@ class TensorflowGate:
     """The base Tensorflow gate."""
 
     def slice_generator(self, q: int, is_one: bool = False) -> int:
+        q = self.nqubits - q - 1 # because we use "cirq" like order
         s = (q + 1) * int(is_one)
         while s < self.nstates:
             for i in range(s, s + q + 1):
@@ -26,6 +27,9 @@ class TensorflowGate:
         """Implements the `Gate` on a given state."""
         slice0 = tuple(self.slice_generator(self.qubits[0], False))
         slice1 = tuple(self.slice_generator(self.qubits[0], True))
+
+        print(slice0)
+        print(slice1)
 
         state0 = tf.gather(state, slice0)
         state1 = tf.gather(state, slice1)
@@ -54,8 +58,6 @@ class H(TensorflowGate, base_gates.H):
 
 
 class X(TensorflowGate, base_gates.X):
-
-    # TODO: Fix qubit ordering issue
 
     def __init__(self, *args):
         base_gates.X.__init__(self, *args)
@@ -133,8 +135,8 @@ class RX(TensorflowGate, base_gates.RX):
         base_gates.RX.__init__(self, *args)
 
         self.phase = tf.exp(1j * np.pi * self.theta / 2.0)
-        self.cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
-        self.sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
+        self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
 
     def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * (self.cos * state0 - 1j * self.sin * state1)
@@ -157,10 +159,13 @@ class RZ(TensorflowGate, base_gates.RZ):
 
     def __init__(self, *args):
         base_gates.RZ.__init__(self, *args)
+        self.phase = tf.exp(1j * np.pi * self.theta)
 
-        phase = tf.exp(1j * np.pi * self.theta)
-        rz = tf.eye(2, dtype=self.dtype)
-        self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * state1
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
