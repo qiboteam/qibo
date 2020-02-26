@@ -32,7 +32,7 @@ def test_hadamard():
     target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_flatten():
     """Check flatten gate is working properly."""
     target_state = np.ones(4) / 2.0
@@ -76,7 +76,6 @@ def test_rz_phase():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_rx():
     """Check RX gate is working properly."""
     theta = 0.1234
@@ -92,7 +91,7 @@ def test_rx():
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_ry():
     """Check RY gate is working properly."""
     theta = 0.1234

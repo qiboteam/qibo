@@ -8,6 +8,7 @@ from typing import Tuple
 
 class TensorflowGate:
     """The base Tensorflow gate."""
+    from qibo.config import DTYPECPX as dtype
 
     def slice_generator(self, q: int, is_one: bool = False) -> int:
         q = self.nqubits - q - 1 # because we use "cirq" like order
@@ -150,9 +151,15 @@ class RY(TensorflowGate, base_gates.RY):
     def __init__(self, *args):
         base_gates.RY.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta / 2.0)
-        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
-        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
+        self.phase = tf.exp(1j * np.pi * self.theta / 2.0)
+        self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
+        self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * (self.cos * state0 - self.sin * state1)
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * (self.sin * state0 + self.cos * state1)
 
 
 class RZ(TensorflowGate, base_gates.RZ):
@@ -203,9 +210,6 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         base_gates.Flatten.__init__(self, *args)
 
     def __call__(self, state):
-        if self.nqubits is None:
-            self.nqubits = len(tuple(state.shape))
-
         if len(self.coefficients) != 2 ** self.nqubits:
                 raise ValueError(
                     "Circuit was created with {} qubits but the "
@@ -213,5 +217,4 @@ class Flatten(TensorflowGate, base_gates.Flatten):
                     "".format(self.nqubits, self.coefficients)
                 )
 
-        _state = np.array(self.coefficients).reshape(self.nqubits * (2,))
-        return tf.convert_to_tensor(_state, dtype=state.dtype)
+        return tf.convert_to_tensor(self.coefficients, dtype=state.dtype)
