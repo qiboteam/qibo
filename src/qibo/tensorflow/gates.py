@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from typing import Tuple
+from typing import Optional, Tuple
 
 
 class TensorflowGate:
@@ -29,8 +29,38 @@ class TensorflowGate:
         slice0 = tuple(self.slice_generator(self.qubits[0], False))
         slice1 = tuple(self.slice_generator(self.qubits[0], True))
 
-        print(slice0)
-        print(slice1)
+        state0 = tf.gather(state, slice0)
+        state1 = tf.gather(state, slice1)
+
+        new0 = self._call_0(state0, state1)
+        new1 = self._call_1(state0, state1)
+
+        slice0 = tf.constant(slice0)[:, tf.newaxis]
+        slice1 = tf.constant(slice1)[:, tf.newaxis]
+
+        new = tf.tensor_scatter_nd_update(state, slice0, new0)
+        new = tf.tensor_scatter_nd_update(new, slice1, new1)
+        return new
+
+
+class TensorflowControlledGate(TensorflowGate):
+
+    def slice_generator(self, control: int, q: int, is_one: bool = False) -> int:
+        q = self.nqubits - q - 1 # because we use "cirq" like order
+        control = self.nqubits - control - 1
+        s = (q + 1) * int(is_one)
+        while s < self.nstates:
+            for i in range(s, s + q + 1):
+                if control is None:
+                    yield i
+                elif (i // 2**control) % 2 == 1:
+                    yield i
+            s += 2 * q + 2
+
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+        """Implements the `Gate` on a given state."""
+        slice0 = tuple(self.slice_generator(self.qubits[0], self.qubits[1], False))
+        slice1 = tuple(self.slice_generator(self.qubits[0], self.qubits[1], True))
 
         state0 = tf.gather(state, slice0)
         state1 = tf.gather(state, slice1)
@@ -175,10 +205,16 @@ class RZ(TensorflowGate, base_gates.RZ):
         return self.phase * state1
 
 
-class CNOT(TensorflowGate, base_gates.CNOT):
+class CNOT(TensorflowControlledGate, base_gates.CNOT):
 
     def __init__(self, *args):
         base_gates.CNOT.__init__(self, *args)
+
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state1
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):
@@ -191,11 +227,13 @@ class CRZ(TensorflowGate, base_gates.CRZ):
 
     def __init__(self, *args):
         base_gates.CRZ.__init__(self, *args)
+        self.phase = tf.exp(1j * np.pi * self.theta)
 
-        phase = tf.exp(1j * np.pi * self.theta)
-        crz = tf.eye(4, dtype=self.dtype)
-        crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
-        self.matrix = tf.reshape(crz, 4 * (2,))
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return self.phase * state1
 
 
 class Toffoli(TensorflowGate, base_gates.Toffoli):
