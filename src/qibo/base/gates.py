@@ -53,6 +53,14 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
 
+    def controlled_by(self, *q) -> "Gate":
+        if self.control_qubits:
+            raise ValueError("Cannot use `controlled_by` method on gate {} "
+                             "because it is already controlled by {}."
+                             "".format(self, self.control_qubits))
+        self.control_qubits = tuple(q)
+        return self
+
     @abstractmethod
     def __call__(self, state):
         """Implements the `Gate` on a given state."""
