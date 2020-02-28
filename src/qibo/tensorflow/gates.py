@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import itertools
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
@@ -10,26 +11,39 @@ class TensorflowGate:
     """The base Tensorflow gate."""
     from qibo.config import DTYPECPX as dtype
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        raise NotImplementedError
+    def _iterables(self, d):
+      for i in range(1, len(d)):
+          yield range(d[i] // (2 * d[i - 1]))
+      yield range(self.nstates // d[-1])
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        raise NotImplementedError
+    def _base_slicer(self, d: np.ndarray) -> np.ndarray:
+        d_sorted = np.array([1] + list(np.sort(d)))
+        configurations = itertools.product(*list(self._iterables(d_sorted)))
+        return np.array([d_sorted.dot(c) for c in configurations])
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        d = 2**(self.nqubits - self.qubits[0])
-        slice = np.array([x + d * y for x in range(d // 2)
-                          for y in range(self.nstates // d)])
-        return tuple(slice), tuple(slice + d // 2)
+        d = 2 ** (self.nqubits - np.array(self.qubits))
+        slicer = self._base_slicer(d)
+        return tuple(slicer), tuple(slicer + d[0] // 2)
+
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
+
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
+        # Set nqubits for the case the gate is called outside of the circuit
+        if self._nqubits is None:
+            self.nqubits = int(np.log2(state.shape[0]))
+
         slice0, slice1 = self._create_slicers()
         state0 = tf.gather(state, slice0)
         state1 = tf.gather(state, slice1)
 
-        new0 = self._call_0(state0, state1)
-        new1 = self._call_1(state0, state1)
+        new0 = self.call_0(state0, state1)
+        new1 = self.call_1(state0, state1)
 
         slice0 = tf.constant(slice0)[:, tf.newaxis]
         slice1 = tf.constant(slice1)[:, tf.newaxis]
@@ -42,14 +56,9 @@ class TensorflowGate:
 class TensorflowControlledGate(TensorflowGate):
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        dc = 2 ** (self.nqubits - self.qubits[0])
-        dt = 2 ** (self.nqubits - self.qubits[1])
-        dmin, dmax = min(dc, dt), max(dc, dt)
-        slice = np.array([x + dmin * y + dmax * z
-                          for x in range(dmin // 2)
-                          for y in range(dmax // (2 * dmin))
-                          for z in range(self.nstates // dmax)])
-        return tuple(slice + dc // 2), tuple(slice + (dc + dt) // 2)
+        d = 2 ** (self.nqubits - np.array(self.qubits))
+        slicer = self._base_slicer(d)
+        return tuple(slicer + d[0] // 2), tuple(slicer + (d[0] + d[1]) // 2)
 
 
 class H(TensorflowGate, base_gates.H):
@@ -57,10 +66,10 @@ class H(TensorflowGate, base_gates.H):
     def __init__(self, *args):
         base_gates.H.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return (state0 + state1) / np.sqrt(2)
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return (state0 - state1) / np.sqrt(2)
 
 
@@ -69,10 +78,10 @@ class X(TensorflowGate, base_gates.X):
     def __init__(self, *args):
         base_gates.X.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state1
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
 
@@ -81,10 +90,10 @@ class Y(TensorflowGate, base_gates.Y):
     def __init__(self, *args):
         base_gates.Y.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return -1j * state1
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return 1j * state0
 
 
@@ -93,10 +102,10 @@ class Z(TensorflowGate, base_gates.Z):
     def __init__(self, *args):
         base_gates.Z.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return -state1
 
 
@@ -111,10 +120,10 @@ class Iden(TensorflowGate, base_gates.Iden):
     def __init__(self, *args):
         base_gates.Iden.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state1
 
 
@@ -145,10 +154,10 @@ class RX(TensorflowGate, base_gates.RX):
         self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
         self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * (self.cos * state0 - 1j * self.sin * state1)
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * (- 1j * self.sin * state0 + self.cos * state1)
 
 
@@ -161,10 +170,10 @@ class RY(TensorflowGate, base_gates.RY):
         self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
         self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * (self.cos * state0 - self.sin * state1)
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * (self.sin * state0 + self.cos * state1)
 
 
@@ -174,10 +183,10 @@ class RZ(TensorflowGate, base_gates.RZ):
         base_gates.RZ.__init__(self, *args)
         self.phase = tf.exp(1j * np.pi * self.theta)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * state1
 
 
@@ -186,10 +195,10 @@ class CNOT(TensorflowControlledGate, base_gates.CNOT):
     def __init__(self, *args):
         base_gates.CNOT.__init__(self, *args)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state1
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
 
@@ -199,19 +208,14 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         base_gates.SWAP.__init__(self, *args)
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        dc = 2 ** (self.nqubits - self.qubits[0])
-        dt = 2 ** (self.nqubits - self.qubits[1])
-        dmin, dmax = min(dc, dt), max(dc, dt)
-        slice = np.array([x + dmin * y + dmax * z
-                          for x in range(dmin // 2)
-                          for y in range(dmax // (2 * dmin))
-                          for z in range(self.nstates // dmax)])
-        return tuple(slice + dc // 2), tuple(slice + dt // 2)
+        d = 2 ** (self.nqubits - np.array(self.qubits))
+        slicer = self._base_slicer(d)
+        return tuple(slicer + d[0] // 2), tuple(slicer + d[1] // 2)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state1
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
 
@@ -221,10 +225,10 @@ class CRZ(TensorflowControlledGate, base_gates.CRZ):
         base_gates.CRZ.__init__(self, *args)
         self.phase = tf.exp(1j * np.pi * self.theta)
 
-    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
 
-    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return self.phase * state1
 
 
@@ -232,6 +236,18 @@ class Toffoli(TensorflowGate, base_gates.Toffoli):
 
     def __init__(self, *args):
         base_gates.Toffoli.__init__(self, *args)
+
+    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+        d = 2 ** (self.nqubits - np.array(self.qubits))
+        slicer = self._base_slicer(d)
+        c = (d[0] + d[1]) // 2
+        return tuple(slicer + c), tuple(slicer + c + d[2] // 2)
+
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state1
+
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

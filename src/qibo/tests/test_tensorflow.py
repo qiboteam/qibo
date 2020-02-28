@@ -4,7 +4,6 @@ Testing tensorflow backend.
 import numpy as np
 from qibo.models import Circuit
 from qibo import gates
-import pytest
 
 
 def test_circuit_sanity():
@@ -155,7 +154,7 @@ def test_swap():
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_toffoli_no_effect():
     """Check Toffoli gate is working properly on |010>."""
     c = Circuit(3)
@@ -166,7 +165,7 @@ def test_toffoli_no_effect():
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_toffoli():
     """Check Toffoli gate is working properly on |110>."""
     c = Circuit(3)
@@ -179,7 +178,6 @@ def test_toffoli():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
     theta = 0.1234
@@ -206,7 +204,7 @@ def test_custom_circuit():
     r3 = tf_custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r2, r3)
 
-@pytest.mark.skip
+
 def test_compiled_circuit():
     """Check that compiling with `Circuit.compile` does not break results."""
     def create_circuit(theta = 0.1234):
@@ -227,7 +225,7 @@ def test_compiled_circuit():
 
     np.testing.assert_allclose(r1, r2)
 
-@pytest.mark.skip
+
 def test_circuit_custom_compilation():
     theta = 0.1234
     init_state = np.ones(4) / 2.0

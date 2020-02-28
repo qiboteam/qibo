@@ -36,6 +36,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Executes the Tensorflow circuit."""
         if initial_state is None:
             state = self._default_initial_state()
+        else:
+            state = tf.cast(initial_state, dtype=self.dtype)
+
         if self.compiled_execute is None:
             return self._execute_func(state)
         return self.compiled_execute(state)
