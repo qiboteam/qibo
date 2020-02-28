@@ -16,13 +16,14 @@ class TensorflowGate:
     def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
 
+    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+      d = 2**(self.nqubits - self.qubits[0])
+      slice = np.array([x + d * y for x in range(d // 2) for y in range(self.nstates // d)])
+      return tuple(slice), tuple(slice + d // 2)
+
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
-        d = 2**(self.nqubits - self.qubits[0])
-        slice = np.array([x + d * y for x in range(d // 2) for y in range(self.nstates // d)])
-        slice0 = tuple(slice)
-        slice1 = tuple(slice + d // 2)
-
+        slice0, slice1 = self._create_slicers()
         state0 = tf.gather(state, slice0)
         state1 = tf.gather(state, slice1)
 
@@ -39,30 +40,15 @@ class TensorflowGate:
 
 class TensorflowControlledGate(TensorflowGate):
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        """Implements the `Gate` on a given state."""
-        dc = 2 ** (self.nqubits - self.qubits[0])
-        dt = 2 ** (self.nqubits - self.qubits[1])
-        dmin, dmax = min(dc, dt), max(dc, dt)
-        slice = np.array([x + dmin * y + dmax * z
-                          for x in range(dmin // 2)
-                          for y in range(dmax // (2 * dmin))
-                          for z in range(self.nstates // dmax)])
-        slice0 = tuple(slice + dc // 2)
-        slice1 = tuple(slice + (dc + dt) // 2)
-
-        state0 = tf.gather(state, slice0)
-        state1 = tf.gather(state, slice1)
-
-        new0 = self._call_0(state0, state1)
-        new1 = self._call_1(state0, state1)
-
-        slice0 = tf.constant(slice0)[:, tf.newaxis]
-        slice1 = tf.constant(slice1)[:, tf.newaxis]
-
-        new = tf.tensor_scatter_nd_update(state, slice0, new0)
-        new = tf.tensor_scatter_nd_update(new, slice1, new1)
-        return new
+    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+      dc = 2 ** (self.nqubits - self.qubits[0])
+      dt = 2 ** (self.nqubits - self.qubits[1])
+      dmin, dmax = min(dc, dt), max(dc, dt)
+      slice = np.array([x + dmin * y + dmax * z
+                        for x in range(dmin // 2)
+                        for y in range(dmax // (2 * dmin))
+                        for z in range(self.nstates // dmax)])
+      return tuple(slice + dc // 2), tuple(slice + (dc + dt) // 2)
 
 
 class H(TensorflowGate, base_gates.H):
