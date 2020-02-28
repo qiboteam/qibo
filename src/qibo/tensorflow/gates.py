@@ -17,9 +17,10 @@ class TensorflowGate:
         raise NotImplementedError
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-      d = 2**(self.nqubits - self.qubits[0])
-      slice = np.array([x + d * y for x in range(d // 2) for y in range(self.nstates // d)])
-      return tuple(slice), tuple(slice + d // 2)
+        d = 2**(self.nqubits - self.qubits[0])
+        slice = np.array([x + d * y for x in range(d // 2)
+                          for y in range(self.nstates // d)])
+        return tuple(slice), tuple(slice + d // 2)
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
@@ -41,14 +42,14 @@ class TensorflowGate:
 class TensorflowControlledGate(TensorflowGate):
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-      dc = 2 ** (self.nqubits - self.qubits[0])
-      dt = 2 ** (self.nqubits - self.qubits[1])
-      dmin, dmax = min(dc, dt), max(dc, dt)
-      slice = np.array([x + dmin * y + dmax * z
-                        for x in range(dmin // 2)
-                        for y in range(dmax // (2 * dmin))
-                        for z in range(self.nstates // dmax)])
-      return tuple(slice + dc // 2), tuple(slice + (dc + dt) // 2)
+        dc = 2 ** (self.nqubits - self.qubits[0])
+        dt = 2 ** (self.nqubits - self.qubits[1])
+        dmin, dmax = min(dc, dt), max(dc, dt)
+        slice = np.array([x + dmin * y + dmax * z
+                          for x in range(dmin // 2)
+                          for y in range(dmax // (2 * dmin))
+                          for z in range(self.nstates // dmax)])
+        return tuple(slice + dc // 2), tuple(slice + (dc + dt) // 2)
 
 
 class H(TensorflowGate, base_gates.H):
@@ -197,29 +198,21 @@ class SWAP(TensorflowGate, base_gates.SWAP):
     def __init__(self, *args):
         base_gates.SWAP.__init__(self, *args)
 
-    def slice_generator(self, control: int, q: int, is_one: bool = False) -> int:
-        q = self.nqubits - q - 1 # because we use "cirq" like order
-        control = self.nqubits - control - 1
-        s = (q + 1) * int(is_one)
-        while s < self.nstates:
-            for i in range(s, s + q + 1):
-                if control is None:
-                    yield i
-                elif (i // 2**control) % 2 == 1:
-                    yield i
-            s += 2 * q + 2
+    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+        dc = 2 ** (self.nqubits - self.qubits[0])
+        dt = 2 ** (self.nqubits - self.qubits[1])
+        dmin, dmax = min(dc, dt), max(dc, dt)
+        slice = np.array([x + dmin * y + dmax * z
+                          for x in range(dmin // 2)
+                          for y in range(dmax // (2 * dmin))
+                          for z in range(self.nstates // dmax)])
+        return tuple(slice + dc // 2), tuple(slice + dt // 2)
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        d1 = 2 ** (self.nqubits - self.qubits[0] - 1)
-        d2 = 2 ** (self.nqubits - self.qubits[1] - 1)
-        ind01, ind10 = [], []
-        for i in range(self.nstates):
-            b1 = (i // d1) % 2
-            b2 = (i // d2) % 2
-            if not b1 and b2:
-                ind01.append(i)
-            elif b1 and not b2:
-                ind10.append(i)
+    def _call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state1
+
+    def _call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        return state0
 
 
 class CRZ(TensorflowControlledGate, base_gates.CRZ):

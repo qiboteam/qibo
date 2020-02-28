@@ -128,7 +128,23 @@ def test_cnot():
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
+def test_crz():
+    """Check CRZ gate is working properly on |11>."""
+    theta = 0.1234
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CRZ(0, 1, theta))
+    final_state = c.execute().numpy()
+
+    phase = np.exp(1j * np.pi * theta)
+    target_state = np.zeros_like(final_state)
+    target_state[-1] = phase
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_swap():
     """Check SWAP gate is working properly on |01>."""
     c = Circuit(2)
@@ -162,21 +178,6 @@ def test_toffoli():
     target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-
-def test_crz():
-    """Check CRZ gate is working properly on |11>."""
-    theta = 0.1234
-
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
-    final_state = c.execute().numpy()
-
-    phase = np.exp(1j * np.pi * theta)
-    target_state = np.zeros_like(final_state)
-    target_state[-1] = phase
-    np.testing.assert_allclose(final_state, target_state)
 
 @pytest.mark.skip
 def test_custom_circuit():
