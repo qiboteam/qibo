@@ -12,9 +12,9 @@ class TensorflowGate:
     from qibo.config import DTYPECPX as dtype
 
     def _iterables(self, d):
-      for i in range(1, len(d)):
-          yield range(d[i] // (2 * d[i - 1]))
-      yield range(self.nstates // d[-1])
+        for i in range(1, len(d)):
+            yield range(d[i] // (2 * d[i - 1]))
+        yield range(self.nstates // d[-1])
 
     def _base_slicer(self, d: np.ndarray) -> np.ndarray:
         d_sorted = np.array([1] + list(np.sort(d)))
@@ -22,9 +22,14 @@ class TensorflowGate:
         return np.array([d_sorted.dot(c) for c in configurations])
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+        if len(self.target_qubits) > 1:
+            raise NotImplementedError("Basic slicer implementation works only "
+                                      "for one target qubit but was called on "
+                                      "{}.".format(self.target_qubits))
         d = 2 ** (self.nqubits - np.array(self.qubits))
         slicer = self._base_slicer(d)
-        return tuple(slicer), tuple(slicer + d[0] // 2)
+        c = d[:len(self.control_qubits)].sum() // 2
+        return tuple(slicer + c), tuple(slicer + c + d[-1] // 2)
 
     def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
@@ -51,14 +56,6 @@ class TensorflowGate:
         new = tf.tensor_scatter_nd_update(state, slice0, new0)
         new = tf.tensor_scatter_nd_update(new, slice1, new1)
         return new
-
-
-class TensorflowControlledGate(TensorflowGate):
-
-    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        d = 2 ** (self.nqubits - np.array(self.qubits))
-        slicer = self._base_slicer(d)
-        return tuple(slicer + d[0] // 2), tuple(slicer + (d[0] + d[1]) // 2)
 
 
 class H(TensorflowGate, base_gates.H):
@@ -190,19 +187,13 @@ class RZ(TensorflowGate, base_gates.RZ):
         return self.phase * state1
 
 
-class CNOT(TensorflowControlledGate, base_gates.CNOT):
+class CNOT(X, base_gates.CNOT):
 
     def __init__(self, *args):
         base_gates.CNOT.__init__(self, *args)
 
-    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state1
 
-    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state0
-
-
-class SWAP(TensorflowGate, base_gates.SWAP):
+class SWAP(X, base_gates.SWAP):
 
     def __init__(self, *args):
         base_gates.SWAP.__init__(self, *args)
@@ -210,44 +201,21 @@ class SWAP(TensorflowGate, base_gates.SWAP):
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
         d = 2 ** (self.nqubits - np.array(self.qubits))
         slicer = self._base_slicer(d)
-        return tuple(slicer + d[0] // 2), tuple(slicer + d[1] // 2)
-
-    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state1
-
-    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state0
+        c = d[:len(self.control_qubits)].sum() // 2
+        return tuple(slicer + c + d[-2] // 2), tuple(slicer + c + d[-1] // 2)
 
 
-class CRZ(TensorflowControlledGate, base_gates.CRZ):
+class CRZ(RZ, base_gates.CRZ):
 
     def __init__(self, *args):
         base_gates.CRZ.__init__(self, *args)
         self.phase = tf.exp(1j * np.pi * self.theta)
 
-    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state0
 
-    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return self.phase * state1
-
-
-class Toffoli(TensorflowGate, base_gates.Toffoli):
+class Toffoli(X, base_gates.Toffoli):
 
     def __init__(self, *args):
         base_gates.Toffoli.__init__(self, *args)
-
-    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        d = 2 ** (self.nqubits - np.array(self.qubits))
-        slicer = self._base_slicer(d)
-        c = (d[0] + d[1]) // 2
-        return tuple(slicer + c), tuple(slicer + c + d[2] // 2)
-
-    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state1
-
-    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        return state0
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):
