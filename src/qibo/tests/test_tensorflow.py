@@ -22,6 +22,40 @@ def test_circuit_add():
     assert c.depth == 3
 
 
+def test_circuit_addition():
+    """Check if circuit addition increases depth."""
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.H(1))
+    assert c1.depth == 2
+
+    c2 = Circuit(2)
+    c2.add(gates.CNOT(0, 1))
+    assert c2.depth == 1
+
+    c3 = c1 + c2
+    assert c3.depth == 3
+
+
+def test_circuit_addition_result():
+    """Check if circuit addition works properly on Tensorflow circuit."""
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.H(1))
+
+    c2 = Circuit(2)
+    c2.add(gates.CNOT(0, 1))
+
+    c3 = c1 + c2
+
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 1))
+
+    np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
+
+
 def test_hadamard():
     """Check Hadamard gate is working properly."""
     c = Circuit(2)
