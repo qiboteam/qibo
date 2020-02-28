@@ -4,7 +4,7 @@ import itertools
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from typing import Optional, Tuple
+from typing import Tuple
 
 
 class TensorflowGate:
