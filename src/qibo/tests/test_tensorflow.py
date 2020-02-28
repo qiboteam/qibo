@@ -107,7 +107,7 @@ def test_ry():
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_cnot_no_effect():
     """Check CNOT gate is working properly on |00>."""
     c = Circuit(2)
@@ -117,7 +117,7 @@ def test_cnot_no_effect():
     target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_cnot():
     """Check CNOT gate is working properly on |10>."""
     c = Circuit(2)
@@ -162,7 +162,7 @@ def test_toffoli():
     target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
-@pytest.mark.skip
+
 def test_crz():
     """Check CRZ gate is working properly on |11>."""
     theta = 0.1234
