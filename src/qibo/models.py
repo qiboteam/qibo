@@ -89,7 +89,7 @@ class VQE(object):
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
 
-    def minimize(self, initial_state, method='BFGS', options=None):
+    def minimize(self, initial_state, method='BFGS', options=None, compile=True):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
@@ -105,14 +105,18 @@ class VQE(object):
             s = self.ansatz(params)
             return self.hamiltonian.expectation(s)
 
-        if method is 'BFGS':
+        if compile:
+            from qibo.config import K
+            loss = K.function(loss)
+
+        if method is 'cma':
+            raise NotImplementedError('Method not implemented')
+        else:
             import numpy as np
             from scipy.optimize import minimize
             n = self.hamiltonian.nqubits
-            m = minimize(loss, initial_state,
+            m = minimize(lambda p: loss(p).numpy(), initial_state,
                          method=method, options=options)
             result = m.fun
             parameters = m.x
-        else:
-            raise NotImplementedError('Method not implemented')
         return result, parameters
