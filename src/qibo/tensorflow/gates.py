@@ -11,14 +11,12 @@ class TensorflowGate:
     """The base Tensorflow gate."""
     from qibo.config import DTYPECPX as dtype
 
-    def _iterables(self, d):
-        for i in range(1, len(d)):
-            yield range(d[i] // (2 * d[i - 1]))
-        yield range(self.nstates // d[-1])
-
     def _base_slicer(self, d: np.ndarray) -> np.ndarray:
         d_sorted = np.array([1] + list(np.sort(d)))
-        configurations = itertools.product(*list(self._iterables(d_sorted)))
+        generators = [range(d_sorted[i] // (2 * d_sorted[i - 1]))
+                      for i in range(1, len(d_sorted))]
+        generators.append(range(self.nstates // d_sorted[-1]))
+        configurations = itertools.product(*generators)
         return np.array([d_sorted.dot(c) for c in configurations])
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
