@@ -34,6 +34,7 @@ def test_vqe():
         return c()
 
     hamiltonian = XXZ(nqubits=nqubits)
+    np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
