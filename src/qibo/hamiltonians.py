@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo.config import matrices
+from qibo.config import matrices, K
 from abc import ABCMeta, abstractmethod
 
 
@@ -35,8 +35,10 @@ class Hamiltonian(object):
         Args:
             state (array): the expectation state.
         """
-        n = np.dot(np.conj(state).T, np.dot(self.hamiltonian, state))
-        return np.real(n)
+        a = K.math.conj(state)
+        b = K.tensordot(self.hamiltonian, state, axes=1)
+        n = K.math.real(K.reduce_sum(a*b))
+        return n
 
 
 class XXZ(Hamiltonian):
