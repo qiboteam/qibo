@@ -109,13 +109,13 @@ class VQE(object):
             from qibo.config import K
             loss = K.function(loss)
 
-        if method is 'cma':
+        if method == 'cma':
             # Genetic optimizer
             import cma
             r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
             result = r[1].result.fbest
             parameters = r[1].result.xbest
-        elif method is 'sgd':
+        elif method == 'sgd':
             from qibo.config import K
             vparams = K.Variable(initial_state)
             opt = K.optimizers.Adagrad(learning_rate=0.001)
