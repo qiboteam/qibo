@@ -1,10 +1,34 @@
 """
 Testing Variational Quantum Eigensolver.
 """
+import pathlib
 import numpy as np
 from qibo.models import Circuit, VQE
 from qibo import gates
 from qibo.hamiltonians import XXZ
+
+
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name('regressions')
+
+def assert_regression_fixture(array, filename):
+    """Check array matches data inside filename.
+
+    Args:
+        array: numpy array/
+        filename: fixture filename
+
+    If filename does not exists, this function
+    creates the missing file otherwise it loads
+    from file and compare.
+    """
+    def load(filename):
+        return np.loadtxt(filename)
+    try:
+        array_fixture = load(filaneme)
+    except:
+        np.savetxt(filename, array)
+        array_fixture = load(filename)
+    np.testing.assert_array_equal(array, array_fixture)
 
 
 def test_vqe():
@@ -39,3 +63,4 @@ def test_vqe():
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS', options={'maxiter': 1})
+    assert_regression_fixture(params, REGRESSION_FOLDER/'vqe.out')
