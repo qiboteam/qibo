@@ -110,8 +110,15 @@ class VQE(object):
             loss = K.function(loss)
 
         if method is 'cma':
-            raise NotImplementedError('Method not implemented')
+            # Genetic optimizer
+            import cma
+            r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
+            result = r[1].result.fbest
+            parameters = r[1].result.xbest
+        elif method is 'sgd':
+            raise NotImplementedError('SGD not implemented')
         else:
+            # Newtonian approaches
             import numpy as np
             from scipy.optimize import minimize
             n = self.hamiltonian.nqubits
