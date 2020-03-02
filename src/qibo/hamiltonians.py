@@ -15,20 +15,18 @@ class Hamiltonian(object):
     def __init__(self, nqubits):
         self.hamiltonian = None
         self.nqubits = nqubits
-        self._min_eigenvalue = None
+        self._eigenvalues = None
 
     @abstractmethod
     def _build(self, sigma):
         """Implements the Hamiltonian construction."""
         pass
 
-    def min_eigenvalue(self):
+    def eigenvalues(self):
         """Computes the minimum eigenvalue for the Hamiltonian."""
-        if self._min_eigenvalue is None:
-            self._min_eigenvalue = np.min(
-                np.linalg.eigvalsh(self.hamiltonian)
-            )
-        return self._min_eigenvalue
+        if self._eigenvalues is None:
+            self._eigenvalues = K.linalg.eigvalsh(self.hamiltonian)
+        return self._eigenvalues
 
     def expectation(self, state):
         """Computes the real expectation value for a given state.
