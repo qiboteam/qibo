@@ -1,17 +1,23 @@
 """
 Testing Variational Quantum Eigensolver.
 """
+import argparse
 import numpy as np
 from qibo.models import Circuit, VQE
 from qibo import gates
 from qibo.hamiltonians import XXZ
 
 
-def main():
+parser = argparse.ArgumentParser()
+parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
+parser.add_argument("--layers", default=4, help="Number of layers.", type=int)
+
+
+def main(nqubits, layers):
     """Performs a VQE circuit minimization test."""
 
-    nqubits = 6
-    layers  = 4
+    print("Number of qubits:", nqubits)
+    print("Number of layers:", layers)
 
     def ansatz(theta):
         c = Circuit(nqubits)
@@ -42,11 +48,12 @@ def main():
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
-    best, params = v.minimize(initial_parameters)
+    best, params = v.minimize(initial_parameters, method='BFGS')
     epsilon = np.log10(1/np.abs(best-target))
     print('Found state =', best)
     print('Final eps =', epsilon)
 
 
 if __name__ == "__main__":
-    main()
+    args = vars(parser.parse_args())
+    main(**args)

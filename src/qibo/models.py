@@ -116,7 +116,19 @@ class VQE(object):
             result = r[1].result.fbest
             parameters = r[1].result.xbest
         elif method is 'sgd':
-            raise NotImplementedError('SGD not implemented')
+            from qibo.config import K
+            vparams = K.Variable(initial_state)
+            opt = K.optimizers.Adagrad(learning_rate=0.001)
+            with K.GradientTape() as t:
+                l = loss(vparams)
+            trainable_variables = [vparams]
+            grad = t.gradient(l, trainable_variables)
+            for e in range(1000000):
+                opt.apply_gradients(zip(grad, trainable_variables))
+                if e % 1000 == True:
+                    print('ite %d : loss %f' % (e, loss(vparams).numpy()))
+            result = loss(vparams).numpy()
+            parameters = vparams.numpy()
         else:
             # Newtonian approaches
             import numpy as np
