@@ -18,7 +18,7 @@ class Hamiltonian(object):
         self._eigenvalues = None
 
     @abstractmethod
-    def _build(self, sigma):
+    def _build(self, *args, **kwargs):
         """Implements the Hamiltonian construction."""
         pass
 
@@ -62,7 +62,7 @@ class XXZ(Hamiltonian):
         hz = self._build(matrices._npZ())
         self.hamiltonian = hx + hy + delta * hz
 
-    def _build(self, sigma):
+    def _build(self, *args, **kwargs):
         """Builds the Heisenber model for a given operator sigma"""
         hamiltonian = 0
         eye = matrices._npI()
@@ -71,7 +71,7 @@ class XXZ(Hamiltonian):
             h = 1
             for j in range(n):
                 if i == j % n or i == (j+1) % n:
-                    h = np.kron(sigma, h)
+                    h = np.kron(args[0], h)
                 else:
                     h = np.kron(eye, h)
             hamiltonian += h
