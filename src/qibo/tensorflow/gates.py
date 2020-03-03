@@ -11,20 +11,31 @@ class TensorflowGate:
     """The base Tensorflow gate."""
     from qibo.config import DTYPECPX as dtype
 
-    def _base_slicer(self, d: np.ndarray) -> np.ndarray:
-        d_sorted = np.array([1] + list(np.sort(d)))
-        generators = [range(d_sorted[i] // (2 * d_sorted[i - 1]))
-                      for i in range(1, len(d_sorted))]
-        generators.append(range(self.nstates // d_sorted[-1]))
-        return np.array(list(itertools.product(*generators))).dot(d_sorted)
+    #def _base_slicer(self, d: np.ndarray) -> np.ndarray:
+#        d_sorted = np.array([1] + list(np.sort(d)))
+#        generators = [range(d_sorted[i] // (2 * d_sorted[i - 1]))
+#                      for i in range(1, len(d_sorted))]
+#        generators.append(range(self.nstates // d_sorted[-1]))
+#        return np.array(list(itertools.product(*generators))).dot(d_sorted)
+
+    def _base_slicer(self, target: int) -> np.ndarray:
+        nbits = self.nqubits - 1
+        mask = (1 << target) - 1
+        not_mask = (1 << nbits) - 1 - mask
+
+        configs = np.arange(2**nbits, dtype=np.int32)
+        return (configs & mask) | ((configs & not_mask) << 1)
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
         if len(self.target_qubits) > 1:
             raise NotImplementedError("Basic slicer implementation works only "
                                       "for one target qubit but was called on "
                                       "{}.".format(self.target_qubits))
+        if self.control_qubits:
+            raise NotImplementedError
+
         d = 2 ** (self.nqubits - np.array(self.qubits))
-        slicer = self._base_slicer(d)
+        slicer = self._base_slicer(self.target_qubits[0])
         c = d[:len(self.control_qubits)].sum() // 2
         return tuple(slicer + c), tuple(slicer + c + d[-1] // 2)
 
