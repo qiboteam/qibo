@@ -16,8 +16,7 @@ class TensorflowGate:
         generators = [range(d_sorted[i] // (2 * d_sorted[i - 1]))
                       for i in range(1, len(d_sorted))]
         generators.append(range(self.nstates // d_sorted[-1]))
-        configurations = itertools.product(*generators)
-        return np.array([d_sorted.dot(c) for c in configurations])
+        return np.array(list(itertools.product(*generators))).dot(d_sorted)
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
         if len(self.target_qubits) > 1:
