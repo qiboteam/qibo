@@ -216,7 +216,7 @@ def test_multiple_swap():
     c = Circuit(4)
     c.add(gates.X(1))
     c.add(gates.H(3))
-    target_state = c.execute().numpy() + 1
+    target_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
 

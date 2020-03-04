@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import itertools
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from typing import Tuple
+from typing import List
 
 
 class TensorflowGate:
@@ -29,20 +28,22 @@ class TensorflowGate:
     def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
 
+    def _get_slices(self) -> List[np.ndarray]:
+        qubits = self.nqubits - np.array(self.qubits) - 1
+        slicer = self._base_slicer(qubits)
+
+        target = 2 ** qubits[-1]
+        control = (2 ** qubits[:-1]).sum()
+
+        return [slicer + control, slicer + control + target]
+
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         # Set nqubits for the case the gate is called outside of the circuit
         if self._nqubits is None:
             self.nqubits = int(np.log2(state.shape[0]))
 
-        qubits = self.nqubits - np.array(self.qubits) - 1
-        slicer = self._base_slicer(qubits)
-
-        exponents = 2 ** qubits
-        target = exponents[-1]
-        control = exponents[:-1].sum()
-
-        slices = [slicer + control, slicer + control + target]
+        slices = self._get_slices()
         states = [tf.gather(state, s) for s in slices]
 
         new0 = tf.IndexedSlices(self.call_0(states[0], states[1]),
@@ -51,14 +52,14 @@ class TensorflowGate:
                                 slices[1], [self.nstates])
         new_state = tf.add(new0, new1)
 
-        if not self.control_qubits:
-            return new_state
+        if self.control_qubits or len(self.target_qubits) > 1:
+            all_indices = np.concatenate(slices)
+            mask = tf.constant(len(all_indices) * [1.0], dtype=self.dtype)
+            mask = tf.convert_to_tensor(
+                tf.IndexedSlices(mask, all_indices, [self.nstates]))
+            return state * (1.0 - mask) + new_state
 
-        all_indices = np.concatenate(slices)
-        mask = tf.constant(len(all_indices) * [1.0], dtype=self.dtype)
-        mask = tf.convert_to_tensor(
-            tf.IndexedSlices(mask, all_indices, [self.nstates]))
-        return state * (1.0 - mask) + new_state
+        return new_state
 
 
 class H(TensorflowGate, base_gates.H):
@@ -201,14 +202,14 @@ class SWAP(X, base_gates.SWAP):
     def __init__(self, *args):
         base_gates.SWAP.__init__(self, *args)
 
-    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
+    def _get_slices(self) -> List[np.ndarray]:
         qubits = self.nqubits - np.array(self.qubits) - 1
         slicer = self._base_slicer(qubits)
 
         targets = 2 ** qubits[-2:]
         control = (2 ** qubits[:-2]).sum()
 
-        return tuple(slicer + control + targets[0]), tuple(slicer + control + targets[1])
+        return [slicer + control + targets[0], slicer + control + targets[1]]
 
 
 class CRZ(RZ, base_gates.CRZ):
