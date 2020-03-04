@@ -19,6 +19,8 @@ if BACKEND_NAME == "tensorflow":
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
+    # Backend access
+    K = tf
 
     # Default types
     DTYPE = tf.float64
