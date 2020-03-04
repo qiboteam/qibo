@@ -72,6 +72,10 @@ for i in range(100):
 ### How to write a VQE?
 
 The VQE requires an ansatz function and a Hamiltonian object.
+There are examples of VQE optimization in `src/qibo/benchmarks`:
+- `vqe_benchmark.py`: a simple example with the XXZ model.
+- `adaptive_vqe_benchmark.py`: an adaptive example with the XXZ model.
+
 Here a simple example using the Heisenberg XXZ model:
 ```python
 import numpy as np
