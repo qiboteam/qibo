@@ -207,16 +207,8 @@ class SWAP(X, base_gates.SWAP):
         qubits = self.nqubits - np.array(self.qubits) - 1
         slicer = self._base_slicer(qubits)
 
-        print(self.target_qubits)
-        print(self.control_qubits)
-        print(qubits)
-        print()
-
         targets = 2 ** qubits[-2:]
         control = (2 ** qubits[:-2]).sum()
-        print(targets)
-        print(control)
-        print("\n")
 
         return tuple(slicer + control + targets[0]), tuple(slicer + control + targets[1])
 
