@@ -23,19 +23,6 @@ class TensorflowGate:
 
         return configs
 
-    def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        if len(self.target_qubits) > 1:
-            raise NotImplementedError("Basic slicer implementation works only "
-                                      "for one target qubit but was called on "
-                                      "{}.".format(self.target_qubits))
-
-        qubits = self.nqubits - np.array(self.qubits) - 1
-        slicer = self._base_slicer(qubits)
-
-        target = 2 ** qubits[-1]
-        control = (2 ** qubits[:-1]).sum()
-        return tuple(slicer + control), tuple(slicer + control + target)
-
     def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
 
@@ -48,19 +35,30 @@ class TensorflowGate:
         if self._nqubits is None:
             self.nqubits = int(np.log2(state.shape[0]))
 
-        slice0, slice1 = self._create_slicers()
-        state0 = tf.gather(state, slice0)
-        state1 = tf.gather(state, slice1)
+        qubits = self.nqubits - np.array(self.qubits) - 1
+        slicer = self._base_slicer(qubits)
 
-        new0 = self.call_0(state0, state1)
-        new1 = self.call_1(state0, state1)
+        exponents = 2 ** qubits
+        target = exponents[-1]
+        control = exponents[:-1].sum()
 
-        slice0 = tf.constant(slice0)[:, tf.newaxis]
-        slice1 = tf.constant(slice1)[:, tf.newaxis]
+        slices = [slicer + control, slicer + control + target]
+        states = [tf.gather(state, s) for s in slices]
 
-        new = tf.tensor_scatter_nd_update(state, slice0, new0)
-        new = tf.tensor_scatter_nd_update(new, slice1, new1)
-        return new
+        new0 = tf.IndexedSlices(self.call_0(states[0], states[1]),
+                                slices[0], [self.nstates])
+        new1 = tf.IndexedSlices(self.call_1(states[0], states[1]),
+                                slices[1], [self.nstates])
+        new_state = tf.add(new0, new1)
+
+        if not self.control_qubits:
+            return new_state
+
+        all_indices = np.concatenate(slices)
+        mask = tf.constant(len(all_indices) * [1.0], dtype=self.dtype)
+        mask = tf.convert_to_tensor(
+            tf.IndexedSlices(mask, all_indices, [self.nstates]))
+        return state * (1.0 - mask) + new_state
 
 
 class H(TensorflowGate, base_gates.H):
