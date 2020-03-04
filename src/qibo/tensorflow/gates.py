@@ -117,7 +117,8 @@ class RX(TensorflowGate, base_gates.RX):
     def __init__(self, *args):
         base_gates.RX.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta / 2.0)
+        theta = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * np.pi * theta / 2.0)
         cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
         sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
         self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.X)
@@ -128,7 +129,8 @@ class RY(TensorflowGate, base_gates.RY):
     def __init__(self, *args):
         base_gates.RY.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta / 2.0)
+        theta = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * np.pi * theta / 2.0)
         cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
         sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
         self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.Y)
@@ -139,7 +141,8 @@ class RZ(TensorflowGate, base_gates.RZ):
     def __init__(self, *args):
         base_gates.RZ.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta)
+        theta = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * np.pi * theta)
         rz = tf.eye(2, dtype=self.dtype)
         self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
 
@@ -163,7 +166,8 @@ class CRZ(TensorflowGate, base_gates.CRZ):
     def __init__(self, *args):
         base_gates.CRZ.__init__(self, *args)
 
-        phase = tf.exp(1j * np.pi * self.theta)
+        theta = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * np.pi * theta)
         crz = tf.eye(4, dtype=self.dtype)
         crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
         self.matrix = tf.reshape(crz, 4 * (2,))
