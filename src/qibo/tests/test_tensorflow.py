@@ -204,6 +204,24 @@ def test_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_multiple_swap():
+    """Check SWAP gate is working properly when called multiple times."""
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.H(2))
+    c.add(gates.SWAP(2, 3))
+    c.add(gates.SWAP(0, 1))
+
+    final_state = c.execute().numpy()
+
+    c = Circuit(4)
+    c.add(gates.X(1))
+    c.add(gates.H(3))
+    target_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_controlled_by_swap():
     """Check controlled SWAP using controlled by."""
     c = Circuit(3)

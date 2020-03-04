@@ -204,10 +204,21 @@ class SWAP(X, base_gates.SWAP):
         base_gates.SWAP.__init__(self, *args)
 
     def _create_slicers(self) -> Tuple[Tuple[int], Tuple[int]]:
-        d = 2 ** (self.nqubits - np.array(self.qubits))
-        slicer = self._base_slicer(d)
-        c = d[:len(self.control_qubits)].sum() // 2
-        return tuple(slicer + c + d[-2] // 2), tuple(slicer + c + d[-1] // 2)
+        qubits = self.nqubits - np.array(self.qubits) - 1
+        slicer = self._base_slicer(qubits)
+
+        print(self.target_qubits)
+        print(self.control_qubits)
+        print(qubits)
+        print()
+
+        targets = 2 ** qubits[-2:]
+        control = (2 ** qubits[:-2]).sum()
+        print(targets)
+        print(control)
+        print("\n")
+
+        return tuple(slicer + control + targets[0]), tuple(slicer + control + targets[1])
 
 
 class CRZ(RZ, base_gates.CRZ):
