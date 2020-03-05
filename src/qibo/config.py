@@ -21,9 +21,9 @@ if BACKEND_NAME == "tensorflow":
     import tensorflow as tf
 
     # Default types
-    DTYPE = tf.float32
+    DTYPE = tf.float64
     DTYPEINT = tf.int32
-    DTYPECPX = tf.complex64
+    DTYPECPX = tf.complex128
 
     from qibo.tensorflow import gates
     from qibo.tensorflow import circuit as tensorflow_circuit
