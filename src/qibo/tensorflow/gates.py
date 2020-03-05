@@ -204,6 +204,7 @@ class SWAP(X, base_gates.SWAP):
 
     def _get_slices(self) -> List[np.ndarray]:
         qubits = self.nqubits - np.array(self.qubits) - 1
+        qubits.sort()
         slicer = self._base_slicer(qubits)
 
         targets = 2 ** qubits[-2:]
