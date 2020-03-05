@@ -182,7 +182,7 @@ class RZ(TensorflowGate, base_gates.RZ):
 
     def __init__(self, *args):
         base_gates.RZ.__init__(self, *args)
-        self.phase = tf.exp(1j * np.pi * self.theta)
+        self.phase = tf.cast(tf.exp(1j * np.pi * self.theta), dtype=self.dtype)
 
     def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
@@ -216,7 +216,7 @@ class CRZ(RZ, base_gates.CRZ):
 
     def __init__(self, *args):
         base_gates.CRZ.__init__(self, *args)
-        self.phase = tf.exp(1j * np.pi * self.theta)
+        self.phase = tf.cast(tf.exp(1j * np.pi * self.theta), dtype=self.dtype)
 
 
 class Toffoli(X, base_gates.Toffoli):
