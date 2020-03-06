@@ -19,11 +19,19 @@ if BACKEND_NAME == "tensorflow":
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
+    # Backend access
+    K = tf
 
     # Default types
     DTYPE = tf.float64
     DTYPEINT = tf.int32
     DTYPECPX = tf.complex128
+
+    # Default numpy types
+    import numpy as np
+    NP_DTYPE = np.float64
+    NP_DTYPEINT = np.int32
+    NP_DTYPECPX = np.complex128
 
     from qibo.tensorflow import gates
     from qibo.tensorflow import circuit as tensorflow_circuit

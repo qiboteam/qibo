@@ -151,7 +151,8 @@ class RX(TensorflowGate, base_gates.RX):
     def __init__(self, *args):
         base_gates.RX.__init__(self, *args)
 
-        self.phase = tf.cast(tf.exp(1j * np.pi * self.theta / 2.0), dtype=self.dtype)
+        self.theta = tf.cast(self.theta, dtype=self.dtype)
+        self.phase = tf.exp(1j * np.pi * self.theta / 2.0)
         self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
         self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
 
@@ -167,7 +168,8 @@ class RY(TensorflowGate, base_gates.RY):
     def __init__(self, *args):
         base_gates.RY.__init__(self, *args)
 
-        self.phase = tf.cast(tf.exp(1j * np.pi * self.theta / 2.0), dtype=self.dtype)
+        self.theta = tf.cast(self.theta, dtype=self.dtype)
+        self.phase = tf.exp(1j * np.pi * self.theta / 2.0)
         self.cos = tf.cast(tf.math.real(self.phase), dtype=self.dtype)
         self.sin = tf.cast(tf.math.imag(self.phase), dtype=self.dtype)
 
@@ -182,7 +184,8 @@ class RZ(TensorflowGate, base_gates.RZ):
 
     def __init__(self, *args):
         base_gates.RZ.__init__(self, *args)
-        self.phase = tf.cast(tf.exp(1j * np.pi * self.theta), dtype=self.dtype)
+        self.theta = tf.cast(self.theta, dtype=self.dtype)
+        self.phase = tf.exp(1j * np.pi * self.theta)
 
     def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
         return state0
