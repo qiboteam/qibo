@@ -64,12 +64,3 @@ def test_qft_transformation_random(nqubits):
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, exact_state)
-
-
-@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
-def test_qftgates_transformation_random(nqubits):
-    """Check QFT transformation of `QFTGates` for random initial state."""
-    initial_state = random_state(nqubits)
-    exact_state = exact_qft(initial_state)
-    final_state = models.QFTGates(initial_state)
-    np.testing.assert_allclose(final_state, exact_state)
