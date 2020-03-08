@@ -46,20 +46,12 @@ class TensorflowGate:
         slices = self._get_slices()
         states = [tf.gather(state, s) for s in slices]
 
-        new0 = tf.IndexedSlices(self.call_0(states[0], states[1]),
-                                slices[0], [self.nstates])
-        new1 = tf.IndexedSlices(self.call_1(states[0], states[1]),
-                                slices[1], [self.nstates])
-        new_state = tf.add(new0, new1)
+        updates0 = self.call_0(states[0], states[1]) - states[0]
+        new0 = tf.scatter_nd(slices[0][:, np.newaxis], updates0, [self.nstates])
+        updates1 = self.call_1(states[0], states[1]) - states[1]
+        new1 = tf.scatter_nd(slices[1][:, np.newaxis], updates1, [self.nstates])
 
-        if self.control_qubits or len(self.target_qubits) > 1:
-            all_indices = np.concatenate(slices)
-            mask = tf.constant(len(all_indices) * [1.0], dtype=self.dtype)
-            mask = tf.convert_to_tensor(
-                tf.IndexedSlices(mask, all_indices, [self.nstates]))
-            return state * (1.0 - mask) + new_state
-
-        return new_state
+        return state + new0 + new1
 
 
 class H(TensorflowGate, base_gates.H):
