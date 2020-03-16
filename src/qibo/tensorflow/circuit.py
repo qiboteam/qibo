@@ -15,19 +15,19 @@ class TensorflowCircuit(circuit.BaseCircuit):
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
+        self.state = self._default_initial_state()
 
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, initial_state: tf.Tensor) -> tf.Tensor:
+    def _execute_func(self) -> tf.Variable:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
         """
-        state = tf.cast(initial_state, dtype=self.dtype)
         for gate in self.queue:
-            state = gate(state)
-        return state
+            self.state = gate(self.state)
+        return self.state
 
     def compile(self):
         """Compiles `_execute_func` using `tf.function`."""
@@ -37,19 +37,16 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
-        if initial_state is None:
-            state = self._default_initial_state()
-        else:
-            state = tf.Variable(initial_state, dtype=self.dtype)
-
+        if initial_state is not None:
+            self.state.assign(initial_state)
         if self.compiled_execute is None:
-            return self._execute_func(state)
-        return self.compiled_execute(state)
+            return self._execute_func()
+        return self.compiled_execute()
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
         return self.execute(initial_state)
 
-    def _default_initial_state(self) -> tf.Tensor:
+    def _default_initial_state(self) -> tf.Variable:
         """Creates the |000...0> state for default initialization."""
         initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1

@@ -2,6 +2,7 @@
 Testing tensorflow backend.
 """
 import numpy as np
+import pytest
 from qibo.models import Circuit
 from qibo import gates
 
@@ -290,6 +291,7 @@ def test_toffoli():
 
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
+    import tensorflow as tf
     theta = 0.1234
 
     c = Circuit(2)
@@ -299,18 +301,18 @@ def test_custom_circuit():
     r1 = c.execute().numpy()
 
     # custom circuit
-    def custom_circuit(initial_state, theta):
-        l1 = gates.X(0)(initial_state)
-        l2 = gates.X(1)(l1)
-        o = gates.CRZ(0, 1, theta)(l2)
-        return o
+    def custom_circuit(state, theta):
+        state = gates.X(0)(state)
+        state = gates.X(1)(state)
+        state = gates.CRZ(0, 1, theta)(state)
+        return state
 
     init = c._default_initial_state()
     r2 = custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r1, r2)
 
-    import tensorflow as tf
     tf_custom_circuit = tf.function(custom_circuit)
+    init = c._default_initial_state()
     r3 = tf_custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r2, r3)
 
@@ -336,6 +338,10 @@ def test_compiled_circuit():
     np.testing.assert_allclose(r1, r2)
 
 
+# Disabled when we switched to using `tf.Variable` for the state
+# Prefer using the built-in circuit.compile method to compile circuits
+# instead of doing custom compilation
+@pytest.mark.skip
 def test_circuit_custom_compilation():
     theta = 0.1234
     init_state = np.ones(4) / 2.0
@@ -355,6 +361,6 @@ def test_circuit_custom_compilation():
 
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
-    r2 = compiled_circuit(init_state)
+    r2 = compiled_circuit(init_state).numpy()
 
     np.testing.assert_allclose(r1, r2)
