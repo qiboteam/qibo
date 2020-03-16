@@ -9,6 +9,7 @@ from typing import List
 class TensorflowGate:
     """The base Tensorflow gate."""
     from qibo.config import DTYPECPX as dtype
+    _slice = None
 
     def _base_slicer(self, targets: np.ndarray) -> np.ndarray:
         nbits = self.nqubits - len(targets)
@@ -22,20 +23,26 @@ class TensorflowGate:
 
         return configs
 
-    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        raise NotImplementedError
-
-    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
-        raise NotImplementedError
-
-    def _get_slices(self) -> List[np.ndarray]:
+    def _calculate_slice(self) -> np.ndarray:
         qubits = self.nqubits - np.array(self.qubits) - 1
         slicer = self._base_slicer(qubits)
 
         target = 2 ** qubits[-1]
         control = (2 ** qubits[:-1]).sum()
 
-        return [slicer + control, slicer + control + target]
+        return np.concatenate([slicer + control, slicer + control + target])
+
+    def call_0(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
+
+    def call_1(self, state0: tf.Tensor, state1: tf.Tensor) -> tf.Tensor:
+        raise NotImplementedError
+
+    @property
+    def slice(self) -> np.ndarray:
+        if self._slice is None:
+            self._slice = self._calculate_slice()
+        return self._slice
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
@@ -46,13 +53,14 @@ class TensorflowGate:
             raise TypeError("Gate {} called with a state that is not "
                             "tf.Variable.".format(self.name))
 
-        slices = self._get_slices()
-        states = [state.sparse_read(s) for s in slices]
+        n = len(self.slice) // 2
+        states = [state.sparse_read(self.slice[:n]),
+                  state.sparse_read(self.slice[n:])]
 
         updates = tf.IndexedSlices(tf.concat([self.call_0(states[0], states[1]),
                                               self.call_1(states[0], states[1])],
                                              axis=0),
-                                   np.concatenate(slices),
+                                   self.slice,
                                    dense_shape=(2 ** self.nqubits,))
         state.scatter_update(updates)
         return state
@@ -201,7 +209,7 @@ class SWAP(X, base_gates.SWAP):
     def __init__(self, *args):
         base_gates.SWAP.__init__(self, *args)
 
-    def _get_slices(self) -> List[np.ndarray]:
+    def _calculate_slice(self) -> np.ndarray:
         qubits = self.nqubits - np.array(self.qubits) - 1
         qubits.sort()
         slicer = self._base_slicer(qubits)
@@ -209,7 +217,8 @@ class SWAP(X, base_gates.SWAP):
         targets = 2 ** qubits[-2:]
         control = (2 ** qubits[:-2]).sum()
 
-        return [slicer + control + targets[0], slicer + control + targets[1]]
+        return np.array([slicer + control + targets[0],
+                         slicer + control + targets[1]])
 
 
 class CRZ(RZ, base_gates.CRZ):
