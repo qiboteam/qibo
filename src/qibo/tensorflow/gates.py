@@ -42,6 +42,9 @@ class TensorflowGate:
         # Set nqubits for the case the gate is called outside of the circuit
         if self._nqubits is None:
             self.nqubits = int(np.log2(state.shape[0]))
+        if not isinstance(state, tf.Variable):
+            raise TypeError("Gate {} called with a state that is not "
+                            "tf.Variable.".format(self.name))
 
         slices = self._get_slices()
         states = [tf.gather(state, s) for s in slices]
@@ -49,7 +52,9 @@ class TensorflowGate:
         updates = tf.concat([self.call_0(states[0], states[1]),
                              self.call_1(states[0], states[1])], axis=0)
         slice = np.concatenate(slices)
-        return tf.tensor_scatter_nd_update(state, slice[:, np.newaxis], updates)
+        state.scatter_nd_update(slice[:, np.newaxis], updates)
+        return state
+        #return tf.tensor_scatter_nd_update(state, slice[:, np.newaxis], updates)
 
 
 class H(TensorflowGate, base_gates.H):
