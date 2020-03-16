@@ -47,12 +47,19 @@ class TensorflowGate:
                             "tf.Variable.".format(self.name))
 
         slices = self._get_slices()
-        states = [tf.gather(state, s) for s in slices]
+        #states = [tf.gather(state, s) for s in slices]
+        states = [state.sparse_read(s) for s in slices]
 
-        updates = tf.concat([self.call_0(states[0], states[1]),
-                             self.call_1(states[0], states[1])], axis=0)
-        slice = np.concatenate(slices)
-        state.scatter_nd_update(slice[:, np.newaxis], updates)
+        #updates = tf.concat([self.call_0(states[0], states[1]),
+        #                     self.call_1(states[0], states[1])], axis=0)
+        #slice = np.concatenate(slices)
+        updates = tf.IndexedSlices(tf.concat([self.call_0(states[0], states[1]),
+                                              self.call_1(states[0], states[1])],
+                                             axis=0),
+                                   np.concatenate(slices),
+                                   dense_shape=(2 ** self.nqubits,))
+        #state.scatter_nd_update(slice[:, np.newaxis], updates)
+        state.scatter_update(updates)
         return state
         #return tf.tensor_scatter_nd_update(state, slice[:, np.newaxis], updates)
 
