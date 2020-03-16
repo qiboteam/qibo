@@ -40,7 +40,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if initial_state is None:
             state = self._default_initial_state()
         else:
-            #state = tf.cast(initial_state, dtype=self.dtype)
             state = tf.Variable(initial_state, dtype=self.dtype)
 
         if self.compiled_execute is None:
@@ -54,5 +53,4 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Creates the |000...0> state for default initialization."""
         initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1
-        #return tf.convert_to_tensor(initial_state, dtype=self.dtype)
         return tf.Variable(initial_state, dtype=self.dtype)
