@@ -54,9 +54,13 @@ class TensorflowGate:
                             "tf.Variable.".format(self.name))
 
         n = len(self.slice) // 2
+        # this implementation is slightly faster than
+        # states = state.sparse_read(self.slice)
+        # self.call_0(states[:n], states[n:])
+        # self.call_1(states[:n], states[n:])
+        # perhaps because slicing is better in numpy
         states = [state.sparse_read(self.slice[:n]),
                   state.sparse_read(self.slice[n:])]
-
         updates = tf.IndexedSlices(tf.concat([self.call_0(states[0], states[1]),
                                               self.call_1(states[0], states[1])],
                                              axis=0),
