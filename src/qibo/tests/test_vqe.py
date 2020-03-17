@@ -57,10 +57,15 @@ def test_vqe():
             for q in range(nqubits):
                 self.parametrized_gates.append(self.circuit.add(gates.RY(q, 0)))
 
+            # Set initial state in numpy because circuit's internal state
+            # will change every time this is called
+            self.initial_state = np.zeros(2 ** nqubits)
+            self.initial_state[0] = 1.0
+
         def __call__(self, theta):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.update(theta[i])
-            return self.circuit()
+            return self.circuit(self.initial_state)
 
 
     hamiltonian = XXZ(nqubits=nqubits)
