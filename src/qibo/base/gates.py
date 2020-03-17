@@ -197,7 +197,7 @@ class RX(Gate):
         self.name = "RX"
         self.parameters = ["theta"]
         self.target_qubits = (q,)
-        self.theta = self.update(theta)
+        self.update(theta)
 
     def update(self, theta):
         self.theta = theta
@@ -219,7 +219,7 @@ class RY(Gate):
         self.name = "RY"
         self.parameters = ["theta"]
         self.target_qubits = (q,)
-        self.theta = self.update(theta)
+        self.update(theta)
 
     def update(self, theta):
         self.theta = theta
@@ -240,7 +240,7 @@ class RZ(Gate):
         self.name = "RZ"
         self.parameters = ["theta"]
         self.target_qubits = (q,)
-        self.theta = self.update(theta)
+        self.update(theta)
 
     def update(self, theta):
         self.theta = theta
@@ -291,7 +291,7 @@ class CRZ(Gate):
         self.parameters = ["theta"]
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.theta = self.update(theta)
+        self.update(theta)
 
     def update(self, theta):
         self.theta = theta

@@ -110,6 +110,28 @@ def test_rz_phase():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_update_params():
+    """Check updating gate parameters."""
+    theta = 0.1234
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.RZ(0, theta))
+    print(c.queue[-1].theta)
+    target_state = c.execute().numpy()
+    initial_state = np.zeros_like(target_state)
+    initial_state[0] = 1.0
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    gate = c.add(gates.RZ(0, 0))
+    final_state = c(initial_state).numpy()
+    gate.update(theta)
+    final_state = c(initial_state).numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_rx():
     """Check RX gate is working properly."""
     theta = 0.1234
