@@ -52,6 +52,7 @@ class BaseCircuit(object):
         """
         gate.nqubits = self.nqubits
         self.queue.append(gate)
+        return gate
 
     @property
     def size(self):

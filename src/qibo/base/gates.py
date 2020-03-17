@@ -20,6 +20,7 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
+        self.parameters = []
 
         self.target_qubits = tuple()
         self.control_qubits = tuple()
@@ -194,7 +195,11 @@ class RX(Gate):
     def __init__(self, q, theta):
         super(RX, self).__init__()
         self.name = "RX"
+        self.parameters = ["theta"]
         self.target_qubits = (q,)
+        self.theta = self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -212,7 +217,11 @@ class RY(Gate):
     def __init__(self, q, theta):
         super(RY, self).__init__()
         self.name = "RY"
+        self.parameters = ["theta"]
         self.target_qubits = (q,)
+        self.theta = self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -229,7 +238,11 @@ class RZ(Gate):
     def __init__(self, q, theta):
         super(RZ, self).__init__()
         self.name = "RZ"
+        self.parameters = ["theta"]
         self.target_qubits = (q,)
+        self.theta = self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -275,8 +288,12 @@ class CRZ(Gate):
     def __init__(self, q0, q1, theta):
         super(CRZ, self).__init__()
         self.name = "CRZ"
+        self.parameters = ["theta"]
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
+        self.theta = self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
