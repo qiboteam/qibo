@@ -1,18 +1,66 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import abstractmethod
+from typing import Tuple
 
 
 class Gate(object):
-    """The base class for gate implementation
+    """The base class for gate implementation.
 
     **Properties:**
-        * **name** *(str)* - the gate string name
+        * name: the gate string name.
+        * target_qubits: tuple with indices of target qubits.
+        * control_qubits: tuple with indices of control qubits.
+        * qubits: tuple with all qubits (control + target) that the gate acts.
+        * nqubits: total number of qubits in the circuit/state the gate acts.
+            This is set automatically when the gate is added to a circuit or
+            when it is called on a state.
+        * nstates: 2 ** nqubits.
     """
 
     def __init__(self):
         self.name = None
-        self.nqubits = None
+        self.parameters = []
+
+        self.target_qubits = tuple()
+        self.control_qubits = tuple()
+
+        self._nqubits = None
+        self._nstates = None
+
+    @property
+    def qubits(self) -> Tuple[int]:
+        return self.control_qubits + self.target_qubits
+
+    @property
+    def nqubits(self) -> int:
+        if self._nqubits is None:
+            raise ValueError("Accessing number of qubits for gate {} but "
+                             "this is not yet set.".format(self))
+        return self._nqubits
+
+    @property
+    def nstates(self) -> int:
+        if self._nstates is None:
+            raise ValueError("Accessing number of qubits for gate {} but "
+                             "this is not yet set.".format(self))
+        return self._nstates
+
+    @nqubits.setter
+    def nqubits(self, n: int):
+        if self._nqubits is not None and self._nqubits != n:
+            raise ValueError("Setting number of qubits as {} while it is "
+                             "already set as {}.".format(self._nqubits))
+        self._nqubits = n
+        self._nstates = 2**n
+
+    def controlled_by(self, *q) -> "Gate":
+        if self.control_qubits:
+            raise ValueError("Cannot use `controlled_by` method on gate {} "
+                             "because it is already controlled by {}."
+                             "".format(self, self.control_qubits))
+        self.control_qubits = tuple(q)
+        return self
 
     @abstractmethod
     def __call__(self, state):
@@ -30,7 +78,7 @@ class H(Gate):
     def __init__(self, q):
         super(H, self).__init__()
         self.name = "H"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class X(Gate):
@@ -43,7 +91,7 @@ class X(Gate):
     def __init__(self, q):
         super(X, self).__init__()
         self.name = "X"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class Y(Gate):
@@ -56,7 +104,7 @@ class Y(Gate):
     def __init__(self, q):
         super(Y, self).__init__()
         self.name = "Y"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class Z(Gate):
@@ -69,7 +117,7 @@ class Z(Gate):
     def __init__(self, q):
         super(Z, self).__init__()
         self.name = "Z"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class Barrier(Gate):
@@ -78,7 +126,7 @@ class Barrier(Gate):
     def __init__(self, q):
         super(Barrier, self).__init__()
         self.name = "barrier"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class Iden(Gate):
@@ -91,7 +139,7 @@ class Iden(Gate):
     def __init__(self, q):
         super(Iden, self).__init__()
         self.name = "Iden"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class MX(Gate):
@@ -104,7 +152,7 @@ class MX(Gate):
     def __init__(self, q):
         super(MX, self).__init__()
         self.name = "MX"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class MY(Gate):
@@ -117,7 +165,7 @@ class MY(Gate):
     def __init__(self, q):
         super(MY, self).__init__()
         self.name = "MY"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class MZ(Gate):
@@ -130,7 +178,7 @@ class MZ(Gate):
     def __init__(self, q):
         super(MZ, self).__init__()
         self.name = "measure"
-        self.qubits = [q]
+        self.target_qubits = (q,)
 
 
 class RX(Gate):
@@ -147,7 +195,11 @@ class RX(Gate):
     def __init__(self, q, theta):
         super(RX, self).__init__()
         self.name = "RX"
-        self.qubits = [q]
+        self.parameters = ["theta"]
+        self.target_qubits = (q,)
+        self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -165,7 +217,11 @@ class RY(Gate):
     def __init__(self, q, theta):
         super(RY, self).__init__()
         self.name = "RY"
-        self.qubits = [q]
+        self.parameters = ["theta"]
+        self.target_qubits = (q,)
+        self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -182,7 +238,11 @@ class RZ(Gate):
     def __init__(self, q, theta):
         super(RZ, self).__init__()
         self.name = "RZ"
-        self.qubits = [q]
+        self.parameters = ["theta"]
+        self.target_qubits = (q,)
+        self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -197,7 +257,8 @@ class CNOT(Gate):
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
         self.name = "CNOT"
-        self.qubits = [q0, q1]
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
 
 
 class SWAP(Gate):
@@ -210,7 +271,7 @@ class SWAP(Gate):
     def __init__(self, q0, q1):
         super(SWAP, self).__init__()
         self.name = "SWAP"
-        self.qubits = [q0, q1]
+        self.target_qubits = (q0, q1)
 
 
 class CRZ(Gate):
@@ -227,7 +288,12 @@ class CRZ(Gate):
     def __init__(self, q0, q1, theta):
         super(CRZ, self).__init__()
         self.name = "CRZ"
-        self.qubits = [q0, q1]
+        self.parameters = ["theta"]
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.update(theta)
+
+    def update(self, theta):
         self.theta = theta
 
 
@@ -243,7 +309,8 @@ class Toffoli(Gate):
     def __init__(self, q0, q1, q2):
         super(Toffoli, self).__init__()
         self.name = "Toffoli"
-        self.qubits = [q0, q1, q2]
+        self.control_qubits = (q0, q1)
+        self.target_qubits = (q2,)
 
 
 class Flatten(Gate):
