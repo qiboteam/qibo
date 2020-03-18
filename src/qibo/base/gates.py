@@ -196,6 +196,7 @@ class RX(Gate):
         super(RX, self).__init__()
         self.name = "RX"
         self.target_qubits = (q,)
+        self.theta = theta
 
 
 class RY(Gate):
@@ -213,6 +214,7 @@ class RY(Gate):
         super(RY, self).__init__()
         self.name = "RY"
         self.target_qubits = (q,)
+        self.theta = theta
 
 
 class RZ(Gate):
@@ -229,6 +231,7 @@ class RZ(Gate):
         super(RZ, self).__init__()
         self.name = "RZ"
         self.target_qubits = (q,)
+        self.theta = theta
 
 
 class CNOT(Gate):
@@ -275,6 +278,7 @@ class CRZ(Gate):
         self.name = "CRZ"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
+        self.theta = theta
 
 
 class Toffoli(Gate):
