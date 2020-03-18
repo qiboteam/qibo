@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import matrices
-from typing import List
+from typing import Sequence
 
 
 class TensorflowGate:
@@ -24,10 +24,27 @@ class TensorflowGate:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
-        einsum_str = self._create_einsum_str(self.qubits)
+        einsum_str = self._create_einsum_str(self.qubits, self.nqubits)
         return tf.einsum(einsum_str, state, self.matrix)
 
-    def _create_einsum_str(self, qubits: List[int]) -> str:
+    def controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
+        slicer = self.nqubits * [slice(None)]
+        for control in self.control_qubits:
+            slicer[control] = 1
+
+        targets = list(self.target_qubits)
+        for control in self.control_qubits:
+            for i, t in enumerate(targets):
+                if t > control:
+                    targets[i] -= 1
+
+        nactive = self.nqubits - len(self.control_qubits)
+        einsum_str = self._create_einsum_str(targets, nactive)
+        updates = tf.einsum(einsum_str, state[slicer], self.matrix)
+
+
+    @classmethod
+    def _create_einsum_str(cls, qubits: Sequence[int], nqubits: int) -> str:
         """Creates index string for `tf.einsum`.
 
         Args:
@@ -36,12 +53,12 @@ class TensorflowGate:
         Returns:
             String formated as {input state}{gate matrix}->{output state}.
         """
-        if len(qubits) + self.nqubits > len(self._chars):
+        if len(qubits) + nqubits > len(cls._chars):
             raise NotImplementedError("Not enough einsum characters.")
 
-        input_state = list(self._chars[: self.nqubits])
+        input_state = list(cls._chars[: nqubits])
         output_state = input_state[:]
-        gate_chars = list(self._chars[self.nqubits : self.nqubits + len(qubits)])
+        gate_chars = list(cls._chars[nqubits : nqubits + len(qubits)])
 
         for i, q in enumerate(qubits):
             gate_chars.append(input_state[q])
