@@ -21,7 +21,7 @@ class TensorflowGate:
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
-        if self.nqubits is None:
+        if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
         einsum_str = self._create_einsum_str(self.qubits)
