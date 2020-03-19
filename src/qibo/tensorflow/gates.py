@@ -220,11 +220,11 @@ class CRZ(TensorflowGate, base_gates.CRZ):
         self.matrix = tf.reshape(crz, 4 * (2,))
 
 
-class Toffoli(TensorflowGate, base_gates.Toffoli):
+class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, *args):
-        base_gates.Toffoli.__init__(self, *args)
-        self.matrix = matrices.Toffoli
+        base_gates.TOFFOLI.__init__(self, *args)
+        self.matrix = matrices.TOFFOLI
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

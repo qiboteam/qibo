@@ -302,7 +302,7 @@ def test_toffoli_no_effect():
     """Check Toffoli gate is working properly on |010>."""
     c = Circuit(3)
     c.add(gates.X(1))
-    c.add(gates.Toffoli(0, 1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
@@ -314,7 +314,7 @@ def test_toffoli():
     c = Circuit(3)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.Toffoli(0, 1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
