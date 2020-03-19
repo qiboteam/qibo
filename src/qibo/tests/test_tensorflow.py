@@ -58,10 +58,11 @@ def test_circuit_addition_result():
 
 def test_hadamard():
     """Check Hadamard gate is working properly."""
-    c = Circuit(1)
+    c = Circuit(2)
     c.add(gates.H(0))
+    c.add(gates.H(1))
     final_state = c.execute().numpy()
-    target_state = np.ones_like(final_state) / np.sqrt(2)
+    target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -161,6 +162,70 @@ def test_cnot():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_crz():
+    """Check CRZ gate is working properly on |11>."""
+    theta = 0.1234
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CRZ(0, 1, theta))
+    final_state = c.execute().numpy()
+
+    phase = np.exp(1j * np.pi * theta)
+    target_state = np.zeros_like(final_state)
+    target_state[-1] = phase
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_controlled_by_rz():
+    """Check RZ.controlled_by is equivalent to CRZ."""
+    theta = 0.1234
+
+    c = Circuit(2)
+    c.add(gates.CRZ(0, 1, theta))
+    target_state = c.execute().numpy()
+
+    c = Circuit(2)
+    c.add(gates.RZ(1, theta).controlled_by(0))
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_doubly_controlled_by_rx_no_effect():
+    theta = 0.1234
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.RX(2, theta).controlled_by(0, 1))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_doubly_controlled_by_rx():
+    theta = 0.1234
+
+    c = Circuit(3)
+    c.add(gates.RX(2, theta))
+    target_state = c.execute().numpy()
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.RX(2, theta).controlled_by(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_swap():
     """Check SWAP gate is working properly on |01>."""
     c = Circuit(2)
@@ -169,6 +234,67 @@ def test_swap():
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_multiple_swap():
+    """Check SWAP gate is working properly when called multiple times."""
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.X(2))
+    c.add(gates.SWAP(0, 1))
+    c.add(gates.SWAP(2, 3))
+    final_state = c.execute().numpy()
+
+    c = Circuit(4)
+    c.add(gates.X(1))
+    c.add(gates.X(3))
+    target_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_controlled_by_swap():
+    """Check controlled SWAP using controlled by."""
+    c = Circuit(3)
+    c.add(gates.SWAP(1, 2).controlled_by(0))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.SWAP(1, 2).controlled_by(0))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+    c = Circuit(3)
+    c.add(gates.SWAP(1, 2))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_doubly_controlled_by_swap():
+    """Check controlled SWAP using controlled by two qubits."""
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.SWAP(1, 2).controlled_by(0, 3))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.X(3))
+    c.add(gates.SWAP(1, 2).controlled_by(0, 3))
+    c.add(gates.X(0))
+    c.add(gates.X(3))
+    final_state = c.execute().numpy()
+    c = Circuit(4)
+    c.add(gates.SWAP(1, 2))
+    target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -192,36 +318,6 @@ def test_toffoli():
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_crz():
-    """Check CRZ gate is working properly on |11>."""
-    theta = 0.1234
-
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
-    final_state = c.execute().numpy()
-
-    phase = np.exp(1j * np.pi * theta)
-    target_state = np.zeros_like(final_state)
-    target_state[-1] = phase
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_swap():
-    """Check SWAP gate is working properly on |+0>."""
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.SWAP(0, 1))
-    final_state = c.execute().numpy()
-
-    c2 = Circuit(2)
-    c2.add(gates.H(1))
-    target_state = c2.execute().numpy()
-
     np.testing.assert_allclose(final_state, target_state)
 
 

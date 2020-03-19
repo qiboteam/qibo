@@ -25,17 +25,20 @@ class TensorflowGate:
             self.nqubits = len(tuple(state.shape))
 
         if self.is_controlled_by:
-            return self.controlled_by_call(state)
+            return self._controlled_by_call(state)
 
         einsum_str = self._create_einsum_str(self.qubits, self.nqubits)
         return tf.einsum(einsum_str, state, self.matrix)
 
-    def controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
-        slicer0 = self.nqubits * [slice(None)]
-        slicer1 = self.nqubits * [slice(None)]
-        for control in self.control_qubits:
-            slicer0[control] = 0
-            slicer1[control] = 1
+    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
+        control_set = set(self.control_qubits)
+        ncontrol = len(self.control_qubits)
+        nactive = self.nqubits - ncontrol
+
+        order = list(self.control_qubits)
+        for i in range(self.nqubits):
+            if i not in control_set:
+                order.append(i)
 
         targets = list(self.target_qubits)
         for control in self.control_qubits:
@@ -43,19 +46,18 @@ class TensorflowGate:
                 if t > control:
                     targets[i] -= 1
 
-        nactive = self.nqubits - len(self.control_qubits)
+        state = tf.transpose(state, order)
+        state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
         einsum_str = self._create_einsum_str(targets, nactive)
-        updates = tf.einsum(einsum_str, state[slicer1], self.matrix)
+        updates = tf.einsum(einsum_str, state[-1], self.matrix)
 
-        state = state[slicer0]
-        print(state.shape)
-        print(updates.shape)
-        for control in self.control_qubits:
-            slicer = control * [slice(None)]
-            slicer.append(tf.newaxis)
-            state = tf.concat([state[slicer], updates[slicer]], axis=control)
-            print(state.shape)
-        return state
+        state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
+        state = tf.reshape(state, self.nqubits * (2,))
+
+        reverse_order = self.nqubits * [0]
+        for i, r in enumerate(order):
+            reverse_order[r] = i
+        return tf.transpose(state, reverse_order)
 
     @classmethod
     def _create_einsum_str(cls, qubits: Sequence[int], nqubits: int) -> str:
