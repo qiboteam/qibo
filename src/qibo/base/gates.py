@@ -309,6 +309,24 @@ class TOFFOLI(Gate):
         self.target_qubits = (q2,)
 
 
+class Unitary(Gate):
+    """Arbitrary unitary gate.
+
+    Args:
+        unitary: Unitary matrix as a tensor supported by the backend.
+            Note that there is no check that the matrix passed is actually
+            unitary. This allows the user to create non-unitary gates.
+        *q (int): Qubit id numbers that the gate acts on.
+        name (Optional): Name for the gate.
+    """
+
+    def __init__(self, unitary, *q, name=None):
+        super(Unitary, self).__init__()
+        self.name = "Unitary" if name is None else name
+        self.unitary = unitary
+        self.target_qubits = tuple(q)
+
+
 class Flatten(Gate):
     """Custom coefficients
 

@@ -342,6 +342,61 @@ def test_toffoli():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_unitary_common_gates():
+    """Check that `Unitary` gate can create common gates."""
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.H(1))
+    target_state = c.execute().numpy()
+
+    c = Circuit(2)
+    c.add(gates.Unitary(np.array([[0, 1], [1, 0]]), 0))
+    c.add(gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1))
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_unitary_random_gate():
+    """Check that `Unitary` gate can apply random matrices."""
+    init_state = np.ones(4) / 2.0
+    matrix = np.random.random([4, 4])
+    target_state = matrix.dot(init_state)
+
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.Unitary(matrix, 0, 1))
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_unitary_controlled_by():
+    """Check that `controlled_by` works as expected with `Unitary`."""
+    matrix = np.random.random([2, 2])
+
+    # No effect
+    c = Circuit(2)
+    c.add(gates.Unitary(matrix, 1).controlled_by(0))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    # With effect
+    c = Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.Unitary(matrix, 1).controlled_by(0))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+
+    c = Circuit(2)
+    c.add(gates.Unitary(matrix, 1))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
     theta = 0.1234

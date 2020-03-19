@@ -243,6 +243,17 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         self.matrix = matrices.TOFFOLI
 
 
+class Unitary(TensorflowGate, base_gates.Unitary):
+
+    def __init__(self, *args):
+        base_gates.Unitary.__init__(self, *args)
+        rank = 2 * len(self.target_qubits)
+        # This reshape will raise an error if the number of target qubits
+        # given is incompatible to the shape of the given unitary.
+        self.matrix = tf.convert_to_tensor(self.unitary, dtype=self.dtype)
+        self.matrix = tf.reshape(self.matrix, rank * (2,))
+
+
 class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, *args):
