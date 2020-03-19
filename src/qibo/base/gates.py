@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import abstractmethod
-from typing import Tuple
+from typing import Sequence, Tuple
 
 
 class Gate(object):
@@ -24,10 +24,20 @@ class Gate(object):
         self.parameters = []
 
         self.target_qubits = tuple()
-        self.control_qubits = tuple()
+        self._control_qubits = tuple()
 
         self._nqubits = None
         self._nstates = None
+
+    @property
+    def control_qubits(self) -> Tuple[int]:
+        """Returns control qubits sorted."""
+        return self._control_qubits
+
+    @control_qubits.setter
+    def control_qubits(self, q: Sequence[int]):
+        """Sets control qubits sorted."""
+        self._control_qubits = tuple(sorted(q))
 
     @property
     def qubits(self) -> Tuple[int]:
@@ -61,7 +71,7 @@ class Gate(object):
                              "because it is already controlled by {}."
                              "".format(self, self.control_qubits))
         self.is_controlled_by = True
-        self.control_qubits = tuple(q)
+        self.control_qubits = q
         return self
 
     @abstractmethod
