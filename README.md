@@ -79,9 +79,9 @@ The following gates can be accessed as attributes of the `gates` module:
 * The `Flatten` gate can be used to input a specific state vector. It takes as input a list/array of the amplitudes.
 
 All gates support the `controlled_by` that allows to control them on an arbitrary number of qubits. For example 
-* `gates.X(0).controlled_by(1, 2)` is equivalent to `gates.Toffoli(1, 2, 0)`,
-* `gates.RY(0, np.pi).controlled_by(1, 2, 3)` applies the Y-rotation to qubit 0 or qubits 1, 2 and 3 are all 1,
-* `gates.SWAP(0, 1).controlled_by(3, 4)` swaps qubits 0 and 1 if qubits 3 and 4 are both 1.
+* `gates.X(0).controlled_by(1, 2)` is equivalent to `gates.TOFFOLI(1, 2, 0)`,
+* `gates.RY(0, np.pi).controlled_by(1, 2, 3)` applies the Y-rotation to qubit 0 when qubits 1, 2 and 3 are in the |111> state.
+* `gates.SWAP(0, 1).controlled_by(3, 4)` swaps qubits 0 and 1 when qubits 3 and 4 are in the |11> state.
 
 `controlled_by` cannot be used on gates that are already controlled.
 
