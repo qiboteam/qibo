@@ -137,3 +137,44 @@ class BaseCircuit(object):
     def execute(self):
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
+
+    def show(self):
+        """Simple mechanism to plot qasm circuit."""
+        import tempfile
+        with tempfile.TemporaryDirectory() as td_name:
+            from qibo.external.qasm2 import qasm2png
+            from IPython.display import Image
+            self.to_qasm(f"{td_name}.qasm")
+            qasm2png.qasm2png(f"{td_name}")
+            display(Image(f"{td_name}.png"))
+
+    def to_qasm(self, filename):
+        """Convert circuit to QASM.
+
+        Args:
+            filename (str): The filename where the code is saved.
+        """
+        def gate2qasm(buffer, res):
+            """Covert gate to qasm."""
+            qgate = f"\t{res[0]}\tq{res[1]}"
+            if len(res) > 2:
+                qgate += f",q{res[2]}"
+            buffer.write(f"{qgate}\n")
+
+        with open(filename, "w") as buffer:
+            buffer.write(f"# File: {filename}\n")
+            buffer.write(f"# Author: QIBO\n")
+            for i in range(self.nqubits):
+                buffer.write(f"\tqubit q{i}\n")
+            buffer.write("\n")
+            for item in self.queue:
+                res = item.gate2qasm()
+                if res[0] == 'MX':
+                    gate2qasm(buffer, ('H', res[1]))
+                    gate2qasm(buffer, ('measure', res[1]))
+                elif res[0] == 'MY':
+                    gate2qasm(buffer, ('S', res[1]))
+                    gate2qasm(buffer, ('H', res[1]))
+                    gate2qasm(buffer, ('measure', res[1]))
+                else:
+                    gate2qasm(buffer, res)

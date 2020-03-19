@@ -106,6 +106,12 @@ class Gate(object):
         """
         raise NotImplementedError
 
+    def gate2qasm(self):
+        """Converts the gate properties to qasm syntax."""
+        qasm = [ self.name ]
+        qasm += [ q for q in self.qubits]
+        return qasm
+
 
 class H(Gate):
     """The Hadamard gate.
