@@ -24,24 +24,38 @@ class TensorflowGate:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
+        if self.is_controlled_by:
+            return self.controlled_by_call(state)
+
         einsum_str = self._create_einsum_str(self.qubits, self.nqubits)
         return tf.einsum(einsum_str, state, self.matrix)
 
     def controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
-        slicer = self.nqubits * [slice(None)]
+        slicer0 = self.nqubits * [slice(None)]
+        slicer1 = self.nqubits * [slice(None)]
         for control in self.control_qubits:
-            slicer[control] = 1
+            slicer0[control] = 0
+            slicer1[control] = 1
 
         targets = list(self.target_qubits)
         for control in self.control_qubits:
-            for i, t in enumerate(targets):
+            for i, t in enumerate(self.target_qubits):
                 if t > control:
                     targets[i] -= 1
 
         nactive = self.nqubits - len(self.control_qubits)
         einsum_str = self._create_einsum_str(targets, nactive)
-        updates = tf.einsum(einsum_str, state[slicer], self.matrix)
+        updates = tf.einsum(einsum_str, state[slicer1], self.matrix)
 
+        state = state[slicer0]
+        print(state.shape)
+        print(updates.shape)
+        for control in self.control_qubits:
+            slicer = control * [slice(None)]
+            slicer.append(tf.newaxis)
+            state = tf.concat([state[slicer], updates[slicer]], axis=control)
+            print(state.shape)
+        return state
 
     @classmethod
     def _create_einsum_str(cls, qubits: Sequence[int], nqubits: int) -> str:

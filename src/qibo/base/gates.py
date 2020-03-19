@@ -20,6 +20,7 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
+        self.is_controlled_by = False
         self.parameters = []
 
         self.target_qubits = tuple()
@@ -59,6 +60,7 @@ class Gate(object):
             raise ValueError("Cannot use `controlled_by` method on gate {} "
                              "because it is already controlled by {}."
                              "".format(self, self.control_qubits))
+        self.is_controlled_by = True
         self.control_qubits = tuple(q)
         return self
 
