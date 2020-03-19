@@ -94,33 +94,7 @@ class Iden(Gate):
         self.qubits = [q]
 
 
-class MX(Gate):
-    """The Measure X gate.
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super(MX, self).__init__()
-        self.name = "MX"
-        self.qubits = [q]
-
-
-class MY(Gate):
-    """The Measure Y gate.
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super(MY, self).__init__()
-        self.name = "MY"
-        self.qubits = [q]
-
-
-class MZ(Gate):
+class M(Gate):
     """The Measure Z gate.
 
     Args:
@@ -128,7 +102,7 @@ class MZ(Gate):
     """
 
     def __init__(self, q):
-        super(MZ, self).__init__()
+        super(M, self).__init__()
         self.name = "measure"
         self.qubits = [q]
 

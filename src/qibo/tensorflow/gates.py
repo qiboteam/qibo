@@ -94,22 +94,10 @@ class Iden(TensorflowGate, base_gates.Iden):
         self.matrix = matrices.Iden
 
 
-class MX(TensorflowGate, base_gates.MX):
+class M(TensorflowGate, base_gates.M):
 
-    def __init__(self):
-        raise NotImplementedError
-
-
-class MY(TensorflowGate, base_gates.MY):
-
-    def __init__(self):
-        raise NotImplementedError
-
-
-class MZ(TensorflowGate, base_gates.MZ):
-
-    def __init__(self):
-        raise NotImplementedError
+    def __init__(self, *args):
+        base_gates.M.__init__(self, *args)
 
 
 class RX(TensorflowGate, base_gates.RX):
