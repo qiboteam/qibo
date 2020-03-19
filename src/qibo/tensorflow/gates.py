@@ -31,29 +31,43 @@ class TensorflowGate:
         return tf.einsum(einsum_str, state, self.matrix)
 
     def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
-        control_set = set(self.control_qubits)
+        """Gate __call__ method for `controlled_by` gates."""
         ncontrol = len(self.control_qubits)
         nactive = self.nqubits - ncontrol
 
+        # This loop generates:
+        # A) an `order` that is used to transpose `state`
+        #    so that control legs are moved in the front
+        # B) a `targets` list which is equivalent to the
+        #    `target_qubits` tuple but each index is reduced
+        #    by the amount of control qubits that preceed it.
+        loop_start = 0
         order = list(self.control_qubits)
-        for i in range(self.nqubits):
-            if i not in control_set:
-                order.append(i)
-
         targets = list(self.target_qubits)
         for control in self.control_qubits:
+            for i in range(loop_start, control):
+                order.append(i)
+            loop_start = control + 1
+
             for i, t in enumerate(self.target_qubits):
                 if t > control:
                     targets[i] -= 1
+        for i in range(loop_start, self.nqubits):
+            order.append(i)
 
+        # Apply `einsum` only to the part of the state where all controls
+        # are active. This should be `state[-1]`
         state = tf.transpose(state, order)
         state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
         einsum_str = self._create_einsum_str(targets, nactive)
         updates = tf.einsum(einsum_str, state[-1], self.matrix)
 
+        # Concatenate the updated part of the state `updates` with the
+        # part of of the state that remained unaffected `state[:-1]`.
         state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
         state = tf.reshape(state, self.nqubits * (2,))
-
+        # Revert the order of legs so that controls are back to their
+        # true positions
         reverse_order = self.nqubits * [0]
         for i, r in enumerate(order):
             reverse_order[r] = i
