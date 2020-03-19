@@ -113,6 +113,15 @@ class X(TensorflowGate, base_gates.X):
         base_gates.X.__init__(self, *args)
         self.matrix = matrices.X
 
+    def controlled_by(self, *q):
+        """Fall back to CNOT and Toffoli if controls are one or two."""
+        gate = super(X, self).controlled_by(*q)
+        if len(q) == 1:
+            return CNOT(q[0], self.target_qubits[0])
+        elif len(q) == 2:
+            return TOFFOLI(q[0], q[1], self.target_qubits[0])
+        return gate
+
 
 class Y(TensorflowGate, base_gates.Y):
 
@@ -193,19 +202,19 @@ class RZ(TensorflowGate, base_gates.RZ):
         rz = tf.eye(2, dtype=self.dtype)
         self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
 
+    def controlled_by(self, *q):
+        """Fall back to CRZ if control is one."""
+        gate = super(RZ, self).controlled_by(*q)
+        if len(q) == 1:
+            return CRZ(q[0], self.target_qubits[0], self.theta)
+        return gate
+
 
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, *args):
         base_gates.CNOT.__init__(self, *args)
         self.matrix = matrices.CNOT
-
-
-class SWAP(TensorflowGate, base_gates.SWAP):
-
-    def __init__(self, *args):
-        base_gates.SWAP.__init__(self, *args)
-        self.matrix = matrices.SWAP
 
 
 class CRZ(TensorflowGate, base_gates.CRZ):
@@ -218,6 +227,13 @@ class CRZ(TensorflowGate, base_gates.CRZ):
         crz = tf.eye(4, dtype=self.dtype)
         crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
         self.matrix = tf.reshape(crz, 4 * (2,))
+
+
+class SWAP(TensorflowGate, base_gates.SWAP):
+
+    def __init__(self, *args):
+        base_gates.SWAP.__init__(self, *args)
+        self.matrix = matrices.SWAP
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):

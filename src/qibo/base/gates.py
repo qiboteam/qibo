@@ -251,19 +251,6 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
 
 
-class SWAP(Gate):
-    """The swap gate.
-
-    Args:
-        q0, q1 (ints): id numbers of the qubits to be swapped.
-    """
-
-    def __init__(self, q0, q1):
-        super(SWAP, self).__init__()
-        self.name = "SWAP"
-        self.target_qubits = (q0, q1)
-
-
 class CRZ(Gate):
     """Controlled Rotation Z-axis.
 
@@ -283,7 +270,20 @@ class CRZ(Gate):
         self.theta = theta
 
 
-class Toffoli(Gate):
+class SWAP(Gate):
+    """The swap gate.
+
+    Args:
+        q0, q1 (ints): id numbers of the qubits to be swapped.
+    """
+
+    def __init__(self, q0, q1):
+        super(SWAP, self).__init__()
+        self.name = "SWAP"
+        self.target_qubits = (q0, q1)
+
+
+class TOFFOLI(Gate):
     """The Toffoli gate.
 
     Args:
@@ -293,8 +293,8 @@ class Toffoli(Gate):
     """
 
     def __init__(self, q0, q1, q2):
-        super(Toffoli, self).__init__()
-        self.name = "Toffoli"
+        super(TOFFOLI, self).__init__()
+        self.name = "TOFFOLI"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
 

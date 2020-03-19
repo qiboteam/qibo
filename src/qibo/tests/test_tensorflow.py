@@ -85,6 +85,25 @@ def test_xgate():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_multicontrol_xgate():
+    """Check that fallback method for X works for more than two controls."""
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.X(3).controlled_by(0, 1, 2))
+    c.add(gates.X(0))
+    c.add(gates.X(2))
+    final_state = c.execute().numpy()
+
+    c = Circuit(4)
+    c.add(gates.X(1))
+    c.add(gates.X(3))
+    target_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_rz_no_effect():
     """Check RZ gate is working properly when qubit is on |0>."""
     c = Circuit(2)
@@ -179,15 +198,17 @@ def test_crz():
 
 
 def test_controlled_by_rz():
-    """Check RZ.controlled_by is equivalent to CRZ."""
+    """Check RZ.controlled_by falls back to CRZ."""
     theta = 0.1234
 
     c = Circuit(2)
     c.add(gates.CRZ(0, 1, theta))
+    print(c.queue)
     target_state = c.execute().numpy()
 
     c = Circuit(2)
     c.add(gates.RZ(1, theta).controlled_by(0))
+    print(c.queue)
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
