@@ -98,6 +98,13 @@ class M(TensorflowGate, base_gates.M):
 
     def __init__(self, *args):
         base_gates.M.__init__(self, *args)
+        self.rest_qubits = tuple(i for i in range(self.nqubits)
+                                 if i not in self.qubits)
+
+    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        probs = tf.reduce_sum(tf.square(tf.abs(state)), axis=self.rest_qubits)
+        logits = tf.log(tf.reshape(probs, (2 ** len(self.qubits),)))
+        return tf.random.categorical(logits[tf.newaxis], nshots)[0]
 
 
 class RX(TensorflowGate, base_gates.RX):

@@ -225,6 +225,14 @@ def test_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_basic_measurement():
+    c = Circuit(2)
+    c.add(gates.M(0))
+    measurements = c.execute().numpy()
+    target_meas = np.zeros_like(measurements)
+    np.testing.assert_allclose(measurements, target_meas)
+
+
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
     theta = 0.1234

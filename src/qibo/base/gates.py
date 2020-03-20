@@ -101,10 +101,13 @@ class M(Gate):
         q (int): the qubit id number.
     """
 
-    def __init__(self, q):
+    def __init__(self, *q):
         super(M, self).__init__()
         self.name = "measure"
-        self.qubits = [q]
+        self.qubits = set(q)
+
+    # TODO: Override `controlled_by` method and raise NotImplementedError
+    # We will not allow controlled measurements for simplicity (for now).
 
 
 class RX(Gate):
