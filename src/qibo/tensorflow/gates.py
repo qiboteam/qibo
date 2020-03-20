@@ -188,12 +188,19 @@ class M(TensorflowGate, base_gates.M):
 
     def __init__(self, *args):
         base_gates.M.__init__(self, *args)
-        self.rest_qubits = tuple(i for i in range(self.nqubits)
+
+    @base_gates.Gate.nqubits.setter
+    def nqubits(self, n: int):
+        base_gates.Gate.nqubits.fset(self, n)
+        self.rest_qubits = tuple(i for i in range(n)
                                  if i not in self.target_qubits)
 
     def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape))
+
         probs = tf.reduce_sum(tf.square(tf.abs(state)), axis=self.rest_qubits)
-        logits = tf.log(tf.reshape(probs, (2 ** len(self.qubits),)))
+        logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
         return tf.random.categorical(logits[tf.newaxis], nshots)[0]
 
 

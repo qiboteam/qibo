@@ -170,6 +170,10 @@ class M(Gate):
         self.name = "measure"
         self.target_qubits = set(q)
 
+    @property
+    def qubits(self):
+        return tuple(self.target_qubits)
+
     # TODO: Override `controlled_by` method and raise NotImplementedError
     # We will not allow controlled measurements for simplicity (for now).
 
