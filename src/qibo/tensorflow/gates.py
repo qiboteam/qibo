@@ -7,7 +7,7 @@ from qibo.config import matrices
 from typing import Sequence
 
 
-class TensorflowGate:
+class TensorflowGate(base_gates.Gate):
     """The base Tensorflow gate.
 
     **Properties:**
@@ -19,6 +19,37 @@ class TensorflowGate:
     dtype = matrices.dtype
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+    def __init__(self):
+      super(TensorflowGate, self).__init__()
+      self.einsum_string = None
+      # For `controlled_by` gates
+      # See the docstring of `_calculate_transpose_order` for more details
+      self.transpose_order = None
+      self.reverse_transpose_order = None
+
+    @base_gates.Gate.nqubits.setter
+    def nqubits(self, n: int):
+        """Sets the number of qubit that this gate acts on.
+
+        This is called automatically by the `Circuit.add` method if the gate
+        is used on a `Circuit`. If the gate is called on a state then `nqubits`
+        is set during the first `__call__`.
+        When `nqubits` is set we also calculate the einsum string so that it
+        is calculated only once per gate.
+        """
+        base_gates.Gate.nqubits.fset(self, n)
+        if self.is_controlled_by:
+            self.transpose_order, targets = self._calculate_transpose_order()
+            ncontrol = len(self.control_qubits)
+            self.einsum_string = self._create_einsum_str(targets, n - ncontrol)
+            # Calculate the reverse order for transposing the state legs so that
+            # control qubits are back to their original positions
+            self.reverse_transpose_order = self.nqubits * [0]
+            for i, r in enumerate(self.transpose_order):
+                self.reverse_transpose_order[r] = i
+        else:
+            self.einsum_string = self._create_einsum_str(self.qubits, n)
+
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
@@ -27,20 +58,22 @@ class TensorflowGate:
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        einsum_str = self._create_einsum_str(self.qubits, self.nqubits)
-        return tf.einsum(einsum_str, state, self.matrix)
+        return tf.einsum(self.einsum_string, state, self.matrix)
 
-    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
-        """Gate __call__ method for `controlled_by` gates."""
-        ncontrol = len(self.control_qubits)
-        nactive = self.nqubits - ncontrol
+    def _calculate_transpose_order(self):
+        """Helper method for `_controlled_by_call`.
 
-        # This loop generates:
-        # A) an `order` that is used to transpose `state`
-        #    so that control legs are moved in the front
-        # B) a `targets` list which is equivalent to the
-        #    `target_qubits` tuple but each index is reduced
-        #    by the amount of control qubits that preceed it.
+        This is used only for `controlled_by` gates.
+
+        The loop generates:
+          A) an `order` that is used to transpose `state`
+             so that control legs are moved in the front
+          B) a `targets` list which is equivalent to the
+             `target_qubits` tuple but each index is reduced
+             by the amount of control qubits that preceed it.
+        This method is called by the `nqubits` setter so that the loop runs
+        once per gate (and not every time the gate is called).
+        """
         loop_start = 0
         order = list(self.control_qubits)
         targets = list(self.target_qubits)
@@ -55,23 +88,24 @@ class TensorflowGate:
         for i in range(loop_start, self.nqubits):
             order.append(i)
 
+        return order, targets
+
+    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
+        """Gate __call__ method for `controlled_by` gates."""
+        ncontrol = len(self.control_qubits)
+        nactive = self.nqubits - ncontrol
+
         # Apply `einsum` only to the part of the state where all controls
         # are active. This should be `state[-1]`
-        state = tf.transpose(state, order)
+        state = tf.transpose(state, self.transpose_order)
         state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-        einsum_str = self._create_einsum_str(targets, nactive)
-        updates = tf.einsum(einsum_str, state[-1], self.matrix)
+        updates = tf.einsum(self.einsum_string, state[-1], self.matrix)
 
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.
         state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
         state = tf.reshape(state, self.nqubits * (2,))
-        # Revert the order of legs so that controls are back to their
-        # true positions
-        reverse_order = self.nqubits * [0]
-        for i, r in enumerate(order):
-            reverse_order[r] = i
-        return tf.transpose(state, reverse_order)
+        return tf.transpose(state, self.reverse_transpose_order)
 
     @classmethod
     def _create_einsum_str(cls, qubits: Sequence[int], nqubits: int) -> str:

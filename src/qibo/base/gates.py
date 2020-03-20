@@ -59,9 +59,9 @@ class Gate(object):
 
     @nqubits.setter
     def nqubits(self, n: int):
-        if self._nqubits is not None and self._nqubits != n:
-            raise ValueError("Setting number of qubits as {} while it is "
-                             "already set as {}.".format(self._nqubits))
+        if self._nqubits is not None:
+            raise ValueError("The number of qubits for this gates is already "
+                             "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
 
@@ -70,6 +70,10 @@ class Gate(object):
             raise ValueError("Cannot use `controlled_by` method on gate {} "
                              "because it is already controlled by {}."
                              "".format(self, self.control_qubits))
+        if self._nqubits is not None:
+            raise RuntimeError("Cannot use controlled_by on a gate that is "
+                               "part of a Circuit or has been called on a "
+                               "state.")
         self.is_controlled_by = True
         self.control_qubits = q
         return self

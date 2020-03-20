@@ -36,12 +36,16 @@ class BaseCircuit(object):
     @classmethod
     def _circuit_addition(cls, c1, c2):
         if c1.nqubits != c2.nqubits:
-            raise ValueError("Circuits of different size.")
+            raise ValueError("Cannot add circuits with different number of "
+                             "qubits. The first has {} qubits while the "
+                             "second has {}".format(c1.nqubits, c2.nqubits))
         newcircuit = cls(c1.nqubits)
         for gate in c1.queue:
-            newcircuit.add(gate)
+            # We are not using the newcircuit.add method here because
+            # `gate.nqubits` is already set for these gates.
+            newcircuit.queue.append(gate)
         for gate in c2.queue:
-            newcircuit.add(gate)
+            newcircuit.queue.append(gate)
         return newcircuit
 
     def add(self, gate):
