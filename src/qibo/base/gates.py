@@ -174,8 +174,8 @@ class M(Gate):
     def qubits(self):
         return tuple(self.target_qubits)
 
-    # TODO: Override `controlled_by` method and raise NotImplementedError
-    # We will not allow controlled measurements for simplicity (for now).
+    def controlled_by(self, *q):
+        raise NotImplementedError("Measurement gates cannot be controlled.")
 
 
 class RX(Gate):
