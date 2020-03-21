@@ -22,6 +22,12 @@ class BaseCircuit(object):
         """Initialize properties."""
         self.nqubits = nqubits
         self.queue = []
+        # Flag to keep track if the circuit was executed
+        # We do not allow adding gates in an executed circuit
+        self.is_executed = False
+
+        self.measure_sets = []
+        self.measure_qubits = set()
 
     def __add__(self, circuit):
         """Add circuits.
@@ -41,11 +47,9 @@ class BaseCircuit(object):
                              "second has {}".format(c1.nqubits, c2.nqubits))
         newcircuit = cls(c1.nqubits)
         for gate in c1.queue:
-            # We are not using the newcircuit.add method here because
-            # `gate.nqubits` is already set for these gates.
-            newcircuit.queue.append(gate)
+            newcircuit.add(gate)
         for gate in c2.queue:
-            newcircuit.queue.append(gate)
+            newcircuit.add(gate)
         return newcircuit
 
     def add(self, gate):
@@ -54,8 +58,30 @@ class BaseCircuit(object):
         Args:
             gate (qibo.gates): the specific gate (see :ref:`Gates`).
         """
-        gate.nqubits = self.nqubits
-        self.queue.append(gate)
+        if self.is_executed:
+            raise RuntimeError("Cannot add gates to a circuit after it is "
+                               "executed.")
+
+        # Set number of qubits in gate
+        if gate._nqubits is None:
+            gate.nqubits = self.nqubits
+        elif gate.nqubits != self.nqubits:
+            raise ValueError("Attempting to add gate with {} total qubits to "
+                             "a circuit with {} qubits."
+                             "".format(gate.nqubits, self.nqubits))
+
+        # Check if any of the qubits that the gate acts on is already measured
+        # Currently we do not allow measured qubits to be reused
+        for qubit in gate.qubits:
+            if qubit in self.measure_qubits:
+                raise ValueError("Cannot reuse qubit {} because it is already "
+                                 "measured".format(qubit))
+
+        if gate.name == "measure":
+            self.measure_sets.append(gate.target_qubits)
+            self.measure_qubits |= gate.target_qubits
+        else:
+            self.queue.append(gate)
 
     @property
     def size(self):

@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX
+from qibo.tensorflow import gates
 from typing import Optional
 
 
@@ -35,8 +36,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise RuntimeError("Circuit is already compiled.")
         self.compiled_execute = tf.function(self._execute_func)
 
-    def execute(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
+    def execute(self, initial_state: Optional[tf.Tensor] = None,
+                nshots: Optional[int] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
+        self.is_executed = True
         if initial_state is None:
             state = self._default_initial_state()
         else:
