@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import abstractmethod
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence, Set, Tuple
 
 
 class Gate(object):
@@ -172,6 +172,13 @@ class M(Gate):
         self.name = "measure"
         self.target_qubits = set(q)
         self.nshots = None
+        self.is_executed = False
+
+    def add(self, qubits: Set[int]):
+        if self.is_executed:
+            raise RuntimeError("Cannot add qubits to a measurement gate that "
+                               "was executed.")
+        self.target_qubits |= qubits
 
     @property
     def qubits(self):

@@ -27,7 +27,7 @@ class BaseCircuit(object):
         self.is_executed = False
 
         self.measure_sets = []
-        self.measure_qubits = set()
+        self.measure_gate = None
 
     def __add__(self, circuit):
         """Add circuits.
@@ -73,13 +73,17 @@ class BaseCircuit(object):
         # Check if any of the qubits that the gate acts on is already measured
         # Currently we do not allow measured qubits to be reused
         for qubit in gate.qubits:
-            if qubit in self.measure_qubits:
+            if (self.measure_gate is not None and
+                qubit in self.measure_gate.target_qubits):
                 raise ValueError("Cannot reuse qubit {} because it is already "
                                  "measured".format(qubit))
 
         if gate.name == "measure":
             self.measure_sets.append(gate.target_qubits)
-            self.measure_qubits |= gate.target_qubits
+            if self.measure_gate is None:
+                self.measure_gate = gate
+            else:
+                self.measure_gate.add_qubits(gate.target_qubits)
         else:
             self.queue.append(gate)
 
