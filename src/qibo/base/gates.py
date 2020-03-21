@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import abstractmethod
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 class Gate(object):
@@ -162,17 +162,20 @@ class M(Gate):
     """The Measure Z gate.
 
     Args:
-        q (int): the qubit id number.
+        q (int): id numbers of the qubits to measure.
+            Order does not matter. Measurement results will follow increasing
+            order in ids.
     """
 
-    def __init__(self, *q):
+    def __init__(self, *q, nshots: Optional[int] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = set(q)
+        self.nshots = None
 
     @property
     def qubits(self):
-        return tuple(self.target_qubits)
+        return tuple(sorted(self.target_qubits))
 
     def controlled_by(self, *q):
         raise NotImplementedError("Measurement gates cannot be controlled.")

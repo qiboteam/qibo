@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import matrices
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 class TensorflowGate(base_gates.Gate):
@@ -195,13 +195,16 @@ class M(TensorflowGate, base_gates.M):
         self.rest_qubits = tuple(i for i in range(n)
                                  if i not in self.target_qubits)
 
-    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor,
+                 nshots: Optional[int] = None) -> tf.Tensor:
+        if nshots is not None:
+            self.nshots = nshots
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
         probs = tf.reduce_sum(tf.square(tf.abs(state)), axis=self.rest_qubits)
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
-        return tf.random.categorical(logits[tf.newaxis], nshots)[0]
+        return tf.random.categorical(logits[tf.newaxis], self.nshots)[0]
 
 
 class RX(TensorflowGate, base_gates.RX):
