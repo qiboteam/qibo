@@ -167,10 +167,11 @@ class M(Gate):
             order in ids.
     """
 
-    def __init__(self, *q):
+    def __init__(self, *q, register_name: Optional[str] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = set(q)
+        self.register_name = register_name
 
         self.is_executed = False
         self.is_circuit_measurement = False

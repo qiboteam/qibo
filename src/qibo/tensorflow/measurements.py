@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import collections
 import tensorflow as tf
-from typing import Optional, Dict, List, Tuple, Set
+from typing import Optional, Dict, Tuple, Set
 
 
 class GateResult:
@@ -66,7 +66,7 @@ class GateResult:
 class CircuitResult:
 
     def __init__(self,
-                 register_qubits: List[Set[int]],
+                 register_qubits: Dict[str, Set[int]],
                  all_measured_qubits: Tuple[int],
                  all_decimal_samples: tf.Tensor):
         self.result = GateResult(all_measured_qubits,
@@ -77,16 +77,13 @@ class CircuitResult:
 
     @property
     def register_results(self) -> Dict[str, GateResult]:
-        # TODO: Allow naming registers by making `register_qubits` a Dict
-        # instead of List
         if self._register_results is not None:
             return self._register_results
 
         self._register_results = {}
-        for i, qubit_set in enumerate(self.register_qubits):
+        for name, qubit_set in self.register_qubits.items():
             qubit_tuple = tuple(sorted(qubit_set))
             slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
-            name = "Register{}".format(i)
             samples = self.result.binary_samples[:, slicer]
             self._register_results[name] = GateResult(
                 qubit_tuple, binary_samples=samples)

@@ -26,7 +26,7 @@ class BaseCircuit(object):
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
 
-        self.measurement_sets = []
+        self.measurement_sets = dict()
         self.measurement_gate = None
 
     def __add__(self, circuit):
@@ -79,7 +79,17 @@ class BaseCircuit(object):
                                  "measured".format(qubit))
 
         if gate.name == "measure":
-            self.measurement_sets.append(gate.target_qubits)
+            # Add register
+            name = gate.register_name
+            if name is None:
+                name = "Register{}".format(len(self.measurement_sets))
+                gate.register_name = name
+            elif name in self.measurement_sets:
+                raise KeyError("Register name {} has already been used."
+                               "".format(name))
+            self.measurement_sets[name] = gate.target_qubits
+
+            # Update circuit's global measurement gate
             if self.measurement_gate is None:
                 self.measurement_gate = gate
                 self.measurement_gate.is_circuit_measurement = True
