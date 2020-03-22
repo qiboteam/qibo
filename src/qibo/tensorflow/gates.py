@@ -207,8 +207,8 @@ class M(TensorflowGate, base_gates.M):
                                             dtype=tf.int64)[0]
         if self.is_circuit_measurement:
             return samples_dec
-        return self.measurements.GateResult(len(self.target_qubits),
-                                            samples_dec)
+        return self.measurements.GateResult(
+            self.qubits, decimal_samples=samples_dec)
 
 
 class RX(TensorflowGate, base_gates.RX):

@@ -58,13 +58,15 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                  "{}.".format(shape))
 
         if self.compiled_execute is None:
-            measurements, self._final_state = self._execute_func(state, nshots)
+            samples, self._final_state = self._execute_func(state, nshots)
         else:
-            measurements, self._final_state = self.compiled_execute(state, nshots)
+            samples, self._final_state = self.compiled_execute(state, nshots)
 
         if self.measurement_gate is None or nshots is None:
             return self._final_state
-        return measurements
+
+        return measurements.CircuitResult(
+            self.measurement_sets, self.measurement_gate.qubits, samples)
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
                  nshots: Optional[int] = None) -> tf.Tensor:

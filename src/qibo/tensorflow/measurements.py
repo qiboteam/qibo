@@ -2,15 +2,15 @@
 # @authors: S. Efthymiou
 import collections
 import tensorflow as tf
-from typing import Optional, Tuple
+from typing import Optional, Dict, List, Tuple, Set
 
 
 class GateResult:
 
-    def __init__(self, nqubits: int,
+    def __init__(self, qubits: Tuple[int],
                  decimal_samples: Optional[tf.Tensor] = None,
                  binary_samples: Optional[tf.Tensor] = None):
-        self.qubits = nqubits
+        self.qubits = qubits
         if decimal_samples is not None and binary_samples is not None:
             raise ValueError("Measurement result object cannot be created "
                              "when samples are given both in decimal and "
@@ -24,6 +24,14 @@ class GateResult:
         self._binary_samples = binary_samples
 
         self._frequencies = None
+
+    @property
+    def nqubits(self) -> int:
+        return len(self.qubits)
+
+    @property
+    def qubit_map(self) -> Dict[int, int]:
+        return {q: i for i, q in enumerate(self.qubits)}
 
     @property
     def binary_samples(self) -> tf.Tensor:
@@ -55,6 +63,53 @@ class GateResult:
         return self._frequencies
 
 
-#class CircuitResult:
+class CircuitResult:
 
-    #def __init__(self, register_sets: List[Set[int]], result: GateResult):
+    def __init__(self,
+                 register_qubits: List[Set[int]],
+                 all_measured_qubits: Tuple[int],
+                 all_decimal_samples: tf.Tensor):
+        self.result = GateResult(all_measured_qubits,
+                                 decimal_samples=all_decimal_samples)
+
+        self.register_qubits = register_qubits
+        self._register_results = None
+
+    @property
+    def register_results(self) -> Dict[str, GateResult]:
+        # TODO: Allow naming registers by making `register_qubits` a Dict
+        # instead of List
+        if self._register_results is not None:
+            return self._register_results
+
+        self._register_results = {}
+        for i, qubit_set in enumerate(self.register_qubits):
+            qubit_tuple = tuple(sorted(qubit_set))
+            slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
+            name = "Register{}".format(i)
+            samples = self.result.binary_samples[:, slicer]
+            self._register_results[name] = GateResult(
+                qubit_tuple, binary_samples=samples)
+
+    @property
+    def binary_samples(self):
+        return self.result.binary_samples
+
+    @property
+    def register_binary_samples(self, all: bool = True):
+        return {k: v.binary_samples for k, v in self.register_results.items()}
+
+    @property
+    def decimal_samples(self):
+        return self.result.decimal_samples
+
+    @property
+    def register_decimal_samples(self):
+        return {k: v.decimal_samples for k, v in self.register_results.items()}
+
+    def frequencies(self, binary: bool = False):
+        return self.result.frequencies(binary)
+
+    def register_frequencies(self, binary: bool = False):
+        return {k: v.frequencies(binary)
+                for k, v in self.register_results.items()}
