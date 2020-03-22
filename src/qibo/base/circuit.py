@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
+from typing import Tuple
 
 
 class BaseCircuit(object):
@@ -52,6 +53,19 @@ class BaseCircuit(object):
             newcircuit.add(gate)
         return newcircuit
 
+    def _check_measured(self, gate_qubits: Tuple[int]):
+        """Helper method for `add`.
+
+        Checks if the qubits that a gate acts are already measured and raises
+        a `NotImplementedError` if they are because currently we do not allow
+        measured qubits to be reused.
+        """
+        for qubit in gate_qubits:
+            if (self.measurement_gate is not None and
+                qubit in self.measurement_gate.target_qubits):
+                raise ValueError("Cannot reuse qubit {} because it is already "
+                                 "measured".format(qubit))
+
     def add(self, gate):
         """Add a gate to a given queue.
 
@@ -70,33 +84,35 @@ class BaseCircuit(object):
                              "a circuit with {} qubits."
                              "".format(gate.nqubits, self.nqubits))
 
-        # Check if any of the qubits that the gate acts on is already measured
-        # Currently we do not allow measured qubits to be reused
-        for qubit in gate.qubits:
-            if (self.measurement_gate is not None and
-                qubit in self.measurement_gate.target_qubits):
-                raise ValueError("Cannot reuse qubit {} because it is already "
-                                 "measured".format(qubit))
-
+        self._check_measured(gate.qubits)
         if gate.name == "measure":
-            # Add register
-            name = gate.register_name
-            if name is None:
-                name = "Register{}".format(len(self.measurement_sets))
-                gate.register_name = name
-            elif name in self.measurement_sets:
-                raise KeyError("Register name {} has already been used."
-                               "".format(name))
-            self.measurement_sets[name] = gate.target_qubits
-
-            # Update circuit's global measurement gate
-            if self.measurement_gate is None:
-                self.measurement_gate = gate
-                self.measurement_gate.is_circuit_measurement = True
-            else:
-                self.measurement_gate.add(gate.target_qubits)
+            self.add_measurement(gate)
         else:
             self.queue.append(gate)
+
+    def add_measurement(self, gate):
+        """Gets called automatically by `add` when `gate` is measurement.
+
+        This is because measurement gates (`gates.M`) are treated differently
+        than all other gates.
+        The user is not supposed to use the `add_measurement` method.
+        """
+        # Set register's name and log the set of qubits in `self.measurement_sets`
+        name = gate.register_name
+        if name is None:
+            name = "Register{}".format(len(self.measurement_sets))
+            gate.register_name = name
+        elif name in self.measurement_sets:
+            raise KeyError("Register name {} has already been used."
+                           "".format(name))
+        self.measurement_sets[name] = gate.target_qubits
+
+        # Update circuit's global measurement gate
+        if self.measurement_gate is None:
+            self.measurement_gate = gate
+            self.measurement_gate.is_circuit_measurement = True
+        else:
+            self.measurement_gate.add(gate.target_qubits)
 
     @property
     def size(self) -> int:

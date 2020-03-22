@@ -6,6 +6,20 @@ TensorType = Any
 
 
 class GateResult:
+    """Object returned when user uses a `gates.M` on a state.
+
+    Implements tools to convert samples from decimal to binary representation
+    (and vice versa) and calculating the frequencies of shots.
+
+    Args:
+        qubits: Sorted tuple of qubit ids that the measurement gate acts on.
+        decimal_samples: Tensor holding the measured samples in decimal
+            representation. Has shape (nshots,).
+        binary_samples: Tensor holding the measured samples in binary
+            representation. Has shape (nshots, len(qubits)).
+        Exactly one of `decimal_samples`, `binary_samples` should be given to
+        create the object.
+    """
 
     def __init__(self, qubits: Tuple[int],
                  decimal_samples: Optional[TensorType] = None,
@@ -45,6 +59,18 @@ class GateResult:
         return self._decimal
 
     def frequencies(self, binary: bool = False) -> collections.Counter:
+        """Calculates frequencies of appearance of each measurement.
+
+        Args:
+            binary: If True the returned keys (measurement results) are in
+                binary representation. Otherwise they are in decimal
+                representation.
+
+        Returns:
+            A `collections.Counter` where the keys are the measurement results
+            and the values are the number of appearances of each result in the
+            measured shots.
+        """
         if self._frequencies is None:
             res, cnts = self._calculate_counts(self.decimal)
             self._frequencies = collections.Counter(
@@ -70,6 +96,18 @@ class GateResult:
 
 
 class CircuitResult:
+    """Object returned when user performs measurements using a circuit.
+
+    Implements tools for dividing the global measurements from the circuit's
+    `measurement_gate` to the corresponding registers.
+
+    Args:
+        register_qubits: Dictionary that maps register names to the
+            corresponding sets of qubit ids. This is created in the
+            `measurement_sets` variable of `models.Circuit`.
+        measurement_gate_result: The `GateResult` resulting from the circuit's
+            global measurement gate.
+    """
 
     def __init__(self,
                  register_qubits: Dict[str, Set[int]],
@@ -80,31 +118,32 @@ class CircuitResult:
 
     @property
     def register_results(self) -> Dict[str, GateResult]:
+        """Returns the individual `GateResult`s for each register."""
         if self._register_results is None:
             self._register_results = self._calculate_register_results(
                 self.register_qubits, self.result)
         return self._register_results
 
     @property
-    def binary(self):
+    def binary(self) -> TensorType:
         return self.result.binary
 
     @property
-    def register_binary(self, all: bool = True):
+    def decimal(self) -> TensorType:
+        return self.result.decimal
+
+    def frequencies(self, binary: bool = False) -> collections.Counter:
+        return self.result.frequencies(binary)
+
+    @property
+    def register_binary(self) -> Dict[str, TensorType]:
         return {k: v.binary for k, v in self.register_results.items()}
 
     @property
-    def decimal(self):
-        return self.result.decimal
-
-    @property
-    def register_decimal(self):
+    def register_decimal(self) -> Dict[str, TensorType]:
         return {k: v.decimal for k, v in self.register_results.items()}
 
-    def frequencies(self, binary: bool = False):
-        return self.result.frequencies(binary)
-
-    def register_frequencies(self, binary: bool = False):
+    def register_frequencies(self, binary: bool = False) -> Dict[str, collections.Counter]:
         return {k: v.frequencies(binary)
                 for k, v in self.register_results.items()}
 
@@ -112,4 +151,9 @@ class CircuitResult:
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
                                     gate_result: GateResult
                                     ) -> Dict[str, GateResult]:
+        """Calculates the individual register `GateResults`.
+
+        This uses the `register_qubits` map to divide the bitstrings to their
+        appropriate registers.
+        """
         raise NotImplementedError

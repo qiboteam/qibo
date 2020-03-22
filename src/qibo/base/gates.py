@@ -165,6 +165,8 @@ class M(Gate):
         q (int): id numbers of the qubits to measure.
             Order does not matter. Measurement results will follow increasing
             order in ids.
+        register_name: Optional name of the register to distinguish it from
+            other registers when used in circuits.
     """
 
     def __init__(self, *q, register_name: Optional[str] = None):
@@ -178,6 +180,19 @@ class M(Gate):
         self._unmeasured_qubits = None # Set
 
     def add(self, qubits: Set[int]):
+        """Adds qubits to a measurement gate.
+
+        This method is only used for creating the global measurement gate used
+        by the `models.Circuit`.
+        The user is not supposed to use this method and a `ValueError` is
+        raised if he does so.
+
+        Args:
+            qubits: Set of qubit ids to be added to the measurement's qubits.
+        """
+        if not self.is_circuit_measurement:
+            raise ValueError("Only `models.Circuit`'s measurement gate are "
+                             "allowed to add qubits to.")
         if self.is_executed:
             raise RuntimeError("Cannot add qubits to a measurement gate that "
                                "was executed.")
@@ -187,10 +202,16 @@ class M(Gate):
 
     @property
     def qubits(self) -> Tuple[int]:
+        """Qubits that are measured by this gate in increasing order of ids."""
         return tuple(sorted(self.target_qubits))
 
     @property
     def unmeasured_qubits(self) -> Tuple[int]:
+        """Qubits that are not measured by this gate in increasing order of ids.
+
+        This is useful when tracing out unmeasured qubits to calculate
+        probabilities.
+        """
         if self._nqubits is None:
             raise ValueError("Cannot calculate set of unmeasured qubits if "
                              "the number of qubits in the circuit is unknown.")
