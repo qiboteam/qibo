@@ -20,7 +20,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, initial_state: tf.Tensor) -> tf.Tensor:
+    def _execute_func(self, initial_state: tf.Tensor,
+                      nshots: Optional[int]) -> tf.Tensor:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
@@ -28,9 +29,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
         state = tf.cast(initial_state, dtype=self.dtype)
         for gate in self.queue:
             state = gate(state)
-        if self.measurement_gate is not None:
-            return state
-        return tf.reshape(state, (2**self.nqubits,))
+        if self.measurement_gate is None or nshots is None:
+            return None, tf.reshape(state, (2**self.nqubits,))
+        return (self.measurement_gate(state, nshots),
+                tf.reshape(state, (2**self.nqubits,)))
+
 
     def compile(self):
         """Compiles `_execute_func` using `tf.function`."""
@@ -55,18 +58,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                  "{}.".format(shape))
 
         if self.compiled_execute is None:
-            final_state = self._execute_func(state)
+            measurements, self._final_state = self._execute_func(state, nshots)
         else:
-            final_state = self.compiled_execute(state)
+            measurements, self._final_state = self.compiled_execute(state, nshots)
 
-        if self.measurement_gate is None:
-            self._final_state = final_state
-            return final_state
-
-        self._final_state = tf.reshape(final_state, (2**self.nqubits,))
-        if nshots is None:
+        if self.measurement_gate is None or nshots is None:
             return self._final_state
-        measurements = self.measurement_gate(final_state, nshots)
         return measurements
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
