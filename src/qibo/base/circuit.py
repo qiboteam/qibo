@@ -83,7 +83,7 @@ class BaseCircuit(object):
             if self.measure_gate is None:
                 self.measure_gate = gate
             else:
-                self.measure_gate.add_qubits(gate.target_qubits)
+                self.measure_gate.add(gate.target_qubits)
         else:
             self.queue.append(gate)
 

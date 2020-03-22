@@ -171,18 +171,32 @@ class M(Gate):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = set(q)
-        self.nshots = None
         self.is_executed = False
+
+        self.nshots = None
+        self._unmeasured_qubits = None # Set
 
     def add(self, qubits: Set[int]):
         if self.is_executed:
             raise RuntimeError("Cannot add qubits to a measurement gate that "
                                "was executed.")
         self.target_qubits |= qubits
+        if self._unmeasured_qubits is not None:
+            self._unmeasured_qubits -= qubits
 
     @property
-    def qubits(self):
+    def qubits(self) -> Tuple[int]:
         return tuple(sorted(self.target_qubits))
+
+    @property
+    def unmeasured_qubits(self) -> Tuple[int]:
+        if self._nqubits is None:
+            raise ValueError("Cannot calculate set of unmeasured qubits if "
+                             "the number of qubits in the circuit is unknown.")
+        if self._unmeasured_qubits is None:
+            self._unmeasured_qubits = set(i for i in range(self.nqubits)
+                                          if i not in self.target_qubits)
+        return tuple(sorted(self._unmeasured_qubits))
 
     def controlled_by(self, *q):
         raise NotImplementedError("Measurement gates cannot be controlled.")
