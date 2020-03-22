@@ -82,6 +82,7 @@ class BaseCircuit(object):
             self.measurement_sets.append(gate.target_qubits)
             if self.measurement_gate is None:
                 self.measurement_gate = gate
+                self.measurement_gate.is_circuit_measurement = True
             else:
                 self.measurement_gate.add(gate.target_qubits)
         else:

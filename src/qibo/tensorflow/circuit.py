@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX
-from qibo.tensorflow import gates
+from qibo.tensorflow import gates, measurements
 from typing import Optional
 
 

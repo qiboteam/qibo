@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import matrices
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Tuple
 
 
 class TensorflowGate(base_gates.Gate):
@@ -185,6 +185,7 @@ class Iden(TensorflowGate, base_gates.Iden):
 
 
 class M(TensorflowGate, base_gates.M):
+    from qibo.tensorflow import measurements
 
     def __init__(self, *args):
         base_gates.M.__init__(self, *args)
@@ -202,7 +203,12 @@ class M(TensorflowGate, base_gates.M):
                               axis=self.unmeasured_qubits)
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
         # Generate samples
-        return tf.random.categorical(logits[tf.newaxis], nshots)[0]
+        samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
+                                            dtype=tf.int64)[0]
+        if self.is_circuit_measurement:
+            return samples_dec
+        return self.measurements.GateResult(len(self.target_qubits),
+                                            samples_dec)
 
 
 class RX(TensorflowGate, base_gates.RX):

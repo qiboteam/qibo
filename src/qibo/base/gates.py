@@ -171,7 +171,9 @@ class M(Gate):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = set(q)
+
         self.is_executed = False
+        self.is_circuit_measurement = False
         self._unmeasured_qubits = None # Set
 
     def add(self, qubits: Set[int]):
