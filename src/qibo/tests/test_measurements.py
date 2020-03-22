@@ -83,6 +83,14 @@ def test_multiple_measurement_gates_circuit():
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
 
+    final_state = c.final_state.numpy()
+    c = models.Circuit(4)
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.X(3))
+    target_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
 
 def test_measurement_compiled_circuit():
     """Check that measurement gates work when compiling the circuit."""
@@ -97,7 +105,6 @@ def test_measurement_compiled_circuit():
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
 
-    print(c.final_state)
     final_state = c.final_state.numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1
