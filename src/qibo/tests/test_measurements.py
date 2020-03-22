@@ -9,13 +9,13 @@ def test_measurement_gate():
     state[0] = 1
     state = state.reshape((2, 2))
 
-    measurements = gates.M(0)(state, nshots=100).decimal_samples.numpy()
+    measurements = gates.M(0)(state, nshots=100).decimal.numpy()
     target_measurements = np.zeros_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
 
     state[0], state[-1] = 0, 1
-    measurements = gates.M(0)(state, nshots=100).decimal_samples.numpy()
+    measurements = gates.M(0)(state, nshots=100).decimal.numpy()
     target_measurements = np.ones_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
@@ -28,7 +28,7 @@ def test_multiple_qubit_measurement_gate():
     state[2] = 1
     state = state.reshape((2, 2))
 
-    measurements = gates.M(0, 1)(state, nshots=100).decimal_samples.numpy()
+    measurements = gates.M(0, 1)(state, nshots=100).decimal.numpy()
     target_measurements = 2 * np.ones_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
@@ -45,7 +45,7 @@ def test_measurement_circuit():
     c = models.Circuit(2)
     c.add(gates.M(0))
 
-    measurements = c(nshots=100).decimal_samples.numpy()
+    measurements = c(nshots=100).decimal.numpy()
     target_measurements = np.zeros_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
@@ -58,7 +58,7 @@ def test_multiple_qubit_measurement_circuit():
     c.add(gates.M(0))
     c.add(gates.M(1))
 
-    measurements = c(nshots=100).decimal_samples.numpy()
+    measurements = c(nshots=100).decimal.numpy()
     target_measurements = 2 * np.ones_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
@@ -78,7 +78,7 @@ def test_multiple_measurement_gates_circuit():
     c.add(gates.M(2))
     c.add(gates.X(3))
 
-    measurements = c(nshots=100).decimal_samples.numpy()
+    measurements = c(nshots=100).decimal.numpy()
     target_measurements = 3 * np.ones_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)
@@ -100,7 +100,7 @@ def test_measurement_compiled_circuit():
     c.add(gates.M(1))
     c.compile()
 
-    measurements = c(nshots=100).decimal_samples.numpy()
+    measurements = c(nshots=100).decimal.numpy()
     target_measurements = 2 * np.ones_like(measurements)
     assert measurements.shape == (100,)
     np.testing.assert_allclose(measurements, target_measurements)

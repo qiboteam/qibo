@@ -20,9 +20,8 @@ class GateResult:
                              "number of qubits is {}."
                              "".format(binary_samples.shape[-1], nqubits))
 
-        self._decimal_samples = decimal_samples
-        self._binary_samples = binary_samples
-
+        self._decimal = decimal_samples
+        self._binary = binary_samples
         self._frequencies = None
 
     @property
@@ -34,28 +33,26 @@ class GateResult:
         return {q: i for i, q in enumerate(self.qubits)}
 
     @property
-    def binary_samples(self) -> tf.Tensor:
-        if self._binary_samples is None:
+    def binary(self) -> tf.Tensor:
+        if self._binary is None:
             _range = tf.range(self.nqubits, dtype=tf.int64)
-            self._binary_samples = tf.math.mod(tf.bitwise.right_shift(
-                self.decimal_samples[:, tf.newaxis], _range), 2)
-        return self._binary_samples
+            self._binary = tf.math.mod(tf.bitwise.right_shift(
+                self._decimal[:, tf.newaxis], _range), 2)
+        return self._binary
 
     @property
-    def decimal_samples(self) -> tf.Tensor:
-        if self._decimal_samples is None:
+    def decimal(self) -> tf.Tensor:
+        if self._decimal is None:
             _range = tf.range(self.nqubits - 1, -1, -1, dtype=tf.int64)
             _range = tf.math(2, _range)[:, tf.newaxis]
-            self._decimal_samples = tf.matmul(self._binary_samples,
-                                              _range)[0]
-        return self._decimal_samples
+            self._decimal = tf.matmul(self._binary, _range)[0]
+        return self._decimal
 
     def frequencies(self, binary: bool = False) -> collections.Counter:
         if self._frequencies is None:
-            results, counts = np.unique(self.decimal_samples.numpy(),
-                                        return_counts=True)
+            res, cnts = np.unique(self.decimal.numpy(), return_counts=True)
             self._frequencies = collections.Counter(
-                {k: v for k, v in zip(results, counts)})
+                {k: v for k, v in zip(res, cnts)})
 
         if binary:
             return collections.Counter({{"0:b".format(k).zfill(self.nqubits): v
@@ -89,20 +86,20 @@ class CircuitResult:
                 qubit_tuple, binary_samples=samples)
 
     @property
-    def binary_samples(self):
-        return self.result.binary_samples
+    def binary(self):
+        return self.result.binary
 
     @property
-    def register_binary_samples(self, all: bool = True):
-        return {k: v.binary_samples for k, v in self.register_results.items()}
+    def register_binary(self, all: bool = True):
+        return {k: v.binary for k, v in self.register_results.items()}
 
     @property
-    def decimal_samples(self):
-        return self.result.decimal_samples
+    def decimal(self):
+        return self.result.decimal
 
     @property
-    def register_decimal_samples(self):
-        return {k: v.decimal_samples for k, v in self.register_results.items()}
+    def register_decimal(self):
+        return {k: v.decimal for k, v in self.register_results.items()}
 
     def frequencies(self, binary: bool = False):
         return self.result.frequencies(binary)
