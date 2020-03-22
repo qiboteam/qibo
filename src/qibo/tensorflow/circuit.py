@@ -28,6 +28,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         state = tf.cast(initial_state, dtype=self.dtype)
         for gate in self.queue:
             state = gate(state)
+        if self.measurement_gate is not None:
+            return state
         return tf.reshape(state, (2**self.nqubits,))
 
     def compile(self):
@@ -53,11 +55,23 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                  "{}.".format(shape))
 
         if self.compiled_execute is None:
-            return self._execute_func(state)
-        return self.compiled_execute(state)
+            final_state = self._execute_func(state)
+        else:
+            final_state = self.compiled_execute(state)
 
-    def __call__(self, initial_state: Optional[tf.Tensor] = None) -> tf.Tensor:
-        return self.execute(initial_state)
+        if self.measurement_gate is None:
+            self._final_state = final_state
+            return final_state
+
+        self._final_state = tf.reshape(final_state, (2**self.nqubits,))
+        if nshots is None:
+            return self._final_state
+        measurements = self.measurement_gate(final_state, nshots)
+        return measurements
+
+    def __call__(self, initial_state: Optional[tf.Tensor] = None,
+                 nshots: Optional[int] = None) -> tf.Tensor:
+        return self.execute(initial_state=initial_state, nshots=nshots)
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""

@@ -26,8 +26,8 @@ class BaseCircuit(object):
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
 
-        self.measure_sets = []
-        self.measure_gate = None
+        self.measurement_sets = []
+        self.measurement_gate = None
 
     def __add__(self, circuit):
         """Add circuits.
@@ -73,22 +73,22 @@ class BaseCircuit(object):
         # Check if any of the qubits that the gate acts on is already measured
         # Currently we do not allow measured qubits to be reused
         for qubit in gate.qubits:
-            if (self.measure_gate is not None and
-                qubit in self.measure_gate.target_qubits):
+            if (self.measurement_gate is not None and
+                qubit in self.measurement_gate.target_qubits):
                 raise ValueError("Cannot reuse qubit {} because it is already "
                                  "measured".format(qubit))
 
         if gate.name == "measure":
-            self.measure_sets.append(gate.target_qubits)
-            if self.measure_gate is None:
-                self.measure_gate = gate
+            self.measurement_sets.append(gate.target_qubits)
+            if self.measurement_gate is None:
+                self.measurement_gate = gate
             else:
-                self.measure_gate.add(gate.target_qubits)
+                self.measurement_gate.add(gate.target_qubits)
         else:
             self.queue.append(gate)
 
     @property
-    def size(self):
+    def size(self) -> int:
         """
         Return:
             number of qubits in the circuit
@@ -96,12 +96,19 @@ class BaseCircuit(object):
         return self.nqubits
 
     @property
-    def depth(self):
+    def depth(self) -> int:
         """
         Return:
             number of gates/operations in the circuit
         """
         return len(self.queue)
+
+    @property
+    def final_state(self):
+        if self._final_state is None:
+            raise ValueError("Cannot access final state before the circuit is "
+                             "executed.")
+        return self._final_state
 
     @abstractmethod
     def execute(self):

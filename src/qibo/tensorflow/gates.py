@@ -193,10 +193,7 @@ class M(TensorflowGate, base_gates.M):
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n)
 
-    def __call__(self, state: tf.Tensor,
-                 nshots: Optional[int] = None) -> tf.Tensor:
-        if nshots is not None:
-            self.nshots = nshots
+    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
@@ -205,7 +202,7 @@ class M(TensorflowGate, base_gates.M):
                               axis=self.unmeasured_qubits)
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
         # Generate samples
-        return tf.random.categorical(logits[tf.newaxis], self.nshots)[0]
+        return tf.random.categorical(logits[tf.newaxis], nshots)[0]
 
 
 class RX(TensorflowGate, base_gates.RX):

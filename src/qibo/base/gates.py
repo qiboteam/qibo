@@ -167,13 +167,11 @@ class M(Gate):
             order in ids.
     """
 
-    def __init__(self, *q, nshots: Optional[int] = None):
+    def __init__(self, *q):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = set(q)
         self.is_executed = False
-
-        self.nshots = None
         self._unmeasured_qubits = None # Set
 
     def add(self, qubits: Set[int]):
