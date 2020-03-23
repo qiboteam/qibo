@@ -26,10 +26,11 @@ jobs:
           pip install sphinx
           make -C doc html
       - name: Deploy
-        env:
-          QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
         run: |
-          echo $QIBO_TEAM | base64 --decode > "$KEY"
+          KEY=$( mktemp )
+          echo "$QIBO_TEAM" | base64 --decode > "$KEY"
           scp -r -i "$KEY" -o StrictHostKeyChecking=no\
            doc/build/html/* \
            ubuntu@34.240.99.72:/var/www/html/
+        env:
+          QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
