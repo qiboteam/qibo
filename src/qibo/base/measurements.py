@@ -46,19 +46,18 @@ class GateResult:
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
 
-    @property
-    def binary(self) -> TensorType:
-        if self._binary is None:
-            self._binary = self._convert_to_binary(self._decimal, self.nqubits)
-        return self._binary
+    def samples(self, binary: bool = True) -> TensorType:
+        if binary:
+            if self._binary is None:
+                self._binary = self._convert_to_binary(
+                    self._decimal, self.nqubits)
+            return self._binary
 
-    @property
-    def decimal(self) -> TensorType:
         if self._decimal is None:
             self._decimal = self._convert_to_decimal(self._binary, self.nqubits)
         return self._decimal
 
-    def frequencies(self, binary: bool = False) -> collections.Counter:
+    def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
         Args:
@@ -124,28 +123,15 @@ class CircuitResult:
                 self.register_qubits, self.result)
         return self._register_results
 
-    @property
-    def binary(self) -> TensorType:
-        return self.result.binary
+    def samples(self, binary: bool = True, registers: bool = False) -> TensorType:
+        if not registers:
+            return self.result.samples(binary)
+        return {k: v.samples(binary) for k, v in self.register_results.items()}
 
-    @property
-    def decimal(self) -> TensorType:
-        return self.result.decimal
-
-    def frequencies(self, binary: bool = False) -> collections.Counter:
-        return self.result.frequencies(binary)
-
-    @property
-    def register_binary(self) -> Dict[str, TensorType]:
-        return {k: v.binary for k, v in self.register_results.items()}
-
-    @property
-    def register_decimal(self) -> Dict[str, TensorType]:
-        return {k: v.decimal for k, v in self.register_results.items()}
-
-    def register_frequencies(self, binary: bool = False) -> Dict[str, collections.Counter]:
-        return {k: v.frequencies(binary)
-                for k, v in self.register_results.items()}
+    def frequencies(self, binary: bool = True, registers: bool = False) -> Dict[str, collections.Counter]:
+        if not registers:
+            return self.result.frequencies(binary)
+        return {k: v.frequencies(binary) for k, v in self.register_results.items()}
 
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
