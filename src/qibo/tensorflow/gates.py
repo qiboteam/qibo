@@ -210,7 +210,7 @@ class M(TensorflowGate, base_gates.M):
             return samples_dec
 
         return self.measurements.GateResult(
-            self.qubits, decimal_samples=samples_dec)
+            self.qubits, state, decimal_samples=samples_dec)
 
 
 class RX(TensorflowGate, base_gates.RX):

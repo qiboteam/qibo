@@ -16,6 +16,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
+        self._final_state = None
 
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
@@ -30,9 +31,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         for gate in self.queue:
             state = gate(state)
         if self.measurement_gate is None or nshots is None:
-            return None, tf.reshape(state, (2**self.nqubits,))
-        return (self.measurement_gate(state, nshots, samples_only=True),
-                tf.reshape(state, (2**self.nqubits,)))
+            return None, tf.reshape(state, (2 ** self.nqubits,))
+        return self.measurement_gate(state, nshots, samples_only=True), state
 
     def compile(self):
         """Compiles `_execute_func` using `tf.function`."""
@@ -43,7 +43,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def execute(self, initial_state: Optional[tf.Tensor] = None,
                 nshots: Optional[int] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit."""
-        self.is_executed = True
         if initial_state is None:
             state = self._default_initial_state()
         else:
@@ -64,9 +63,19 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self.measurement_gate is None or nshots is None:
             return self._final_state
 
-        gate_result = measurements.GateResult(self.measurement_gate.qubits,
-                                              decimal_samples=samples)
-        return measurements.CircuitResult(self.measurement_sets, gate_result)
+        self.measurement_gate_result = measurements.GateResult(
+            self.measurement_gate.qubits, state, decimal_samples=samples)
+        return measurements.CircuitResult(
+            self.measurement_sets, self.measurement_gate_result)
+
+    @property
+    def final_state(self) -> tf.Tensor:
+        if self._final_state is None:
+            raise ValueError("Cannot access final state before the circuit is "
+                             "executed.")
+        if self.measurement_gate_result is None:
+            return self._final_state
+        return tf.reshape(self._final_state, (2 ** self.nqubits,))
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
                  nshots: Optional[int] = None) -> tf.Tensor:

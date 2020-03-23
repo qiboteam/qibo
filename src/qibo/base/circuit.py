@@ -29,6 +29,7 @@ class BaseCircuit(object):
 
         self.measurement_sets = dict()
         self.measurement_gate = None
+        self.measurement_gate_result = None
 
     def __add__(self, circuit):
         """Add circuits.
@@ -72,7 +73,7 @@ class BaseCircuit(object):
         Args:
             gate (qibo.gates): the specific gate (see :ref:`Gates`).
         """
-        if self.is_executed:
+        if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")
 
@@ -128,13 +129,6 @@ class BaseCircuit(object):
             number of gates/operations in the circuit
         """
         return len(self.queue)
-
-    @property
-    def final_state(self):
-        if self._final_state is None:
-            raise ValueError("Cannot access final state before the circuit is "
-                             "executed.")
-        return self._final_state
 
     @abstractmethod
     def execute(self):
