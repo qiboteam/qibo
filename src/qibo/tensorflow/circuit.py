@@ -31,9 +31,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             state = gate(state)
         if self.measurement_gate is None or nshots is None:
             return None, tf.reshape(state, (2**self.nqubits,))
-        return (self.measurement_gate(state, nshots),
+        return (self.measurement_gate(state, nshots, samples_only=True),
                 tf.reshape(state, (2**self.nqubits,)))
-
 
     def compile(self):
         """Compiles `_execute_func` using `tf.function`."""

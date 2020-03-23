@@ -176,7 +176,6 @@ class M(Gate):
         self.register_name = register_name
 
         self.is_executed = False
-        self.is_circuit_measurement = False
         self._unmeasured_qubits = None # Set
 
     def add(self, qubits: Set[int]):
@@ -190,9 +189,6 @@ class M(Gate):
         Args:
             qubits: Set of qubit ids to be added to the measurement's qubits.
         """
-        if not self.is_circuit_measurement:
-            raise ValueError("Only `models.Circuit`'s measurement gate are "
-                             "allowed to add qubits to.")
         if self.is_executed:
             raise RuntimeError("Cannot add qubits to a measurement gate that "
                                "was executed.")

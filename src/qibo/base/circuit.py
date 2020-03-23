@@ -110,7 +110,6 @@ class BaseCircuit(object):
         # Update circuit's global measurement gate
         if self.measurement_gate is None:
             self.measurement_gate = gate
-            self.measurement_gate.is_circuit_measurement = True
         else:
             self.measurement_gate.add(gate.target_qubits)
 

@@ -194,7 +194,8 @@ class M(TensorflowGate, base_gates.M):
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n)
 
-    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor, nshots: int,
+                 samples_only: bool = False) -> tf.Tensor:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape))
 
@@ -205,8 +206,9 @@ class M(TensorflowGate, base_gates.M):
         # Generate samples
         samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                             dtype=tf.int64)[0]
-        if self.is_circuit_measurement:
+        if samples_only:
             return samples_dec
+
         return self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
 
