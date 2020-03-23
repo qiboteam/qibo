@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.7]
-        
+
     steps:
       - uses: actions/checkout@v1
       - name: Set up Python ${{ matrix.python-version }}
@@ -25,3 +25,11 @@ jobs:
         run: |
           pip install sphinx
           make -C doc html
+      - name: Deploy
+        env:
+          QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
+        run: |
+          echo $QIBO_TEAM | base64 --decode > "$KEY"
+          scp -r -i "$KEY" -o StrictHostKeyChecking=no\
+           doc/build/html/* \
+           ubuntu@34.240.99.72:/var/www/html/
