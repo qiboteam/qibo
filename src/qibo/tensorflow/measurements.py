@@ -10,7 +10,7 @@ class GateResult(base_measurements.GateResult):
 
     @staticmethod
     def _convert_to_binary(x: tf.Tensor, n: int) -> tf.Tensor:
-        _range = tf.range(n, dtype=tf.int64)
+        _range = tf.range(n - 1, -1, -1, dtype=tf.int64)
         return tf.math.mod(tf.bitwise.right_shift(x[:, tf.newaxis], _range), 2)
 
     @staticmethod

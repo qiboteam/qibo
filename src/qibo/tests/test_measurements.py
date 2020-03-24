@@ -28,11 +28,10 @@ def test_convert_to_binary():
     state = state.reshape((2, 2))
     result = gates.M(0)(state, nshots=100)
 
-    import tensorflow as tf
     import itertools
     nbits = 5
-    decimal_samples = tf.cast(np.arange(2 ** nbits), dtype=tf.int64)
-    binary_samples = result._convert_to_binary(decimal_samples, nbits).numpy()
+    binary_samples = result._convert_to_binary(np.arange(2 ** nbits),
+                                               nbits).numpy()
     target_samples = np.array(list(itertools.product([0, 1], repeat=nbits)))
     np.testing.assert_allclose(binary_samples, target_samples)
 
