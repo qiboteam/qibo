@@ -20,6 +20,23 @@ def assert_results(result,
       assert result.frequencies(True) == collections.Counter(binary_frequencies)
 
 
+def test_convert_to_binary():
+    """Check that `_convert_to_binary` method works properly."""
+    # Create a result object to access `_convert_to_binary`
+    state = np.zeros(4)
+    state[0] = 1
+    state = state.reshape((2, 2))
+    result = gates.M(0)(state, nshots=100)
+
+    import tensorflow as tf
+    import itertools
+    nbits = 5
+    decimal_samples = tf.cast(np.arange(2 ** nbits), dtype=tf.int64)
+    binary_samples = result._convert_to_binary(decimal_samples, nbits).numpy()
+    target_samples = np.array(list(itertools.product([0, 1], repeat=nbits)))
+    np.testing.assert_allclose(binary_samples, target_samples)
+
+
 def test_measurement_gate():
     """Check that measurement gate works when called on the state |00>."""
     state = np.zeros(4)
