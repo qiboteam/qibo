@@ -36,6 +36,22 @@ def test_convert_to_binary():
     np.testing.assert_allclose(binary_samples, target_samples)
 
 
+def test_convert_to_decimal():
+    """Check that `_convert_to_decimal` method works properly."""
+    # Create a result object to access `_convert_to_decimal`
+    state = np.zeros(4)
+    state[0] = 1
+    state = state.reshape((2, 2))
+    result = gates.M(0)(state, nshots=100)
+
+    import itertools
+    nbits = 5
+    binary_samples = np.array(list(itertools.product([0, 1], repeat=nbits)))
+    decimal_samples = result._convert_to_decimal(binary_samples, nbits).numpy()
+    target_samples = np.arange(2 ** nbits)
+    np.testing.assert_allclose(decimal_samples, target_samples)
+
+
 def test_measurement_gate():
     """Check that measurement gate works when called on the state |00>."""
     state = np.zeros(4)
@@ -67,7 +83,6 @@ def test_multiple_qubit_measurement_gate():
     state = np.zeros(4)
     state[2] = 1
     state = state.reshape((2, 2))
-    print([state[0, 0], state[0, 1], state[1, 0], state[1, 1]])
     result = gates.M(0, 1)(state, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))

@@ -16,8 +16,8 @@ class GateResult(base_measurements.GateResult):
     @staticmethod
     def _convert_to_decimal(x: tf.Tensor, n: int) -> tf.Tensor:
         _range = tf.range(n - 1, -1, -1, dtype=tf.int64)
-        _range = tf.math(2, _range)[:, tf.newaxis]
-        return tf.matmul(x, _range)[0]
+        _range = tf.math.pow(2, _range)[:, tf.newaxis]
+        return tf.matmul(x, _range)[:, 0]
 
     @staticmethod
     def _calculate_counts(decimal_samples: tf.Tensor) -> Tuple[np.ndarray]:
