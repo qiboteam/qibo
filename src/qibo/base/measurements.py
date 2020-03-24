@@ -75,13 +75,13 @@ class GateResult:
             measured shots.
         """
         if self._frequencies is None:
-            res, cnts = self._calculate_counts(self.decimal)
+            res, cnts = self._calculate_counts(self.samples(binary=False))
             self._frequencies = collections.Counter(
                 {k: v for k, v in zip(res, cnts)})
 
         if binary:
             return collections.Counter(
-                {"0:b".format(k).zfill(self.nqubits): v
+                {"{0:b}".format(k).zfill(self.nqubits): v
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
