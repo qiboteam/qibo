@@ -103,69 +103,108 @@ def test_controlled_measurement_error():
 def test_measurement_circuit():
     """Check that measurement gate works as part of circuit."""
     c = models.Circuit(2)
+    c.add(gates.X(0))
     c.add(gates.M(0))
+    result = c(nshots=100)
+    assert_results(result,
+                   decimal_samples=np.ones((100,)),
+                   binary_samples=np.ones((100, 1)),
+                   decimal_frequencies={1: 100},
+                   binary_frequencies={"1": 100})
 
-    measurements = c(nshots=100).samples(False).numpy()
-    target_measurements = np.zeros_like(measurements)
-    assert measurements.shape == (100,)
-    np.testing.assert_allclose(measurements, target_measurements)
 
-
-def test_multiple_qubit_measurement_circuit():
-    """Check that multiple measurement gates fuse correctly."""
+def test_gate_after_measurement_error():
+    """Check that reusing measured qubits is not allowed."""
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
+    c.add(gates.X(1))
+    with pytest.raises(ValueError):
+        c.add(gates.H(0))
+
+
+def test_multiple_qubit_measurement_circuit():
+    """Check that multiple measurement gates in circuit."""
+    c = models.Circuit(2)
+    c.add(gates.X(1))
+    c.add(gates.M(0))
     c.add(gates.M(1))
+    result = c(nshots=100)
 
-    measurements = c(nshots=100).samples(False).numpy()
-    target_measurements = 2 * np.ones_like(measurements)
-    assert measurements.shape == (100,)
-    np.testing.assert_allclose(measurements, target_measurements)
-
-    final_state = c.final_state.numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[2] = 1
-    np.testing.assert_allclose(final_state, target_state)
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 1] = 1
+    assert_results(result,
+                   decimal_samples=np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={1: 100},
+                   binary_frequencies={"01": 100})
 
 
 def test_multiple_measurement_gates_circuit():
-    """Check that measurement gates with different number of targets."""
+    """Check using many gates with multiple qubits each in the same circuit."""
     c = models.Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 1))
     c.add(gates.M(2))
     c.add(gates.X(3))
+    result = c(nshots=100)
 
-    measurements = c(nshots=100).samples(False).numpy()
-    target_measurements = 3 * np.ones_like(measurements)
-    assert measurements.shape == (100,)
-    np.testing.assert_allclose(measurements, target_measurements)
+    target_binary_samples = np.ones((100, 3))
+    target_binary_samples[:, 0] = 0
+    assert_results(result,
+                   decimal_samples=3 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={3: 100},
+                   binary_frequencies={"011": 100})
 
-    final_state = c.final_state.numpy()
+
+def test_final_state():
+    """Check that final state is logged correctly when using measurements."""
+    c = models.Circuit(4)
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.M(0, 1))
+    c.add(gates.M(2))
+    c.add(gates.X(3))
+    result = c(nshots=100)
+    logged_final_state = c.final_state.numpy()
+
     c = models.Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.X(3))
     target_state = c().numpy()
-    np.testing.assert_allclose(final_state, target_state)
+
+    np.testing.assert_allclose(logged_final_state, target_state)
 
 
 def test_measurement_compiled_circuit():
-    """Check that measurement gates work when compiling the circuit."""
+    """Check that measurements and final state work for compiled circuits."""
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
     c.add(gates.M(1))
     c.compile()
+    result = c(nshots=100)
 
-    measurements = c(nshots=100).samples(False).numpy()
-    target_measurements = 2 * np.ones_like(measurements)
-    assert measurements.shape == (100,)
-    np.testing.assert_allclose(measurements, target_measurements)
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_results(result,
+                   decimal_samples=2 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={2: 100},
+                   binary_frequencies={"10": 100})
 
     final_state = c.final_state.numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1
     np.testing.assert_allclose(final_state, target_state)
+
+
+def test_register_measurements():
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(0))
+    c.add(gates.M(1))
+    result = c(nshots=100)
