@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import abstractmethod
-from typing import Sequence, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 class Gate(object):
@@ -324,7 +324,7 @@ class Unitary(Gate):
         name (Optional): Name for the gate.
     """
 
-    def __init__(self, unitary, *q, name=None):
+    def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
         self.unitary = unitary

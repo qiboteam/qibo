@@ -366,7 +366,7 @@ def test_unitary_random_gate():
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.Unitary(matrix, 0, 1))
+    c.add(gates.Unitary(matrix, 0, 1, name="random"))
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)

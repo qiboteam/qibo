@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import matrices
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 class TensorflowGate(base_gates.Gate):
@@ -279,8 +279,8 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
 class Unitary(TensorflowGate, base_gates.Unitary):
 
-    def __init__(self, *args):
-        base_gates.Unitary.__init__(self, *args)
+    def __init__(self, *args, name: Optional[str] = None):
+        base_gates.Unitary.__init__(self, *args, name=name)
         rank = 2 * len(self.target_qubits)
         # This reshape will raise an error if the number of target qubits
         # given is incompatible to the shape of the given unitary.
