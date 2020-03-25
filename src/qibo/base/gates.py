@@ -41,10 +41,16 @@ class Gate(object):
 
     @property
     def qubits(self) -> Tuple[int]:
+        """Tuple with all all (control and target) qubits that the gate acts."""
         return self.control_qubits + self.target_qubits
 
     @property
     def nqubits(self) -> int:
+        """Number of qubits in the circuit that the gate is part of.
+
+        This is set automatically when the gate is added on a circuit or
+        when the gate is called on a state.
+        """
         if self._nqubits is None:
             raise ValueError("Accessing number of qubits for gate {} but "
                              "this is not yet set.".format(self))
@@ -59,6 +65,12 @@ class Gate(object):
 
     @nqubits.setter
     def nqubits(self, n: int):
+        """Sets the total number of qubits that this gate acts on.
+
+        This setter is used by `circuit.add` if the gate is added in a circuit
+        or during `__call__` if the gate is called directly on a state.
+        The user is not supposed to set `nqubits` by hand.
+        """
         if self._nqubits is not None:
             raise ValueError("The number of qubits for this gates is already "
                              "set to {}.".format(self._nqubits))
@@ -66,6 +78,11 @@ class Gate(object):
         self._nstates = 2**n
 
     def controlled_by(self, *q) -> "Gate":
+        """Controls the gate on (arbitrarily many) qubits.
+
+        Args:
+            *q: Ids of the qubits that the gate will be controlled on.
+        """
         if self.control_qubits:
             raise ValueError("Cannot use `controlled_by` method on gate {} "
                              "because it is already controlled by {}."
@@ -142,19 +159,6 @@ class Barrier(Gate):
     def __init__(self, q):
         super(Barrier, self).__init__()
         self.name = "barrier"
-        self.target_qubits = (q,)
-
-
-class Iden(Gate):
-    """The identity gate.
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super(Iden, self).__init__()
-        self.name = "Iden"
         self.target_qubits = (q,)
 
 

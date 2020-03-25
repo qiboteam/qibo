@@ -177,13 +177,6 @@ class Barrier(TensorflowGate, base_gates.Barrier):
         raise NotImplementedError
 
 
-class Iden(TensorflowGate, base_gates.Iden):
-
-    def __init__(self, *args):
-        base_gates.Iden.__init__(self, *args)
-        self.matrix = matrices.Iden
-
-
 class MX(TensorflowGate, base_gates.MX):
 
     def __init__(self):
