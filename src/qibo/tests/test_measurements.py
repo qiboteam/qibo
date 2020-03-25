@@ -2,22 +2,56 @@ import collections
 import numpy as np
 import pytest
 from qibo import gates, models
-from typing import Optional
+from typing import Dict, Optional, Union
 
 
-def assert_results(result,
-                   decimal_samples: Optional[np.ndarray] = None,
-                   binary_samples: Optional[np.ndarray] = None,
-                   decimal_frequencies: Optional[collections.Counter] = None,
-                   binary_frequencies: Optional[collections.Counter] = None):
-  if decimal_samples is not None:
-      np.testing.assert_allclose(result.samples(False).numpy(), decimal_samples)
-  if binary_samples is not None:
-      np.testing.assert_allclose(result.samples(True).numpy(), binary_samples)
-  if decimal_frequencies is not None:
-      assert result.frequencies(False) == collections.Counter(decimal_frequencies)
-  if binary_frequencies is not None:
-      assert result.frequencies(True) == collections.Counter(binary_frequencies)
+def _assert_results(result: Dict[str, Union[np.ndarray, collections.Counter]],
+                    target: Dict[str, Union[np.ndarray, collections.Counter]]):
+    if "decimal_samples" in target:
+        np.testing.assert_allclose(result["decimal_samples"],
+                                   target["decimal_samples"])
+    if "binary_samples" in target:
+        np.testing.assert_allclose(result["binary_samples"],
+                                   target["binary_samples"])
+    if "decimal_frequencies" in target:
+        assert (result["decimal_frequencies"] ==
+                collections.Counter(target["decimal_frequencies"]))
+    if "binary_frequencies" in target:
+        assert (result["binary_frequencies"] ==
+                collections.Counter(target["binary_frequencies"]))
+
+
+def assert_results(result, **target):
+    results = {}
+    if "decimal_samples" in target:
+        results["decimal_samples"] = result.samples(False)
+    if "binary_samples" in target:
+        results["binary_samples"] = result.samples(True)
+    if "decimal_frequencies" in target:
+        results["decimal_frequencies"] = result.frequencies(False)
+    if "binary_samples" in target:
+        results["binary_frequencies"] = result.frequencies(True)
+    _assert_results(results, target)
+
+
+def assert_register_results(
+        result,
+        decimal_samples: Optional[np.ndarray] = None,
+        binary_samples: Optional[np.ndarray] = None,
+        decimal_frequencies: Optional[collections.Counter] = None,
+        binary_frequencies: Optional[collections.Counter] = None):
+
+    if decimal_samples is not None:
+        register_result = result.samples(binary=False, registers=True)
+        assert register_result.keys() == decimal_samples.keys()
+        for k, v in register_result.items():
+            np.testing.assert_allclose(v.numpy(), decimal_samples[k])
+
+    if binary_samples is not None:
+        register_result = result.samples(binary=True, registers=True)
+        assert register_result.keys() == binary_samples.keys()
+        for k, v in register_result.items():
+            np.testing.assert_allclose(v.numpy(), binary_samples[k])
 
 
 def test_convert_to_binary():
