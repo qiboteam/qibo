@@ -177,13 +177,6 @@ class Barrier(TensorflowGate, base_gates.Barrier):
         raise NotImplementedError
 
 
-class Iden(TensorflowGate, base_gates.Iden):
-
-    def __init__(self, *args):
-        base_gates.Iden.__init__(self, *args)
-        self.matrix = matrices.Iden
-
-
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
@@ -290,8 +283,8 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
 class Unitary(TensorflowGate, base_gates.Unitary):
 
-    def __init__(self, *args):
-        base_gates.Unitary.__init__(self, *args)
+    def __init__(self, *args, name: Optional[str] = None):
+        base_gates.Unitary.__init__(self, *args, name=name)
         rank = 2 * len(self.target_qubits)
         # This reshape will raise an error if the number of target qubits
         # given is incompatible to the shape of the given unitary.

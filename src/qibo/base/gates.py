@@ -41,10 +41,16 @@ class Gate(object):
 
     @property
     def qubits(self) -> Tuple[int]:
+        """Tuple with all all (control and target) qubits that the gate acts."""
         return self.control_qubits + self.target_qubits
 
     @property
     def nqubits(self) -> int:
+        """Number of qubits in the circuit that the gate is part of.
+
+        This is set automatically when the gate is added on a circuit or
+        when the gate is called on a state.
+        """
         if self._nqubits is None:
             raise ValueError("Accessing number of qubits for gate {} but "
                              "this is not yet set.".format(self))
@@ -59,6 +65,12 @@ class Gate(object):
 
     @nqubits.setter
     def nqubits(self, n: int):
+        """Sets the total number of qubits that this gate acts on.
+
+        This setter is used by `circuit.add` if the gate is added in a circuit
+        or during `__call__` if the gate is called directly on a state.
+        The user is not supposed to set `nqubits` by hand.
+        """
         if self._nqubits is not None:
             raise ValueError("The number of qubits for this gates is already "
                              "set to {}.".format(self._nqubits))
@@ -66,6 +78,11 @@ class Gate(object):
         self._nstates = 2**n
 
     def controlled_by(self, *q) -> "Gate":
+        """Controls the gate on (arbitrarily many) qubits.
+
+        Args:
+            *q: Ids of the qubits that the gate will be controlled on.
+        """
         if self.control_qubits:
             raise ValueError("Cannot use `controlled_by` method on gate {} "
                              "because it is already controlled by {}."
@@ -145,24 +162,11 @@ class Barrier(Gate):
         self.target_qubits = (q,)
 
 
-class Iden(Gate):
-    """The identity gate.
-
-    Args:
-        q (int): the qubit id number.
-    """
-
-    def __init__(self, q):
-        super(Iden, self).__init__()
-        self.name = "Iden"
-        self.target_qubits = (q,)
-
-
 class M(Gate):
     """The Measure Z gate.
 
     Args:
-        q (int): id numbers of the qubits to measure.
+        *q (int): id numbers of the qubits to measure.
             Order does not matter. Measurement results will follow increasing
             order in ids.
         register_name: Optional name of the register to distinguish it from
@@ -347,7 +351,7 @@ class Unitary(Gate):
         name (Optional): Name for the gate.
     """
 
-    def __init__(self, unitary, *q, name=None):
+    def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
         self.unitary = unitary

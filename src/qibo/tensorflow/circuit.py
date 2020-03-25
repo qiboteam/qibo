@@ -21,13 +21,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, initial_state: tf.Tensor,
-                      nshots: Optional[int]) -> tf.Tensor:
+    def _execute_func(self, state: tf.Tensor, nshots: Optional[int] = None
+                      ) -> tf.Tensor:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
         """
-        state = tf.cast(initial_state, dtype=self.dtype)
         for gate in self.queue:
             state = gate(state)
         if self.measurement_gate is None or nshots is None:
@@ -45,15 +44,21 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Executes the Tensorflow circuit."""
         if initial_state is None:
             state = self._default_initial_state()
+        elif isinstance(initial_state, np.ndarray):
+            state = tf.cast(initial_state.reshape(self.nqubits * (2,)),
+                            dtype=self.dtype)
+        elif isinstance(initial_state, tf.Tensor):
+            if tuple(initial_state.shape) != self.nqubits * (2,):
+                raise ValueError("Initial state should be a rank-n tensor if "
+                                 "it is passed as a Tensorflow tensor but it "
+                                 "has shape {}.".format(initial_state.shape))
+            if initial_state.dtype != self.dtype:
+                raise TypeError("Circuit is of type {} but initial state is "
+                                "{}.".format(self.dtype, initial_state.dtype))
+            state = initial_state
         else:
-            shape = tuple(initial_state.shape)
-            if len(shape) == self.nqubits:
-                state = tf.cast(initial_state, dtype=self.dtype)
-            elif len(shape) == 1:
-                state = tf.reshape(initial_state, self.nqubits * (2,))
-            else:
-                raise ValueError("Given initial state has unsupported shape "
-                                 "{}.".format(shape))
+            raise TypeError("Initial state type {} is not recognized."
+                            "".format(type(initial_state)))
 
         if self.compiled_execute is None:
             samples, self._final_state = self._execute_func(state, nshots)

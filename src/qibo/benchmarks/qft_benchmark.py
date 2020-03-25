@@ -76,10 +76,10 @@ def main(nqubits_list: List[int],
         if compile:
             start_time = time.time()
             circuit.compile()
-            logs["compile_time"].append(time.time() - start_time)
             # Try executing here so that compile time is not included
             # in the simulation time
             final_state = circuit.execute()
+            logs["compile_time"].append(time.time() - start_time)
 
         start_time = time.time()
         final_state = circuit.execute(initial_state)
