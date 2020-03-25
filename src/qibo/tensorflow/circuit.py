@@ -34,14 +34,33 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return self.measurement_gate(state, nshots, samples_only=True), state
 
     def compile(self):
-        """Compiles `_execute_func` using `tf.function`."""
+        """Compiles the circuit as a Tensorflow graph."""
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
         self.compiled_execute = tf.function(self._execute_func)
 
     def execute(self, initial_state: Optional[tf.Tensor] = None,
                 nshots: Optional[int] = None) -> tf.Tensor:
-        """Executes the Tensorflow circuit."""
+        """Executes the Tensorflow circuit.
+
+        Args:
+            initial_state: Initial state vector as a numpy array of shape
+                (2 ** nqubits,).
+                A Tensorflow tensor with shape nqubits * (2,) is also allowed
+                as an initial state if it has the `dtype` of the circuit.
+                If None the |000...0> state will be used as initial state.
+            nshots: Number of shots to sample if the circuit contains
+                measurement gates.
+                If None the measurement gates will be ignored.
+
+        Returns:
+            If `nshots` is given and the circuit contains measurements this
+                will return a `CircuitResult` object that contains information
+                about the measured samples.
+            If the circuit does not contain measurements or `nshots` is None
+                this will return the final state vector as a Tensorflow tensor
+                of shape (2 ** nqubits,).
+        """
         if initial_state is None:
             state = self._default_initial_state()
         elif isinstance(initial_state, np.ndarray):
@@ -75,6 +94,14 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def final_state(self) -> tf.Tensor:
+        """"Returns the final state as a Tensorflow tensor.
+
+        The tensor has shape (2 ** nqubits,).
+
+        Raises:
+            ValueError if the user attempts to access the final state before
+                executing the circuit.
+        """
         if self._final_state is None:
             raise ValueError("Cannot access final state before the circuit is "
                              "executed.")
@@ -84,6 +111,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
                  nshots: Optional[int] = None) -> tf.Tensor:
+        """Equivalent to `circuit.execute()`."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 
     def _default_initial_state(self) -> tf.Tensor:
