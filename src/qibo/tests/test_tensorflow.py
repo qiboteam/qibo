@@ -464,6 +464,7 @@ def test_circuit_custom_compilation():
 
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
+    init_state = tf.cast(init_state.reshape((2, 2)), dtype=c.dtype)
     r2 = compiled_circuit(init_state)
 
     np.testing.assert_allclose(r1, r2)
