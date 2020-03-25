@@ -187,8 +187,8 @@ class Iden(TensorflowGate, base_gates.Iden):
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
-    def __init__(self, *args):
-        base_gates.M.__init__(self, *args)
+    def __init__(self, *args, register_name: Optional[str] = None):
+        base_gates.M.__init__(self, *args, register_name=register_name)
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):

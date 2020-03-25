@@ -153,7 +153,7 @@ def test_gate_after_measurement_error():
 
 
 def test_multiple_qubit_measurement_circuit():
-    """Check that multiple measurement gates in circuit."""
+    """Check multiple measurement gates in circuit."""
     c = models.Circuit(2)
     c.add(gates.X(1))
     c.add(gates.M(0))
@@ -170,7 +170,7 @@ def test_multiple_qubit_measurement_circuit():
 
 
 def test_multiple_measurement_gates_circuit():
-    """Check using many gates with multiple qubits each in the same circuit."""
+    """Check multiple gates with multiple qubits each in the same circuit."""
     c = models.Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(2))
@@ -208,6 +208,26 @@ def test_final_state():
     np.testing.assert_allclose(logged_final_state, target_state)
 
 
+def test_circuit_with_unmeasured_qubits():
+    """Check that unmeasured qubits are not taken into account."""
+    c = models.Circuit(5)
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.M(0, 2))
+    c.add(gates.X(3))
+    c.add(gates.M(1, 4))
+    result = c(nshots=100)
+
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    assert_results(result,
+                   decimal_samples=6 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={6: 100},
+                   binary_frequencies={"0110": 100})
+
+
 def test_measurement_compiled_circuit():
     """Check that measurements and final state work for compiled circuits."""
     c = models.Circuit(2)
@@ -232,6 +252,7 @@ def test_measurement_compiled_circuit():
 
 
 def test_register_measurements():
+    """Check register measurements are split properly."""
     c = models.Circuit(3)
     c.add(gates.X(0))
     c.add(gates.X(1))
@@ -251,3 +272,40 @@ def test_register_measurements():
     target["binary_frequencies"] = {"Register0": {"10": 100},
                                     "Register1": {"1": 100}}
     assert_register_results(result, **target)
+
+
+def test_registers_in_circuit_with_unmeasured_qubits():
+    """Check that register measurements are unaffected by unmeasured qubits."""
+    c = models.Circuit(5)
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.M(0, 2, register_name="A"))
+    c.add(gates.X(3))
+    c.add(gates.M(1, 4, register_name="B"))
+    result = c(nshots=100)
+
+    target = {}
+    target["decimal_samples"] = {"A": np.ones((100,)),
+                                 "B": 2 * np.ones((100,))}
+    target["binary_samples"] = {"A": np.zeros((100, 2)),
+                                "B": np.zeros((100, 2))}
+    target["binary_samples"]["A"][:, 1] = 1
+    target["binary_samples"]["B"][:, 0] = 1
+    target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
+    target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
+    assert_register_results(result, **target)
+
+
+@pytest.mark.skip
+def test_probabilistic_measurement():
+    import tensorflow as tf
+    tf.random.set_seed(1234)
+
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.M(0, 1))
+    result = c(nshots=1000)
+
+    target_freqs = {"00": 250, "01": 250, "10": 250, "11": 250}
+    assert_results(result, binary_frequencies=target_freqs)
