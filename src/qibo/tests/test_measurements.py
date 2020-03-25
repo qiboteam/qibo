@@ -20,6 +20,35 @@ def assert_results(result,
       assert result.frequencies(True) == collections.Counter(binary_frequencies)
 
 
+def assert_register_results(
+            result,
+            decimal_samples: Optional[np.ndarray] = None,
+            binary_samples: Optional[np.ndarray] = None,
+            decimal_frequencies: Optional[collections.Counter] = None,
+            binary_frequencies: Optional[collections.Counter] = None):
+    if decimal_samples is not None:
+        register_result = result.samples(binary=False, registers=True)
+        assert register_result.keys() == decimal_samples.keys()
+        for k, v in register_result.items():
+            np.testing.assert_allclose(v.numpy(), decimal_samples[k])
+    if binary_samples is not None:
+        register_result = result.samples(binary=True, registers=True)
+        assert register_result.keys() == binary_samples.keys()
+        for k, v in register_result.items():
+            np.testing.assert_allclose(v.numpy(), binary_samples[k])
+
+    if decimal_frequencies is not None:
+        register_result = result.frequencies(binary=False, registers=True)
+        assert register_result.keys() == decimal_frequencies.keys()
+        for k, v in register_result.items():
+            assert v == collections.Counter(decimal_frequencies[k])
+    if binary_frequencies is not None:
+        register_result = result.frequencies(binary=True, registers=True)
+        assert register_result.keys() == binary_frequencies.keys()
+        for k, v in register_result.items():
+            assert v == collections.Counter(binary_frequencies[k])
+
+
 def test_convert_to_binary():
     """Check that `_convert_to_binary` method works properly."""
     # Create a result object to access `_convert_to_binary`
@@ -203,8 +232,22 @@ def test_measurement_compiled_circuit():
 
 
 def test_register_measurements():
-    c = models.Circuit(2)
+    c = models.Circuit(3)
     c.add(gates.X(0))
-    c.add(gates.M(0))
+    c.add(gates.X(1))
+    c.add(gates.M(0, 2))
     c.add(gates.M(1))
     result = c(nshots=100)
+
+    target = {}
+    target["decimal_samples"] = {"Register0": 2 * np.ones((100,)),
+                                 "Register1": np.ones((100,))}
+    target["binary_samples"] = {"Register0": np.zeros((100, 2)),
+                                "Register1": np.ones((100, 1))}
+    target["binary_samples"]["Register0"][:, 0] = 1
+
+    target["decimal_frequencies"] = {"Register0": {2: 100},
+                                     "Register1": {1: 100}}
+    target["binary_frequencies"] = {"Register0": {"10": 100},
+                                    "Register1": {"1": 100}}
+    assert_register_results(result, **target)

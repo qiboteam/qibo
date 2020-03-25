@@ -34,6 +34,6 @@ class CircuitResult(base_measurements.CircuitResult):
         for name, qubit_set in register_qubits.items():
             qubit_tuple = tuple(sorted(qubit_set))
             slicer = tuple(gate_result.qubit_map[q] for q in qubit_tuple)
-            samples = gate_result.binary_samples[:, slicer]
+            samples = tf.gather(gate_result.samples(True), slicer, axis=-1)
             results[name] = GateResult(qubit_tuple, binary_samples=samples)
         return results

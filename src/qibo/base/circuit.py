@@ -106,13 +106,14 @@ class BaseCircuit(object):
         elif name in self.measurement_sets:
             raise KeyError("Register name {} has already been used."
                            "".format(name))
-        self.measurement_sets[name] = gate.target_qubits
 
         # Update circuit's global measurement gate
         if self.measurement_gate is None:
             self.measurement_gate = gate
+            self.measurement_sets[name] = set(gate.target_qubits)
         else:
             self.measurement_gate.add(gate.target_qubits)
+            self.measurement_sets[name] = gate.target_qubits
 
     @property
     def size(self) -> int:

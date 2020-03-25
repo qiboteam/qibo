@@ -23,7 +23,8 @@ class GateResult:
         create the object.
     """
 
-    def __init__(self, qubits: Tuple[int], state: TensorType,
+    def __init__(self, qubits: Tuple[int],
+                 state: Optional[TensorType] = None,
                  decimal_samples: Optional[TensorType] = None,
                  binary_samples: Optional[TensorType] = None):
         self.qubits = qubits
@@ -33,10 +34,9 @@ class GateResult:
             raise ValueError("Measurement result object cannot be created "
                              "when samples are given both in decimal and "
                              "binary. Use one of the two.")
-        if binary_samples is not None and binary_samples.shape[-1] != len(qubits):
+        if binary_samples is not None and binary_samples.shape[-1] != self.nqubits:
             raise ValueError("Binary samples are for {} qubits but the given "
-                             "number of qubits is {}."
-                             "".format(binary_samples.shape[-1], nqubits))
+                             "qubits are {}.".format(binary_samples.shape[-1], qubits))
 
         self._decimal = decimal_samples
         self._binary = binary_samples
