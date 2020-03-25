@@ -296,7 +296,6 @@ def test_registers_in_circuit_with_unmeasured_qubits():
     assert_register_results(result, **target)
 
 
-@pytest.mark.skip
 def test_probabilistic_measurement():
     import tensorflow as tf
     tf.random.set_seed(1234)
@@ -307,5 +306,27 @@ def test_probabilistic_measurement():
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    target_freqs = {"00": 250, "01": 250, "10": 250, "11": 250}
-    assert_results(result, binary_frequencies=target_freqs)
+    decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
+    binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
+    assert sum(binary_freqs.values()) == 1000
+    assert_results(result,
+                   decimal_frequencies=decimal_freqs,
+                   binary_frequencies=binary_freqs)
+
+
+def test_unbalanced_probabilistic_measurement():
+    import tensorflow as tf
+    tf.random.set_seed(1234)
+
+    state = np.array([1, 1, 1, np.sqrt(3)]) / 2.0
+    c = models.Circuit(2)
+    c.add(gates.Flatten(state))
+    c.add(gates.M(0, 1))
+    result = c(nshots=1000)
+
+    decimal_freqs = {0: 168, 1: 188, 2: 154, 3: 490}
+    binary_freqs = {"00": 168, "01": 188, "10": 154, "11": 490}
+    assert sum(binary_freqs.values()) == 1000
+    assert_results(result,
+                   decimal_frequencies=decimal_freqs,
+                   binary_frequencies=binary_freqs)
