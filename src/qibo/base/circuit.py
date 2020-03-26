@@ -138,16 +138,6 @@ class BaseCircuit(object):
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
 
-    def show(self):
-        """Simple mechanism to plot qasm circuit."""
-        import tempfile
-        with tempfile.TemporaryDirectory() as td_name:
-            from qibo.external.qasm2 import qasm2png
-            from IPython.display import Image
-            self.to_qasm(f"{td_name}.qasm")
-            qasm2png.qasm2png(f"{td_name}")
-            display(Image(f"{td_name}.png"))
-
     def to_qasm(self, filename):
         """Convert circuit to QASM.
 
