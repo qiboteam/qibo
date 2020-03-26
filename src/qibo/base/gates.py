@@ -1,21 +1,16 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-from abc import abstractmethod
 from typing import Optional, Sequence, Set, Tuple
 
 
 class Gate(object):
     """The base class for gate implementation.
 
-    **Properties:**
-        * name: the gate string name.
-        * target_qubits: tuple with indices of target qubits.
-        * control_qubits: tuple with indices of control qubits.
-        * qubits: tuple with all qubits (control + target) that the gate acts.
-        * nqubits: total number of qubits in the circuit/state the gate acts.
-            This is set automatically when the gate is added to a circuit or
-            when it is called on a state.
-        * nstates: 2 ** nqubits.
+    All gates should inherit this class.
+
+    Attributes:
+        name: Name of the gate.
+        target_qubits: Tuple with ids of target qubits.
     """
 
     def __init__(self):
@@ -31,7 +26,7 @@ class Gate(object):
 
     @property
     def control_qubits(self) -> Tuple[int]:
-        """Returns control qubits sorted."""
+        """Tuple with ids of control qubits sorted in increasing order."""
         return self._control_qubits
 
     @control_qubits.setter
@@ -41,7 +36,7 @@ class Gate(object):
 
     @property
     def qubits(self) -> Tuple[int]:
-        """Tuple with all all (control and target) qubits that the gate acts."""
+        """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
     @property
@@ -49,7 +44,7 @@ class Gate(object):
         """Number of qubits in the circuit that the gate is part of.
 
         This is set automatically when the gate is added on a circuit or
-        when the gate is called on a state.
+        when the gate is called on a state. The user should not set this.
         """
         if self._nqubits is None:
             raise ValueError("Accessing number of qubits for gate {} but "
@@ -77,11 +72,15 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
 
-    def controlled_by(self, *q) -> "Gate":
+    def controlled_by(self, *q: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
         Args:
-            *q: Ids of the qubits that the gate will be controlled on.
+            *q (int): Ids of the qubits that the gate will be controlled on.
+
+        Returns:
+            A `qibo.gates.Gate` object in with the corresponding gate being
+            controlled in the given qubits.
         """
         if self.control_qubits:
             raise ValueError("Cannot use `controlled_by` method on gate {} "
@@ -95,10 +94,17 @@ class Gate(object):
         self.control_qubits = q
         return self
 
-    @abstractmethod
     def __call__(self, state):
-        """Implements the `Gate` on a given state."""
-        pass
+        """Acts with the gate on a given state vector:
+
+        Args:
+            state: Input state vector.
+                The type and shape of this depend on the backend.
+
+        Returns:
+            The state vector after the action of the gate.
+        """
+        raise NotImplementedError
 
 
 class H(Gate):
@@ -167,7 +173,7 @@ class M(Gate):
 
     Args:
         *q (int): id numbers of the qubits to measure.
-            Order does not matter. Measurement results will follow increasing
+            Order does not matter as measurement results will follow increasing
             order in ids.
         register_name: Optional name of the register to distinguish it from
             other registers when used in circuits.
@@ -182,8 +188,8 @@ class M(Gate):
         self.is_executed = False
         self._unmeasured_qubits = None # Set
 
-    def add(self, qubits: Set[int]):
-        """Adds qubits to a measurement gate.
+    def _add(self, qubits: Set[int]):
+        """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
         by the `models.Circuit`.
@@ -202,12 +208,12 @@ class M(Gate):
 
     @property
     def qubits(self) -> Tuple[int]:
-        """Qubits that are measured by this gate in increasing order of ids."""
+        """Tuple with ids of measured qubits sorted in increasing order."""
         return tuple(sorted(self.target_qubits))
 
     @property
     def unmeasured_qubits(self) -> Tuple[int]:
-        """Qubits that are not measured by this gate in increasing order of ids.
+        """Tuple with ids of unmeasured qubits sorted in increasing order.
 
         This is useful when tracing out unmeasured qubits to calculate
         probabilities.
@@ -221,14 +227,22 @@ class M(Gate):
         return tuple(sorted(self._unmeasured_qubits))
 
     def controlled_by(self, *q):
+        """"""
         raise NotImplementedError("Measurement gates cannot be controlled.")
 
 
 class RX(Gate):
-    """Rotation X-axis.
+    """Rotation around the X-axis of the Bloch sphere.
 
-    [[g·c, -i·g·s], [-i·g·s, g·c]]
-    where c = cos(π theta / 2), s = sin(π theta / 2), g = exp(i π theta / 2).
+    Corresponds to the following unitary matrix
+
+    .. math::
+        e^{i \\pi \\theta / 2}\\begin{pmatrix}
+        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
+        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
+        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -243,10 +257,17 @@ class RX(Gate):
 
 
 class RY(Gate):
-    """Rotation Y-axis defined as:
+    """Rotation around the Y-axis of the Bloch sphere.
 
-    [[g·c, -g·s], [g·s, g·c]]
-    where c = cos(π theta / 2), s = sin(π theta / 2), g = exp(i π theta / 2).
+    Corresponds to the following unitary matrix
+
+    .. math::
+        e^{i \\pi \\theta / 2}\\begin{pmatrix}
+        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
+        -\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
+        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -261,9 +282,15 @@ class RY(Gate):
 
 
 class RZ(Gate):
-    """Rotation Z-axis.
+    """Rotation around the X-axis of the Bloch sphere.
 
-    Convention is [[1, 0], [0, exp(i π theta)]].
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\pi \\theta} \\\\
+        \\end{pmatrix}
 
     Args:
         q (int): the qubit id number.
@@ -293,9 +320,9 @@ class CNOT(Gate):
 
 
 class CRZ(Gate):
-    """Controlled Rotation Z-axis.
+    """Controlled rotation around the Z-axis of the Bloch sphere.
 
-    Convention is the same as RZ.
+    The convention for the unitary matrix is the same as in `RZ`.
 
     Args:
         q0 (int): the control qubit id number.
@@ -315,7 +342,8 @@ class SWAP(Gate):
     """The swap gate.
 
     Args:
-        q0, q1 (ints): id numbers of the qubits to be swapped.
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
     """
 
     def __init__(self, q0, q1):
@@ -348,7 +376,7 @@ class Unitary(Gate):
             Note that there is no check that the matrix passed is actually
             unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
-        name (Optional): Name for the gate.
+        name (str): Optional name for the gate.
     """
 
     def __init__(self, unitary, *q, name: Optional[str] = None):
@@ -359,10 +387,11 @@ class Unitary(Gate):
 
 
 class Flatten(Gate):
-    """Custom coefficients
+    """Passes an arbitrary state vector in the circuit.
 
     Args:
-        coeff (list): list of coefficients for the wave function.
+        coefficients (list): list of the target state vector components.
+            This can also be a tensor supported by the backend.
     """
 
     def __init__(self, coefficients):

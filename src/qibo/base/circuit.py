@@ -112,7 +112,7 @@ class BaseCircuit(object):
             self.measurement_gate = gate
             self.measurement_sets[name] = set(gate.target_qubits)
         else:
-            self.measurement_gate.add(gate.target_qubits)
+            self.measurement_gate._add(gate.target_qubits)
             self.measurement_sets[name] = gate.target_qubits
 
     @property
