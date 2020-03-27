@@ -44,7 +44,7 @@ If you are planning to freeze the circuit and just query for different initial s
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
 
-
+.. _measurement-examples:
 How to perform measurements?
 ----------------------------
 

@@ -134,6 +134,8 @@ In order to execute measurements the user has to add the measurement gate
 of shots. This will return a :class:`qibo.base.measurements.CircuitResult`
 object that is described bellow.
 
+For more information on measurements we refer to the related examples.
+
 .. autoclass:: qibo.base.measurements.CircuitResult
     :members:
     :member-order: bysource

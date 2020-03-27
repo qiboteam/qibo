@@ -46,7 +46,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
-                nshots: Optional[int] = None) -> tf.Tensor:
+                nshots: Optional[int] = None
+                ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Executes the Tensorflow circuit.
 
         Args:
@@ -59,7 +60,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         Returns:
             If `nshots` is given and the circuit contains measurements
-                A `CircuitResult` object that contains the measured bitstrings.
+                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
             If `nshots` is `None` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape (2 ** nqubits,).
         """
