@@ -43,6 +43,7 @@ General purpose models
     :members:
     :member-order: bysource
 
+
 .. _applicationspecific:
 
 Application specific models
@@ -51,6 +52,33 @@ Application specific models
 .. automodule:: qibo.models
     :members:
     :member-order: bysource
+
+
+.. _circuitaddition:
+
+Circuit addition
+^^^^^^^^^^^^^^^^
+
+Circuit objects also support addition. For example
+
+.. code-block::  python
+
+    from qibo import models
+    from qibo import gates
+
+    c1 = models.QFT(4)
+
+    c2 = models.Circuit(4)
+    c2.add(gates.RZ(0, 0.1234))
+    c2.add(gates.RZ(1, 0.1234))
+    c2.add(gates.RZ(2, 0.1234))
+    c2.add(gates.RZ(3, 0.1234))
+
+    c = c1 + c2
+
+will create a circuit that performs the Quantum Fourier Transform on four qubits
+followed by Rotation-Z gates.
+
 
 _______________________
 
