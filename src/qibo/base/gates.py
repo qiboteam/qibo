@@ -79,7 +79,7 @@ class Gate(object):
             *q (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
-            A `qibo.gates.Gate` object in with the corresponding gate being
+            A :class:`qibo.base.gates.Gate` object in with the corresponding gate being
             controlled in the given qubits.
         """
         if self.control_qubits:

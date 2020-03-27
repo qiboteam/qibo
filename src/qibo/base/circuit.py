@@ -78,8 +78,8 @@ class BaseCircuit(object):
         """Add a gate to a given queue.
 
         Args:
-            gate (qibo.gates.Gate): the gate object to add.
-                See :ref:`Gates` for available gates.
+            gate (:class:`qibo.base.gates.Gate`): the gate object to add.
+                See :ref:`Gates` for a list of available gates.
         """
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
