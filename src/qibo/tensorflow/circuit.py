@@ -5,14 +5,19 @@ import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX
 from qibo.tensorflow import gates, measurements
-from typing import Optional
+from typing import Optional, Union
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
-    """Implementation of circuit methods in Tensorflow."""
+    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+        dtype: Tensorflow type for complex numbers.
+            Read automatically from `config`.
+    """
 
     def __init__(self, nqubits, dtype=DTYPECPX):
-        """Initialize a Tensorflow circuit."""
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
@@ -39,27 +44,24 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise RuntimeError("Circuit is already compiled.")
         self.compiled_execute = tf.function(self._execute_func)
 
-    def execute(self, initial_state: Optional[tf.Tensor] = None,
+    def execute(self,
+                initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None) -> tf.Tensor:
         """Executes the Tensorflow circuit.
 
         Args:
-            initial_state: Initial state vector as a numpy array of shape
-                (2 ** nqubits,).
-                A Tensorflow tensor with shape nqubits * (2,) is also allowed
-                as an initial state if it has the `dtype` of the circuit.
-                If None the |000...0> state will be used as initial state.
-            nshots: Number of shots to sample if the circuit contains
+            initial_state (np.ndarray): Initial state vector as a numpy array.
+                A Tensorflow tensor with shape nqubits * (2,) is also allowed as an initial state if it has the `dtype` of the circuit.
+                If `initial_state` is `None` the |000...0> state will be used.
+            nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
-                If None the measurement gates will be ignored.
+                If `nshots` None the measurement gates will be ignored.
 
         Returns:
-            If `nshots` is given and the circuit contains measurements this
-                will return a `CircuitResult` object that contains information
-                about the measured samples.
-            If the circuit does not contain measurements or `nshots` is None
-                this will return the final state vector as a Tensorflow tensor
-                of shape (2 ** nqubits,).
+            If `nshots` is given and the circuit contains measurements
+                A `CircuitResult` object that contains the measured bitstrings.
+            If `nshots` is `None` or the circuit does not contain measurements.
+                The final state vector as a Tensorflow tensor of shape (2 ** nqubits,).
         """
         if initial_state is None:
             state = self._default_initial_state()
@@ -94,13 +96,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def final_state(self) -> tf.Tensor:
-        """"Returns the final state as a Tensorflow tensor.
+        """Final state as a Tensorflow tensor of shape (2 ** nqubits,).
 
-        The tensor has shape (2 ** nqubits,).
-
-        Raises:
-            ValueError if the user attempts to access the final state before
-                executing the circuit.
+        The circuit has to be executed at least once before accessing this
+        property, otherwise a `ValueError` is raised. If the circuit is
+        executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
             raise ValueError("Cannot access final state before the circuit is "

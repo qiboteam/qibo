@@ -5,22 +5,28 @@ from typing import Tuple
 
 
 class BaseCircuit(object):
-    """This class implements the circuit object which holds all gates.
+    """Circuit object which holds a list of gates.
+
+    This circuit is symbolic and cannot perform calculations.
+    A specific backend (eg. Tensorflow) has to be used for performing
+    calculations (evolving the state vector).
+    All backend-based circuits should inherit `BaseCircuit`.
 
     Args:
-        nqubits (int): number of quantum bits.
+        nqubits (int): Total number of qubits in the circuit.
 
     Example:
         ::
 
             from qibo.models import Circuit
+            from qibo import gates
             c = Circuit(3) # initialized circuit with 3 qubits
+            c.add(gates.H(0)) # added Hadamard gate on qubit 0
     """
 
     __metaclass__ = ABCMeta
 
     def __init__(self, nqubits):
-        """Initialize properties."""
         self.nqubits = nqubits
         self.queue = []
         # Flag to keep track if the circuit was executed
@@ -36,7 +42,8 @@ class BaseCircuit(object):
 
         Args:
             circuit: Circuit to be added to the current one.
-        Return:
+
+        Returns:
             The resulting circuit from the addition.
         """
         return BaseCircuit._circuit_addition(self, circuit)
@@ -71,7 +78,8 @@ class BaseCircuit(object):
         """Add a gate to a given queue.
 
         Args:
-            gate (qibo.gates): the specific gate (see :ref:`Gates`).
+            gate (qibo.gates.Gate): the gate object to add.
+                See :ref:`Gates` for available gates.
         """
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
@@ -87,11 +95,11 @@ class BaseCircuit(object):
 
         self._check_measured(gate.qubits)
         if gate.name == "measure":
-            self.add_measurement(gate)
+            self._add_measurement(gate)
         else:
             self.queue.append(gate)
 
-    def add_measurement(self, gate):
+    def _add_measurement(self, gate):
         """Gets called automatically by `add` when `gate` is measurement.
 
         This is because measurement gates (`gates.M`) are treated differently
@@ -117,27 +125,15 @@ class BaseCircuit(object):
 
     @property
     def size(self) -> int:
-        """
-        Return:
-            number of qubits in the circuit
-        """
+        """Total number of qubits in the circuit."""
         return self.nqubits
 
     @property
     def depth(self) -> int:
-        """
-        Return:
-            number of gates/operations in the circuit
-        """
+        """Total number of gates/operations in the circuit."""
         return len(self.queue)
 
     @abstractmethod
     def execute(self):
-        """Executes the circuit on a given backend.
-
-        Args:
-            model: (qibo.models.Circuit): The circuit to be executed.
-        Returns:
-            The final wave function.
-        """
+        """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
