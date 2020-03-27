@@ -64,10 +64,11 @@ the base gate object :class:`qibo.base.gates.Gate`. Read bellow for a complete
 list of supported gates.
 
 All gates support the ``controlled_by`` method that allows to control
-the gate on an arbitrary number of qubits.
-   - ``gates.X(0).controlled_by(1, 2)`` is equivalent to ``gates.TOFFOLI(1, 2, 0)``,
-   - ``gates.RY(0, np.pi).controlled_by(1, 2, 3)`` applies the Y-rotation to qubit 0 when qubits 1, 2 and 3 are in the |111> state.
-   - ``gates.SWAP(0, 1).controlled_by(3, 4)`` swaps qubits 0 and 1 when qubits 3 and 4 are in the |11> state.
+the gate on an arbitrary number of qubits. For example
+
+* ``gates.X(0).controlled_by(1, 2)`` is equivalent to ``gates.TOFFOLI(1, 2, 0)``,
+* ``gates.RY(0, np.pi).controlled_by(1, 2, 3)`` applies the Y-rotation to qubit 0 when qubits 1, 2 and 3 are in the |111> state.
+* ``gates.SWAP(0, 1).controlled_by(3, 4)`` swaps qubits 0 and 1 when qubits 3 and 4 are in the |11> state.
 
 .. automodule:: qibo.base.gates
    :members:
@@ -85,3 +86,26 @@ We provide the following hamiltonians:
 .. automodule:: qibo.hamiltonians
    :members:
    :member-order: bysource
+
+_______________________
+
+.. _Measurements:
+
+Measurements
+------------
+
+Qibo is a wave function simulator in the sense that propagates the state vector
+through the circuit applying the corresponding gates. In the default usage the
+result of executing a circuit is the full final state vector. However for
+specific applications it is useful to have measurement samples from the final
+wave function, instead of its full vector form.
+:class:`qibo.base.measurements.CircuitResult` provides a basic API for this.
+
+In order to execute measurements the user has to add the measurement gate
+:class:`qibo.base.gates.M` to the circuit and then execute providing a number
+of shots. This will return a :class:`qibo.base.measurements.CircuitResult`
+object that is described bellow.
+
+.. autoclass:: qibo.base.measurements.CircuitResult
+    :members:
+    :member-order: bysource

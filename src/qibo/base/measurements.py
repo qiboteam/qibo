@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import collections
-from typing import Any, Optional, Dict, List, Tuple, Set
+from typing import Any, Optional, Dict, List, Set, Tuple, Union
 TensorType = Any
 
 
@@ -103,6 +103,9 @@ class CircuitResult:
 
     Implements tools for dividing the global measurements from the circuit's
     `measurement_gate` to the corresponding registers.
+    This object is created automatically every time a circuit that contains
+    measurement gates is executed. The user does not have to worry about
+    creating this object.
 
     Args:
         register_qubits: Dictionary that maps register names to the
@@ -117,25 +120,70 @@ class CircuitResult:
                  measurement_gate_result: GateResult):
         self.register_qubits = register_qubits
         self.result = measurement_gate_result
-        self._register_results = None
+        self.__register_results = None
 
     @property
-    def register_results(self) -> Dict[str, GateResult]:
+    def _register_results(self) -> Dict[str, GateResult]:
         """Returns the individual `GateResult`s for each register."""
-        if self._register_results is None:
-            self._register_results = self._calculate_register_results(
+        if self.__register_results is None:
+            self.__register_results = self._calculate_register_results(
                 self.register_qubits, self.result)
-        return self._register_results
+        return self.__register_results
 
-    def samples(self, binary: bool = True, registers: bool = False) -> TensorType:
+    def samples(self, binary: bool = True, registers: bool = False
+                ) -> Union[TensorType, Dict[str, TensorType]]:
+        """Returns raw measurement samples.
+
+        Args:
+            binary (bool): Return samples in binary or decimal form.
+            registers (bool): Group samples according to registers.
+
+        Returns:
+            If `binary` is `True`
+                samples are returned in binary form as a tensor
+                of shape `(nshots, n_measured_qubits)`.
+            If `binary` is `False`
+                samples are returned in decimal form as a tensor
+                of shape `(nshots,)`.
+            If `registers` is `True`
+                samples are returned in a `dict` where the keys are the register
+                names and the values are the samples tensors for each register.
+            If `registers` is `False`
+                a single tensor is returned which contains samples from all the
+                measured qubits, independently of their registers.
+        """
         if not registers:
             return self.result.samples(binary)
-        return {k: v.samples(binary) for k, v in self.register_results.items()}
+        return {k: v.samples(binary) for k, v in self._register_results.items()}
 
-    def frequencies(self, binary: bool = True, registers: bool = False) -> Dict[str, collections.Counter]:
+    def frequencies(self, binary: bool = True, registers: bool = False
+                    ) -> Union[collections.Counter, Dict[str, collections.Counter]]:
+        """Returns the frequencies of measured samples.
+
+        Args:
+            binary (bool): Return frequency keys in binary or decimal form.
+            registers (bool): Group frequencies according to registers.
+
+        Returns:
+            A `collections.Counter` where the keys are the observed values
+            and the values the corresponding frequencies, that is the number
+            of times each measured value/bitstring appears.
+
+            If `binary` is `True`
+                the keys of the `Counter` are in binary form, as strings of
+                0s and 1s.
+            If `binary` is `False`
+                the keys of the `Counter` are integers.
+            If `registers` is `True`
+                a `dict` of `Counter` s is returned where keys are the name of
+                each register.
+            If `registers` is `False`
+                a single `Counter` is returned which contains samples from all
+                the measured qubits, independently of their registers.
+        """
         if not registers:
             return self.result.frequencies(binary)
-        return {k: v.frequencies(binary) for k, v in self.register_results.items()}
+        return {k: v.frequencies(binary) for k, v in self._register_results.items()}
 
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
