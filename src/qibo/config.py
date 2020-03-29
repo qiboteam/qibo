@@ -30,7 +30,6 @@ if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import matrices as tensorflow_matrices
     matrices = tensorflow_matrices.GateMatrices(DTYPECPX)
 
-    from qibo.tensorflow import gates
     from qibo.tensorflow import circuit as tensorflow_circuit
     Circuit = tensorflow_circuit.TensorflowCircuit
 
