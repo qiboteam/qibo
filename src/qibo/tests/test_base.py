@@ -2,7 +2,6 @@
 Test imports and basic functionality that is indepedent of calculation backend.
 """
 import numpy as np
-# Test that import * is allowed both for `models` and `gates`
 from qibo.models import *
 from qibo.gates import *
 
@@ -12,6 +11,24 @@ def test_circuit_sanity():
     c = Circuit(2)
     assert c.nqubits == 2
     assert c.size == 2
+
+
+def test_importing_qibo():
+    """Checks accessing `models` and `gates` from `qibo`."""
+    import qibo
+    c = qibo.models.Circuit(2)
+    c.add(qibo.gates.H(0))
+    assert c.nqubits == 2
+    assert c.depth == 1
+
+
+def test_importing_qibo():
+    """Checks importing `models` and `gates`."""
+    from qibo import models, gates
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    assert c.nqubits == 2
+    assert c.depth == 1
 
 
 def test_circuit_add():
