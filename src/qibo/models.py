@@ -1,4 +1,8 @@
-from qibo.config import Circuit
+from qibo.config import BACKEND_NAME
+if BACKEND_NAME == "tensorflow":
+    from qibo.tensorflow.circuit import TensorflowCircuit as Circuit
+else:
+    raise NotImplementedError("Only Tensorflow backend is implemented.")
 
 
 def QFTCircuit(nqubits: int, with_swaps: bool = True) -> Circuit:
