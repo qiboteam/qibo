@@ -12,7 +12,7 @@ def QFTCircuit(nqubits: int, with_swaps: bool = True) -> Circuit:
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
     """
-    from qibo.config import gates
+    from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
