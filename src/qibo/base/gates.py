@@ -159,15 +159,6 @@ class Z(Gate):
         self.target_qubits = (q,)
 
 
-class Barrier(Gate):
-    """The barrier gate."""
-
-    def __init__(self, q):
-        super(Barrier, self).__init__()
-        self.name = "barrier"
-        self.target_qubits = (q,)
-
-
 class M(Gate):
     """The Measure Z gate.
 

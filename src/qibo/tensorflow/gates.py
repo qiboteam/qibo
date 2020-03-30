@@ -171,12 +171,6 @@ class Z(TensorflowGate, base_gates.Z):
         self.matrix = matrices.Z
 
 
-class Barrier(TensorflowGate, base_gates.Barrier):
-
-    def __init__(self):
-        raise NotImplementedError
-
-
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
