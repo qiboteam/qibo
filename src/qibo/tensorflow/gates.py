@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import matrices
+from qibo.config import matrices, DTYPEINT
 from typing import Optional, Sequence, Tuple
 
 
@@ -192,7 +192,7 @@ class M(TensorflowGate, base_gates.M):
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
         # Generate samples
         samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                            dtype=tf.int64)[0]
+                                            dtype=DTYPEINT)[0]
         if samples_only:
             return samples_dec
 

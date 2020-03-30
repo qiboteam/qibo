@@ -10,12 +10,12 @@ class GateResult(base_measurements.GateResult):
 
     @staticmethod
     def _convert_to_binary(x: tf.Tensor, n: int) -> tf.Tensor:
-        _range = tf.range(n - 1, -1, -1, dtype=tf.int64)
+        _range = tf.range(n - 1, -1, -1, dtype=x.dtype)
         return tf.math.mod(tf.bitwise.right_shift(x[:, tf.newaxis], _range), 2)
 
     @staticmethod
     def _convert_to_decimal(x: tf.Tensor, n: int) -> tf.Tensor:
-        _range = tf.range(n - 1, -1, -1, dtype=tf.int64)
+        _range = tf.range(n - 1, -1, -1, dtype=x.dtype)
         _range = tf.math.pow(2, _range)[:, tf.newaxis]
         return tf.matmul(x, _range)[:, 0]
 
