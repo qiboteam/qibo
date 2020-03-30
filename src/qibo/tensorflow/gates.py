@@ -3,8 +3,8 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import matrices
-from typing import Optional, Sequence
+from qibo.config import matrices, DTYPEINT
+from typing import Optional, Sequence, Tuple
 
 
 class TensorflowGate(base_gates.Gate):
@@ -171,28 +171,33 @@ class Z(TensorflowGate, base_gates.Z):
         self.matrix = matrices.Z
 
 
-class Barrier(TensorflowGate, base_gates.Barrier):
+class M(TensorflowGate, base_gates.M):
+    from qibo.tensorflow import measurements
 
-    def __init__(self):
-        raise NotImplementedError
+    def __init__(self, *args, register_name: Optional[str] = None):
+        base_gates.M.__init__(self, *args, register_name=register_name)
 
+    @base_gates.Gate.nqubits.setter
+    def nqubits(self, n: int):
+        base_gates.Gate.nqubits.fset(self, n)
 
-class MX(TensorflowGate, base_gates.MX):
+    def __call__(self, state: tf.Tensor, nshots: int,
+                 samples_only: bool = False) -> tf.Tensor:
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape))
 
-    def __init__(self):
-        raise NotImplementedError
+        # Trace out unmeasured qubits
+        probs = tf.reduce_sum(tf.square(tf.abs(state)),
+                              axis=self.unmeasured_qubits)
+        logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
+        # Generate samples
+        samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
+                                            dtype=DTYPEINT)[0]
+        if samples_only:
+            return samples_dec
 
-
-class MY(TensorflowGate, base_gates.MY):
-
-    def __init__(self):
-        raise NotImplementedError
-
-
-class MZ(TensorflowGate, base_gates.MZ):
-
-    def __init__(self):
-        raise NotImplementedError
+        return self.measurements.GateResult(
+            self.qubits, state, decimal_samples=samples_dec)
 
 
 class RX(TensorflowGate, base_gates.RX):

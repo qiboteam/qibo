@@ -29,7 +29,7 @@ def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
 
 def test_qft_sanity():
     """Check QFT circuit size and depth."""
-    c = models.QFTCircuit(4)
+    c = models.QFT(4)
     assert c.size == 4
     assert c.depth == 12
 
@@ -37,7 +37,7 @@ def test_qft_sanity():
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_qft_transformation(nqubits):
     """Check QFT transformation for |00...0>."""
-    c = models.QFTCircuit(nqubits)
+    c = models.QFT(nqubits)
     final_state = c.execute().numpy()
 
     initial_state = np.zeros_like(final_state)
@@ -60,7 +60,7 @@ def test_qft_transformation_random(nqubits):
 
     c_init = models.Circuit(nqubits)
     c_init.add(gates.Flatten(initial_state))
-    c = c_init + models.QFTCircuit(nqubits)
+    c = c_init + models.QFT(nqubits)
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, exact_state)

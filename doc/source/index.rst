@@ -61,10 +61,7 @@ Indices and tables
     QIBO<self>
     qibo
     examples
-    apisrc/qibo
-
 
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
-

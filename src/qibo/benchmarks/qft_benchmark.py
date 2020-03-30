@@ -69,7 +69,7 @@ def main(nqubits_list: List[int],
     for nqubits in nqubits_list:
         # Generate a random initial state
         initial_state = utils.random_state(nqubits)
-        circuit = models.QFTCircuit(nqubits)
+        circuit = models.QFT(nqubits)
 
         print("\nSimulating {} qubits...".format(nqubits))
 
