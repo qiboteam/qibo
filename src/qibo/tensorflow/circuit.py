@@ -35,7 +35,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         for gate in self.queue:
             state = gate(state)
         if self.measurement_gate is None or nshots is None:
-            return None, tf.reshape(state, (2 ** self.nqubits,))
+            return tf.reshape(state, (2**self.nqubits,))
         return self.measurement_gate(state, nshots, samples_only=True), state
 
     def compile(self):
@@ -83,15 +83,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
                             "".format(type(initial_state)))
 
         if self.compiled_execute is None:
-            samples, self._final_state = self._execute_func(state, nshots)
+            output = self._execute_func(state, nshots)
         else:
-            samples, self._final_state = self.compiled_execute(state, nshots)
+            output = self.compiled_execute(state, nshots)
 
         if self.measurement_gate is None or nshots is None:
-            return self._final_state
+            self._final_state = output
+            return output
 
+        self._final_state = tf.reshape(output[1], (2 ** self.nqubits,))
         self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, state, decimal_samples=samples)
+            self.measurement_gate.qubits, output[1], decimal_samples=output[0])
         return measurements.CircuitResult(
             self.measurement_sets, self.measurement_gate_result)
 
