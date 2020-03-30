@@ -51,7 +51,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Executes the Tensorflow circuit.
+        """Propagates the state through the circuit applying the corresponding gates.
+
+        In default usage the full final state vector is returned.
+        If the circuit contains measurement gates and `nshots` is given, then
+        the final state vector is sampled and the samples are returned.
 
         Args:
             initial_state (np.ndarray): Initial state vector as a numpy array.
@@ -89,9 +93,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
             samples, state = self._execute_func(state, nshots)
         else:
             samples, state = self.compiled_execute(state, nshots)
-        self._final_state = tf.reshape(state, (2 ** self.nqubits,))
+        self._final_state = state
 
         if self.measurement_gate is None or nshots is None:
+            self._final_state = tf.reshape(state, (2 ** self.nqubits,))
             return self._final_state
 
         self.measurement_gate_result = measurements.GateResult(
