@@ -5,9 +5,9 @@ import argparse
 import os
 import time
 import utils
-import cirq
 import numpy as np
 np.random.seed(1234)
+from qibo import models, gates
 
 
 parser = argparse.ArgumentParser()
@@ -19,24 +19,22 @@ parser.add_argument("--name", default=None, type=str)
 
 
 def SupremacyLikeCircuit(nqubits, nlayers):
-    one_qubit_gates = [(cirq.X)**0.5, (cirq.Y)**0.5, (cirq.Z)**0.5]
-    two_qubit_gate = cirq.CZPowGate(exponent=1.0/6.0)
-    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
-    circuit = cirq.Circuit()
+    one_qubit_gates = ["RX", "RY", "RZ"]
+    circuit = models.Circuit(nqubits)
     d = 1
     for l in range(nlayers):
         for i in range(nqubits):
-            gate = one_qubit_gates[np.random.randint(0, len(one_qubit_gates))]
-            circuit.append(gate(qubits[i]))
+            gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+            circuit.add(gate(i, 0.5))
         for i in range(nqubits):
-            circuit.append(two_qubit_gate(qubits[i], qubits[(i + d) % nqubits]))
+            circuit.add(gates.CRZ(i, (i + d) % nqubits, 1.0/6.0))
         d += 1
         if d > nqubits - 1:
             d = 1
     for i in range(nqubits):
-        gate = one_qubit_gates[np.random.randint(0, len(one_qubit_gates))]
-        circuit.append(gate(qubits[i]))
-        circuit.append(cirq.measure(qubits[i]))
+        gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+        circuit.add(gate(i, 0.5))
+        circuit.add(gates.M(i))
     return circuit
 
 
@@ -80,13 +78,12 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
 
     # Create log dict
     logs = {"nqubits": [], "simulation_time": []}
-    simulator = cirq.Simulator()
     for nqubits in nqubits_list:
         print("\nSimulating {} qubits with {} layers...".format(nqubits, nlayers))
         circuit = SupremacyLikeCircuit(nqubits, nlayers)
 
         start_time = time.time()
-        results = simulator.run(circuit, repetitions=nshots)
+        results = circuit(nshots=nshots)
         logs["simulation_time"].append(time.time() - start_time)
         logs["nqubits"].append(nqubits)
 
