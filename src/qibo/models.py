@@ -1,4 +1,8 @@
-from qibo.config import Circuit
+from qibo.config import BACKEND_NAME
+if BACKEND_NAME == "tensorflow":
+    from qibo.tensorflow.circuit import TensorflowCircuit as Circuit
+else:
+    raise NotImplementedError("Only Tensorflow backend is implemented.")
 
 
 def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
@@ -25,7 +29,7 @@ def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
             # Execute the circuit
             final_state = c(init_state)
     """
-    from qibo.config import gates
+    from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):

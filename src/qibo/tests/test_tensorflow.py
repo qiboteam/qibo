@@ -6,37 +6,6 @@ from qibo.models import Circuit
 from qibo import gates
 
 
-def test_circuit_sanity():
-    """Check if the number of qbits is preserved."""
-    c = Circuit(2)
-    assert c.nqubits == 2
-    assert c.size == 2
-
-
-def test_circuit_add():
-    """Check if circuit depth increases with the add method."""
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 1))
-    assert c.depth == 3
-
-
-def test_circuit_addition():
-    """Check if circuit addition increases depth."""
-    c1 = Circuit(2)
-    c1.add(gates.H(0))
-    c1.add(gates.H(1))
-    assert c1.depth == 2
-
-    c2 = Circuit(2)
-    c2.add(gates.CNOT(0, 1))
-    assert c2.depth == 1
-
-    c3 = c1 + c2
-    assert c3.depth == 3
-
-
 def test_circuit_addition_result():
     """Check if circuit addition works properly on Tensorflow circuit."""
     c1 = Circuit(2)
