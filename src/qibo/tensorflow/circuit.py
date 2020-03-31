@@ -34,12 +34,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """
         for gate in self.queue:
             state = gate(state)
-
-        samples = None
-        if self.measurement_gate is not None and nshots is not None:
-            samples = self.measurement_gate(state, nshots, samples_only=True)
-
-        return samples, state
+        return state
 
     def compile(self):
         """Compiles the circuit as a Tensorflow graph."""
@@ -90,14 +85,16 @@ class TensorflowCircuit(circuit.BaseCircuit):
                             "".format(type(initial_state)))
 
         if self.compiled_execute is None:
-            samples, state = self._execute_func(state, nshots)
+            state = self._execute_func(state, nshots)
         else:
-            samples, state = self.compiled_execute(state, nshots)
-        self._final_state = state
+            state = self.compiled_execute(state, nshots)
 
         if self.measurement_gate is None or nshots is None:
             self._final_state = tf.reshape(state, (2 ** self.nqubits,))
             return self._final_state
+
+        samples = self.measurement_gate(state, nshots, samples_only=True)
+        self._final_state = state
 
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
