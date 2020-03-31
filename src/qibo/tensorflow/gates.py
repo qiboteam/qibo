@@ -190,13 +190,21 @@ class M(TensorflowGate, base_gates.M):
         probs = tf.reduce_sum(tf.square(tf.abs(state)),
                               axis=self.unmeasured_qubits)
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
+
+        # Find CPU to use for sampling
+        available_cpus = tf.config.list_logical_devices("CPU")
+        if available_cpus:
+            cpu_name = available_cpus[0].name
+        else:
+            raise RuntimeError("Cannot find CPU device to perform measurement "
+                               "sampling.")
         # Generate samples
-        with tf.device("/CPU:0"):
+        with tf.device(cpu_name):
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPEINT)[0]
+
         if samples_only:
             return samples_dec
-
         return self.measurements.GateResult(
             self.qubits, state, decimal_samples=samples_dec)
 
