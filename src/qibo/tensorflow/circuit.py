@@ -26,8 +26,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, state: tf.Tensor, nshots: Optional[int] = None
-                      ) -> tf.Tensor:
+    def _execute_func(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
@@ -85,9 +84,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
                             "".format(type(initial_state)))
 
         if self.compiled_execute is None:
-            state = self._execute_func(state, nshots)
+            state = self._execute_func(state)
         else:
-            state = self.compiled_execute(state, nshots)
+            state = self.compiled_execute(state)
 
         if self.measurement_gate is None or nshots is None:
             self._final_state = tf.reshape(state, (2 ** self.nqubits,))
