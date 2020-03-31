@@ -191,8 +191,9 @@ class M(TensorflowGate, base_gates.M):
                               axis=self.unmeasured_qubits)
         logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
         # Generate samples
-        samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                            dtype=DTYPEINT)[0]
+        with tf.device("/CPU:0"):
+            samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
+                                                dtype=DTYPEINT)[0]
         if samples_only:
             return samples_dec
 
