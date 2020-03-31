@@ -16,6 +16,7 @@ parser.add_argument("--nlayers", default=5, type=int)
 parser.add_argument("--nshots", default=10000, type=int)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
+parser.add_argument("--compile", action="store_true")
 
 
 def SupremacyLikeCircuit(nqubits, nlayers):
@@ -38,7 +39,8 @@ def SupremacyLikeCircuit(nqubits, nlayers):
     return circuit
 
 
-def main(nqubits_list, nlayers, nshots, directory=None, name=None):
+def main(nqubits_list, nlayers, nshots, directory=None, name=None,
+         compile=True):
     """Runs benchmarks for the Quantum Fourier Transform.
 
     If `directory` is specified this saves an `.h5` file that contains the
@@ -78,9 +80,19 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
 
     # Create log dict
     logs = {"nqubits": [], "simulation_time": []}
+    if compile:
+        logs["compile_time"] = []
     for nqubits in nqubits_list:
         print("\nSimulating {} qubits with {} layers...".format(nqubits, nlayers))
         circuit = SupremacyLikeCircuit(nqubits, nlayers)
+
+        if compile:
+            start_time = time.time()
+            circuit.compile()
+            # Try executing here so that compile time is not included
+            # in the simulation time
+            final_state = circuit.execute()
+            logs["compile_time"].append(time.time() - start_time)
 
         start_time = time.time()
         results = circuit(nshots=nshots)
@@ -92,6 +104,8 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
             utils.update_file(file_path, logs)
 
         # Print results during run
+        if compile:
+            print("Compile time:", logs["compile_time"][-1])
         print("Simulation time:", logs["simulation_time"][-1])
 
 

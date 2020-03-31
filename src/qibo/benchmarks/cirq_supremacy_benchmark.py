@@ -67,8 +67,6 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
 
         # Generate log file name
         log_name = [name]
-        if compile:
-            log_name.append("compiled")
         log_name = "{}.h5".format("_".join(log_name))
         # Generate log file path
         file_path = os.path.join(directory, log_name)
