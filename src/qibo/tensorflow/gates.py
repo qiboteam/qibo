@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import matrices, DTYPEINT
+from qibo.config import matrices, DTYPEINT, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Optional, Sequence, Tuple
 
 
@@ -187,15 +187,26 @@ class M(TensorflowGate, base_gates.M):
             self.nqubits = len(tuple(state.shape))
 
         # Trace out unmeasured qubits
+        probs_dim = 2 ** len(self.target_qubits)
         probs = tf.reduce_sum(tf.square(tf.abs(state)),
                               axis=self.unmeasured_qubits)
-        logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
-        # Generate samples
-        samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                            dtype=DTYPEINT)[0]
+        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
+
+        if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
+            # Use default device to perform sampling
+            samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
+                                                dtype=DTYPEINT)[0]
+        else:
+            # Force using CPU to perform sampling because if GPU is used
+            # it will cause a `ResourceExhaustedError`
+            if CPU_NAME is None:
+                raise RuntimeError("Cannot find CPU device to use for sampling.")
+            with tf.device(CPU_NAME):
+                samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
+                                                    dtype=DTYPEINT)[0]
+
         if samples_only:
             return samples_dec
-
         return self.measurements.GateResult(
             self.qubits, state, decimal_samples=samples_dec)
 
