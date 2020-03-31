@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import matrices, DTYPEINT
+from qibo.config import matrices, DTYPEINT, GPU_MEASUREMENT_CUTOFF
 from typing import Optional, Sequence, Tuple
 
 
@@ -181,17 +181,8 @@ class M(TensorflowGate, base_gates.M):
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n)
 
-    def __call__(self, state: tf.Tensor, nshots: int,
-                 samples_only: bool = False) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
-
-        # Trace out unmeasured qubits
-        probs = tf.reduce_sum(tf.square(tf.abs(state)),
-                              axis=self.unmeasured_qubits)
-        logits = tf.math.log(tf.reshape(probs, (2 ** len(self.target_qubits),)))
-
-        # Find CPU to use for sampling
+    @staticmethod
+    def cpu_sampling(logits: tf.Tensor, nshots: int) -> tf.Tensor:
         available_cpus = tf.config.list_logical_devices("CPU")
         if available_cpus:
             cpu_name = available_cpus[0].name
@@ -200,8 +191,30 @@ class M(TensorflowGate, base_gates.M):
                                "sampling.")
         # Generate samples
         with tf.device(cpu_name):
+            samples = tf.random.categorical(logits[tf.newaxis], nshots,
+                                            dtype=DTYPEINT)[0]
+        return samples
+
+    def __call__(self, state: tf.Tensor, nshots: int,
+                 samples_only: bool = False,
+                 gpu_cutoff: int = GPU_MEASUREMENT_CUTOFF) -> tf.Tensor:
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape))
+
+        # Trace out unmeasured qubits
+        probs_dim = 2 ** len(self.target_qubits)
+        probs = tf.reduce_sum(tf.square(tf.abs(state)),
+                              axis=self.unmeasured_qubits)
+        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
+
+        if nshots * probs_dim < gpu_cutoff:
+            # Use default device to perform sampling
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPEINT)[0]
+        else:
+            # Force using CPU to perform sampling because if GPU is used
+            # it will cause a `ResourceExhaustedError`
+            samples_dec = self.cpu_sampling(logits, nshots)
 
         if samples_only:
             return samples_dec

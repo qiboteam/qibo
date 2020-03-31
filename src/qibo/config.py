@@ -27,6 +27,9 @@ if BACKEND_NAME == "tensorflow":
     DTYPEINT = tf.int32
     DTYPECPX = tf.complex128
 
+    # Set memory cut-off for using GPU when sampling
+    GPU_MEASUREMENT_CUTOFF = 1300000000
+
     from qibo.tensorflow import matrices as tensorflow_matrices
     matrices = tensorflow_matrices.GateMatrices(DTYPECPX)
 
