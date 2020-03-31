@@ -5,42 +5,42 @@ import argparse
 import os
 import time
 import utils
-import cirq
 import numpy as np
 np.random.seed(1234)
+from qibo import models, gates
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--nlayers", default=5, type=int)
-parser.add_argument("--nshots", default=10000, type=int)
+parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
+parser.add_argument("--compile", action="store_true")
 
 
 def SupremacyLikeCircuit(nqubits, nlayers):
-    one_qubit_gates = [(cirq.X)**0.5, (cirq.Y)**0.5, (cirq.Z)**0.5]
-    two_qubit_gate = cirq.CZPowGate(exponent=1.0/6.0)
-    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
-    circuit = cirq.Circuit()
+    one_qubit_gates = ["RX", "RY", "RZ"]
+    circuit = models.Circuit(nqubits)
     d = 1
     for l in range(nlayers):
         for i in range(nqubits):
-            gate = one_qubit_gates[np.random.randint(0, len(one_qubit_gates))]
-            circuit.append(gate(qubits[i]))
+            gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+            circuit.add(gate(i, 0.5))
         for i in range(nqubits):
-            circuit.append(two_qubit_gate(qubits[i], qubits[(i + d) % nqubits]))
+            circuit.add(gates.CRZ(i, (i + d) % nqubits, 1.0/6.0))
         d += 1
         if d > nqubits - 1:
             d = 1
     for i in range(nqubits):
-        gate = one_qubit_gates[np.random.randint(0, len(one_qubit_gates))]
-        circuit.append(gate(qubits[i]))
-        circuit.append(cirq.measure(qubits[i]))
+        gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+        circuit.add(gate(i, 0.5))
+        circuit.add(gates.M(i))
     return circuit
 
 
-def main(nqubits_list, nlayers, nshots, directory=None, name=None):
+def main(nqubits_list, nlayers, nshots=None, directory=None, name=None,
+         compile=False):
     """Runs benchmarks for the Quantum Fourier Transform.
 
     If `directory` is specified this saves an `.h5` file that contains the
@@ -67,6 +67,8 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
 
         # Generate log file name
         log_name = [name]
+        if compile:
+            log_name.append("compiled")
         log_name = "{}.h5".format("_".join(log_name))
         # Generate log file path
         file_path = os.path.join(directory, log_name)
@@ -78,13 +80,24 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
 
     # Create log dict
     logs = {"nqubits": [], "simulation_time": []}
-    simulator = cirq.Simulator()
+    if compile:
+        logs["compile_time"] = []
     for nqubits in nqubits_list:
         print("\nSimulating {} qubits with {} layers...".format(nqubits, nlayers))
+        if nshots is not None:
+            print("Performing measurements...")
         circuit = SupremacyLikeCircuit(nqubits, nlayers)
 
+        if compile:
+            start_time = time.time()
+            circuit.compile()
+            # Try executing here so that compile time is not included
+            # in the simulation time
+            results = circuit(nshots=nshots)
+            logs["compile_time"].append(time.time() - start_time)
+
         start_time = time.time()
-        results = simulator.run(circuit, repetitions=nshots)
+        results = circuit(nshots=nshots)
         logs["simulation_time"].append(time.time() - start_time)
         logs["nqubits"].append(nqubits)
 
@@ -93,6 +106,8 @@ def main(nqubits_list, nlayers, nshots, directory=None, name=None):
             utils.update_file(file_path, logs)
 
         # Print results during run
+        if compile:
+            print("Compile time:", logs["compile_time"][-1])
         print("Simulation time:", logs["simulation_time"][-1])
 
 
