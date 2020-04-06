@@ -261,16 +261,16 @@ def test_register_measurements():
     result = c(nshots=100)
 
     target = {}
-    target["decimal_samples"] = {"Register0": 2 * np.ones((100,)),
-                                 "Register1": np.ones((100,))}
-    target["binary_samples"] = {"Register0": np.zeros((100, 2)),
-                                "Register1": np.ones((100, 1))}
-    target["binary_samples"]["Register0"][:, 0] = 1
+    target["decimal_samples"] = {"register0": 2 * np.ones((100,)),
+                                 "register1": np.ones((100,))}
+    target["binary_samples"] = {"register0": np.zeros((100, 2)),
+                                "register1": np.ones((100, 1))}
+    target["binary_samples"]["register0"][:, 0] = 1
 
-    target["decimal_frequencies"] = {"Register0": {2: 100},
-                                     "Register1": {1: 100}}
-    target["binary_frequencies"] = {"Register0": {"10": 100},
-                                    "Register1": {"1": 100}}
+    target["decimal_frequencies"] = {"register0": {2: 100},
+                                     "register1": {1: 100}}
+    target["binary_frequencies"] = {"register0": {"10": 100},
+                                    "register1": {"1": 100}}
     assert_register_results(result, **target)
 
 

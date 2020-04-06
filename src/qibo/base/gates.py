@@ -116,7 +116,7 @@ class H(Gate):
 
     def __init__(self, q):
         super(H, self).__init__()
-        self.name = "H"
+        self.name = "h"
         self.target_qubits = (q,)
 
 
@@ -129,7 +129,7 @@ class X(Gate):
 
     def __init__(self, q):
         super(X, self).__init__()
-        self.name = "X"
+        self.name = "x"
         self.target_qubits = (q,)
 
 
@@ -142,7 +142,7 @@ class Y(Gate):
 
     def __init__(self, q):
         super(Y, self).__init__()
-        self.name = "Y"
+        self.name = "y"
         self.target_qubits = (q,)
 
 
@@ -155,7 +155,7 @@ class Z(Gate):
 
     def __init__(self, q):
         super(Z, self).__init__()
-        self.name = "Z"
+        self.name = "z"
         self.target_qubits = (q,)
 
 
@@ -242,7 +242,7 @@ class RX(Gate):
 
     def __init__(self, q, theta):
         super(RX, self).__init__()
-        self.name = "RX"
+        self.name = "rx"
         self.target_qubits = (q,)
         self.theta = theta
 
@@ -267,7 +267,7 @@ class RY(Gate):
 
     def __init__(self, q, theta):
         super(RY, self).__init__()
-        self.name = "RY"
+        self.name = "ry"
         self.target_qubits = (q,)
         self.theta = theta
 
@@ -290,7 +290,7 @@ class RZ(Gate):
 
     def __init__(self, q, theta):
         super(RZ, self).__init__()
-        self.name = "RZ"
+        self.name = "rz"
         self.target_qubits = (q,)
         self.theta = theta
 
@@ -305,7 +305,7 @@ class CNOT(Gate):
 
     def __init__(self, q0, q1):
         super(CNOT, self).__init__()
-        self.name = "CNOT"
+        self.name = "cx"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
 
@@ -323,7 +323,7 @@ class CRZ(Gate):
 
     def __init__(self, q0, q1, theta):
         super(CRZ, self).__init__()
-        self.name = "CRZ"
+        self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.theta = theta
@@ -339,7 +339,7 @@ class SWAP(Gate):
 
     def __init__(self, q0, q1):
         super(SWAP, self).__init__()
-        self.name = "SWAP"
+        self.name = "swap"
         self.target_qubits = (q0, q1)
 
 
@@ -354,7 +354,7 @@ class TOFFOLI(Gate):
 
     def __init__(self, q0, q1, q2):
         super(TOFFOLI, self).__init__()
-        self.name = "TOFFOLI"
+        self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
 
