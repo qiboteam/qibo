@@ -28,7 +28,7 @@ def assert_regression_fixture(array, filename):
     except:
         np.savetxt(filename, array)
         array_fixture = load(filename)
-    np.testing.assert_array_equal(array, array_fixture)
+    np.testing.assert_allclose(array, array_fixture)
 
 
 def test_vqe():
