@@ -24,7 +24,7 @@ def assert_regression_fixture(array, filename):
     def load(filename):
         return np.loadtxt(filename)
     try:
-        array_fixture = load(filaneme)
+        array_fixture = load(filename)
     except:
         np.savetxt(filename, array)
         array_fixture = load(filename)
