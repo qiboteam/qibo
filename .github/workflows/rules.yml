@@ -1,16 +1,14 @@
-name: pytest
+# A single CI script with github workflow
+name: Tests
 
 on: [push]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 2
       matrix:
-        python-version: [3.6, 3.7]
-
+        python-version: [3.7]
     steps:
     - uses: actions/checkout@v1
     - name: Set up Python ${{ matrix.python-version }}
@@ -20,14 +18,25 @@ jobs:
     - name: Install dependencies and package
       run: |
         python -m pip install --upgrade pip
-        pip install .
+        pip install .[docs]
     - name: Lint with pylint
       run: |
         pip install pylint
-        # Error out only in actual errors
         pylint src/*/*.py -E
         pylint src/*/*.py --exit-zero
     - name: Test with pytest
       run: |
         pip install pytest
         pytest
+    - name: Sphinx compile
+      if: github.ref == 'refs/heads/master'
+      run: |
+        pip install sphinx
+        make -C doc html
+        KEY=$( mktemp )
+        echo "$QIBO_TEAM" | base64 --decode > "$KEY"
+        scp -r -i "$KEY" -o StrictHostKeyChecking=no\
+          doc/build/html/* \
+          ubuntu@34.240.99.72:/var/www/html/
+      env:
+        QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
