@@ -5,7 +5,7 @@ import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX
 from qibo.tensorflow import gates, measurements, callbacks
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -27,19 +27,24 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, state: tf.Tensor) -> tf.Tensor:
+    def _execute_func(self, state: tf.Tensor) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
         """
-        for callback in self.callbacks:
-            callback(state)
+        # Calculate callbacks for initial state
+        callback_results = [[callback(state)] for callback in self.callbacks]
+
         for gate in self.queue:
             state = gate(state)
             # TODO: Fix this calculation according to callback.steps
-            for callback in self.callbacks:
-                callback(state)
-        return state
+            for i, callback in enumerate(self.callbacks):
+                callback_results[i].append(callback(state))
+
+        # Stack all results for each callback
+        callback_results = [tf.stack(r) for r in callback_results]
+
+        return state, callback_results
 
     def compile(self, callback: Optional[callbacks.Callback] = None):
         """Compiles the circuit as a Tensorflow graph.
@@ -105,16 +110,16 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         if self.compiled_execute is None:
             self._add_callbacks(callback)
-            state = self._execute_func(state)
+            state, callback_results = self._execute_func(state)
         else:
             if callback is not None:
                 raise RuntimeError("Cannot add callbacks to compiled circuit. "
                                    "Please pass the callbacks when compiling.")
-            state = self.compiled_execute(state)
+            state, callback_results = self.compiled_execute(state)
 
         # Complete callbacks
-        for callback in self.callbacks:
-            callback.complete()
+        for callback, result in zip(self.callbacks, callback_results):
+            callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
             self._final_state = tf.reshape(state, (2 ** self.nqubits,))

@@ -5,6 +5,9 @@ import numpy as np
 from qibo.models import Circuit
 from qibo import gates, callbacks
 
+# Absolute testing tolerance for the cases of zero entanglement entropy
+_atol = 1e-12
+
 
 def test_entropy_product_state():
     """Check that the |++> state has zero entropy."""
@@ -12,10 +15,7 @@ def test_entropy_product_state():
     state = np.ones(4).reshape((2, 2)) / 2.0
 
     result = entropy(state).numpy()
-    np.testing.assert_allclose(result, 0, atol=1e-12)
-
-    result = entropy.results[0].numpy()
-    np.testing.assert_allclose(result, 0, atol=1e-12)
+    np.testing.assert_allclose(result, 0, atol=_atol)
 
 
 def test_entropy_singlet_state():
@@ -28,9 +28,6 @@ def test_entropy_singlet_state():
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, np.log(2))
 
-    result = entropy.results[0].numpy()
-    np.testing.assert_allclose(result, np.log(2))
-
 
 def test_entropy_in_circuit():
     entropy = callbacks.EntanglementEntropy([0])
@@ -41,7 +38,7 @@ def test_entropy_in_circuit():
 
     result = entropy.results.numpy()
     print(entropy._results)
-    np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=1e-12)
+    np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)
 
 
 def test_entropy_in_compiled_circuit():
@@ -54,4 +51,4 @@ def test_entropy_in_compiled_circuit():
 
     result = entropy.results.numpy()
     print(entropy._results)
-    np.testing.assert_allclose(result, [0, np.log(2)], atol=1e-12)
+    np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)

@@ -9,12 +9,12 @@ class Callback:
 
     Args:
         steps: Every how many gates to perform the callback calculation.
-            Defaults at 1, that is calculation is done after every gate.
+            Defaults at 1 for which calculation is done after every gate.
     """
 
     def __init__(self, steps: int = 1):
         self.steps = steps
-        self._results = [[]]
+        self._results = []
         self._nqubits = None
 
     @property
@@ -28,15 +28,14 @@ class Callback:
     @property
     def results(self) -> Union[tf.Tensor, List[tf.Tensor]]:
         if len(self._results) > 2:
-            return self._results[:-1]
+            return self._results
         return self._results[0]
 
     def __call__(self, state: tf.Tensor):
         raise NotImplementedError
 
-    def complete(self):
-        self._results[-1] = tf.stack(self._results[-1])
-        self._results.append([])
+    def append(self, result: tf.Tensor):
+        self._results.append(result)
 
 
 class EntanglementEntropy(Callback):
@@ -75,6 +74,4 @@ class EntanglementEntropy(Callback):
                                tf.ones_like(eigvals2),
                                tf.zeros_like(eigvals2))
         entropy = - tf.reduce_sum(eigvals2 * tf.math.log(eigvals2 + regularizer))
-        # Append entropy to the callback's result list
-        self._results[-1].append(entropy)
         return entropy
