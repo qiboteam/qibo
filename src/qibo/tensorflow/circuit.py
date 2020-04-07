@@ -35,11 +35,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
         # Calculate callbacks for initial state
         callback_results = [[callback(state)] for callback in self.callbacks]
 
-        for gate in self.queue:
+        for ig, gate in enumerate(self.queue):
             state = gate(state)
-            # TODO: Fix this calculation according to callback.steps
-            for i, callback in enumerate(self.callbacks):
-                callback_results[i].append(callback(state))
+            for ic, callback in enumerate(self.callbacks):
+                if (ig + 1) % callback.steps == 0:
+                    callback_results[ic].append(callback(state))
 
         # Stack all results for each callback
         callback_results = [tf.stack(r) for r in callback_results]

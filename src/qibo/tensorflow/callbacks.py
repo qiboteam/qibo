@@ -27,11 +27,11 @@ class Callback:
 
     @property
     def results(self) -> Union[tf.Tensor, List[tf.Tensor]]:
-        if len(self._results) > 2:
+        if len(self._results) > 1:
             return self._results
         return self._results[0]
 
-    def __call__(self, state: tf.Tensor):
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
 
     def append(self, result: tf.Tensor):

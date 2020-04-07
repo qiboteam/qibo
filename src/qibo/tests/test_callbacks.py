@@ -30,6 +30,7 @@ def test_entropy_singlet_state():
 
 
 def test_entropy_in_circuit():
+    """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.H(0))
@@ -37,11 +38,11 @@ def test_entropy_in_circuit():
     state = c(callback=entropy)
 
     result = entropy.results.numpy()
-    print(entropy._results)
     np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)
 
 
 def test_entropy_in_compiled_circuit():
+    """Check that entropy calculation works when circuit is compiled."""
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.H(0))
@@ -50,5 +51,19 @@ def test_entropy_in_compiled_circuit():
     state = c()
 
     result = entropy.results.numpy()
-    print(entropy._results)
     np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)
+
+
+def test_entropy_steps():
+    """Check that using steps skips the appropriate number of gates."""
+    entropy = callbacks.EntanglementEntropy([0], steps=2)
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(1, 0))
+    c.compile(callback=entropy)
+    state = c()
+
+    result = entropy.results.numpy()
+    np.testing.assert_allclose(result, [0, np.log(2), np.log(2)], atol=_atol)
