@@ -69,7 +69,7 @@ class EntanglementEntropy(Callback):
             c.add(gates.H(0))
             c.add(gates.CNOT(0, 1))
             # execute the circuit using the callback
-            final_state = c(callbacks=entropy)
+            final_state = c(callback=entropy)
             print(entropy[0])
             # Should print [0, 0, np.log(2)] which is the entanglement entropy
             # after every gate in the calculation.
