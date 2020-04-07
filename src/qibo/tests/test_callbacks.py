@@ -37,8 +37,8 @@ def test_entropy_in_circuit():
     c.add(gates.CNOT(0, 1))
     state = c(callback=entropy)
 
-    result = entropy.results.numpy()
-    np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)
+    target = [0, 0, np.log(2)]
+    np.testing.assert_allclose(entropy[0].numpy(), target, atol=_atol)
 
 
 def test_entropy_in_compiled_circuit():
@@ -50,8 +50,8 @@ def test_entropy_in_compiled_circuit():
     c.compile(callback=entropy)
     state = c()
 
-    result = entropy.results.numpy()
-    np.testing.assert_allclose(result, [0, 0, np.log(2)], atol=_atol)
+    target = [0, 0, np.log(2)]
+    np.testing.assert_allclose(entropy[0].numpy(), target, atol=_atol)
 
 
 def test_entropy_steps():
@@ -65,8 +65,8 @@ def test_entropy_steps():
     c.compile(callback=entropy)
     state = c()
 
-    result = entropy.results.numpy()
-    np.testing.assert_allclose(result, [0, np.log(2), np.log(2)], atol=_atol)
+    target = [0, np.log(2), np.log(2)]
+    np.testing.assert_allclose(entropy[0].numpy(), target, atol=_atol)
 
 
 def test_entropy_multiple_executions():
@@ -88,7 +88,5 @@ def test_entropy_multiple_executions():
         sin = np.sin(np.pi * t / 2.0) ** 4
         return - cos * np.log(cos) - sin * np.log(sin)
 
-    target = [0, target_entropy(0.1234)]
-    np.testing.assert_allclose(entropy.results[0].numpy(), target)
-    target = [0, target_entropy(0.4321)]
-    np.testing.assert_allclose(entropy.results[1].numpy(), target)
+    target = [[0, target_entropy(0.1234)], [0, target_entropy(0.4321)]]
+    np.testing.assert_allclose(entropy[:].numpy(), target)

@@ -8,6 +8,8 @@ class Callback:
     All Tensorflow callbacks should inherit this class and implement its
     `__call__` method.
 
+    Results of a callback can be accessed by indexing the corresponding object.
+
     Args:
         steps (int): Every how many gates to perform the callback calculation.
             Defaults at 1 for which the calculation is done after every gate.
@@ -27,22 +29,16 @@ class Callback:
     def nqubits(self, n: int):
         self._nqubits = n
 
-    @property
-    def results(self) -> Union[tf.Tensor, List[tf.Tensor]]:
-        """Callback's results after a circuit execution.
-
-        If the callback was used in a single circuit execution
-            A single rank-1 `tf.Tensor` that holds all the results.
-        If the callback was used in more than one circuit executions
-            A list of rank-1 `tf.Tensor`s where each holds the results of each
-            execution.
-        """
-        if len(self._results) > 1:
-            return self._results
-        elif len(self._results) == 1:
-            return self._results[0]
-        raise ValueError("Callback does not have results available before "
-                         "using in a circuit execution.")
+    def __getitem__(self, k) -> tf.Tensor:
+        if isinstance(k, int):
+            if k > len(self._results):
+                raise IndexError("Attempting to access callbacks {} run but "
+                                 "the callback has been used in {} executions."
+                                 "".format(k, len(self._results)))
+            return self._results[k]
+        if isinstance(k, slice) or isinstance(k, list) or isisntance(k, tuple):
+            return tf.stack(self._results[k])
+        raise IndexError("Unrecognized type for index {}.".format(k))
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         raise NotImplementedError
@@ -74,7 +70,7 @@ class EntanglementEntropy(Callback):
             c.add(gates.CNOT(0, 1))
             # execute the circuit using the callback
             final_state = c(callbacks=entropy)
-            print(entropy.results.numpy())
+            print(entropy[0])
             # Should print [0, 0, np.log(2)] which is the entanglement entropy
             # after every gate in the calculation.
     """
