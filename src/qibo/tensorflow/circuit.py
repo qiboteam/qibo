@@ -51,8 +51,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         Args:
             callback: A Callback to calculate during circuit execution.
-                See tensorflow.callbacks for more details.
-                Can be a single callback list of callbacks.
+                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
+                User can give a single callback or list of callbacks here.
         """
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
@@ -78,11 +78,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 measurement gates.
                 If `nshots` None the measurement gates will be ignored.
             callback: A Callback to calculate during circuit execution.
-                See tensorflow.callbacks for more details.
-                Can be a single callback list of callbacks.
-                If the Circuit is compiled then all callbacks should be passed
-                when `compile` is called, not during execution, otherwise an
-                RuntimeError will be raised.
+                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
+                User can give a single callback or list of callbacks here.
+                Note that if the Circuit is compiled then all callbacks should
+                be passed when `compile` is called, not during execution.
+                Otherwise an `RuntimeError` will be raised.
 
         Returns:
             If `nshots` is given and the circuit contains measurements
@@ -117,7 +117,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                    "Please pass the callbacks when compiling.")
             state, callback_results = self.compiled_execute(state)
 
-        # Complete callbacks
+        # Append callback results to callbacks
         for callback, result in zip(self.callbacks, callback_results):
             callback.append(result)
 

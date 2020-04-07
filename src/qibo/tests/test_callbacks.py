@@ -67,3 +67,28 @@ def test_entropy_steps():
 
     result = entropy.results.numpy()
     np.testing.assert_allclose(result, [0, np.log(2), np.log(2)], atol=_atol)
+
+
+def test_entropy_multiple_executions():
+    """Check entropy calculation when the callback is used in multiple executions."""
+    entropy = callbacks.EntanglementEntropy([0], steps=2)
+
+    c = Circuit(2)
+    c.add(gates.RY(0, 0.1234))
+    c.add(gates.CNOT(0, 1))
+    state = c(callback=entropy)
+
+    c = Circuit(2)
+    c.add(gates.RY(0, 0.4321))
+    c.add(gates.CNOT(0, 1))
+    state = c(callback=entropy)
+
+    def target_entropy(t):
+        cos = np.cos(np.pi * t / 2.0) ** 4
+        sin = np.sin(np.pi * t / 2.0) ** 4
+        return - cos * np.log(cos) - sin * np.log(sin)
+
+    target = [0, target_entropy(0.1234)]
+    np.testing.assert_allclose(entropy.results[0].numpy(), target)
+    target = [0, target_entropy(0.4321)]
+    np.testing.assert_allclose(entropy.results[1].numpy(), target)
