@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
+from typing import Set, Tuple
 
 QASM_GATES = {"h", "x", "y", "z",
               "rx", "ry", "rz",
@@ -60,10 +60,29 @@ class BaseCircuit(object):
                              "qubits. The first has {} qubits while the "
                              "second has {}".format(c1.nqubits, c2.nqubits))
         newcircuit = cls(c1.nqubits)
+        # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.add(gate)
+        newcircuit.measurement_gate = c1.measurement_gate
+        newcircuit.measurement_sets = c1.measurement_sets
+        # Add gates from `c2` to `newcircuit` (including measurements)
         for gate in c2.queue:
             newcircuit.add(gate)
+        if newcircuit.measurement_gate is None:
+            newcircuit.measurement_gate = c2.measurement_gate
+            newcircuit.measurement_sets = c2.measurement_sets
+        elif c2.measurement_gate is not None:
+            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
+            measured_qubits = newcircuit.measured_qubits
+            for k, v in c2.measurement_sets.items():
+                if k in newcircuit.measurement_sets:
+                    raise KeyError("Register name {} already exists in the "
+                                   "circuit.".format(k))
+                if v & measured_qubits:
+                    raise ValueError("Attempting to add measurements to qubits "
+                                     "{} that are already measured."
+                                     "".format(v & measured_qubits))
+                newcircuit.measurement_sets[k] = v
         return newcircuit
 
     def _check_measured(self, gate_qubits: Tuple[int]):
@@ -137,6 +156,14 @@ class BaseCircuit(object):
     def depth(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
+
+    @property
+    def measured_qubits(self) -> Set[int]:
+        """Set of qubits that are measured."""
+        qubits = set()
+        for s in self.measurement_sets.values():
+            qubits |= s
+        return qubits
 
     @abstractmethod
     def execute(self):
