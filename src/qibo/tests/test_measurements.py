@@ -330,3 +330,73 @@ def test_unbalanced_probabilistic_measurement():
     assert_results(result,
                    decimal_frequencies=decimal_freqs,
                    binary_frequencies=binary_freqs)
+
+
+def test_measured_qubits_property():
+    """Check that `measured_qubits` property returns the correct qubit ids."""
+    c = models.Circuit(4)
+    c.add(gates.M(0, 1))
+    c.add(gates.M(3))
+    assert c.measured_qubits == {0, 1, 3}
+
+
+def test_circuit_addition_with_measurements():
+    """Check if measurements are transferred during circuit addition."""
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+
+    meas_c = models.Circuit(2)
+    c.add(gates.M(0, 1))
+
+    c += meas_c
+    assert len(c.measurement_gate.target_qubits) == 2
+    assert c.measurement_sets == {"register0": {0, 1}}
+
+
+def test_circuit_addition_with_measurements_in_both_circuits():
+    """Check if measurements of two circuits are added during circuit addition."""
+    c1 = models.Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.H(1))
+    c1.add(gates.M(1, register_name="a"))
+
+    c2 = models.Circuit(2)
+    c2.add(gates.X(0))
+    c2.add(gates.M(0, register_name="b"))
+
+    c = c1 + c2
+    assert len(c.measurement_gate.target_qubits) == 2
+    assert c.measurement_sets == {"a": {1}, "b": {0}}
+
+
+def test_gate_after_measurement_with_addition_error():
+    """Check that measured qubits cannot be reused by adding gates."""
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.M(1))
+
+    # Try to add gate to qubit that is already measured
+    c2 = models.Circuit(2)
+    c2.add(gates.H(1))
+    with pytest.raises(ValueError):
+        c += c2
+    # Try to add measurement to qubit that is already measured
+    c2 = models.Circuit(2)
+    c2.add(gates.M(1, register_name="a"))
+    with pytest.raises(ValueError):
+        c += c2
+
+
+def test_registers_with_same_name_error():
+    """Check that registers with the same name cannot be added."""
+    c1 = models.Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.M(0))
+
+    c2 = models.Circuit(2)
+    c2.add(gates.H(1))
+    c2.add(gates.M(1))
+
+    with pytest.raises(KeyError):
+        c = c1 + c2
