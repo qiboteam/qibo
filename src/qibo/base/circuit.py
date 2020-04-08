@@ -72,17 +72,13 @@ class BaseCircuit(object):
             newcircuit.measurement_gate = c2.measurement_gate
             newcircuit.measurement_sets = c2.measurement_sets
         elif c2.measurement_gate is not None:
-            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
-            measured_qubits = newcircuit.measured_qubits
             for k, v in c2.measurement_sets.items():
                 if k in newcircuit.measurement_sets:
                     raise KeyError("Register name {} already exists in the "
                                    "circuit.".format(k))
-                if v & measured_qubits:
-                    raise ValueError("Attempting to add measurements to qubits "
-                                     "{} that are already measured."
-                                     "".format(v & measured_qubits))
+                newcircuit._check_measured(tuple(v))
                 newcircuit.measurement_sets[k] = v
+            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
     def _check_measured(self, gate_qubits: Tuple[int]):
@@ -156,14 +152,6 @@ class BaseCircuit(object):
     def depth(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
-
-    @property
-    def measured_qubits(self) -> Set[int]:
-        """Set of qubits that are measured."""
-        qubits = set()
-        for s in self.measurement_sets.values():
-            qubits |= s
-        return qubits
 
     @abstractmethod
     def execute(self):

@@ -332,14 +332,6 @@ def test_unbalanced_probabilistic_measurement():
                    binary_frequencies=binary_freqs)
 
 
-def test_measured_qubits_property():
-    """Check that `measured_qubits` property returns the correct qubit ids."""
-    c = models.Circuit(4)
-    c.add(gates.M(0, 1))
-    c.add(gates.M(3))
-    assert c.measured_qubits == {0, 1, 3}
-
-
 def test_circuit_addition_with_measurements():
     """Check if measurements are transferred during circuit addition."""
     c = models.Circuit(2)
