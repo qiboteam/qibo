@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
-from typing import Set, Tuple
+from qibo.base import gates
+from typing import Iterable, Set, Tuple
 
 QASM_GATES = {"h", "x", "y", "z",
               "rx", "ry", "rz",
@@ -100,7 +101,17 @@ class BaseCircuit(object):
         Args:
             gate (:class:`qibo.base.gates.Gate`): the gate object to add.
                 See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
         """
+        if isinstance(gate, Iterable):
+            for g in gate:
+                self.add(g)
+            return
+        elif not isinstance(gate, gates.Gate):
+            raise TypeError("Unknown gate type {}.".format(type(gate)))
+
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")

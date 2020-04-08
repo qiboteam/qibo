@@ -40,6 +40,31 @@ def test_circuit_add():
     assert c.depth == 3
 
 
+def test_circuit_add_iterable():
+    """Check if `circuit.add` works with iterables."""
+    c = Circuit(2)
+    # Try adding list
+    c.add([H(0), H(1), CNOT(0, 1)])
+    assert c.depth == 3
+    assert isinstance(c.queue[-1], CNOT)
+    # Try adding tuple
+    c.add((H(0), H(1), CNOT(0, 1)))
+    assert c.depth == 6
+    assert isinstance(c.queue[-1], CNOT)
+
+
+def test_circuit_add_generator():
+    """Check if `circuit.add` works with generators."""
+    def gen():
+        yield H(0)
+        yield H(1)
+        yield CNOT(0, 1)
+    c = Circuit(2)
+    c.add(gen())
+    assert c.depth == 3
+    assert isinstance(c.queue[-1], CNOT)
+
+
 def test_circuit_addition():
     """Check if circuit addition increases depth."""
     c1 = Circuit(2)
