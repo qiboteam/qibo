@@ -1,4 +1,6 @@
+import numpy as np
 import tensorflow as tf
+from qibo.config import DTYPECPX
 from typing import List, Optional, Union
 
 
@@ -97,8 +99,18 @@ class EntanglementEntropy(Callback):
         self.rho_dim = 2 ** (n - len(self.partition))
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
+        # Cast state in the proper state if it is given as a numpy array
+        shape = tuple(state.shape)
+        if len(shape) == 1:
+            if not isinstance(state, np.ndarray):
+                raise TypeError("If the state is passed as a vector then it should "
+                                "be a numpy array but is {}.".format(type(state)))
+            self.nqubits = int(np.log2(shape[0]))
         if self.nqubits is None:
-            self.nqubits = len(tuple(state.shape))
+            self.nqubits = len(shape)
+        if isinstance(state, np.ndarray):
+            state = tf.convert_to_tensor(state.reshape(self.nqubits * (2,)),
+                                         dtype=DTYPECPX)
 
         # Construct density matrix
         rho = tf.tensordot(state, tf.math.conj(state),
