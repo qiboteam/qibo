@@ -164,8 +164,6 @@ class M(Gate):
 
     Args:
         *q (int): id numbers of the qubits to measure.
-            Order does not matter as measurement results will follow increasing
-            order in ids.
         register_name: Optional name of the register to distinguish it from
             other registers when used in circuits.
     """

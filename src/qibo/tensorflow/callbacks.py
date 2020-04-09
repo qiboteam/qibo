@@ -73,7 +73,7 @@ class EntanglementEntropy(Callback):
             # execute the circuit using the callback
             final_state = c(callback=entropy)
             print(entropy[0])
-            # Should print [0, 0, np.log(2)] which is the entanglement entropy
+            # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPE)
