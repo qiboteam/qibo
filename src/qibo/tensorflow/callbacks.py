@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPECPX
+from qibo.config import DTYPE, DTYPECPX
 from typing import List, Optional, Union
 
 
@@ -76,6 +76,7 @@ class EntanglementEntropy(Callback):
             # Should print [0, 0, np.log(2)] which is the entanglement entropy
             # after every gate in the calculation.
     """
+    _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPE)
 
     def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
         super(EntanglementEntropy, self).__init__(steps)
@@ -124,4 +125,4 @@ class EntanglementEntropy(Callback):
                                tf.ones_like(eigvals2),
                                tf.zeros_like(eigvals2))
         entropy = - tf.reduce_sum(eigvals2 * tf.math.log(eigvals2 + regularizer))
-        return entropy
+        return entropy / self._log2
