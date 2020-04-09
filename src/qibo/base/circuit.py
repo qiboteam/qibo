@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
-from typing import Tuple
+from qibo.base import gates
+from typing import Iterable, Set, Tuple
 
 QASM_GATES = {"h", "x", "y", "z",
               "rx", "ry", "rz",
@@ -60,10 +61,25 @@ class BaseCircuit(object):
                              "qubits. The first has {} qubits while the "
                              "second has {}".format(c1.nqubits, c2.nqubits))
         newcircuit = cls(c1.nqubits)
+        # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.add(gate)
+        newcircuit.measurement_gate = c1.measurement_gate
+        newcircuit.measurement_sets = c1.measurement_sets
+        # Add gates from `c2` to `newcircuit` (including measurements)
         for gate in c2.queue:
             newcircuit.add(gate)
+        if newcircuit.measurement_gate is None:
+            newcircuit.measurement_gate = c2.measurement_gate
+            newcircuit.measurement_sets = c2.measurement_sets
+        elif c2.measurement_gate is not None:
+            for k, v in c2.measurement_sets.items():
+                if k in newcircuit.measurement_sets:
+                    raise KeyError("Register name {} already exists in the "
+                                   "circuit.".format(k))
+                newcircuit._check_measured(tuple(v))
+                newcircuit.measurement_sets[k] = v
+            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
     def _check_measured(self, gate_qubits: Tuple[int]):
@@ -85,7 +101,17 @@ class BaseCircuit(object):
         Args:
             gate (:class:`qibo.base.gates.Gate`): the gate object to add.
                 See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
         """
+        if isinstance(gate, Iterable):
+            for g in gate:
+                self.add(g)
+            return
+        elif not isinstance(gate, gates.Gate):
+            raise TypeError("Unknown gate type {}.".format(type(gate)))
+
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")
