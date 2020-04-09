@@ -170,6 +170,29 @@ def test_multiple_qubit_measurement_circuit():
                    binary_frequencies={"01": 100})
 
 
+def test_measurement_qubit_order_simple():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(1, 0))
+    result1 = c(nshots=100)
+
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(1))
+    c.add(gates.M(0))
+    result2 = c(nshots=100)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 1] = 1
+    target = {"decimal_samples": np.ones((100,)),
+              "binary_samples": target_binary_samples,
+              "decimal_frequencies": {1: 100},
+              "binary_frequencies": {"01": 100}}
+    assert_results(result1, **target)
+    assert_results(result2, **target)
+
+
 def test_measurement_qubit_order():
     """Check that measurement results follow order defined by user."""
     c = models.Circuit(6)
