@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-from typing import Optional, Sequence, Set, Tuple
+from typing import Optional, Sequence, Tuple
 
 
 class Gate(object):
@@ -173,13 +173,14 @@ class M(Gate):
     def __init__(self, *q, register_name: Optional[str] = None):
         super(M, self).__init__()
         self.name = "measure"
-        self.target_qubits = set(q)
+        self.target_qubits = tuple(q)
+        self._control_qubits = tuple()
         self.register_name = register_name
 
-        self.is_executed = False
-        self._unmeasured_qubits = None # Set
+        self._unmeasured_qubits = None # Tuple
+        self._reduced_target_qubits = None # Tuple
 
-    def _add(self, qubits: Set[int]):
+    def _add(self, qubits: Tuple[int]):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
@@ -188,19 +189,27 @@ class M(Gate):
         raised if he does so.
 
         Args:
-            qubits: Set of qubit ids to be added to the measurement's qubits.
+            qubits: Tuple of qubit ids to be added to the measurement's qubits.
         """
-        if self.is_executed:
+        if self._unmeasured_qubits is not None:
             raise RuntimeError("Cannot add qubits to a measurement gate that "
                                "was executed.")
-        self.target_qubits |= qubits
-        if self._unmeasured_qubits is not None:
-            self._unmeasured_qubits -= qubits
+        self.target_qubits += qubits
 
-    @property
-    def qubits(self) -> Tuple[int]:
-        """Tuple with ids of measured qubits sorted in increasing order."""
-        return tuple(sorted(self.target_qubits))
+    def _set_unmeasured_qubits(self):
+        if self._nqubits is None:
+            raise ValueError("Cannot calculate set of unmeasured qubits if "
+                             "the number of qubits in the circuit is unknown.")
+        target_qubits = set(self.target_qubits)
+        unmeasured_qubits, reduced_target_qubits = [], []
+        for i in range(self.nqubits):
+            if i in target_qubits:
+                reduced_target_qubits.append(i - len(unmeasured_qubits))
+            else:
+                unmeasured_qubits.append(i)
+
+        self._unmeasured_qubits = tuple(unmeasured_qubits)
+        self._reduced_target_qubits = tuple(reduced_target_qubits)
 
     @property
     def unmeasured_qubits(self) -> Tuple[int]:
@@ -209,13 +218,15 @@ class M(Gate):
         This is useful when tracing out unmeasured qubits to calculate
         probabilities.
         """
-        if self._nqubits is None:
-            raise ValueError("Cannot calculate set of unmeasured qubits if "
-                             "the number of qubits in the circuit is unknown.")
         if self._unmeasured_qubits is None:
-            self._unmeasured_qubits = set(i for i in range(self.nqubits)
-                                          if i not in self.target_qubits)
-        return tuple(sorted(self._unmeasured_qubits))
+            self._set_unmeasured_qubits()
+        return self._unmeasured_qubits
+
+    @property
+    def reduced_target_qubits(self) -> Tuple[int]:
+        if self._unmeasured_qubits is None:
+            self._set_unmeasured_qubits()
+        return self._reduced_target_qubits
 
     def controlled_by(self, *q):
         """"""
