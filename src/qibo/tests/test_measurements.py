@@ -170,6 +170,59 @@ def test_multiple_qubit_measurement_circuit():
                    binary_frequencies={"01": 100})
 
 
+def test_measurement_qubit_order():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(6)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.M(1, 5, 2, 0))
+    result = c(nshots=100)
+
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 0] = 1
+    target_binary_samples[:, 3] = 1
+    assert_results(result,
+                   decimal_samples=9 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={9: 100},
+                   binary_frequencies={"1001": 100})
+
+
+def test_measurement_qubit_order_multiple_registers():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(6)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(3))
+    c.add(gates.M(5, 1, 3, register_name="a"))
+    c.add(gates.M(2, 0, register_name="b"))
+    result = c(nshots=100)
+
+    # Check full result
+    target_binary_samples = np.zeros((100, 5))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    target_binary_samples[:, 4] = 1
+    assert_results(result,
+                   decimal_samples=13 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={13: 100},
+                   binary_frequencies={"01101": 100})
+
+    target = {}
+    target["decimal_samples"] = {"a": 3 * np.ones((100,)),
+                                 "b": np.ones((100,))}
+    target["binary_samples"] = {"a": np.zeros((100, 3)),
+                                "b": np.zeros((100, 2))}
+    target["binary_samples"]["a"][:, 1] = 1
+    target["binary_samples"]["a"][:, 2] = 1
+    target["binary_samples"]["b"][:, 1] = 1
+
+    target["decimal_frequencies"] = {"a": {3: 100}, "b": {1: 100}}
+    target["binary_frequencies"] = {"a": {"011": 100}, "b": {"01": 100}}
+    assert_register_results(result, **target)
+
+
 def test_multiple_measurement_gates_circuit():
     """Check multiple gates with multiple qubits each in the same circuit."""
     c = models.Circuit(4)
