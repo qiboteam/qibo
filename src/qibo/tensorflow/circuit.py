@@ -131,7 +131,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
-            self.measurement_sets, self.measurement_gate_result)
+            self.measurement_tuples, self.measurement_gate_result)
 
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
                  nshots: Optional[int] = None,

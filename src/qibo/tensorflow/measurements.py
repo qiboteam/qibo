@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import measurements as base_measurements
-from typing import Dict, Set, Tuple
+from typing import Dict, Tuple
 
 
 class GateResult(base_measurements.GateResult):
@@ -27,12 +27,11 @@ class GateResult(base_measurements.GateResult):
 class CircuitResult(base_measurements.CircuitResult):
 
     @staticmethod
-    def _calculate_register_results(register_qubits: Dict[str, Set[int]],
+    def _calculate_register_results(register_qubits: Dict[str, Tuple[int]],
                                     gate_result: GateResult
                                     ) -> Dict[str, GateResult]:
         results = {}
-        for name, qubit_set in register_qubits.items():
-            qubit_tuple = tuple(sorted(qubit_set))
+        for name, qubit_tuple in register_qubits.items():
             slicer = tuple(gate_result.qubit_map[q] for q in qubit_tuple)
             samples = tf.gather(gate_result.samples(True), slicer, axis=-1)
             results[name] = GateResult(qubit_tuple, binary_samples=samples)

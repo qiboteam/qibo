@@ -103,7 +103,7 @@ def test_rx():
 
     c = Circuit(1)
     c.add(gates.H(0))
-    c.add(gates.RX(0, theta))
+    c.add(gates.RX(0, theta=theta))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * np.pi * theta / 2.0)

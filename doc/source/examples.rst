@@ -101,8 +101,11 @@ qubit ``2`` remains unmeasured. Measured results can now be accessed as
 
 Setting ``registers=False`` (default option) will ignore the registers and return the
 results similarly to the previous example. For example ``result.frequencies(binary=True)``
-will return ``collections.Counter({"1001": 100})``. Note that unmeasured qubits
-are ignored by the measurement objects.
+will return ``collections.Counter({"1001": 100})``.
+
+Note that unmeasured qubits are ignored by the measurement objects. Also, the
+order that qubits appear in the results is defined by the order the user added
+the measurements and not the qubit ids.
 
 
 How to use callbacks?
@@ -120,7 +123,7 @@ as follows:
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
     c.add(gates.H(0)) # state is |+0> (entropy = 0)
-    c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = log(2))
+    c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
 
     # create entropy callback where qubit 0 is the first subsystem
     entropy = callbacks.EntanglementEntropy([0])
@@ -128,7 +131,7 @@ as follows:
     final_state = c(callback=entropy)
 
 The results can be accessed using indexing on the callback objects. In this
-example ``entropy[0]`` will return ``tf.Tensor([0, 0, log(2)])`` which are the
+example ``entropy[0]`` will return ``tf.Tensor([0, 0, 1])`` which are the
 values of entropy after every gate in the circuit.
 
 The same callback object can be used in a second execution of this or a different
@@ -144,11 +147,28 @@ circuit. For example
     final_state = c(callback=entropy)
 
     # print result of first execution
-    print(entropy[0]) # tf.Tensor([0, 0, log(2)])
+    print(entropy[0]) # tf.Tensor([0, 0, 1])
     # print result of second execution
-    print(entropy[1]) # tf.Tensor([0, 0, log(2)])
+    print(entropy[1]) # tf.Tensor([0, 0, 1])
     # print result of all executions
-    print(entropy[:]) # tf.Tensor([[0, 0, log(2)], [0, 0, log(2)]])
+    print(entropy[:]) # tf.Tensor([[0, 0, 1], [0, 0, 1]])
+
+The callback for entanglement entropy can also be used on state vectors directly.
+For example
+
+.. code-block::  python
+
+    import numpy as np
+    # create a singlet state vector
+    state = np.zeros(4)
+    state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
+
+    # create an `EntanglementEntropy` callback object
+    entropy = callbacks.EntanglementEntropy([0])
+    # call the object on the state
+    print(entropy(state))
+
+will print ``tf.Tensor(1.0)``.
 
 
 How to write a VQE?

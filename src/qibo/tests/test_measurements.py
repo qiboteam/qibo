@@ -148,6 +148,7 @@ def test_gate_after_measurement_error():
     c.add(gates.X(0))
     c.add(gates.M(0))
     c.add(gates.X(1))
+    # TODO: Change this to NotImplementedError
     with pytest.raises(ValueError):
         c.add(gates.H(0))
 
@@ -167,6 +168,82 @@ def test_multiple_qubit_measurement_circuit():
                    binary_samples=target_binary_samples,
                    decimal_frequencies={1: 100},
                    binary_frequencies={"01": 100})
+
+
+def test_measurement_qubit_order_simple():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(1, 0))
+    result1 = c(nshots=100)
+
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(1))
+    c.add(gates.M(0))
+    result2 = c(nshots=100)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 1] = 1
+    target = {"decimal_samples": np.ones((100,)),
+              "binary_samples": target_binary_samples,
+              "decimal_frequencies": {1: 100},
+              "binary_frequencies": {"01": 100}}
+    assert_results(result1, **target)
+    assert_results(result2, **target)
+
+
+def test_measurement_qubit_order():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(6)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.M(1, 5, 2, 0))
+    result = c(nshots=100)
+
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 0] = 1
+    target_binary_samples[:, 3] = 1
+    assert_results(result,
+                   decimal_samples=9 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={9: 100},
+                   binary_frequencies={"1001": 100})
+
+
+def test_measurement_qubit_order_multiple_registers():
+    """Check that measurement results follow order defined by user."""
+    c = models.Circuit(6)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(3))
+    c.add(gates.M(5, 1, 3, register_name="a"))
+    c.add(gates.M(2, 0, register_name="b"))
+    result = c(nshots=100)
+
+    # Check full result
+    target_binary_samples = np.zeros((100, 5))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    target_binary_samples[:, 4] = 1
+    assert_results(result,
+                   decimal_samples=13 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={13: 100},
+                   binary_frequencies={"01101": 100})
+
+    target = {}
+    target["decimal_samples"] = {"a": 3 * np.ones((100,)),
+                                 "b": np.ones((100,))}
+    target["binary_samples"] = {"a": np.zeros((100, 3)),
+                                "b": np.zeros((100, 2))}
+    target["binary_samples"]["a"][:, 1] = 1
+    target["binary_samples"]["a"][:, 2] = 1
+    target["binary_samples"]["b"][:, 1] = 1
+
+    target["decimal_frequencies"] = {"a": {3: 100}, "b": {1: 100}}
+    target["binary_frequencies"] = {"a": {"011": 100}, "b": {"01": 100}}
+    assert_register_results(result, **target)
 
 
 def test_multiple_measurement_gates_circuit():
@@ -211,7 +288,7 @@ def test_final_state():
 def test_circuit_with_unmeasured_qubits():
     """Check that unmeasured qubits are not taken into account."""
     c = models.Circuit(5)
-    c.add(gates.X(1))
+    c.add(gates.X(4))
     c.add(gates.X(2))
     c.add(gates.M(0, 2))
     c.add(gates.X(3))
@@ -220,12 +297,12 @@ def test_circuit_with_unmeasured_qubits():
 
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
-    target_binary_samples[:, 2] = 1
+    target_binary_samples[:, 3] = 1
     assert_results(result,
-                   decimal_samples=6 * np.ones((100,)),
+                   decimal_samples=5 * np.ones((100,)),
                    binary_samples=target_binary_samples,
-                   decimal_frequencies={6: 100},
-                   binary_frequencies={"0110": 100})
+                   decimal_frequencies={5: 100},
+                   binary_frequencies={"0101": 100})
 
 
 def test_measurement_compiled_circuit():
@@ -343,7 +420,7 @@ def test_circuit_addition_with_measurements():
 
     c += meas_c
     assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_sets == {"register0": {0, 1}}
+    assert c.measurement_tuples == {"register0": (0, 1)}
 
 
 def test_circuit_addition_with_measurements_in_both_circuits():
@@ -359,7 +436,7 @@ def test_circuit_addition_with_measurements_in_both_circuits():
 
     c = c1 + c2
     assert len(c.measurement_gate.target_qubits) == 2
-    assert c.measurement_sets == {"a": {1}, "b": {0}}
+    assert c.measurement_tuples == {"a": (1,), "b": (0,)}
 
 
 def test_gate_after_measurement_with_addition_error():
