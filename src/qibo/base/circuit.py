@@ -39,7 +39,7 @@ class BaseCircuit(object):
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
 
-        self.measurement_sets = dict()
+        self.measurement_tuples = dict()
         self.measurement_gate = None
         self.measurement_gate_result = None
 
@@ -65,20 +65,20 @@ class BaseCircuit(object):
         for gate in c1.queue:
             newcircuit.add(gate)
         newcircuit.measurement_gate = c1.measurement_gate
-        newcircuit.measurement_sets = c1.measurement_sets
+        newcircuit.measurement_tuples = c1.measurement_tuples
         # Add gates from `c2` to `newcircuit` (including measurements)
         for gate in c2.queue:
             newcircuit.add(gate)
         if newcircuit.measurement_gate is None:
             newcircuit.measurement_gate = c2.measurement_gate
-            newcircuit.measurement_sets = c2.measurement_sets
+            newcircuit.measurement_tuples = c2.measurement_tuples
         elif c2.measurement_gate is not None:
-            for k, v in c2.measurement_sets.items():
-                if k in newcircuit.measurement_sets:
+            for k, v in c2.measurement_tuples.items():
+                if k in newcircuit.measurement_tuples:
                     raise KeyError("Register name {} already exists in the "
                                    "circuit.".format(k))
-                newcircuit._check_measured(tuple(v))
-                newcircuit.measurement_sets[k] = v
+                newcircuit._check_measured(v)
+                newcircuit.measurement_tuples[k] = v
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
@@ -137,22 +137,22 @@ class BaseCircuit(object):
         than all other gates.
         The user is not supposed to use the `add_measurement` method.
         """
-        # Set register's name and log the set of qubits in `self.measurement_sets`
+        # Set register's name and log the set of qubits in `self.measurement_tuples`
         name = gate.register_name
         if name is None:
-            name = "register{}".format(len(self.measurement_sets))
+            name = "register{}".format(len(self.measurement_tuples))
             gate.register_name = name
-        elif name in self.measurement_sets:
+        elif name in self.measurement_tuples:
             raise KeyError("Register name {} has already been used."
                            "".format(name))
 
         # Update circuit's global measurement gate
         if self.measurement_gate is None:
             self.measurement_gate = gate
-            self.measurement_sets[name] = set(gate.target_qubits)
+            self.measurement_tuples[name] = tuple(gate.target_qubits)
         else:
             self.measurement_gate._add(gate.target_qubits)
-            self.measurement_sets[name] = gate.target_qubits
+            self.measurement_tuples[name] = gate.target_qubits
 
     @property
     def size(self) -> int:
@@ -182,7 +182,7 @@ class BaseCircuit(object):
         code += [f"qreg q[{self.nqubits}];"]
 
         # Set measurements
-        for reg_name, reg_qubits in self.measurement_sets.items():
+        for reg_name, reg_qubits in self.measurement_tuples.items():
             if not reg_name.islower():
                 raise NameError("OpenQASM does not support capital letters in "
                                 "register names but {} was used".format(reg_name))
@@ -203,8 +203,8 @@ class BaseCircuit(object):
             code.append(f"{name} {qubits};")
 
         # Add measurements
-        for reg_name, reg_qubits in self.measurement_sets.items():
-            for i, q in enumerate(sorted(reg_qubits)):
+        for reg_name, reg_qubits in self.measurement_tuples.items():
+            for i, q in enumerate(reg_qubits):
                 code.append(f"measure q[{q}] -> {reg_name}[{i}];")
 
         return "\n".join(code)

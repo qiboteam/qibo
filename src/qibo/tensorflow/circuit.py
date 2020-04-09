@@ -98,7 +98,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
-            self.measurement_sets, self.measurement_gate_result)
+            self.measurement_tuples, self.measurement_gate_result)
 
     @property
     def final_state(self) -> tf.Tensor:

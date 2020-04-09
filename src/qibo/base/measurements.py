@@ -116,7 +116,7 @@ class CircuitResult:
     """
 
     def __init__(self,
-                 register_qubits: Dict[str, Set[int]],
+                 register_qubits: Dict[str, Tuple[int]],
                  measurement_gate_result: GateResult):
         self.register_qubits = register_qubits
         self.result = measurement_gate_result
