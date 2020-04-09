@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX
-from qibo.tensorflow import gates, measurements
-from typing import Optional, Union
+from qibo.tensorflow import gates, measurements, callbacks
+from typing import List, Optional, Tuple, Union
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -21,29 +21,48 @@ class TensorflowCircuit(circuit.BaseCircuit):
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
+        self.callbacks = []
         self._final_state = None
 
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
-    def _execute_func(self, state: tf.Tensor) -> tf.Tensor:
+    def _execute_func(self, state: tf.Tensor) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """Simulates the circuit gates.
 
         Can be compiled using `tf.function` or used as it is in Eager mode.
         """
-        for gate in self.queue:
-            state = gate(state)
-        return state
+        # Calculate callbacks for initial state
+        callback_results = [[callback(state)] for callback in self.callbacks]
 
-    def compile(self):
-        """Compiles the circuit as a Tensorflow graph."""
+        for ig, gate in enumerate(self.queue):
+            state = gate(state)
+            for ic, callback in enumerate(self.callbacks):
+                if (ig + 1) % callback.steps == 0:
+                    callback_results[ic].append(callback(state))
+
+        # Stack all results for each callback
+        callback_results = [tf.stack(r) for r in callback_results]
+
+        return state, callback_results
+
+    def compile(self, callback: Optional[callbacks.Callback] = None):
+        """Compiles the circuit as a Tensorflow graph.
+
+        Args:
+            callback: A Callback to calculate during circuit execution.
+                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
+                User can give a single callback or list of callbacks here.
+        """
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
+        self._add_callbacks(callback)
         self.compiled_execute = tf.function(self._execute_func)
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
-                nshots: Optional[int] = None
+                nshots: Optional[int] = None,
+                callback: Optional[callbacks.Callback] = None
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Propagates the state through the circuit applying the corresponding gates.
 
@@ -58,6 +77,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
             nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
                 If `nshots` None the measurement gates will be ignored.
+            callback: A Callback to calculate during circuit execution.
+                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
+                User can give a single callback or list of callbacks here.
+                Note that if the Circuit is compiled then all callbacks should
+                be passed when `compile` is called, not during execution.
+                Otherwise an `RuntimeError` will be raised.
 
         Returns:
             If `nshots` is given and the circuit contains measurements
@@ -84,9 +109,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
                             "".format(type(initial_state)))
 
         if self.compiled_execute is None:
-            state = self._execute_func(state)
+            self._add_callbacks(callback)
+            state, callback_results = self._execute_func(state)
         else:
-            state = self.compiled_execute(state)
+            if callback is not None:
+                raise RuntimeError("Cannot add callbacks to compiled circuit. "
+                                   "Please pass the callbacks when compiling.")
+            state, callback_results = self.compiled_execute(state)
+
+        # Append callback results to callbacks
+        for callback, result in zip(self.callbacks, callback_results):
+            callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
             self._final_state = tf.reshape(state, (2 ** self.nqubits,))
@@ -99,6 +132,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
             self.measurement_tuples, self.measurement_gate_result)
+
+    def __call__(self, initial_state: Optional[tf.Tensor] = None,
+                 nshots: Optional[int] = None,
+                 callback: Optional[callbacks.Callback] = None) -> tf.Tensor:
+        """Equivalent to `circuit.execute()`."""
+        return self.execute(initial_state=initial_state, nshots=nshots,
+                            callback=callback)
 
     @property
     def final_state(self) -> tf.Tensor:
@@ -115,14 +155,20 @@ class TensorflowCircuit(circuit.BaseCircuit):
             return self._final_state
         return tf.reshape(self._final_state, (2 ** self.nqubits,))
 
-    def __call__(self, initial_state: Optional[tf.Tensor] = None,
-                 nshots: Optional[int] = None) -> tf.Tensor:
-        """Equivalent to `circuit.execute()`."""
-        return self.execute(initial_state=initial_state, nshots=nshots)
-
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
         initial_state = np.zeros(2 ** self.nqubits)
         initial_state[0] = 1
         initial_state = initial_state.reshape(self.nqubits * (2,))
         return tf.convert_to_tensor(initial_state, dtype=self.dtype)
+
+    def _add_callbacks(self, callback: callbacks.Callback):
+        """Adds callbacks in the circuit."""
+        n = len(self.callbacks)
+        if isinstance(callback, list):
+            self.callbacks += callback
+        elif isinstance(callback, callbacks.Callback):
+            self.callbacks.append(callback)
+        # Set number of qubits in new callbacks
+        for cb in self.callbacks[n:]:
+            cb.nqubits = self.nqubits

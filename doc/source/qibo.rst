@@ -6,6 +6,7 @@ The Qibo package comes with the following modules:
 * Models_
 * Gates_
 * Hamiltonians_
+* Callbacks_
 
 These modules provide all the required components to ...
 
@@ -139,3 +140,20 @@ For more information on measurements we refer to the related examples.
 .. autoclass:: qibo.base.measurements.CircuitResult
     :members:
     :member-order: bysource
+
+
+.. _Callbacks:
+
+Callbacks
+------------
+
+Callbacks provide a way to calculate quantities on the state vector as it
+propagates through the circuit. Example of such quantity is the entanglement
+entropy, which is currently the only callback implemented in
+:class:`qibo.tensorflow.callbacks.EntanglementEntropy`.
+The user can create custom callbacks by inheriting the
+:class:`qibo.tensorflow.callbacks.Callback` class.
+
+.. automodule:: qibo.tensorflow.callbacks
+   :members:
+   :member-order: bysource
