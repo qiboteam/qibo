@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-from typing import Optional, Sequence, Tuple
+from typing import List, Optional, Sequence, Tuple
 
 
 class Gate(object):
@@ -178,7 +178,7 @@ class M(Gate):
         self.register_name = register_name
 
         self._unmeasured_qubits = None # Tuple
-        self._reduced_target_qubits = None # Tuple
+        self._reduced_target_qubits = None # List
 
     def _add(self, qubits: Tuple[int]):
         """Adds target qubits to a measurement gate.
@@ -200,16 +200,20 @@ class M(Gate):
         if self._nqubits is None:
             raise ValueError("Cannot calculate set of unmeasured qubits if "
                              "the number of qubits in the circuit is unknown.")
+        if self._unmeasured_qubits is not None:
+            raise RuntimeError("Cannot recalculate unmeasured qubits.")
         target_qubits = set(self.target_qubits)
-        unmeasured_qubits, reduced_target_qubits = [], []
+        unmeasured_qubits = []
+        reduced_target_qubits = dict()
         for i in range(self.nqubits):
             if i in target_qubits:
-                reduced_target_qubits.append(i - len(unmeasured_qubits))
+                reduced_target_qubits[i] = i - len(unmeasured_qubits)
             else:
                 unmeasured_qubits.append(i)
 
         self._unmeasured_qubits = tuple(unmeasured_qubits)
-        self._reduced_target_qubits = tuple(reduced_target_qubits)
+        self._reduced_target_qubits = list(reduced_target_qubits[i]
+                                           for i in self.target_qubits)
 
     @property
     def unmeasured_qubits(self) -> Tuple[int]:
@@ -223,7 +227,7 @@ class M(Gate):
         return self._unmeasured_qubits
 
     @property
-    def reduced_target_qubits(self) -> Tuple[int]:
+    def reduced_target_qubits(self) -> List[int]:
         if self._unmeasured_qubits is None:
             self._set_unmeasured_qubits()
         return self._reduced_target_qubits

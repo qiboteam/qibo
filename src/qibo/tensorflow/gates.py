@@ -190,7 +190,10 @@ class M(TensorflowGate, base_gates.M):
         probs_dim = 2 ** len(self.target_qubits)
         probs = tf.reduce_sum(tf.square(tf.abs(state)),
                               axis=self.unmeasured_qubits)
+        # Bring probs in the order specified by the user
+        probs = tf.transpose(probs, perm=self.reduced_target_qubits)
         logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
+
 
         if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
             # Use default device to perform sampling
@@ -204,7 +207,6 @@ class M(TensorflowGate, base_gates.M):
             with tf.device(CPU_NAME):
                 samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                     dtype=DTYPEINT)[0]
-
         if samples_only:
             return samples_dec
         return self.measurements.GateResult(
