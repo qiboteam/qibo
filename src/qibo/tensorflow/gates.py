@@ -136,15 +136,15 @@ class TensorflowGate(base_gates.Gate):
 
 class H(TensorflowGate, base_gates.H):
 
-    def __init__(self, *args):
-        base_gates.H.__init__(self, *args)
+    def __init__(self, q):
+        base_gates.H.__init__(self, q)
         self.matrix = matrices.H
 
 
 class X(TensorflowGate, base_gates.X):
 
-    def __init__(self, *args):
-        base_gates.X.__init__(self, *args)
+    def __init__(self, q):
+        base_gates.X.__init__(self, q)
         self.matrix = matrices.X
 
     def controlled_by(self, *q):
@@ -159,23 +159,23 @@ class X(TensorflowGate, base_gates.X):
 
 class Y(TensorflowGate, base_gates.Y):
 
-    def __init__(self, *args):
-        base_gates.Y.__init__(self, *args)
+    def __init__(self, q):
+        base_gates.Y.__init__(self, q)
         self.matrix = matrices.Y
 
 
 class Z(TensorflowGate, base_gates.Z):
 
-    def __init__(self, *args):
-        base_gates.Z.__init__(self, *args)
+    def __init__(self, q):
+        base_gates.Z.__init__(self, q)
         self.matrix = matrices.Z
 
 
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
-    def __init__(self, *args, register_name: Optional[str] = None):
-        base_gates.M.__init__(self, *args, register_name=register_name)
+    def __init__(self, *q, register_name: Optional[str] = None):
+        base_gates.M.__init__(self, *q, register_name=register_name)
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
@@ -213,8 +213,8 @@ class M(TensorflowGate, base_gates.M):
 
 class RX(TensorflowGate, base_gates.RX):
 
-    def __init__(self, *args):
-        base_gates.RX.__init__(self, *args)
+    def __init__(self, q, theta):
+        base_gates.RX.__init__(self, q, theta)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta / 2.0)
@@ -225,8 +225,8 @@ class RX(TensorflowGate, base_gates.RX):
 
 class RY(TensorflowGate, base_gates.RY):
 
-    def __init__(self, *args):
-        base_gates.RY.__init__(self, *args)
+    def __init__(self, q, theta):
+        base_gates.RY.__init__(self, q, theta)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta / 2.0)
@@ -237,8 +237,8 @@ class RY(TensorflowGate, base_gates.RY):
 
 class RZ(TensorflowGate, base_gates.RZ):
 
-    def __init__(self, *args):
-        base_gates.RZ.__init__(self, *args)
+    def __init__(self, q, theta):
+        base_gates.RZ.__init__(self, q, theta)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta)
@@ -255,15 +255,15 @@ class RZ(TensorflowGate, base_gates.RZ):
 
 class CNOT(TensorflowGate, base_gates.CNOT):
 
-    def __init__(self, *args):
-        base_gates.CNOT.__init__(self, *args)
+    def __init__(self, q0, q1):
+        base_gates.CNOT.__init__(self, q0, q1)
         self.matrix = matrices.CNOT
 
 
 class CRZ(TensorflowGate, base_gates.CRZ):
 
-    def __init__(self, *args):
-        base_gates.CRZ.__init__(self, *args)
+    def __init__(self, q0, q1, theta):
+        base_gates.CRZ.__init__(self, q0, q1, theta)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta)
@@ -274,22 +274,22 @@ class CRZ(TensorflowGate, base_gates.CRZ):
 
 class SWAP(TensorflowGate, base_gates.SWAP):
 
-    def __init__(self, *args):
-        base_gates.SWAP.__init__(self, *args)
+    def __init__(self, q0, q1):
+        base_gates.SWAP.__init__(self, q0, q1)
         self.matrix = matrices.SWAP
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
-    def __init__(self, *args):
-        base_gates.TOFFOLI.__init__(self, *args)
+    def __init__(self, q0, q1, q2):
+        base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         self.matrix = matrices.TOFFOLI
 
 
 class Unitary(TensorflowGate, base_gates.Unitary):
 
-    def __init__(self, *args, name: Optional[str] = None):
-        base_gates.Unitary.__init__(self, *args, name=name)
+    def __init__(self, unitary, *q, name: Optional[str] = None):
+        base_gates.Unitary.__init__(self, unitary, *q, name=name)
         rank = 2 * len(self.target_qubits)
         # This reshape will raise an error if the number of target qubits
         # given is incompatible to the shape of the given unitary.
@@ -299,8 +299,8 @@ class Unitary(TensorflowGate, base_gates.Unitary):
 
 class Flatten(TensorflowGate, base_gates.Flatten):
 
-    def __init__(self, *args):
-        base_gates.Flatten.__init__(self, *args)
+    def __init__(self, coefficients):
+        base_gates.Flatten.__init__(self, coefficients)
 
     def __call__(self, state):
         if self.nqubits is None:
