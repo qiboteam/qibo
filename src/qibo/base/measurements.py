@@ -110,7 +110,7 @@ class CircuitResult:
     Args:
         register_qubits: Dictionary that maps register names to the
             corresponding tuples of qubit ids. This is created in the
-            `measurement_tuples` variable of `models.Circuit`.
+            `measurement_tuples` variable of :class:`qibo.base.circuit.BaseCircuit`.
         measurement_gate_result: The `GateResult` resulting from the circuit's
             global measurement gate.
     """

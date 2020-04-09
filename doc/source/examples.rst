@@ -101,8 +101,11 @@ qubit ``2`` remains unmeasured. Measured results can now be accessed as
 
 Setting ``registers=False`` (default option) will ignore the registers and return the
 results similarly to the previous example. For example ``result.frequencies(binary=True)``
-will return ``collections.Counter({"1001": 100})``. Note that unmeasured qubits
-are ignored by the measurement objects.
+will return ``collections.Counter({"1001": 100})``.
+
+Note that unmeasured qubits are ignored by the measurement objects. Also, the
+order that qubits appear in the results is defined by the order the user added
+the measurements and not the qubit ids.
 
 
 How to use callbacks?
@@ -149,6 +152,23 @@ circuit. For example
     print(entropy[1]) # tf.Tensor([0, 0, 1])
     # print result of all executions
     print(entropy[:]) # tf.Tensor([[0, 0, 1], [0, 0, 1]])
+
+The callback for entanglement entropy can also be used on state vectors directly.
+For example
+
+.. code-block::  python
+
+    import numpy as np
+    # create a singlet state vector
+    state = np.zeros(4)
+    state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
+
+    # create an `EntanglementEntropy` callback object
+    entropy = callbacks.EntanglementEntropy([0])
+    # call the object on the state
+    print(entropy(state))
+
+will print ``tf.Tensor(1.0)``.
 
 
 How to write a VQE?
