@@ -50,7 +50,13 @@ class MatmulEinsum:
       state = tf.reshape(state, shapes[0])
       state = tf.transpose(state, indices)
       state = tf.reshape(state, shapes[1])
-      state = tf.matmul(gate, state)
+
+      n = len(tuple(gate.shape))
+      if n > 2:
+          dim = 2 ** (n // 2)
+          state = tf.matmul(tf.reshape(gate, (dim, dim)), state)
+      else:
+          state = tf.matmul(gate, state)
 
       state = tf.reshape(state, shapes[2])
       state = tf.transpose(state, inv_indices)
@@ -114,7 +120,8 @@ class MatmulEinsumRankN:
         state = tf.transpose(state, inv_indices)
         return state
 
-    def create_cache(self, qubits: Sequence[int], nqubits: int):
+    @staticmethod
+    def create_cache(qubits: Sequence[int], nqubits: int):
         ntargets = len(qubits)
         nrest = nqubits - ntargets
         cache = {}

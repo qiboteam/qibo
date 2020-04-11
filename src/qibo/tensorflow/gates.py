@@ -17,6 +17,7 @@ class TensorflowGate(base_gates.Gate):
     """
 
     dtype = matrices.dtype
+    einsum = einsum
 
     def __init__(self):
       super(TensorflowGate, self).__init__()
@@ -25,6 +26,15 @@ class TensorflowGate(base_gates.Gate):
       # See the docstring of `_calculate_transpose_order` for more details
       self.transpose_order = None
       self.reverse_transpose_order = None
+
+    def with_backend(self, einsum_choice: str) -> "TensorflowGate":
+        """Uses a different einsum backend than the one defined in config.
+
+        Useful for testing.
+        """
+        from qibo.tensorflow import einsum
+        self.einsum = getattr(einsum, einsum_choice)()
+        return self
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
@@ -40,14 +50,14 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             self.transpose_order, targets = self._calculate_transpose_order()
             ncontrol = len(self.control_qubits)
-            self.calculation_cache = einsum.create_cache(targets, n - ncontrol)
+            self.calculation_cache = self.einsum.create_cache(targets, n - ncontrol)
             # Calculate the reverse order for transposing the state legs so that
             # control qubits are back to their original positions
             self.reverse_transpose_order = self.nqubits * [0]
             for i, r in enumerate(self.transpose_order):
                 self.reverse_transpose_order[r] = i
         else:
-            self.calculation_cache = einsum.create_cache(self.qubits, n)
+            self.calculation_cache = self.einsum.create_cache(self.qubits, n)
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
@@ -57,7 +67,7 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        return einsum(self.calculation_cache, state, self.matrix)
+        return self.einsum(self.calculation_cache, state, self.matrix)
 
     def _calculate_transpose_order(self):
         """Helper method for `_controlled_by_call`.
@@ -98,7 +108,7 @@ class TensorflowGate(base_gates.Gate):
         # are active. This should be `state[-1]`
         state = tf.transpose(state, self.transpose_order)
         state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-        updates = einsum(self.calculation_cache, state[-1], self.matrix)
+        updates = self.einsum(self.calculation_cache, state[-1], self.matrix)
 
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.

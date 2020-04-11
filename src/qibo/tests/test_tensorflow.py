@@ -2,6 +2,7 @@
 Testing tensorflow backend.
 """
 import numpy as np
+import pytest
 from qibo.models import Circuit
 from qibo import gates
 
@@ -25,11 +26,12 @@ def test_circuit_addition_result():
     np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
 
 
-def test_hadamard():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_hadamard(einsum_choice):
     """Check Hadamard gate is working properly."""
     c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
+    c.add(gates.H(0).with_backend(einsum_choice))
+    c.add(gates.H(1).with_backend(einsum_choice))
     final_state = c.execute().numpy()
     target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
@@ -54,15 +56,16 @@ def test_xgate():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_multicontrol_xgate():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_multicontrol_xgate(einsum_choice):
     """Check that fallback method for X works for more than two controls."""
     c = Circuit(4)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.X(2))
-    c.add(gates.X(3).controlled_by(0, 1, 2))
-    c.add(gates.X(0))
-    c.add(gates.X(2))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(1).with_backend(einsum_choice))
+    c.add(gates.X(2).with_backend(einsum_choice))
+    c.add(gates.X(3).with_backend(einsum_choice).controlled_by(0, 1, 2))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(2).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     c = Circuit(4)
@@ -83,13 +86,14 @@ def test_rz_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_rz_phase():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_rz_phase(einsum_choice):
     """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
 
     c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.RZ(0, theta))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.RZ(0, theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     target_state = np.zeros_like(final_state)
@@ -97,13 +101,14 @@ def test_rz_phase():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_rx():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_rx(einsum_choice):
     """Check RX gate is working properly."""
     theta = 0.1234
 
     c = Circuit(1)
-    c.add(gates.H(0))
-    c.add(gates.RX(0, theta=theta))
+    c.add(gates.H(0).with_backend(einsum_choice))
+    c.add(gates.RX(0, theta=theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * np.pi * theta / 2.0)
@@ -139,25 +144,27 @@ def test_cnot_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_cnot():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_cnot(einsum_choice):
     """Check CNOT gate is working properly on |10>."""
     c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.CNOT(0, 1))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.CNOT(0, 1).with_backend(einsum_choice))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_crz():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_crz(einsum_choice):
     """Check CRZ gate is working properly on |11>."""
     theta = 0.1234
 
     c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(1).with_backend(einsum_choice))
+    c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * np.pi * theta)
@@ -227,13 +234,14 @@ def test_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_multiple_swap():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_multiple_swap(einsum_choice):
     """Check SWAP gate is working properly when called multiple times."""
     c = Circuit(4)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
-    c.add(gates.SWAP(0, 1))
-    c.add(gates.SWAP(2, 3))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(2).with_backend(einsum_choice))
+    c.add(gates.SWAP(0, 1).with_backend(einsum_choice))
+    c.add(gates.SWAP(2, 3).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     c = Circuit(4)
@@ -244,19 +252,20 @@ def test_multiple_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_controlled_by_swap():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_controlled_by_swap(einsum_choice):
     """Check controlled SWAP using controlled by."""
     c = Circuit(3)
-    c.add(gates.SWAP(1, 2).controlled_by(0))
+    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(einsum_choice))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(3)
-    c.add(gates.X(0))
-    c.add(gates.SWAP(1, 2).controlled_by(0))
-    c.add(gates.X(0))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(einsum_choice))
     final_state = c.execute().numpy()
     c = Circuit(3)
     c.add(gates.SWAP(1, 2))
@@ -299,12 +308,13 @@ def test_toffoli_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_toffoli():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_toffoli(einsum_choice):
     """Check Toffoli gate is working properly on |110>."""
     c = Circuit(3)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.TOFFOLI(0, 1, 2))
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(1).with_backend(einsum_choice))
+    c.add(gates.TOFFOLI(0, 1, 2).with_backend(einsum_choice))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
@@ -326,16 +336,17 @@ def test_unitary_common_gates():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_unitary_random_gate():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_unitary_random_gate(einsum_choice):
     """Check that `Unitary` gate can apply random matrices."""
     init_state = np.ones(4) / 2.0
     matrix = np.random.random([4, 4])
     target_state = matrix.dot(init_state)
 
     c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.Unitary(matrix, 0, 1, name="random"))
+    c.add(gates.H(0).with_backend(einsum_choice))
+    c.add(gates.H(1).with_backend(einsum_choice))
+    c.add(gates.Unitary(matrix, 0, 1, name="random").with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
@@ -393,13 +404,14 @@ def test_custom_circuit():
     np.testing.assert_allclose(r2, r3)
 
 
-def test_compiled_circuit():
+@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+def test_compiled_circuit(einsum_choice):
     """Check that compiling with `Circuit.compile` does not break results."""
     def create_circuit(theta = 0.1234):
         c = Circuit(2)
-        c.add(gates.X(0))
-        c.add(gates.X(1))
-        c.add(gates.CRZ(0, 1, theta))
+        c.add(gates.X(0).with_backend(einsum_choice))
+        c.add(gates.X(1).with_backend(einsum_choice))
+        c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
         return c
 
     # Run eager circuit
