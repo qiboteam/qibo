@@ -31,6 +31,14 @@ class TensorflowGate(base_gates.Gate):
         """Uses a different einsum backend than the one defined in config.
 
         Useful for testing.
+
+        Args:
+            einsum_choice: Which einsum backend to use.
+                One of `DefaultEinsum` or `MatmulEinsum`.
+
+        Returns:
+            The gate object with the calculation backend switched to the
+            selection.
         """
         from qibo.tensorflow import einsum
         self.einsum = getattr(einsum, einsum_choice)()
