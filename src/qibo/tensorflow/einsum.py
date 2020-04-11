@@ -44,15 +44,16 @@ class DefaultEinsum:
 class MatmulEinsum:
 
   def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
-      shapes, indices = cache["shapes"], cache["indices"]
+      indices, inv_indices = cache["indices"], cache["inv_indices"]
+      shapes = cache["shapes"]
 
       state = tf.reshape(state, shapes[0])
-      state = tf.transpose(state, indices[0])
+      state = tf.transpose(state, indices)
       state = tf.reshape(state, shapes[1])
-      state = tf.matmul(self.matrix, state)
+      state = tf.matmul(gate, state)
 
       state = tf.reshape(state, shapes[2])
-      state = tf.transpose(state, indices[1])
+      state = tf.transpose(state, inv_indices)
       state = tf.reshape(state, shapes[3])
       return state
 
@@ -93,7 +94,36 @@ class MatmulEinsum:
           inv_ids[r] = i
           transposed_shape.append(shape[r])
 
-      cache = {"indices": (ids, inv_ids),
+      cache = {"indices": ids, "inv_indices": inv_ids,
                "shapes": (shape, (2 ** ntargets, 2 ** nrest),
                           transposed_shape, (2 ** nqubits,))}
       return cache
+
+
+class MatmulEinsumRankN:
+
+    def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
+        indices, inv_indices = cache["indices"], cache["inv_indices"]
+        shapes = cache["shapes"]
+
+        state = tf.transpose(state, indices)
+        state = tf.reshape(state, shapes[0])
+        state = tf.matmul(gate, state)
+
+        state = tf.reshape(state, shapes[1])
+        state = tf.transpose(state, inv_indices)
+        return state
+
+    def create_cache(self, qubits: Sequence[int], nqubits: int):
+        ntargets = len(qubits)
+        nrest = nqubits - ntargets
+        cache = {}
+
+        ids = list(qubits) + [i for i in range(nqubits) if i not in set(qubits)]
+        inv_ids = nqubits * [0]
+        for i, r in enumerate(ids):
+            inv_ids[r] = i
+
+        cache = {"indices": ids, "inv_indices": inv_ids,
+                 "shapes": ((2 ** ntargets, 2 ** nrest), nqubits * (2,))}
+        return cache
