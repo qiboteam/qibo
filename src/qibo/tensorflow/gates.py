@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import matrices, DTYPEINT, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import einsum, matrices, DTYPEINT, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Optional, Sequence, Tuple
 
 
@@ -17,11 +17,11 @@ class TensorflowGate(base_gates.Gate):
     """
 
     dtype = matrices.dtype
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    einsum = einsum
 
     def __init__(self):
       super(TensorflowGate, self).__init__()
-      self.einsum_string = None
+      self.calculation_cache = None
       # For `controlled_by` gates
       # See the docstring of `_calculate_transpose_order` for more details
       self.transpose_order = None
@@ -41,14 +41,14 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             self.transpose_order, targets = self._calculate_transpose_order()
             ncontrol = len(self.control_qubits)
-            self.einsum_string = self._create_einsum_str(targets, n - ncontrol)
+            self.calculation_cache = self.einsum.create_cache(targets, n - ncontrol)
             # Calculate the reverse order for transposing the state legs so that
             # control qubits are back to their original positions
             self.reverse_transpose_order = self.nqubits * [0]
             for i, r in enumerate(self.transpose_order):
                 self.reverse_transpose_order[r] = i
         else:
-            self.einsum_string = self._create_einsum_str(self.qubits, n)
+            self.calculation_cache = self.einsum.create_cache(self.qubits, n)
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
@@ -58,7 +58,7 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        return tf.einsum(self.einsum_string, state, self.matrix)
+        return self.einsum(self.calculation_cache, state, self.matrix)
 
     def _calculate_transpose_order(self):
         """Helper method for `_controlled_by_call`.
@@ -99,39 +99,13 @@ class TensorflowGate(base_gates.Gate):
         # are active. This should be `state[-1]`
         state = tf.transpose(state, self.transpose_order)
         state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-        updates = tf.einsum(self.einsum_string, state[-1], self.matrix)
+        updates = self.einsum(self.calculation_cache, state[-1], self.matrix)
 
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.
         state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
         state = tf.reshape(state, self.nqubits * (2,))
         return tf.transpose(state, self.reverse_transpose_order)
-
-    @classmethod
-    def _create_einsum_str(cls, qubits: Sequence[int], nqubits: int) -> str:
-        """Creates index string for `tf.einsum`.
-
-        Args:
-            qubits: List with the qubit indices that the gate is applied to.
-
-        Returns:
-            String formated as {input state}{gate matrix}->{output state}.
-        """
-        if len(qubits) + nqubits > len(cls._chars):
-            raise NotImplementedError("Not enough einsum characters.")
-
-        input_state = list(cls._chars[: nqubits])
-        output_state = input_state[:]
-        gate_chars = list(cls._chars[nqubits : nqubits + len(qubits)])
-
-        for i, q in enumerate(qubits):
-            gate_chars.append(input_state[q])
-            output_state[q] = gate_chars[i]
-
-        input_str = "".join(input_state)
-        gate_str = "".join(gate_chars)
-        output_str = "".join(output_state)
-        return "{},{}->{}".format(input_str, gate_str, output_str)
 
 
 class H(TensorflowGate, base_gates.H):

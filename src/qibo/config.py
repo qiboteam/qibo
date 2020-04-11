@@ -22,6 +22,10 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
+    # Switch between Tensorflow's and our custom matmul based einsum
+    from qibo.tensorflow.einsum import DefaultEinsum
+    einsum = DefaultEinsum()
+
     # Default types
     DTYPE = tf.float64
     DTYPEINT = tf.int32
