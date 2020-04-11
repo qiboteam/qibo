@@ -6,6 +6,8 @@ import pytest
 from qibo.models import Circuit
 from qibo import gates
 
+_EINSUM_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
+
 
 def test_circuit_addition_result():
     """Check if circuit addition works properly on Tensorflow circuit."""
@@ -26,7 +28,7 @@ def test_circuit_addition_result():
     np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_hadamard(einsum_choice):
     """Check Hadamard gate is working properly."""
     c = Circuit(2)
@@ -56,7 +58,7 @@ def test_xgate():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_multicontrol_xgate(einsum_choice):
     """Check that fallback method for X works for more than two controls."""
     c = Circuit(4)
@@ -86,7 +88,7 @@ def test_rz_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_rz_phase(einsum_choice):
     """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
@@ -101,7 +103,7 @@ def test_rz_phase(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_rx(einsum_choice):
     """Check RX gate is working properly."""
     theta = 0.1234
@@ -144,7 +146,7 @@ def test_cnot_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_cnot(einsum_choice):
     """Check CNOT gate is working properly on |10>."""
     c = Circuit(2)
@@ -156,7 +158,7 @@ def test_cnot(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_crz(einsum_choice):
     """Check CRZ gate is working properly on |11>."""
     theta = 0.1234
@@ -234,7 +236,7 @@ def test_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_multiple_swap(einsum_choice):
     """Check SWAP gate is working properly when called multiple times."""
     c = Circuit(4)
@@ -252,7 +254,7 @@ def test_multiple_swap(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_swap(einsum_choice):
     """Check controlled SWAP using controlled by."""
     c = Circuit(3)
@@ -308,7 +310,7 @@ def test_toffoli_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_toffoli(einsum_choice):
     """Check Toffoli gate is working properly on |110>."""
     c = Circuit(3)
@@ -336,7 +338,7 @@ def test_unitary_common_gates():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_unitary_random_gate(einsum_choice):
     """Check that `Unitary` gate can apply random matrices."""
     init_state = np.ones(4) / 2.0
@@ -404,7 +406,7 @@ def test_custom_circuit():
     np.testing.assert_allclose(r2, r3)
 
 
-@pytest.mark.parametrize("einsum_choice", ["DefaultEinsum", "MatmulEinsum"])
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_compiled_circuit(einsum_choice):
     """Check that compiling with `Circuit.compile` does not break results."""
     def create_circuit(theta = 0.1234):

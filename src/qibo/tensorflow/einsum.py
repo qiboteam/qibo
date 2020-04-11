@@ -102,7 +102,7 @@ class MatmulEinsum:
 
       cache = {"indices": ids, "inv_indices": inv_ids,
                "shapes": (shape, (2 ** ntargets, 2 ** nrest),
-                          transposed_shape, (2 ** nqubits,))}
+                          transposed_shape, nqubits * (2,))}
       return cache
 
 
