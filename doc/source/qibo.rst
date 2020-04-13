@@ -157,3 +157,13 @@ The user can create custom callbacks by inheriting the
 .. automodule:: qibo.tensorflow.callbacks
    :members:
    :member-order: bysource
+
+
+.. _Einsum:
+
+Einsum Backends
+---------------
+
+.. automodule:: qibo.tensorflow.einsum
+   :members:
+   :member-order: bysource

@@ -1,14 +1,29 @@
-"""Custom implementations of `tf.einsum` used to apply gates to state vectors.
+# -*- coding: utf-8 -*-
+# @authors: S. Efthymiou
+"""Custom implementations of ``tf.einsum`` used to apply gates to state vectors.
+
+QIBO uses ``tf.einsum`` to apply gates to state vectors. The einsum string that
+specifies the contraction indices is created and cached when a gate is created
+so that it is not recalculated every time the gate is called on a state. This
+functionality is implemented in :class:`qibo.tensorflow.einsum.DefaultEinsum`.
+
+Due to an `issue <https://github.com/tensorflow/tensorflow/issues/37307>`_
+with automatic differentiation and complex numbers in ``tf.einsum``, we have
+implemented an alternative calculation backend based on ``tf.matmul`` in
+:class:`qibo.tensorflow.einsum.MatmulEinsum`. Note that this is slower than
+the default ``tf.einsum`` on GPU but slightly faster on CPU.
 
 The user can switch the default einsum used by the gates by changing the
-`einsum` variable in `config.py`.
+``einsum`` variable in `config.py`. It is recommended to use the default unless
+automatic differentiation is required. For the latter case, we refer to our
+examples.
 """
 import tensorflow as tf
 from typing import Sequence
 
 
 class DefaultEinsum:
-    """Einsum backend that uses Tensorflow's default `tf.einsum`.
+    """Einsum backend that uses Tensorflow's default ``tf.einsum``.
 
     This is the most efficient implementation for GPU, however its
     backpropagation is not working properly for complex numbers.
@@ -26,7 +41,8 @@ class DefaultEinsum:
         """Creates index string for `tf.einsum`.
 
         Args:
-            qubits: List with the qubit indices that the gate is applied to.
+            qubits (list): List with the qubit indices that the gate is applied to.
+            nqubits (int): Total number of qubits in the circuit / state vector.
 
         Returns:
             String formated as {input state}{gate matrix}->{output state}.
@@ -49,19 +65,22 @@ class DefaultEinsum:
 
 
 class MatmulEinsum:
-  """Einsum backend that uses a custom implementation based on `tf.matmul`.
+  """Einsum backend that uses a custom implementation based on ``tf.matmul``.
 
-  This is more efficient than `tf.einsum` on CPU but slower on GPU.
+  This is more efficient than ``tf.einsum`` on CPU but slower on GPU.
   The matmul version implemented here is not the most efficient possible.
-  The implementation algorithm is the following. Assume that we are applying
+  The implementation algorithm is the following.
+
+  Assume that we are applying
   a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
   vector of shape 5 * (2,). We perform the following steps:
-  1) Reshape the state to (2, 4, 2, 2)
-  2) Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
-  3) Reshape to (4, 8).
-  4) Apply the gate using the matmul (4, 4) x (4, 8).
-  5) Reshape to the original shape 5 * (2,) and traspose so that the final
-     qubit order agrees with the initial.
+
+  * Reshape the state to (2, 4, 2, 2)
+  * Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
+  * Reshape to (4, 8).
+  * Apply the gate using the matmul (4, 4) x (4, 8).
+  * Reshape to the original shape 5 * (2,) and traspose so that the final
+    qubit order agrees with the initial.
   """
 
   def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
@@ -89,12 +108,12 @@ class MatmulEinsum:
       """Creates indeces and shapes required for gate application with matmul.
 
       Args:
-          qubits: Tuple with the qubit indices that the gate is applied to.
-          nqubits: Total number of qubits in the circuit / state vector.
+          qubits (tuple): Tuple with the qubit indices that the gate is applied to.
+          nqubits (int): Total number of qubits in the circuit / state vector.
+
       Returns:
-          indices: Tuple indices for the first transposition (before matmul)
-              and the inverse transposition (after matmul).
-          shapes: Tuple with the four reshape shapes.
+          Indices for the first transposition (before matmul) and the inverse
+          transposition (after matmul) and the four reshape shapes.
       """
       ntargets = len(qubits)
       nrest = nqubits - ntargets

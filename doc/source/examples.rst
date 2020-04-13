@@ -216,3 +216,74 @@ Here a simple example using the Heisenberg XXZ model:
                                             2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS')
+
+
+How to use automatic differentiation?
+-------------------------------------
+
+As a deep learning framework, Tensorflow supports
+`automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
+This can be used to optimize the parameters of variational circuits. For example
+the following script optimizes the parameters of two rotations so that the circuit
+output matches a target state, using the fidelity as figure of merit.
+
+.. code-block:: python
+
+    import tensorflow as tf
+
+    nepochs = 100
+    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    optimizer = tf.keras.optimizers.Adam()
+    target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    for _ in range(nepochs):
+        with tf.GradientTape() as tape:
+            c = Circuit(2)
+            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
+            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            loss = 1 - fidelity
+
+        grads = tape.gradient(loss, params)
+        optimizer.apply_gradients(zip(grads, params))
+
+
+Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
+the calculated gradients will be ``None``. Also, our custom einsum backend
+:class:`qibo.tensorflow.einsum.MatmulEinsum` has to be used for gates that
+contain parameters with respect to which we calculate gradients.
+This is because the gradients of the original ``tf.einsum`` do not work properly
+with complex numbers
+(see `related issue <https://github.com/tensorflow/tensorflow/issues/37307>`_).
+
+The optimization procedure can also be compiled as follows:
+
+.. code-block:: python
+
+    import tensorflow as tf
+
+    nepochs = 100
+    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    optimizer = tf.keras.optimizers.Adam()
+    target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    @tf.function
+    def optimize(params):
+        with tf.GradientTape() as tape:
+            c = Circuit(2)
+            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
+            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            loss = 1 - fidelity
+
+        grads = tape.gradient(loss, params)
+        optimizer.apply_gradients(zip(grads, params))
+
+    for _ in range(nepochs):
+        optimize(params)
+
+The user may also use ``tf.Variable`` and parametrized gates in any other way
+that is supported by Tensorflow, such as defining
+`custon Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
+and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
+to train them.
