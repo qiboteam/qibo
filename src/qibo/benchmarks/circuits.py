@@ -1,3 +1,4 @@
+import numpy as np
 from qibo import models, gates
 
 
@@ -21,5 +22,14 @@ def SupremacyLikeCircuit(nqubits, nlayers):
     return circuit
 
 
+def PrepareGHZ(nqubits):
+    circuit = models.Circuit(nqubits)
+    circuit.add(gates.H(0))
+    for i in range(nqubits - 1):
+        circuit.add(gates.CNOT(i, i + 1))
+    return circuit
+
+
 circuits = {"supremacy": SupremacyLikeCircuit,
-            "qft": models.QFT}
+            "qft": models.QFT,
+            "ghz": PrepareGHZ}

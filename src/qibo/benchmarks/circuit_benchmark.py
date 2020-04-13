@@ -73,7 +73,7 @@ def main(nqubits_list: List[int],
 
     # Set circuit type
     print("Running {} benchmarks.".format(type))
-    create_circuit_func = circuits[type]
+    create_circuit_func = circuits.circuits[type]
 
     for nqubits in nqubits_list:
         if nlayers is None:
