@@ -1,13 +1,20 @@
-"""Custom implementation of `tf.einsum` using `tf.matmul`.
+"""Custom implementations of `tf.einsum` used to apply gates to state vectors.
 
-Temporary solution until the complex gradients of `tf.einsum` are fixed.
-This approach is not optimal in terms of performance.
+The user can switch the default einsum used by the gates by changing the
+`einsum` variable in `config.py`.
 """
 import tensorflow as tf
 from typing import Sequence
 
 
 class DefaultEinsum:
+    """Einsum backend that uses Tensorflow's default `tf.einsum`.
+
+    This is the most efficient implementation for GPU, however its
+    backpropagation is not working properly for complex numbers.
+    The user should switch to :class:`qibo.tensorflow.einsum.MatmulEinsum`
+    if automatic differentiation is required.
+    """
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
@@ -42,6 +49,20 @@ class DefaultEinsum:
 
 
 class MatmulEinsum:
+  """Einsum backend that uses a custom implementation based on `tf.matmul`.
+
+  This is more efficient than `tf.einsum` on CPU but slower on GPU.
+  The matmul version implemented here is not the most efficient possible.
+  The implementation algorithm is the following. Assume that we are applying
+  a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
+  vector of shape 5 * (2,). We perform the following steps:
+  1) Reshape the state to (2, 4, 2, 2)
+  2) Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
+  3) Reshape to (4, 8).
+  4) Apply the gate using the matmul (4, 4) x (4, 8).
+  5) Reshape to the original shape 5 * (2,) and traspose so that the final
+     qubit order agrees with the initial.
+  """
 
   def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       indices, inv_indices = cache["indices"], cache["inv_indices"]
