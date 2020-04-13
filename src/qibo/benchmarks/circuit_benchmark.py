@@ -4,49 +4,35 @@ Benchmark script for the Quantum Fourier Transform using `models.QFTCircuit`.
 import argparse
 import os
 import time
-import utils
-import numpy as np
-np.random.seed(1234)
-from qibo import models, gates
+from qibo.benchmarks import utils, circuits
+from typing import List, Optional
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
-parser.add_argument("--nlayers", default=5, type=int)
+parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--nshots", default=None, type=int)
+parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
 
 
-def SupremacyLikeCircuit(nqubits, nlayers):
-    one_qubit_gates = ["RX", "RY", "RZ"]
-    circuit = models.Circuit(nqubits)
-    d = 1
-    for l in range(nlayers):
-        for i in range(nqubits):
-            gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
-            circuit.add(gate(i, 0.5))
-        for i in range(nqubits):
-            circuit.add(gates.CRZ(i, (i + d) % nqubits, 1.0/6.0))
-        d += 1
-        if d > nqubits - 1:
-            d = 1
-    for i in range(nqubits):
-        gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
-        circuit.add(gate(i, 0.5))
-        circuit.add(gates.M(i))
-    return circuit
-
-
-def main(nqubits_list, nlayers, nshots=None, directory=None, name=None,
-         compile=False):
+def main(nqubits_list: List[int],
+         type: str,
+         nlayers: Optional[int] = None,
+         nshots: Optional[int] = None,
+         directory: Optional[str] = None,
+         name: Optional[str] = None,
+         compile: bool = False):
     """Runs benchmarks for the Quantum Fourier Transform.
 
     If `directory` is specified this saves an `.h5` file that contains the
     following keys:
         * nqubits: List with the number of qubits that were simulated.
         * simulation_time: List with simulation times for each number of qubits.
+        * compile_time (optional): List with compile times for each number of
+            qubits. This is saved only if `compile` is `True`.
 
     Args:
         nqubits_list: List with the number of qubits to run for.
@@ -55,6 +41,8 @@ def main(nqubits_list, nlayers, nshots=None, directory=None, name=None,
         name: Name of the run to be used when saving logs.
             This should be specified if a directory in given. Otherwise it
             is ignored.
+        compile: If `True` then the Tensorflow graph is compiled using
+            `circuit.compile()`. In this case the compile time is also logged.
 
     Raises:
         FileExistsError if the file with the `name` specified exists in the
@@ -82,23 +70,31 @@ def main(nqubits_list, nlayers, nshots=None, directory=None, name=None,
     logs = {"nqubits": [], "simulation_time": []}
     if compile:
         logs["compile_time"] = []
+
+    # Set circuit type
+    print("Running {} benchmarks.".format(type))
+    create_circuit_func = circuits[type]
+
     for nqubits in nqubits_list:
-        print("\nSimulating {} qubits with {} layers...".format(nqubits, nlayers))
-        if nshots is not None:
-            print("Performing measurements...")
-        circuit = SupremacyLikeCircuit(nqubits, nlayers)
+        if nlayers is None:
+            circuit = create_circuit_func(nqubits)
+        else:
+            circuit = create_circuit_func(nqubits, nlayers)
+
+        print("\nSimulating {} qubits...".format(nqubits))
 
         if compile:
             start_time = time.time()
             circuit.compile()
             # Try executing here so that compile time is not included
             # in the simulation time
-            results = circuit(nshots=nshots)
+            final_state = circuit.execute(nshots=nshots)
             logs["compile_time"].append(time.time() - start_time)
 
         start_time = time.time()
-        results = circuit(nshots=nshots)
+        final_state = circuit.execute(nshots=nshots)
         logs["simulation_time"].append(time.time() - start_time)
+
         logs["nqubits"].append(nqubits)
 
         # Write updated logs in file
