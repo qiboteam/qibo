@@ -7,7 +7,7 @@ QIBO is an open-source high-level API, written in Python and capable of performi
 Some of the key features of QIBO are:
 - A standard interface for the implementation and extension of quantum algorithms.
 - Modular implementation on single (multi-threading) CPU and GPU.
-- Good performance on GPU, with emphasis on double precision, through a custom classical simulation back-end based on [TensorFlow](tensorflow.org/).
+- Good performance on GPU, with emphasis on double precision, through a custom classical simulation back-end based on [TensorFlow](https://tensorflow.org/).
 
 ## Documentation
 
