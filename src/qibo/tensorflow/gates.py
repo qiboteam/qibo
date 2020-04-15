@@ -70,12 +70,41 @@ class TensorflowGate(base_gates.Gate):
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
+            raise ValueError("Cannot apply gate {} with unspecified number "
+                             "of qubits.".format(self.name))
+        shape = tuple(state.shape)
+        if len(shape) == self.nqubits:
+            return self._apply_to_state_vector(state)
+        if len(shape) == 2 * self.nqubits:
+            return self._apply_to_state_vector(state)
 
+        raise ValueError("Gate for {} qubits cannot be applied to a state "
+                         "of shape {}.".format(self.nqubits, shape))
+
+    def _apply_to_state_vector(self, state: tf.Tensor) -> tf.Tensor:
+        """Applies gate to a state vector.
+
+        Args:
+            state: State vector of shape nqubits * (2,).
+
+        Returns:
+            State vector with the same shape after the gate is applied.
+        """
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
         return self.einsum(self.calculation_cache, state, self.matrix)
+
+    def _apply_to_density_matrix(self, rho: tf.Tensor) -> tf.Tensor:
+        """Applies gate to a density matrix.
+
+        Args:
+            state: Density matrix of shape 2 * nqubits * (2,).
+
+        Returns:
+            Density matrix with the same shape after the gate is applied.
+        """
+        raise NotImplementedError
 
     def _calculate_transpose_order(self):
         """Helper method for `_controlled_by_call`.
