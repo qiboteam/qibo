@@ -1,10 +1,12 @@
 """
-Benchmark script for the Quantum Fourier Transform using `models.QFTCircuit`.
+Generic benchmark script that runs circuits defined in `benchmark_models.py`.
+
+The type of the circuit is selected using the ``--type`` flag.
 """
 import argparse
 import os
 import time
-from qibo.benchmarks import utils, circuits
+from qibo.benchmarks import utils, benchmark_models
 from typing import List, Optional
 
 
@@ -73,7 +75,7 @@ def main(nqubits_list: List[int],
 
     # Set circuit type
     print("Running {} benchmarks.".format(type))
-    create_circuit_func = circuits.circuits[type]
+    create_circuit_func = benchmark_models.circuits[type]
 
     for nqubits in nqubits_list:
         if nlayers is None:
