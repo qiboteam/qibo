@@ -22,9 +22,15 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
-    # Switch between Tensorflow's and our custom matmul based einsum
-    from qibo.tensorflow.einsum import DefaultEinsum
-    einsum = DefaultEinsum()
+    # Einsum backend switcher according to device
+    if tf.config.list_physical_devices("GPU"):
+        # If GPU is available use `tf.einsum`
+        from qibo.tensorflow.einsum import DefaultEinsum
+        einsum = DefaultEinsum()
+    else:
+        # If only CPU is available then fall back to `tf.matmul`
+        from qibo.tensorflow.einsum import MatmulEinsum
+        einsum = MatmulEinsum()
 
     # Default types
     DTYPE = tf.float64
