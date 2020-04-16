@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from qibo import gates, models
 
-_atol = 1e-8
+_atol = 1e-7
 
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
