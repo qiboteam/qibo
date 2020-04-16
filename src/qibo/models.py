@@ -102,6 +102,7 @@ class VQE(object):
             r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
             result = r[1].result.fbest
             parameters = r[1].result.xbest
+
         elif method == 'sgd':
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.einsum import MatmulEinsum
@@ -110,20 +111,37 @@ class VQE(object):
                 if not isinstance(gate.einsum, MatmulEinsum):
                     raise RuntimeError('SGD VQE requires MatmulEinsum backend.')
 
+            sgd_options = {"nepochs": 1000000,
+                           "nmessage": 1000,
+                           "optimizer": "Adagrad",
+                           "learning_rate": 0.001}
+            if options is not None:
+                sgd_options.update(options)
+
             # proceed with the training
             from qibo.config import K
             vparams = K.Variable(initial_state)
-            opt = K.optimizers.Adagrad(learning_rate=0.001)
-            with K.GradientTape() as t:
-                l = loss(vparams)
-            trainable_variables = [vparams]
-            grad = t.gradient(l, trainable_variables)
-            for e in range(1000000):
-                opt.apply_gradients(zip(grad, trainable_variables))
-                if e % 1000 == True:
-                    print('ite %d : loss %f' % (e, loss(vparams).numpy()))
+            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+              learning_rate=sgd_options["learning_rate"])
+
+            def opt_step():
+                with K.GradientTape() as tape:
+                    l = loss(vparams)
+                grads = tape.gradient(l, [vparams])
+                optimizer.apply_gradients(zip(grads, [vparams]))
+                return l
+
+            if compile:
+                opt_step = K.function(opt_step)
+
+            for e in range(sgd_options["nepochs"]):
+                l = opt_step()
+                if e % sgd_options["nmessage"] == 1:
+                    print('ite %d : loss %f' % (e, l.numpy()))
+
             result = loss(vparams).numpy()
             parameters = vparams.numpy()
+
         else:
             # Newtonian approaches
             import numpy as np
@@ -133,4 +151,5 @@ class VQE(object):
                          method=method, options=options)
             result = m.fun
             parameters = m.x
+
         return result, parameters
