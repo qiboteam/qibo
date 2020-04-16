@@ -209,7 +209,7 @@ Here a simple example using the Heisenberg XXZ model:
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi,

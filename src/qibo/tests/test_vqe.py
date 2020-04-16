@@ -55,7 +55,7 @@ def test_vqe():
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     np.random.seed(0)

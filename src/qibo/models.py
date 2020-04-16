@@ -64,7 +64,7 @@ class VQE(object):
             def ansatz(theta):
                 c = Circuit(2)
                 c.add(gates.RY(q, theta[0]))
-                return c()
+                return c
             v = VQE(ansats, XXZ(2))
             initial_state = np.random.uniform(0, 2, 1)
             v.minimize(initial_state)
@@ -89,7 +89,7 @@ class VQE(object):
             The corresponding best parameters.
         """
         def loss(params):
-            s = self.ansatz(params)
+            s = self.ansatz(params)()
             return self.hamiltonian.expectation(s)
 
         if compile:
@@ -103,6 +103,14 @@ class VQE(object):
             result = r[1].result.fbest
             parameters = r[1].result.xbest
         elif method == 'sgd':
+            # check if gates are using the MatmulEinsum backend
+            from qibo.tensorflow.einsum import MatmulEinsum
+            circuit = self.ansatz(initial_state)
+            for gate in circuit.queue:
+                if not isinstance(gate.einsum, MatmulEinsum):
+                    raise RuntimeError('SGD VQE requires MatmulEinsum backend.')
+
+            # proceed with the training
             from qibo.config import K
             vparams = K.Variable(initial_state)
             opt = K.optimizers.Adagrad(learning_rate=0.001)

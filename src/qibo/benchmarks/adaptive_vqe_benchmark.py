@@ -35,7 +35,7 @@ def main(nqubits, max_layers):
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
