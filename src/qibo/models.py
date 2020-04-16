@@ -79,6 +79,8 @@ class VQE(object):
         Args:
             initial_state (array): a initial guess for the circuit.
             method (str): the desired minimization method.
+                One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
+                any of the methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
             options (dict): a dictionary with options for the different optimizers.
 
         Return:
