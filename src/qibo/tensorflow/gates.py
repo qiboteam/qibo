@@ -249,15 +249,14 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         self.matrix = matrices.CNOT
 
 
-class CRZ(TensorflowGate, base_gates.CRZ):
+class CZPow(TensorflowGate, base_gates.CZPow):
 
     def __init__(self, q0, q1, theta):
-        base_gates.CRZ.__init__(self, q0, q1, theta)
+        base_gates.CZPow.__init__(self, q0, q1, theta)
 
         th = tf.cast(self.theta, dtype=self.dtype)
-        phase = tf.exp(1j * th / 2.0)[tf.newaxis]
-        diag = tf.concat([tf.ones(2, dtype=self.dtype),
-                          tf.math.conj(phase), phase], axis=0)
+        phase = tf.exp(1j * th)[tf.newaxis]
+        diag = tf.concat([tf.ones(3, dtype=self.dtype), phase], axis=0)
         crz = tf.linalg.diag(diag)
         self.matrix = tf.reshape(crz, 4 * (2,))
 

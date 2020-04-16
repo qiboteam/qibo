@@ -323,11 +323,20 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
 
 
-class CRZ(Gate):
+class CZPow(Gate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
-    The convention for the unitary matrix is the same as in
-    :class:`qibo.base.gates.RZ`.
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 0 & 0 & e^{i \\theta / 2} \\\\
+        \\end{pmatrix}
+
+    Note that this differs from the :class:`qibo.base.gates.RZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
@@ -336,7 +345,7 @@ class CRZ(Gate):
     """
 
     def __init__(self, q0, q1, theta):
-        super(CRZ, self).__init__()
+        super(CZPow, self).__init__()
         self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
