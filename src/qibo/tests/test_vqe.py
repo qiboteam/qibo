@@ -3,6 +3,7 @@ Testing Variational Quantum Eigensolver.
 """
 import pathlib
 import numpy as np
+import pytest
 from qibo.models import Circuit, VQE
 from qibo import gates
 from qibo.hamiltonians import XXZ
@@ -31,7 +32,12 @@ def assert_regression_fixture(array, filename):
     np.testing.assert_allclose(array, array_fixture)
 
 
-def test_vqe():
+test_names = "method,options,compile,filename"
+test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
+               ("sgd", {"nepochs": 5}, False, None),
+               ("sgd", {"nepochs": 5}, True, None)]
+@pytest.mark.parametrize(test_names, test_values)
+def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
 
     nqubits = 6
@@ -55,12 +61,13 @@ def test_vqe():
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     np.random.seed(0)
-    initial_parameters = np.random.uniform(0, 2,
-                                           2*nqubits*layers + nqubits)
+    initial_parameters = np.random.uniform(0, 2, 2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
-    best, params = v.minimize(initial_parameters, method='BFGS', options={'maxiter': 1})
-    assert_regression_fixture(params, REGRESSION_FOLDER/'vqe.out')
+    best, params = v.minimize(initial_parameters, method=method,
+                              options=options, compile=compile)
+    if filename is not None:
+        assert_regression_fixture(params, REGRESSION_FOLDER/filename)
