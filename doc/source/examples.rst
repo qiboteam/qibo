@@ -209,10 +209,94 @@ Here a simple example using the Heisenberg XXZ model:
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS')
+
+The user can choose one of the following methods for minimization:
+
+    - ``"cma"``: Genetic optimizer,
+    - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
+    - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+If ``"sgd"`` is used then the user has to switch to the :class:`qibo.tensorflow.einsum.MatmulEinsum`
+backend when defining the ansatz in order to get correct gradients,
+because of an issue with the automatic differentiation of ``tf.einsum``.
+This can be done easily by calling ``.with_backend("MatmulEinsum")`` on each
+gate when defining the ansatz.
+Check the next example on automatic differentiation for more details.
+
+
+How to use automatic differentiation?
+-------------------------------------
+
+As a deep learning framework, Tensorflow supports
+`automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
+This can be used to optimize the parameters of variational circuits. For example
+the following script optimizes the parameters of two rotations so that the circuit
+output matches a target state, using the fidelity as figure of merit.
+
+.. code-block:: python
+
+    import tensorflow as tf
+
+    nepochs = 100
+    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    optimizer = tf.keras.optimizers.Adam()
+    target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    for _ in range(nepochs):
+        with tf.GradientTape() as tape:
+            c = Circuit(2)
+            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
+            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            loss = 1 - fidelity
+
+        grads = tape.gradient(loss, params)
+        optimizer.apply_gradients(zip(grads, params))
+
+
+Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
+the calculated gradients will be ``None``. Also, our custom einsum backend
+:class:`qibo.tensorflow.einsum.MatmulEinsum` has to be used for gates that
+contain parameters with respect to which we calculate gradients.
+This is because the gradients of the original ``tf.einsum`` do not work properly
+with complex numbers
+(see `related issue <https://github.com/tensorflow/tensorflow/issues/37307>`_).
+
+The optimization procedure can also be compiled as follows:
+
+.. code-block:: python
+
+    import tensorflow as tf
+
+    nepochs = 100
+    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    optimizer = tf.keras.optimizers.Adam()
+    target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    @tf.function
+    def optimize(params):
+        with tf.GradientTape() as tape:
+            c = Circuit(2)
+            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
+            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            loss = 1 - fidelity
+
+        grads = tape.gradient(loss, params)
+        optimizer.apply_gradients(zip(grads, params))
+
+    for _ in range(nepochs):
+        optimize(params)
+
+The user may also use ``tf.Variable`` and parametrized gates in any other way
+that is supported by Tensorflow, such as defining
+`custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
+and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
+to train them.

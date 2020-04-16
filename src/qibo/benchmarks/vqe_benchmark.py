@@ -37,7 +37,7 @@ def main(nqubits, layers):
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
@@ -45,7 +45,7 @@ def main(nqubits, layers):
     print('Target state =', target)
 
     np.random.seed(0)
-    initial_parameters = np.random.uniform(0, 2*np.pi,
+    initial_parameters = np.random.uniform(0, 2,
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS')
