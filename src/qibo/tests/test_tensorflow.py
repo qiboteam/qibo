@@ -162,37 +162,19 @@ def test_cnot(einsum_choice):
 
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_crz(einsum_choice):
-    """Check CRZ gate is working properly on |11>."""
+def test_czpow(einsum_choice):
+    """Check CZPow gate is working properly on |11>."""
     theta = 0.1234
 
     c = Circuit(2)
     c.add(gates.X(0).with_backend(einsum_choice))
     c.add(gates.X(1).with_backend(einsum_choice))
-    c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
+    c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
-    phase = np.exp(1j * theta / 2.0)
+    phase = np.exp(1j * theta)
     target_state = np.zeros_like(final_state)
-    target_state[3] = phase.conj()
     target_state[3] = phase
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_controlled_by_rz():
-    """Check RZ.controlled_by falls back to CRZ."""
-    theta = 0.1234
-
-    c = Circuit(2)
-    c.add(gates.CRZ(0, 1, theta))
-    print(c.queue)
-    target_state = c.execute().numpy()
-
-    c = Circuit(2)
-    c.add(gates.RZ(1, theta).controlled_by(0))
-    print(c.queue)
-    final_state = c.execute().numpy()
-
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -390,14 +372,14 @@ def test_custom_circuit():
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
+    c.add(gates.CZPow(0, 1, theta))
     r1 = c.execute().numpy()
 
     # custom circuit
     def custom_circuit(initial_state, theta):
         l1 = gates.X(0)(initial_state)
         l2 = gates.X(1)(l1)
-        o = gates.CRZ(0, 1, theta)(l2)
+        o = gates.CZPow(0, 1, theta)(l2)
         return o
 
     init = c._default_initial_state()
@@ -417,7 +399,7 @@ def test_compiled_circuit(einsum_choice):
         c = Circuit(2)
         c.add(gates.X(0).with_backend(einsum_choice))
         c.add(gates.X(1).with_backend(einsum_choice))
-        c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
+        c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
         return c
 
     # Run eager circuit
@@ -439,14 +421,14 @@ def test_circuit_custom_compilation():
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
+    c.add(gates.CZPow(0, 1, theta))
     r1 = c.execute(init_state).numpy()
 
     def run_circuit(initial_state):
         c = Circuit(2)
         c.add(gates.X(0))
         c.add(gates.X(1))
-        c.add(gates.CRZ(0, 1, theta))
+        c.add(gates.CZPow(0, 1, theta))
         return c.execute(initial_state)
 
     import tensorflow as tf

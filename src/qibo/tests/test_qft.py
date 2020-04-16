@@ -5,6 +5,8 @@ import numpy as np
 import pytest
 from qibo import gates, models
 
+_atol = 1e-8
+
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
     """Creates exact QFT matrix.
@@ -44,7 +46,7 @@ def test_qft_transformation(nqubits):
     initial_state[0] = 1.0
     exact_state = exact_qft(initial_state)
 
-    np.testing.assert_allclose(final_state, exact_state)
+    np.testing.assert_allclose(final_state, exact_state, atol=_atol)
 
 
 def random_state(nqubits):
@@ -63,4 +65,4 @@ def test_qft_transformation_random(nqubits):
     c = c_init + models.QFT(nqubits)
     final_state = c.execute().numpy()
 
-    np.testing.assert_allclose(final_state, exact_state)
+    np.testing.assert_allclose(final_state, exact_state, atol=_atol)

@@ -234,13 +234,6 @@ class RZ(TensorflowGate, base_gates.RZ):
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         self.matrix = tf.linalg.diag(diag)
 
-    def controlled_by(self, *q):
-        """Fall back to CRZ for one control qubit."""
-        gate = super(RZ, self).controlled_by(*q)
-        if len(q) == 1:
-            return CRZ(q[0], self.target_qubits[0], self.theta)
-        return gate
-
 
 class CNOT(TensorflowGate, base_gates.CNOT):
 
