@@ -64,8 +64,9 @@ class VQE(object):
             def ansatz(theta):
                 c = Circuit(2)
                 c.add(gates.RY(q, theta[0]))
+                return c()
             v = VQE(ansats, XXZ(2))
-            initial_state = np.random.uniform(0, 2*np.pi, 1)
+            initial_state = np.random.uniform(0, 2, 1)
             v.minimize(initial_state)
     """
     def __init__(self, ansatz, hamiltonian):

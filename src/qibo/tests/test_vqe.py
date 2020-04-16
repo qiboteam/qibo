@@ -59,7 +59,7 @@ def test_vqe():
 
     hamiltonian = XXZ(nqubits=nqubits)
     np.random.seed(0)
-    initial_parameters = np.random.uniform(0, 2*np.pi,
+    initial_parameters = np.random.uniform(0, 2,
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS', options={'maxiter': 1})
