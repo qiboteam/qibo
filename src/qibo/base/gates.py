@@ -241,11 +241,11 @@ class RX(Gate):
     Corresponds to the following unitary matrix
 
     .. math::
-        e^{i \\pi \\theta / 2}\\begin{pmatrix}
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
-        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2}  &
+        -i\\sin \\frac{\\theta }{2} \\\\
+        -i\\sin \\frac{\\theta }{2}  &
+        \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -266,11 +266,11 @@ class RY(Gate):
     Corresponds to the following unitary matrix
 
     .. math::
-        e^{i \\pi \\theta / 2}\\begin{pmatrix}
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        -\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
-        \\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2}  &
+        -\\sin \\frac{\\theta }{2} \\\\
+        \\sin \\frac{\\theta }{2}  &
+        \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -292,8 +292,8 @@ class RZ(Gate):
 
     .. math::
         \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & e^{i \\pi \\theta} \\\\
+        e^{-i \\theta / 2} & 0 \\\\
+        0 & e^{i \\theta / 2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -326,7 +326,8 @@ class CNOT(Gate):
 class CRZ(Gate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
-    The convention for the unitary matrix is the same as in `RZ`.
+    The convention for the unitary matrix is the same as in
+    :class:`qibo.base.gates.RZ`.
 
     Args:
         q0 (int): the control qubit id number.
