@@ -400,6 +400,34 @@ class Unitary(Gate):
         self.target_qubits = tuple(q)
 
 
+class NoiseChannel(Gate):
+    """Probabilistic noise channel.
+
+    Implements the following evolution
+
+    .. math::
+        \\rho \\rightarrow (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
+
+    which can be used to simulate phase flip and bit flip errors.
+
+    Args:
+        q (int): Qubit id that the noise acts on.
+        px (float): Bit flip (X) error probability.
+        py (float): Y-error probability.
+        pz (float): Phase flip (Z) error probability.
+    """
+
+    def __init__(self, q, px=0, py=0, pz=0):
+        super(NoiseChannel, self).__init__()
+        self.target_qubits = (q,)
+        self.p = (px, py, pz)
+        self.total_p = sum(self.p)
+
+    def controlled_by(self, *q):
+        """"""
+        raise ValueError("Noise channel cannot be controlled on qubits.")
+
+
 class Flatten(Gate):
     """Passes an arbitrary state vector in the circuit.
 

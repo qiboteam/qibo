@@ -156,3 +156,19 @@ def test_controlled_with_effect(einsum_choice):
     target_rho = c(np.copy(initial_rho)).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_bitflip_noise(einsum_choice):
+    initial_rho = random_density_matrix(2)
+
+    c = models.Circuit(2)
+    c.add(gates.NoiseChannel(1, px=0.3).with_backend(einsum_choice))
+    final_rho = c(np.copy(initial_rho)).numpy()
+
+    c = models.Circuit(2)
+    c.add(gates.X(1).with_backend(einsum_choice))
+    target_rho = 0.3 * c(np.copy(initial_rho)).numpy()
+    target_rho += 0.7 * initial_rho.reshape(target_rho.shape)
+
+    np.testing.assert_allclose(final_rho, target_rho)

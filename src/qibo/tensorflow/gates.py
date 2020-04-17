@@ -98,7 +98,7 @@ class TensorflowGate(base_gates.Gate):
         self.control_cache = None
         # Gate matrices
         self.matrix = None
-        self._matrix_dagger = None
+        self._matrix_dagger = None # TODO: Remove this if it is not needed
 
     def with_backend(self, einsum_choice: str) -> "TensorflowGate":
         """Uses a different einsum backend than the one defined in config.
@@ -138,6 +138,7 @@ class TensorflowGate(base_gates.Gate):
 
     @property
     def matrix_dagger(self):
+        # TODO: Remove this if it is not needed for `MatmulEinsum`.
         if self._matrix_dagger is not None:
             return self._matrix_dagger
 
@@ -161,8 +162,7 @@ class TensorflowGate(base_gates.Gate):
         if is_density_matrix:
             cache = self.calculation_cache.density_matrix()
             state = self.einsum(cache["left"], state, self.matrix)
-            state = self.einsum(cache["right"], state, tf.math.conj(self.matrix))
-            return state
+            return self.einsum(cache["right"], state, tf.math.conj(self.matrix))
 
         return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
@@ -391,6 +391,40 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         # given is incompatible to the shape of the given unitary.
         self.matrix = tf.convert_to_tensor(self.unitary, dtype=self.dtype)
         self.matrix = tf.reshape(self.matrix, rank * (2,))
+
+
+class NoiseChannel(TensorflowGate, base_gates.NoiseChannel):
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
+        TensorflowGate.__init__(self)
+
+        self.gates = []
+        for p, cl in zip(self.p, (X, Y, Z)):
+            if p > 0:
+                gate = cl(q)
+                if self._nqubits is not None:
+                    gate.nqubits = self.nqubits
+                self.gates.append((p, gate))
+
+    def with_backend(self, einsum_choice: str) -> "NoiseChannel":
+        TensorflowGate.with_backend(self, einsum_choice)
+        for _, gate in self.gates:
+            gate.einsum = self.einsum
+        return self
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
+                 ) -> tf.Tensor:
+        if not is_density_matrix:
+            raise ValueError("Noise channel can only be applied to density "
+                             "matrices.")
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // 2
+
+        new_state = tf.zeros_like(state)
+        for p, gate in self.gates:
+            new_state += p * gate(state, is_density_matrix=True)
+        return (1 - self.total_p) * state + new_state
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):
