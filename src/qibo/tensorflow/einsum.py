@@ -38,8 +38,17 @@ class DefaultEinsumCache:
             raise NotImplementedError("Not enough einsum characters.")
 
         rest = self.rest[:self.nqubits]
-        return {"left": f"{self.input}{rest},{self.gate}->{self.output}{rest}",
-                "right": f"{rest}{self.input},{self.gate}->{rest}{self.output}"}
+        cache = {"left": f"{self.input}{rest},{self.gate}->{self.output}{rest}",
+                 "right": f"{rest}{self.input},{self.gate}->{rest}{self.output}"}
+
+        if is_controlled_by:
+            if self.nqubits + 1 > len(self.rest):
+                raise NotImplementedError("Not enough einsum characters.")
+            c = self.rest[self.nqubits]
+            cache["left0"] = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
+            cache["right0"] = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
+
+        return cache
 
 
 class DefaultEinsum:

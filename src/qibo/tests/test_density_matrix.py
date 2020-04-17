@@ -5,10 +5,21 @@ from qibo import gates, models
 _EINSUM_BACKENDS = ["DefaultEinsum"]#, "MatmulEinsum"]
 
 
+def random_density_matrix(nqubits: int) -> np.ndarray:
+    shape = 2 * (2 ** nqubits,)
+    rho = np.random.random(shape) + 1j * np.random.random(shape)
+    # Make Hermitian
+    rho = (rho + rho.T.conj()) / 2.0
+    # Normalize
+    ids = np.arange(2 ** nqubits)
+    rho[ids, ids] = rho[ids, ids] / np.trace(rho)
+    return rho
+
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_xgate_application_onequbit(einsum_choice):
     """Check applying one qubit gate to one qubit density matrix."""
-    initial_rho = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    initial_rho = random_density_matrix(1)
     gate = gates.X(0).with_backend(einsum_choice)
     final_rho = gate(initial_rho, is_density_matrix=True).numpy()
 
@@ -21,9 +32,8 @@ def test_xgate_application_onequbit(einsum_choice):
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_hgate_application_twoqubit(einsum_choice):
     """Check applying one qubit gate to two qubit density matrix."""
-    initial_rho = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
+    initial_rho = random_density_matrix(2)
     gate = gates.H(1).with_backend(einsum_choice)
-    gate.nqubits = 2
     final_rho = gate(initial_rho.reshape(4 * (2,)), is_density_matrix=True
                      ).numpy().reshape((4, 4))
 
@@ -38,8 +48,8 @@ def test_hgate_application_twoqubit(einsum_choice):
 def test_rygate_application_twoqubit(einsum_choice):
     """Check applying non-hermitian one qubit gate to one qubit density matrix."""
     theta = 0.1234
+    initial_rho = random_density_matrix(1)
 
-    initial_rho = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
     gate = gates.RY(0, theta=theta).with_backend(einsum_choice)
     gate.nqubits = 1
     final_rho = gate(initial_rho, is_density_matrix=True).numpy()
@@ -55,14 +65,11 @@ def test_rygate_application_twoqubit(einsum_choice):
 def test_czpowgate_application_twoqubit(einsum_choice):
     """Check applying two qubit gate to three qubit density matrix."""
     theta = 0.1234
-    nqubits = 3
-    shape = 2 * (2 ** nqubits,)
+    initial_rho = random_density_matrix(3)
 
-    initial_rho = np.random.random(shape) + 1j * np.random.random(shape)
     gate = gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice)
-    gate.nqubits = nqubits
-    final_rho = gate(initial_rho.reshape(2 * nqubits * (2,)),
-                     is_density_matrix=True).numpy().reshape(shape)
+    final_rho = gate(initial_rho.reshape(6 * (2,)),
+                     is_density_matrix=True).numpy().reshape(initial_rho.shape)
 
     matrix = np.eye(4, dtype=np.complex128)
     matrix[3, 3] = np.exp(1j * np.pi * theta)
@@ -76,13 +83,12 @@ def test_czpowgate_application_twoqubit(einsum_choice):
 def test_circuit(einsum_choice):
     """Check passing density matrix as initial state to circuit."""
     theta = 0.1234
-    shape = (8, 8)
-    initial_rho = np.random.random(shape) + 1j * np.random.random(shape)
+    initial_rho = random_density_matrix(3)
 
     c = models.Circuit(3)
     c.add(gates.X(2).with_backend(einsum_choice))
     c.add(gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice))
-    final_rho = c(initial_rho).numpy().reshape(shape)
+    final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
 
     m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
     m2 = np.eye(4, dtype=np.complex128)
@@ -94,11 +100,30 @@ def test_circuit(einsum_choice):
     np.testing.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_controlled_by_simple(einsum_choice):
+    psi = np.zeros(4)
+    psi[0] = 1
+    initial_rho = np.outer(psi, psi.conj())
+
+    c = models.Circuit(2)
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.Y(1).with_backend(einsum_choice).controlled_by(0))
+    final_rho = c(np.copy(initial_rho)).numpy()
+
+    c = models.Circuit(2)
+    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.Y(1).with_backend(einsum_choice))
+    target_rho = c(np.copy(initial_rho)).numpy()
+
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_no_effect(einsum_choice):
-    shape = (16, 16)
-    initial_rho = np.random.random(shape) + 1j * np.random.random(shape)
+    psi = np.zeros(2 ** 4)
+    psi[0] = 1
+    initial_rho = np.outer(psi, psi.conj())
 
     c = models.Circuit(4)
     c.add(gates.X(0).with_backend(einsum_choice))
@@ -112,11 +137,11 @@ def test_controlled_by_no_effect(einsum_choice):
     np.testing.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_with_effect(einsum_choice):
-    shape = (16, 16)
-    initial_rho = np.random.random(shape) + 1j * np.random.random(shape)
+    psi = np.zeros(2 ** 4)
+    psi[0] = 1
+    initial_rho = np.outer(psi, psi.conj())
 
     c = models.Circuit(4)
     c.add(gates.X(0).with_backend(einsum_choice))

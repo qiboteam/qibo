@@ -156,12 +156,13 @@ class TensorflowGate(base_gates.Gate):
                 self.nqubits = len(tuple(state.shape))
 
         if self.is_controlled_by:
-            return self._controlled_by_call(state)
+            return self._controlled_by_call(state, is_density_matrix)
 
         if is_density_matrix:
             cache = self.calculation_cache.density_matrix()
             state = self.einsum(cache["left"], state, self.matrix)
-            return self.einsum(cache["right"], state, tf.math.conj(self.matrix))
+            state = self.einsum(cache["right"], state, tf.math.conj(self.matrix))
+            return state
 
         return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
@@ -176,21 +177,25 @@ class TensorflowGate(base_gates.Gate):
 
         state = tf.transpose(state, transpose_order)
         if is_density_matrix:
+            cache = self.calculation_cache.density_matrix(is_controlled_by=True)
             state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
-            updates01 = self.einsum(self.calculation_cache["..."],
-                                    state[:-1, -1], tf.math.conj(self.matrix))
-            updates10 = self.einsum(self.calculation_cache["..."],
-                                    state[-1, :-1], self.matrix)
+            #shape = ((2 ** ncontrol - 1) ** 2,) + 2 * nactive * (2,)
+            #updates00 = tf.reshape(state[:-1, :-1], shape)
 
-            updates11 = self.einsum(self.calculation_cache["..."],
-                                    state[-1, -1], self.matrix)
-            updates11 = self.einsum(self.calculation_cache["..."],
-                                    updates11, tf.math.conj(self.matrix))
+            updates01 = self.einsum(cache["right0"], state[:-1, -1],
+                                    tf.math.conj(self.matrix))
+            updates10 = self.einsum(cache["left0"], state[-1, :-1],
+                                    self.matrix)
 
-            state = tf.concat([updates01, updates10, updates11[tf.newaxis]],
-                              axis=0)
-            state = tf.reshape(shape, 2 * self.nqubits * (2,))
+            updates11 = self.einsum(cache["left"], state[-1, -1], self.matrix)
+            updates11 = self.einsum(cache["right"], updates11,
+                                    tf.math.conj(self.matrix))
+
+            updates01 = tf.concat([state[:-1, :-1], updates01[:, tf.newaxis]], axis=1)
+            updates10 = tf.concat([updates10, updates11[tf.newaxis]], axis=0)
+            state = tf.concat([updates01, updates10[tf.newaxis]], axis=0)
+            state = tf.reshape(state, 2 * self.nqubits * (2,))
 
         else:
             # Apply `einsum` only to the part of the state where all controls
@@ -223,11 +228,14 @@ class X(TensorflowGate, base_gates.X):
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
-        gate = super(X, self).controlled_by(*q)
         if len(q) == 1:
-            return CNOT(q[0], self.target_qubits[0])
+            gate = CNOT(q[0], self.target_qubits[0])
         elif len(q) == 2:
-            return TOFFOLI(q[0], q[1], self.target_qubits[0])
+            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+
+        gate.einsum = self.einsum
         return gate
 
 
