@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo import gates
+from qibo import gates, models
 
 _EINSUM_BACKENDS = ["DefaultEinsum"]#, "MatmulEinsum"]
 
@@ -67,5 +67,27 @@ def test_czpowgate_application_twoqubit(einsum_choice):
     matrix[3, 3] = np.exp(1j * np.pi * theta)
     matrix = np.kron(matrix, np.eye(2))
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
+
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_circuit_with_initial_density_matrix(einsum_choice):
+    """Check passing density matrix as initial state to circuit."""
+    theta = 0.1234
+    shape = (8, 8)
+    initial_rho = np.random.random(shape) + 1j * np.random.random(shape)
+
+    c = models.Circuit(3)
+    c.add(gates.X(2).with_backend(einsum_choice))
+    c.add(gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice))
+    final_rho = c(initial_rho).numpy().reshape(shape)
+
+    m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
+    m2 = np.eye(4, dtype=np.complex128)
+    m2[3, 3] = np.exp(1j * np.pi * theta)
+    m2 = np.kron(m2, np.eye(2))
+    target_rho = m1.dot(initial_rho).dot(m1)
+    target_rho = m2.dot(target_rho).dot(m2.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)

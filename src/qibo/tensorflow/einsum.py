@@ -95,6 +95,9 @@ class MatmulEinsum:
 
   def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor,
                is_density_matrix: bool = False) -> tf.Tensor:
+      if is_density_matrix:
+          raise NotImplementedError
+
       indices, inv_indices = cache["indices"], cache["inv_indices"]
       shapes = cache["shapes"]
 
