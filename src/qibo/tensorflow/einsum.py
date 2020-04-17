@@ -22,6 +22,26 @@ import tensorflow as tf
 from typing import Sequence
 
 
+class DefaultEinsumCache:
+
+    def __init__(self, nqubits: int, input_str: str, output_str: str,
+                 gate_str: str, rest: str):
+      self.nqubits = nqubits
+      self.input = input_str
+      self.output = output_str
+      self.gate = gate_str
+      self.rest = rest
+      self.vector = f"{self.input},{self.gate}->{self.output}"
+
+    def density_matrix(self, is_controlled_by: bool = False):
+        if self.nqubits > len(self.rest):
+            raise NotImplementedError("Not enough einsum characters.")
+
+        rest = self.rest[:self.nqubits]
+        return {"left": f"{self.input}{rest},{self.gate}->{self.output}{rest}",
+                "right": f"{rest}{self.input},{self.gate}->{rest}{self.output}"}
+
+
 class DefaultEinsum:
     """Einsum backend that uses Tensorflow's default ``tf.einsum``.
 
@@ -47,10 +67,10 @@ class DefaultEinsum:
         Returns:
             String formated as {input state}{gate matrix}->{output state}.
         """
-        if len(qubits) + nqubits > len(cls._chars):
+        if nqubits + len(qubits) > len(cls._chars):
             raise NotImplementedError("Not enough einsum characters.")
 
-        input_state = list(cls._chars[: nqubits])
+        input_state = list(cls._chars[:nqubits])
         output_state = input_state[:]
         gate_chars = list(cls._chars[nqubits : nqubits + len(qubits)])
 
@@ -58,15 +78,15 @@ class DefaultEinsum:
             gate_chars.append(input_state[q])
             output_state[q] = gate_chars[i]
 
-        input_str = "".join(input_state)
-        output_str = "".join(output_state)
-        gate_str = "".join(gate_chars)
-        rest_str = cls._chars[nqubits + len(qubits): 2 * nqubits + len(qubits)]
+        return DefaultEinsumCache(nqubits=nqubits,
+                                  input_str="".join(input_state),
+                                  output_str="".join(output_state),
+                                  gate_str="".join(gate_chars),
+                                  rest=cls._chars[nqubits + len(qubits):])
 
-        cache = {"vector": f"{input_str},{gate_str}->{output_str}",
-                 "dmL": f"{input_str}{rest_str},{gate_str}->{output_str}{rest_str}",
-                 "dmR": f"{rest_str}{input_str},{gate_str}->{rest_str}{output_str}"}
-        return cache
+
+class MatmulEinsumCache:
+    pass
 
 
 class MatmulEinsum:
@@ -145,8 +165,8 @@ class MatmulEinsum:
           inv_ids[r] = i
           transposed_shape.append(shape[r])
 
-      cache = {}
-      cache["vector"] = {"indices": ids, "inv_indices": inv_ids,
-                         "shapes": (shape, (2 ** ntargets, 2 ** nrest),
-                                    transposed_shape, nqubits * (2,))}
+      cache = MatmulEinsumCache()
+      cache.vector = {"indices": ids, "inv_indices": inv_ids,
+                      "shapes": (shape, (2 ** ntargets, 2 ** nrest),
+                                 transposed_shape, nqubits * (2,))}
       return cache

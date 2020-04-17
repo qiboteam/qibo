@@ -159,12 +159,11 @@ class TensorflowGate(base_gates.Gate):
             return self._controlled_by_call(state)
 
         if is_density_matrix:
-            state = self.einsum(self.calculation_cache["dmL"], state,
-                                self.matrix)
-            return self.einsum(self.calculation_cache["dmR"], state,
-                               tf.math.conj(self.matrix))
+            cache = self.calculation_cache.density_matrix()
+            state = self.einsum(cache["left"], state, self.matrix)
+            return self.einsum(cache["right"], state, tf.math.conj(self.matrix))
 
-        return self.einsum(self.calculation_cache["vector"], state, self.matrix)
+        return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
     def _controlled_by_call(self, state: tf.Tensor,
                             is_density_matrix: bool = False) -> tf.Tensor:
@@ -174,25 +173,36 @@ class TensorflowGate(base_gates.Gate):
 
         transpose_order = self.control_cache.order(is_density_matrix)
         reverse_transpose_order = self.control_cache.reverse(is_density_matrix)
-        if is_density_matrix:
-            input_shape = (2 ** (2 * ncontrol),) + 2 * nactive * (2,)
-            output_shape = 2 * self.nqubits * (2,)
-        else:
-            input_shape = (2 ** ncontrol,) + nactive * (2,)
-            output_shape = self.nqubits * (2,)
 
-        # Apply `einsum` only to the part of the state where all controls
-        # are active. This should be `state[-1]`
         state = tf.transpose(state, transpose_order)
-        state = tf.reshape(state, input_shape)
+        if is_density_matrix:
+            state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
-        updates = self.einsum(self.calculation_cache["vector"], state[-1],
-                              self.matrix)
+            updates01 = self.einsum(self.calculation_cache["..."],
+                                    state[:-1, -1], tf.math.conj(self.matrix))
+            updates10 = self.einsum(self.calculation_cache["..."],
+                                    state[-1, :-1], self.matrix)
 
-        # Concatenate the updated part of the state `updates` with the
-        # part of of the state that remained unaffected `state[:-1]`.
-        state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
-        state = tf.reshape(state, output_shape)
+            updates11 = self.einsum(self.calculation_cache["..."],
+                                    state[-1, -1], self.matrix)
+            updates11 = self.einsum(self.calculation_cache["..."],
+                                    updates11, tf.math.conj(self.matrix))
+
+            state = tf.concat([updates01, updates10, updates11[tf.newaxis]],
+                              axis=0)
+            state = tf.reshape(shape, 2 * self.nqubits * (2,))
+
+        else:
+            # Apply `einsum` only to the part of the state where all controls
+            # are active. This should be `state[-1]`
+            state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            updates = self.einsum(self.calculation_cache.vector, state[-1],
+                                  self.matrix)
+            # Concatenate the updated part of the state `updates` with the
+            # part of of the state that remained unaffected `state[:-1]`.
+            state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
+            state = tf.reshape(state, self.nqubits * (2,))
+
         return tf.transpose(state, reverse_transpose_order)
 
 
