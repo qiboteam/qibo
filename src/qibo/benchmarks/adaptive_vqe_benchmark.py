@@ -35,7 +35,7 @@ def main(nqubits, max_layers):
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
@@ -47,7 +47,7 @@ def main(nqubits, max_layers):
     for layers in range(1, max_layers+1):
 
         initial_parameters = np.array(params)
-        initial_parameters = np.append(initial_parameters, np.random.uniform(0, 2*np.pi,
+        initial_parameters = np.append(initial_parameters, np.random.uniform(0, 2,
                                        2*nqubits*layers + nqubits - len(params)))
         t0 = time.time()
         best, params = v.minimize(initial_parameters)

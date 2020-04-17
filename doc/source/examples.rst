@@ -209,13 +209,26 @@ Here a simple example using the Heisenberg XXZ model:
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
-        return c()
+        return c
 
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
     best, params = v.minimize(initial_parameters, method='BFGS')
+
+The user can choose one of the following methods for minimization:
+
+    - ``"cma"``: Genetic optimizer,
+    - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
+    - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+
+If ``"sgd"`` is used then the user has to switch to the :class:`qibo.tensorflow.einsum.MatmulEinsum`
+backend when defining the ansatz in order to get correct gradients,
+because of an issue with the automatic differentiation of ``tf.einsum``.
+This can be done easily by calling ``.with_backend("MatmulEinsum")`` on each
+gate when defining the ansatz.
+Check the next example on automatic differentiation for more details.
 
 
 How to use automatic differentiation?
@@ -284,6 +297,6 @@ The optimization procedure can also be compiled as follows:
 
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
-`custon Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
+`custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
 and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
 to train them.
