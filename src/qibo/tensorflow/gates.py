@@ -90,25 +90,12 @@ class TensorflowGate(base_gates.Gate):
 
         shape = tuple(state.shape)
         if len(shape) == self.nqubits:
-            matrix_dagger = None
-        elif len(shape) == 2 * self.nqubits:
-            matrix_dagger = self.matrix_dagger
-        else:
-            raise ValueError("Gate for {} qubits cannot be applied to a state "
-                             "of shape {}.".format(self.nqubits, shape))
-
-        return self.einsum(self.calculation_cache, state, self.matrix, matrix_dagger)
-
-    def _apply_to_density_matrix(self, rho: tf.Tensor) -> tf.Tensor:
-        """Applies gate to a density matrix.
-
-        Args:
-            state: Density matrix of shape 2 * nqubits * (2,).
-
-        Returns:
-            Density matrix with the same shape after the gate is applied.
-        """
-        raise NotImplementedError
+            return self.einsum(self.calculation_cache, state, self.matrix)
+        if len(shape) == 2 * self.nqubits:
+            return self.einsum(self.calculation_cache, state, self.matrix,
+                               is_density_matrix=True)
+        raise ValueError("Gate for {} qubits cannot be applied to a state "
+                          "of shape {}.".format(self.nqubits, shape))
 
     def _calculate_transpose_order(self):
         """Helper method for `_controlled_by_call`.
