@@ -20,15 +20,34 @@ class _ControlCache:
     once per gate (and not every time the gate is called).
     """
 
-    def __init__(self, gate):
-        self.nqubits = gate.nqubits
-        self.order, self.targets = self.calculate(gate)
+    def __init__(self, gate: base_gates.Gate):
+        self.ncontrol = len(gate.control_qubits)
+        self._order, self.targets = self.calculate(gate)
         # Calculate the reverse order for transposing the state legs so that
         # control qubits are back to their original positions
-        self.reverse = self.revert(self.order)
+        self._reverse = self.revert(self._order)
+
+        self._order_dm = None
+        self._reverse_dm = None
+
+    def order(self, is_density_matrix: bool = False):
+        if not is_density_matrix:
+            return self._order
+
+        if self._order_dm is None:
+            self.calculate_dm()
+        return self._order_dm
+
+    def reverse(self, is_density_matrix: bool = False):
+        if not is_density_matrix:
+            return self._reverse
+
+        if self._reverse_dm is None:
+            self.calculate_dm()
+        return self._reverse_dm
 
     @staticmethod
-    def calculate(gate):
+    def calculate(gate: base_gates.Gate):
         loop_start = 0
         order = list(gate.control_qubits)
         targets = list(gate.target_qubits)
@@ -45,8 +64,17 @@ class _ControlCache:
 
         return order, targets
 
-    def revert(self, transpose_order) -> List[int]:
-        reverse_order = self.nqubits * [0]
+    def calculate_dm(self):
+        additional_order = np.array(self._order) + len(self._order)
+        self._order_dm = (self._order[:self.ncontrol] +
+                          list(additional_order[:self.ncontrol]) +
+                          self._order[self.ncontrol:] +
+                          list(additional_order[self.ncontrol:]))
+        self._reverse_dm = self.revert(self._order_dm)
+
+    @staticmethod
+    def revert(transpose_order) -> List[int]:
+        reverse_order = len(transpose_order) * [0]
         for i, r in enumerate(transpose_order):
             reverse_order[r] = i
         return reverse_order
@@ -118,46 +146,54 @@ class TensorflowGate(base_gates.Gate):
         self._matrix_dagger = tf.math.conj(tf.transpose(self.matrix, ids))
         return self._matrix_dagger
 
-    def _is_density_matrix(self, state: tf.Tensor) -> bool:
-        shape = tuple(state.shape)
-        if len(shape) == self.nqubits:
-            return False
-        if len(shape) == 2 * self.nqubits:
-            return True
-        raise ValueError("Gate for {} qubits cannot be applied to a state "
-                          "of shape {}.".format(self.nqubits, shape))
-
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
-            raise ValueError("Cannot apply gate {} with unspecified number "
-                             "of qubits.".format(self.name))
+            if is_density_matrix:
+                self.nqubits = len(tuple(state.shape)) // 2
+            else:
+                self.nqubits = len(tuple(state.shape))
 
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        return self.einsum(self.calculation_cache, state, self.matrix,
-                           is_density_matrix=self._is_density_matrix(state))
+        if is_density_matrix:
+            state = self.einsum(self.calculation_cache["dmL"], state,
+                                self.matrix)
+            return self.einsum(self.calculation_cache["dmR"], state,
+                               tf.math.conj(self.matrix))
 
-    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.einsum(self.calculation_cache["vector"], state, self.matrix)
+
+    def _controlled_by_call(self, state: tf.Tensor,
+                            is_density_matrix: bool = False) -> tf.Tensor:
         """Gate __call__ method for `controlled_by` gates."""
         ncontrol = len(self.control_qubits)
         nactive = self.nqubits - ncontrol
 
-        if self._is_density_matrix(state):
-            raise NotImplementedError
+        transpose_order = self.control_cache.order(is_density_matrix)
+        reverse_transpose_order = self.control_cache.reverse(is_density_matrix)
+        if is_density_matrix:
+            input_shape = (2 ** (2 * ncontrol),) + 2 * nactive * (2,)
+            output_shape = 2 * self.nqubits * (2,)
+        else:
+            input_shape = (2 ** ncontrol,) + nactive * (2,)
+            output_shape = self.nqubits * (2,)
 
         # Apply `einsum` only to the part of the state where all controls
         # are active. This should be `state[-1]`
-        state = tf.transpose(state, self.control_cache.order)
-        state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-        updates = self.einsum(self.calculation_cache, state[-1], self.matrix)
+        state = tf.transpose(state, transpose_order)
+        state = tf.reshape(state, input_shape)
+
+        updates = self.einsum(self.calculation_cache["vector"], state[-1],
+                              self.matrix)
 
         # Concatenate the updated part of the state `updates` with the
         # part of of the state that remained unaffected `state[:-1]`.
         state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
-        state = tf.reshape(state, self.nqubits * (2,))
-        return tf.transpose(state, self.control_cache.reverse)
+        state = tf.reshape(state, output_shape)
+        return tf.transpose(state, reverse_transpose_order)
 
 
 class H(TensorflowGate, base_gates.H):
@@ -344,16 +380,18 @@ class Flatten(TensorflowGate, base_gates.Flatten):
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
 
-    def __call__(self, state):
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
         if self.nqubits is None:
-            self.nqubits = len(tuple(state.shape))
+            if is_density_matrix:
+                self.nqubits = len(tuple(state.shape)) // 2
+            else:
+                self.nqubits = len(tuple(state.shape))
 
-        if len(self.coefficients) != 2 ** self.nqubits:
-                raise ValueError(
-                    "Circuit was created with {} qubits but the "
-                    "flatten layer state has {} coefficients."
-                    "".format(self.nqubits, self.coefficients)
-                )
+        if is_density_matrix:
+            shape = 2 * self.nqubits * (2,)
+        else:
+            shape = self.nqubits * (2,)
 
-        _state = np.array(self.coefficients).reshape(self.nqubits * (2,))
+        _state = np.array(self.coefficients).reshape(shape)
         return tf.convert_to_tensor(_state, dtype=state.dtype)

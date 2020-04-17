@@ -33,13 +33,8 @@ class DefaultEinsum:
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor,
-                 is_density_matrix: bool = False) -> tf.Tensor:
-        if is_density_matrix:
-            state = tf.einsum(cache["dmL"], state, gate)
-            return tf.einsum(cache["dmR"], state, tf.math.conj(gate))
-
-        return tf.einsum(cache["vector"], state, gate)
+    def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
+      return tf.einsum(cache, state, gate)
 
     @classmethod
     def create_cache(cls, qubits: Sequence[int], nqubits: int) -> str:
@@ -93,11 +88,7 @@ class MatmulEinsum:
     qubit order agrees with the initial.
   """
 
-  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor,
-               is_density_matrix: bool = False) -> tf.Tensor:
-      if is_density_matrix:
-          raise NotImplementedError
-
+  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       indices, inv_indices = cache["indices"], cache["inv_indices"]
       shapes = cache["shapes"]
 
@@ -154,7 +145,8 @@ class MatmulEinsum:
           inv_ids[r] = i
           transposed_shape.append(shape[r])
 
-      cache = {"indices": ids, "inv_indices": inv_ids,
-               "shapes": (shape, (2 ** ntargets, 2 ** nrest),
-                          transposed_shape, nqubits * (2,))}
+      cache = {}
+      cache["vector"] = {"indices": ids, "inv_indices": inv_ids,
+                         "shapes": (shape, (2 ** ntargets, 2 ** nrest),
+                                    transposed_shape, nqubits * (2,))}
       return cache
