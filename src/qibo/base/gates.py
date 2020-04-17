@@ -15,6 +15,7 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
+        self.is_channel = False
         self.is_controlled_by = False
         self.parameters = []
 
@@ -419,6 +420,7 @@ class NoiseChannel(Gate):
 
     def __init__(self, q, px=0, py=0, pz=0):
         super(NoiseChannel, self).__init__()
+        self.is_channel = True
         self.target_qubits = (q,)
         self.p = (px, py, pz)
         self.total_p = sum(self.p)

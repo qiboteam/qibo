@@ -38,6 +38,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         callback_results = [[callback(state)] for callback in self.callbacks]
 
         for ig, gate in enumerate(self.queue):
+            if gate.is_channel and not self.using_density_matrix:
+                # Switch from vector to density matrix
+                self.using_density_matrix = True
+                slicer0 = self.nqubits * (slice(None),)
+                slicer1 = self.nqubits * (tf.newaxis,)
+                state = state[slicer0 + slicer1] * tf.math.conj(state[slicer1])
+
             state = gate(state, is_density_matrix=self.using_density_matrix)
             for ic, callback in enumerate(self.callbacks):
                 if (ig + 1) % callback.steps == 0:

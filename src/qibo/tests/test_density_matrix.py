@@ -2,10 +2,12 @@ import numpy as np
 import pytest
 from qibo import gates, models
 
+# TODO: Add docstrings in all tests
 _EINSUM_BACKENDS = ["DefaultEinsum"]#, "MatmulEinsum"]
 
 
 def random_density_matrix(nqubits: int) -> np.ndarray:
+    """Generates a random density matrix."""
     shape = 2 * (2 ** nqubits,)
     rho = np.random.random(shape) + 1j * np.random.random(shape)
     # Make Hermitian
@@ -170,5 +172,24 @@ def test_bitflip_noise(einsum_choice):
     c.add(gates.X(1).with_backend(einsum_choice))
     target_rho = 0.3 * c(np.copy(initial_rho)).numpy()
     target_rho += 0.7 * initial_rho.reshape(target_rho.shape)
+
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_circuit_switch_to_density_matrix(einsum_choice):
+    c = models.Circuit(2)
+    c.add(gates.H(0).with_backend(einsum_choice))
+    c.add(gates.H(1).with_backend(einsum_choice))
+    c.add(gates.NoiseChannel(0, px=0.5).with_backend(einsum_choice))
+    c.add(gates.NoiseChannel(1, pz=0.3).with_backend(einsum_choice))
+    final_rho = c().numpy()
+
+    psi = np.ones(4) / 2
+    initial_rho = np.outer(psi, psi.conj())
+    c = models.Circuit(2)
+    c.add(gates.NoiseChannel(0, px=0.5).with_backend(einsum_choice))
+    c.add(gates.NoiseChannel(1, pz=0.3).with_backend(einsum_choice))
+    target_rho = c(initial_rho).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
