@@ -20,12 +20,14 @@ class TensorflowGate(base_gates.Gate):
     einsum = einsum
 
     def __init__(self):
-      super(TensorflowGate, self).__init__()
       self.calculation_cache = None
       # For `controlled_by` gates
       # See the docstring of `_calculate_transpose_order` for more details
       self.transpose_order = None
       self.reverse_transpose_order = None
+      # Gate matrices
+      self.matrix = None
+      self._matrix_dagger = None
 
     def with_backend(self, einsum_choice: str) -> "TensorflowGate":
         """Uses a different einsum backend than the one defined in config.
@@ -67,33 +69,35 @@ class TensorflowGate(base_gates.Gate):
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
 
+    @property
+    def matrix_dagger(self):
+        if self._matrix_dagger is not None:
+            return self._matrix_dagger
+
+        n = len(tuple(self.matrix.shape)) // 2
+        ids = tuple(range(n, 2 * n)) + tuple(range(n))
+        self._matrix_dagger = tf.math.conj(tf.transpose(self.matrix, ids))
+        return self._matrix_dagger
+
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
             raise ValueError("Cannot apply gate {} with unspecified number "
                              "of qubits.".format(self.name))
-        shape = tuple(state.shape)
-        if len(shape) == self.nqubits:
-            return self._apply_to_state_vector(state)
-        if len(shape) == 2 * self.nqubits:
-            return self._apply_to_state_vector(state)
 
-        raise ValueError("Gate for {} qubits cannot be applied to a state "
-                         "of shape {}.".format(self.nqubits, shape))
-
-    def _apply_to_state_vector(self, state: tf.Tensor) -> tf.Tensor:
-        """Applies gate to a state vector.
-
-        Args:
-            state: State vector of shape nqubits * (2,).
-
-        Returns:
-            State vector with the same shape after the gate is applied.
-        """
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        return self.einsum(self.calculation_cache, state, self.matrix)
+        shape = tuple(state.shape)
+        if len(shape) == self.nqubits:
+            matrix_dagger = None
+        elif len(shape) == 2 * self.nqubits:
+            matrix_dagger = self.matrix_dagger
+        else:
+            raise ValueError("Gate for {} qubits cannot be applied to a state "
+                             "of shape {}.".format(self.nqubits, shape))
+
+        return self.einsum(self.calculation_cache, state, self.matrix, matrix_dagger)
 
     def _apply_to_density_matrix(self, rho: tf.Tensor) -> tf.Tensor:
         """Applies gate to a density matrix.
@@ -158,6 +162,7 @@ class H(TensorflowGate, base_gates.H):
 
     def __init__(self, q):
         base_gates.H.__init__(self, q)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.H
 
 
@@ -165,6 +170,7 @@ class X(TensorflowGate, base_gates.X):
 
     def __init__(self, q):
         base_gates.X.__init__(self, q)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.X
 
     def controlled_by(self, *q):
@@ -181,6 +187,7 @@ class Y(TensorflowGate, base_gates.Y):
 
     def __init__(self, q):
         base_gates.Y.__init__(self, q)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.Y
 
 
@@ -188,6 +195,7 @@ class Z(TensorflowGate, base_gates.Z):
 
     def __init__(self, q):
         base_gates.Z.__init__(self, q)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.Z
 
 
@@ -196,6 +204,7 @@ class M(TensorflowGate, base_gates.M):
 
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
+        TensorflowGate.__init__(self)
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
@@ -237,6 +246,7 @@ class RX(TensorflowGate, base_gates.RX):
 
     def __init__(self, q, theta):
         base_gates.RX.__init__(self, q, theta)
+        TensorflowGate.__init__(self)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta / 2.0)
@@ -249,6 +259,7 @@ class RY(TensorflowGate, base_gates.RY):
 
     def __init__(self, q, theta):
         base_gates.RY.__init__(self, q, theta)
+        TensorflowGate.__init__(self)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta / 2.0)
@@ -261,6 +272,7 @@ class RZ(TensorflowGate, base_gates.RZ):
 
     def __init__(self, q, theta):
         base_gates.RZ.__init__(self, q, theta)
+        TensorflowGate.__init__(self)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta)
@@ -279,6 +291,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
         base_gates.CNOT.__init__(self, q0, q1)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.CNOT
 
 
@@ -286,6 +299,7 @@ class CRZ(TensorflowGate, base_gates.CRZ):
 
     def __init__(self, q0, q1, theta):
         base_gates.CRZ.__init__(self, q0, q1, theta)
+        TensorflowGate.__init__(self)
 
         theta = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * np.pi * theta)
@@ -298,6 +312,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __init__(self, q0, q1):
         base_gates.SWAP.__init__(self, q0, q1)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.SWAP
 
 
@@ -305,6 +320,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
+        TensorflowGate.__init__(self)
         self.matrix = matrices.TOFFOLI
 
 
@@ -312,6 +328,8 @@ class Unitary(TensorflowGate, base_gates.Unitary):
 
     def __init__(self, unitary, *q, name: Optional[str] = None):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
+        TensorflowGate.__init__(self)
+
         rank = 2 * len(self.target_qubits)
         # This reshape will raise an error if the number of target qubits
         # given is incompatible to the shape of the given unitary.

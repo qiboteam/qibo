@@ -19,7 +19,7 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 import tensorflow as tf
-from typing import Sequence
+from typing import Optional, Sequence
 
 
 class DefaultEinsum:
@@ -33,8 +33,13 @@ class DefaultEinsum:
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
-        return tf.einsum(cache, state, gate)
+    def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor,
+                 gate_dagger: Optional[tf.Tensor] = None) -> tf.Tensor:
+        if gate_dagger is None:
+            return tf.einsum(cache["vector"], state, gate)
+
+        state = tf.einsum(cache["dmL"], state, gate)
+        return tf.einsum(cache["dmR"], state, gate_dagger)
 
     @classmethod
     def create_cache(cls, qubits: Sequence[int], nqubits: int) -> str:
@@ -59,9 +64,14 @@ class DefaultEinsum:
             output_state[q] = gate_chars[i]
 
         input_str = "".join(input_state)
-        gate_str = "".join(gate_chars)
         output_str = "".join(output_state)
-        return "{},{}->{}".format(input_str, gate_str, output_str)
+        gate_str = "".join(gate_chars)
+        rest_str = cls._chars[nqubits + len(qubits): 2 * nqubits + len(qubits)]
+
+        cache = {"vector": f"{input_str},{gate_str}->{output_str}",
+                 "dmL": f"{rest_str}{input_str},{gate_str}->{rest_str}{output_str}",
+                 "dmR": f"{input_str}{rest_str},{gate_str}->{output_str}{rest_str}"}
+        return cache
 
 
 class MatmulEinsum:
@@ -83,7 +93,8 @@ class MatmulEinsum:
     qubit order agrees with the initial.
   """
 
-  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
+  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor,
+               gate_dagger: Optional[tf.Tensor] = None) -> tf.Tensor:
       indices, inv_indices = cache["indices"], cache["inv_indices"]
       shapes = cache["shapes"]
 
