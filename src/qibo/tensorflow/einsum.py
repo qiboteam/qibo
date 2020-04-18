@@ -94,7 +94,8 @@ class DefaultEinsum:
                                   rest=cls._chars[nqubits + len(qubits):])
 
     @classmethod
-    def partialtrace_str(cls, qubits: Set[int], nqubits: int):
+    def partialtrace_str(cls, qubits: Set[int], nqubits: int,
+                         measuring: bool = False) -> str:
         """Generates einsum strings for partial trace of density matrices.
 
         Helper method used when measuring or calculating entanglement entropies
@@ -103,8 +104,15 @@ class DefaultEinsum:
         Args:
             qubits: Set of qubit ids that are traced out.
             nqubits: Total number of qubits in the state.
+            measuring: If True non-traced-out indices are multiplied and the
+                output has shape (nqubits - len(qubits),).
+                If False the output has shape 2 * (nqubits - len(qubits),).
+
+        Returns:
+            String to use in einsum for performing partial density of a
+            density matrix.
         """
-        if 2 * nqubits > len(cls._chars):
+        if (2 - int(measuring)) * nqubits > len(cls._chars):
             raise NotImplementedError("Not enough einsum characters.")
 
         left_in, right_in, left_out, right_out = [], [], [], []
@@ -114,8 +122,11 @@ class DefaultEinsum:
                 right_in.append(cls._chars[i])
             else:
                 left_out.append(cls._chars[i])
-                right_in.append(cls._chars[i + nqubits])
-                right_out.append(cls._chars[i + nqubits])
+                if measuring:
+                    right_in.append(cls._chars[i])
+                else:
+                    right_in.append(cls._chars[i + nqubits])
+                    right_out.append(cls._chars[i + nqubits])
 
         left_in, left_out = "".join(left_in), "".join(left_out)
         right_in, right_out = "".join(right_in), "".join(right_out)

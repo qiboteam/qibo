@@ -158,11 +158,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             self._final_state = tf.reshape(state, self._output_shape)
             return self._final_state
 
-        if self.using_density_matrix:
-            raise NotImplementedError("Measurements are not yet implemented "
-                                      "for density matrices.")
-
-        samples = self.measurement_gate(state, nshots, samples_only=True)
+        samples = self.measurement_gate(state, nshots, samples_only=True,
+                                        is_density_matrix=self.using_density_matrix)
         self._final_state = state
 
         self.measurement_gate_result = measurements.GateResult(

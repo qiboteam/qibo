@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import einsum, matrices, DTYPEINT, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import einsum, matrices, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import List, Optional, Sequence, Tuple
 
 
@@ -261,24 +261,55 @@ class M(TensorflowGate, base_gates.M):
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
         TensorflowGate.__init__(self)
+        self._traceout = None
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n)
 
-    def __call__(self, state: tf.Tensor, nshots: int,
-                 samples_only: bool = False) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
+    @property
+    def _traceout_str(self):
+        """Einsum string used to trace out when state is density matrix."""
+        if self._traceout is None:
+            from qibo.tensorflow.einsum import DefaultEinsum
+            qubits = set(self.unmeasured_qubits)
+            self._traceout = DefaultEinsum.partialtrace_str(
+              qubits, self.nqubits, measuring=True)
+        return self._traceout
 
+    def _calculate_probabilities(self, state: tf.Tensor,
+                                 is_density_matrix: bool = False) -> tf.Tensor:
+        """Calculates probabilities from state using Born's rule.
+
+        Args:
+            state: State vector of shape nqubits * (2,) or density matrix of
+                shape 2 * nqubits * (2,).
+            is_density_matrix: Flag that specifies whether `state` is a state
+                vector or density matrix.
+
+        Returns:
+            Probabilities for measured qubits with shape len(target_qubits)* (2,).
+        """
         # Trace out unmeasured qubits
-        probs_dim = 2 ** len(self.target_qubits)
-        probs = tf.reduce_sum(tf.square(tf.abs(state)),
-                              axis=self.unmeasured_qubits)
+        if is_density_matrix:
+            print(self._traceout_str)
+            probs = tf.cast(tf.einsum(self._traceout_str, state),
+                            dtype=DTYPE)
+        else:
+            probs = tf.reduce_sum(tf.square(tf.abs(state)),
+                                  axis=self.unmeasured_qubits)
         # Bring probs in the order specified by the user
-        probs = tf.transpose(probs, perm=self.reduced_target_qubits)
-        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
+        return tf.transpose(probs, perm=self.reduced_target_qubits)
 
+    def __call__(self, state: tf.Tensor, nshots: int,
+                 samples_only: bool = False,
+                 is_density_matrix: bool = False) -> tf.Tensor:
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // (1 + int(is_density_matrix))
+
+        probs_dim = 2 ** len(self.target_qubits)
+        probs = self._calculate_probabilities(state, is_density_matrix)
+        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
 
         if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
             # Use default device to perform sampling
