@@ -77,11 +77,13 @@ class EntanglementEntropy(Callback):
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPE)
+    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
         super(EntanglementEntropy, self).__init__(steps)
         self.partition = partition
         self.rho_dim = None
+        self._traceout = None
 
     @property
     def nqubits(self) -> int:
@@ -98,25 +100,61 @@ class EntanglementEntropy(Callback):
             self.partition = [i for i in range(n)
                               if i not in set(self.partition)]
         self.rho_dim = 2 ** (n - len(self.partition))
+        self._traceout = None
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        # Cast state in the proper state if it is given as a numpy array
-        shape = tuple(state.shape)
-        if len(shape) == 1:
-            if not isinstance(state, np.ndarray):
-                raise TypeError("If the state is passed as a vector then it should "
-                                "be a numpy array but is {}.".format(type(state)))
-            self.nqubits = int(np.log2(shape[0]))
-        if self.nqubits is None:
-            self.nqubits = len(shape)
+    @property
+    def _traceout_str(self):
+        """Einsum string used to trace out when state is density matrix."""
+        if self._traceout is None:
+            partition = set(self.partition)
+            left_in, right_in, left_out, right_out = [], [], [], []
+            for i in range(self.nqubits):
+                left_in.append(self._chars[i])
+                if i in partition:
+                    right_in.append(self._chars[i])
+                else:
+                    left_out.append(self._chars[i])
+                    right_in.append(self._chars[i + self.nqubits])
+                    right_out.append(self._chars[i + self.nqubits])
+
+            left_in, left_out = "".join(left_in), "".join(left_out)
+            right_in, right_out = "".join(right_in), "".join(right_out)
+            self._traceout = f"{left_in}{right_in}->{left_out}{right_out}"
+
+        return self._traceout
+
+    def _partial_trace(self, state: tf.Tensor, is_density_matrix: bool = False
+                       ) -> tf.Tensor:
+        """Calculates reduced density matrix.
+
+        Traces out all qubits contained in `self.partition`.
+        """
+        if is_density_matrix:
+            rho = tf.einsum(self._traceout_str, state)
+        else:
+            rho = tf.tensordot(state, tf.math.conj(state),
+                               axes=[self.partition, self.partition])
+        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        # Cast state in the proper shape
         if isinstance(state, np.ndarray):
-            state = tf.convert_to_tensor(state.reshape(self.nqubits * (2,)),
-                                         dtype=DTYPECPX)
+            if self._nqubits is None:
+                self.nqubits = int(np.log2(state.shape[0]))
+            shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
+            state = tf.convert_to_tensor(state.reshape(shape), dtype=DTYPECPX)
+        elif isinstance(state, tf.Tensor):
+            if self._nqubits is None:
+                self.nqubits = len(tuple(state.shape)) // (1 + int(is_density_matrix))
+            shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
+            state = tf.reshape(state, shape)
+        else:
+            raise TypeError("State of unknown type {} was given in callback "
+                            "calculation.".format(type(state)))
 
-        # Construct density matrix
-        rho = tf.tensordot(state, tf.math.conj(state),
-                           axes=[self.partition, self.partition])
-        rho = tf.reshape(rho, (self.rho_dim, self.rho_dim))
+        # Construct reduced density matrix
+        rho = self._partial_trace(state, is_density_matrix)
         # Diagonalize
         eigvals = tf.linalg.eigvalsh(rho)
         eigvals2 = tf.square(tf.abs(eigvals))

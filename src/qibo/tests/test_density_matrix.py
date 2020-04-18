@@ -1,9 +1,10 @@
 import numpy as np
 import pytest
-from qibo import gates, models
+from qibo import gates, models, callbacks
 
 # TODO: Add docstrings in all tests
 _EINSUM_BACKENDS = ["DefaultEinsum"]#, "MatmulEinsum"]
+_atol = 1e-8
 
 
 def random_density_matrix(nqubits: int) -> np.ndarray:
@@ -60,7 +61,7 @@ def test_rygate_application_twoqubit(einsum_choice):
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
-    np.testing.assert_allclose(final_rho, target_rho)
+    np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
 
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
@@ -193,3 +194,18 @@ def test_circuit_switch_to_density_matrix(einsum_choice):
     target_rho = c(initial_rho).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+
+
+def test_entanglement_entropy():
+    """Check that entanglement entropy calculation works for density matrices."""
+    rho = random_density_matrix(4)
+    entropy = callbacks.EntanglementEntropy([0, 2])
+    final_ent = entropy(rho, is_density_matrix=True)
+
+    rho = rho.reshape(8 * (2,))
+    reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
+    eigvals = np.abs(np.linalg.eigvalsh(reduced_rho)) ** 2
+    mask = eigvals > 0
+    target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
+
+    np.testing.assert_allclose(final_ent, target_ent)
