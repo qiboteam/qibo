@@ -106,20 +106,9 @@ class EntanglementEntropy(Callback):
     def _traceout_str(self):
         """Einsum string used to trace out when state is density matrix."""
         if self._traceout is None:
+            from qibo.tensorflow.einsum import DefaultEinsum
             partition = set(self.partition)
-            left_in, right_in, left_out, right_out = [], [], [], []
-            for i in range(self.nqubits):
-                left_in.append(self._chars[i])
-                if i in partition:
-                    right_in.append(self._chars[i])
-                else:
-                    left_out.append(self._chars[i])
-                    right_in.append(self._chars[i + self.nqubits])
-                    right_out.append(self._chars[i + self.nqubits])
-
-            left_in, left_out = "".join(left_in), "".join(left_out)
-            right_in, right_out = "".join(right_in), "".join(right_out)
-            self._traceout = f"{left_in}{right_in}->{left_out}{right_out}"
+            self._traceout = DefaultEinsum.partialtrace_str(partition, self.nqubits)
 
         return self._traceout
 

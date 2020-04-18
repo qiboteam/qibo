@@ -19,7 +19,7 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 import tensorflow as tf
-from typing import Sequence
+from typing import Sequence, Set
 
 
 class DefaultEinsumCache:
@@ -92,6 +92,34 @@ class DefaultEinsum:
                                   output_str="".join(output_state),
                                   gate_str="".join(gate_chars),
                                   rest=cls._chars[nqubits + len(qubits):])
+
+    @classmethod
+    def partialtrace_str(cls, qubits: Set[int], nqubits: int):
+        """Generates einsum strings for partial trace of density matrices.
+
+        Helper method used when measuring or calculating entanglement entropies
+        on density matrices.
+
+        Args:
+            qubits: Set of qubit ids that are traced out.
+            nqubits: Total number of qubits in the state.
+        """
+        if 2 * nqubits > len(cls._chars):
+            raise NotImplementedError("Not enough einsum characters.")
+
+        left_in, right_in, left_out, right_out = [], [], [], []
+        for i in range(nqubits):
+            left_in.append(cls._chars[i])
+            if i in qubits:
+                right_in.append(cls._chars[i])
+            else:
+                left_out.append(cls._chars[i])
+                right_in.append(cls._chars[i + nqubits])
+                right_out.append(cls._chars[i + nqubits])
+
+        left_in, left_out = "".join(left_in), "".join(left_out)
+        right_in, right_out = "".join(right_in), "".join(right_out)
+        return f"{left_in}{right_in}->{left_out}{right_out}"
 
 
 class MatmulEinsumCache:
