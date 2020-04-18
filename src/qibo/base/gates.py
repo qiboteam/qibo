@@ -74,15 +74,6 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
 
-    def with_nqubits(self, n: int) -> "Gate":
-        """Sets the total number of qubits the this gates acts on.
-
-        To be used only if the gate is to be called on a state outside of a
-        circuit.
-        """
-        self.nqubits = n
-        return self
-
     def controlled_by(self, *q: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 

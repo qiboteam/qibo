@@ -391,9 +391,9 @@ def test_custom_circuit():
 
     # custom circuit
     def custom_circuit(initial_state, theta):
-        l1 = gates.X(0).with_nqubits(2)(initial_state)
-        l2 = gates.X(1).with_nqubits(2)(l1)
-        o = gates.CRZ(0, 1, theta).with_nqubits(2)(l2)
+        l1 = gates.X(0)(initial_state)
+        l2 = gates.X(1)(l1)
+        o = gates.CRZ(0, 1, theta)(l2)
         return o
 
     init = c._default_initial_state()
