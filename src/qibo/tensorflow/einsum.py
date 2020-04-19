@@ -122,7 +122,7 @@ class DefaultEinsumCache(BaseCache):
             self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
 
 
-class MatmulEinsumCache:
+class MatmulEinsumCache(BaseCache):
 
     def __init__(self, qubits: Sequence[int], nqubits: int):
         """Creates indeces and shapes required for gate application with matmul.
@@ -162,17 +162,31 @@ class MatmulEinsumCache:
             self.inverse_ids[r] = i
             self.transposed_shape.append(self.shape[r])
 
-        self.vector = {"ids": self.ids, "inverse_ids": self.inverse_ids,
-                       "shapes": (self.shape,
-                                  (2 ** self.ntargets, 2 ** self.nrest),
-                                  self.transposed_shape,
-                                  self.nqubits * (2,))}
+        self.shape = tuple(self.shape)
+        self.transposed_shape = tuple(self.transposed_shape)
+        self._vector = {"ids": self.ids, "inverse_ids": self.inverse_ids,
+                        "shapes": (self.shape,
+                                   (2 ** self.ntargets, 2 ** self.nrest),
+                                   self.transposed_shape,
+                                   self.nqubits * (2,)),
+                        "conjugate": False}
 
     def _calculate_density_matrix(self, is_controlled_by: bool = False):
-        raise NotImplementedError
-        shapes = (self.shapes[0] + (self.nstates,),
-                  (self.shapes[1][0], self.shapes[1][1] * self.nstates),
-                  self.shapes[2] + (self.nstates,))
+        self._left = {"ids": self.ids + [len(self.ids)],
+                      "inverse_ids": self.inverse_ids + [len(self.ids)],
+                      "shapes": (self.shape + (self.nstates,),
+                                 (2 ** self.ntargets, (2 ** self.nrest) * self.nstates),
+                                 self.transposed_shape + (self.nstates,),
+                                 2 * self.nqubits * (2,)),
+                      "conjugate": False}
+
+        self._right = dict(self._left)
+        #self._right["inverse_ids"] = [i + 1 for i in self.inverse_ids]
+        #self._right["inverse_ids"].append(0)
+        #self._right["conjugate"] = True
+
+        if is_controlled_by:
+            raise NotImplementedError
 
 
 class DefaultEinsum:
@@ -258,7 +272,10 @@ class MatmulEinsum:
 
       state = tf.reshape(state, shapes[0])
       state = tf.transpose(state, cache["ids"])
-      state = tf.reshape(state, shapes[1])
+      if cache["conjugate"]:
+          state = tf.reshape(tf.math.conj(state), shapes[1])
+      else:
+          state = tf.reshape(state, shapes[1])
 
       n = len(tuple(gate.shape))
       if n > 2:
