@@ -140,11 +140,13 @@ class X(TensorflowGate, base_gates.X):
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
-        gate = super(X, self).controlled_by(*q)
         if len(q) == 1:
-            return CNOT(q[0], self.target_qubits[0])
+            gate = CNOT(q[0], self.target_qubits[0])
         elif len(q) == 2:
-            return TOFFOLI(q[0], q[1], self.target_qubits[0])
+            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+        gate.einsum = self.einsum
         return gate
 
 
