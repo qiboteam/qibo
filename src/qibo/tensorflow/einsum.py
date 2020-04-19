@@ -72,15 +72,36 @@ class BaseCache:
 
 class DefaultEinsumCache(BaseCache):
 
-    def __init__(self, nqubits: int, input_str: str, output_str: str,
-                 gate_str: str, rest: str):
+    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+    def __init__(self, qubits: Sequence[int], nqubits: int):
+      """Creates index string for `tf.einsum`.
+
+      Args:
+          qubits (list): List with the qubit indices that the gate is applied to.
+          nqubits (int): Total number of qubits in the circuit / state vector.
+
+      Returns:
+          String formated as {input state}{gate matrix}->{output state}.
+      """
       super(DefaultEinsumCache, self).__init__()
       self.nqubits = nqubits
 
-      self.input = input_str
-      self.output = output_str
-      self.gate = gate_str
-      self.rest = rest
+      if nqubits + len(qubits) > len(self._chars):
+          raise NotImplementedError("Not enough einsum characters.")
+
+      input_state = list(self._chars[:nqubits])
+      output_state = input_state[:]
+      gate_chars = list(self._chars[nqubits : nqubits + len(qubits)])
+
+      for i, q in enumerate(qubits):
+          gate_chars.append(input_state[q])
+          output_state[q] = gate_chars[i]
+
+      self.input = "".join(input_state)
+      self.output = "".join(output_state)
+      self.gate = "".join(gate_chars)
+      self.rest = self._chars[nqubits + len(qubits):]
 
       self._vector = f"{self.input},{self.gate}->{self.output}"
 
@@ -103,21 +124,45 @@ class DefaultEinsumCache(BaseCache):
 
 class MatmulEinsumCache:
 
-    def __init__(self, nqubits: int, ntargets: int,
-                 ids: List[int], inverse_ids: List[int],
-                 shape: Tuple[int], transposed_shape: Tuple[int]):
+    def __init__(self, qubits: Sequence[int], nqubits: int):
+        """Creates indeces and shapes required for gate application with matmul.
+
+        Args:
+            qubits (tuple): Tuple with the qubit indices that the gate is applied to.
+            nqubits (int): Total number of qubits in the circuit / state vector.
+
+        Returns:
+            Indices for the first transposition (before matmul) and the inverse
+            transposition (after matmul) and the four reshape shapes.
+        """
         super(MatmulEinsumCache, self).__init__()
         self.nqubits = nqubits
-        self.ntargets = ntargets
-        self.nrest = nqubits - ntargets
+        self.ntargets = len(qubits)
+        self.nrest = nqubits - self.ntargets
         self.nstates = 2 ** nqubits
 
-        self.ids = ids
-        self.inverse_ids = inverse_ids
-        self.shape = shape
-        self.transposed_shape = transposed_shape
+        last_index = 0
+        target_ids, rest_ids = {}, []
+        self.shape = []
+        for q in sorted(qubits):
+            if q > last_index:
+                self.shape.append(2 ** (q - last_index))
+                rest_ids.append(len(self.shape) - 1)
+            self.shape.append(2)
+            target_ids[q] = len(self.shape) - 1
+            last_index = q + 1
+        if last_index < self.nqubits:
+            self.shape.append(2 ** (self.nqubits - last_index))
+            rest_ids.append(len(self.shape) - 1)
 
-        self.vector = {"ids": ids, "inverse_ids": inverse_ids,
+        self.ids = [target_ids[q] for q in qubits] + rest_ids
+        self.transposed_shape = []
+        self.inverse_ids = len(self.ids) * [0]
+        for i, r in enumerate(self.ids):
+            self.inverse_ids[r] = i
+            self.transposed_shape.append(self.shape[r])
+
+        self.vector = {"ids": self.ids, "inverse_ids": self.inverse_ids,
                        "shapes": (self.shape,
                                   (2 ** self.ntargets, 2 ** self.nrest),
                                   self.transposed_shape,
@@ -139,38 +184,14 @@ class DefaultEinsum:
     if automatic differentiation is required.
     """
 
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    _chars = DefaultEinsumCache._chars
 
     def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       return tf.einsum(cache, state, gate)
 
     @classmethod
-    def create_cache(cls, qubits: Sequence[int], nqubits: int) -> str:
-        """Creates index string for `tf.einsum`.
-
-        Args:
-            qubits (list): List with the qubit indices that the gate is applied to.
-            nqubits (int): Total number of qubits in the circuit / state vector.
-
-        Returns:
-            String formated as {input state}{gate matrix}->{output state}.
-        """
-        if nqubits + len(qubits) > len(cls._chars):
-            raise NotImplementedError("Not enough einsum characters.")
-
-        input_state = list(cls._chars[:nqubits])
-        output_state = input_state[:]
-        gate_chars = list(cls._chars[nqubits : nqubits + len(qubits)])
-
-        for i, q in enumerate(qubits):
-            gate_chars.append(input_state[q])
-            output_state[q] = gate_chars[i]
-
-        return DefaultEinsumCache(nqubits=nqubits,
-                                  input_str="".join(input_state),
-                                  output_str="".join(output_state),
-                                  gate_str="".join(gate_chars),
-                                  rest=cls._chars[nqubits + len(qubits):])
+    def create_cache(cls, qubits: Sequence[int], nqubits: int) -> DefaultEinsumCache:
+        return DefaultEinsumCache(qubits, nqubits)
 
     @classmethod
     def partialtrace_str(cls, qubits: Set[int], nqubits: int,
@@ -252,42 +273,5 @@ class MatmulEinsum:
       return state
 
   @staticmethod
-  def create_cache(qubits: Sequence[int], nqubits: int):
-      """Creates indeces and shapes required for gate application with matmul.
-
-      Args:
-          qubits (tuple): Tuple with the qubit indices that the gate is applied to.
-          nqubits (int): Total number of qubits in the circuit / state vector.
-
-      Returns:
-          Indices for the first transposition (before matmul) and the inverse
-          transposition (after matmul) and the four reshape shapes.
-      """
-      ntargets = len(qubits)
-      nrest = nqubits - ntargets
-
-      last_index = 0
-      target_ids = {}
-      rest_ids = []
-      shape = []
-      for q in sorted(qubits):
-          if q > last_index:
-              shape.append(2 ** (q - last_index))
-              rest_ids.append(len(shape) - 1)
-          shape.append(2)
-          target_ids[q] = len(shape) - 1
-          last_index = q + 1
-      if last_index < nqubits:
-          shape.append(2 ** (nqubits - last_index))
-          rest_ids.append(len(shape) - 1)
-
-      ids = [target_ids[q] for q in qubits] + rest_ids
-      transposed_shape = []
-      inv_ids = len(ids) * [0]
-      for i, r in enumerate(ids):
-          inv_ids[r] = i
-          transposed_shape.append(shape[r])
-
-      return MatmulEinsumCache(nqubits=nqubits, ntargets=ntargets,
-                               ids=ids, inverse_ids=inv_ids,
-                               shape=shape, transposed_shape=transposed_shape)
+  def create_cache(qubits: Sequence[int], nqubits: int) -> MatmulEinsumCache:
+      return MatmulEinsumCache(qubits, nqubits)
