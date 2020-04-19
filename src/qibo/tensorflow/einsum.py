@@ -19,36 +19,115 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 import tensorflow as tf
-from typing import Sequence, Set
+from typing import Dict, List, Sequence, Set, Tuple
 
 
-class DefaultEinsumCache:
+class BaseCache:
+
+    def __init__(self):
+        # Cache for state vectors
+        self._vector = None
+        # Cache for density matrices
+        self._left = None
+        self._right = None
+        self._left0 = None
+        self._right0 = None
+
+    @property
+    def vector(self):
+        if self._vector is None:
+            self._calculate_state_vector()
+        return self._vector
+
+    @property
+    def left(self):
+        if self._left is None:
+            self._calculate_density_matrix()
+        return self._left
+
+    @property
+    def right(self):
+        if self._right is None:
+            self._calculate_density_matrix()
+        return self._right
+
+    @property
+    def left0(self):
+        if self._left0 is None:
+            self._calculate_density_matrix(is_controlled_by=True)
+        return self._left0
+
+    @property
+    def right0(self):
+        if self._right0 is None:
+            self._calculate_density_matrix(is_controlled_by=True)
+        return self._right0
+
+    def _calculate_state_vector(self):
+        raise NotImplementedError
+
+    def _calculate_density_matrix(self, is_controlled_by: bool = False):
+        raise NotImplementedError
+
+
+class DefaultEinsumCache(BaseCache):
 
     def __init__(self, nqubits: int, input_str: str, output_str: str,
                  gate_str: str, rest: str):
+      super(DefaultEinsumCache, self).__init__()
       self.nqubits = nqubits
+
       self.input = input_str
       self.output = output_str
       self.gate = gate_str
       self.rest = rest
-      self.vector = f"{self.input},{self.gate}->{self.output}"
 
-    def density_matrix(self, is_controlled_by: bool = False):
+      self._vector = f"{self.input},{self.gate}->{self.output}"
+
+    def _calculate_density_matrix(self, is_controlled_by: bool = False):
         if self.nqubits > len(self.rest):
             raise NotImplementedError("Not enough einsum characters.")
 
         rest = self.rest[:self.nqubits]
-        cache = {"left": f"{self.input}{rest},{self.gate}->{self.output}{rest}",
-                 "right": f"{rest}{self.input},{self.gate}->{rest}{self.output}"}
+
+        self._left = f"{self.input}{rest},{self.gate}->{self.output}{rest}"
+        self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
         if is_controlled_by:
             if self.nqubits + 1 > len(self.rest):
                 raise NotImplementedError("Not enough einsum characters.")
             c = self.rest[self.nqubits]
-            cache["left0"] = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
-            cache["right0"] = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
+            self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
+            self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
 
-        return cache
+
+class MatmulEinsumCache:
+
+    def __init__(self, nqubits: int, ntargets: int,
+                 ids: List[int], inverse_ids: List[int],
+                 shape: Tuple[int], transposed_shape: Tuple[int]):
+        super(MatmulEinsumCache, self).__init__()
+        self.nqubits = nqubits
+        self.ntargets = ntargets
+        self.nrest = nqubits - ntargets
+        self.nstates = 2 ** nqubits
+
+        self.ids = ids
+        self.inverse_ids = inverse_ids
+        self.shape = shape
+        self.transposed_shape = transposed_shape
+
+        self.vector = {"ids": ids, "inverse_ids": inverse_ids,
+                       "shapes": (self.shape,
+                                  (2 ** self.ntargets, 2 ** self.nrest),
+                                  self.transposed_shape,
+                                  self.nqubits * (2,))}
+
+    def _calculate_density_matrix(self, is_controlled_by: bool = False):
+        raise NotImplementedError
+        shapes = (self.shapes[0] + (self.nstates,),
+                  (self.shapes[1][0], self.shapes[1][1] * self.nstates),
+                  self.shapes[2] + (self.nstates,))
 
 
 class DefaultEinsum:
@@ -133,10 +212,6 @@ class DefaultEinsum:
         return f"{left_in}{right_in}->{left_out}{right_out}"
 
 
-class MatmulEinsumCache:
-    pass
-
-
 class MatmulEinsum:
   """Einsum backend that uses a custom implementation based on ``tf.matmul``.
 
@@ -156,12 +231,12 @@ class MatmulEinsum:
     qubit order agrees with the initial.
   """
 
-  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
-      indices, inv_indices = cache["indices"], cache["inv_indices"]
+  def __call__(self, cache: Dict, state: tf.Tensor,
+               gate: tf.Tensor) -> tf.Tensor:
       shapes = cache["shapes"]
 
       state = tf.reshape(state, shapes[0])
-      state = tf.transpose(state, indices)
+      state = tf.transpose(state, cache["ids"])
       state = tf.reshape(state, shapes[1])
 
       n = len(tuple(gate.shape))
@@ -172,7 +247,7 @@ class MatmulEinsum:
           state = tf.matmul(gate, state)
 
       state = tf.reshape(state, shapes[2])
-      state = tf.transpose(state, inv_indices)
+      state = tf.transpose(state, cache["inverse_ids"])
       state = tf.reshape(state, shapes[3])
       return state
 
@@ -213,8 +288,6 @@ class MatmulEinsum:
           inv_ids[r] = i
           transposed_shape.append(shape[r])
 
-      cache = MatmulEinsumCache()
-      cache.vector = {"indices": ids, "inv_indices": inv_ids,
-                      "shapes": (shape, (2 ** ntargets, 2 ** nrest),
-                                 transposed_shape, nqubits * (2,))}
-      return cache
+      return MatmulEinsumCache(nqubits=nqubits, ntargets=ntargets,
+                               ids=ids, inverse_ids=inv_ids,
+                               shape=shape, transposed_shape=transposed_shape)

@@ -160,9 +160,9 @@ class TensorflowGate(base_gates.Gate):
             return self._controlled_by_call(state, is_density_matrix)
 
         if is_density_matrix:
-            cache = self.calculation_cache.density_matrix()
-            state = self.einsum(cache["left"], state, self.matrix)
-            return self.einsum(cache["right"], state, tf.math.conj(self.matrix))
+            state = self.einsum(self.calculation_cache.left, state, self.matrix)
+            return self.einsum(self.calculation_cache.right, state,
+                               tf.math.conj(self.matrix))
 
         return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
@@ -177,20 +177,19 @@ class TensorflowGate(base_gates.Gate):
 
         state = tf.transpose(state, transpose_order)
         if is_density_matrix:
-            cache = self.calculation_cache.density_matrix(is_controlled_by=True)
             state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
-            #shape = ((2 ** ncontrol - 1) ** 2,) + 2 * nactive * (2,)
-            #updates00 = tf.reshape(state[:-1, :-1], shape)
-
-            updates01 = self.einsum(cache["right0"], state[:-1, -1],
+            updates01 = self.einsum(self.calculation_cache.right0,
+                                    state[:-1, -1],
                                     tf.math.conj(self.matrix))
-            updates10 = self.einsum(cache["left0"], state[-1, :-1],
+            updates10 = self.einsum(self.calculation_cache.left0,
+                                    state[-1, :-1],
                                     self.matrix)
 
-            updates11 = self.einsum(cache["left"], state[-1, -1], self.matrix)
-            updates11 = self.einsum(cache["right"], updates11,
-                                    tf.math.conj(self.matrix))
+            updates11 = self.einsum(self.calculation_cache.left,
+                                    state[-1, -1], self.matrix)
+            updates11 = self.einsum(self.calculation_cache.right,
+                                    updates11, tf.math.conj(self.matrix))
 
             updates01 = tf.concat([state[:-1, :-1], updates01[:, tf.newaxis]], axis=1)
             updates10 = tf.concat([updates10, updates11[tf.newaxis]], axis=0)
