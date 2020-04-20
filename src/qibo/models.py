@@ -29,6 +29,7 @@ def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
             # Execute the circuit
             final_state = c(init_state)
     """
+    import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits)
@@ -36,8 +37,8 @@ def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
         circuit.add(gates.H(i1))
         m = 2
         for i2 in range(i1 + 1, nqubits):
-            theta = 1.0 / 2 ** (m - 1)
-            circuit.add(gates.CRZ(i2, i1, theta))
+            theta = np.pi / 2 ** (m - 1)
+            circuit.add(gates.CZPow(i2, i1, theta))
             m += 1
 
     if with_swaps:
