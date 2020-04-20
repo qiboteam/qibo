@@ -435,6 +435,23 @@ class GeneralChannel(Gate):
         A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
           qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
           corresponding matrix.
+
+    Example:
+        ::
+
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
     """
 
     def __init__(self, A):
