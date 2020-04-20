@@ -5,7 +5,7 @@ import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.tensorflow import cache
 from qibo.config import einsum, matrices, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
-from typing import Optional
+from typing import Optional, Sequence, Tuple
 
 
 class TensorflowGate(base_gates.Gate):
@@ -339,40 +339,6 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         self.matrix = tf.reshape(self.matrix, rank * (2,))
 
 
-class NoiseChannel(TensorflowGate, base_gates.NoiseChannel):
-
-    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
-        TensorflowGate.__init__(self)
-
-        self.gates = []
-        for p, cl in zip(self.p, (X, Y, Z)):
-            if p > 0:
-                gate = cl(q)
-                if self._nqubits is not None:
-                    gate.nqubits = self.nqubits
-                self.gates.append((p, gate))
-
-    def with_backend(self, einsum_choice: str) -> "NoiseChannel":
-        TensorflowGate.with_backend(self, einsum_choice)
-        for _, gate in self.gates:
-            gate.einsum = self.einsum
-        return self
-
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
-                 ) -> tf.Tensor:
-        if not is_density_matrix:
-            raise ValueError("Noise channel can only be applied to density "
-                             "matrices.")
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // 2
-
-        new_state = tf.zeros_like(state)
-        for p, gate in self.gates:
-            new_state += p * gate(state, is_density_matrix=True)
-        return (1 - self.total_p) * state + new_state
-
-
 class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
@@ -393,3 +359,64 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
         _state = np.array(self.coefficients).reshape(shape)
         return tf.convert_to_tensor(_state, dtype=state.dtype)
+
+
+class TensorflowChannel(TensorflowGate):
+    """Base Tensorflow channels.
+
+    All channels should inherit this class.
+    """
+
+    def with_backend(self, einsum_choice: str) -> "TensorflowChannel":
+        super(TensorflowChannel, self).with_backend(einsum_choice)
+        for gate in self.gates:
+            gate.einsum = self.einsum
+        return self
+
+    @TensorflowGate.nqubits.setter
+    def nqubits(self, n: int):
+        self._nqubits = n
+        self._nstates = 2 ** n
+        for gate in self.gates:
+            gate.nqubits = n
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
+                 ) -> tf.Tensor:
+        if not is_density_matrix:
+            raise ValueError("Noise channel can only be applied to density "
+                             "matrices.")
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // 2
+
+
+class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
+        TensorflowChannel.__init__(self)
+
+        classes = (X, Y, Z)
+        self.gates = [cl(q) for p, cl in zip(self.p, classes) if p > 0]
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
+                 ) -> tf.Tensor:
+        TensorflowChannel.__call__(self, state, is_density_matrix)
+        new_state = tf.zeros_like(state)
+        for p, gate in zip(self.p, self.gates):
+            new_state += p * gate(state, is_density_matrix=True)
+        return (1 - self.total_p) * state + new_state
+
+
+class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):
+
+    def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
+        base_gates.NoiseChannel.__init__(self, A)
+        TensorflowChannel.__init__(self)
+
+        self.gates = []
+        raise NotImplementedError
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
+                 ) -> tf.Tensor:
+        TensorflowChannel.__call__(self, state, is_density_matrix)
+        raise NotImplementedError
