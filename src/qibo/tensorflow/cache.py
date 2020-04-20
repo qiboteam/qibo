@@ -4,7 +4,9 @@ from typing import List, Optional, Sequence
 
 class BaseCache:
 
-    def __init__(self):
+    def __init__(self, nqubits, ncontrol: Optional[int] = None):
+        self.nqubits = nqubits
+        self.ncontrol = ncontrol
         # Cache for state vectors
         self._vector = None
         # Cache for density matrices
@@ -34,19 +36,22 @@ class BaseCache:
     @property
     def left0(self):
         if self._left0 is None:
-            self._calculate_density_matrix(is_controlled_by=True)
+            self._calculate_density_matrix_controlled()
         return self._left0
 
     @property
     def right0(self):
         if self._right0 is None:
-            self._calculate_density_matrix(is_controlled_by=True)
+            self._calculate_density_matrix_controlled()
         return self._right0
 
     def _calculate_state_vector(self):
         raise NotImplementedError
 
-    def _calculate_density_matrix(self, is_controlled_by: bool = False):
+    def _calculate_density_matrix(self):
+        raise NotImplementedError
+
+    def _calculate_density_matrix_controlled(self):
         raise NotImplementedError
 
 
@@ -65,8 +70,7 @@ class DefaultEinsumCache(BaseCache):
       Returns:
           String formated as {input state}{gate matrix}->{output state}.
       """
-      super(DefaultEinsumCache, self).__init__()
-      self.nqubits = nqubits
+      super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
 
       if nqubits + len(qubits) > len(self._chars):
           raise NotImplementedError("Not enough einsum characters.")
@@ -86,21 +90,20 @@ class DefaultEinsumCache(BaseCache):
 
       self._vector = f"{self.input},{self.gate}->{self.output}"
 
-    def _calculate_density_matrix(self, is_controlled_by: bool = False):
+    def _calculate_density_matrix(self):
         if self.nqubits > len(self.rest):
             raise NotImplementedError("Not enough einsum characters.")
 
         rest = self.rest[:self.nqubits]
-
         self._left = f"{self.input}{rest},{self.gate}->{self.output}{rest}"
         self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
-        if is_controlled_by:
-            if self.nqubits + 1 > len(self.rest):
-                raise NotImplementedError("Not enough einsum characters.")
-            c = self.rest[self.nqubits]
-            self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
-            self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
+    def _calculate_density_matrix_controlled(self):
+        if self.nqubits + 1 > len(self.rest):
+            raise NotImplementedError("Not enough einsum characters.")
+        rest, c = self.rest[:self.nqubits], self.rest[self.nqubits]
+        self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
+        self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
 
 
 class MatmulEinsumCache(BaseCache):
@@ -117,10 +120,8 @@ class MatmulEinsumCache(BaseCache):
             Indices for the first transposition (before matmul) and the inverse
             transposition (after matmul) and the four reshape shapes.
         """
-        super(MatmulEinsumCache, self).__init__()
-        self.nqubits = nqubits
+        super(MatmulEinsumCache, self).__init__(nqubits, ncontrol)
         self.ntargets = len(qubits)
-        self.ncontrol = ncontrol
         self.nrest = nqubits - self.ntargets
         self.nstates = 2 ** nqubits
 
@@ -154,7 +155,7 @@ class MatmulEinsumCache(BaseCache):
                                    self.nqubits * (2,)),
                         "conjugate": False}
 
-    def _calculate_density_matrix(self, is_controlled_by: bool = False):
+    def _calculate_density_matrix(self):
         self._left = {"ids": self.ids + [len(self.ids)],
                       "inverse_ids": self.inverse_ids + [len(self.ids)],
                       "shapes": (self.shape + (self.nstates,),
@@ -167,20 +168,20 @@ class MatmulEinsumCache(BaseCache):
         self._right["inverse_ids"] = [len(self.ids)] + self.inverse_ids
         self._right["conjugate"] = True
 
-        if is_controlled_by:
+    def _calculate_density_matrix_controlled(self):
             cdim = 2 ** self.ncontrol - 1
             shapes = ((cdim,) + self.shape + (self.nstates,),
                       (2 ** self.ntargets, (2 ** self.nrest) * self.nstates * cdim),
                       self.transposed_shape + (self.nstates, cdim),
                       (cdim,) + 2 * self.nqubits * (2,))
 
-            self._left0 = self._controlled_by_ids(self.left)
+            self._left0 = self._controlled_ids(self.left)
             self._left0["shapes"] = shapes
-            self._right0 = self._controlled_by_ids(self.right)
+            self._right0 = self._controlled_ids(self.right)
             self._right0["shapes"] = shapes
 
     @staticmethod
-    def _controlled_by_ids(original):
+    def _controlled_ids(original):
         new = {"ids": [i + 1 for i in original["ids"]],
                "inverse_ids": [len(original["ids"])] + original["inverse_ids"],
                "conjugate": original["conjugate"]}
