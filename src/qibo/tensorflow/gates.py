@@ -26,7 +26,6 @@ class TensorflowGate(base_gates.Gate):
         self.control_cache = None
         # Gate matrices
         self.matrix = None
-        self._matrix_dagger = None # TODO: Remove this if it is not needed
 
     def with_backend(self, einsum_choice: str) -> "TensorflowGate":
         """Uses a different einsum backend than the one defined in config.
@@ -63,17 +62,6 @@ class TensorflowGate(base_gates.Gate):
             self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
-
-    @property
-    def matrix_dagger(self):
-        # TODO: Remove this if it is not needed for `MatmulEinsum`.
-        if self._matrix_dagger is not None:
-            return self._matrix_dagger
-
-        n = len(tuple(self.matrix.shape)) // 2
-        ids = tuple(range(n, 2 * n)) + tuple(range(n))
-        self._matrix_dagger = tf.math.conj(tf.transpose(self.matrix, ids))
-        return self._matrix_dagger
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
