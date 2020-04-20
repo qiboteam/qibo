@@ -84,6 +84,32 @@ def test_czpowgate_application_twoqubit(einsum_choice):
 
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_circuit_compiled(einsum_choice):
+    """Check passing density matrix as initial state to a compiled circuit."""
+    theta = 0.1234
+    initial_rho = random_density_matrix(3)
+
+    c = models.Circuit(3)
+    c.add(gates.H(0).with_backend(einsum_choice))
+    c.add(gates.H(1).with_backend(einsum_choice))
+    c.add(gates.CNOT(0, 1).with_backend(einsum_choice))
+    c.add(gates.H(2).with_backend(einsum_choice))
+    final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
+
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                     [0, 0, 0, 1], [0, 0, 1, 0]])
+    m1 = np.kron(np.kron(h, h), np.eye(2))
+    m2 = np.kron(cnot, np.eye(2))
+    m3 = np.kron(np.eye(4), h)
+    target_rho = m1.dot(initial_rho).dot(m1.T.conj())
+    target_rho = m2.dot(target_rho).dot(m2.T.conj())
+    target_rho = m3.dot(target_rho).dot(m3.T.conj())
+
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_circuit(einsum_choice):
     """Check passing density matrix as initial state to circuit."""
     theta = 0.1234
@@ -102,6 +128,7 @@ def test_circuit(einsum_choice):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
+
 
 @pytest.mark.skip
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
