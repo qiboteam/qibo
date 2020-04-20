@@ -150,10 +150,6 @@ class X(TensorflowGate, base_gates.X):
             gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
             gate = super(X, self).controlled_by(*q)
-<<<<<<< HEAD
-
-=======
->>>>>>> master
         gate.einsum = self.einsum
         return gate
 

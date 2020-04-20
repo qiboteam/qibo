@@ -56,7 +56,7 @@ def test_rygate_application_twoqubit(einsum_choice):
     gate.nqubits = 1
     final_rho = gate(initial_rho, is_density_matrix=True).numpy()
 
-    phase = np.exp(1j * np.pi * theta / 2.0)
+    phase = np.exp(1j * theta / 2.0)
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
@@ -70,12 +70,12 @@ def test_czpowgate_application_twoqubit(einsum_choice):
     nqubits = 3
     initial_rho = random_density_matrix(nqubits)
 
-    gate = gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice)
+    gate = gates.CZPow(0, 1, theta=theta).with_backend(einsum_choice)
     final_rho = gate(initial_rho.reshape(2 * nqubits * (2,)),
                      is_density_matrix=True).numpy().reshape(initial_rho.shape)
 
     matrix = np.eye(4, dtype=np.complex128)
-    matrix[3, 3] = np.exp(1j * np.pi * theta)
+    matrix[3, 3] = np.exp(1j * theta)
     matrix = np.kron(matrix, np.eye(2))
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
@@ -116,12 +116,12 @@ def test_circuit(einsum_choice):
 
     c = models.Circuit(3)
     c.add(gates.X(2).with_backend(einsum_choice))
-    c.add(gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice))
+    c.add(gates.CZPow(0, 1, theta=theta).with_backend(einsum_choice))
     final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
 
     m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
     m2 = np.eye(4, dtype=np.complex128)
-    m2[3, 3] = np.exp(1j * np.pi * theta)
+    m2[3, 3] = np.exp(1j * theta)
     m2 = np.kron(m2, np.eye(2))
     target_rho = m1.dot(initial_rho).dot(m1)
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
@@ -244,7 +244,6 @@ def test_general_channel(einsum_choice):
     initial_rho = np.outer(psi, psi.conj())
     m1 = np.kron(np.eye(2), a1)
     m2 = a2
-    print(initial_rho)
     target_rho = (m1.dot(initial_rho).dot(m1.conj().T) +
                   m2.dot(initial_rho).dot(m2.conj().T))
 
