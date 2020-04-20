@@ -300,3 +300,60 @@ that is supported by Tensorflow, such as defining
 `custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
 and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/tf/keras/Sequential>`_
 to train them.
+
+
+How to perform noisy simulation?
+--------------------------------
+
+QIBO can perform noisy simulation using density matrices. Circuit objects can
+evolve density matrices in a similar manner to state vectors. In order to use
+density matrices the user should execute the circuit passing a density matrix as
+the initial state. For example
+
+.. code-block:: python
+
+    from qibo import models, gates
+
+    # Define circuit
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+
+    # Define initial density matrix as `rho = |00><00|`
+    state = np.zeros(4)
+    state[0] = 1
+    initial_rho = np.outer(state, state.conj())
+
+    # Call circuit on the density matrix
+    final_rho = c(initial_rho)
+    # final_rho will be tf.eye(4) / 4 which corresponds to |++><++|
+
+will perform the transformation
+
+.. math::
+    |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
+
+The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
+If this or any other channel is used in a Circuit, then the execution will automatically
+switch to density matrices. For example
+
+.. code-block:: python
+
+    from qibo import models, gates
+
+    c = models.Circuit(2) # starts with state |00>
+    c.add(gates.X(1)) # transforms |00> -> |01>
+    c.add(gates.NoiseChannel(0, px=0.3)) # transforms |01> -> (1 - px)|01><01| + px |11><11|
+    final_state = c()
+    # will return tf.Tensor(diag([0, 0.7, 0, 0.3]))
+
+will perform the transformation
+
+.. math::
+    |00\rangle & \rightarrow (I \otimes X)|00\rangle = |01\rangle
+    \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
+    \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
+
+Note that Circuit will use state vectors until the first channel is found and will
+switch to density matrices for the rest of the simulation. Measurements and
+callbacks can be used exactly as in the pure state vector case.
