@@ -18,7 +18,7 @@ class BaseCache:
     @property
     def vector(self):
         if self._vector is None:
-            self._calculate_state_vector()
+            raise NotImplementedError("Vector cache should be defined in __init__.")
         return self._vector
 
     @property
@@ -44,9 +44,6 @@ class BaseCache:
         if self._right0 is None:
             self._calculate_density_matrix_controlled()
         return self._right0
-
-    def _calculate_state_vector(self):
-        raise NotImplementedError
 
     def _calculate_density_matrix(self):
         raise NotImplementedError

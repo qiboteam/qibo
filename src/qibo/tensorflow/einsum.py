@@ -51,10 +51,10 @@ class DefaultEinsum:
         on density matrices.
 
         Args:
-            qubits: Set of qubit ids that are traced out.
-            nqubits: Total number of qubits in the state.
-            measuring: If True non-traced-out indices are multiplied and the
-                output has shape (nqubits - len(qubits),).
+            qubits (list): Set of qubit ids that are traced out.
+            nqubits (int): Total number of qubits in the state.
+            measuring (bool): If True non-traced-out indices are multiplied and
+                the output has shape (nqubits - len(qubits),).
                 If False the output has shape 2 * (nqubits - len(qubits),).
 
         Returns:

@@ -64,9 +64,8 @@ class Gate(object):
         """Sets the total number of qubits that this gate acts on.
 
         This setter is used by `circuit.add` if the gate is added in a circuit
-        The user should only set qubits by hand if the gate is called on a
-        state outside of a circuit. In this case the `with_nqubits` method has
-        to be used.
+        or during `__call__` if the gate is called directly on a state.
+        The user is not supposed to set `nqubits` by hand.
         """
         if self._nqubits is not None:
             raise ValueError("The number of qubits for this gates is already "
