@@ -388,35 +388,37 @@ class TensorflowChannel(TensorflowGate):
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape)) // 2
 
+        return self._krauss_sum(state)
+
+    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
+        """Loops over `self.gates` to calculate sum of Krauss operators."""
+        raise NotImplementedError
+
 
 class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
 
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
         base_gates.NoiseChannel.__init__(self, q, px, py, pz)
         TensorflowChannel.__init__(self)
-
         classes = (X, Y, Z)
         self.gates = [cl(q) for p, cl in zip(self.p, classes) if p > 0]
 
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
-                 ) -> tf.Tensor:
-        TensorflowChannel.__call__(self, state, is_density_matrix)
+    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for p, gate in zip(self.p, self.gates):
             new_state += p * gate(state, is_density_matrix=True)
         return (1 - self.total_p) * state + new_state
 
 
-class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):
+class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
 
     def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        base_gates.NoiseChannel.__init__(self, A)
+        base_gates.GeneralChannel.__init__(self, A)
         TensorflowChannel.__init__(self)
+        self.gates = [Unitary(m, *list(q)) for q, m in A]
 
-        self.gates = []
-        raise NotImplementedError
-
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
-                 ) -> tf.Tensor:
-        TensorflowChannel.__call__(self, state, is_density_matrix)
-        raise NotImplementedError
+    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = tf.zeros_like(state)
+        for gate in self.gates:
+            new_state += gate(state, is_density_matrix=True)
+        return new_state

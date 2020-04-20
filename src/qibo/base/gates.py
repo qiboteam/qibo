@@ -420,6 +420,34 @@ class NoiseChannel(Gate):
         raise ValueError("Noise channel cannot be controlled on qubits.")
 
 
+class GeneralChannel(Gate):
+    """General channel defined by arbitrary Krauss operators.
+
+    Implements the following evolution
+
+    .. math::
+        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
+
+    where A are arbitrary Krauss operators given by the user. Note that the
+    Krauss operators set should be trace preserving, however this is not checked.
+
+    Args:
+        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
+          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
+          corresponding matrix.
+    """
+
+    def __init__(self, A):
+        super(GeneralChannel, self).__init__()
+        self.is_channel = True
+        self.target_qubits = tuple(sorted(set(
+          q for qubits, _ in A for q in qubits)))
+
+    def controlled_by(self, *q):
+        """"""
+        raise ValueError("Channel cannot be controlled on qubits.")
+
+
 class Flatten(Gate):
     """Passes an arbitrary state vector in the circuit.
 

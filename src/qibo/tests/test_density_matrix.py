@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from qibo import gates, models, callbacks
 
-# TODO: Add docstrings in all tests
 _EINSUM_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
 _atol = 1e-8
 
@@ -224,6 +223,30 @@ def test_circuit_switch_to_density_matrix(einsum_choice):
     c.add(gates.NoiseChannel(0, px=0.5).with_backend(einsum_choice))
     c.add(gates.NoiseChannel(1, pz=0.3).with_backend(einsum_choice))
     target_rho = c(initial_rho).numpy()
+
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_general_channel(einsum_choice):
+    """Test `gates.GeneralChannel`."""
+    psi = np.random.random(4) + 1j * np.random.random(4)
+    psi = psi / np.sqrt((np.abs(psi) ** 2).sum())
+
+    c = models.Circuit(2)
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    gate = gates.GeneralChannel([((1,), a1), ((0, 1), a2)])
+    assert gate.target_qubits == (0, 1)
+    c.add(gate.with_backend(einsum_choice))
+    final_rho = c(psi).numpy()
+
+    initial_rho = np.outer(psi, psi.conj())
+    m1 = np.kron(np.eye(2), a1)
+    m2 = a2
+    print(initial_rho)
+    target_rho = (m1.dot(initial_rho).dot(m1.conj().T) +
+                  m2.dot(initial_rho).dot(m2.conj().T))
 
     np.testing.assert_allclose(final_rho, target_rho)
 
