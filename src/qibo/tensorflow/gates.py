@@ -3,81 +3,9 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
+from qibo.tensorflow import cache
 from qibo.config import einsum, matrices, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
-from typing import List, Optional, Sequence, Tuple
-
-
-class _ControlCache:
-    """Helper tools for `controlled_by` gates.
-
-    This class contains:
-      A) an `order` that is used to transpose `state`
-         so that control legs are moved in the front
-      B) a `targets` list which is equivalent to the
-         `target_qubits` tuple but each index is reduced
-         by the amount of control qubits that preceed it.
-    This method is called by the `nqubits` setter so that the loop runs
-    once per gate (and not every time the gate is called).
-    """
-
-    def __init__(self, gate: base_gates.Gate):
-        self.ncontrol = len(gate.control_qubits)
-        self._order, self.targets = self.calculate(gate)
-        # Calculate the reverse order for transposing the state legs so that
-        # control qubits are back to their original positions
-        self._reverse = self.revert(self._order)
-
-        self._order_dm = None
-        self._reverse_dm = None
-
-    def order(self, is_density_matrix: bool = False):
-        if not is_density_matrix:
-            return self._order
-
-        if self._order_dm is None:
-            self.calculate_dm()
-        return self._order_dm
-
-    def reverse(self, is_density_matrix: bool = False):
-        if not is_density_matrix:
-            return self._reverse
-
-        if self._reverse_dm is None:
-            self.calculate_dm()
-        return self._reverse_dm
-
-    @staticmethod
-    def calculate(gate: base_gates.Gate):
-        loop_start = 0
-        order = list(gate.control_qubits)
-        targets = list(gate.target_qubits)
-        for control in gate.control_qubits:
-            for i in range(loop_start, control):
-                order.append(i)
-            loop_start = control + 1
-
-            for i, t in enumerate(gate.target_qubits):
-                if t > control:
-                    targets[i] -= 1
-        for i in range(loop_start, gate.nqubits):
-            order.append(i)
-
-        return order, targets
-
-    def calculate_dm(self):
-        additional_order = np.array(self._order) + len(self._order)
-        self._order_dm = (self._order[:self.ncontrol] +
-                          list(additional_order[:self.ncontrol]) +
-                          self._order[self.ncontrol:] +
-                          list(additional_order[self.ncontrol:]))
-        self._reverse_dm = self.revert(self._order_dm)
-
-    @staticmethod
-    def revert(transpose_order) -> List[int]:
-        reverse_order = len(transpose_order) * [0]
-        for i, r in enumerate(transpose_order):
-            reverse_order[r] = i
-        return reverse_order
+from typing import Optional
 
 
 class TensorflowGate(base_gates.Gate):
@@ -94,7 +22,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __init__(self):
         self.calculation_cache = None
-        # For `controlled_by` gates (see `_ControlCache` for more details)
+        # For `controlled_by` gates (see `cache.ControlCache` for more details)
         self.control_cache = None
         # Gate matrices
         self.matrix = None
@@ -129,10 +57,10 @@ class TensorflowGate(base_gates.Gate):
         """
         base_gates.Gate.nqubits.fset(self, n)
         if self.is_controlled_by:
-            self.control_cache = _ControlCache(self)
+            self.control_cache = cache.ControlCache(self)
             nactive = n - len(self.control_qubits)
             targets = self.control_cache.targets
-            self.calculation_cache = self.einsum.create_cache(targets, nactive)
+            self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
 
