@@ -27,14 +27,11 @@ def test_xgate_application_onequbit(einsum_choice):
     final_rho = gate(initial_rho, is_density_matrix=True).numpy()
 
     pauliX = np.array([[0, 1], [1, 0]])
-    print()
-    print(pauliX.dot(initial_rho))
     target_rho = pauliX.dot(initial_rho).dot(pauliX)
-    print(target_rho)
 
     np.testing.assert_allclose(final_rho, target_rho)
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_hgate_application_twoqubit(einsum_choice):
     """Check applying one qubit gate to two qubit density matrix."""
@@ -49,7 +46,7 @@ def test_hgate_application_twoqubit(einsum_choice):
 
     np.testing.assert_allclose(final_rho, target_rho)
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_rygate_application_twoqubit(einsum_choice):
     """Check applying non-hermitian one qubit gate to one qubit density matrix."""
@@ -66,15 +63,16 @@ def test_rygate_application_twoqubit(einsum_choice):
 
     np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
 
-@pytest.mark.skip
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+
+@pytest.mark.parametrize("einsum_choice", ["MatmulEinsum"])
 def test_czpowgate_application_twoqubit(einsum_choice):
     """Check applying two qubit gate to three qubit density matrix."""
     theta = 0.1234
-    initial_rho = random_density_matrix(3)
+    nqubits = 3
+    initial_rho = random_density_matrix(nqubits)
 
     gate = gates.CRZ(0, 1, theta=theta).with_backend(einsum_choice)
-    final_rho = gate(initial_rho.reshape(6 * (2,)),
+    final_rho = gate(initial_rho.reshape(2 * nqubits * (2,)),
                      is_density_matrix=True).numpy().reshape(initial_rho.shape)
 
     matrix = np.eye(4, dtype=np.complex128)
@@ -84,7 +82,7 @@ def test_czpowgate_application_twoqubit(einsum_choice):
 
     np.testing.assert_allclose(final_rho, target_rho)
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_circuit(einsum_choice):
     """Check passing density matrix as initial state to circuit."""
@@ -104,7 +102,6 @@ def test_circuit(einsum_choice):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
-
 
 @pytest.mark.skip
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)

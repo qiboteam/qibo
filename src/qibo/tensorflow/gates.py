@@ -160,9 +160,10 @@ class TensorflowGate(base_gates.Gate):
             return self._controlled_by_call(state, is_density_matrix)
 
         if is_density_matrix:
+            state = self.einsum(self.calculation_cache.right, state,
+                                tf.math.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
-            return self.einsum(self.calculation_cache.right, state,
-                               tf.math.conj(self.matrix))
+            return state
 
         return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
@@ -186,10 +187,10 @@ class TensorflowGate(base_gates.Gate):
                                     state[-1, :-1],
                                     self.matrix)
 
-            updates11 = self.einsum(self.calculation_cache.left,
-                                    state[-1, -1], self.matrix)
             updates11 = self.einsum(self.calculation_cache.right,
-                                    updates11, tf.math.conj(self.matrix))
+                                    state[-1, -1], tf.math.conj(self.matrix))
+            updates11 = self.einsum(self.calculation_cache.left,
+                                    updates11, self.matrix)
 
             updates01 = tf.concat([state[:-1, :-1], updates01[:, tf.newaxis]], axis=1)
             updates10 = tf.concat([updates10, updates11[tf.newaxis]], axis=0)
@@ -291,7 +292,6 @@ class M(TensorflowGate, base_gates.M):
         """
         # Trace out unmeasured qubits
         if is_density_matrix:
-            print(self._traceout_str)
             probs = tf.cast(tf.einsum(self._traceout_str, state),
                             dtype=DTYPE)
         else:

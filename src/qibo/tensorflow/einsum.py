@@ -181,9 +181,8 @@ class MatmulEinsumCache(BaseCache):
                       "conjugate": False}
 
         self._right = dict(self._left)
-        #self._right["inverse_ids"] = [i + 1 for i in self.inverse_ids]
-        #self._right["inverse_ids"].append(0)
-        #self._right["conjugate"] = True
+        self._right["inverse_ids"] = [len(self.ids)] + self.inverse_ids
+        self._right["conjugate"] = True
 
         if is_controlled_by:
             raise NotImplementedError
