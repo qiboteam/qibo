@@ -130,7 +130,6 @@ def test_circuit(einsum_choice):
     np.testing.assert_allclose(final_rho, target_rho)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_simple(einsum_choice):
     psi = np.zeros(4)
@@ -149,7 +148,7 @@ def test_controlled_by_simple(einsum_choice):
 
     np.testing.assert_allclose(final_rho, target_rho)
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_no_effect(einsum_choice):
     psi = np.zeros(2 ** 4)
@@ -167,7 +166,7 @@ def test_controlled_by_no_effect(einsum_choice):
 
     np.testing.assert_allclose(final_rho, target_rho)
 
-@pytest.mark.skip
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_with_effect(einsum_choice):
     psi = np.zeros(2 ** 4)

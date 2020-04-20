@@ -168,14 +168,24 @@ class MatmulEinsumCache(BaseCache):
         self._right["conjugate"] = True
 
         if is_controlled_by:
-            raise NotImplementedError
-            c_dim = 2 ** self.ncontrol - 1
-            self._left0 = {}
-            self._left0["ids"] = [len(self.left["ids"])] + self.left["ids"]
-            self._left0["shapes"] = ((c_dim,) + self.shape + (self.nstates,),
-                                     (2 ** self.ntargets, (2 ** self.nrest) * self.nstates * cdim),
-                                     self.transposed_shape + (self.nstates, cdim)
-                                     )
+            cdim = 2 ** self.ncontrol - 1
+            shapes = ((cdim,) + self.shape + (self.nstates,),
+                      (2 ** self.ntargets, (2 ** self.nrest) * self.nstates * cdim),
+                      self.transposed_shape + (self.nstates, cdim),
+                      (cdim,) + 2 * self.nqubits * (2,))
+
+            self._left0 = self._controlled_by_ids(self.left)
+            self._left0["shapes"] = shapes
+            self._right0 = self._controlled_by_ids(self.right)
+            self._right0["shapes"] = shapes
+
+    @staticmethod
+    def _controlled_by_ids(original):
+        new = {"ids": [i + 1 for i in original["ids"]],
+               "inverse_ids": [len(original["ids"])] + original["inverse_ids"],
+               "conjugate": original["conjugate"]}
+        new["ids"].append(0)
+        return new
 
 
 class ControlCache:
@@ -236,7 +246,7 @@ class ControlCache:
         return order, targets
 
     def calculate_dm(self):
-        additional_order = np.array(self._order) + len(self._order)
+        additional_order = [x + len(self._order) for x in self._order]
         self._order_dm = (self._order[:self.ncontrol] +
                           list(additional_order[:self.ncontrol]) +
                           self._order[self.ncontrol:] +

@@ -127,4 +127,4 @@ class MatmulEinsum:
   @staticmethod
   def create_cache(qubits: Sequence[int], nqubits: int,
                    ncontrol: Optional[int] = None) -> cache.MatmulEinsumCache:
-      return cache.MatmulEinsumCache(qubits, nqubits)
+      return cache.MatmulEinsumCache(qubits, nqubits, ncontrol)
