@@ -188,6 +188,7 @@ class MatmulEinsumCache(BaseCache):
             raise NotImplementedError
 
 
+
 class DefaultEinsum:
     """Einsum backend that uses Tensorflow's default ``tf.einsum``.
 
@@ -202,8 +203,8 @@ class DefaultEinsum:
     def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       return tf.einsum(cache, state, gate)
 
-    @classmethod
-    def create_cache(cls, qubits: Sequence[int], nqubits: int) -> DefaultEinsumCache:
+    @staticmethod
+    def create_cache(qubits: Sequence[int], nqubits: int) -> DefaultEinsumCache:
         return DefaultEinsumCache(qubits, nqubits)
 
     @classmethod
