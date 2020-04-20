@@ -150,7 +150,10 @@ class X(TensorflowGate, base_gates.X):
             gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
         else:
             gate = super(X, self).controlled_by(*q)
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
         gate.einsum = self.einsum
         return gate
 
@@ -250,11 +253,9 @@ class RX(TensorflowGate, base_gates.RX):
         base_gates.RX.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-        theta = tf.cast(self.theta, dtype=self.dtype)
-        phase = tf.exp(1j * np.pi * theta / 2.0)
-        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
-        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
-        self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.X)
+        th = tf.cast(self.theta, dtype=self.dtype)
+        self.matrix = (tf.cos(th / 2.0) * matrices.I -
+                       1j * tf.sin(th / 2.0) * matrices.X)
 
 
 class RY(TensorflowGate, base_gates.RY):
@@ -263,11 +264,9 @@ class RY(TensorflowGate, base_gates.RY):
         base_gates.RY.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-        theta = tf.cast(self.theta, dtype=self.dtype)
-        phase = tf.exp(1j * np.pi * theta / 2.0)
-        cos = tf.cast(tf.math.real(phase), dtype=self.dtype)
-        sin = tf.cast(tf.math.imag(phase), dtype=self.dtype)
-        self.matrix = phase * (cos * matrices.I - 1j * sin * matrices.Y)
+        th = tf.cast(self.theta, dtype=self.dtype)
+        self.matrix = (tf.cos(th / 2.0) * matrices.I -
+                       1j * tf.sin(th / 2.0) * matrices.Y)
 
 
 class RZ(TensorflowGate, base_gates.RZ):
@@ -276,17 +275,10 @@ class RZ(TensorflowGate, base_gates.RZ):
         base_gates.RZ.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-        theta = tf.cast(self.theta, dtype=self.dtype)
-        phase = tf.exp(1j * np.pi * theta)
-        rz = tf.eye(2, dtype=self.dtype)
-        self.matrix = tf.tensor_scatter_nd_update(rz, [[1, 1]], [phase])
-
-    def controlled_by(self, *q):
-        """Fall back to CRZ if control is one."""
-        gate = super(RZ, self).controlled_by(*q)
-        if len(q) == 1:
-            return CRZ(q[0], self.target_qubits[0], self.theta)
-        return gate
+        th = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * th / 2.0)[tf.newaxis]
+        diag = tf.concat([tf.math.conj(phase), phase], axis=0)
+        self.matrix = tf.linalg.diag(diag)
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -297,16 +289,16 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         self.matrix = matrices.CNOT
 
 
-class CRZ(TensorflowGate, base_gates.CRZ):
+class CZPow(TensorflowGate, base_gates.CZPow):
 
     def __init__(self, q0, q1, theta):
-        base_gates.CRZ.__init__(self, q0, q1, theta)
+        base_gates.CZPow.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)
 
-        theta = tf.cast(self.theta, dtype=self.dtype)
-        phase = tf.exp(1j * np.pi * theta)
-        crz = tf.eye(4, dtype=self.dtype)
-        crz = tf.tensor_scatter_nd_update(crz, [[3, 3]], [phase])
+        th = tf.cast(self.theta, dtype=self.dtype)
+        phase = tf.exp(1j * th)[tf.newaxis]
+        diag = tf.concat([tf.ones(3, dtype=self.dtype), phase], axis=0)
+        crz = tf.linalg.diag(diag)
         self.matrix = tf.reshape(crz, 4 * (2,))
 
 

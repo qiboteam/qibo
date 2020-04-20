@@ -78,18 +78,21 @@ def test_multicontrol_xgate(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_rz_no_effect():
+def test_rz_phase0():
     """Check RZ gate is working properly when qubit is on |0>."""
+    theta = 0.1234
+
     c = Circuit(2)
-    c.add(gates.RZ(0, 0.1234))
+    c.add(gates.RZ(0, theta))
     final_state = c.execute().numpy()
+
     target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    target_state[0] = np.exp(-1j * theta / 2.0)
     np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_rz_phase(einsum_choice):
+def test_rz_phase1(einsum_choice):
     """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
 
@@ -99,7 +102,7 @@ def test_rz_phase(einsum_choice):
     final_state = c.execute().numpy()
 
     target_state = np.zeros_like(final_state)
-    target_state[2] = np.exp(1j * np.pi * theta)
+    target_state[2] = np.exp(1j * theta / 2.0)
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -113,9 +116,9 @@ def test_rx(einsum_choice):
     c.add(gates.RX(0, theta=theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
-    phase = np.exp(1j * np.pi * theta / 2.0)
-    gate = phase * np.array([[phase.real, -1j * phase.imag],
-                             [-1j * phase.imag, phase.real]])
+    phase = np.exp(1j * theta / 2.0)
+    gate = np.array([[phase.real, -1j * phase.imag],
+                    [-1j * phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
@@ -129,9 +132,9 @@ def test_ry():
     c.add(gates.RY(0, theta))
     final_state = c.execute().numpy()
 
-    phase = np.exp(1j * np.pi * theta / 2.0)
-    gate = phase * np.array([[phase.real, -phase.imag],
-                             [phase.imag, phase.real]])
+    phase = np.exp(1j * theta / 2.0)
+    gate = np.array([[phase.real, -phase.imag],
+                     [phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
 
@@ -159,36 +162,19 @@ def test_cnot(einsum_choice):
 
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_crz(einsum_choice):
-    """Check CRZ gate is working properly on |11>."""
+def test_czpow(einsum_choice):
+    """Check CZPow gate is working properly on |11>."""
     theta = 0.1234
 
     c = Circuit(2)
     c.add(gates.X(0).with_backend(einsum_choice))
     c.add(gates.X(1).with_backend(einsum_choice))
-    c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
+    c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
     final_state = c.execute().numpy()
 
-    phase = np.exp(1j * np.pi * theta)
+    phase = np.exp(1j * theta)
     target_state = np.zeros_like(final_state)
-    target_state[-1] = phase
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_controlled_by_rz():
-    """Check RZ.controlled_by falls back to CRZ."""
-    theta = 0.1234
-
-    c = Circuit(2)
-    c.add(gates.CRZ(0, 1, theta))
-    print(c.queue)
-    target_state = c.execute().numpy()
-
-    c = Circuit(2)
-    c.add(gates.RZ(1, theta).controlled_by(0))
-    print(c.queue)
-    final_state = c.execute().numpy()
-
+    target_state[3] = phase
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -386,14 +372,14 @@ def test_custom_circuit():
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
+    c.add(gates.CZPow(0, 1, theta))
     r1 = c.execute().numpy()
 
     # custom circuit
     def custom_circuit(initial_state, theta):
         l1 = gates.X(0)(initial_state)
         l2 = gates.X(1)(l1)
-        o = gates.CRZ(0, 1, theta)(l2)
+        o = gates.CZPow(0, 1, theta)(l2)
         return o
 
     init = c._default_initial_state()
@@ -413,7 +399,7 @@ def test_compiled_circuit(einsum_choice):
         c = Circuit(2)
         c.add(gates.X(0).with_backend(einsum_choice))
         c.add(gates.X(1).with_backend(einsum_choice))
-        c.add(gates.CRZ(0, 1, theta).with_backend(einsum_choice))
+        c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
         return c
 
     # Run eager circuit
@@ -435,14 +421,14 @@ def test_circuit_custom_compilation():
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, theta))
+    c.add(gates.CZPow(0, 1, theta))
     r1 = c.execute(init_state).numpy()
 
     def run_circuit(initial_state):
         c = Circuit(2)
         c.add(gates.X(0))
         c.add(gates.X(1))
-        c.add(gates.CRZ(0, 1, theta))
+        c.add(gates.CZPow(0, 1, theta))
         return c.execute(initial_state)
 
     import tensorflow as tf
@@ -488,10 +474,10 @@ def test_variable_backpropagation():
         loss = tf.math.real(c()[-1])
     grad = tape.gradient(loss, theta)
 
-    target_loss = np.cos(np.pi * theta.numpy())
+    target_loss = np.cos(theta.numpy() / 2.0)
     np.testing.assert_allclose(loss.numpy(), target_loss)
 
-    target_grad = - np.pi * np.sin(np.pi * theta.numpy())
+    target_grad = - np.sin(theta.numpy() / 2.0) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)
 
 
@@ -510,13 +496,11 @@ def test_two_variables_backpropagation():
         loss = tf.math.real(c()[0])
     grad = tape.gradient(loss, theta)
 
-    t = np.pi * np.array([0.1234, 0.4321]) / 2.0
-    target_loss = np.cos(t.sum()) * np.cos(t[0]) * np.cos(t[1])
+    t = np.array([0.1234, 0.4321]) / 2.0
+    target_loss = np.cos(t[0]) * np.cos(t[1])
     np.testing.assert_allclose(loss.numpy(), target_loss)
 
-    target_grad1 = - (np.sin(t.sum()) * np.cos(t[0]) * np.cos(t[1]) +
-                      np.cos(t.sum()) * np.sin(t[0]) * np.cos(t[1]))
-    target_grad2 = - (np.sin(t.sum()) * np.cos(t[0]) * np.cos(t[1]) +
-                      np.cos(t.sum()) * np.cos(t[0]) * np.sin(t[1]))
-    target_grad = np.pi * np.array([target_grad1, target_grad2]) / 2.0
+    target_grad1 = - np.sin(t[0]) * np.cos(t[1])
+    target_grad2 = - np.cos(t[0]) * np.sin(t[1])
+    target_grad = np.array([target_grad1, target_grad2]) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)

@@ -242,11 +242,11 @@ class RX(Gate):
     Corresponds to the following unitary matrix
 
     .. math::
-        e^{i \\pi \\theta / 2}\\begin{pmatrix}
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
-        -i\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2}  &
+        -i\\sin \\frac{\\theta }{2} \\\\
+        -i\\sin \\frac{\\theta }{2}  &
+        \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -267,11 +267,11 @@ class RY(Gate):
     Corresponds to the following unitary matrix
 
     .. math::
-        e^{i \\pi \\theta / 2}\\begin{pmatrix}
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        -\\sin \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
-        \\sin \\left (\\frac{\\pi }{2} \\theta \\right ) &
-        \\cos \\left (\\frac{\\pi }{2} \\theta \\right ) \\\\
+        \\begin{pmatrix}
+        \\cos \\frac{\\theta }{2}  &
+        -\\sin \\frac{\\theta }{2} \\\\
+        \\sin \\frac{\\theta }{2}  &
+        \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -293,8 +293,8 @@ class RZ(Gate):
 
     .. math::
         \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & e^{i \\pi \\theta} \\\\
+        e^{-i \\theta / 2} & 0 \\\\
+        0 & e^{i \\theta / 2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -324,10 +324,20 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
 
 
-class CRZ(Gate):
+class CZPow(Gate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
-    The convention for the unitary matrix is the same as in `RZ`.
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 0 & 0 & e^{i \\theta / 2} \\\\
+        \\end{pmatrix}
+
+    Note that this differs from the :class:`qibo.base.gates.RZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
@@ -336,7 +346,7 @@ class CRZ(Gate):
     """
 
     def __init__(self, q0, q1, theta):
-        super(CRZ, self).__init__()
+        super(CZPow, self).__init__()
         self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
