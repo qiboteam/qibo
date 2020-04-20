@@ -132,6 +132,7 @@ def test_circuit(einsum_choice):
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_simple(einsum_choice):
+    """Check controlled_by method on gate."""
     psi = np.zeros(4)
     psi[0] = 1
     initial_rho = np.outer(psi, psi.conj())
@@ -151,6 +152,7 @@ def test_controlled_by_simple(einsum_choice):
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_by_no_effect(einsum_choice):
+    """Check controlled_by SWAP that should not be applied."""
     psi = np.zeros(2 ** 4)
     psi[0] = 1
     initial_rho = np.outer(psi, psi.conj())
@@ -169,6 +171,7 @@ def test_controlled_by_no_effect(einsum_choice):
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_controlled_with_effect(einsum_choice):
+    """Check controlled_by SWAP that should be applied."""
     psi = np.zeros(2 ** 4)
     psi[0] = 1
     initial_rho = np.outer(psi, psi.conj())
@@ -190,6 +193,7 @@ def test_controlled_with_effect(einsum_choice):
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_bitflip_noise(einsum_choice):
+    """Test `gates.NoiseChannel` on random initial density matrix."""
     initial_rho = random_density_matrix(2)
 
     c = models.Circuit(2)
@@ -206,6 +210,7 @@ def test_bitflip_noise(einsum_choice):
 
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_circuit_switch_to_density_matrix(einsum_choice):
+    """Test that using `gates.NoiseChnanel` switches vector to density matrix."""
     c = models.Circuit(2)
     c.add(gates.H(0).with_backend(einsum_choice))
     c.add(gates.H(1).with_backend(einsum_choice))
