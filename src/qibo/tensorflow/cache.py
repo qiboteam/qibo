@@ -1,8 +1,22 @@
+"""Tools for caching various elements required for circuit execution.
+
+Elements cached are the indices strings required for ``tf.einsum`` or the
+shapes and transposition orders required for ``tf.matmul``.
+"""
 from qibo.base import gates as base_gates
 from typing import List, Optional, Sequence
 
 
 class BaseCache:
+    """Base cache object for einsum backends defined in `einsum.py`.
+
+    ``circuit.calculation_cache`` is an object of this class.
+
+    ``self.vector`` returns the cache elements required for state vector
+    calculations.
+    ``self.left``, ``self.right``, ``self.left0`` and ``self.right0`` return the cache
+    elements required for density matrix calculations.
+    """
 
     def __init__(self, nqubits, ncontrol: Optional[int] = None):
         self.nqubits = nqubits
@@ -46,27 +60,30 @@ class BaseCache:
         return self._right0
 
     def _calculate_density_matrix(self):
+        """Calculates `left` and `right` elements."""
         raise NotImplementedError
 
     def _calculate_density_matrix_controlled(self):
+        """Calculates `left0` and `right0` elements."""
         raise NotImplementedError
 
 
 class DefaultEinsumCache(BaseCache):
+    """Cache object required by the :class:`qibo.tensorflow.einsum.DefaultEinsum` backend.
+
+    The ``vector``, ``left``, ``right``, ``left0``, ``right0`` properties are
+    strings that hold the einsum indices.
+
+    Args:
+        qubits (list): List with the qubit indices that the gate is applied to.
+        nqubits (int): Total number of qubits in the circuit / state vector.
+        ncontrol (int): Number of control qubits for `controlled_by` gates.
+    """
 
     _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
     def __init__(self, qubits: Sequence[int], nqubits: int,
                  ncontrol: Optional[int] = None):
-      """Creates index string for `tf.einsum`.
-
-      Args:
-          qubits (list): List with the qubit indices that the gate is applied to.
-          nqubits (int): Total number of qubits in the circuit / state vector.
-
-      Returns:
-          String formated as {input state}{gate matrix}->{output state}.
-      """
       super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
 
       if nqubits + len(qubits) > len(self._chars):
@@ -104,19 +121,23 @@ class DefaultEinsumCache(BaseCache):
 
 
 class MatmulEinsumCache(BaseCache):
+    """Cache object required by the :class:`qibo.tensorflow.einsum.MatmulEinsum` backend.
+
+    The ``vector``, ``left``, ``right``, ``left0``, ``right0`` properties are dictionaries
+    that hold the following keys:
+
+    * ``ids``: Indices for the transposition before matmul.
+    * ``inverse_ids``: Indices for the transposition after matmul.
+    * ``shapes``: Tuple with four shapes that are required for ``tf.reshape`` in the ``__call__`` method of :class:`qibo.tensorflow.einsum.MatmulEinsum`.
+
+    Args:
+        qubits (list): List with the qubit indices that the gate is applied to.
+        nqubits (int): Total number of qubits in the circuit / state vector.
+        ncontrol (int): Number of control qubits for `controlled_by` gates.
+    """
 
     def __init__(self, qubits: Sequence[int], nqubits: int,
                  ncontrol: Optional[int] = None):
-        """Creates indeces and shapes required for gate application with matmul.
-
-        Args:
-            qubits (tuple): Tuple with the qubit indices that the gate is applied to.
-            nqubits (int): Total number of qubits in the circuit / state vector.
-
-        Returns:
-            Indices for the first transposition (before matmul) and the inverse
-            transposition (after matmul) and the four reshape shapes.
-        """
         super(MatmulEinsumCache, self).__init__(nqubits, ncontrol)
         self.ntargets = len(qubits)
         self.nrest = nqubits - self.ntargets
@@ -190,11 +211,10 @@ class ControlCache:
     """Helper tools for `controlled_by` gates.
 
     This class contains:
-      A) an `order` that is used to transpose `state`
-         so that control legs are moved in the front
-      B) a `targets` list which is equivalent to the
-         `target_qubits` tuple but each index is reduced
-         by the amount of control qubits that preceed it.
+
+    * an `order` that is used to transpose `state` so that control legs are moved in the front
+    * a `targets` list which is equivalent to the `target_qubits` tuple but each index is reduced by the amount of control qubits that preceed it.
+
     This method is called by the `nqubits` setter so that the loop runs
     once per gate (and not every time the gate is called).
     """

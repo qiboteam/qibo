@@ -75,29 +75,33 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Propagates the state through the circuit applying the corresponding gates.
 
-        In default usage the full final state vector is returned.
+        In default usage the full final state vector or density matrix is returned.
         If the circuit contains measurement gates and `nshots` is given, then
-        the final state vector is sampled and the samples are returned.
+        the final state is sampled and the samples are returned.
+        Circuit execution uses by default state vectors but switches automatically
+        to density matrices if
 
         Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array.
-                A Tensorflow tensor with shape nqubits * (2,) is also allowed as an initial state if it has the `dtype` of the circuit.
-                If `initial_state` is `None` the |000...0> state will be used.
+            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
+                or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+                A Tensorflow tensor with shape ``nqubits * (2,)`` (or ``2 * nqubits * (2,)`` for density matrices)
+                is also allowed as an initial state but must have the `dtype` of the circuit.
+                If ``initial_state`` is ``None`` the |000...0> state will be used.
             nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
-                If `nshots` None the measurement gates will be ignored.
+                If ``nshots`` None the measurement gates will be ignored.
             callback: A Callback to calculate during circuit execution.
                 See :class:`qibo.tensorflow.callbacks.Callback` for more details.
                 User can give a single callback or list of callbacks here.
                 Note that if the Circuit is compiled then all callbacks should
-                be passed when `compile` is called, not during execution.
-                Otherwise an `RuntimeError` will be raised.
+                be passed when ``compile`` is called, not during execution.
+                Otherwise an ``RuntimeError`` will be raised.
 
         Returns:
-            If `nshots` is given and the circuit contains measurements
+            If ``nshots`` is given and the circuit contains measurements
                 A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
-            If `nshots` is `None` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape (2 ** nqubits,).
+            If ``nshots`` is ``None`` or the circuit does not contain measurements.
+                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
         if initial_state is None:
             state = self._default_initial_state()
@@ -170,7 +174,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __call__(self, initial_state: Optional[tf.Tensor] = None,
                  nshots: Optional[int] = None,
                  callback: Optional[callbacks.Callback] = None) -> tf.Tensor:
-        """Equivalent to `circuit.execute()`."""
+        """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots,
                             callback=callback)
 
@@ -191,6 +195,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def _output_shape(self):
+        """Proper shape of the returned final state."""
         if self.using_density_matrix:
             return 2 * (2 ** self.nqubits,)
         return (2 ** self.nqubits,)
