@@ -19,14 +19,14 @@ Models
 
 QIBO provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
 
-The general purpose model is called `Circuit` and holds the list of gates
-that are applied to the state vector or density matrix. All `Circuit` models
+The general purpose model is called ``Circuit`` and holds the list of gates
+that are applied to the state vector or density matrix. All ``Circuit`` models
 inherit the :class:`qibo.base.circuit.BaseCircuit` which implements basic
 properties of the circuit, such as the list of gates and the number of qubits.
 
 In order to perform calculations and apply gates to a state vector a backend
 has to be used. Our current backend of choice is `Tensorflow <http://tensorflow.org/>`_
-and the corresponding `Circuit` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
+and the corresponding ``Circuit`` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
 
 Currently there are two application specific models implemented,
 the Quantum Fourier Transform (:class:`qibo.models.QFT`) and
@@ -60,7 +60,7 @@ Application specific models
 Circuit addition
 ^^^^^^^^^^^^^^^^
 
-Circuit objects also support addition. For example
+``Circuit`` objects also support addition. For example
 
 .. code-block::  python
 

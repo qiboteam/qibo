@@ -26,7 +26,7 @@ Here is an example of a circuit with 2 qubits:
     print(final_state.numpy())
     # should print `np.array([1, 0, 0, 0])`
 
-If you are planning to freeze the circuit and just query for different initial states then you can use the Circuit.compile method which will improve the evaluation performance, e.g.:
+If you are planning to freeze the circuit and just query for different initial states then you can use the ``Circuit.compile`` method which will improve the evaluation performance, e.g.:
 
 .. code-block:: python
 
@@ -305,7 +305,7 @@ to train them.
 How to perform noisy simulation?
 --------------------------------
 
-QIBO can perform noisy simulation using density matrices. Circuit objects can
+QIBO can perform noisy simulation using density matrices. ``Circuit`` objects can
 evolve density matrices in a similar manner to state vectors. In order to use
 density matrices the user should execute the circuit passing a density matrix as
 the initial state. For example
@@ -334,7 +334,7 @@ will perform the transformation
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
 
 The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
-If this or any other channel is used in a Circuit, then the execution will automatically
+If this or any other channel is used in a ``Circuit``, then the execution will automatically
 switch to density matrices. For example
 
 .. code-block:: python
@@ -354,6 +354,6 @@ will perform the transformation
     \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
     \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
-Note that Circuit will use state vectors until the first channel is found and will
+Note that ``Circuit`` will use state vectors until the first channel is found and will
 switch to density matrices for the rest of the simulation. Measurements and
 callbacks can be used exactly as in the pure state vector case.
