@@ -41,9 +41,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             if gate.is_channel and not self.using_density_matrix:
                 # Switch from vector to density matrix
                 self.using_density_matrix = True
-                slicer0 = self.nqubits * (slice(None),)
-                slicer1 = self.nqubits * (tf.newaxis,)
-                state = state[slicer0 + slicer1] * tf.math.conj(state[slicer1])
+                state = tf.tensordot(state, tf.math.conj(state), axes=0)
 
             state = gate(state, is_density_matrix=self.using_density_matrix)
             for ic, callback in enumerate(self.callbacks):
