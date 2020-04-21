@@ -1,7 +1,7 @@
 Components
 ==========
 
-The Qibo package comes with the following modules:
+The QIBO package comes with the following modules:
 
 * Models_
 * Gates_
@@ -17,7 +17,7 @@ _______________________
 Models
 ------
 
-Qibo provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
+QIBO provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
 
 The general purpose model is called `Circuit` and holds the list of gates
 that are applied to the state vector or density matrix. All `Circuit` models
@@ -123,7 +123,7 @@ _______________________
 Measurements
 ------------
 
-Qibo is a wave function simulator in the sense that propagates the state vector
+QIBO is a wave function simulator in the sense that propagates the state vector
 through the circuit applying the corresponding gates. In the default usage the
 result of executing a circuit is the full final state vector. However for
 specific applications it is useful to have measurement samples from the final
