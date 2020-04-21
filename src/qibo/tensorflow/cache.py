@@ -79,8 +79,7 @@ class DefaultEinsumCache(BaseCache):
         nqubits (int): Total number of qubits in the circuit / state vector.
         ncontrol (int): Number of control qubits for `controlled_by` gates.
     """
-
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    from qibo.config import EINSUM_CHARS as _chars
 
     def __init__(self, qubits: Sequence[int], nqubits: int,
                  ncontrol: Optional[int] = None):

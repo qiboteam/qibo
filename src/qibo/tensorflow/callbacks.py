@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPE, DTYPECPX
+from qibo.config import DTYPE, DTYPECPX, EINSUM_CHARS
 from typing import List, Optional, Union
 
 
@@ -77,7 +77,7 @@ class EntanglementEntropy(Callback):
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPE)
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    _chars = EINSUM_CHARS
 
     def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
         super(EntanglementEntropy, self).__init__(steps)

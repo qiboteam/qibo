@@ -22,6 +22,9 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
+    # characters used in einsum strings
+    EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
     # Einsum backend switcher according to device
     if tf.config.list_physical_devices("GPU"):
         # If GPU is available use `tf.einsum`

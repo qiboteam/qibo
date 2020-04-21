@@ -31,8 +31,7 @@ class DefaultEinsum:
     The user should switch to :class:`qibo.tensorflow.einsum.MatmulEinsum`
     if automatic differentiation is required.
     """
-
-    _chars = cache.DefaultEinsumCache._chars
+    from qibo.config import EINSUM_CHARS as _chars
 
     def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       return tf.einsum(cache, state, gate)
