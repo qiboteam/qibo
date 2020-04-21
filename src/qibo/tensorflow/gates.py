@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.tensorflow import cache
+from qibo.base import cache
 from qibo.config import einsum, matrices, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Optional, Sequence, Tuple
 

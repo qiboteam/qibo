@@ -19,7 +19,7 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 import tensorflow as tf
-from qibo.tensorflow import cache
+from qibo.base import cache
 from typing import Dict, Optional, Sequence, Set
 
 
