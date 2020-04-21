@@ -334,7 +334,7 @@ class CZPow(Gate):
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
         0 & 0 & 1 & 0 \\\\
-        0 & 0 & 0 & e^{i \\theta / 2} \\\\
+        0 & 0 & 0 & e^{i \\theta } \\\\
         \\end{pmatrix}
 
     Note that this differs from the :class:`qibo.base.gates.RZ` gate.
@@ -420,6 +420,7 @@ class NoiseChannel(Gate):
 
     def __init__(self, q, px=0, py=0, pz=0):
         super(NoiseChannel, self).__init__()
+        self.name = "NoiseChannel"
         self.is_channel = True
         self.target_qubits = (q,)
         self.p = (px, py, pz)
@@ -439,7 +440,9 @@ class GeneralChannel(Gate):
         \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
 
     where A are arbitrary Krauss operators given by the user. Note that the
-    Krauss operators set should be trace preserving, however this is not checked.
+    Krauss operators set should be trace preserving, however this is not checked here.
+    For more information on channels and Krauss operators please check
+    `J. Preskill's notes <http://www.theory.caltech.edu/people/preskill/ph219/chap3_15.pdf>`_.
 
     Args:
         A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
@@ -466,6 +469,7 @@ class GeneralChannel(Gate):
 
     def __init__(self, A):
         super(GeneralChannel, self).__init__()
+        self.name = "GeneralChannel"
         self.is_channel = True
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
