@@ -474,6 +474,14 @@ class GeneralChannel(Gate):
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
 
+        # Check that given operators have the proper shape
+        for qubits, matrix in A:
+            rank = 2 ** len(qubits)
+            shape = tuple(matrix.shape)
+            if shape != (rank, rank):
+                raise ValueError("Invalid Krauss operator shape {} for acting "
+                                 "on {} qubits.".format(shape, len(qubits)))
+
     def controlled_by(self, *q):
         """"""
         raise ValueError("Channel cannot be controlled on qubits.")

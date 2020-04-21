@@ -320,11 +320,14 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         TensorflowGate.__init__(self)
 
-        rank = 2 * len(self.target_qubits)
-        # This reshape will raise an error if the number of target qubits
-        # given is incompatible to the shape of the given unitary.
+        rank = len(self.target_qubits)
+        shape = tuple(unitary.shape)
+        if shape != (2 ** rank, 2 ** rank):
+            raise ValueError("Invalid shape {} of unitary matrix acting on "
+                             "{} target qubits.".format(shape, rank))
+
         self.matrix = tf.convert_to_tensor(self.unitary, dtype=self.dtype)
-        self.matrix = tf.reshape(self.matrix, rank * (2,))
+        self.matrix = tf.reshape(self.matrix, 2 * rank * (2,))
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):
