@@ -469,3 +469,53 @@ def test_registers_with_same_name_error():
 
     with pytest.raises(KeyError):
         c = c1 + c2
+
+
+def test_density_matrix_measurement():
+    """Check measurement gate on density matrices."""
+    state = np.zeros(4)
+    state[2] = 1
+    rho = np.outer(state, state.conj()).reshape(4 * (2,))
+    result = gates.M(0, 1)(rho, nshots=100, is_density_matrix=True)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_results(result,
+                   decimal_samples=2 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={2: 100},
+                   binary_frequencies={"10": 100})
+
+
+def test_density_matrix_circuit_measurement():
+    """Check measurement gate on density matrices using circuit."""
+    state = np.zeros(16)
+    state[0] = 1
+    init_rho = np.outer(state, state.conj())
+
+    c = models.Circuit(4)
+    c.add(gates.X(1).with_backend("DefaultEinsum"))
+    c.add(gates.X(3).with_backend("DefaultEinsum"))
+    c.add(gates.M(0, 1, register_name="A"))
+    c.add(gates.M(3, 2, register_name="B"))
+    result = c(init_rho, nshots=100)
+    
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    assert_results(result,
+                   decimal_samples=6 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={6: 100},
+                   binary_frequencies={"0110": 100})
+
+    target = {}
+    target["decimal_samples"] = {"A": np.ones((100,)),
+                                 "B": 2 * np.ones((100,))}
+    target["binary_samples"] = {"A": np.zeros((100, 2)),
+                                "B": np.zeros((100, 2))}
+    target["binary_samples"]["A"][:, 1] = 1
+    target["binary_samples"]["B"][:, 0] = 1
+    target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
+    target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
+    assert_register_results(result, **target)

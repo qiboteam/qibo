@@ -14,7 +14,8 @@ class GateResult:
     Args:
         qubits: Sorted tuple of qubit ids that the measurement gate acts on.
         state: Reference to the tensor that holds the state that was sampled.
-            The state should have shape nqubits * (2,).
+            The state should have shape ``nqubits * (2,)`` if it is a state vector
+            or ``2 * nqubits * (2,)`` if it is a density matrix.
         decimal_samples: Tensor holding the measured samples in decimal
             representation. Has shape (nshots,).
         binary_samples: Tensor holding the measured samples in binary

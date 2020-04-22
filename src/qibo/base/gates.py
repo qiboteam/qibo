@@ -15,6 +15,7 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
+        self.is_channel = False
         self.is_controlled_by = False
         self.parameters = []
 
@@ -333,7 +334,7 @@ class CZPow(Gate):
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
         0 & 0 & 1 & 0 \\\\
-        0 & 0 & 0 & e^{i \\theta / 2} \\\\
+        0 & 0 & 0 & e^{i \\theta } \\\\
         \\end{pmatrix}
 
     Note that this differs from the :class:`qibo.base.gates.RZ` gate.
@@ -398,6 +399,92 @@ class Unitary(Gate):
         self.name = "Unitary" if name is None else name
         self.unitary = unitary
         self.target_qubits = tuple(q)
+
+
+class NoiseChannel(Gate):
+    """Probabilistic noise channel.
+
+    Implements the following evolution
+
+    .. math::
+        \\rho \\rightarrow (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
+
+    which can be used to simulate phase flip and bit flip errors.
+
+    Args:
+        q (int): Qubit id that the noise acts on.
+        px (float): Bit flip (X) error probability.
+        py (float): Y-error probability.
+        pz (float): Phase flip (Z) error probability.
+    """
+
+    def __init__(self, q, px=0, py=0, pz=0):
+        super(NoiseChannel, self).__init__()
+        self.name = "NoiseChannel"
+        self.is_channel = True
+        self.target_qubits = (q,)
+        self.p = (px, py, pz)
+        self.total_p = sum(self.p)
+
+    def controlled_by(self, *q):
+        """"""
+        raise ValueError("Noise channel cannot be controlled on qubits.")
+
+
+class GeneralChannel(Gate):
+    """General channel defined by arbitrary Krauss operators.
+
+    Implements the following evolution
+
+    .. math::
+        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
+
+    where A are arbitrary Krauss operators given by the user. Note that the
+    Krauss operators set should be trace preserving, however this is not checked here.
+    For more information on channels and Krauss operators please check
+    `J. Preskill's notes <http://www.theory.caltech.edu/people/preskill/ph219/chap3_15.pdf>`_.
+
+    Args:
+        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
+          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
+          corresponding matrix.
+
+    Example:
+        ::
+
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
+    """
+
+    def __init__(self, A):
+        super(GeneralChannel, self).__init__()
+        self.name = "GeneralChannel"
+        self.is_channel = True
+        self.target_qubits = tuple(sorted(set(
+          q for qubits, _ in A for q in qubits)))
+
+        # Check that given operators have the proper shape
+        for qubits, matrix in A:
+            rank = 2 ** len(qubits)
+            shape = tuple(matrix.shape)
+            if shape != (rank, rank):
+                raise ValueError("Invalid Krauss operator shape {} for acting "
+                                 "on {} qubits.".format(shape, len(qubits)))
+
+    def controlled_by(self, *q):
+        """"""
+        raise ValueError("Channel cannot be controlled on qubits.")
 
 
 class Flatten(Gate):

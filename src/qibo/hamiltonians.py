@@ -42,7 +42,10 @@ class Hamiltonian(object):
 class XXZ(Hamiltonian):
     """This class implements the Heisenberg XXZ model.
     The mode uses the Pauli matrices and build the final
-    Hamiltonian: H = Hx + Hy + delta * Hz.
+    Hamiltonian:
+
+    .. math::
+        H = H_x + H_y + \\delta \cdot H_z.
 
     Args:
         nqubits (int): number of quantum bits.

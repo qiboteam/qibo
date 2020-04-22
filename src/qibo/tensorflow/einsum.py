@@ -19,7 +19,8 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 import tensorflow as tf
-from typing import Sequence
+from qibo.base import cache
+from typing import Dict, Optional, Sequence, Set
 
 
 class DefaultEinsum:
@@ -30,38 +31,54 @@ class DefaultEinsum:
     The user should switch to :class:`qibo.tensorflow.einsum.MatmulEinsum`
     if automatic differentiation is required.
     """
+    from qibo.config import EINSUM_CHARS as _chars
 
-    _chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
+      return tf.einsum(cache, state, gate)
 
-    def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
-        return tf.einsum(cache, state, gate)
+    @staticmethod
+    def create_cache(qubits: Sequence[int], nqubits: int,
+                     ncontrol: Optional[int] = None) -> cache.DefaultEinsumCache:
+        return cache.DefaultEinsumCache(qubits, nqubits, ncontrol)
 
     @classmethod
-    def create_cache(cls, qubits: Sequence[int], nqubits: int) -> str:
-        """Creates index string for `tf.einsum`.
+    def partialtrace_str(cls, qubits: Set[int], nqubits: int,
+                         measuring: bool = False) -> str:
+        """Generates einsum strings for partial trace of density matrices.
+
+        Helper method used when measuring or calculating entanglement entropies
+        on density matrices.
 
         Args:
-            qubits (list): List with the qubit indices that the gate is applied to.
-            nqubits (int): Total number of qubits in the circuit / state vector.
+            qubits (list): Set of qubit ids that are traced out.
+            nqubits (int): Total number of qubits in the state.
+            measuring (bool): If True non-traced-out indices are multiplied and
+                the output has shape (nqubits - len(qubits),).
+                If False the output has shape 2 * (nqubits - len(qubits),).
 
         Returns:
-            String formated as {input state}{gate matrix}->{output state}.
+            String to use in einsum for performing partial density of a
+            density matrix.
         """
-        if len(qubits) + nqubits > len(cls._chars):
+        if (2 - int(measuring)) * nqubits > len(cls._chars):
             raise NotImplementedError("Not enough einsum characters.")
 
-        input_state = list(cls._chars[: nqubits])
-        output_state = input_state[:]
-        gate_chars = list(cls._chars[nqubits : nqubits + len(qubits)])
+        left_in, right_in, left_out, right_out = [], [], [], []
+        for i in range(nqubits):
+            left_in.append(cls._chars[i])
+            if i in qubits:
+                right_in.append(cls._chars[i])
+            else:
+                left_out.append(cls._chars[i])
+                if measuring:
+                    right_in.append(cls._chars[i])
+                else:
+                    right_in.append(cls._chars[i + nqubits])
+                    right_out.append(cls._chars[i + nqubits])
 
-        for i, q in enumerate(qubits):
-            gate_chars.append(input_state[q])
-            output_state[q] = gate_chars[i]
-
-        input_str = "".join(input_state)
-        gate_str = "".join(gate_chars)
-        output_str = "".join(output_state)
-        return "{},{}->{}".format(input_str, gate_str, output_str)
+        left_in, left_out = "".join(left_in), "".join(left_out)
+        right_in, right_out = "".join(right_in), "".join(right_out)
+        return f"{left_in}{right_in}->{left_out}{right_out}"
 
 
 class MatmulEinsum:
@@ -83,13 +100,16 @@ class MatmulEinsum:
     qubit order agrees with the initial.
   """
 
-  def __call__(self, cache, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
-      indices, inv_indices = cache["indices"], cache["inv_indices"]
+  def __call__(self, cache: Dict, state: tf.Tensor,
+               gate: tf.Tensor) -> tf.Tensor:
       shapes = cache["shapes"]
 
       state = tf.reshape(state, shapes[0])
-      state = tf.transpose(state, indices)
-      state = tf.reshape(state, shapes[1])
+      state = tf.transpose(state, cache["ids"])
+      if cache["conjugate"]:
+          state = tf.reshape(tf.math.conj(state), shapes[1])
+      else:
+          state = tf.reshape(state, shapes[1])
 
       n = len(tuple(gate.shape))
       if n > 2:
@@ -99,48 +119,11 @@ class MatmulEinsum:
           state = tf.matmul(gate, state)
 
       state = tf.reshape(state, shapes[2])
-      state = tf.transpose(state, inv_indices)
+      state = tf.transpose(state, cache["inverse_ids"])
       state = tf.reshape(state, shapes[3])
       return state
 
   @staticmethod
-  def create_cache(qubits: Sequence[int], nqubits: int):
-      """Creates indeces and shapes required for gate application with matmul.
-
-      Args:
-          qubits (tuple): Tuple with the qubit indices that the gate is applied to.
-          nqubits (int): Total number of qubits in the circuit / state vector.
-
-      Returns:
-          Indices for the first transposition (before matmul) and the inverse
-          transposition (after matmul) and the four reshape shapes.
-      """
-      ntargets = len(qubits)
-      nrest = nqubits - ntargets
-
-      last_index = 0
-      target_ids = {}
-      rest_ids = []
-      shape = []
-      for q in sorted(qubits):
-          if q > last_index:
-              shape.append(2 ** (q - last_index))
-              rest_ids.append(len(shape) - 1)
-          shape.append(2)
-          target_ids[q] = len(shape) - 1
-          last_index = q + 1
-      if last_index < nqubits:
-          shape.append(2 ** (nqubits - last_index))
-          rest_ids.append(len(shape) - 1)
-
-      ids = [target_ids[q] for q in qubits] + rest_ids
-      transposed_shape = []
-      inv_ids = len(ids) * [0]
-      for i, r in enumerate(ids):
-          inv_ids[r] = i
-          transposed_shape.append(shape[r])
-
-      cache = {"indices": ids, "inv_indices": inv_ids,
-               "shapes": (shape, (2 ** ntargets, 2 ** nrest),
-                          transposed_shape, nqubits * (2,))}
-      return cache
+  def create_cache(qubits: Sequence[int], nqubits: int,
+                   ncontrol: Optional[int] = None) -> cache.MatmulEinsumCache:
+      return cache.MatmulEinsumCache(qubits, nqubits, ncontrol)

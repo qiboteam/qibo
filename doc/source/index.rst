@@ -1,5 +1,5 @@
 .. title::
-      qibo's documentation!
+      QIBO's documentation!
 
 ===================================
 QIBO: a quantum computing framework
