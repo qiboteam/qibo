@@ -84,8 +84,8 @@ def test_entropy_multiple_executions():
     state = c(callback=entropy)
 
     def target_entropy(t):
-        cos = np.cos(t / 2.0) ** 4
-        sin = np.sin(t / 2.0) ** 4
+        cos = np.cos(t / 2.0) ** 2
+        sin = np.sin(t / 2.0) ** 2
         return - cos * np.log2(cos) - sin * np.log2(sin)
 
     target = [[0, target_entropy(0.1234)], [0, target_entropy(0.4321)]]

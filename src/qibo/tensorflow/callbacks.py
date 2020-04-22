@@ -145,11 +145,11 @@ class EntanglementEntropy(Callback):
         # Construct reduced density matrix
         rho = self._partial_trace(state, is_density_matrix)
         # Diagonalize
-        eigvals = tf.linalg.eigvalsh(rho)
-        eigvals2 = tf.square(tf.abs(eigvals))
+        eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+        print(eigvals)
         # Calculate entropy (treating zero eigenvalues)
-        regularizer = tf.where(eigvals2 == 0,
-                               tf.ones_like(eigvals2),
-                               tf.zeros_like(eigvals2))
-        entropy = - tf.reduce_sum(eigvals2 * tf.math.log(eigvals2 + regularizer))
+        regularizer = tf.where(eigvals == 0,
+                               tf.ones_like(eigvals),
+                               tf.zeros_like(eigvals))
+        entropy = - tf.reduce_sum(eigvals * tf.math.log(eigvals + regularizer))
         return entropy / self._log2
