@@ -1,4 +1,5 @@
 ![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
 
 # QIBO
 
