@@ -77,6 +77,7 @@ class EntanglementEntropy(Callback):
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPE)
+    _epsilon = 1e-14 # eigenvalues smaller than this cut-off are ignored
     _chars = EINSUM_CHARS
 
     def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
@@ -125,6 +126,20 @@ class EntanglementEntropy(Callback):
                                axes=[self.partition, self.partition])
         return tf.reshape(rho, (self.rho_dim, self.rho_dim))
 
+    @classmethod
+    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
+      """Calculates entropy of a density matrix."""
+      # Diagonalize
+      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+      # Treating zero and negative eigenvalues
+      mask = tf.where(eigvals > cls._epsilon,
+                      tf.ones_like(eigvals),
+                      tf.zeros_like(eigvals))
+      masked_eigvals = mask * eigvals
+      entropy = - tf.reduce_sum(masked_eigvals *
+                                tf.math.log(masked_eigvals + 1 - mask))
+      return entropy / cls._log2
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         # Cast state in the proper shape
@@ -144,11 +159,5 @@ class EntanglementEntropy(Callback):
 
         # Construct reduced density matrix
         rho = self._partial_trace(state, is_density_matrix)
-        # Diagonalize
-        eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
-        # Calculate entropy (treating zero eigenvalues)
-        regularizer = tf.where(eigvals == 0,
-                               tf.ones_like(eigvals),
-                               tf.zeros_like(eigvals))
-        entropy = - tf.reduce_sum(eigvals * tf.math.log(eigvals + regularizer))
-        return entropy / self._log2
+        # Calculate entropy of reduced density matrix
+        return self._entropy(rho)
