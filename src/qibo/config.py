@@ -25,6 +25,10 @@ if BACKEND_NAME == "tensorflow":
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+    # Entanglement entropy eigenvalue cut-off
+    # Eigenvalues smaller than this cut-off are ignored in entropy calculation
+    EIGVAL_CUTOFF = 1e-14
+
     # Einsum backend switcher according to device
     if tf.config.list_physical_devices("GPU"):
         # If GPU is available use `tf.einsum`

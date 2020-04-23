@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPE, DTYPECPX, EINSUM_CHARS
+from qibo.config import DTYPE, DTYPECPX, EINSUM_CHARS, EIGVAL_CUTOFF
 from typing import List, Optional, Union
 
 
@@ -125,6 +125,16 @@ class EntanglementEntropy(Callback):
                                axes=[self.partition, self.partition])
         return tf.reshape(rho, (self.rho_dim, self.rho_dim))
 
+    @classmethod
+    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
+      """Calculates entropy of a density matrix."""
+      # Diagonalize
+      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+      # Treating zero and negative eigenvalues
+      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
+      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
+      return entropy / cls._log2
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         # Cast state in the proper shape
@@ -144,12 +154,5 @@ class EntanglementEntropy(Callback):
 
         # Construct reduced density matrix
         rho = self._partial_trace(state, is_density_matrix)
-        # Diagonalize
-        eigvals = tf.linalg.eigvalsh(rho)
-        eigvals2 = tf.square(tf.abs(eigvals))
-        # Calculate entropy (treating zero eigenvalues)
-        regularizer = tf.where(eigvals2 == 0,
-                               tf.ones_like(eigvals2),
-                               tf.zeros_like(eigvals2))
-        entropy = - tf.reduce_sum(eigvals2 * tf.math.log(eigvals2 + regularizer))
-        return entropy / self._log2
+        # Calculate entropy of reduced density matrix
+        return self._entropy(rho)
