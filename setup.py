@@ -35,10 +35,10 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=["numpy", "tensorflow>=2.1.0", "scipy", "cma"],
+    install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma"],
     extras_require={
         "docs": ["sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
     },
-    python_requires=">=3.6,<3.8",
+    python_requires=">=3.6",
     long_description="See readthedocs webpage with the documentation",
 )
