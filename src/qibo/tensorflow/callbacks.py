@@ -131,12 +131,8 @@ class EntanglementEntropy(Callback):
       # Diagonalize
       eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
       # Treating zero and negative eigenvalues
-      mask = tf.where(eigvals > EIGVAL_CUTOFF,
-                      tf.ones_like(eigvals),
-                      tf.zeros_like(eigvals))
-      masked_eigvals = mask * eigvals
-      entropy = - tf.reduce_sum(masked_eigvals *
-                                tf.math.log(masked_eigvals + 1 - mask))
+      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
+      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
       return entropy / cls._log2
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
