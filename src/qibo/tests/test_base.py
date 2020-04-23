@@ -13,7 +13,7 @@ def test_circuit_sanity():
     assert c.size == 2
 
 
-def test_importing_qibo():
+def test_importing_full_qibo():
     """Checks accessing `models` and `gates` from `qibo`."""
     import qibo
     c = qibo.models.Circuit(2)
@@ -22,8 +22,8 @@ def test_importing_qibo():
     assert c.depth == 1
 
 
-def test_importing_qibo():
-    """Checks importing `models` and `gates`."""
+def test_importing_qibo_modules():
+    """Checks importing `models` and `gates` from qibo."""
     from qibo import models, gates
     c = models.Circuit(2)
     c.add(gates.H(0))
