@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPE, DTYPECPX, EINSUM_CHARS, EIGVAL_CUTOFF, GPU_ENTROPY_CUTOFF, CPU_NAME
+from qibo.config import DTYPE, DTYPECPX, EINSUM_CHARS, EIGVAL_CUTOFF
 from typing import List, Optional, Union
 
 
@@ -152,13 +152,7 @@ class EntanglementEntropy(Callback):
             raise TypeError("State of unknown type {} was given in callback "
                             "calculation.".format(type(state)))
 
-        if self.nqubits > GPU_ENTROPY_CUTOFF and CPU_NAME is not None:
-            # Fall back to CPU if nqubits are more than the GPU cut-off
-            with tf.device(CPU_NAME):
-                rho = self._partial_trace(state, is_density_matrix)
-                entropy = self._entropy(rho)
-        else:
-            rho = self._partial_trace(state, is_density_matrix)
-            entropy = self._entropy(rho)
-
-        return entropy
+        # Construct reduced density matrix
+        rho = self._partial_trace(state, is_density_matrix)
+        # Calculate entropy of reduced density matrix
+        return self._entropy(rho)

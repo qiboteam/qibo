@@ -46,8 +46,6 @@ if BACKEND_NAME == "tensorflow":
 
     # Set memory cut-off for using GPU when sampling
     GPU_MEASUREMENT_CUTOFF = 1300000000
-    # Number of qubits cut-off for using GPU to calculate entanglement entropy
-    GPU_ENTROPY_CUTOFF = 26
 
     # Find available CPUs as they may be needed for sampling
     _available_cpus = tf.config.list_logical_devices("CPU")
