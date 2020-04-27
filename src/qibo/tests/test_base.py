@@ -78,3 +78,14 @@ def test_circuit_addition():
 
     c3 = c1 + c2
     assert c3.depth == 3
+
+
+def test_circuit_copy():
+    """Check that ``circuit.copy()`` copies gates properly"""
+    c1 = Circuit(2)
+    c1.add([H(0), H(1), CNOT(0, 1)])
+    c2 = c1.copy()
+    assert c2.depth == c1.depth
+    assert c2.nqubits == c1.nqubits
+    for g1, g2 in zip(c1.queue, c2.queue):
+        assert g1 is g2

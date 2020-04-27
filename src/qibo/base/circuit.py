@@ -85,6 +85,31 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
+    @classmethod
+    def _from_circuit(cls, circuit: "BaseCircuit", deep: bool = False
+                      ) -> "BaseCircuit":
+        if deep:
+            raise NotImplementedError
+
+        new_circuit = cls(circuit.nqubits)
+        new_circuit.queue = list(circuit.queue)
+        new_circuit.measurement_tuples = dict(circuit.measurement_tuples)
+        new_circuit.measurement_gate = circuit.measurement_gate
+        return new_circuit
+
+    def copy(self, deep: bool = False) -> "BaseCircuit":
+        """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
+
+        Args:
+            deep (bool): If True new gate objects will be created that act in the same
+                qubits as in ``circuit``. Otherwise, the same gate objects of
+                ``circuit`` will be used.
+
+        Returns:
+            The copied circuit object.
+        """
+        return self._from_circuit(self, deep=deep)
+
     def _check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
 
@@ -167,10 +192,23 @@ class BaseCircuit(object):
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
 
+    @property
+    def final_state(self):
+        """Returns the final state after full simulation of the circuit.
+
+        If the circuit is executed more than once, only the last final state
+        is returned.
+        """
+        raise NotImplementedError
+
     @abstractmethod
-    def execute(self):
+    def execute(self, *args):
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
+
+    def __call__(self, *args):
+        """Equivalent to ``circuit.execute``."""
+        return self.execute(*args)
 
     def to_qasm(self):
         """Convert circuit to QASM.
