@@ -23,9 +23,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.compiled_execute = None
         self.callbacks = []
 
-        self._final_state = None
-        self.using_density_matrix = False
-
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
@@ -157,7 +154,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
-            self._final_state = tf.reshape(state, self._output_shape)
+            shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
+            self._final_state = tf.reshape(state, shape)
             return self._final_state
 
         samples = self.measurement_gate(state, nshots, samples_only=True,
@@ -189,14 +187,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
                              "executed.")
         if self.measurement_gate_result is None:
             return self._final_state
-        return tf.reshape(self._final_state, self._output_shape)
-
-    @property
-    def _output_shape(self):
-        """Proper shape of the returned final state."""
-        if self.using_density_matrix:
-            return 2 * (2 ** self.nqubits,)
-        return (2 ** self.nqubits,)
+        shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
+        return tf.reshape(self._final_state, shape)
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""

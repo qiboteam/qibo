@@ -43,6 +43,9 @@ class BaseCircuit(object):
         self.measurement_gate = None
         self.measurement_gate_result = None
 
+        self._final_state = None
+        self.using_density_matrix = False
+
     def __add__(self, circuit):
         """Add circuits.
 
