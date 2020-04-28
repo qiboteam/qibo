@@ -200,6 +200,12 @@ class BaseCircuit(object):
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")
 
+        for q in gate.target_qubits:
+            if q >= self.nqubits:
+                raise ValueError("Attempting to add gate with target qubits {} "
+                                 "on a circuit of {} qubits."
+                                 "".format(gate.target_qubits, self.nqubits))
+
         # Set number of qubits in gate
         if gate._nqubits is None:
             gate.nqubits = self.nqubits
