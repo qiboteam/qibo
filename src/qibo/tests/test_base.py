@@ -81,7 +81,7 @@ def test_circuit_addition():
 
 
 def test_circuit_copy():
-    """Check that ``circuit.copy()`` copies gates properly"""
+    """Check that ``circuit.copy()`` copies gates properly."""
     c1 = Circuit(2)
     c1.add([H(0), H(1), CNOT(0, 1)])
     c2 = c1.copy()
@@ -89,3 +89,15 @@ def test_circuit_copy():
     assert c2.nqubits == c1.nqubits
     for g1, g2 in zip(c1.queue, c2.queue):
         assert g1 is g2
+
+
+def test_circuit_copy_with_measurements():
+    """Check that ``circuit.copy()`` copies measurements properly."""
+    c1 = Circuit(4)
+    c1.add([H(0), H(3), CNOT(0, 2)])
+    c1.add(M(0, 1, register_name="a"))
+    c1.add(M(3, register_name="b"))
+    c2 = c1.copy()
+
+    assert c2.measurement_gate is c1.measurement_gate
+    assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}

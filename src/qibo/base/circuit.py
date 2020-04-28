@@ -89,7 +89,7 @@ class BaseCircuit(object):
     def _from_circuit(cls, circuit: "BaseCircuit", deep: bool = False
                       ) -> "BaseCircuit":
         if deep:
-            raise NotImplementedError
+            raise NotImplementedError("Deep copy is not implemented yet.")
 
         new_circuit = cls(circuit.nqubits)
         new_circuit.queue = list(circuit.queue)
