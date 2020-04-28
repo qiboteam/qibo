@@ -85,18 +85,6 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
-    @classmethod
-    def _from_circuit(cls, circuit: "BaseCircuit", deep: bool = False
-                      ) -> "BaseCircuit":
-        if deep:
-            raise NotImplementedError("Deep copy is not implemented yet.")
-
-        new_circuit = cls(circuit.nqubits)
-        new_circuit.queue = list(circuit.queue)
-        new_circuit.measurement_tuples = dict(circuit.measurement_tuples)
-        new_circuit.measurement_gate = circuit.measurement_gate
-        return new_circuit
-
     def copy(self, deep: bool = False) -> "BaseCircuit":
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
@@ -108,7 +96,14 @@ class BaseCircuit(object):
         Returns:
             The copied circuit object.
         """
-        return self._from_circuit(self, deep=deep)
+        if deep:
+            raise NotImplementedError("Deep copy is not implemented yet.")
+
+        new_circuit = self.__class__(self.nqubits)
+        new_circuit.queue = list(self.queue)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        new_circuit.measurement_gate = self.measurement_gate
+        return new_circuit
 
     def _check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
