@@ -504,3 +504,17 @@ def test_two_variables_backpropagation():
     target_grad2 = - np.cos(t[0]) * np.sin(t[1])
     target_grad = np.array([target_grad1, target_grad2]) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)
+
+
+def test_circuit_copy():
+    """Check that circuit copy execution is equivalent to original circuit."""
+    theta = 0.1234
+
+    c1 = Circuit(2)
+    c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
+    target_state = c1.execute().numpy()
+
+    c2 = c1.copy()
+    final_state = c2.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)

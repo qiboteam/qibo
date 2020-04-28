@@ -26,6 +26,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
+    def copy(self, deep: bool = False) -> "TensorflowCircuit":
+        new_circuit = super(TensorflowCircuit, self).copy(deep)
+        new_circuit.callbacks = list(self.callbacks)
+        return new_circuit
+
     def _execute_func(self, state: tf.Tensor) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """Simulates the circuit gates.
 
