@@ -512,9 +512,9 @@ def test_circuit_copy():
 
     c1 = Circuit(2)
     c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
-    target_state = c1.execute().numpy()
-
     c2 = c1.copy()
+    
+    target_state = c1.execute().numpy()
     final_state = c2.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
