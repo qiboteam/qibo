@@ -127,6 +127,7 @@ class BaseCircuit(object):
                    noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
+        """"""
         noise_map = self._check_noise_map(noise_map)
         if measurement_noise is not None:
             if self.measurement_gate is None:
