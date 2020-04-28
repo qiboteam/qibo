@@ -26,6 +26,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
+    def with_noise(self, noise_map: circuit.NoiseMapType,
+                   measurement_noise: Optional[circuit.NoiseMapType] = None
+                   ) -> "TensorflowCircuit":
+        return super(TensorflowCircuit, self).with_noise(gates.NoiseChannel,
+                                                         noise_map,
+                                                         measurement_noise)
+
     def _execute_func(self, state: tf.Tensor) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """Simulates the circuit gates.
 

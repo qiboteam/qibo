@@ -2,7 +2,9 @@
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
-from typing import Iterable, Set, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple, Union
+NoiseMapType = Union[Tuple[int, int, int],
+                     Dict[int, Tuple[int, int, int]]]
 
 QASM_GATES = {"h", "x", "y", "z",
               "rx", "ry", "rz",
@@ -104,6 +106,65 @@ class BaseCircuit(object):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         new_circuit.measurement_gate = self.measurement_gate
         return new_circuit
+
+    def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
+        if isinstance(noise_map, tuple) or isinstance(noise_map, list):
+            if len(noise_map) != 3:
+                raise ValueError("Noise map expects three probabilities "
+                                 "but received {}.".format(v))
+            return {q: noise_map for q in range(self.nqubits)}
+        elif isinstance(noise_map, dict):
+            for v in noise_map.values():
+                if len(v) != 3:
+                    raise ValueError("Noise map expects three probabilities "
+                                     "but received {}.".format(v))
+            return noise_map
+
+        raise TypeError("Type {} of noise map is not recognized."
+                        "".format(type(noise_map)))
+
+    def with_noise(self, noise_channel_class,
+                   noise_map: NoiseMapType,
+                   measurement_noise: Optional[NoiseMapType] = None
+                   ) -> "BaseCircuit":
+        noise_map = self._check_noise_map(noise_map)
+        if measurement_noise is not None:
+            if self.measurement_gate is None:
+                raise ValueError("Passed measurement noise but the circuit "
+                                 "does not contain measurement gates.")
+            measurement_noise = self._check_noise_map(measurement_noise)
+            # apply measurement noise only to the qubits that are measured
+            # and leave default noise to the rest
+            measured_qubits = set(self.measurement_gate.target_qubits)
+            measurement_noise = {q: measurement_noise[q] if q in measured_qubits
+                                 else noise_map[q] for q in range(self.nqubits)}
+
+        # Generate noise gates
+        noise_gates = []
+        for gate in self.queue:
+            if isinstance(gate, noise_channel_class):
+                raise ValueError("`.with_noise` method is not available for "
+                                 "circuits that already contain noise channels.")
+            noise_gates.append([noise_channel_class(q, *list(p))
+                                for q, p in noise_map.items()
+                                if sum(p) > 0])
+        if measurement_noise is not None:
+            noise_gates[-1] = [noise_channel_class(q, *list(p))
+                               for q, p in measurement_noise.items()
+                               if sum(p) > 0]
+
+        # Create new circuit with noise gates inside
+        noisy_circuit = self.__class__(self.nqubits)
+        noisy_circuit.queue = []
+        for i, gate in enumerate(self.queue):
+            # Do not use `circuit.add` here because these gates are already
+            # added in the original circuit
+            noisy_circuit.queue.append(gate)
+            for noise_gate in noise_gates[i]:
+                noisy_circuit.add(noise_gate)
+        noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
+        noisy_circuit.measurement_gate = self.measurement_gate
+        return noisy_circuit
 
     def _check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
