@@ -111,9 +111,12 @@ class BaseCircuit(object):
         if isinstance(noise_map, tuple) or isinstance(noise_map, list):
             if len(noise_map) != 3:
                 raise ValueError("Noise map expects three probabilities "
-                                 "but received {}.".format(v))
+                                 "but received {}.".format(len(noise_map)))
             return {q: noise_map for q in range(self.nqubits)}
         elif isinstance(noise_map, dict):
+            if len(noise_map) != self.nqubits:
+                raise ValueError("Noise map has {} qubits while the circuit "
+                                 "has {}.".format(len(noise_map), self.nqubits))
             for v in noise_map.values():
                 if len(v) != 3:
                     raise ValueError("Noise map expects three probabilities "

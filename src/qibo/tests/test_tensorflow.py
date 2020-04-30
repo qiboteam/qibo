@@ -595,3 +595,17 @@ def test_circuit_with_noise_noise_map():
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_noise_map_exceptions():
+    """Check that proper exceptions are raised when noise map is invalid."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3))
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
+    with pytest.raises(TypeError):
+        noisy_c = c.with_noise({0, 1})
