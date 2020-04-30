@@ -102,29 +102,30 @@ class TensorflowCircuit(circuit.BaseCircuit):
             state = self._default_initial_state()
 
         else:
-            shape = tuple(initial_state.shape)
-            def shape_error():
+            def shape_error(shape):
                 raise ValueError("Invalid initial state shape {} for circuit "
                                  "with {} qubits.".format(shape, self.nqubits))
 
             if isinstance(initial_state, np.ndarray):
+                shape = initial_state.shape
                 if len(shape) == 1:
                     # Assume state vector was given
                     if 2 ** self.nqubits != shape[0]:
-                        shape_error()
+                        shape_error(shape)
                     state = tf.cast(initial_state.reshape(self.nqubits * (2,)),
                                     dtype=self.dtype)
                 elif len(shape) == 2:
                     # Assume density matrix was given
                     self.using_density_matrix = True
                     if 2 * (2 ** self.nqubits,) != shape:
-                        shape_error()
+                        shape_error(shape)
                     state = tf.cast(initial_state.reshape(2 * self.nqubits * (2,)),
                                     dtype=self.dtype)
                 else:
-                    shape_error()
+                    shape_error(shape)
 
             elif isinstance(initial_state, tf.Tensor):
+                shape = tuple(initial_state.shape)
                 if initial_state.dtype != self.dtype:
                     raise TypeError("Circuit is of type {} but initial state is "
                                     "{}.".format(self.dtype, initial_state.dtype))
@@ -135,7 +136,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                     self.using_density_matrix = True
                     state = initial_state
                 else:
-                    shape_error()
+                    shape_error(shape)
             else:
                 raise TypeError("Initial state type {} is not recognized."
                                 "".format(type(initial_state)))

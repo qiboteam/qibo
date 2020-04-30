@@ -414,6 +414,15 @@ def test_compiled_circuit(einsum_choice):
     np.testing.assert_allclose(r1, r2)
 
 
+def test_compiling_twice_exception():
+    """Check that compiling a circuit a second time raises error."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    c.compile()
+    with pytest.raises(RuntimeError):
+        c.compile()
+
+
 def test_circuit_custom_compilation():
     theta = 0.1234
     init_state = np.ones(4) / 2.0
@@ -437,6 +446,26 @@ def test_circuit_custom_compilation():
     r2 = compiled_circuit(init_state)
 
     np.testing.assert_allclose(r1, r2)
+
+
+def test_bad_initial_state():
+    """Check that errors are raised when bad initial state is passed."""
+    import tensorflow as tf
+    from qibo.config import DTYPECPX
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros(2**3))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros((2, 2)))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros((2, 2, 2)))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=tf.zeros((2, 2), dtype=tf.float32))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=tf.zeros(4, dtype=DTYPECPX))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=0)
 
 
 def test_variable_theta():
