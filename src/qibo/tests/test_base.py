@@ -2,6 +2,7 @@
 Test imports and basic functionality that is indepedent of calculation backend.
 """
 import numpy as np
+import pytest
 from qibo.models import *
 from qibo.gates import *
 
@@ -38,6 +39,23 @@ def test_circuit_add():
     c.add(H(1))
     c.add(CNOT(0, 1))
     assert c.depth == 3
+
+
+def test_circuit_add_bad_gate():
+    """Check ``circuit.add()`` exceptions."""
+    c = Circuit(2)
+    with pytest.raises(TypeError):
+        c.add(0)
+    with pytest.raises(ValueError):
+        c.add(H(2))
+    with pytest.raises(ValueError):
+        gate = H(1)
+        gate.nqubits = 3
+        c.add(gate)
+
+    final_state = c()
+    with pytest.raises(RuntimeError):
+        c.add(H(0))
 
 
 def test_circuit_add_iterable():
@@ -89,6 +107,13 @@ def test_circuit_copy():
     assert c2.nqubits == c1.nqubits
     for g1, g2 in zip(c1.queue, c2.queue):
         assert g1 is g2
+
+
+def test_circuit_deep_copy():
+    c1 = Circuit(2)
+    c1.add([H(0), H(1), CNOT(0, 1)])
+    with pytest.raises(NotImplementedError):
+        c2 = c1.copy(deep=True)
 
 
 def test_circuit_copy_with_measurements():
