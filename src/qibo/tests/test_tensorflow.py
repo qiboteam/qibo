@@ -609,3 +609,14 @@ def test_circuit_with_noise_noise_map_exceptions():
         noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
     with pytest.raises(TypeError):
         noisy_c = c.with_noise({0, 1})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.1),
+                               measurement_noise=(0.5, 0.0, 0.0))
+
+
+def test_circuit_with_noise_exception():
+    """Check that calling ``with_noise`` in a noisy circuit raises error."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.0))
