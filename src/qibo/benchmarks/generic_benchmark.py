@@ -6,6 +6,7 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
+import tensorflow as tf
 from qibo.benchmarks import utils, benchmark_models
 from typing import List, Optional
 
@@ -14,6 +15,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--nshots", default=None, type=int)
+parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
@@ -24,6 +26,7 @@ def main(nqubits_list: List[int],
          type: str,
          nlayers: Optional[int] = None,
          nshots: Optional[int] = None,
+         device: Optional[str] = None,
          directory: Optional[str] = None,
          name: Optional[str] = None,
          compile: bool = False):
@@ -83,19 +86,19 @@ def main(nqubits_list: List[int],
         else:
             circuit = create_circuit_func(nqubits, nlayers)
 
-        print("\nSimulating {} qubits...".format(nqubits))
+        print("\nSimulating {} qubits on {}...".format(nqubits, device))
+        with tf.device(device):
+            if compile:
+                start_time = time.time()
+                circuit.compile()
+                # Try executing here so that compile time is not included
+                # in the simulation time
+                final_state = circuit.execute(nshots=nshots)
+                logs["compile_time"].append(time.time() - start_time)
 
-        if compile:
             start_time = time.time()
-            circuit.compile()
-            # Try executing here so that compile time is not included
-            # in the simulation time
             final_state = circuit.execute(nshots=nshots)
-            logs["compile_time"].append(time.time() - start_time)
-
-        start_time = time.time()
-        final_state = circuit.execute(nshots=nshots)
-        logs["simulation_time"].append(time.time() - start_time)
+            logs["simulation_time"].append(time.time() - start_time)
 
         logs["nqubits"].append(nqubits)
 
