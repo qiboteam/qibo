@@ -184,8 +184,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
-            raise ValueError("Cannot access final state before the circuit is "
-                             "executed.")
+            raise RuntimeError("Cannot access final state before the circuit "
+                               "is executed.")
         if self.measurement_gate_result is None:
             return self._final_state
         shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)

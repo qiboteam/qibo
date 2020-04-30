@@ -468,6 +468,22 @@ def test_bad_initial_state():
         final_state = c(initial_state=0)
 
 
+def test_final_state_property():
+    """Check accessing final state using the circuit's property."""
+    import tensorflow as tf
+    from qibo.config import DTYPECPX
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+
+    with pytest.raises(RuntimeError):
+        final_state = c.final_state
+
+    _ = c()
+    final_state = c.final_state.numpy()
+    target_state = np.ones(4) / 2
+    np.testing.assert_allclose(final_state, target_state)
+
+
 def test_variable_theta():
     """Check that parametrized gates accept `tf.Variable` parameters."""
     import tensorflow as tf
