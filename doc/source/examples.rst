@@ -379,22 +379,25 @@ For example, the following script
       noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
       noisy_c = c.with_noise(noise_map)
 
-will create a new circuit ``noisy_c`` that is equivalent to running the
-following:
+will create a new circuit ``noisy_c`` that is equivalent to:
 
 .. code-block:: python
 
-      noisy_c = Circuit(2)
-      noisy_c.add(gates.H(0))
-      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.H(1))
-      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.CNOT(0, 1))
-      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2 = Circuit(2)
+      noisy_c2.add(gates.H(0))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.H(1))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.CNOT(0, 1))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
 
+Note however that the circuit ``noisy_c`` that was created using the
+``with_noise`` method uses the gate objects of the original circuit ``c``
+(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as 
+a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
 In this case the same probabilities will be applied to all qubits.
