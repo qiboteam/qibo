@@ -24,9 +24,9 @@ parser.add_argument("--compile", action="store_true")
 
 def main(nqubits_list: List[int],
          type: str,
+         device: Optional[str] = None,
          nlayers: Optional[int] = None,
          nshots: Optional[int] = None,
-         device: Optional[str] = None,
          directory: Optional[str] = None,
          name: Optional[str] = None,
          compile: bool = False):
@@ -41,18 +41,28 @@ def main(nqubits_list: List[int],
 
     Args:
         nqubits_list: List with the number of qubits to run for.
+        type: Type of Circuit to use.
+            See ``benchmark_models.py`` for available types.
+        device: Tensorflow logical device to use for the benchmark.
+            If ``None`` the first available device is used.
+        nlayers: Number of layers for the supremacy-like circuit.
+            If a different circuit is used ``nlayers`` is ignored.
+        nshots: Number of measurement shots.
         directory: Directory to save the log files.
-            If `None` then logs are not saved.
+            If ``None`` then logs are not saved.
         name: Name of the run to be used when saving logs.
             This should be specified if a directory in given. Otherwise it
             is ignored.
-        compile: If `True` then the Tensorflow graph is compiled using
-            `circuit.compile()`. In this case the compile time is also logged.
+        compile: If ``True`` then the Tensorflow graph is compiled using
+            ``circuit.compile()``. In this case the compile time is also logged.
 
     Raises:
         FileExistsError if the file with the `name` specified exists in the
         given `directory`.
     """
+    if device is None:
+        device = tf.config.list_logical_devices()[0].name
+
     if directory is not None:
         if name is None:
             raise ValueError("A run name should be given in order to save "
