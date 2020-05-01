@@ -38,7 +38,7 @@ class Callback:
                                  "the callback has been used in {} executions."
                                  "".format(k, len(self._results)))
             return self._results[k]
-        if isinstance(k, slice) or isinstance(k, list) or isisntance(k, tuple):
+        if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
             return tf.stack(self._results[k])
         raise IndexError("Unrecognized type for index {}.".format(k))
 
