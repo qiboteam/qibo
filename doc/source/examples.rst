@@ -357,3 +357,88 @@ will perform the transformation
 Note that ``Circuit`` will use state vectors until the first channel is found and will
 switch to density matrices for the rest of the simulation. Measurements and
 callbacks can be used exactly as in the pure state vector case.
+
+In practical applications noise typically occurs after every gate. For this reason,
+:class:`qibo.tensorflow.TensorflowCircuit` provides a `.with_noise()` method
+which automatically creates a new circuit that contains a noise channel after
+every normal gate. The user can control the probabilities of the noise channel
+using a noise map, which is a dictionary that maps qubits to the corresponding
+noise probability triplets.
+
+For example, the following script
+
+.. code-block:: python
+
+      from qibo.models import Circuit
+      from qibo import gates
+
+      c = Circuit(2)
+      c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+
+      # Define a noise map that maps qubit IDs to noise probabilities
+      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+      noisy_c = c.with_noise(noise_map)
+
+will create a new circuit ``noisy_c`` that is equivalent to:
+
+.. code-block:: python
+
+      noisy_c2 = Circuit(2)
+      noisy_c2.add(gates.H(0))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.H(1))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.CNOT(0, 1))
+      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+
+Note however that the circuit ``noisy_c`` that was created using the
+``with_noise`` method uses the gate objects of the original circuit ``c``
+(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as 
+a new object.
+
+The user may use a single tuple instead of a dictionary as the noise map
+In this case the same probabilities will be applied to all qubits.
+That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
+``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
+
+Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
+which allows the user to explicitly specify the noise probabilities.
+before measurement gates. These may be different from the typical noise probabilities
+depending on the experimental realization of measurements. For example:
+
+.. code-block:: python
+
+      from qibo.models import Circuit
+      from qibo import gates
+
+      c = Circuit(2)
+      c.add([gates.H(0), gates.H(1)])
+      c.add(gates.M(0))
+
+      # Define a noise map that maps qubit IDs to noise probabilities
+      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+      measurement_noise = (0.4, 0.0, 0.0)
+      noisy_c = c.with_noise(noise_map, measurement_noise=measurement_noise)
+
+is equivalent to the following:
+
+.. code-block:: python
+
+      noisy_c = Circuit(2)
+      noisy_c.add(gates.H(0))
+      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c.add(gates.H(1))
+      noisy_c.add(gates.NoiseChannel(0, 0.4, 0.0, 0.0))
+      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c.add(gates.M(0))
+
+Note that ``measurement_noise`` does not affect qubits that are not measured
+and the default ``noise_map`` will be used for those.
+
+Similarly to ``noise_map``, ``measurement_noise`` can either be either a
+dictionary that maps each qubit to the corresponding probability triplet or
+a tuple if the same triplet shall be used on all measured qubits.

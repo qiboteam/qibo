@@ -87,6 +87,15 @@ def test_czpowgate_application_twoqubit(einsum_choice):
     np.testing.assert_allclose(final_rho, target_rho)
 
 
+def test_flatten_density_matrix():
+    """Check ``Flatten`` gate works with density matrices."""
+    target_rho = random_density_matrix(3)
+    initial_rho = np.zeros(6 * (2,))
+    gate = gates.Flatten(target_rho)
+    final_rho = gate(initial_rho, is_density_matrix=True).numpy().reshape((8, 8))
+    np.testing.assert_allclose(final_rho, target_rho)
+
+
 @pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
 def test_circuit_compiled(einsum_choice):
     """Check passing density matrix as initial state to a compiled circuit."""

@@ -153,6 +153,15 @@ def test_gate_after_measurement_error():
         c.add(gates.H(0))
 
 
+def test_register_name_error():
+    """Check that using the same register name twice results to error."""
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(0, register_name="a"))
+    with pytest.raises(KeyError):
+        c.add(gates.M(1, register_name="a"))
+
+
 def test_multiple_qubit_measurement_circuit():
     """Check multiple measurement gates in circuit."""
     c = models.Circuit(2)
@@ -499,7 +508,7 @@ def test_density_matrix_circuit_measurement():
     c.add(gates.M(0, 1, register_name="A"))
     c.add(gates.M(3, 2, register_name="B"))
     result = c(init_rho, nshots=100)
-    
+
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1
@@ -519,3 +528,22 @@ def test_density_matrix_circuit_measurement():
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
     assert_register_results(result, **target)
+
+
+def test_copy_measurements():
+    """Check that ``circuit.copy()`` properly copies measurements."""
+    c1 = models.Circuit(6)
+    c1.add([gates.X(0), gates.X(1), gates.X(3)])
+    c1.add(gates.M(5, 1, 3, register_name="a"))
+    c1.add(gates.M(2, 0, register_name="b"))
+    c2 = c1.copy()
+
+    r1 = c1(nshots=100)
+    r2 = c2(nshots=100)
+
+    np.testing.assert_allclose(r1.samples().numpy(), r2.samples().numpy())
+    rg1 = r1.frequencies(registers=True)
+    rg2 = r2.frequencies(registers=True)
+    assert rg1.keys() == rg2.keys()
+    for k in rg1.keys():
+        assert rg1[k] == rg2[k]

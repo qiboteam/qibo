@@ -337,7 +337,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
-        if self.nqubits is None:
+        if self._nqubits is None:
             if is_density_matrix:
                 self.nqubits = len(tuple(state.shape)) // 2
             else:
@@ -349,7 +349,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
             shape = self.nqubits * (2,)
 
         _state = np.array(self.coefficients).reshape(shape)
-        return tf.convert_to_tensor(_state, dtype=state.dtype)
+        return tf.convert_to_tensor(_state, dtype=self.dtype)
 
 
 class TensorflowChannel(TensorflowGate):
