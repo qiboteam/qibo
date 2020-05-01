@@ -40,7 +40,7 @@ def test_hadamard(einsum_choice):
 
 
 def test_flatten():
-    """Check flatten gate is working properly."""
+    """Check ``Flatten`` gate works in circuits ."""
     target_state = np.ones(4) / 2.0
     c = Circuit(2)
     c.add(gates.Flatten(target_state))
@@ -363,6 +363,12 @@ def test_unitary_controlled_by():
     c.add(gates.Unitary(matrix, 1))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+
+
+def test_unitary_bad_shape():
+    matrix = np.random.random((8, 8))
+    with pytest.raises(ValueError):
+        gate = gates.Unitary(matrix, (0, 1))
 
 
 def test_custom_circuit():
