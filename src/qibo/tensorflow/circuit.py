@@ -37,11 +37,16 @@ class TensorflowCircuit(circuit.BaseCircuit):
         # Calculate callbacks for initial state
         callback_results = [[callback(state)] for callback in self.callbacks]
 
+        print("\nExecuting circuit...")
+
         for ig, gate in enumerate(self.queue):
             if gate.is_channel and not self.using_density_matrix:
                 # Switch from vector to density matrix
                 self.using_density_matrix = True
                 state = tf.tensordot(state, tf.math.conj(state), axes=0)
+
+            if ig % 10:
+                print(ig)
 
             state = gate(state, is_density_matrix=self.using_density_matrix)
             for ic, callback in enumerate(self.callbacks):
