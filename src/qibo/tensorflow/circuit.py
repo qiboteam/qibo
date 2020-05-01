@@ -240,10 +240,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        initial_state = np.zeros(2 ** self.nqubits)
-        initial_state[0] = 1
-        initial_state = initial_state.reshape(self.nqubits * (2,))
-        return tf.convert_to_tensor(initial_state, dtype=self.dtype)
+        initial_state = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
+        update = tf.constant([1], dtype=self.dtype)
+        initial_state = tf.tensor_scatter_nd_update(initial_state, [[0]], update)
+        initial_state = tf.reshape(initial_state, self.nqubits * (2,))
+        return initial_state
 
     def _add_callbacks(self, callback: callbacks.Callback):
         """Adds callbacks in the circuit."""
