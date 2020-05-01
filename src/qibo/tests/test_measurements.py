@@ -153,6 +153,15 @@ def test_gate_after_measurement_error():
         c.add(gates.H(0))
 
 
+def test_register_name_error():
+    """Check that using the same register name twice results to error."""
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.M(0, register_name="a"))
+    with pytest.raises(KeyError):
+        c.add(gates.M(1, register_name="a"))
+
+
 def test_multiple_qubit_measurement_circuit():
     """Check multiple measurement gates in circuit."""
     c = models.Circuit(2)

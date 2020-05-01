@@ -98,6 +98,19 @@ def test_circuit_addition():
     assert c3.depth == 3
 
 
+def test_bad_circuit_addition():
+    """Check that it is not possible to add circuits with different number of qubits."""
+    c1 = Circuit(2)
+    c1.add(H(0))
+    c1.add(H(1))
+
+    c2 = Circuit(1)
+    c2.add(X(0))
+
+    with pytest.raises(ValueError):
+        c3 = c1 + c2
+
+
 def test_circuit_copy():
     """Check that ``circuit.copy()`` copies gates properly."""
     c1 = Circuit(2)
