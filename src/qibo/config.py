@@ -39,6 +39,8 @@ if BACKEND_NAME == "tensorflow":
         from qibo.tensorflow.einsum import MatmulEinsum
         einsum = MatmulEinsum()
 
+    einsum = MatmulEinsum()
+
     # Default types
     DTYPE = tf.float64
     DTYPEINT = tf.int32
