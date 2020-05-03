@@ -146,6 +146,5 @@ def main(nqubits_list: List[int],
 
 
 if __name__ == "__main__":
-    args = vars(parser.parse_args())
     args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
     main(**args)
