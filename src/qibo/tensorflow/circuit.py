@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPECPX
+from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import gates, measurements, callbacks
 from typing import List, Optional, Tuple, Union
 
@@ -155,7 +155,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
             callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
-            shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
+            shape = tf.constant((2 ** self.nqubits,), dtype=DTYPEINT)
+            if self.using_density_matrix:
+                shape *= 2
             self._final_state = tf.reshape(state, shape)
             return self._final_state
 
@@ -242,7 +244,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Creates the |000...0> state for default initialization."""
         initial_state = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
         update = tf.constant([1], dtype=self.dtype)
-        initial_state = tf.tensor_scatter_nd_update(initial_state, [[0]], update)
+        initial_state = tf.tensor_scatter_nd_update(initial_state,
+                                                    tf.constant([[0]], dtype=DTYPEINT),
+                                                    update)
         initial_state = tf.reshape(initial_state, self.nqubits * (2,))
         return initial_state
 

@@ -41,7 +41,7 @@ if BACKEND_NAME == "tensorflow":
 
     # Default types
     DTYPE = tf.float64
-    DTYPEINT = tf.int32
+    DTYPEINT = tf.int64
     DTYPECPX = tf.complex128
 
     # Set memory cut-off for using GPU when sampling
