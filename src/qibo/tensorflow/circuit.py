@@ -155,9 +155,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
-            shape = tf.constant((2 ** self.nqubits,), dtype=DTYPEINT)
-            if self.using_density_matrix:
-                shape *= 2
+            shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
+                            dtype=DTYPEINT)
             self._final_state = tf.reshape(state, shape)
             return self._final_state
 
