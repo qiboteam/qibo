@@ -6,20 +6,43 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
-import tensorflow as tf
-from qibo.benchmarks import utils, benchmark_models
 from typing import List, Optional
-
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
+parser.add_argument("--memory", default=None, type=int)
 parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
+args = vars(parser.parse_args())
+
+
+import tensorflow as tf
+def limit_gpu_memory(memory_limit=None):
+    """Limits GPU memory that is available to Tensorflow.
+
+    Args:
+        memory_limit: Memory limit in MBs.
+    """
+    if memory_limit is None:
+        print("\nNo GPU memory limiter used.\n")
+        return
+
+    print("\nAttempting to limit GPU memory to {}.\n".format(memory_limit))
+    gpus = tf.config.list_physical_devices("GPU")
+    for gpu in tf.config.list_physical_devices("GPU"):
+        config = tf.config.experimental.VirtualDeviceConfiguration(
+                      memory_limit=memory_limit)
+        tf.config.experimental.set_virtual_device_configuration(gpu, [config])
+        print("Limiting memory of {} to {}.".format(gpu.name, memory_limit))
+    print()
+
+limit_gpu_memory(args.pop("memory"))
+from qibo.benchmarks import utils, benchmark_models
 
 
 def main(nqubits_list: List[int],
