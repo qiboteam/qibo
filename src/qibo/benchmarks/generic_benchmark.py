@@ -10,6 +10,7 @@ from typing import List, Optional
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
+parser.add_argument("--backend", default="DefaultEinsum", type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
@@ -47,6 +48,7 @@ from qibo.benchmarks import utils, benchmark_models
 
 def main(nqubits_list: List[int],
          type: str,
+         backend: str = "DefaultEinsum",
          device: Optional[str] = None,
          nlayers: Optional[int] = None,
          nshots: Optional[int] = None,
@@ -66,6 +68,8 @@ def main(nqubits_list: List[int],
         nqubits_list: List with the number of qubits to run for.
         type: Type of Circuit to use.
             See ``benchmark_models.py`` for available types.
+        backend: Which einsum backend to use.
+            Available backends: ``DefaultEinsum`` and ``MatmulEinsum``.
         device: Tensorflow logical device to use for the benchmark.
             If ``None`` the first available device is used.
         nlayers: Number of layers for the supremacy-like circuit.
@@ -115,9 +119,9 @@ def main(nqubits_list: List[int],
 
     for nqubits in nqubits_list:
         if nlayers is None:
-            circuit = create_circuit_func(nqubits)
+            circuit = create_circuit_func(nqubits, backend)
         else:
-            circuit = create_circuit_func(nqubits, nlayers)
+            circuit = create_circuit_func(nqubits, backend, nlayers)
 
         print("\nSimulating {} qubits on {}...".format(nqubits, device))
         with tf.device(device):
