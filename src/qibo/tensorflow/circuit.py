@@ -239,9 +239,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        x = tf.constant([1], dtype=self.dtype)
-        x = tf.sparse.SparseTensor([[0, 0]], x, (2 ** self.nqubits, 1))
-        initial_state = tf.sparse.to_dense(x)[:, 0]
+        initial_state = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
+        update = tf.constant([1], dtype=self.dtype)
+        initial_state = tf.tensor_scatter_nd_update(initial_state,
+                                                    [[0]], update)
         initial_state = tf.reshape(initial_state, self.nqubits * (2,))
         return initial_state
 
