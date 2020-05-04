@@ -2,7 +2,9 @@
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
-from typing import Iterable, Set, Tuple
+from typing import Dict, Iterable, Optional, Set, Tuple, Union
+NoiseMapType = Union[Tuple[int, int, int],
+                     Dict[int, Tuple[int, int, int]]]
 
 QASM_GATES = {"h", "x", "y", "z",
               "rx", "ry", "rz",
@@ -43,6 +45,9 @@ class BaseCircuit(object):
         self.measurement_gate = None
         self.measurement_gate_result = None
 
+        self._final_state = None
+        self.using_density_matrix = False
+
     def __add__(self, circuit):
         """Add circuits.
 
@@ -82,6 +87,89 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
+    def copy(self, deep: bool = False) -> "BaseCircuit":
+        """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
+
+        Args:
+            deep (bool): If True new gate objects will be created that act in the same
+                qubits as in ``circuit``. Otherwise, the same gate objects of
+                ``circuit`` will be used.
+
+        Returns:
+            The copied circuit object.
+        """
+        if deep:
+            raise NotImplementedError("Deep copy is not implemented yet.")
+
+        new_circuit = self.__class__(self.nqubits)
+        new_circuit.queue = list(self.queue)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        new_circuit.measurement_gate = self.measurement_gate
+        return new_circuit
+
+    def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
+        if isinstance(noise_map, tuple) or isinstance(noise_map, list):
+            if len(noise_map) != 3:
+                raise ValueError("Noise map expects three probabilities "
+                                 "but received {}.".format(len(noise_map)))
+            return {q: noise_map for q in range(self.nqubits)}
+        elif isinstance(noise_map, dict):
+            if len(noise_map) != self.nqubits:
+                raise ValueError("Noise map has {} qubits while the circuit "
+                                 "has {}.".format(len(noise_map), self.nqubits))
+            for v in noise_map.values():
+                if len(v) != 3:
+                    raise ValueError("Noise map expects three probabilities "
+                                     "but received {}.".format(v))
+            return noise_map
+
+        raise TypeError("Type {} of noise map is not recognized."
+                        "".format(type(noise_map)))
+
+    def with_noise(self, noise_channel_class,
+                   noise_map: NoiseMapType,
+                   measurement_noise: Optional[NoiseMapType] = None
+                   ) -> "BaseCircuit":
+        """"""
+        noise_map = self._check_noise_map(noise_map)
+        if measurement_noise is not None:
+            if self.measurement_gate is None:
+                raise ValueError("Passed measurement noise but the circuit "
+                                 "does not contain measurement gates.")
+            measurement_noise = self._check_noise_map(measurement_noise)
+            # apply measurement noise only to the qubits that are measured
+            # and leave default noise to the rest
+            measured_qubits = set(self.measurement_gate.target_qubits)
+            measurement_noise = {q: measurement_noise[q] if q in measured_qubits
+                                 else noise_map[q] for q in range(self.nqubits)}
+
+        # Generate noise gates
+        noise_gates = []
+        for gate in self.queue:
+            if isinstance(gate, noise_channel_class):
+                raise ValueError("`.with_noise` method is not available for "
+                                 "circuits that already contain noise channels.")
+            noise_gates.append([noise_channel_class(q, *list(p))
+                                for q, p in noise_map.items()
+                                if sum(p) > 0])
+        if measurement_noise is not None:
+            noise_gates[-1] = [noise_channel_class(q, *list(p))
+                               for q, p in measurement_noise.items()
+                               if sum(p) > 0]
+
+        # Create new circuit with noise gates inside
+        noisy_circuit = self.__class__(self.nqubits)
+        noisy_circuit.queue = []
+        for i, gate in enumerate(self.queue):
+            # Do not use `circuit.add` here because these gates are already
+            # added in the original circuit
+            noisy_circuit.queue.append(gate)
+            for noise_gate in noise_gates[i]:
+                noisy_circuit.add(noise_gate)
+        noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
+        noisy_circuit.measurement_gate = self.measurement_gate
+        return noisy_circuit
+
     def _check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
 
@@ -115,6 +203,12 @@ class BaseCircuit(object):
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")
+
+        for q in gate.target_qubits:
+            if q >= self.nqubits:
+                raise ValueError("Attempting to add gate with target qubits {} "
+                                 "on a circuit of {} qubits."
+                                 "".format(gate.target_qubits, self.nqubits))
 
         # Set number of qubits in gate
         if gate._nqubits is None:
@@ -164,10 +258,23 @@ class BaseCircuit(object):
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
 
+    @property
+    def final_state(self):
+        """Returns the final state after full simulation of the circuit.
+
+        If the circuit is executed more than once, only the last final state
+        is returned.
+        """
+        raise NotImplementedError
+
     @abstractmethod
-    def execute(self):
+    def execute(self, *args):
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
+
+    def __call__(self, *args):
+        """Equivalent to ``circuit.execute``."""
+        return self.execute(*args)
 
     def to_qasm(self):
         """Convert circuit to QASM.

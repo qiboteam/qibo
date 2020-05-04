@@ -1,6 +1,7 @@
 """
 Testing tensorflow callbacks.
 """
+import pytest
 import numpy as np
 from qibo.models import Circuit
 from qibo import gates, callbacks
@@ -24,6 +25,10 @@ def test_entropy_singlet_state():
     state = np.zeros(4)
     state[0], state[-1] = 1, 1
     state = state / np.sqrt(2)
+    # Pass the state as `tf.Tensor` to test this functionality as well
+    import tensorflow as tf
+    from qibo.config import DTYPECPX
+    state = tf.convert_to_tensor(state.reshape((2, 2)), dtype=DTYPECPX)
 
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, 1.0)
@@ -42,6 +47,26 @@ def test_entropy_random_state():
     result = callbacks.EntanglementEntropy._entropy(rho).numpy()
     target = - (s * np.log2(s)).sum()
     np.testing.assert_allclose(result, target)
+
+
+def test_entropy_switch_partition():
+    """Check that partition is switched to the largest counterpart."""
+    entropy = callbacks.EntanglementEntropy([0])
+    # Prepare ghz state of 5 qubits
+    state = np.zeros(2 ** 5)
+    state[0], state[-1] = 1, 1
+    state = state / np.sqrt(2)
+
+    result = entropy(state).numpy()
+    np.testing.assert_allclose(result, 1.0)
+
+
+def test_state_invalid_type():
+    """Check that ``TypeError`` is raised for bad state type."""
+    entropy = callbacks.EntanglementEntropy([0])
+    # Prepare ghz state of 5 qubits
+    with pytest.raises(TypeError):
+        result = entropy([0, 1, 0, 0])
 
 
 def test_entropy_numerical():
@@ -121,3 +146,17 @@ def test_entropy_multiple_executions():
 
     target = [[0, target_entropy(0.1234)], [0, target_entropy(0.4321)]]
     np.testing.assert_allclose(entropy[:].numpy(), target)
+
+
+def test_entropy_bad_indexing():
+    """Check exceptions in ``Callback.__getitem__``."""
+    entropy = callbacks.EntanglementEntropy([0], steps=2)
+    c = Circuit(2)
+    c.add(gates.RY(0, 0.1234))
+    c.add(gates.CNOT(0, 1))
+    state = c(callback=entropy)
+
+    with pytest.raises(IndexError):
+        entropy[1]
+    with pytest.raises(IndexError):
+        entropy["a"]

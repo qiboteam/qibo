@@ -23,9 +23,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.compiled_execute = None
         self.callbacks = []
 
-        self._final_state = None
-        self.using_density_matrix = False
-
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
 
@@ -104,29 +101,30 @@ class TensorflowCircuit(circuit.BaseCircuit):
             state = self._default_initial_state()
 
         else:
-            shape = tuple(initial_state.shape)
-            def shape_error():
+            def shape_error(shape):
                 raise ValueError("Invalid initial state shape {} for circuit "
                                  "with {} qubits.".format(shape, self.nqubits))
 
             if isinstance(initial_state, np.ndarray):
+                shape = initial_state.shape
                 if len(shape) == 1:
                     # Assume state vector was given
                     if 2 ** self.nqubits != shape[0]:
-                        shape_error()
+                        shape_error(shape)
                     state = tf.cast(initial_state.reshape(self.nqubits * (2,)),
                                     dtype=self.dtype)
                 elif len(shape) == 2:
                     # Assume density matrix was given
                     self.using_density_matrix = True
                     if 2 * (2 ** self.nqubits,) != shape:
-                        shape_error()
+                        shape_error(shape)
                     state = tf.cast(initial_state.reshape(2 * self.nqubits * (2,)),
                                     dtype=self.dtype)
                 else:
-                    shape_error()
+                    shape_error(shape)
 
             elif isinstance(initial_state, tf.Tensor):
+                shape = tuple(initial_state.shape)
                 if initial_state.dtype != self.dtype:
                     raise TypeError("Circuit is of type {} but initial state is "
                                     "{}.".format(self.dtype, initial_state.dtype))
@@ -137,7 +135,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                     self.using_density_matrix = True
                     state = initial_state
                 else:
-                    shape_error()
+                    shape_error(shape)
             else:
                 raise TypeError("Initial state type {} is not recognized."
                                 "".format(type(initial_state)))
@@ -156,7 +154,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
-            self._final_state = tf.reshape(state, self._output_shape)
+            shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
+            self._final_state = tf.reshape(state, shape)
             return self._final_state
 
         samples = self.measurement_gate(state, nshots, samples_only=True,
@@ -184,18 +183,59 @@ class TensorflowCircuit(circuit.BaseCircuit):
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
-            raise ValueError("Cannot access final state before the circuit is "
-                             "executed.")
+            raise RuntimeError("Cannot access final state before the circuit "
+                               "is executed.")
         if self.measurement_gate_result is None:
             return self._final_state
-        return tf.reshape(self._final_state, self._output_shape)
+        shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
+        return tf.reshape(self._final_state, shape)
 
-    @property
-    def _output_shape(self):
-        """Proper shape of the returned final state."""
-        if self.using_density_matrix:
-            return 2 * (2 ** self.nqubits,)
-        return (2 ** self.nqubits,)
+    def with_noise(self, noise_map: circuit.NoiseMapType,
+                   measurement_noise: Optional[circuit.NoiseMapType] = None
+                   ) -> "TensorflowCircuit":
+        """Creates a copy of the circuit with noise gates after each gate.
+
+        Args:
+            noise_map (dict): Dictionary that maps qubit ids to noise
+                probabilities (px, py, pz).
+                If a tuple of probabilities (px, py, pz) is given instead of
+                a dictionary, then the same probabilities will be used for all
+                qubits.
+            measurement_noise (dict): Optional map for using different noise
+                probabilities before measurement for the qubits that are
+                measured.
+                If ``None`` the default probabilities specified by ``noise_map``
+                will be used for all qubits.
+
+        Returns:
+            Circuit object that contains all the gates of the original circuit
+            and additional noise channels on all qubits after every gate.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(2)
+                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noisy_c = c.with_noise(noise_map)
+
+                # ``noisy_c`` will be equivalent to the following circuit
+                c2 = Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.H(1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.CNOT(0, 1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+        """
+        return super(TensorflowCircuit, self).with_noise(gates.NoiseChannel,
+                                                         noise_map,
+                                                         measurement_noise)
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""

@@ -40,7 +40,7 @@ def test_hadamard(einsum_choice):
 
 
 def test_flatten():
-    """Check flatten gate is working properly."""
+    """Check ``Flatten`` gate works in circuits ."""
     target_state = np.ones(4) / 2.0
     c = Circuit(2)
     c.add(gates.Flatten(target_state))
@@ -365,6 +365,12 @@ def test_unitary_controlled_by():
     np.testing.assert_allclose(final_state, target_state)
 
 
+def test_unitary_bad_shape():
+    matrix = np.random.random((8, 8))
+    with pytest.raises(ValueError):
+        gate = gates.Unitary(matrix, (0, 1))
+
+
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
     theta = 0.1234
@@ -414,6 +420,15 @@ def test_compiled_circuit(einsum_choice):
     np.testing.assert_allclose(r1, r2)
 
 
+def test_compiling_twice_exception():
+    """Check that compiling a circuit a second time raises error."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    c.compile()
+    with pytest.raises(RuntimeError):
+        c.compile()
+
+
 def test_circuit_custom_compilation():
     theta = 0.1234
     init_state = np.ones(4) / 2.0
@@ -437,6 +452,42 @@ def test_circuit_custom_compilation():
     r2 = compiled_circuit(init_state)
 
     np.testing.assert_allclose(r1, r2)
+
+
+def test_bad_initial_state():
+    """Check that errors are raised when bad initial state is passed."""
+    import tensorflow as tf
+    from qibo.config import DTYPECPX
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros(2**3))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros((2, 2)))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=np.zeros((2, 2, 2)))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=tf.zeros((2, 2), dtype=tf.float32))
+    with pytest.raises(ValueError):
+        final_state = c(initial_state=tf.zeros(4, dtype=DTYPECPX))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=0)
+
+
+def test_final_state_property():
+    """Check accessing final state using the circuit's property."""
+    import tensorflow as tf
+    from qibo.config import DTYPECPX
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+
+    with pytest.raises(RuntimeError):
+        final_state = c.final_state
+
+    _ = c()
+    final_state = c.final_state.numpy()
+    target_state = np.ones(4) / 2
+    np.testing.assert_allclose(final_state, target_state)
 
 
 def test_variable_theta():
@@ -504,3 +555,119 @@ def test_two_variables_backpropagation():
     target_grad2 = - np.cos(t[0]) * np.sin(t[1])
     target_grad = np.array([target_grad1, target_grad2]) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)
+
+
+def test_circuit_copy():
+    """Check that circuit copy execution is equivalent to original circuit."""
+    theta = 0.1234
+
+    c1 = Circuit(2)
+    c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
+    c2 = c1.copy()
+
+    target_state = c1.execute().numpy()
+    final_state = c2.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_circuit_with_noise_gates():
+    """Check that ``circuit.with_noise()`` adds the proper noise channels."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+
+    assert noisy_c.depth == 9
+    for i in [1, 2, 4, 5, 7, 8]:
+        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
+
+
+def test_circuit_with_noise_execution():
+    """Check ``circuit.with_noise()`` execution."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+
+    target_c = Circuit(2)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_with_measurements():
+    """Check ``circuit.with_noise() when using measurement noise."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    c.add(gates.M(0))
+    noisy_c = c.with_noise(3 * (0.1,), measurement_noise = (0.3, 0.0, 0.0))
+
+    target_c = Circuit(2)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.3, 0.0, 0.0))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_noise_map():
+    """Check ``circuit.with_noise() when giving noise map."""
+    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
+                 2: (0.0, 0.0, 0.0)}
+
+    c = Circuit(3)
+    c.add([gates.H(0), gates.H(1), gates.X(2)])
+    c.add(gates.M(2))
+    noisy_c = c.with_noise(noise_map, measurement_noise = (0.3, 0.0, 0.0))
+
+    target_c = Circuit(3)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.X(2))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.NoiseChannel(2, 0.3, 0.0, 0.0))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_noise_map_exceptions():
+    """Check that proper exceptions are raised when noise map is invalid."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3))
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
+    with pytest.raises(TypeError):
+        noisy_c = c.with_noise({0, 1})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.1),
+                               measurement_noise=(0.5, 0.0, 0.0))
+
+
+def test_circuit_with_noise_exception():
+    """Check that calling ``with_noise`` in a noisy circuit raises error."""
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.0))
