@@ -46,6 +46,14 @@ def QFT(nqubits, backend):
     return circuit
 
 
+def Hadamards(nqubits, backend):
+    circuit = models.Circuit(nqubits)
+    for i in range(nqubits):
+        circuit.add(gates.H(i).with_backend(backend))
+    return circuit
+
+
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
-            "ghz": PrepareGHZ}
+            "ghz": PrepareGHZ,
+            "hadamards": Hadamards}

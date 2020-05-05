@@ -10,7 +10,7 @@ from typing import List, Optional
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
-parser.add_argument("--backend", default="DefaultEinsum", type=str)
+parser.add_argument("--backend", default=None, type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
@@ -48,7 +48,7 @@ from qibo.benchmarks import utils, benchmark_models
 
 def main(nqubits_list: List[int],
          type: str,
-         backend: str = "DefaultEinsum",
+         backend: Optional[str] = None,
          device: Optional[str] = None,
          nlayers: Optional[int] = None,
          nshots: Optional[int] = None,
@@ -89,6 +89,9 @@ def main(nqubits_list: List[int],
     """
     if device is None:
         device = tf.config.list_logical_devices()[0].name
+    if backend is None:
+        backend = ("DefaultEinsum" if tf.config.list_physical_devices("GPU")
+                   else "MatmulEinsum")
 
     if directory is not None:
         if name is None:
