@@ -336,9 +336,10 @@ class BaseCircuit(object):
                         raise ValueError("Invalid QASM qubit arguments:", args)
                     yield name, int(index)
 
-        _lines = qasm_code.replace("\n", "").split(";")
-        # Generator of lines that ignores comments
-        lines = (line for line in _lines if line and line[:2] != "//")
+        # Remove comment lines
+        lines = "".join(line for line in qasm_code.split("\n")
+                        if line and line[:2] != "//")
+        lines = (line for line in lines.split(";") if line)
 
         if next(lines) != "OPENQASM 2.0":
             raise ValueError("QASM code should start with 'OPENQASM 2.0'.")
