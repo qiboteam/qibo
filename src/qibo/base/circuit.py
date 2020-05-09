@@ -6,10 +6,6 @@ from typing import Dict, Iterable, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
-QASM_GATES = {"h", "x", "y", "z",
-              "rx", "ry", "rz",
-              "cx", "swap", "crz", "ccx"}
-
 
 class BaseCircuit(object):
     """Circuit object which holds a list of gates.
@@ -297,7 +293,7 @@ class BaseCircuit(object):
 
         # Add gates
         for gate in self.queue:
-            if gate.name not in QASM_GATES:
+            if gate.name not in gates.QASM_GATES:
                 raise ValueError(f"Gate {gate.name} is not supported by OpenQASM.")
             if gate.is_controlled_by:
                 raise ValueError("OpenQASM does not support multi-controlled gates.")
