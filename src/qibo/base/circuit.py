@@ -358,6 +358,10 @@ class BaseCircuit(object):
                     for i in range(nqubits):
                         qubits[(name, i)] = len(qubits)
 
+            elif command == "creg":
+                # TODO: Define measurement registers here
+                raise NotImplementedError
+
             elif command in gates.QASM_GATES:
                 qubit_list = []
                 for qubit in read_args(args):
