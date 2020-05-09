@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
-from typing import Dict, Iterable, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
@@ -29,6 +29,7 @@ class BaseCircuit(object):
 
     __metaclass__ = ABCMeta
     _PARAMETRIZED_GATES = {"rx", "ry", "rz", "crz"}
+    _GATE_MODULE = gates
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -311,3 +312,61 @@ class BaseCircuit(object):
                 code.append(f"measure q[{q}] -> {reg_name}[{i}];")
 
         return "\n".join(code)
+
+    @classmethod
+    def from_qasm(cls, qasm_code: str) -> "BaseCircuit":
+        nqubits, gate_list = cls._parse_qasm(qasm_code)
+        circuit = cls(nqubits)
+        for gate_name, qubits in gate_list:
+            gate = getattr(cls._GATE_MODULE, gate_name)
+            circuit.add(gate(*qubits))
+        return circuit
+
+    @staticmethod
+    def _parse_qasm(qasm_code: str) -> Tuple[int, List[Tuple[str, List[int]]]]:
+        # TODO: Implement measurements
+        # TODO: Implement parametrized gates
+        import re
+        def read_args(args):
+            _args = iter(re.split("[\[\],]", args))
+            for name in _args:
+                if name:
+                    index = next(_args)
+                    if not index.isdigit():
+                        raise ValueError("Invalid QASM qubit arguments:", args)
+                    yield name, int(index)
+
+        _lines = qasm_code.replace("\n", "").split(";")
+        # Generator of lines that ignores comments
+        lines = (line for line in _lines if line and line[:2] != "//")
+
+        if next(lines) != "OPENQASM 2.0":
+            raise ValueError("QASM code should start with 'OPENQASM 2.0'.")
+
+        qubits = {} # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
+        gate_list = [] # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
+        for line in lines:
+            command, args = line.split(" ")
+            args = args.replace(" ", "") # remove spaces from args
+
+            if command == "include":
+                pass
+
+            elif command == "qreg":
+                for name, nqubits in read_args(args):
+                    for i in range(nqubits):
+                        qubits[(name, i)] = len(qubits)
+
+            elif command in gates.QASM_GATES:
+                qubit_list = []
+                for qubit in read_args(args):
+                    if qubit not in qubits:
+                        raise ValueError("Qubit {} is not defined in QASM code."
+                                         "".format(qubit))
+                    qubit_list.append(qubits[qubit])
+                gate_list.append((gates.QASM_GATES[command], list(qubit_list)))
+
+            else:
+                raise ValueError("QASM command {} is not recognized.".format(command))
+
+        return len(qubits), gate_list

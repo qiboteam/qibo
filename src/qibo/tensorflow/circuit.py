@@ -16,6 +16,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         dtype: Tensorflow type for complex numbers.
             Read automatically from `config`.
     """
+    _GATE_MODULE = gates
 
     def __init__(self, nqubits, dtype=DTYPECPX):
         super(TensorflowCircuit, self).__init__(nqubits)

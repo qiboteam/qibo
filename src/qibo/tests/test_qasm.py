@@ -159,3 +159,29 @@ def test_capital_in_register_name_error():
     c.add(gates.M(0, 1, register_name="Abc"))
     with pytest.raises(NameError):
         c.to_qasm()
+
+
+def test_from_qasm_simple():
+    target = f"""OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+h q[0];
+h q[1];"""
+    c = Circuit.from_qasm(target)
+    assert c.nqubits == 2
+    assert c.depth == 2
+    assert isinstance(c.queue[0], gates.H)
+    assert isinstance(c.queue[1], gates.H)
+
+
+def test_from_qasm_evaluation():
+    import numpy as np
+    target = f"""OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+h q[0];
+h q[1];"""
+    c = Circuit.from_qasm(target)
+    final_state = c().numpy()
+    target_state = np.ones(4) / 2.0
+    np.testing.assert_allclose(target_state, final_state)
