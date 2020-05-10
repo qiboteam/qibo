@@ -122,11 +122,49 @@ class BaseCircuit(object):
         raise TypeError("Type {} of noise map is not recognized."
                         "".format(type(noise_map)))
 
-    def with_noise(self, noise_channel_class,
-                   noise_map: NoiseMapType,
+    def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
-        """"""
+        """Creates a copy of the circuit with noise gates after each gate.
+
+        Args:
+            noise_map (dict): Dictionary that maps qubit ids to noise
+                probabilities (px, py, pz).
+                If a tuple of probabilities (px, py, pz) is given instead of
+                a dictionary, then the same probabilities will be used for all
+                qubits.
+            measurement_noise (dict): Optional map for using different noise
+                probabilities before measurement for the qubits that are
+                measured.
+                If ``None`` the default probabilities specified by ``noise_map``
+                will be used for all qubits.
+
+        Returns:
+            Circuit object that contains all the gates of the original circuit
+            and additional noise channels on all qubits after every gate.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(2)
+                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noisy_c = c.with_noise(noise_map)
+
+                # ``noisy_c`` will be equivalent to the following circuit
+                c2 = Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.H(1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.CNOT(0, 1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+        """
         noise_map = self._check_noise_map(noise_map)
         if measurement_noise is not None:
             if self.measurement_gate is None:
@@ -142,14 +180,14 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, noise_channel_class):
+            if isinstance(gate, self._GATE_MODULE.NoiseChannel):
                 raise ValueError("`.with_noise` method is not available for "
                                  "circuits that already contain noise channels.")
-            noise_gates.append([noise_channel_class(q, *list(p))
+            noise_gates.append([self._GATE_MODULE.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
         if measurement_noise is not None:
-            noise_gates[-1] = [noise_channel_class(q, *list(p))
+            noise_gates[-1] = [self._GATE_MODULE.NoiseChannel(q, *list(p))
                                for q, p in measurement_noise.items()
                                if sum(p) > 0]
 
