@@ -342,25 +342,24 @@ class BaseCircuit(object):
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        nqubits, gate_list, registers = cls._parse_qasm(qasm_code)
+        nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
-        for gate_name, qubits, theta in gate_list:
+        for gate_name, qubits, param in gate_list:
             gate = getattr(cls._GATE_MODULE, gate_name)
             if gate_name == "M":
-                # If gate is measurement then `qubits` holds the register
-                # name and not the list of qubits
-                circuit.add(gate(*registers[qubits], register_name=qubits))
+                circuit.add(gate(*qubits, register_name=param))
+            elif param is None:
+                circuit.add(gate(*qubits))
             else:
-                if theta is None:
-                    circuit.add(gate(*qubits))
-                else:
-                    circuit.add(gate(*qubits, theta=theta))
+                # assume parametrized gate
+                circuit.add(gate(*qubits, theta=param))
         return circuit
 
     @staticmethod
     def _parse_qasm(qasm_code: str
-                    ) -> Tuple[int, Dict[str, List[int]],
-                               List[Tuple[str, List[int], Optional[float]]]]:
+                    ) -> Tuple[int,
+                               List[Tuple[str, List[int],
+                                          Optional[Union[str, float]]]]]:
         """Extracts circuit information from QASM script.
 
         Helper method for ``from_qasm``.
@@ -370,11 +369,11 @@ class BaseCircuit(object):
 
         Returns:
             nqubits: The total number of qubits in the circuit.
-            registers: Dictionary mapping measurement register names to the
-                list of target qubit ids.
             gate_list: List that specifies the gates of the circuit.
                 Contains tuples of the form
-                (Qibo gate name, qubit IDs, theta parameter (optional)).
+                (Qibo gate name, qubit IDs, optional additional parameter).
+                The additional parameter is the ``register_name`` for
+                measurement gates or ``theta`` for parametrized gates.
         """
         import re
         def read_args(args):
@@ -433,11 +432,13 @@ class BaseCircuit(object):
                     raise ValueError("Cannot access index {} of register {} "
                                      "with {} qubits."
                                      "".format(idx, register, cregs_size[register]))
-                # TODO: Fix qubit ordering in measurement registers
                 if register in registers:
-                    registers[register].append(qubits[qubit])
+                    if idx in registers[register]:
+                        raise KeyError("Key {} of register {} has already "
+                                       "been used.".format(idx, register))
+                    registers[register][idx] = qubits[qubit]
                 else:
-                    registers[register] = [qubits[qubit]]
+                    registers[register] = {idx: qubits[qubit]}
                     gate_list.append(("M", register, None))
 
             else:
@@ -477,4 +478,11 @@ class BaseCircuit(object):
                                   list(qubit_list),
                                   theta))
 
-        return len(qubits), gate_list, registers
+        # Create measurement gate qubit lists from registers
+        for i, (gatename, register, _) in enumerate(gate_list):
+            if gatename == "M":
+                qubit_list = registers[register]
+                qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
+                gate_list[i] = ("M", qubit_list, register)
+
+        return len(qubits), gate_list

@@ -294,10 +294,25 @@ measure q[3] -> b[1];"""
     assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
 
 
+def test_from_qasm_measurements_order():
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[5];
+creg a[3];
+creg b[2];
+measure q[2] -> b[1];
+measure q[3] -> a[1];
+measure q[4] -> a[0];
+measure q[1] -> a[2];
+measure q[0] -> b[0];
+"""
+    c = Circuit.from_qasm(target)
+    assert c.measurement_tuples == {"a": (4, 3, 1), "b": (0, 2)}
+
+
 def test_from_qasm_invalid_measurements():
     # Undefined qubit
     target = """OPENQASM 2.0;
-include "qelib1.inc";
 qreg q[2];
 creg a[2];
 measure q[2] -> a[0];"""
@@ -306,7 +321,6 @@ measure q[2] -> a[0];"""
 
     # Undefined register
     target = """OPENQASM 2.0;
-include "qelib1.inc";
 qreg q[2];
 creg a[2];
 measure q[0] -> b[0];"""
@@ -315,7 +329,6 @@ measure q[0] -> b[0];"""
 
     # Register index out of range
     target = """OPENQASM 2.0;
-include "qelib1.inc";
 qreg q[2];
 creg a[2];
 measure q[0] -> a[2];"""
@@ -324,7 +337,6 @@ measure q[0] -> a[2];"""
 
     # Reuse measured qubit
     target = """OPENQASM 2.0;
-include "qelib1.inc";
 qreg q[2];
 creg a[2];
 measure q[0] -> a[0];
@@ -333,6 +345,15 @@ measure q[1] -> a[1];"""
     # Note that in this example the full register measurement is added during
     # the first `measurement` call
     with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Reuse classical register
+    target = """OPENQASM 2.0;
+qreg q[2];
+creg a[2];
+measure q[0] -> a[1];
+measure q[1] -> a[1];"""
+    with pytest.raises(KeyError):
         c = Circuit.from_qasm(target)
 
 
