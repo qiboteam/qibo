@@ -334,3 +334,47 @@ measure q[1] -> a[1];"""
     # the first `measurement` call
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
+
+
+def test_from_qasm_parametrized_gates():
+    import numpy as np
+    target = """OPENQASM 2.0;
+qreg q[2];
+rx(0.1234) q[0];
+rz(0.4321) q[1];
+crz(0.567) q[0],q[1];"""
+    c = Circuit.from_qasm(target)
+    assert c.depth == 3
+    assert isinstance(c.queue[0], gates.RX)
+    assert isinstance(c.queue[1], gates.RZ)
+    assert isinstance(c.queue[2], gates.CZPow)
+
+    c2 = Circuit(2)
+    c2.add([gates.RX(0, 0.1234), gates.RZ(1, 0.4321), gates.CZPow(0, 1, 0.567)])
+    np.testing.assert_allclose(c2().numpy(), c().numpy())
+
+
+def test_from_qasm_invalid_parametrized_gates():
+    # Parametrize non-parametrized gate
+    target = """OPENQASM 2.0;
+qreg q[2];
+x(0.1234) q[0];
+"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Failure to give theta value for parametrized gate
+    target = """OPENQASM 2.0;
+qreg q[2];
+rx q[0];
+"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Invalid parameter value
+    target = """OPENQASM 2.0;
+qreg q[2];
+rx(0.123a) q[0];
+"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)

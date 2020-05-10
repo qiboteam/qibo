@@ -28,7 +28,6 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
-    _PARAMETRIZED_GATES = {"rx", "ry", "rz", "crz"}
     _GATE_MODULE = gates
 
     def __init__(self, nqubits):
@@ -301,7 +300,7 @@ class BaseCircuit(object):
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             name = gate.name
-            if gate.name in self._PARAMETRIZED_GATES:
+            if gate.name in gates.PARAMETRIZED_GATES:
                 # TODO: Make sure that our parameter convention agrees with OpenQASM
                 name += f"({gate.theta})"
             code.append(f"{name} {qubits};")
@@ -345,20 +344,23 @@ class BaseCircuit(object):
         """
         nqubits, gate_list, registers = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
-        for gate_name, qubits in gate_list:
+        for gate_name, qubits, theta in gate_list:
             gate = getattr(cls._GATE_MODULE, gate_name)
             if gate_name == "M":
                 # If gate is measurement then `qubits` holds the register
                 # name and not the list of qubits
                 circuit.add(gate(*registers[qubits], register_name=qubits))
             else:
-                circuit.add(gate(*qubits))
+                if theta is None:
+                    circuit.add(gate(*qubits))
+                else:
+                    circuit.add(gate(*qubits, theta=theta))
         return circuit
 
     @staticmethod
     def _parse_qasm(qasm_code: str
-                    ) -> Tuple[int, List[Tuple[str, List[int]]],
-                               Dict[str, List[int]]]:
+                    ) -> Tuple[int, Dict[str, List[int]],
+                               List[Tuple[str, List[int], Optional[float]]]]:
         """Extracts circuit information from QASM script.
 
         Helper method for ``from_qasm``.
@@ -368,12 +370,12 @@ class BaseCircuit(object):
 
         Returns:
             nqubits: The total number of qubits in the circuit.
-            gate_list: List that specifies the gates of the circuit.
-                Contains tuples (Qibo gate name, qubit IDs).
             registers: Dictionary mapping measurement register names to the
                 list of target qubit ids.
+            gate_list: List that specifies the gates of the circuit.
+                Contains tuples of the form
+                (Qibo gate name, qubit IDs, theta parameter (optional)).
         """
-        # TODO: Implement parametrized gates
         import re
         def read_args(args):
             _args = iter(re.split("[\[\],]", args))
@@ -398,7 +400,9 @@ class BaseCircuit(object):
         gate_list = [] # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
         for line in lines:
             command, args = line.split(" ", 1)
-            args = args.replace(" ", "") # remove spaces from args
+            # remove spaces
+            command = command.replace(" ", "")
+            args = args.replace(" ", "")
 
             if command == "include":
                 pass
@@ -433,30 +437,43 @@ class BaseCircuit(object):
                     registers[register].append(qubits[qubit])
                 else:
                     registers[register] = [qubits[qubit]]
-                    gate_list.append(("M", register))
+                    gate_list.append(("M", register, None))
 
             else:
-                command = [x for x in re.split("[()]", command) if x]
-                if len(command) == 1:
-                    command = command[0]
-                    if command not in gates.QASM_GATES:
+                pieces = [x for x in re.split("[()]", command) if x]
+                if len(pieces) == 1:
+                    gatename, theta = pieces[0], None
+                    if gatename not in gates.QASM_GATES:
                         raise ValueError("QASM command {} is not recognized."
                                          "".format(command))
-                    qubit_list = []
-                    for qubit in read_args(args):
-                        if qubit not in qubits:
-                            raise ValueError("Qubit {} is not defined in QASM "
-                                             "code.".format(qubit))
-                        qubit_list.append(qubits[qubit])
-                    gate_list.append((gates.QASM_GATES[command], list(qubit_list)))
+                    if gatename in gates.PARAMETRIZED_GATES:
+                        raise ValueError("Missing theta parameter for QASM "
+                                         "gate {}.".format(gatename))
 
-                elif len(command) == 2:
-                    command, theta = command
-                    theta = float(theta)
-                    raise NotImplementedError
+                elif len(pieces) == 2:
+                    gatename, theta = pieces
+                    if gatename not in gates.PARAMETRIZED_GATES:
+                        raise ValueError("Invalid QASM command {}."
+                                         "".format(command))
+                    try:
+                        theta = float(theta)
+                    except ValueError:
+                        raise ValueError("Invalid value {} for theta parameter."
+                                         "".format(theta))
 
                 else:
                     raise ValueError("QASM command {} is not recognized."
                                      "".format(command))
+
+                # Add gate to gate list
+                qubit_list = []
+                for qubit in read_args(args):
+                    if qubit not in qubits:
+                        raise ValueError("Qubit {} is not defined in QASM "
+                                         "code.".format(qubit))
+                    qubit_list.append(qubits[qubit])
+                gate_list.append((gates.QASM_GATES[gatename],
+                                  list(qubit_list),
+                                  theta))
 
         return len(qubits), gate_list, registers
