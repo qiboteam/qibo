@@ -315,6 +315,34 @@ class BaseCircuit(object):
 
     @classmethod
     def from_qasm(cls, qasm_code: str) -> "BaseCircuit":
+        """Constructs a circuit from QASM code.
+
+        Args:
+            qasm_code (str): String with the QASM script.
+
+        Returns:
+            A :class:`qibo.base.circuit.BaseCircuit` that contains the gates
+            specified by the given QASM script.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+
+                qasm_code = '''OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                h q[0];
+                h q[1];
+                cx q[0],q[1];'''
+                c = models.Circuit.from_qasm(qasm_code)
+
+                # is equivalent to creating the following circuit
+                c2 = models.Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.H(1))
+                c2.add(gates.CNOT(0, 1))
+        """
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
         for gate_name, qubits in gate_list:
@@ -324,6 +352,18 @@ class BaseCircuit(object):
 
     @staticmethod
     def _parse_qasm(qasm_code: str) -> Tuple[int, List[Tuple[str, List[int]]]]:
+        """Extracts circuit information from QASM script.
+
+        Helper method for ``from_qasm``.
+
+        Args:
+            qasm_code: String with the QASM code to parse.
+
+        Returns:
+            nqubits: The total number of qubits in the circuit.
+            gate_list: List that specifies the gates of the circuit.
+                Contains tuples (Qibo gate name, qubit IDs).
+        """
         # TODO: Implement measurements
         # TODO: Implement parametrized gates
         import re
