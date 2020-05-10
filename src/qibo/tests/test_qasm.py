@@ -378,3 +378,16 @@ rx(0.123a) q[0];
 """
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
+
+
+def test_from_qasm_empty_spaces():
+    target = """OPENQASM 2.0; qreg q[2];
+creg a[2]; h q[0];x q[1]; cx q[0], q[1];
+measure q[0] -> a[0];measure q[1]->a[1]"""
+    c = Circuit.from_qasm(target)
+    assert c.nqubits == 2
+    assert c.depth == 3
+    assert isinstance(c.queue[0], gates.H)
+    assert isinstance(c.queue[1], gates.X)
+    assert isinstance(c.queue[2], gates.CNOT)
+    assert c.measurement_tuples == {"a": (0, 1)}

@@ -399,7 +399,7 @@ class BaseCircuit(object):
         registers = {} # Dict[str, List[int]]: map from register names to target qubit ids
         gate_list = [] # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
         for line in lines:
-            command, args = line.split(" ", 1)
+            command, args = line.split(None, 1)
             # remove spaces
             command = command.replace(" ", "")
             args = args.replace(" ", "")
@@ -433,6 +433,7 @@ class BaseCircuit(object):
                     raise ValueError("Cannot access index {} of register {} "
                                      "with {} qubits."
                                      "".format(idx, register, cregs_size[register]))
+                # TODO: Fix qubit ordering in measurement registers
                 if register in registers:
                     registers[register].append(qubits[qubit])
                 else:
