@@ -244,10 +244,17 @@ x q[1];"""
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
 
-    # Undefined qubit
+    # Qubit index out of range
     target = """OPENQASM 2.0;
 qreg q[2];
 x q[2];
+"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Invalid qubit index
+    target = """OPENQASM 2.0;
+qreg q[a];
 """
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)

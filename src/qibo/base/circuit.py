@@ -415,7 +415,7 @@ class BaseCircuit(object):
             elif command == "measure":
                 args = args.split("->")
                 if len(args) != 2:
-                    raise ValueError("Invalid QASM measurement command:", line)
+                    raise ValueError("Invalid QASM measurement:", line)
                 qubit = next(read_args(args[0]))
                 if qubit not in qubits:
                     raise ValueError("Qubit {} is not defined in QASM code."
@@ -435,16 +435,28 @@ class BaseCircuit(object):
                     registers[register] = [qubits[qubit]]
                     gate_list.append(("M", register))
 
-            elif command in gates.QASM_GATES:
-                qubit_list = []
-                for qubit in read_args(args):
-                    if qubit not in qubits:
-                        raise ValueError("Qubit {} is not defined in QASM code."
-                                         "".format(qubit))
-                    qubit_list.append(qubits[qubit])
-                gate_list.append((gates.QASM_GATES[command], list(qubit_list)))
-
             else:
-                raise ValueError("QASM command {} is not recognized.".format(command))
+                command = [x for x in re.split("[()]", command) if x]
+                if len(command) == 1:
+                    command = command[0]
+                    if command not in gates.QASM_GATES:
+                        raise ValueError("QASM command {} is not recognized."
+                                         "".format(command))
+                    qubit_list = []
+                    for qubit in read_args(args):
+                        if qubit not in qubits:
+                            raise ValueError("Qubit {} is not defined in QASM "
+                                             "code.".format(qubit))
+                        qubit_list.append(qubits[qubit])
+                    gate_list.append((gates.QASM_GATES[command], list(qubit_list)))
+
+                elif len(command) == 2:
+                    command, theta = command
+                    theta = float(theta)
+                    raise NotImplementedError
+
+                else:
+                    raise ValueError("QASM command {} is not recognized."
+                                     "".format(command))
 
         return len(qubits), gate_list, registers
