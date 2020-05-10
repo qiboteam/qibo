@@ -356,6 +356,14 @@ measure q[1] -> a[1];"""
     with pytest.raises(KeyError):
         c = Circuit.from_qasm(target)
 
+    # Invalid measurement command
+    target = """OPENQASM 2.0;
+qreg q[2];
+creg a[2];
+measure q[0] -> a[1] -> a[0];"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
 
 def test_from_qasm_parametrized_gates():
     import numpy as np
@@ -396,6 +404,14 @@ rx q[0];
     target = """OPENQASM 2.0;
 qreg q[2];
 rx(0.123a) q[0];
+"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Invalid parenthesis use
+    target = """OPENQASM 2.0;
+qreg q[2];
+rx(0.123)(0.25)(0) q[0];
 """
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
