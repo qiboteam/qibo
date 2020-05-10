@@ -266,3 +266,64 @@ test q[2];
 """
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
+
+
+def test_from_qasm_measurements():
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[5];
+creg a[3];
+creg b[2];
+measure q[0] -> a[0];
+x q[3];
+measure q[1] -> b[0];
+measure q[2] -> a[1];
+measure q[4] -> a[2];
+measure q[3] -> b[1];"""
+    c = Circuit.from_qasm(target)
+    assert c.depth == 1
+    assert isinstance(c.queue[0], gates.X)
+    assert isinstance(c.measurement_gate, gates.M)
+    assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
+
+
+def test_from_qasm_invalid_measurements():
+    # Undefined qubit
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg a[2];
+measure q[2] -> a[0];"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Undefined register
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg a[2];
+measure q[0] -> b[0];"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Register index out of range
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg a[2];
+measure q[0] -> a[2];"""
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)
+
+    # Reuse measured qubit
+    target = """OPENQASM 2.0;
+include "qelib1.inc";
+qreg q[2];
+creg a[2];
+measure q[0] -> a[0];
+x q[1];
+measure q[1] -> a[1];"""
+    # Note that in this example the full register measurement is added during
+    # the first `measurement` call
+    with pytest.raises(ValueError):
+        c = Circuit.from_qasm(target)

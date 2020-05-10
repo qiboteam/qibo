@@ -343,15 +343,22 @@ class BaseCircuit(object):
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        nqubits, gate_list = cls._parse_qasm(qasm_code)
+        nqubits, gate_list, registers = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
         for gate_name, qubits in gate_list:
             gate = getattr(cls._GATE_MODULE, gate_name)
-            circuit.add(gate(*qubits))
+            if gate_name == "M":
+                # If gate is measurement then `qubits` holds the register
+                # name and not the list of qubits
+                circuit.add(gate(*registers[qubits], register_name=qubits))
+            else:
+                circuit.add(gate(*qubits))
         return circuit
 
     @staticmethod
-    def _parse_qasm(qasm_code: str) -> Tuple[int, List[Tuple[str, List[int]]]]:
+    def _parse_qasm(qasm_code: str
+                    ) -> Tuple[int, List[Tuple[str, List[int]]],
+                               Dict[str, List[int]]]:
         """Extracts circuit information from QASM script.
 
         Helper method for ``from_qasm``.
@@ -363,8 +370,9 @@ class BaseCircuit(object):
             nqubits: The total number of qubits in the circuit.
             gate_list: List that specifies the gates of the circuit.
                 Contains tuples (Qibo gate name, qubit IDs).
+            registers: Dictionary mapping measurement register names to the
+                list of target qubit ids.
         """
-        # TODO: Implement measurements
         # TODO: Implement parametrized gates
         import re
         def read_args(args):
@@ -385,9 +393,11 @@ class BaseCircuit(object):
             raise ValueError("QASM code should start with 'OPENQASM 2.0'.")
 
         qubits = {} # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
+        cregs_size = {} # Dict[str, int]: map from `creg` name to its size
+        registers = {} # Dict[str, List[int]]: map from register names to target qubit ids
         gate_list = [] # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
         for line in lines:
-            command, args = line.split(" ")
+            command, args = line.split(" ", 1)
             args = args.replace(" ", "") # remove spaces from args
 
             if command == "include":
@@ -399,8 +409,31 @@ class BaseCircuit(object):
                         qubits[(name, i)] = len(qubits)
 
             elif command == "creg":
-                # TODO: Define measurement registers here
-                raise NotImplementedError
+                for name, nqubits in read_args(args):
+                    cregs_size[name] = nqubits
+
+            elif command == "measure":
+                args = args.split("->")
+                if len(args) != 2:
+                    raise ValueError("Invalid QASM measurement command:", line)
+                qubit = next(read_args(args[0]))
+                if qubit not in qubits:
+                    raise ValueError("Qubit {} is not defined in QASM code."
+                                     "".format(qubit))
+
+                register, idx = next(read_args(args[1]))
+                if register not in cregs_size:
+                    raise ValueError("Classical register name {} is not defined "
+                                     "in QASM code.".format(register))
+                if idx >= cregs_size[register]:
+                    raise ValueError("Cannot access index {} of register {} "
+                                     "with {} qubits."
+                                     "".format(idx, register, cregs_size[register]))
+                if register in registers:
+                    registers[register].append(qubits[qubit])
+                else:
+                    registers[register] = [qubits[qubit]]
+                    gate_list.append(("M", register))
 
             elif command in gates.QASM_GATES:
                 qubit_list = []
@@ -414,4 +447,4 @@ class BaseCircuit(object):
             else:
                 raise ValueError("QASM command {} is not recognized.".format(command))
 
-        return len(qubits), gate_list
+        return len(qubits), gate_list, registers
