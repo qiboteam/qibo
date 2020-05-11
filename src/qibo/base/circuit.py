@@ -2,13 +2,9 @@
 # @authors: S. Carrazza and A. Garcia
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
-from typing import Dict, Iterable, Optional, Set, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
-
-QASM_GATES = {"h", "x", "y", "z",
-              "rx", "ry", "rz",
-              "cx", "swap", "crz", "ccx"}
 
 
 class BaseCircuit(object):
@@ -32,7 +28,7 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
-    _PARAMETRIZED_GATES = {"rx", "ry", "rz", "crz"}
+    _GATE_MODULE = gates
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -126,11 +122,49 @@ class BaseCircuit(object):
         raise TypeError("Type {} of noise map is not recognized."
                         "".format(type(noise_map)))
 
-    def with_noise(self, noise_channel_class,
-                   noise_map: NoiseMapType,
+    def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
-        """"""
+        """Creates a copy of the circuit with noise gates after each gate.
+
+        Args:
+            noise_map (dict): Dictionary that maps qubit ids to noise
+                probabilities (px, py, pz).
+                If a tuple of probabilities (px, py, pz) is given instead of
+                a dictionary, then the same probabilities will be used for all
+                qubits.
+            measurement_noise (dict): Optional map for using different noise
+                probabilities before measurement for the qubits that are
+                measured.
+                If ``None`` the default probabilities specified by ``noise_map``
+                will be used for all qubits.
+
+        Returns:
+            Circuit object that contains all the gates of the original circuit
+            and additional noise channels on all qubits after every gate.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(2)
+                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noisy_c = c.with_noise(noise_map)
+
+                # ``noisy_c`` will be equivalent to the following circuit
+                c2 = Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.H(1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.CNOT(0, 1))
+                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+        """
         noise_map = self._check_noise_map(noise_map)
         if measurement_noise is not None:
             if self.measurement_gate is None:
@@ -146,14 +180,14 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, noise_channel_class):
+            if isinstance(gate, self._GATE_MODULE.NoiseChannel):
                 raise ValueError("`.with_noise` method is not available for "
                                  "circuits that already contain noise channels.")
-            noise_gates.append([noise_channel_class(q, *list(p))
+            noise_gates.append([self._GATE_MODULE.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
         if measurement_noise is not None:
-            noise_gates[-1] = [noise_channel_class(q, *list(p))
+            noise_gates[-1] = [self._GATE_MODULE.NoiseChannel(q, *list(p))
                                for q, p in measurement_noise.items()
                                if sum(p) > 0]
 
@@ -297,14 +331,14 @@ class BaseCircuit(object):
 
         # Add gates
         for gate in self.queue:
-            if gate.name not in QASM_GATES:
+            if gate.name not in gates.QASM_GATES:
                 raise ValueError(f"Gate {gate.name} is not supported by OpenQASM.")
             if gate.is_controlled_by:
                 raise ValueError("OpenQASM does not support multi-controlled gates.")
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             name = gate.name
-            if gate.name in self._PARAMETRIZED_GATES:
+            if gate.name in gates.PARAMETRIZED_GATES:
                 # TODO: Make sure that our parameter convention agrees with OpenQASM
                 name += f"({gate.theta})"
             code.append(f"{name} {qubits};")
@@ -315,3 +349,178 @@ class BaseCircuit(object):
                 code.append(f"measure q[{q}] -> {reg_name}[{i}];")
 
         return "\n".join(code)
+
+    @classmethod
+    def from_qasm(cls, qasm_code: str) -> "BaseCircuit":
+        """Constructs a circuit from QASM code.
+
+        Args:
+            qasm_code (str): String with the QASM script.
+
+        Returns:
+            A :class:`qibo.base.circuit.BaseCircuit` that contains the gates
+            specified by the given QASM script.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+
+                qasm_code = '''OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                h q[0];
+                h q[1];
+                cx q[0],q[1];'''
+                c = models.Circuit.from_qasm(qasm_code)
+
+                # is equivalent to creating the following circuit
+                c2 = models.Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.H(1))
+                c2.add(gates.CNOT(0, 1))
+        """
+        nqubits, gate_list = cls._parse_qasm(qasm_code)
+        circuit = cls(nqubits)
+        for gate_name, qubits, param in gate_list:
+            gate = getattr(cls._GATE_MODULE, gate_name)
+            if gate_name == "M":
+                circuit.add(gate(*qubits, register_name=param))
+            elif param is None:
+                circuit.add(gate(*qubits))
+            else:
+                # assume parametrized gate
+                circuit.add(gate(*qubits, theta=param))
+        return circuit
+
+    @staticmethod
+    def _parse_qasm(qasm_code: str
+                    ) -> Tuple[int,
+                               List[Tuple[str, List[int],
+                                          Optional[Union[str, float]]]]]:
+        """Extracts circuit information from QASM script.
+
+        Helper method for ``from_qasm``.
+
+        Args:
+            qasm_code: String with the QASM code to parse.
+
+        Returns:
+            nqubits: The total number of qubits in the circuit.
+            gate_list: List that specifies the gates of the circuit.
+                Contains tuples of the form
+                (Qibo gate name, qubit IDs, optional additional parameter).
+                The additional parameter is the ``register_name`` for
+                measurement gates or ``theta`` for parametrized gates.
+        """
+        import re
+        def read_args(args):
+            _args = iter(re.split("[\[\],]", args))
+            for name in _args:
+                if name:
+                    index = next(_args)
+                    if not index.isdigit():
+                        raise ValueError("Invalid QASM qubit arguments:", args)
+                    yield name, int(index)
+
+        # Remove comment lines
+        lines = "".join(line for line in qasm_code.split("\n")
+                        if line and line[:2] != "//")
+        lines = (line for line in lines.split(";") if line)
+
+        if next(lines) != "OPENQASM 2.0":
+            raise ValueError("QASM code should start with 'OPENQASM 2.0'.")
+
+        qubits = {} # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
+        cregs_size = {} # Dict[str, int]: map from `creg` name to its size
+        registers = {} # Dict[str, List[int]]: map from register names to target qubit ids
+        gate_list = [] # List[Tuple[str, List[int]]]: List of (gate name, list of target qubit ids)
+        for line in lines:
+            command, args = line.split(None, 1)
+            # remove spaces
+            command = command.replace(" ", "")
+            args = args.replace(" ", "")
+
+            if command == "include":
+                pass
+
+            elif command == "qreg":
+                for name, nqubits in read_args(args):
+                    for i in range(nqubits):
+                        qubits[(name, i)] = len(qubits)
+
+            elif command == "creg":
+                for name, nqubits in read_args(args):
+                    cregs_size[name] = nqubits
+
+            elif command == "measure":
+                args = args.split("->")
+                if len(args) != 2:
+                    raise ValueError("Invalid QASM measurement:", line)
+                qubit = next(read_args(args[0]))
+                if qubit not in qubits:
+                    raise ValueError("Qubit {} is not defined in QASM code."
+                                     "".format(qubit))
+
+                register, idx = next(read_args(args[1]))
+                if register not in cregs_size:
+                    raise ValueError("Classical register name {} is not defined "
+                                     "in QASM code.".format(register))
+                if idx >= cregs_size[register]:
+                    raise ValueError("Cannot access index {} of register {} "
+                                     "with {} qubits."
+                                     "".format(idx, register, cregs_size[register]))
+                if register in registers:
+                    if idx in registers[register]:
+                        raise KeyError("Key {} of register {} has already "
+                                       "been used.".format(idx, register))
+                    registers[register][idx] = qubits[qubit]
+                else:
+                    registers[register] = {idx: qubits[qubit]}
+                    gate_list.append(("M", register, None))
+
+            else:
+                pieces = [x for x in re.split("[()]", command) if x]
+                if len(pieces) == 1:
+                    gatename, theta = pieces[0], None
+                    if gatename not in gates.QASM_GATES:
+                        raise ValueError("QASM command {} is not recognized."
+                                         "".format(command))
+                    if gatename in gates.PARAMETRIZED_GATES:
+                        raise ValueError("Missing theta parameter for QASM "
+                                         "gate {}.".format(gatename))
+
+                elif len(pieces) == 2:
+                    gatename, theta = pieces
+                    if gatename not in gates.PARAMETRIZED_GATES:
+                        raise ValueError("Invalid QASM command {}."
+                                         "".format(command))
+                    try:
+                        theta = float(theta)
+                    except ValueError:
+                        raise ValueError("Invalid value {} for theta parameter."
+                                         "".format(theta))
+
+                else:
+                    raise ValueError("QASM command {} is not recognized."
+                                     "".format(command))
+
+                # Add gate to gate list
+                qubit_list = []
+                for qubit in read_args(args):
+                    if qubit not in qubits:
+                        raise ValueError("Qubit {} is not defined in QASM "
+                                         "code.".format(qubit))
+                    qubit_list.append(qubits[qubit])
+                gate_list.append((gates.QASM_GATES[gatename],
+                                  list(qubit_list),
+                                  theta))
+
+        # Create measurement gate qubit lists from registers
+        for i, (gatename, register, _) in enumerate(gate_list):
+            if gatename == "M":
+                qubit_list = registers[register]
+                qubit_list = [qubit_list[k] for k in sorted(qubit_list.keys())]
+                gate_list[i] = ("M", qubit_list, register)
+
+        return len(qubits), gate_list

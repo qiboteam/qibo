@@ -16,6 +16,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         dtype: Tensorflow type for complex numbers.
             Read automatically from `config`.
     """
+    _GATE_MODULE = gates
 
     def __init__(self, nqubits, dtype=DTYPECPX):
         super(TensorflowCircuit, self).__init__(nqubits)
@@ -190,53 +191,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
             return self._final_state
         shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
         return tf.reshape(self._final_state, shape)
-
-    def with_noise(self, noise_map: circuit.NoiseMapType,
-                   measurement_noise: Optional[circuit.NoiseMapType] = None
-                   ) -> "TensorflowCircuit":
-        """Creates a copy of the circuit with noise gates after each gate.
-
-        Args:
-            noise_map (dict): Dictionary that maps qubit ids to noise
-                probabilities (px, py, pz).
-                If a tuple of probabilities (px, py, pz) is given instead of
-                a dictionary, then the same probabilities will be used for all
-                qubits.
-            measurement_noise (dict): Optional map for using different noise
-                probabilities before measurement for the qubits that are
-                measured.
-                If ``None`` the default probabilities specified by ``noise_map``
-                will be used for all qubits.
-
-        Returns:
-            Circuit object that contains all the gates of the original circuit
-            and additional noise channels on all qubits after every gate.
-
-        Example:
-            ::
-
-                from qibo.models import Circuit
-                from qibo import gates
-                c = Circuit(2)
-                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-                noisy_c = c.with_noise(noise_map)
-
-                # ``noisy_c`` will be equivalent to the following circuit
-                c2 = Circuit(2)
-                c2.add(gates.H(0))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-                c2.add(gates.H(1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-                c2.add(gates.CNOT(0, 1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-        """
-        return super(TensorflowCircuit, self).with_noise(gates.NoiseChannel,
-                                                         noise_map,
-                                                         measurement_noise)
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
