@@ -46,10 +46,11 @@ def QFT(nqubits, backend):
     return circuit
 
 
-def Hadamards(nqubits, backend):
+def Hadamards(nqubits, backend, nlayers=1):
     circuit = models.Circuit(nqubits)
-    for i in range(nqubits):
-        circuit.add(gates.H(i).with_backend(backend))
+    for _ in range(nlayers):
+        for i in range(nqubits):
+            circuit.add(gates.H(i).with_backend(backend))
     return circuit
 
 
