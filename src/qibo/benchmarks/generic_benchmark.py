@@ -12,6 +12,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--backend", default=None, type=str)
 parser.add_argument("--nlayers", default=None, type=int)
+parser.add_argument("--gate-type", default=None, type=str)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
@@ -46,11 +47,20 @@ limit_gpu_memory(args.pop("memory"))
 from qibo.benchmarks import utils, benchmark_models
 
 
+def get_backend(backend: str, device: str):
+    if backend is not None:
+        return backend
+    if "GPU" in device:
+        return "DefaultEinsum"
+    return "MatmulEinsum"
+
+
 def main(nqubits_list: List[int],
          type: str,
          backend: Optional[str] = None,
          device: Optional[str] = None,
          nlayers: Optional[int] = None,
+         gate_type: Optional[str] = None,
          nshots: Optional[int] = None,
          directory: Optional[str] = None,
          name: Optional[str] = None,
@@ -89,14 +99,10 @@ def main(nqubits_list: List[int],
     """
     if device is None:
         device = tf.config.list_logical_devices()[0].name
-    if backend is None:
-        backend = ("DefaultEinsum" if tf.config.list_physical_devices("GPU")
-                   else "MatmulEinsum")
 
     if directory is not None:
         if name is None:
-            raise ValueError("A run name should be given in order to save "
-                             "logs.")
+            raise ValueError("A run name should be given in order to save logs.")
 
         # Generate log file name
         log_name = [name]
@@ -121,14 +127,16 @@ def main(nqubits_list: List[int],
     create_circuit_func = benchmark_models.circuits[type]
 
     for nqubits in nqubits_list:
-        if nlayers is None:
-            circuit = create_circuit_func(nqubits, backend)
-        else:
-            circuit = create_circuit_func(nqubits, backend, nlayers)
+        kwargs = {"nqubits": nqubits,
+                  "backend": get_backend(backend, device)}
+        if nlayers is not None: kwargs["nlayers"] = nlayers
+        if gate_type is not None: kwargs["gate_type"] = gate_type
+        circuit = create_circuit_func(**kwargs)
 
         actual_backend = circuit.queue[0].einsum.__class__.__name__
-        print("\nSimulating {} qubits on {} using {}."
-              "".format(nqubits, device, actual_backend))
+        print("\nBenchmark:", type)
+        print(kwargs)
+        print("Actual backend:", actual_backend)
         with tf.device(device):
             if compile:
                 start_time = time.time()

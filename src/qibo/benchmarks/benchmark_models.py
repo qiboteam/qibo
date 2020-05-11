@@ -59,5 +59,4 @@ def SingleQubitGate(nqubits: int, backend: str, gate_type: str = "H",
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
             "ghz": PrepareGHZ,
-            "hadamards": Hadamards
-            "single_gate": SingleQubitGate}
+            "single-gate": SingleQubitGate}
