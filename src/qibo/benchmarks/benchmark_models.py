@@ -2,7 +2,7 @@ import numpy as np
 from qibo import models, gates
 
 
-def SupremacyLikeCircuit(nqubits, backend, nlayers):
+def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Circuit:
     one_qubit_gates = ["RX", "RY", "RZ"]
     circuit = models.Circuit(nqubits)
     d = 1
@@ -22,7 +22,7 @@ def SupremacyLikeCircuit(nqubits, backend, nlayers):
     return circuit
 
 
-def PrepareGHZ(nqubits):
+def PrepareGHZ(nqubits: int, backend: str) -> models.Circuit:
     circuit = models.Circuit(nqubits)
     circuit.add(gates.H(0).with_backend(backend))
     for i in range(nqubits - 1):
@@ -30,7 +30,7 @@ def PrepareGHZ(nqubits):
     return circuit
 
 
-def QFT(nqubits, backend):
+def QFT(nqubits: int, backend: str) -> models.Circuit:
     circuit = models.Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1).with_backend(backend))
@@ -46,15 +46,18 @@ def QFT(nqubits, backend):
     return circuit
 
 
-def Hadamards(nqubits, backend, nlayers=1):
+def SingleQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+                    nlayers: int = 1) -> models.Circuit:
     circuit = models.Circuit(nqubits)
     for _ in range(nlayers):
         for i in range(nqubits):
-            circuit.add(gates.H(i).with_backend(backend))
+            gate = getattr(gates, gate_type)(i)
+            circuit.add(gate.with_backend(backend))
     return circuit
 
 
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
             "ghz": PrepareGHZ,
-            "hadamards": Hadamards}
+            "hadamards": Hadamards
+            "single_gate": SingleQubitGate}
