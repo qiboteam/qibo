@@ -72,7 +72,7 @@ def main(nqubits_list: List[int],
             Available backends: ``DefaultEinsum`` and ``MatmulEinsum``.
         device: Tensorflow logical device to use for the benchmark.
             If ``None`` the first available device is used.
-        nlayers: Number of layers for the supremacy-like circuit.
+        nlayers: Number of layers for the supremacy-like or Hadamards circuits.
             If a different circuit is used ``nlayers`` is ignored.
         nshots: Number of measurement shots.
         directory: Directory to save the log files.
@@ -126,7 +126,9 @@ def main(nqubits_list: List[int],
         else:
             circuit = create_circuit_func(nqubits, backend, nlayers)
 
-        print("\nSimulating {} qubits on {}...".format(nqubits, device))
+        actual_backend = circuit.queue[0].einsum.__class__.__name__
+        print("\nSimulating {} qubits on {} using {}."
+              "".format(nqubits, device, actual_backend))
         with tf.device(device):
             if compile:
                 start_time = time.time()
