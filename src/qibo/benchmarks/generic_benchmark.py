@@ -152,6 +152,7 @@ def main(nqubits_list: List[int],
         if compile:
             print("Compile time:", logs["compile_time"][-1])
         print("Simulation time:", logs["simulation_time"][-1])
+        print("Final dtype:", final_state.dtype)
 
 
 if __name__ == "__main__":
