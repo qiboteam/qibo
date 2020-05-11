@@ -51,17 +51,36 @@ def OneQubitGate(nqubits: int, backend: str,
                  gate_type: str = "H", theta: Optional[float] = None,
                  nlayers: int = 1) -> models.Circuit:
     circuit = models.Circuit(nqubits)
+    if theta is None:
+        gate = lambda q: getattr(gates, gate_type)(q)
+    else:
+        gate = lambda q: getattr(gates, gate_type)(q, theta)
+
     for _ in range(nlayers):
         for i in range(nqubits):
-            if theta is None:
-                gate = getattr(gates, gate_type)(i)
-            else:
-                gate = getattr(gates, gate_type)(i, theta=theta)
-            circuit.add(gate.with_backend(backend))
+            circuit.add(gate(i).with_backend(backend))
+    return circuit
+
+
+def TwoQubitGate(nqubits: int, backend: str,
+                 gate_type: str = "H", theta: Optional[float] = None,
+                 nlayers: int = 1) -> models.Circuit:
+    circuit = models.Circuit(nqubits)
+    if theta is None:
+        gate = lambda q: getattr(gates, gate_type)(q, q + 1)
+    else:
+        gate = lambda q: getattr(gates, gate_type)(q, q + 1, theta)
+
+    for _ in range(nlayers):
+        for i in range(0, nqubits - 1, 2):
+            circuit.add(gate(i).with_backend(backend))
+        for i in range(1, nqubits - 1, 2):
+            circuit.add(gate(i).with_backend(backend))
     return circuit
 
 
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
             "ghz": PrepareGHZ,
-            "one-qubit-gate": OneQubitGate}
+            "one-qubit-gate": OneQubitGate,
+            "two-qubit-gate": TwoQubitGate}
