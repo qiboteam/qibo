@@ -264,6 +264,20 @@ def test_general_channel(einsum_choice):
     np.testing.assert_allclose(final_rho, target_rho)
 
 
+def test_controlled_by_channel():
+    """Test that attempting to control channels raises error."""
+    c = models.Circuit(2)
+    with pytest.raises(ValueError):
+        c.add(gates.NoiseChannel(0, px=0.5).controlled_by(1))
+
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
+                                  [0, 0, 1, 0]])
+    config = [((1,), a1), ((0, 1), a2)]
+    with pytest.raises(ValueError):
+        gate = gates.GeneralChannel(config).controlled_by(1)
+
+
 def test_entanglement_entropy():
     """Check that entanglement entropy calculation works for density matrices."""
     rho = random_density_matrix(4)

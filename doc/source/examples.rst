@@ -359,7 +359,7 @@ switch to density matrices for the rest of the simulation. Measurements and
 callbacks can be used exactly as in the pure state vector case.
 
 In practical applications noise typically occurs after every gate. For this reason,
-:class:`qibo.tensorflow.TensorflowCircuit` provides a `.with_noise()` method
+:class:`qibo.base.circuit.BaseCircuit` provides a ``.with_noise()`` method
 which automatically creates a new circuit that contains a noise channel after
 every normal gate. The user can control the probabilities of the noise channel
 using a noise map, which is a dictionary that maps qubits to the corresponding
@@ -396,7 +396,7 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
 Note however that the circuit ``noisy_c`` that was created using the
 ``with_noise`` method uses the gate objects of the original circuit ``c``
-(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as 
+(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as
 a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
