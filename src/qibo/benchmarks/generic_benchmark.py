@@ -13,6 +13,7 @@ parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--backend", default=None, type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
+parser.add_argument("--theta", default=None, type=float)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
@@ -61,6 +62,7 @@ def main(nqubits_list: List[int],
          device: Optional[str] = None,
          nlayers: Optional[int] = None,
          gate_type: Optional[str] = None,
+         theta: Optional[float] = None,
          nshots: Optional[int] = None,
          directory: Optional[str] = None,
          name: Optional[str] = None,
@@ -131,6 +133,7 @@ def main(nqubits_list: List[int],
                   "backend": get_backend(backend, device)}
         if nlayers is not None: kwargs["nlayers"] = nlayers
         if gate_type is not None: kwargs["gate_type"] = gate_type
+        if theta is not None: kwargs["theta"] = theta
         circuit = create_circuit_func(**kwargs)
 
         actual_backend = circuit.queue[0].einsum.__class__.__name__

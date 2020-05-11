@@ -1,5 +1,6 @@
 import numpy as np
 from qibo import models, gates
+from typing import Optional
 
 
 def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Circuit:
@@ -46,12 +47,16 @@ def QFT(nqubits: int, backend: str) -> models.Circuit:
     return circuit
 
 
-def SingleQubitGate(nqubits: int, backend: str, gate_type: str = "H",
-                    nlayers: int = 1) -> models.Circuit:
+def OneQubitGate(nqubits: int, backend: str,
+                 gate_type: str = "H", theta: Optional[float] = None,
+                 nlayers: int = 1) -> models.Circuit:
     circuit = models.Circuit(nqubits)
     for _ in range(nlayers):
         for i in range(nqubits):
-            gate = getattr(gates, gate_type)(i)
+            if theta is None:
+                gate = getattr(gates, gate_type)(i)
+            else:
+                gate = getattr(gates, gate_type)(i, theta=theta)
             circuit.add(gate.with_backend(backend))
     return circuit
 
@@ -59,4 +64,4 @@ def SingleQubitGate(nqubits: int, backend: str, gate_type: str = "H",
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
             "ghz": PrepareGHZ,
-            "single-gate": SingleQubitGate}
+            "one-qubit-gate": OneQubitGate}
