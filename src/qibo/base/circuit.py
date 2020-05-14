@@ -244,19 +244,24 @@ class BaseCircuit(object):
                                  "on a circuit of {} qubits."
                                  "".format(gate.target_qubits, self.nqubits))
 
-        # Set number of qubits in gate
+        self._set_nqubits(gate)
+        self._check_measured(gate.qubits)
+        if gate.name == "measure":
+            self._add_measurement(gate)
+        else:
+            self.queue.append(gate)
+
+    def _set_nqubits(self, gate: gates.Gate):
+        """Sets the number of qubits in ``gate``.
+
+        Helper method for ``circuit.add(gate)``.
+        """
         if gate._nqubits is None:
             gate.nqubits = self.nqubits
         elif gate.nqubits != self.nqubits:
             raise ValueError("Attempting to add gate with {} total qubits to "
                              "a circuit with {} qubits."
                              "".format(gate.nqubits, self.nqubits))
-
-        self._check_measured(gate.qubits)
-        if gate.name == "measure":
-            self._add_measurement(gate)
-        else:
-            self.queue.append(gate)
 
     def _add_measurement(self, gate):
         """Gets called automatically by `add` when `gate` is measurement.
