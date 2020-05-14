@@ -99,48 +99,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
-        if initial_state is None:
-            state = self._default_initial_state()
-
-        else:
-            def shape_error(shape):
-                raise ValueError("Invalid initial state shape {} for circuit "
-                                 "with {} qubits.".format(shape, self.nqubits))
-
-            if isinstance(initial_state, np.ndarray):
-                shape = initial_state.shape
-                if len(shape) == 1:
-                    # Assume state vector was given
-                    if 2 ** self.nqubits != shape[0]:
-                        shape_error(shape)
-                    state = tf.cast(initial_state.reshape(self.nqubits * (2,)),
-                                    dtype=self.dtype)
-                elif len(shape) == 2:
-                    # Assume density matrix was given
-                    self.using_density_matrix = True
-                    if 2 * (2 ** self.nqubits,) != shape:
-                        shape_error(shape)
-                    state = tf.cast(initial_state.reshape(2 * self.nqubits * (2,)),
-                                    dtype=self.dtype)
-                else:
-                    shape_error(shape)
-
-            elif isinstance(initial_state, tf.Tensor):
-                shape = tuple(initial_state.shape)
-                if initial_state.dtype != self.dtype:
-                    raise TypeError("Circuit is of type {} but initial state is "
-                                    "{}.".format(self.dtype, initial_state.dtype))
-
-                if shape == self.nqubits * (2,):
-                    state = initial_state
-                elif shape == 2 * self.nqubits * (2,):
-                    self.using_density_matrix = True
-                    state = initial_state
-                else:
-                    shape_error(shape)
-            else:
-                raise TypeError("Initial state type {} is not recognized."
-                                "".format(type(initial_state)))
+        state = self._set_initial_state(initial_state)
 
         if self.compiled_execute is None:
             self._add_callbacks(callback)
@@ -202,6 +161,50 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                                     update)
         initial_state = tf.reshape(initial_state, self.nqubits * (2,))
         return initial_state
+
+    def _set_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
+        """Checks and casts initial state given by user."""
+        if initial_state is None:
+            return self._default_initial_state()
+
+        def shape_error(shape):
+            raise ValueError("Invalid initial state shape {} for circuit "
+                             "with {} qubits.".format(shape, self.nqubits))
+
+        if isinstance(initial_state, np.ndarray):
+            shape = initial_state.shape
+            if len(shape) == 1:
+                # Assume state vector was given
+                if 2 ** self.nqubits != shape[0]:
+                    shape_error(shape)
+                return tf.cast(initial_state.reshape(self.nqubits * (2,)),
+                               dtype=self.dtype)
+            if len(shape) == 2:
+                # Assume density matrix was given
+                self.using_density_matrix = True
+                if 2 * (2 ** self.nqubits,) != shape:
+                    shape_error(shape)
+                return tf.cast(initial_state.reshape(2 * self.nqubits * (2,)),
+                               dtype=self.dtype)
+
+            shape_error(shape)
+
+        if isinstance(initial_state, tf.Tensor):
+            shape = tuple(initial_state.shape)
+            if initial_state.dtype != self.dtype:
+                raise TypeError("Circuit is of type {} but initial state is "
+                                "{}.".format(self.dtype, initial_state.dtype))
+
+            if shape == self.nqubits * (2,):
+                return initial_state
+            elif shape == 2 * self.nqubits * (2,):
+                self.using_density_matrix = True
+                return initial_state
+            else:
+                shape_error(shape)
+
+        raise TypeError("Initial state type {} is not recognized."
+                        "".format(type(initial_state)))
 
     def _add_callbacks(self, callback: callbacks.Callback):
         """Adds callbacks in the circuit."""
