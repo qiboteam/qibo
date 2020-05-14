@@ -59,6 +59,9 @@ class BaseCache:
             self._calculate_density_matrix_controlled()
         return self._right0
 
+    def cast_shapes(self, cast_func):
+        pass
+
     def _calculate_density_matrix(self):
         """Calculates `left` and `right` elements."""
         raise NotImplementedError
@@ -171,6 +174,12 @@ class MatmulEinsumCache(BaseCache):
                                    self.transposed_shape,
                                    self.nqubits * (2,)),
                         "conjugate": False}
+
+    def cast_shapes(self, cast_func):
+        for attr in ["_vector", "_left", "_right", "_left0", "_right0"]:
+            d = getattr(self, attr)
+            if d is not None:
+                d["shapes"] = tuple(cast_func(s) for s in d["shapes"])
 
     def _calculate_density_matrix(self):
         self._left = {"ids": self.ids + [len(self.ids)],

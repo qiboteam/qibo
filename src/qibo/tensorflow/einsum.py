@@ -103,16 +103,13 @@ class MatmulEinsum:
   def __call__(self, cache: Dict, state: tf.Tensor,
                gate: tf.Tensor) -> tf.Tensor:
       shapes = cache["shapes"]
-      shape0 = tf.cast(shapes[0], dtype=tf.int64)
-      shape1 = tf.cast(shapes[1], dtype=tf.int64)
-      shape2 = tf.cast(shapes[2], dtype=tf.int64)
 
-      state = tf.reshape(state, shape0)
+      state = tf.reshape(state, shapes[0])
       state = tf.transpose(state, cache["ids"])
       if cache["conjugate"]:
-          state = tf.reshape(tf.math.conj(state), shape1)
+          state = tf.reshape(tf.math.conj(state), shapes[1])
       else:
-          state = tf.reshape(state, shape1)
+          state = tf.reshape(state, shapes[1])
 
       n = len(tuple(gate.shape))
       if n > 2:
@@ -121,7 +118,7 @@ class MatmulEinsum:
       else:
           state = tf.matmul(gate, state)
 
-      state = tf.reshape(state, shape2)
+      state = tf.reshape(state, shapes[2])
       state = tf.transpose(state, cache["inverse_ids"])
       state = tf.reshape(state, shapes[3])
       return state

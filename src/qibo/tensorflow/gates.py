@@ -62,6 +62,7 @@ class TensorflowGate(base_gates.Gate):
             self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
+        self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPEINT))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
