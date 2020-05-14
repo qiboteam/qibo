@@ -197,7 +197,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
             if shape == self.nqubits * (2,):
                 return initial_state
-            elif shape == 2 * self.nqubits * (2,):
+            if shape == 2 * self.nqubits * (2,):
                 self.using_density_matrix = True
                 return initial_state
             else:

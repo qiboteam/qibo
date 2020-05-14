@@ -27,6 +27,13 @@ class TensorflowGate(base_gates.Gate):
         # Gate matrices
         self.matrix = None
 
+    def _construct_matrix(self):
+        """Constructs the gate matrix as ``tf.Tensor``.
+
+        This is called automatically by ``nqubits`` setter.
+        """
+        pass
+
     def with_backend(self, einsum_choice: str) -> "TensorflowGate":
         """Uses a different einsum backend than the one defined in config.
 
@@ -63,6 +70,7 @@ class TensorflowGate(base_gates.Gate):
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
         self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPEINT))
+        self._construct_matrix()
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -133,6 +141,8 @@ class H(TensorflowGate, base_gates.H):
     def __init__(self, q):
         base_gates.H.__init__(self, q)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.H
 
 
@@ -141,6 +151,8 @@ class X(TensorflowGate, base_gates.X):
     def __init__(self, q):
         base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.X
 
     def controlled_by(self, *q):
@@ -160,6 +172,8 @@ class Y(TensorflowGate, base_gates.Y):
     def __init__(self, q):
         base_gates.Y.__init__(self, q)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.Y
 
 
@@ -168,6 +182,8 @@ class Z(TensorflowGate, base_gates.Z):
     def __init__(self, q):
         base_gates.Z.__init__(self, q)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.Z
 
 
@@ -250,6 +266,7 @@ class RX(TensorflowGate, base_gates.RX):
         base_gates.RX.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.X)
@@ -261,6 +278,7 @@ class RY(TensorflowGate, base_gates.RY):
         base_gates.RY.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.Y)
@@ -272,6 +290,7 @@ class RZ(TensorflowGate, base_gates.RZ):
         base_gates.RZ.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * th / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
@@ -283,6 +302,8 @@ class CNOT(TensorflowGate, base_gates.CNOT):
     def __init__(self, q0, q1):
         base_gates.CNOT.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.CNOT
 
 
@@ -292,6 +313,7 @@ class CZPow(TensorflowGate, base_gates.CZPow):
         base_gates.CZPow.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
         phase = tf.exp(1j * th)[tf.newaxis]
         diag = tf.concat([tf.ones(3, dtype=self.dtype), phase], axis=0)
@@ -304,6 +326,8 @@ class SWAP(TensorflowGate, base_gates.SWAP):
     def __init__(self, q0, q1):
         base_gates.SWAP.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.SWAP
 
 
@@ -312,6 +336,8 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
     def __init__(self, q0, q1, q2):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = matrices.TOFFOLI
 
 
@@ -322,11 +348,13 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         TensorflowGate.__init__(self)
 
         rank = len(self.target_qubits)
-        shape = tuple(unitary.shape)
+        shape = tuple(self.unitary.shape)
         if shape != (2 ** rank, 2 ** rank):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))
 
+    def _construct_matrix(self):
+        rank = len(self.target_qubits)
         self.matrix = tf.convert_to_tensor(self.unitary, dtype=self.dtype)
         self.matrix = tf.reshape(self.matrix, 2 * rank * (2,))
 
