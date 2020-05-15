@@ -81,6 +81,7 @@ def TwoQubitGate(nqubits: int, backend: str,
 
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
+            "dist-qft": models.DistributedQFT,
             "ghz": PrepareGHZ,
             "one-qubit-gate": OneQubitGate,
             "two-qubit-gate": TwoQubitGate}

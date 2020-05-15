@@ -6,7 +6,7 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
@@ -16,6 +16,7 @@ parser.add_argument("--gate-type", default=None, type=str)
 parser.add_argument("--theta", default=None, type=float)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
+parser.add_argument("--accelerators", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
 parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
@@ -60,6 +61,7 @@ def main(nqubits_list: List[int],
          type: str,
          backend: Optional[str] = None,
          device: Optional[str] = None,
+         accelerators: Optional[Dict[str, int]] = None,
          nlayers: Optional[int] = None,
          gate_type: Optional[str] = None,
          theta: Optional[float] = None,
@@ -134,6 +136,10 @@ def main(nqubits_list: List[int],
         if nlayers is not None: kwargs["nlayers"] = nlayers
         if gate_type is not None: kwargs["gate_type"] = gate_type
         if theta is not None: kwargs["theta"] = theta
+        if accelerators is not None:
+              kwargs.pop("backend")
+              kwargs["calc_devices"] = accelerators
+              kwargs["memory_device"] = device
         circuit = create_circuit_func(**kwargs)
 
         actual_backend = circuit.queue[0].einsum.__class__.__name__
@@ -168,4 +174,5 @@ def main(nqubits_list: List[int],
 
 if __name__ == "__main__":
     args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
+    args["accelerators"] = utils.parse_accelerators(args.pop("accelerators"))
     main(**args)
