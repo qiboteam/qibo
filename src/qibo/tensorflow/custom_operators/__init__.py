@@ -2,4 +2,4 @@
 
 from __future__ import absolute_import
 
-from python.ops.zero_out_ops import zero_out
+from .python.ops.zero_out_ops import zero_out

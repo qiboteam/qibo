@@ -22,4 +22,4 @@ zero_out_test: python/ops/zero_out_ops_test.py $(TARGET_LIB)
 	$(PYTHON_BIN_PATH) python/ops/zero_out_ops_test.py
 
 clean:
-	rm -f $(ZERO_OUT_TARGET_LIB)
+	rm -f $(TARGET_LIB)
