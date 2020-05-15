@@ -117,11 +117,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 self.queues[device].append([])
 
             for gate in queue:
-                gate.no_matrix = True
-                gate.reduce(global_qubits)
-                gate.nqubits = nlocal
                 for device in self.calc_devices.keys():
+                    # TODO: Move this copy functionality to `gates.py`
                     calc_gate = copy.copy(gate)
+                    calc_gate.reduce(global_qubits)
+                    calc_gate.nqubits = nlocal
+                    calc_gate.original_gate = gate
                     with tf.device(device):
                         calc_gate.matrices = self.matrices[device]
                         calc_gate._construct_matrix()

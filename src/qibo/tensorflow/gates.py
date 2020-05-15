@@ -26,8 +26,6 @@ class TensorflowGate(base_gates.Gate):
         self.control_cache = None
         # Gate matrices
         self.matrix = None
-        # If `no_matrix` is True
-        self.no_matrix = False
 
     def _construct_matrix(self):
         """Constructs the gate matrix as ``tf.Tensor``.
