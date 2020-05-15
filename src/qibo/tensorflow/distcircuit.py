@@ -77,6 +77,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pass
 
     def _set_gates(self):
+        if not self.queue:
+            raise RuntimeError("No gates available to set for distributed run.")
+
         all_qubits = set(range(self.nqubits))
         queues = [[]]
 
@@ -96,6 +99,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 if len(global_qubits) == self.nglobal:
                     queues[-1].append(gate)
                     gate = next(queue)
+                    while not set(gate.qubits) & global_qubits:
+                        queues[-1].append(gate)
+                        gate = next(queue)
                 else:
                     # must be len(global_qubits) < self.nglobal
                     free_qubits = list(sorted(target_qubits))

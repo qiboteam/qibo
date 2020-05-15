@@ -12,6 +12,16 @@ def random_state(nqubits):
     return x
 
 
+def assert_global_qubits(global_qubits_list, gate_groups):
+    """Asserts that global qubits do not collide with the gates to be applied."""
+    assert len(global_qubits_list) == len(gate_groups)
+    for global_qubits, gate_list in zip(global_qubits_list, gate_groups):
+        target_qubits = set()
+        for gate in gate_list:
+            target_qubits |= set(gate.original_gate.qubits)
+        assert not set(global_qubits) & target_qubits
+
+
 def test_invalid_devices():
     """Check if error is raised if total devices is not a power of 2."""
     devices = {"/GPU:0": 2, "/GPU:1": 1}
@@ -32,6 +42,8 @@ def test_set_gates():
     c = models.DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(6)))
     c._set_gates()
+
+    assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     assert c.global_qubits_list == [[4, 5], [0, 1]]
     for device in devices.keys():
         assert len(c.queues[device]) == 2
@@ -46,6 +58,8 @@ def test_set_gates_incomplete():
     c.add(gates.CNOT(4, 5))
     c.add([gates.X(1), gates.X(2)])
     c._set_gates()
+
+    assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     assert c.global_qubits_list == [[1, 5], [0, 3]]
     for device in devices.keys():
         assert len(c.queues[device]) == 2
@@ -98,8 +112,8 @@ def test_simple_execution():
     target_state = c(initial_state)
 
 
-@pytest.mark.parametrize("nqubits", [8])
-@pytest.mark.parametrize("ndevices", [2])
+@pytest.mark.parametrize("nqubits", [7, 8, 30, 31, 32, 33])
+@pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
     """Check that the generated global qubit list is the expected for QFT."""
     devices = {"/GPU:0": ndevices}
@@ -113,9 +127,13 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
         print()
         print()
 
+    assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     nglobal = c.nglobal
     target_global_qubits = [list(range(nqubits - nglobal, nqubits)),
-                            list(range(nglobal, 2 * nglobal)),
+                            list(range(nqubits - 2 * nglobal, nqubits - nglobal)),
                             list(range(nglobal)),
                             list(range(nglobal, 2 * nglobal))]
-    assert target_global_qubits == c.global_qubits_list
+    try:
+        assert target_global_qubits == c.global_qubits_list
+    except AssertionError:
+        assert len(c.global_qubits_list) < len(target_global_qubits)
