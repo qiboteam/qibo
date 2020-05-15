@@ -22,14 +22,13 @@ def get_version():
 
 
 class Build(_build_py):
-    """Customized setuptools build command - builds protos on build."""
     def run(self):
         command = ["make", "-C", "src/qibo/tensorflow/custom_operators/"]
         if subprocess.call(command) != 0:
             sys.exit(-1)
         _build_py.run(self)
 
-
+        
 setup(
     name="qibo",
     version=get_version(),
@@ -37,9 +36,11 @@ setup(
     author="TII-Qilimanjaro team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
-    package_dir={"": "src"},
     packages=find_packages("src"),
-    cmdclass={'build_py': Build,},
+    package_dir={"": "src"},    
+    cmdclass={"build_py": Build,},
+    package_data={"": ['./**/*.so']},
+    include_package_data=True,
     zip_safe=False,
     classifiers=[
         "Operating System :: Unix",
