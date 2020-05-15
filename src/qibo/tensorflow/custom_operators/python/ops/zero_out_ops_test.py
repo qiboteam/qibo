@@ -21,7 +21,7 @@ import numpy as np
 
 from tensorflow.python.platform import test
 try:
-  from tensorflow_zero_out.python.ops.zero_out_ops import zero_out
+  from qibo.tensorflow.custom_operators.python.ops.zero_out_ops import zero_out
 except ImportError:
   from zero_out_ops import zero_out
 
