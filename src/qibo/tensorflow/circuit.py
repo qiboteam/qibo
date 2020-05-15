@@ -34,7 +34,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """
         # Calculate callbacks for initial state
         callback_results = [[callback(state)] for callback in self.callbacks]
-
         for ig, gate in enumerate(self.queue):
             if gate.is_channel and not self.using_density_matrix:
                 # Switch from vector to density matrix
