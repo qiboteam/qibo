@@ -96,3 +96,26 @@ def test_simple_execution():
     initial_state = random_state(c.nqubits)
     final_state = dist_c(initial_state)
     target_state = c(initial_state)
+
+
+@pytest.mark.parametrize("nqubits", [8])
+@pytest.mark.parametrize("ndevices", [2])
+def test_distributed_qft_global_qubits(nqubits, ndevices):
+    """Check that the generated global qubit list is the expected for QFT."""
+    devices = {"/GPU:0": ndevices}
+    c = models.DistributedQFT(nqubits, devices)
+    c._set_gates()
+
+    for i, queue in enumerate(c.queues["/GPU:0"]):
+        print(len(queue), c.global_qubits_list[i])
+        for g in queue:
+            print(g.name, g.original_gate.qubits)
+        print()
+        print()
+
+    nglobal = c.nglobal
+    target_global_qubits = [list(range(nqubits - nglobal, nqubits)),
+                            list(range(nglobal, 2 * nglobal)),
+                            list(range(nglobal)),
+                            list(range(nglobal, 2 * nglobal))]
+    assert target_global_qubits == c.global_qubits_list

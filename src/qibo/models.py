@@ -4,6 +4,7 @@ if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
+from typing import Dict
 
 
 def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
@@ -45,6 +46,43 @@ def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
     if with_swaps:
         for i in range(nqubits // 2):
             circuit.add(gates.SWAP(i, nqubits - i - 1))
+
+    return circuit
+
+
+def DistributedQFT(nqubits: int,
+                   calc_devices: Dict[str, int],
+                   memory_device: str = "/CPU:0",
+                   with_swaps: bool = True) -> DistributedCircuit:
+    import numpy as np
+    from qibo import gates
+    
+    circuit = DistributedCircuit(nqubits, calc_devices, memory_device)
+    nqubits = circuit.nqubits
+    nglobal = circuit.nglobal
+
+    for i1 in range(nqubits - nglobal):
+        for i2 in range(i1):
+            theta = np.pi / 2 ** (i1 - i2)
+            circuit.add(gates.CZPow(i1, i2, theta))
+        circuit.add(gates.H(i1))
+
+    for i2 in range(nglobal):
+        for i1 in range(nqubits - nglobal, nqubits):
+            theta = np.pi / 2 ** (i1 - i2)
+            circuit.add(gates.CZPow(i1, i2, theta))
+
+    for i1 in range(nqubits - nglobal, nqubits):
+        for i2 in range(nglobal, i1):
+            theta = np.pi / 2 ** (i1 - i2)
+            circuit.add(gates.CZPow(i1, i2, theta))
+        circuit.add(gates.H(i1))
+
+    if with_swaps:
+        for i in range(nglobal, nqubits // 2):
+            circuit.add(gates.SWAP(i, nqubits - i - 1))
+        for i in range(nglobal):
+            circuit.add(gates.SWAP(i, nqubits - i -1))
 
     return circuit
 
