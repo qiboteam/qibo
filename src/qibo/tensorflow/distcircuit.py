@@ -8,8 +8,6 @@ from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import circuit, gates, matrices, measurements, callbacks
 from typing import Dict, List, Optional, Sequence, Tuple, Union
 
-# TODO: Fix device matrices and `TensorflowGate._construct_matrix`
-# TODO: Implement swap
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
@@ -201,7 +199,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self._set_initial_state(initital_state)
 
         if self.compiled_execute is None:
-            self._add_callbacks(callback)
+            #self._add_callbacks(callback)
 
             for group, global_qubits in enumerate(self.global_qubits_list):
                 if group > 0:
@@ -219,14 +217,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 self._cast_results(results)
 
         else:
-            if callback is not None:
-                raise RuntimeError("Cannot add callbacks to compiled circuit. "
-                                   "Please pass the callbacks when compiling.")
-            state, callback_results = self.compiled_execute(state)
+            raise NotImplementedError("Compiling is not yet implemented for "
+                                      "distributed circuits.")
+            #if callback is not None:
+            #    raise RuntimeError("Cannot add callbacks to compiled circuit. "
+            #                       "Please pass the callbacks when compiling.")
+            #state, callback_results = self.compiled_execute(state)
 
         # Append callback results to callbacks
-        for callback, result in zip(self.callbacks, callback_results):
-            callback.append(result)
+        #for callback, result in zip(self.callbacks, callback_results):
+        #    callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
             return self.final_state
@@ -252,7 +252,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         if self.pieces is None:
             raise ValueError("Cannot access the state tensor before being set.")
-        return self._merge(self.pieces)
+        return tf.reshape(self._merge(self.pieces), (2 ** self.nqubits,))
 
     def _default_global_qubits(self) -> List[int]:
         """Returns a list with the last qubits to cast them as global."""
@@ -260,34 +260,36 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        if self.pieces is None:
+        shape = (self.nqubits - self.nglobal) * (2,)
+        with tf.device(self.memory_device):
+            self.pieces = [tf.Variable(tf.zeros(shape, dtype=self.dtype))
+                           for _ in range(self.ndevices)]
+
+            _state = tf.zeros(2 ** len(shape), dtype=self.dtype)
+            update = tf.constant([1], dtype=self.dtype)
+            _state = tf.tensor_scatter_nd_update(_state,
+                                                 tf.constant([[0]], dtype=DTYPEINT),
+                                                 update)
+            _state = tf.reshape(_state, shape)
+            self.pieces[0] = tf.Variable(_state)
+
+    def _set_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
+        """Checks and casts initial state given by user."""
+        if self.pieces is not None:
             raise RuntimeError("Attempting to initialize distributed circuit "
                                "state that is already initialized.")
 
         if self._global_qubits is None:
             self.global_qubits = self._default_global_qubits()
-
-        # Generate initial state piece
-        n = self.nqubits - self.nglobal
-        _state = tf.zeros(2 ** n, dtype=self.dtype)
-        update = tf.constant([1], dtype=self.dtype)
-        _state = tf.tensor_scatter_nd_update(initial_state,
-                                             tf.constant([[0]], dtype=DTYPEINT),
-                                             update)
-        _state = tf.reshape(_state, n * (2,))
-        # Cast initial state piece to all variable pieces
-        with tf.device(self.memory_device):
-            self.pieces = [tf.Variable(_state) for _ in range(self.ndevices)]
-
-    def _set_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
-        """Checks and casts initial state given by user."""
         if initial_state is None:
             return self._default_initial_state()
 
         state = super(TensorflowDistributedCircuit, self)._set_initial_state(initial_state)
-        # TODO: Cast `state` (tf.Tensor) to `self.pieces`
-        raise NotImplementedError("User given initial state is not implemented "
-                                  "for distributed circuits yet.")
+        shape = (self.nqubits - self.nglobal) * (2,)
+        with tf.device(self.memory_device):
+            self.pieces = [tf.Variable(tf.zeros(shape, dtype=self.dtype))
+                           for _ in range(self.ndevices)]
+        self._split(state)
 
     def _add_callbacks(self, callback: callbacks.Callback):
         """Adds callbacks in the circuit."""
@@ -318,5 +320,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             return state
 
     def _swap(self, new_global_qubits: Sequence[int]):
-        # TODO: Fix this
-        raise NotImplementedError
+        shape = (self.ndevices,) + (self.nqubits - self.nglobal) * (2,)
+        with tf.device(self.memory_device):
+            state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
+            state = tf.reshape(state, self.nqubits * (2,))
+
+            order = list(self.reverse_transpose_order)
+            self.global_qubits = new_global_qubits
+            order = [order[v] for v in self.transpose_order]
+
+            state = tf.transpose(state, order)
+            state = tf.reshape(state, shape)
+            for i in range(self.ndevices):
+                self.pieces[i].assign(state[i])
