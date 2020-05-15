@@ -18,8 +18,5 @@ all: $(TARGET_LIB)
 $(TARGET_LIB): $(SRCS)
 	$(CXX) $(CFLAGS) -o $@ $^ ${LDFLAGS}
 
-test: python/ops/qibo_tf_custom_operators_test.py $(TARGET_LIB)
-	$(PYTHON_BIN_PATH) python/ops/qibo_tf_custom_operators_test.py
-
 clean:
 	rm -f $(TARGET_LIB)
