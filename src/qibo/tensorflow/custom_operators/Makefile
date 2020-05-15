@@ -10,7 +10,7 @@ TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".j
 CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
 LDFLAGS = -shared ${TF_LFLAGS}
 
-TARGET_LIB = python/ops/_zero_out_ops.so
+TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
 
 # zero_out op for CPU
 all: $(TARGET_LIB)
@@ -18,8 +18,8 @@ all: $(TARGET_LIB)
 $(TARGET_LIB): $(SRCS)
 	$(CXX) $(CFLAGS) -o $@ $^ ${LDFLAGS}
 
-zero_out_test: python/ops/zero_out_ops_test.py $(TARGET_LIB)
-	$(PYTHON_BIN_PATH) python/ops/zero_out_ops_test.py
+test: python/ops/qibo_tf_custom_operators_test.py $(TARGET_LIB)
+	$(PYTHON_BIN_PATH) python/ops/qibo_tf_custom_operators_test.py
 
 clean:
 	rm -f $(TARGET_LIB)
