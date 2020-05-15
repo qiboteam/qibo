@@ -194,9 +194,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
+        if not self.global_qubits_list:
+            self._set_gates()
         self.global_qubits = self.global_qubits_list[0]
-        if initial_state is None:
-            self._set_initial_state(initital_state)
+        self._set_initial_state(initial_state)
 
         if self.compiled_execute is None:
             #self._add_callbacks(callback)
@@ -212,7 +213,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
                 pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                        prefer="threads")
-                results = pool(joblib.delayed(gpu_job)(s, d)
+                results = pool(joblib.delayed(_device_job)(s, d)
                                for s, d in self._joblib_config())
                 self._cast_results(results)
 
