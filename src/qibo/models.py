@@ -1,6 +1,7 @@
 from qibo.config import BACKEND_NAME
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow.circuit import TensorflowCircuit as Circuit
+    from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
 
