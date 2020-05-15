@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 from qibo import gates
 from qibo import models
-from typing import Optional
 
 
 def random_state(nqubits):
@@ -108,8 +107,9 @@ def test_simple_execution():
     dist_c.add((gates.H(i) for i in range(6)))
 
     initial_state = random_state(c.nqubits)
-    final_state = dist_c(initial_state)
-    target_state = c(initial_state)
+    final_state = dist_c(initial_state).numpy()
+    target_state = c(initial_state).numpy()
+    np.testing.assert_allclose(target_state, final_state)
 
 
 @pytest.mark.parametrize("nqubits", [7, 8, 30, 31, 32, 33])
@@ -137,3 +137,16 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
         assert target_global_qubits == c.global_qubits_list
     except AssertionError:
         assert len(c.global_qubits_list) < len(target_global_qubits)
+
+
+@pytest.mark.parametrize("nqubits", [7, 8])
+@pytest.mark.parametrize("ndevices", [2, 4])
+def test_distributed_qft_execution(nqubits, ndevices):
+    devices = {"/GPU:0": ndevices}
+    dist_c = models.DistributedQFT(nqubits, devices)
+    c = models.QFT(nqubits)
+
+    initial_state = random_state(nqubits)
+    final_state = dist_c(initial_state).numpy()
+    target_state = c(initial_state).numpy()
+    np.testing.assert_allclose(target_state, final_state)
