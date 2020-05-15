@@ -46,6 +46,27 @@ class Gate(object):
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
 
+    @staticmethod
+    def _reduction_number(q: int, global_qubits: List[int]) -> int:
+        """Returns number of global qubits that are before qubit ``q``.
+
+        Helper method for ``reduce``.
+        """
+        for i, gq in enumerate(global_qubits):
+            if gq > q:
+                return i
+        return i + 1
+
+    def reduce(self, global_qubits: List[int]):
+        """Reduces target and control qubits according to global qubits.
+
+        Used only by distributed circuits.
+        """
+        self.target_qubits = tuple(q - self._reduction_number(q, global_qubits)
+                                   for q in self.target_qubits)
+        self.control_qubits = tuple(q - self._reduction_number(q, global_qubits)
+                                    for q in self.control_qubits)
+
     @property
     def nqubits(self) -> int:
         """Number of qubits in the circuit that the gate is part of.

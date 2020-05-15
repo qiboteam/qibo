@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
-from qibo.config import einsum, matrices, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import einsum, DTYPEINT, DTYPE, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Optional, Sequence, Tuple
 
 
@@ -16,7 +16,7 @@ class TensorflowGate(base_gates.Gate):
             This is (2, 2) for 1-qubit gates and (4, 4) for 2-qubit gates.
         qubits: List with the qubits that the gate is applied to.
     """
-
+    from qibo.config import matrices
     dtype = matrices.dtype
     einsum = einsum
 
@@ -26,6 +26,8 @@ class TensorflowGate(base_gates.Gate):
         self.control_cache = None
         # Gate matrices
         self.matrix = None
+        # If `no_matrix` is True
+        self.no_matrix = False
 
     def _construct_matrix(self):
         """Constructs the gate matrix as ``tf.Tensor``.
@@ -143,7 +145,7 @@ class H(TensorflowGate, base_gates.H):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.H
+        self.matrix = self.matrices.H
 
 
 class X(TensorflowGate, base_gates.X):
@@ -153,7 +155,7 @@ class X(TensorflowGate, base_gates.X):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.X
+        self.matrix = self.matrices.X
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
@@ -174,7 +176,7 @@ class Y(TensorflowGate, base_gates.Y):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.Y
+        self.matrix = self.matrices.Y
 
 
 class Z(TensorflowGate, base_gates.Z):
@@ -184,7 +186,7 @@ class Z(TensorflowGate, base_gates.Z):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.Z
+        self.matrix = self.matrices.Z
 
 
 class M(TensorflowGate, base_gates.M):
@@ -268,8 +270,8 @@ class RX(TensorflowGate, base_gates.RX):
 
     def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
-        self.matrix = (tf.cos(th / 2.0) * matrices.I -
-                       1j * tf.sin(th / 2.0) * matrices.X)
+        self.matrix = (tf.cos(th / 2.0) * self.matrices.I -
+                       1j * tf.sin(th / 2.0) * self.matrices.X)
 
 
 class RY(TensorflowGate, base_gates.RY):
@@ -280,8 +282,8 @@ class RY(TensorflowGate, base_gates.RY):
 
     def _construct_matrix(self):
         th = tf.cast(self.theta, dtype=self.dtype)
-        self.matrix = (tf.cos(th / 2.0) * matrices.I -
-                       1j * tf.sin(th / 2.0) * matrices.Y)
+        self.matrix = (tf.cos(th / 2.0) * self.matrices.I -
+                       1j * tf.sin(th / 2.0) * self.matrices.Y)
 
 
 class RZ(TensorflowGate, base_gates.RZ):
@@ -304,7 +306,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.CNOT
+        self.matrix = self.matrices.CNOT
 
 
 class CZPow(TensorflowGate, base_gates.CZPow):
@@ -328,7 +330,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.SWAP
+        self.matrix = self.matrices.SWAP
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
@@ -338,7 +340,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = matrices.TOFFOLI
+        self.matrix = self.matrices.TOFFOLI
 
 
 class Unitary(TensorflowGate, base_gates.Unitary):
