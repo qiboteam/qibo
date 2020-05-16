@@ -6,7 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import circuit, gates, matrices, measurements, callbacks
-from typing import Dict, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -158,24 +158,24 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 self.pieces[i].assign(s)
                 i += 1
 
-    def _joblib_config(self) -> Tuple[List[tf.Tensor], str]:
+    def _joblib_config(self) -> Tuple[Iterable[int], str]:
         start = 0
         for device, n in self.calc_devices.items():
             stop = start + n
-            yield self.pieces[start: stop], device
+            yield range(start, stop), device
             start = stop
 
     def _joblib_execute(self, group: int):
-        def _device_job(states, device):
-            with tf.device(device):
-                return [self._device_execute(s, self.queues[device][group])
-                        for s in states]
+        def _device_job(ids, device):
+            for i in ids:
+                with tf.device(device):
+                    state = self._device_execute(self.pieces[i], self.queues[device][group])
+                self.pieces[i].assign(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
-        results = pool(joblib.delayed(_device_job)(s, d)
-                       for s, d in self._joblib_config())
-        self._cast_results(results)
+        pool(joblib.delayed(_device_job)(ids, device)
+             for ids, device in self._joblib_config())
 
     def _sequential_execute(self, group):
         i = 0
@@ -232,8 +232,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 if group > 0:
                     self._swap(global_qubits)
                 # TODO: Add proper execute here
-                self._sequential_execute(group)
-                #self._joblib_execute(group)
+                #self._sequential_execute(group)
+                self._joblib_execute(group)
         else:
             raise NotImplementedError("Compiling is not yet implemented for "
                                       "distributed circuits.")
