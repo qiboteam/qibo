@@ -1,5 +1,4 @@
 CXX := g++
-NVCC := nvcc
 PYTHON_BIN_PATH = python
 
 SRCS = $(wildcard cc/kernels/*.cc) $(wildcard cc/ops/*.cc)
