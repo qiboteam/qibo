@@ -1,10 +1,5 @@
-#if GOOGLE_CUDA
-#define EIGEN_USE_GPU
-#endif  // GOOGLE_CUDA
-
 #include "initial_state.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include <type_traits>
 
 namespace tensorflow {
 
@@ -41,6 +36,7 @@ class InitialStateOp : public OpKernel {
   }
 };
 
+// Register the CPU kernels.
 #define REGISTER_CPU(T)                                               \
   REGISTER_KERNEL_BUILDER(                                            \
       Name("InitialState").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
@@ -49,14 +45,11 @@ REGISTER_CPU(complex64);
 REGISTER_CPU(complex128);
 
 // Register the GPU kernels.
-#ifdef GOOGLE_CUDA
-#define REGISTER_GPU(T)
-  extern template struct InitialStateOp<GPUDevice, T>;
-  REGISTER_KERNEL_BUILDER(
-      Name("InitialState").Device(DEVICE_GPU).TypeConstraint<T>("T"),
-      InitialState<GPUDevice, T>);
+#define REGISTER_GPU(T)					              \
+  REGISTER_KERNEL_BUILDER(					      \
+       Name("InitialState").Device(DEVICE_GPU).TypeConstraint<T>("T"),\
+      InitialStateOp<GPUDevice, T>);
 REGISTER_GPU(complex64);
 REGISTER_GPU(complex128);
-#endif  // GOOGLE_CUDA
 } // namespace functor
 } // namespace tensorflow
