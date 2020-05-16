@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python-version: [3.7, 3.8]
+        python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
@@ -22,10 +22,6 @@ jobs:
     - name: Install package
       run: |
         pip install .[docs]
-    - name: Lint with pylint
-      run: |
-        pip install pylint
-        pylint src/*/*.py -E
     - name: Test with pytest
       run: |
         pip install pytest-cov
@@ -39,7 +35,7 @@ jobs:
         name: codecov-umbrella
         fail_ci_if_error: true
     - name: Sphinx compile
-      if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master' && matrix.python-version == '3.8'
+      if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master'
       run: |
         pip install sphinx
         make -C doc html
