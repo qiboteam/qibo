@@ -146,8 +146,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                   "distributed circuits yet.")
 
     @staticmethod
-    def _device_execute_state(state: tf.Tensor,
-                              gates: List[gates.TensorflowGate]) -> tf.Tensor:
+    def _device_execute(state: tf.Tensor, gates: List[gates.TensorflowGate]) -> tf.Tensor:
         for gate in gates:
             state = gate(state)
         return state
@@ -165,6 +164,27 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             stop = start + n
             yield self.pieces[start: stop], device
             start = stop
+
+    def _joblib_execute(self, group: int):
+        def _device_job(states, device):
+            with tf.device(device):
+                return [self._device_execute(s, self.queues[device][group])
+                        for s in states]
+
+        pool = joblib.Parallel(n_jobs=len(self.calc_devices),
+                               prefer="threads")
+        results = pool(joblib.delayed(_device_job)(s, d)
+                       for s, d in self._joblib_config())
+        self._cast_results(results)
+
+    def _sequential_execute(self, group):
+        i = 0
+        for device in self.calc_devices.keys():
+            for _ in range(self.calc_devices[device]):
+                with tf.device(device):
+                    result = self._device_execute(self.pieces[i], self.queues[device][group])
+                self.pieces[i].assign(result)
+                i += 1
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
@@ -208,22 +228,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         if self.compiled_execute is None:
             #self._add_callbacks(callback)
-
             for group, global_qubits in enumerate(self.global_qubits_list):
                 if group > 0:
                     self._swap(global_qubits)
-
-                def _device_job(states, device):
-                    with tf.device(device):
-                        return [self._device_execute_state(s, self.queues[device][group])
-                                for s in states]
-
-                pool = joblib.Parallel(n_jobs=len(self.calc_devices),
-                                       prefer="threads")
-                results = pool(joblib.delayed(_device_job)(s, d)
-                               for s, d in self._joblib_config())
-                self._cast_results(results)
-
+                # TODO: Add proper execute here
+                self._sequential_execute(group)
+                #self._joblib_execute(group)
         else:
             raise NotImplementedError("Compiling is not yet implemented for "
                                       "distributed circuits.")
