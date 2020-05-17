@@ -1,4 +1,5 @@
 CXX := g++
+NVCC := nvcc
 PYTHON_BIN_PATH = python
 
 SRCS = $(wildcard cc/kernels/*.cc) $(wildcard cc/ops/*.cc)
@@ -11,11 +12,21 @@ LDFLAGS = -shared ${TF_LFLAGS}
 
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
 
-# zero_out op for CPU
-all: $(TARGET_LIB)
+ifeq (($shell which nvcc),)
+TARGETS = cpuoperator
+else
+TARGETS = cpuoperator
+endif
 
-$(TARGET_LIB): $(SRCS)
-	$(CXX) $(CFLAGS) -o $@ $^ ${LDFLAGS}
+all: $(TARGETS)
+
+cpuoperator: $(SRCS)
+	@echo "Compiling CPU operator"
+	$(CXX) $(CFLAGS) -o $(TARGET_LIB) $^ ${LDFLAGS}
+
+cpugpuoperator:
+	@echo "cpugpuoperator"
 
 clean:
 	rm -f $(TARGET_LIB)
+
