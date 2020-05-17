@@ -35,7 +35,7 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma"],
+    install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma", "joblib"],
     extras_require={
         "docs": ["sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
     },
