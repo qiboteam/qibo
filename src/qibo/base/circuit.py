@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+import collections
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -291,6 +292,73 @@ class BaseCircuit(object):
     def depth(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
+
+    @property
+    def gate_types(self) -> collections.Counter:
+        """``collections.Counter`` with the number of appearances of each gate type.
+
+        The QASM names are used as gate identifiers.
+        """
+        gates = collections.Counter()
+        for gate in self.queue:
+            gates[gate.name] += 1
+        return gates
+
+    def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
+        """Finds all gate objects of specific type.
+
+        Args:
+            gate (str, type): The QASM name of a gate or the corresponding gate class.
+
+        Returns:
+            List with all gates that are in the circuit and have the same type
+            with the given ``gate``. The list contains tuples ``(i, g)`` where
+            ``i`` is the index of the gate ``g`` in the circuit's gate queue.
+        """
+        if isinstance(gate, str):
+            return [(i, g) for i, g in enumerate(self.queue)
+                    if g.name == gate]
+        if isinstance(gate, type) and issubclass(gate, gates.Gate):
+            return [(i, g) for i, g in enumerate(self.queue)
+                    if isinstance(g, gate)]
+        raise TypeError("Gate identifier {} not recognized.".format(gate))
+
+    @property
+    def summary(self) -> str:
+        """Generates a summary of the circuit.
+
+        The summary contains the circuit depths, total number of qubits and
+        the all gates sorted in decreasing number of appearance.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(3)
+                c.add(gates.H(0))
+                c.add(gates.H(1))
+                c.add(gates.CNOT(0, 2))
+                c.add(gates.CNOT(1, 2))
+                c.add(gates.H(2))
+                c.add(gates.TOFFOLI(0, 1, 2))
+                print(c.summary())
+                # Prints
+                '''
+                Circuit depth = 7
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
+        """
+        logs = ["Circuit depth = {}".format(self.depth),
+                "Number of qubits = {}".format(self.nqubits),
+                "Most common gates:"]
+        common_gates = self.gate_types.most_common()
+        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        return "\n".join(logs)
 
     @property
     def final_state(self):
