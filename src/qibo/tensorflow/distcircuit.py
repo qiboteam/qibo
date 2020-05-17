@@ -157,12 +157,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             state = gate(state)
         return state
 
-    def _cast_results(self, results: List[List[tf.Tensor]]):
-        i = 0
-        for result in results:
-            for s in result:
-                self.pieces[i].assign(s)
-                i += 1
+    # Old casting on CPU after runs finish. Not used because it leads to
+    # GPU memory errors
+    #def _cast_results(self, results: List[List[tf.Tensor]]):
+    #    i = 0
+    #    for result in results:
+    #        for s in result:
+    #            self.pieces[i].assign(s)
+    #            i += 1
 
     def _joblib_config(self) -> Tuple[Iterable[int], str]:
         start = 0
@@ -183,14 +185,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pool(joblib.delayed(_device_job)(ids, device)
              for ids, device in self._joblib_config())
 
-    def _sequential_execute(self, group):
-        i = 0
-        for device in self.calc_devices.keys():
-            for _ in range(self.calc_devices[device]):
-                with tf.device(device):
-                    result = self._device_execute(self.pieces[i], self.queues[device][group])
-                self.pieces[i].assign(result)
-                i += 1
+    # Sequential execution without `joblib` (not used)
+    #def _sequential_execute(self, group):
+    #    i = 0
+    #    for device in self.calc_devices.keys():
+    #        for _ in range(self.calc_devices[device]):
+    #            with tf.device(device):
+    #                result = self._device_execute(self.pieces[i], self.queues[device][group])
+    #            self.pieces[i].assign(result)
+    #            i += 1
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
@@ -237,7 +240,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             for group, global_qubits in enumerate(self.global_qubits_list):
                 if group > 0:
                     self._swap(global_qubits)
-                # TODO: Add proper execute here
                 #self._sequential_execute(group)
                 self._joblib_execute(group)
         else:
@@ -282,20 +284,28 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """Returns a list with the last qubits to cast them as global."""
         return list(range(self.nqubits - self.nglobal, self.nqubits))
 
-    def _default_initial_state(self) -> tf.Tensor:
-        """Creates the |000...0> state for default initialization."""
+    def _default_initial_piece0(self) -> tf.Tensor:
+        """Returns the 0th piece for the |000...0> state."""
+        shape = (self.nqubits - self.nglobal) * (2,)
+        _state = tf.zeros(2 ** len(shape), dtype=self.dtype)
+        update = tf.constant([1], dtype=self.dtype)
+        _state = tf.tensor_scatter_nd_update(_state,
+                                             tf.constant([[0]], dtype=DTYPEINT),
+                                             update)
+        return tf.reshape(_state, shape)
+
+    def _create_pieces(self):
         shape = (self.nqubits - self.nglobal) * (2,)
         with tf.device(self.memory_device):
             self.pieces = [tf.Variable(tf.zeros(shape, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
-            _state = tf.zeros(2 ** len(shape), dtype=self.dtype)
-            update = tf.constant([1], dtype=self.dtype)
-            _state = tf.tensor_scatter_nd_update(_state,
-                                                 tf.constant([[0]], dtype=DTYPEINT),
-                                                 update)
-            _state = tf.reshape(_state, shape)
-            self.pieces[0] = tf.Variable(_state)
+    def _default_initial_state(self) -> tf.Tensor:
+        """Creates the |000...0> state for default initialization."""
+        shape = (self.nqubits - self.nglobal) * (2,)
+        self._create_pieces()
+        with tf.device(self.memory_device):
+            self.pieces[0].assign(self._default_initial_piece0())
 
     def _set_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
@@ -309,10 +319,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             return self._default_initial_state()
 
         state = super(TensorflowDistributedCircuit, self)._set_initial_state(initial_state)
-        shape = (self.nqubits - self.nglobal) * (2,)
-        with tf.device(self.memory_device):
-            self.pieces = [tf.Variable(tf.zeros(shape, dtype=self.dtype))
-                           for _ in range(self.ndevices)]
+        self._create_pieces()
         self._split(state)
 
     def _add_callbacks(self, callback: callbacks.Callback):
