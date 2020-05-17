@@ -49,6 +49,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._global_qubits = None
         self._local_qubits = None
 
+        self.device_shape = (self.ndevices,) + (self.nqubits - self.nglobal) * (2,)
+        self.full_shape = self.nqubits * (2,)
+        self.output_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
+
     @property
     def global_qubits(self) -> List[int]:
         if self._global_qubits is None:
@@ -270,7 +274,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         if self.pieces is None:
             raise ValueError("Cannot access the state tensor before being set.")
-        return tf.reshape(self._merge(self.pieces), (2 ** self.nqubits,))
+        return tf.reshape(self._merge(self.pieces), self.output_shape)
 
     def _default_global_qubits(self) -> List[int]:
         """Returns a list with the last qubits to cast them as global."""
@@ -323,31 +327,29 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         #    cb.nqubits = self.nqubits
 
     def _split(self, state: tf.Tensor):
-        shape = (self.ndevices,) + (self.nqubits - self.nglobal) * (2,)
         with tf.device(self.memory_device):
             state = tf.transpose(state, self.transpose_order)
-            state = tf.reshape(state, shape)
+            state = tf.reshape(state, self.device_shape)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])
 
     def _merge(self, states: List[tf.Tensor]) -> tf.Tensor:
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in states], axis=0)
-            state = tf.reshape(state, self.nqubits * (2,))
+            state = tf.reshape(state, self.full_shape)
             state = tf.transpose(state, self.reverse_transpose_order)
             return state
 
     def _swap(self, new_global_qubits: Sequence[int]):
-        shape = (self.ndevices,) + (self.nqubits - self.nglobal) * (2,)
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
-            state = tf.reshape(state, self.nqubits * (2,))
+            state = tf.reshape(state, self.full_shape)
 
             order = list(self.reverse_transpose_order)
             self.global_qubits = new_global_qubits
             order = [order[v] for v in self.transpose_order]
 
             state = tf.transpose(state, order)
-            state = tf.reshape(state, shape)
+            state = tf.reshape(state, self.device_shape)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])
