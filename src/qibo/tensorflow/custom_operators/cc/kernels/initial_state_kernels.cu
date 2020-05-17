@@ -12,8 +12,7 @@ typedef Eigen::GpuDevice GPUDevice;
 // cuda kernel
 template <typename T>
 __global__ void InitialStateCudaKernel(T* inout) {
-    out[0] = T(1, 0);
-  }
+  inout[0] = T(1, 0);
 }
 
 // Define the GPU implementation that launches the CUDA kernel.
