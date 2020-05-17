@@ -6,6 +6,7 @@ from qibo.base import circuit
 from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import gates, measurements, callbacks
 from typing import List, Optional, Tuple, Union
+import qibo.tensorflow.custom_operators as op
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -195,11 +196,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        initial_state = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
-        update = tf.constant([1], dtype=self.dtype)
-        initial_state = tf.tensor_scatter_nd_update(initial_state,
-                                                    tf.constant([[0]], dtype=DTYPEINT),
-                                                    update)
+        zeros = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
+        initial_state = op.initial_state(zeros)
         initial_state = tf.reshape(initial_state, self.nqubits * (2,))
         return initial_state
 

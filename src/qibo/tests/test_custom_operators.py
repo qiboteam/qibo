@@ -14,3 +14,15 @@ def test_initial_state(dtype):
   initial_state(final_state)
   exact_state = np.array([1] + [0]*9, dtype=dtype)
   np.testing.assert_allclose(final_state, exact_state)
+
+
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+def test_initial_state_compiled(dtype):
+  """Check that initial_state updates first element properly."""
+  @tf.function
+  def apply_operator():
+    a = tf.zeros(10, dtype=dtype)
+    return initial_state(a)
+  final_state = apply_operator()
+  exact_state = np.array([1] + [0]*9, dtype=dtype)
+  np.testing.assert_allclose(final_state, exact_state)

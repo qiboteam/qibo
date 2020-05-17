@@ -39,6 +39,7 @@ class InitialStateOp : public OpKernel {
     InitialStateFunctor<Device, T>()(
       context->eigen_device<Device>(),
       input_tensor.flat<T>().data());
+    context->set_output(0, input_tensor);
   }
 };
 
