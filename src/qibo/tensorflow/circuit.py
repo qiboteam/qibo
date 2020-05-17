@@ -20,12 +20,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def __init__(self, nqubits, dtype=DTYPECPX):
         super(TensorflowCircuit, self).__init__(nqubits)
+        self._init_kwargs["dtype"] = dtype
         self.dtype = dtype
         self.compiled_execute = None
         self.callbacks = []
-
-    def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
-        return TensorflowCircuit._circuit_addition(self, circuit)
 
     def _execute_func(self, state: tf.Tensor) -> Tuple[tf.Tensor, List[tf.Tensor]]:
         """Simulates the circuit gates.

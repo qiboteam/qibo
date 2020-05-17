@@ -32,6 +32,7 @@ class BaseCircuit(object):
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
+        self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
@@ -44,7 +45,7 @@ class BaseCircuit(object):
         self._final_state = None
         self.using_density_matrix = False
 
-    def __add__(self, circuit):
+    def __add__(self, circuit) -> "BaseCircuit":
         """Add circuits.
 
         Args:
@@ -53,15 +54,17 @@ class BaseCircuit(object):
         Returns:
             The resulting circuit from the addition.
         """
-        return BaseCircuit._circuit_addition(self, circuit)
+        return self.__class__._circuit_addition(self, circuit)
 
     @classmethod
     def _circuit_addition(cls, c1, c2):
-        if c1.nqubits != c2.nqubits:
-            raise ValueError("Cannot add circuits with different number of "
-                             "qubits. The first has {} qubits while the "
-                             "second has {}".format(c1.nqubits, c2.nqubits))
-        newcircuit = cls(c1.nqubits)
+        for k, kwarg1 in c1._init_kwargs.items():
+            kwarg2 = c2._init_kwargs[k]
+            if kwarg1 != kwarg2:
+                raise ValueError("Cannot add circuits with different kwargs. "
+                                 "{} is {} for first circuit and {} for the "
+                                 "second.".format(k, kwarg1, kwarg2))
+        newcircuit = cls(**c1._init_kwargs)
         # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.add(gate)
@@ -97,7 +100,7 @@ class BaseCircuit(object):
         if deep:
             raise NotImplementedError("Deep copy is not implemented yet.")
 
-        new_circuit = self.__class__(self.nqubits)
+        new_circuit = self.__class__(**self._init_kwargs)
         new_circuit.queue = list(self.queue)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         new_circuit.measurement_gate = self.measurement_gate
