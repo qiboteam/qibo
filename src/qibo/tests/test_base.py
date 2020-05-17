@@ -152,12 +152,11 @@ def test_summary():
     c.add(CNOT(1, 2))
     c.add(TOFFOLI(0, 1, 2))
     c.add(H(2))
-    target_summary = """Circuit depth = 7
-Number of qubits = 3
-Most common gates:
-h: 3
-cx: 2
-ccx: 1"""
+    target_summary = "\n".join(["Circuit depth = 6",
+                                "Number of qubits = 3",
+                                "Most common gates:",
+                                "h: 3", "cx: 2", "ccx: 1"])
+    assert c.summary == target_summary
 
 
 def test_circuit_copy():
