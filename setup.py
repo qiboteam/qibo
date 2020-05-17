@@ -1,7 +1,10 @@
 # Installation script for python
 from setuptools import setup, find_packages
+from setuptools.command.build_py import build_py as _build_py
+import subprocess
 import os
 import re
+import sys
 
 PACKAGE = "qibo"
 
@@ -18,6 +21,14 @@ def get_version():
             return mo.group(1)
 
 
+class Build(_build_py):
+    def run(self):
+        command = ["make", "-C", "src/qibo/tensorflow/custom_operators/"]
+        if subprocess.call(command) != 0:
+            sys.exit(-1)
+        _build_py.run(self)
+
+        
 setup(
     name="qibo",
     version=get_version(),
@@ -25,8 +36,11 @@ setup(
     author="TII-Qilimanjaro team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
-    package_dir={"": "src"},
     packages=find_packages("src"),
+    package_dir={"": "src"},    
+    cmdclass={"build_py": Build,},
+    package_data={"": ['./**/*.so']},
+    include_package_data=True,
     zip_safe=False,
     classifiers=[
         "Operating System :: Unix",
