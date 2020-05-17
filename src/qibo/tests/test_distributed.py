@@ -98,6 +98,23 @@ def test_user_initialization(nqubits):
         np.testing.assert_allclose(target_piece, piece)
 
 
+def test_distributed_circuit_errors():
+    devices = {"/GPU:0": 2, "/GPU:1": 2}
+    c = models.DistributedCircuit(6, devices)
+    # Access global qubits before setting them
+    with pytest.raises(ValueError):
+        global_qubits = c.global_qubits
+    # Attempt to set wrong number of global qubits
+    with pytest.raises(ValueError):
+        c.global_qubits = [1, 2, 3]
+    # Attempt to set gates before adding any gate
+    with pytest.raises(RuntimeError):
+        c._set_gates()
+    # Attempt to access state before being set
+    with pytest.raises(ValueError):
+        final_state = c.final_state
+
+
 def test_simple_execution():
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
@@ -109,6 +126,31 @@ def test_simple_execution():
     initial_state = random_state(c.nqubits)
     final_state = dist_c(initial_state).numpy()
     target_state = c(initial_state).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_distributed_circuit_addition():
+    # Attempt to add circuits with different devices
+    devices = {"/GPU:0": 2, "/GPU:1": 2}
+    c1 = models.DistributedCircuit(6, devices)
+    c2 = models.DistributedCircuit(6, {"/GPU:0": 2})
+    with pytest.raises(ValueError):
+        c = c1 + c2
+
+    c2 = models.DistributedCircuit(6, devices)
+    c1.add([gates.H(i) for i in range(6)])
+    c2.add([gates.CNOT(i, i + 1) for i in range(5)])
+    c2.add([gates.Z(i) for i in range(6)])
+    dist_c = c1 + c2
+
+    c = models.Circuit(6)
+    c.add([gates.H(i) for i in range(6)])
+    c.add([gates.CNOT(i, i + 1) for i in range(5)])
+    c.add([gates.Z(i) for i in range(6)])
+
+    target_state = c().numpy()
+    final_state = dist_c().numpy()
+    assert c.depth == dist_c.depth
     np.testing.assert_allclose(target_state, final_state)
 
 

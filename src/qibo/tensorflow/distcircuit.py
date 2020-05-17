@@ -25,7 +25,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                  memory_device: str = "/CPU:0",
                  dtype=DTYPECPX):
         super(TensorflowDistributedCircuit, self).__init__(nqubits, dtype)
-
+        self._init_kwargs.update({"calc_devices": calc_devices,
+                                  "memory_device": memory_device})
         self.ndevices = sum(calc_devices.values())
         self.nglobal = np.log2(self.ndevices)
         if not self.nglobal.is_integer():
@@ -72,13 +73,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
 
-    def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
-        return TensorflowCircuit._circuit_addition(self, circuit)
-
     def _set_nqubits(self, gate):
         # Do not set ``gate.nqubits`` during gate addition because this will
         # be set by the ``_set_gates`` method once all gates are known.
         pass
+
+    def with_noise(self, noise_map, measurement_noise):
+        raise NotImplementedError("Distributed circuit does not support "
+                                  "density matrices yet.")
 
     def _set_gates(self):
         if not self.queue:
