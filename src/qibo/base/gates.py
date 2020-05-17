@@ -171,6 +171,9 @@ class M(Gate):
 
     Args:
         *q (int): id numbers of the qubits to measure.
+            It is possible to measure multiple qubits using ``gates.M(0, 1, 2, ...)``.
+            If the qubits to measure are held in an iterable (eg. list) the ``*``
+            operator can be used, for example ``gates.M(*[0, 1, 4])`` or ``gates.M(*range(5))``.
         register_name: Optional name of the register to distinguish it from
             other registers when used in circuits.
     """
