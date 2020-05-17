@@ -14,6 +14,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
+        calc_devices (dict): Dictionary from device names to the number of
+            times each device will be used.
+            For example if ``calc_devices = {'/GPU:0': 2, '/GPU:1': 2}``
+            then two distinct GPUs will be used twice each for a total of 4
+            logical devices. The number of logical devices must be a power of 2.
+        memory_device (str): Name of the device where the full state will be
+            saved. This is usually the CPU.
         dtype: Tensorflow type for complex numbers.
             Read automatically from `config`.
     """
