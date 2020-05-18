@@ -4,13 +4,13 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
-from qibo.tensorflow.custom_operators import initial_state
+from qibo.tensorflow import custom_operators as op
 
 
 def apply_operator(dtype):
   """Apply the initial_state operator"""
   a = tf.zeros(10, dtype=dtype)
-  return initial_state(a)
+  return op.initial_state(a)
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
