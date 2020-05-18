@@ -1,3 +1,7 @@
+#if GOOGLE_CUDA
+#define EIGEN_USE_GPU
+#endif // GOOGLE_CUDA
+
 #include "initial_state.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -25,9 +29,11 @@ class InitialStateOp : public OpKernel {
     // grabe the input tensor
     Tensor input_tensor = context->input(0);
 
+#ifndef GOOGLE_CUDA
     // prevent running on GPU
     OP_REQUIRES(context, (std::is_same<Device,CPUDevice>::value == true),
                 errors::Unimplemented("InitialState operator not implemented for GPU."));
+#endif
 
     // call the implementation
     InitialStateFunctor<Device, T>()(
@@ -45,8 +51,9 @@ REGISTER_CPU(complex64);
 REGISTER_CPU(complex128);
 
 // Register the GPU kernels.
-#define REGISTER_GPU(T)					              \
-  REGISTER_KERNEL_BUILDER(					      \
+#define REGISTER_GPU(T)					                                      \
+  extern template struct InitialStateFunctor<GPUDevice, T>;           \
+  REGISTER_KERNEL_BUILDER(					                                  \
        Name("InitialState").Device(DEVICE_GPU).TypeConstraint<T>("T"),\
       InitialStateOp<GPUDevice, T>);
 REGISTER_GPU(complex64);
