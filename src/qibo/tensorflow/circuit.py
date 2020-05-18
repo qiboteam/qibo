@@ -6,7 +6,7 @@ from qibo.base import circuit
 from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import gates, measurements, callbacks
 from typing import List, Optional, Tuple, Union
-import qibo.tensorflow.custom_operators as op
+from qibo.tensorflow import custom_operators as op
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
