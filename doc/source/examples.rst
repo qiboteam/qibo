@@ -44,6 +44,49 @@ If you are planning to freeze the circuit and just query for different initial s
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
 
+It is possible to print a summary of the circuit using ``circuit.summary()``.
+This will print basic information about the circuit, including its depth, the
+total number of qubits and all gates in order of the number of times they appear.
+The QASM name is used as identifier of gates.
+For example
+
+.. code-block:: python
+
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.H(2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    print(c.summary())
+    # Prints
+    '''
+    Circuit depth = 7
+    Number of qubits = 3
+    Most common gates:
+    h: 3
+    cx: 2
+    ccx: 1
+    '''
+
+The circuit property ``circuit.gate_types`` will also return a ``collections.Counter``
+that contains the gate types and the corresponding numbers of appearance. The
+method ``circuit.gates_of_type`` can be used to access gate objects of specific type.
+For example for the circuit of the previous example:
+
+.. code-block:: python
+
+    common_gates = c.gate_types.most_common()
+    # returns the list [("h", 3), ("cx", 2), ("ccx", 1)]
+
+    most_common_gate = common_gates[0][0]
+    # returns "h"
+
+    all_h_gates = c.gates_of_type("h")
+    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, H(2))]
+
+
 .. _measurement-examples:
 How to perform measurements?
 ----------------------------
@@ -103,7 +146,13 @@ Setting ``registers=False`` (default option) will ignore the registers and retur
 results similarly to the previous example. For example ``result.frequencies(binary=True)``
 will return ``collections.Counter({"1001": 100})``.
 
-Note that unmeasured qubits are ignored by the measurement objects. Also, the
+It is possible to define registers of multiple qubits by either passing
+the qubit ids seperately, such as ``gates.M(0, 1, 2, 4)``, or using the ``*``
+operator: ``gates.M(*[0, 1, 2, 4])``. The ``*`` operator is useful if qubit
+ids are saved in an iterable. For example ``gates.M(*range(5))`` is equivalent
+to ``gates.M(0, 1, 2, 3, 4)``.
+
+Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
