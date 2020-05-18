@@ -7,22 +7,19 @@ import tensorflow as tf
 from qibo.tensorflow.custom_operators import initial_state
 
 
-@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-def test_initial_state(dtype):
-  """Check that initial_state updates first element properly."""
-  final_state = tf.zeros(10, dtype=dtype)
-  initial_state(final_state)
-  exact_state = np.array([1] + [0]*9, dtype=dtype)
-  np.testing.assert_allclose(final_state, exact_state)
+def apply_operator(dtype):
+  """Apply the initial_state operator"""
+  a = tf.zeros(10, dtype=dtype)
+  return initial_state(a)
 
 
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
-def test_initial_state_compiled(dtype):
+@pytest.mark.parametrize("compile", [False, True])
+def test_initial_state(dtype, compile):
   """Check that initial_state updates first element properly."""
-  @tf.function
-  def apply_operator():
-    a = tf.zeros(10, dtype=dtype)
-    return initial_state(a)
-  final_state = apply_operator()
+  func = apply_operator
+  if compile:
+      func = tf.function(apply_operator)
+  final_state = func(dtype)
   exact_state = np.array([1] + [0]*9, dtype=dtype)
   np.testing.assert_allclose(final_state, exact_state)
