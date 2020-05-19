@@ -8,7 +8,7 @@ ffi.cdef("""
 void binary_matrix(unsigned char *in_array, int nqubits);
 """)
 custom_functions = ffi.dlopen(
-    resource_loader.get_path_to_datafile('./_qibo_custom_functions.so'))
+    resource_loader.get_path_to_datafile('_qibo_custom_functions.so'))
 
 
 def binary_matrix(nqubits):
