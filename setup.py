@@ -23,12 +23,15 @@ def get_version():
 
 class Build(_build_py):
     def run(self):
-        command = ["make", "-C", "src/qibo/tensorflow/custom_operators/"]
-        if subprocess.call(command) != 0:
-            sys.exit(-1)
+        commands = [
+            ["make", "-C", "src/qibo/tensorflow/custom_operators/"],
+            ["make", "-C", "src/qibo/tensorflow/custom_functions/"]]
+        for command in commands:
+            if subprocess.call(command) != 0:
+                sys.exit(-1)
         _build_py.run(self)
 
-        
+
 setup(
     name="qibo",
     version=get_version(),
@@ -37,7 +40,7 @@ setup(
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
     packages=find_packages("src"),
-    package_dir={"": "src"},    
+    package_dir={"": "src"},
     cmdclass={"build_py": Build,},
     package_data={"": ['./**/*.so']},
     include_package_data=True,
