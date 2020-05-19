@@ -4,6 +4,9 @@ CFLAGS = -fopenmp -fPIC -O2
 LDFLAGS = -shared
 TARGET_LIB = python/_qibo_custom_functions.so
 OBJECT_SRCS = $(SRCS:.c=.o)
+ifeq ($(shell uname -s),Darwin)
+    CFLAGS = -fPIC -O2
+endif
 
 all: clean $(TARGET_LIB)
 
