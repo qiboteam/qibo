@@ -29,16 +29,11 @@ class InitialStateOp : public OpKernel {
     // grabe the input tensor
     Tensor input_tensor = context->input(0);
 
-#ifndef GOOGLE_CUDA
-    // prevent running on GPU
-    OP_REQUIRES(context, (std::is_same<Device,CPUDevice>::value == true),
-                errors::Unimplemented("InitialState operator not implemented for GPU."));
-#endif
-
     // call the implementation
     InitialStateFunctor<Device, T>()(
       context->eigen_device<Device>(),
       input_tensor.flat<T>().data());
+
     context->set_output(0, input_tensor);
   }
 };
