@@ -46,6 +46,7 @@ class InitialStateOp : public OpKernel {
 REGISTER_CPU(complex64);
 REGISTER_CPU(complex128);
 
+#ifdef GOOGLE_CUDA
 // Register the GPU kernels.
 #define REGISTER_GPU(T)					                                      \
   extern template struct InitialStateFunctor<GPUDevice, T>;           \
@@ -54,5 +55,6 @@ REGISTER_CPU(complex128);
       InitialStateOp<GPUDevice, T>);
 REGISTER_GPU(complex64);
 REGISTER_GPU(complex128);
+#endif
 } // namespace functor
 } // namespace tensorflow
