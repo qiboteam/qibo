@@ -13,11 +13,11 @@ template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, T* state, const T* gate, int nqubits,
                   int target) {
-    const auto nstates = std::pow(2, nqubits);
-    const auto k = std::pow(2, nqubits - target - 1);
+    const int64 nstates = std::pow(2, nqubits);
+    const int64 k = std::pow(2, nqubits - target - 1);
 
-    for (std::size_t g = 0; g < nstates; g += 2 * k) {
-      for (std::size_t i = g; i < g + k; i++) {
+    for (auto g = 0; g < nstates; g += 2 * k) {
+      for (auto i = g; i < g + k; i++) {
         const auto buffer = state[i];
         state[i] = gate[0] * state[i] + gate[1] * state[i + k];
         state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
