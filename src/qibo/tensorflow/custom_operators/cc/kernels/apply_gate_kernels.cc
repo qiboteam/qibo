@@ -1,7 +1,3 @@
-#if GOOGLE_CUDA
-#define EIGEN_USE_GPU
-#endif  // GOOGLE_CUDA
-
 #include "apply_gate.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -17,8 +13,8 @@ template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, T* state, const T* gate, int nqubits,
                   int target) {
-    const std::size_t nstates = std::pow(2, nqubits);
-    const std::size_t k = std::pow(2, nqubits - target - 1);
+    const auto nstates = std::pow(2, nqubits);
+    const auto k = std::pow(2, nqubits - target - 1);
 
     for (std::size_t g = 0; g < nstates; g += 2 * k) {
       for (std::size_t i = g; i < g + k; i++) {
@@ -42,12 +38,10 @@ class ApplyGateOp : public OpKernel {
     const int nqubits = context->input(2).flat<int32>()(0);
     const int target = context->input(3).flat<int32>()(0);
 
-#ifndef GOOGLE_CUDA
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
-#endif
 
     // call the implementation
     ApplyGateFunctor<Device, T>()(context->eigen_device<Device>(),
