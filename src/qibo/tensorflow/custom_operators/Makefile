@@ -11,6 +11,9 @@ TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".j
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
 CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11 -fopenmp
+ifeq ($(shell uname -s),Darwin)
+    CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
+endif
 LDFLAGS = -shared ${TF_LFLAGS}
 
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
