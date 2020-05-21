@@ -16,6 +16,7 @@ struct ApplyGateFunctor<CPUDevice, T> {
     const int64 nstates = std::pow(2, nqubits);
     const int64 k = std::pow(2, nqubits - target - 1);
 
+#pragma omp parallel for
     for (auto g = 0; g < nstates; g += 2 * k) {
       for (auto i = g; i < g + k; i++) {
         const auto buffer = state[i];
