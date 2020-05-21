@@ -1,6 +1,6 @@
-#include "apply_gate.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/util/work_sharder.h"
+#include "apply_gate.h"
 
 namespace tensorflow {
 
@@ -28,7 +28,7 @@ struct ApplyGateFunctor<CPUDevice, T> {
     };
 
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, {}, 2 * k);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * k);
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     thread_pool->ParallelFor(nstates, p, DoWork);
