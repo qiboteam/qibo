@@ -7,3 +7,6 @@ custom_module = load_library.load_op_library(
 
 # initial_state operator
 initial_state = custom_module.initial_state
+
+# apply_gate operator
+apply_gate = custom_module.apply_gate
