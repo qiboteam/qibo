@@ -40,7 +40,7 @@ def tensorflow_random_complex(shape, dtype):
                           (3, 0, np.float64, True, "abc,Aa->Abc"),
                           (8, 5, np.float64, False, "abcdefgh,Ff->abcdeFgh")])
 def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
-    """Check that `op.apply_gate` agrees with `tf.einsum`."""
+    """Check that ``op.apply_gate`` agrees with ``tf.einsum``."""
     def apply_operator(state, gate):
       return op.apply_gate(state, gate, nqubits, target)
 
@@ -57,19 +57,48 @@ def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     np.testing.assert_allclose(target_state, state.numpy(), atol=_atol)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
-def test_apply_gate_cx(nqubits):
-    """Check that multiply-controlled X gate works."""
-    state = (np.random.random((2 ** nqubits,)) +
-             1j * np.random.random((2 ** nqubits,))).astype(np.complex128)
-    gate = np.eye(2 ** nqubits, dtype=state.dtype)
+@pytest.mark.parametrize(("nqubits", "compile"),
+                         [(2, True), (3, False), (4, True), (5, False)])
+def test_apply_gate_cx(nqubits, compile):
+    """Check ``op.apply_gate`` for multiply-controlled X gates."""
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+
+    target_state = state.numpy()
+    gate = np.eye(2 ** nqubits, dtype=target_state.dtype)
     gate[-2, -2], gate[-2, -1] = 0, 1
     gate[-1, -2], gate[-1, -1] = 1, 0
-    target_state = gate.dot(state)
+    target_state = gate.dot(target_state)
 
-    xgate = np.array([[0, 1], [1, 0]]).astype(state.dtype)
+    xgate = tf.cast([[0, 1], [1, 0]], dtype=state.dtype)
     controls = list(range(nqubits - 1))
-    state = apply_gate(state, xgate, nqubits, nqubits - 1, controls)
+    def apply_operator(state):
+      return op.apply_gate(state, xgate, nqubits, nqubits - 1, controls)
+    if compile:
+        apply_operator = tf.function(apply_operator)
+    state = apply_operator(state)
 
-    np.testing.assert_allclose(target_state, state)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+@pytest.mark.parametrize(("nqubits", "target", "controls", "einsum_str"),
+                         [(3, 0, [1, 2], "a,Aa->A"),
+                          (4, 3, [0, 1, 2], "a,Aa->A"),
+                          (5, 3, [1], "abcd,Cc->abCd"),
+                          (5, 2, [1, 4], "abc,Bb->aBc"),
+                          (6, 3, [0, 2, 5], "abc,Bb->aBc"),
+                          (6, 3, [0, 2, 4, 5], "ab,Bb->aB")])
+def test_apply_gate_controlled(nqubits, target, controls, einsum_str):
+    """Check ``op.apply_gate`` for random controlled gates."""
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    gate = tensorflow_random_complex((2, 2), dtype=tf.float64)
+
+    target_state = state.numpy().reshape(nqubits * (2,))
+    slicer = nqubits * [slice(None)]
+    for c in controls:
+        slicer[c] = 1
+    slicer = tuple(slicer)
+    target_state[slicer] = np.einsum(einsum_str, target_state[slicer], gate)
+    target_state = target_state.ravel()
+
+    state = op.apply_gate(state, gate, nqubits, target, controls)
+    np.testing.assert_allclose(target_state, state.numpy())
