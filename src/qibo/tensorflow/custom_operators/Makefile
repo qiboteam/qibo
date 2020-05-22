@@ -42,7 +42,7 @@ cpugpuoperator: $(OBJECT_CUDASRCS) $(OBJECT_SRCS)
 	$(CXX) -c $(CFLAGS) $^ -o $@
 
 %.cu.o: %.cu.cc
-	$(NVCC) -c -o $@ $^ $(CFLAGS_CUDA) $(TF_LFLAGS)
+	$(NVCC) -c -o $@ $^ $(CFLAGS_CUDA)
 
 clean:
 	rm -f $(TARGET_LIB) $(OBJECT_SRCS) $(OBJECT_CUDASRCS)
