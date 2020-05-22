@@ -27,28 +27,28 @@ def test_initial_state(dtype, compile):
   np.testing.assert_allclose(final_state, exact_state)
 
 
-@pytest.mark.parametrize(("nqubits", "target", "dtype", "compile"),
-                         [(5, 4, np.float32, False),
-                          (4, 2, np.float32, True),
-                          (4, 2, np.float64, False),
-                          (3, 0, np.float64, True),
-                          (8, 5, np.float64, False)])
-def test_apply_gate(nqubits, target, dtype, compile):
+def tensorflow_random_complex(shape, dtype):
+  _re = tf.random.uniform(shape, dtype=dtype)
+  _im = tf.random.uniform(shape, dtype=dtype)
+  return tf.complex(_re, _im)
+
+
+@pytest.mark.parametrize(("nqubits", "target", "dtype", "compile", "einsum_str"),
+                         [(5, 4, np.float32, False, "abcde,Ee->abcdE"),
+                          (4, 2, np.float32, True, "abcd,Cc->abCd"),
+                          (4, 2, np.float64, False, "abcd,Cc->abCd"),
+                          (3, 0, np.float64, True, "abc,Aa->Abc"),
+                          (8, 5, np.float64, False, "abcdefgh,Ff->abcdeFgh")])
+def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     """Check that `op.apply_gate` agrees with `tf.einsum`."""
     def apply_operator(state, gate):
       return op.apply_gate(state, gate, nqubits, target)
 
-    state = tf.complex(tf.random.uniform((2 ** nqubits,), dtype=dtype),
-                       tf.random.uniform((2 ** nqubits,), dtype=dtype))
-    gate = tf.complex(tf.random.uniform((2, 2), dtype=dtype),
-                      tf.random.uniform((2, 2), dtype=dtype))
+    state = tensorflow_random_complex((2 ** nqubits,), dtype)
+    gate = tensorflow_random_complex((2, 2), dtype)
 
-    einsum_str = {3: "abc,Aa->Abc",
-                  4: "abcd,Cc->abCd",
-                  5: "abcde,Ee->abcdE",
-                  8: "abcdefgh,Ff->abcdeFgh"}
     target_state = tf.reshape(state, nqubits * (2,))
-    target_state = tf.einsum(einsum_str[nqubits], target_state, gate)
+    target_state = tf.einsum(einsum_str, target_state, gate)
     target_state = target_state.numpy().ravel()
 
     if compile:
@@ -57,63 +57,19 @@ def test_apply_gate(nqubits, target, dtype, compile):
     np.testing.assert_allclose(target_state, state.numpy(), atol=_atol)
 
 
-def test_apply_with_circuit():
-    """Check that `op.apply_gate` agrees with qibo circuits."""
-    # Temporary test since `op.apply_gate` will be integrated to circuits
+@pytest.mark.skip
+@pytest.mark.parametrize("nqubits", [2, 3, 4, 5])
+def test_apply_gate_cx(nqubits):
+    """Check that multiply-controlled X gate works."""
+    state = (np.random.random((2 ** nqubits,)) +
+             1j * np.random.random((2 ** nqubits,))).astype(np.complex128)
+    gate = np.eye(2 ** nqubits, dtype=state.dtype)
+    gate[-2, -2], gate[-2, -1] = 0, 1
+    gate[-1, -2], gate[-1, -1] = 1, 0
+    target_state = gate.dot(state)
 
-    c = models.Circuit(3)
-    c.add(gates.H(0))
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.Y(2))
-    target_state = c().numpy()
+    xgate = np.array([[0, 1], [1, 0]]).astype(state.dtype)
+    controls = list(range(nqubits - 1))
+    state = apply_gate(state, xgate, nqubits, nqubits - 1, controls)
 
-    state = tf.zeros_like(target_state)
-    op.initial_state(state)
-    op.apply_gate(state, c.queue[0].matrix, c.nqubits, 0)
-    op.apply_gate(state, c.queue[1].matrix, c.nqubits, 1)
-    op.apply_gate(state, c.queue[2].matrix, c.nqubits, 2)
-    np.testing.assert_allclose(target_state, state.numpy())
-
-
-def test_apply_with_circuit_controlled():
-    """Check that `op.apply_gate` agrees with qibo circuits."""
-    # Temporary test since `op.apply_gate` will be integrated to circuits
-    theta = 0.4321
-
-    c = models.Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CZPow(0, 1, theta=theta))
-    target_state = c().numpy()
-
-    zpow = np.array([[1, 0], [0, np.exp(1j * theta)]])
-    state = tf.zeros_like(target_state)
-    op.initial_state(state)
-    op.apply_gate(state, c.queue[0].matrix, c.nqubits, 0)
-    op.apply_gate(state, c.queue[1].matrix, c.nqubits, 1)
-    op.apply_gate(state, zpow, c.nqubits, 1, [0])
-    np.testing.assert_allclose(target_state, state.numpy())
-
-
-def test_apply_gate_controlled():
-    nqubits = 5
-    dtype = tf.float64
-    state = tf.complex(tf.random.uniform((2 ** nqubits,), dtype=dtype),
-                       tf.random.uniform((2 ** nqubits,), dtype=dtype))
-    gate = tf.complex(tf.random.uniform((2, 2), dtype=dtype),
-                      tf.random.uniform((2, 2), dtype=dtype))
-
-    target = 3
-    controls = [1]
-    einsum_str = "abcd,Cc->abCd"
-
-    # Apply controlled gate in numpy
-    target_state = state.numpy().reshape(nqubits * (2,))
-    slicer = nqubits * [slice(None)]
-    for c in controls:
-        slicer[c] = 1
-    target_state[slicer] = np.einsum(einsum_str, target_state[slicer], gate.numpy())
-    target_state = target_state.ravel()
-
-    op.apply_gate(state, gate, nqubits, target, controls)
-    np.testing.assert_allclose(target_state, state.numpy())
+    np.testing.assert_allclose(target_state, state)
