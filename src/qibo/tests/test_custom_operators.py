@@ -102,3 +102,11 @@ def test_apply_gate_controlled(nqubits, target, controls, einsum_str):
 
     state = op.apply_gate(state, gate, nqubits, target, controls)
     np.testing.assert_allclose(target_state, state.numpy())
+
+
+def test_apply_gate_error():
+    """Check that ``TypeError`` is raised for invalid ``controls``."""
+    state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
+    gate = tensorflow_random_complex((2, 2), dtype=tf.float64)
+    with pytest.raises(TypeError):
+        state = op.apply_gate(state, gate, 2, 0, "a")
