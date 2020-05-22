@@ -1,7 +1,6 @@
-#include <algorithm>
-#include <iterator>
-#include "apply_gate.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/util/work_sharder.h"
+#include "apply_gate.h"
 
 namespace tensorflow {
 
@@ -10,39 +9,29 @@ typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
 
+using thread::ThreadPool;
+
 // CPU specialization
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, T* state, const T* gate, int nqubits,
-                  int target, const int32* control, int ncontrol) {
+  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+                  const T* gate, int nqubits, int target) {
     const int64 nstates = std::pow(2, nqubits);
     const int64 tk = std::pow(2, nqubits - target - 1);
 
-    std::set<int64> cks;
-    int64 cktot = 0;
-    for (int i = 0; i < ncontrol; i++) {
-      int64 ck_temp = std::pow(2, nqubits - control[i] - 1);
-      cks.insert(ck_temp);
-      cktot += ck_temp;
-    }
-
-    for (auto g = 0; g < nstates; g += 2 * tk) {
-      auto i = g;
-      while (i < g + tk) {
-        if (cks.find(i) != cks.end()) {
-          cks.erase(i);
-          i += 2 * i;
-        }
-        else {
-          const auto i1 = i + cktot;
-          const auto i2 = i1 + tk;
-          const auto buffer = state[i1];
-          state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
-          state[i2] = gate[2] * buffer + gate[3] * state[i2];
-          i++;
-        }
+    auto DoWork = [&](int64 g, int64 w) {
+      for (auto i = g; i < g + k; i++) {
+        const auto buffer = state[i];
+        state[i] = gate[0] * state[i] + gate[1] * state[i + k];
+        state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
       }
-    }
+    };
+
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * k);
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    thread_pool->ParallelFor(nstates, p, DoWork);
   }
 };
 
@@ -66,12 +55,9 @@ class ApplyGateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
-    ApplyGateFunctor<Device, T>()(context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
-                                  gate.flat<T>().data(),
-                                  nqubits, target,
-                                  control.flat<int32>().data(),
-                                  ncontrol);
+    ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                                  state.flat<T>().data(), gate.flat<T>().data(),
+                                  nqubits, target);
 
     context->set_output(0, state);
   }
