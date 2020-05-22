@@ -10,10 +10,7 @@ SOURCES = $(filter-out $(CUDASRC), $(SRCS))
 TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))')
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
-CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11 -fopenmp
-ifeq ($(shell uname -s),Darwin)
-    CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
-endif
+CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
 LDFLAGS = -shared ${TF_LFLAGS}
 
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
@@ -45,7 +42,7 @@ cpugpuoperator: $(OBJECT_CUDASRCS) $(OBJECT_SRCS)
 	$(CXX) -c $(CFLAGS) $^ -o $@
 
 %.cu.o: %.cu.cc
-	$(NVCC) -c -o $@ $^ $(CFLAGS_CUDA) $(TF_LFLAGS)
+	$(NVCC) -c -o $@ $^ $(CFLAGS_CUDA)
 
 clean:
 	rm -f $(TARGET_LIB) $(OBJECT_SRCS) $(OBJECT_CUDASRCS)

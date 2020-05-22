@@ -1,5 +1,5 @@
 #include "apply_gate.h"
-#include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
 
@@ -8,36 +8,46 @@ typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
 
+using thread::ThreadPool;
+
 // CPU specialization
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice& d, T* state, const T* gate, int nqubits,
-                  int target) {
+  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+                  const T* gate, int nqubits, int target) {
     const int64 nstates = std::pow(2, nqubits);
     const int64 k = std::pow(2, nqubits - target - 1);
 
-#pragma omp parallel for
-    for (auto g = 0; g < nstates; g += 2 * k) {
-      for (auto i = g; i < g + k; i++) {
-        const auto buffer = state[i];
-        state[i] = gate[0] * state[i] + gate[1] * state[i + k];
-        state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+    auto DoWork = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g += 2 * k) {
+        for (auto i = g; i < g + k; i++) {
+          const auto buffer = state[i];
+          state[i] = gate[0] * state[i] + gate[1] * state[i + k];
+          state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+        }
       }
-    }
+    };
+
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * k);
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    thread_pool->ParallelFor(nstates, p, DoWork);
   }
 };
 
 template <typename Device, typename T>
 class ApplyGateOp : public OpKernel {
  public:
-  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
 
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
-    const int nqubits = context->input(2).flat<int32>()(0);
-    const int target = context->input(3).flat<int32>()(0);
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -45,12 +55,16 @@ class ApplyGateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
-    ApplyGateFunctor<Device, T>()(context->eigen_device<Device>(),
+    ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                   state.flat<T>().data(), gate.flat<T>().data(),
-                                  nqubits, target);
+                                  nqubits_, target_);
 
     context->set_output(0, state);
   }
+
+ private:
+  int nqubits_;
+  int target_;
 };
 
 // Register the CPU kernels.
