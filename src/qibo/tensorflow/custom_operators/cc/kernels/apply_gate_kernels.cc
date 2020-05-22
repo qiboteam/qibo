@@ -1,6 +1,6 @@
+#include "apply_gate.h"
 #include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/util/work_sharder.h"
-#include "apply_gate.h"
 
 namespace tensorflow {
 
@@ -19,11 +19,13 @@ struct ApplyGateFunctor<CPUDevice, T> {
     const int64 nstates = std::pow(2, nqubits);
     const int64 k = std::pow(2, nqubits - target - 1);
 
-    auto DoWork = [&](int64 g, int64 w) {
-      for (auto i = g; i < g + k; i++) {
-        const auto buffer = state[i];
-        state[i] = gate[0] * state[i] + gate[1] * state[i + k];
-        state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+    auto DoWork = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g += 2 * k) {
+        for (auto i = g; i < g + k; i++) {
+          const auto buffer = state[i];
+          state[i] = gate[0] * state[i] + gate[1] * state[i + k];
+          state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+        }
       }
     };
 
