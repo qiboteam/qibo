@@ -18,6 +18,7 @@ REGISTER_OP("ApplyGate")
     .Input("gate: T")
     .Input("nqubits: int32")
     .Input("target: int32")
+    .Input("control: int32")
     .Output("out: T")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
       c->set_output(0, c->input(0));

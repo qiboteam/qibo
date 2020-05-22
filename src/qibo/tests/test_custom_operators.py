@@ -4,6 +4,7 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
+from qibo import models, gates
 from qibo.tensorflow import custom_operators as op
 
 _atol = 1e-6
@@ -54,3 +55,65 @@ def test_apply_gate(nqubits, target, dtype, compile):
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state, gate)
     np.testing.assert_allclose(target_state, state.numpy(), atol=_atol)
+
+
+def test_apply_with_circuit():
+    """Check that `op.apply_gate` agrees with qibo circuits."""
+    # Temporary test since `op.apply_gate` will be integrated to circuits
+
+    c = models.Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.Y(2))
+    target_state = c().numpy()
+
+    state = tf.zeros_like(target_state)
+    op.initial_state(state)
+    op.apply_gate(state, c.queue[0].matrix, c.nqubits, 0)
+    op.apply_gate(state, c.queue[1].matrix, c.nqubits, 1)
+    op.apply_gate(state, c.queue[2].matrix, c.nqubits, 2)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+def test_apply_with_circuit_controlled():
+    """Check that `op.apply_gate` agrees with qibo circuits."""
+    # Temporary test since `op.apply_gate` will be integrated to circuits
+    theta = 0.4321
+
+    c = models.Circuit(2)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CZPow(0, 1, theta=theta))
+    target_state = c().numpy()
+
+    zpow = np.array([[1, 0], [0, np.exp(1j * theta)]])
+    state = tf.zeros_like(target_state)
+    op.initial_state(state)
+    op.apply_gate(state, c.queue[0].matrix, c.nqubits, 0)
+    op.apply_gate(state, c.queue[1].matrix, c.nqubits, 1)
+    op.apply_gate(state, zpow, c.nqubits, 1, [0])
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+def test_apply_gate_controlled():
+    nqubits = 5
+    dtype = tf.float64
+    state = tf.complex(tf.random.uniform((2 ** nqubits,), dtype=dtype),
+                       tf.random.uniform((2 ** nqubits,), dtype=dtype))
+    gate = tf.complex(tf.random.uniform((2, 2), dtype=dtype),
+                      tf.random.uniform((2, 2), dtype=dtype))
+
+    target = 3
+    controls = [1]
+    einsum_str = "abcd,Cc->abCd"
+
+    # Apply controlled gate in numpy
+    target_state = state.numpy().reshape(nqubits * (2,))
+    slicer = nqubits * [slice(None)]
+    for c in controls:
+        slicer[c] = 1
+    target_state[slicer] = np.einsum(einsum_str, target_state[slicer], gate.numpy())
+    target_state = target_state.ravel()
+
+    op.apply_gate(state, gate, nqubits, target, controls)
+    np.testing.assert_allclose(target_state, state.numpy())

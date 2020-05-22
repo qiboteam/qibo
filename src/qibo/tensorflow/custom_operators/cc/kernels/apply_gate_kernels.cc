@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <iterator>
 #include "apply_gate.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -12,15 +14,33 @@ namespace functor {
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
   void operator()(const CPUDevice& d, T* state, const T* gate, int nqubits,
-                  int target) {
+                  int target, const int32* control, int ncontrol) {
     const int64 nstates = std::pow(2, nqubits);
-    const int64 k = std::pow(2, nqubits - target - 1);
+    const int64 tk = std::pow(2, nqubits - target - 1);
 
-    for (auto g = 0; g < nstates; g += 2 * k) {
-      for (auto i = g; i < g + k; i++) {
-        const auto buffer = state[i];
-        state[i] = gate[0] * state[i] + gate[1] * state[i + k];
-        state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+    std::set<int64> cks;
+    int64 cktot = 0;
+    for (int i = 0; i < ncontrol; i++) {
+      int64 ck_temp = std::pow(2, nqubits - control[i] - 1);
+      cks.insert(ck_temp);
+      cktot += ck_temp;
+    }
+
+    for (auto g = 0; g < nstates; g += 2 * tk) {
+      auto i = g;
+      while (i < g + tk) {
+        if (cks.find(i) != cks.end()) {
+          cks.erase(i);
+          i += 2 * i;
+        }
+        else {
+          const auto i1 = i + cktot;
+          const auto i2 = i1 + tk;
+          const auto buffer = state[i1];
+          state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
+          state[i2] = gate[2] * buffer + gate[3] * state[i2];
+          i++;
+        }
       }
     }
   }
@@ -35,8 +55,10 @@ class ApplyGateOp : public OpKernel {
     // grabe the input tensor
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
+    const Tensor& control = context->input(4);
     const int nqubits = context->input(2).flat<int32>()(0);
     const int target = context->input(3).flat<int32>()(0);
+    const int ncontrol = control.flat<int32>().size();
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -45,8 +67,11 @@ class ApplyGateOp : public OpKernel {
 
     // call the implementation
     ApplyGateFunctor<Device, T>()(context->eigen_device<Device>(),
-                                  state.flat<T>().data(), gate.flat<T>().data(),
-                                  nqubits, target);
+                                  state.flat<T>().data(),
+                                  gate.flat<T>().data(),
+                                  nqubits, target,
+                                  control.flat<int32>().data(),
+                                  ncontrol);
 
     context->set_output(0, state);
   }
