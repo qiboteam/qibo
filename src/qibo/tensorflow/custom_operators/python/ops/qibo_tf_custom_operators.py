@@ -9,9 +9,9 @@ custom_module = load_library.load_op_library(
 initial_state = custom_module.initial_state
 
 # apply_gate operator
-def apply_gate(state, gate, nqubits, target, control=[]):
-    if not (isinstance(control, list) or isinstance(control, tuple)):
+def apply_gate(state, gate, nqubits, target, controls=[]):
+    if not (isinstance(controls, list) or isinstance(controls, tuple)):
         raise TypeError("Control qubits must be a list or tuple but {} "
                         "was given.".format(type(control)))
 
-    return custom_module.apply_gate(state, gate, nqubits, target, control)
+    return custom_module.apply_gate(state, gate, nqubits, target, controls)

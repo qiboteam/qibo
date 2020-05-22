@@ -15,20 +15,41 @@ using thread::ThreadPool;
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  const T* gate, int nqubits, int target) {
+                  const T* gate, int nqubits, int target,
+                  const int32* controls, int ncontrols) {
     const int64 nstates = std::pow(2, nqubits);
     const int64 tk = std::pow(2, nqubits - target - 1);
 
+    int64 cktot = 0;
+    std::set<int64> cks;
+    for (int i = 0; i < ncontrols; i++) {
+      int64 ck = std::pow(2, nqubits - controls[i] - 1);
+      cks.insert(ck);
+      cktot += ck;
+    }
+
     auto DoWork = [&](int64 g, int64 w) {
-      for (auto i = g; i < g + k; i++) {
-        const auto buffer = state[i];
-        state[i] = gate[0] * state[i] + gate[1] * state[i + k];
-        state[i + k] = gate[2] * buffer + gate[3] * state[i + k];
+      for (auto i = g; i < g + tk; i++) {
+        bool apply = true;
+        for (std::set<int64>::iterator q = cks.begin(); q != cks.end(); q++) {
+          if (((int64) i / *q) % 2) {
+            apply = false;
+            break;
+          }
+        }
+
+        if (apply) {
+          const int64 i1 = i + cktot;
+          const int64 i2 = i1 + tk;
+          const auto buffer = state[i1];
+          state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
+          state[i2] = gate[2] * buffer + gate[3] * state[i2];
+        }
       }
     };
 
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * k);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * tk);
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     thread_pool->ParallelFor(nstates, p, DoWork);
@@ -44,10 +65,10 @@ class ApplyGateOp : public OpKernel {
     // grabe the input tensor
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
-    const Tensor& control = context->input(4);
+    const Tensor& controls = context->input(4);
     const int nqubits = context->input(2).flat<int32>()(0);
     const int target = context->input(3).flat<int32>()(0);
-    const int ncontrol = control.flat<int32>().size();
+    const int ncontrols = controls.flat<int32>().size();
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -56,8 +77,11 @@ class ApplyGateOp : public OpKernel {
 
     // call the implementation
     ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(), gate.flat<T>().data(),
-                                  nqubits, target);
+                                  state.flat<T>().data(),
+                                  gate.flat<T>().data(),
+                                  nqubits, target,
+                                  controls.flat<int32>().data(),
+                                  ncontrols);
 
     context->set_output(0, state);
   }

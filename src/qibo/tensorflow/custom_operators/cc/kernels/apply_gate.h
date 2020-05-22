@@ -10,7 +10,8 @@ namespace functor {
 template <typename Device, typename T>
 struct ApplyGateFunctor {
   void operator()(const OpKernelContext* context, const Device& d, T* state,
-                  const T* gate, int nqubits, int target);
+                  const T* gate, int nqubits, int target,
+                  const int32* controls, int ncontrols);
 };
 
 }  // namespace functor
