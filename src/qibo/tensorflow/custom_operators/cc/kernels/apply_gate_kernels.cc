@@ -1,5 +1,4 @@
 #include "apply_gate.h"
-#include "tensorflow/core/framework/op_kernel.h"
 #include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
@@ -40,14 +39,15 @@ struct ApplyGateFunctor<CPUDevice, T> {
 template <typename Device, typename T>
 class ApplyGateOp : public OpKernel {
  public:
-  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
 
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
-    const int nqubits = context->input(2).flat<int32>()(0);
-    const int target = context->input(3).flat<int32>()(0);
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -57,10 +57,14 @@ class ApplyGateOp : public OpKernel {
     // call the implementation
     ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                   state.flat<T>().data(), gate.flat<T>().data(),
-                                  nqubits, target);
+                                  nqubits_, target_);
 
     context->set_output(0, state);
   }
+
+ private:
+  int nqubits_;
+  int target_;
 };
 
 // Register the CPU kernels.

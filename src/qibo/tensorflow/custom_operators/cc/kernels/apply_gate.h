@@ -1,6 +1,8 @@
 #ifndef KERNEL_APPLY_GATE_H_
 #define KERNEL_APPLY_GATE_H_
 
+#include "tensorflow/core/framework/op_kernel.h"
+
 namespace tensorflow {
 
 namespace functor {
