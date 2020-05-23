@@ -1,3 +1,7 @@
+#if GOOGLE_CUDA
+#define EIGEN_USE_GPU
+#endif // GOOGLE_CUDA
+
 #include "apply_gate.h"
 #include "tensorflow/core/util/work_sharder.h"
 
@@ -49,11 +53,6 @@ class ApplyGateOp : public OpKernel {
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
 
-    // prevent running on GPU
-    OP_REQUIRES(
-        context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyGate operator not implemented for GPU."));
-
     // call the implementation
     ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                   state.flat<T>().data(), gate.flat<T>().data(),
@@ -75,6 +74,7 @@ class ApplyGateOp : public OpKernel {
 REGISTER_CPU(complex64);
 REGISTER_CPU(complex128);
 
+#if GOOGLE_CUDA
 // Register the GPU kernels.
 #define REGISTER_GPU(T)                                            \
   extern template struct ApplyGateFunctor<GPUDevice, T>;           \
@@ -83,5 +83,6 @@ REGISTER_CPU(complex128);
       ApplyGateOp<GPUDevice, T>);
 REGISTER_GPU(complex64);
 REGISTER_GPU(complex128);
+#endif
 }  // namespace functor
 }  // namespace tensorflow
