@@ -32,4 +32,4 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
         raise TypeError("Control qubits must be a list or tuple but {} "
                         "was given.".format(type(controls)))
 
-    return custom_module.apply_gate(state, gate, nqubits, target, controls)
+    return custom_module.apply_gate(state, gate, controls, nqubits, target)

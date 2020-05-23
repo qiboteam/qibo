@@ -57,7 +57,6 @@ def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     np.testing.assert_allclose(target_state, state.numpy(), atol=_atol)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(("nqubits", "compile"),
                          [(2, True), (3, False), (4, True), (5, False)])
 def test_apply_gate_cx(nqubits, compile):
@@ -81,7 +80,6 @@ def test_apply_gate_cx(nqubits, compile):
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(("nqubits", "target", "controls", "einsum_str"),
                          [(3, 0, [1, 2], "a,Aa->A"),
                           (4, 3, [0, 1, 2], "a,Aa->A"),
@@ -106,7 +104,6 @@ def test_apply_gate_controlled(nqubits, target, controls, einsum_str):
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.skip
 def test_apply_gate_error():
     """Check that ``TypeError`` is raised for invalid ``controls``."""
     state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)

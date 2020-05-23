@@ -16,9 +16,9 @@ REGISTER_OP("ApplyGate")
     .Attr("T: {complex64, complex128}")
     .Input("state: T")
     .Input("gate: T")
+    .Input("controls: int32")
     .Attr("nqubits: int")
     .Attr("target: int")
-    .Input("controls: int32")
     .Output("out: T")
     .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
       c->set_output(0, c->input(0));
