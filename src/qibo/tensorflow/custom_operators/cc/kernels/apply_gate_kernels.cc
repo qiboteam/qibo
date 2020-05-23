@@ -20,19 +20,18 @@ struct ApplyGateFunctor<CPUDevice, T> {
     const int64 tk = std::pow(2, nqubits - target - 1);
 
     int64 cktot = 0;
-    std::set<int64> cks;
+    std::vector<int64> cks(ncontrols);
     for (int i = 0; i < ncontrols; i++) {
-      int64 ck = std::pow(2, nqubits - controls[i] - 1);
-      cks.insert(ck);
-      cktot += ck;
+      cks[i] = std::pow(2, nqubits - controls[i] - 1);
+      cktot += cks[i];
     }
 
     auto DoWork = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g += 2 * tk) {
         for (auto i = g; i < g + tk; i++) {
           bool apply = true;
-          for (std::set<int64>::iterator q = cks.begin(); q != cks.end(); q++) {
-            if (((int64) i / *q) % 2) {
+          for (const auto &q: cks) {
+            if (((int64) i / q) % 2) {
               apply = false;
               break;
             }
