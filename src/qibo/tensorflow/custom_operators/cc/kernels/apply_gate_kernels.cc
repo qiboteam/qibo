@@ -1,6 +1,5 @@
-#include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/util/work_sharder.h"
 #include "apply_gate.h"
+#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
 
@@ -28,22 +27,24 @@ struct ApplyGateFunctor<CPUDevice, T> {
       cktot += ck;
     }
 
-    auto DoWork = [&](int64 g, int64 w) {
-      for (auto i = g; i < g + tk; i++) {
-        bool apply = true;
-        for (std::set<int64>::iterator q = cks.begin(); q != cks.end(); q++) {
-          if (((int64) i / *q) % 2) {
-            apply = false;
-            break;
+    auto DoWork = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g += 2 * tk) {
+        for (auto i = g; i < g + tk; i++) {
+          bool apply = true;
+          for (std::set<int64>::iterator q = cks.begin(); q != cks.end(); q++) {
+            if (((int64) i / *q) % 2) {
+              apply = false;
+              break;
+            }
           }
-        }
 
-        if (apply) {
-          const int64 i1 = i + cktot;
-          const int64 i2 = i1 + tk;
-          const auto buffer = state[i1];
-          state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
-          state[i2] = gate[2] * buffer + gate[3] * state[i2];
+          if (apply) {
+            const int64 i1 = i + cktot;
+            const int64 i2 = i1 + tk;
+            const auto buffer = state[i1];
+            state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
+            state[i2] = gate[2] * buffer + gate[3] * state[i2];
+          }
         }
       }
     };
@@ -59,15 +60,16 @@ struct ApplyGateFunctor<CPUDevice, T> {
 template <typename Device, typename T>
 class ApplyGateOp : public OpKernel {
  public:
-  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {}
+  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
 
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
     const Tensor& gate = context->input(1);
-    const Tensor& controls = context->input(4);
-    const int nqubits = context->input(2).flat<int32>()(0);
-    const int target = context->input(3).flat<int32>()(0);
+    const Tensor& controls = context->input(2);
     const int ncontrols = controls.flat<int32>().size();
 
     // prevent running on GPU
@@ -79,12 +81,16 @@ class ApplyGateOp : public OpKernel {
     ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                   state.flat<T>().data(),
                                   gate.flat<T>().data(),
-                                  nqubits, target,
+                                  nqubits_, target_,
                                   controls.flat<int32>().data(),
                                   ncontrols);
 
     context->set_output(0, state);
   }
+
+ private:
+  int nqubits_;
+  int target_;
 };
 
 // Register the CPU kernels.
