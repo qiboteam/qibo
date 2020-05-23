@@ -4,7 +4,6 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
-from qibo import models, gates
 from qibo.tensorflow import custom_operators as op
 
 _atol = 1e-6
