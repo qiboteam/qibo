@@ -8,6 +8,12 @@ custom_module = load_library.load_op_library(
 # initial_state operator
 initial_state = custom_module.initial_state
 
+def check_controls(controls):
+    """Checks if ``controls`` variable has valid type."""
+    if not (isinstance(controls, list) or isinstance(controls, tuple)):
+        raise TypeError("Control qubits must be a list or tuple but {} "
+                        "was given.".format(type(controls)))
+
 # apply_gate operator
 def apply_gate(state, gate, nqubits, target, controls=[]):
     """Applies one-qubit gates to a state vector.
@@ -28,8 +34,22 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
         state (tf.Tensor): State vector of shape ``(2 ** nqubits,)`` after
             ``gate`` is applied.
     """
-    if not (isinstance(controls, list) or isinstance(controls, tuple)):
-        raise TypeError("Control qubits must be a list or tuple but {} "
-                        "was given.".format(type(controls)))
-
+    check_controls(controls)
     return custom_module.apply_gate(state, gate, controls, nqubits, target)
+
+# gate specific operators
+def apply_x(state, nqubits, target, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_x(state, controls, nqubits, target)
+
+def apply_y(state, nqubits, target, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_y(state, controls, nqubits, target)
+
+def apply_z(state, nqubits, target, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_z(state, controls, nqubits, target)
+
+def apply_zpow(state, theta, nqubits, target, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_z_pow(state, theta, controls, nqubits, target)

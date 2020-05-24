@@ -109,3 +109,43 @@ def test_apply_gate_error():
     gate = tensorflow_random_complex((2, 2), dtype=tf.float64)
     with pytest.raises(TypeError):
         state = op.apply_gate(state, gate, 2, 0, "a")
+
+
+@pytest.mark.parametrize(("nqubits", "target", "gate"),
+                         [(3, 0, "x"), (4, 3, "x"),
+                          (5, 2, "y"), (3, 1, "z")])
+def test_apply_pauli_gate(nqubits, target, gate):
+    """Check ``apply_x``, ``apply_y`` and ``apply_z`` kernels."""
+    matrices = {"x": np.array([[0, 1], [1, 0]], dtype=np.complex128),
+                "y": np.array([[0, -1j], [1j, 0]], dtype=np.complex128),
+                "z": np.array([[1, 0], [0, -1]], dtype=np.complex128)}
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    target_state = tf.cast(state.numpy(), dtype=state.dtype)
+
+    state = getattr(op, "apply_{}".format(gate))(state, nqubits, target)
+    target_state = op.apply_gate(state, matrices[gate], nqubits, target)
+
+    np.testing.assert_allclose(target_state.numpy(), state.numpy())
+
+
+@pytest.mark.parametrize(("nqubits", "target", "controls"),
+                         [(3, 0, []), (3, 2, [1]),
+                          (3, 2, [0, 1]), (6, 1, [0, 2, 4])])
+def test_apply_zpow_gate(nqubits, target, controls):
+    """Check ``apply_zpow`` (including CZPow case)."""
+    import itertools
+    phase = np.exp(1j * 0.1234)
+    qubits = controls[:]
+    qubits.append(target)
+    qubits.sort()
+    matrix = np.ones(2 ** nqubits, dtype=np.complex128)
+    for i, conf in enumerate(itertools.product([0, 1], repeat=nqubits)):
+        if np.array(conf)[qubits].prod():
+            matrix[i] = phase
+
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+
+    target_state = np.diag(matrix).dot(state.numpy())
+    state = op.apply_zpow(state, phase, nqubits, target, controls)
+
+    np.testing.assert_allclose(target_state, state.numpy())
