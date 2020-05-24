@@ -10,51 +10,124 @@ namespace functor {
 
 using thread::ThreadPool;
 
-// CPU specialization
+
 template <typename T>
-struct ApplyGateFunctor<CPUDevice, T> {
-  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  const T* gate, int nqubits, int target,
-                  const int32* controls, int ncontrols) {
-    const int64 nstates = std::pow(2, nqubits);
-    const int64 tk = std::pow(2, nqubits - target - 1);
+struct BaseApplyGateFunctor<CPUDevice, T> {
+  virtual inline void _apply(T& state1, T& state2, const T* gate = NULL) {}
 
-    int64 cktot = 0;
-    std::vector<int64> cks(ncontrols);
-    for (int i = 0; i < ncontrols; i++) {
-      cks[i] = std::pow(2, nqubits - controls[i] - 1);
-      cktot += cks[i];
+  void _work(int64 t, int64 w, T* state, const T* gate, const int64 tk) {
+    for (auto g = t; g < w; g += 2 * tk) {
+      for (auto i = g; i < g + tk; i++) {
+          _apply(state[i], state[i + tk], gate);
+      }
     }
+  }
 
-    auto DoWork = [&](int64 t, int64 w) {
-      for (auto g = t; g < w; g += 2 * tk) {
-        for (auto i = g; i < g + tk; i++) {
-          bool apply = true;
-          for (const auto &q: cks) {
-            if (((int64) i / q) % 2) {
-              apply = false;
-              break;
-            }
-          }
+  // TODO: Implement a `_singlecontrol_work`
 
-          if (apply) {
-            const int64 i1 = i + cktot;
-            const int64 i2 = i1 + tk;
-            const auto buffer = state[i1];
-            state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
-            state[i2] = gate[2] * buffer + gate[3] * state[i2];
+  void _multicontrol_work(int64 t, int64 w, T* state, const T* gate,
+                          const int64 tk, const int64 cktot,
+                          const std::vector<int64> cks) {
+    for (auto g = t; g < w; g += 2 * tk) {
+      for (auto i = g; i < g + tk; i++) {
+        bool apply = true;
+        for (const auto &q: cks) {
+          if (((int64) i / q) % 2) {
+            apply = false;
+            break;
           }
         }
+        if (apply) {
+          const int64 i1 = i + cktot;
+          const int64 i2 = i1 + tk;
+          _apply(state[i1], state[i2], gate);
+        }
       }
-    };
+    }
+  }
+
+  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+                  int nqubits, int target, int ncontrols,
+                  const int32* controls, const T* gate = NULL) {
+    const int64 nstates = std::pow(2, nqubits);
+    const int64 tk = std::pow(2, nqubits - target - 1);
 
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * tk);
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
-    thread_pool->ParallelFor(nstates, p, DoWork);
+
+    if (ncontrols == 0) {
+      auto DoWork = [&](int64 t, int64 w) {
+        _work(t, w, state, gate, tk);
+      };
+      thread_pool->ParallelFor(nstates, p, DoWork);
+
+    } else {
+      int64 cktot = 0;
+      std::vector<int64> cks(ncontrols);
+      for (int i = 0; i < ncontrols; i++) {
+        cks[i] = std::pow(2, nqubits - controls[i] - 1);
+        cktot += cks[i];
+      }
+
+      auto DoWork = [&](int64 t, int64 w) {
+        _multicontrol_work(t, w, state, gate, tk, cktot, cks);
+      };
+      thread_pool->ParallelFor(nstates, p, DoWork);
+    }
   }
 };
+
+
+// Apply general one-qubit gate via gate matrix
+template <typename T>
+struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+  inline void _apply(T& state1, T& state2, const T* gate = NULL) override {
+    const auto buffer = state1;
+    state1 = gate[0] * state1 + gate[1] * state2;
+    state2 = gate[2] * buffer + gate[3] * state2;
+  }
+};
+
+
+// Apply X gate via swap
+template <typename T>
+struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+  inline void _apply(T& state1, T& state2, const T* gate = NULL) override {
+    std::swap(state1, state2);
+  }
+};
+
+
+// Apply Y gate via swap
+template <typename T>
+struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+  inline void _apply(T& state1, T& state2, const T* gate = NULL) override {
+    state1 *= T(0, 1);
+    state2 *= - T(0, 1);
+    std::swap(state1, state2);
+  }
+};
+
+
+// Apply Z gate
+template <typename T>
+struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+  inline void _apply(T& state1, T& state2, const T* gate = NULL) override {
+    state2 *= -1;
+  }
+};
+
+
+// Apply ZPow gate
+template <typename T>
+struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+  inline void _apply(T& state1, T& state2, const T* gate = NULL) override {
+    state2 *= gate[0];
+  }
+};
+
 
 template <typename Device, typename T>
 class ApplyGateOp : public OpKernel {
@@ -79,10 +152,9 @@ class ApplyGateOp : public OpKernel {
     // call the implementation
     ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                   state.flat<T>().data(),
-                                  gate.flat<T>().data(),
-                                  nqubits_, target_,
+                                  nqubits_, target_, ncontrols,
                                   controls.flat<int32>().data(),
-                                  ncontrols);
+                                  gate.flat<T>().data());
 
     context->set_output(0, state);
   }
@@ -92,13 +164,162 @@ class ApplyGateOp : public OpKernel {
   int target_;
 };
 
+// TODO: Inherit all these ops from a single base that defines compute
+template <typename Device, typename T>
+class ApplyXOp : public OpKernel {
+ public:
+  explicit ApplyXOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grabe the input tensor
+    Tensor state = context->input(0);
+    const Tensor& controls = context->input(1);
+    const int ncontrols = controls.flat<int32>().size();
+
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+
+    // call the implementation
+    ApplyXFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                               state.flat<T>().data(),
+                               nqubits_, target_, ncontrols,
+                               controls.flat<int32>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+  int nqubits_;
+  int target_;
+};
+
+
+template <typename Device, typename T>
+class ApplyYOp : public OpKernel {
+ public:
+  explicit ApplyYOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grabe the input tensor
+    Tensor state = context->input(0);
+    const Tensor& controls = context->input(1);
+    const int ncontrols = controls.flat<int32>().size();
+
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+
+    // call the implementation
+    ApplyYFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                               state.flat<T>().data(),
+                               nqubits_, target_, ncontrols,
+                               controls.flat<int32>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+  int nqubits_;
+  int target_;
+};
+
+
+template <typename Device, typename T>
+class ApplyZOp : public OpKernel {
+ public:
+  explicit ApplyZOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grabe the input tensor
+    Tensor state = context->input(0);
+    const Tensor& controls = context->input(1);
+    const int ncontrols = controls.flat<int32>().size();
+
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+
+    // call the implementation
+    ApplyZFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                               state.flat<T>().data(),
+                               nqubits_, target_, ncontrols,
+                               controls.flat<int32>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+  int nqubits_;
+  int target_;
+};
+
+
+template <typename Device, typename T>
+class ApplyZPowOp : public OpKernel {
+ public:
+  explicit ApplyZPowOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grabe the input tensor
+    Tensor state = context->input(0);
+    const Tensor& gate = context->input(1);
+    const Tensor& controls = context->input(2);
+    const int ncontrols = controls.flat<int32>().size();
+
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+
+    // call the implementation
+    ApplyZPowFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                                  state.flat<T>().data(),
+                                  nqubits_, target_, ncontrols,
+                                  controls.flat<int32>().data(),
+                                  gate.flat<T>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+  int nqubits_;
+  int target_;
+};
+
+
 // Register the CPU kernels.
-#define REGISTER_CPU(T)                                            \
-  REGISTER_KERNEL_BUILDER(                                         \
-      Name("ApplyGate").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      ApplyGateOp<CPUDevice, T>);
-REGISTER_CPU(complex64);
-REGISTER_CPU(complex128);
+#define REGISTER_CPU(T, NAME, OP)                             \
+  REGISTER_KERNEL_BUILDER(                                    \
+      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      OP<CPUDevice, T>);
+
+REGISTER_CPU(complex64, "ApplyGate", ApplyGateOp);
+REGISTER_CPU(complex128, "ApplyGate", ApplyGateOp);
+REGISTER_CPU(complex64, "ApplyX", ApplyXOp);
+REGISTER_CPU(complex128, "ApplyX", ApplyXOp);
+REGISTER_CPU(complex64, "ApplyY", ApplyYOp);
+REGISTER_CPU(complex128, "ApplyY", ApplyYOp);
+REGISTER_CPU(complex64, "ApplyZ", ApplyZOp);
+REGISTER_CPU(complex128, "ApplyZ", ApplyZOp);
+REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowOp);
+REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowOp);
+
 
 // Register the GPU kernels.
 #define REGISTER_GPU(T)                                            \
