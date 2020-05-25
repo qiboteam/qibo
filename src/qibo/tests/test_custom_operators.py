@@ -163,17 +163,28 @@ def test_apply_swap_with_matrix():
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.parametrize(("nqubits", "targets"),
-                         [(2, [0, 1]), (3, [0, 2]),
-                          (4, [1, 3])])
-def test_apply_swap_general(nqubits, targets):
+@pytest.mark.parametrize(("nqubits", "targets", "controls"),
+                         [(2, [0, 1], []), (3, [0, 2], []), (4, [1, 3], []),
+                          (3, [1, 2], [0]), (4, [0, 2], [1]),
+                          (5, [3, 4], [1, 2])])
+def test_apply_swap_general(nqubits, targets, controls):
     """Check ``apply_swap`` for more general cases."""
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
 
-    target_state = state.numpy().reshape(nqubits * (2,))
-    order = list(range(nqubits))
-    order[targets[0]], order[targets[1]] = targets[1], targets[0]
-    target_state = np.transpose(target_state, order).ravel()
+    target0, target1 = targets
+    for q in controls:
+        if q < target0:
+            target0 -= 1
+        if q < target1:
+            target1 -= 1
 
-    state = op.apply_swap(state, nqubits, targets[0], targets[1])
-    np.testing.assert_allclose(target_state, state.numpy())
+    target_state = state.numpy().reshape(nqubits * (2,))
+    order = list(range(nqubits - len(controls)))
+    order[target0], order[target1] = target1, target0
+    slicer = tuple(1 if q in controls else slice(None) for q in range(nqubits))
+    reduced_state = target_state[slicer]
+    reduced_state = np.transpose(reduced_state, order)
+    target_state[slicer] = reduced_state
+
+    state = op.apply_swap(state, nqubits, targets[0], targets[1], controls)
+    np.testing.assert_allclose(target_state.ravel(), state.numpy())

@@ -161,26 +161,47 @@ struct ApplySwapFunctor<CPUDevice, T> {
                   const int32* controls, const T* gate = NULL) {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
-    int target1_eff = t1;
-    int target2_eff = t2;
+    int t1_eff = t1;
+    int t2_eff = t2;
     for (int i = 0; i < ncontrols; i++) {
       if (controls[i] < t1) {
-        target1_eff--;
+        t1_eff--;
       }
       if (controls[i] < t2) {
-        target2_eff--;
+        t2_eff--;
       }
     }
 
     const int64 tk1 = 1 << (nqubits - t1 - 1);
+    int64 tk1_eff = tk1;
+    if (ncontrols > 0 || t1 != t1_eff) {
+      tk1_eff = 1 << (nqubits - ncontrols - t1_eff - 1);
+    }
     const int64 tk2 = 1 << (nqubits - t2 - 1);
-    const int64 mask1 = ((1 << t1) - 1) << (nqubits - t1 - 1);
-    const int64 mask2 = ((1 << t2) - 1) << (nqubits - t2 - 1);
+    int64 tk2_eff = tk2;
+    if (ncontrols > 0 || t2 != t2_eff) {
+      tk2_eff = 1 << (nqubits - ncontrols - t2_eff - 1);
+    }
+    const int64 mask1 = ((1 << t1_eff) - 1) << (nqubits - t1_eff - 1);
+    const int64 mask2 = ((1 << t2_eff) - 1) << (nqubits - t2_eff - 1);
 
-    const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
+    std::map<int64, int64> control_masks;
+    for (int i = 0; i < ncontrols; i++) {
+      const int control = controls[i];
+      const int64 ck = 1 << (nqubits - control - 1);
+      const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
+      control_masks.insert(std::pair<int64, int64>(ck, mask));
+    }
+
+    const int64 nstates = 1 << (nqubits - 2 - ncontrols);
     for (auto g = 0; g < nstates; g += 1) {
-      int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
-      i = ((i & mask2) << 1) + (i & (tk2 - 1));
+      int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
+      i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
+
+      for (auto const& m : control_masks) {
+        i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
+      }
+
       std::swap(state[i + tk1], state[i + tk2]);
     }
   }
