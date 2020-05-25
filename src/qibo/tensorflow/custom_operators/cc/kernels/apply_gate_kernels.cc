@@ -23,7 +23,18 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     }
   }
 
-  // TODO: Implement a `_singlecontrol_work`
+  void _singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
+                           const int64 tk, const int64 tk_reduced,
+                           const int64 ck, const int mask) {
+    const int64 inv_mask = ck - 1;
+    for (auto g = t; g < w; g += 2 * tk_reduced) {
+      for (auto i = g; i < g + tk_reduced; i++) {
+        const int64 i1 = ((i & mask) << 1) + (i & inv_mask) + ck;
+        const int64 i2 = i1 + tk;
+        _apply(state[i1], state[i2], gate);
+      }
+    }
+  }
 
   void _multicontrol_work(int64 t, int64 w, T* state, const T* gate,
                           const int64 tk, const int64 cktot,
@@ -52,8 +63,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     const int64 nstates = (int64) 1 << nqubits;
     const int64 tk = (int64) 1 << (nqubits - target - 1);
     int64 tk_reduced = tk;
-    if ((ncontrols == 1) && (target > controls[0])) {
-      tk_reduced = (int64) 1 << (nqubits - target);
+    if ((ncontrols == 1) && (target < controls[0])) {
+      tk_reduced = (int64) 1 << (nqubits - target - 2);
     }
 
     const ThreadPool::SchedulingParams p(
@@ -68,7 +79,18 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
 
-    } else {
+    }
+    else if (ncontrols == 1) {
+        const int control = controls[0];
+        const int64 nstates_reduced = 1 << (nqubits - 1);
+        const int64 ck = 1 << (nqubits - control - 1);
+        const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
+        auto DoWork = [&](int64 t, int64 w) {
+          _singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
+        };
+        thread_pool->ParallelFor(nstates_reduced, p, DoWork);
+    }
+    else {
       int64 cktot = 0;
       std::vector<int64> cks(ncontrols);
       for (int i = 0; i < ncontrols; i++) {
