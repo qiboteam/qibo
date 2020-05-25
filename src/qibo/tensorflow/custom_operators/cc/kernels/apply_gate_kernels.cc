@@ -49,8 +49,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target, int ncontrols,
                   const int32* controls, const T* gate = NULL) {
-    const int64 nstates = std::pow(2, nqubits);
-    const int64 tk = std::pow(2, nqubits - target - 1);
+    const int64 nstates = (int64) 1 << nqubits;
+    const int64 tk = (int64) 1 << (nqubits - target - 1);
 
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, 2 * tk);
@@ -67,7 +67,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       int64 cktot = 0;
       std::vector<int64> cks(ncontrols);
       for (int i = 0; i < ncontrols; i++) {
-        cks[i] = std::pow(2, nqubits - controls[i] - 1);
+        cks[i] = (int64) 1 << (nqubits - controls[i] - 1);
         cktot += cks[i];
       }
 
