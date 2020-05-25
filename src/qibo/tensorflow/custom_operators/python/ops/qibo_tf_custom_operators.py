@@ -53,3 +53,7 @@ def apply_z(state, nqubits, target, controls=[]):
 def apply_zpow(state, theta, nqubits, target, controls=[]):
     check_controls(controls)
     return custom_module.apply_z_pow(state, theta, controls, nqubits, target)
+
+def apply_swap(state, nqubits, target1, target2, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_swap(state, controls, nqubits, target1, target2)

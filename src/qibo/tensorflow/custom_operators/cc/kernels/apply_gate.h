@@ -31,6 +31,13 @@ struct ApplyZFunctor: BaseApplyGateFunctor<Device, T> {};
 template <typename Device, typename T>
 struct ApplyZPowFunctor: BaseApplyGateFunctor<Device, T> {};
 
+template <typename Device, typename T>
+struct ApplySwapFunctor {
+  void operator()(const OpKernelContext* context, const Device& d, T* state,
+                  int nqubits, int target1, int target2, int ncontrols,
+                  const int32* controls, const T* gate = NULL);
+};
+
 }  // namespace functor
 
 }  // namespace tensorflow

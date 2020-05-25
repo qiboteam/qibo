@@ -149,3 +149,31 @@ def test_apply_zpow_gate(nqubits, target, controls):
     state = op.apply_zpow(state, phase, nqubits, target, controls)
 
     np.testing.assert_allclose(target_state, state.numpy())
+
+
+def test_apply_swap_with_matrix():
+    """Check ``apply_swap`` for two qubits."""
+    state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
+    matrix = np.array([[1, 0, 0, 0],
+                       [0, 0, 1, 0],
+                       [0, 1, 0, 0],
+                       [0, 0, 0, 1]])
+    target_state = matrix.dot(state.numpy())
+    state = op.apply_swap(state, 2, target1=0, target2=1)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+@pytest.mark.parametrize(("nqubits", "targets"),
+                         [(2, [0, 1]), (3, [0, 2]),
+                          (4, [1, 3])])
+def test_apply_swap_general(nqubits, targets):
+    """Check ``apply_swap`` for more general cases."""
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+
+    target_state = state.numpy().reshape(nqubits * (2,))
+    order = list(range(nqubits))
+    order[targets[0]], order[targets[1]] = targets[1], targets[0]
+    target_state = np.transpose(target_state, order).ravel()
+
+    state = op.apply_swap(state, nqubits, targets[0], targets[1])
+    np.testing.assert_allclose(target_state, state.numpy())

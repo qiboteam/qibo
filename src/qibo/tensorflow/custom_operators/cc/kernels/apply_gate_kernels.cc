@@ -154,6 +154,39 @@ struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 };
 
 
+template <typename T>
+struct ApplySwapFunctor<CPUDevice, T> {
+  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+                  int nqubits, int target1, int target2, int ncontrols,
+                  const int32* controls, const T* gate = NULL) {
+    const int t1 = std::max(target1, target2);
+    const int t2 = std::min(target1, target2);
+    int target1_eff = t1;
+    int target2_eff = t2;
+    for (int i = 0; i < ncontrols; i++) {
+      if (controls[i] < t1) {
+        target1_eff--;
+      }
+      if (controls[i] < t2) {
+        target2_eff--;
+      }
+    }
+
+    const int64 tk1 = 1 << (nqubits - t1 - 1);
+    const int64 tk2 = 1 << (nqubits - t2 - 1);
+    const int64 mask1 = ((1 << t1) - 1) << (nqubits - t1 - 1);
+    const int64 mask2 = ((1 << t2) - 1) << (nqubits - t2 - 1);
+
+    const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
+    for (auto g = 0; g < nstates; g += 1) {
+      int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
+      i = ((i & mask2) << 1) + (i & (tk2 - 1));
+      std::swap(state[i + tk1], state[i + tk2]);
+    }
+  }
+};
+
+
 template <typename Device, typename T>
 class ApplyGateOp : public OpKernel {
  public:
@@ -328,6 +361,41 @@ class ApplyZPowOp : public OpKernel {
 };
 
 
+template <typename Device, typename T>
+class ApplySwapOp : public OpKernel {
+ public:
+  explicit ApplySwapOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
+    OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grabe the input tensor
+    Tensor state = context->input(0);
+    const Tensor& controls = context->input(1);
+    const int ncontrols = controls.flat<int32>().size();
+
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+
+    // call the implementation
+    ApplySwapFunctor<Device, T>()(context, context->eigen_device<Device>(),
+                                  state.flat<T>().data(),
+                                  nqubits_, target1_, target2_,
+                                  ncontrols, controls.flat<int32>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+  int nqubits_;
+  int target1_, target2_;
+};
+
+
 // Register the CPU kernels.
 #define REGISTER_CPU(T, NAME, OP)                             \
   REGISTER_KERNEL_BUILDER(                                    \
@@ -344,6 +412,8 @@ REGISTER_CPU(complex64, "ApplyZ", ApplyZOp);
 REGISTER_CPU(complex128, "ApplyZ", ApplyZOp);
 REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowOp);
 REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowOp);
+REGISTER_CPU(complex64, "ApplySwap", ApplySwapOp);
+REGISTER_CPU(complex128, "ApplySwap", ApplySwapOp);
 
 
 // Register the GPU kernels.
