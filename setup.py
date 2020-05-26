@@ -43,7 +43,7 @@ setup(
     packages=find_packages("src", exclude=["qibo/tensorflow/custom_functions"]),
     package_dir={"": "src"},
     cmdclass={"build_py": Build,},
-    package_data={"": ['./**/*.so']},
+    package_data={"": ["*.so", "*.out"]},
     include_package_data=True,
     zip_safe=False,
     classifiers=[
@@ -55,7 +55,7 @@ setup(
     ],
     install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma", "cffi"],
     extras_require={
-        "docs": ["sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
+        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
     },
     python_requires=">=3.6",
     long_description="See readthedocs webpage with the documentation",
