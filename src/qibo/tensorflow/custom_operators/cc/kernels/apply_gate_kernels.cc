@@ -305,11 +305,6 @@ class ApplySwapOp : public OpKernel {
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),         \
       ApplyGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
 
-#define REGISTER_SWAP_CPU(T)                                         \
-  REGISTER_KERNEL_BUILDER(                                           \
-      Name("ApplySwap").Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
-      ApplySwapOp<CPUDevice, T>);
-
 REGISTER_CPU(complex64, "ApplyGate", ApplyGateFunctor, true);
 REGISTER_CPU(complex128, "ApplyGate", ApplyGateFunctor, true);
 REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
@@ -320,28 +315,44 @@ REGISTER_CPU(complex64, "ApplyY", ApplyYFunctor, false);
 REGISTER_CPU(complex128, "ApplyY", ApplyYFunctor, false);
 REGISTER_CPU(complex64, "ApplyZ", ApplyZFunctor, false);
 REGISTER_CPU(complex128, "ApplyZ", ApplyZFunctor, false);
+
+// Register SWAP kernel on CPU.
+#define REGISTER_SWAP_CPU(T)                                         \
+  REGISTER_KERNEL_BUILDER(                                           \
+      Name("ApplySwap").Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      ApplySwapOp<CPUDevice, T>);
+
 REGISTER_SWAP_CPU(complex64);
 REGISTER_SWAP_CPU(complex128);
 
 
 // Register the GPU kernels.
-#define REGISTER_GPU(T, NAME, OP, FUNCTOR)                      \
-  extern template struct FUNCTOR<GPUDevice, T>;                 \
-  REGISTER_KERNEL_BUILDER(                                      \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),     \
-      OP<GPUDevice, T>);
-/*
-REGISTER_GPU(complex64, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
-REGISTER_GPU(complex128, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
-REGISTER_GPU(complex64, "ApplyX", ApplyXOp, ApplyXFunctor);
-REGISTER_GPU(complex128, "ApplyX", ApplyXOp, ApplyXFunctor);
-REGISTER_GPU(complex64, "ApplyY", ApplyYOp, ApplyYFunctor);
-REGISTER_GPU(complex128, "ApplyY", ApplyYOp, ApplyYFunctor);
-REGISTER_GPU(complex64, "ApplyZ", ApplyZOp, ApplyZFunctor);
-REGISTER_GPU(complex128, "ApplyZ", ApplyZOp, ApplyZFunctor);
-REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
-REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
-REGISTER_GPU(complex64, "ApplySwap", ApplySwapOp, ApplySwapFunctor);
-REGISTER_GPU(complex128, "ApplySwap", ApplySwapOp, ApplySwapFunctor);*/
+#define REGISTER_GPU(T, NAME, FUNCTOR, USEMATRIX)                   \
+  extern template struct FUNCTOR<GPUDevice, T>;                     \
+  REGISTER_KERNEL_BUILDER(                                          \
+      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),         \
+      ApplyGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+
+REGISTER_GPU(complex64, "ApplyGate", ApplyGateFunctor, true);
+REGISTER_GPU(complex128, "ApplyGate", ApplyGateFunctor, true);
+REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
+REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowFunctor, true);
+REGISTER_GPU(complex64, "ApplyX", ApplyXFunctor, false);
+REGISTER_GPU(complex128, "ApplyX", ApplyXFunctor, false);
+REGISTER_GPU(complex64, "ApplyY", ApplyYFunctor, false);
+REGISTER_GPU(complex128, "ApplyY", ApplyYFunctor, false);
+REGISTER_GPU(complex64, "ApplyZ", ApplyZFunctor, false);
+REGISTER_GPU(complex128, "ApplyZ", ApplyZFunctor, false);
+
+// Register SWAP kernel on GPU.
+#define REGISTER_SWAP_GPU(T)                                        \
+  extern template struct ApplySwapFunctor<GPUDevice, T>;            \
+  REGISTER_KERNEL_BUILDER(                                          \
+      Name("ApplySwap").Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
+      ApplySwapOp<GPUDevice, T>);
+
+REGISTER_SWAP_GPU(complex64);
+REGISTER_SWAP_GPU(complex128);
+
 }  // namespace functor
 }  // namespace tensorflow
