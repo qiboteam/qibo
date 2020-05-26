@@ -255,7 +255,7 @@ class ApplyGateOp : public OpKernel {
   int target_;
 };
 
-// TODO: Inherit all these ops from a single base that defines compute
+
 template <typename Device, typename T, typename F>
 class ApplyNoGateOp : public OpKernel {
  public:
@@ -277,74 +277,6 @@ class ApplyNoGateOp : public OpKernel {
 
     // call the implementation
     F()(context, context->eigen_device<Device>(),
-                               state.flat<T>().data(),
-                               nqubits_, target_, ncontrols,
-                               controls.flat<int32>().data());
-
-    context->set_output(0, state);
-  }
-
- private:
-  int nqubits_;
-  int target_;
-};
-
-
-template <typename Device, typename T>
-class ApplyYOp : public OpKernel {
- public:
-  explicit ApplyYOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
-  }
-
-  void Compute(OpKernelContext* context) override {
-    // grabe the input tensor
-    Tensor state = context->input(0);
-    const Tensor& controls = context->input(1);
-    const int ncontrols = controls.flat<int32>().size();
-
-    // prevent running on GPU
-    OP_REQUIRES(
-        context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyX operator not implemented for GPU."));
-
-    // call the implementation
-    ApplyYFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                               state.flat<T>().data(),
-                               nqubits_, target_, ncontrols,
-                               controls.flat<int32>().data());
-
-    context->set_output(0, state);
-  }
-
- private:
-  int nqubits_;
-  int target_;
-};
-
-
-template <typename Device, typename T>
-class ApplyZOp : public OpKernel {
- public:
-  explicit ApplyZOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
-  }
-
-  void Compute(OpKernelContext* context) override {
-    // grabe the input tensor
-    Tensor state = context->input(0);
-    const Tensor& controls = context->input(1);
-    const int ncontrols = controls.flat<int32>().size();
-
-    // prevent running on GPU
-    OP_REQUIRES(
-        context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyX operator not implemented for GPU."));
-
-    // call the implementation
-    ApplyZFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                state.flat<T>().data(),
                                nqubits_, target_, ncontrols,
                                controls.flat<int32>().data());
