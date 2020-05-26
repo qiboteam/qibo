@@ -53,8 +53,8 @@ setup(
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    setup_requires=["tensorflow>=2.1"],
-    install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma", "cffi"],
+    setup_requires=["tensorflow"],
+    install_requires=["numpy", "tensorflow", "scipy", "cma", "cffi"],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
     },
