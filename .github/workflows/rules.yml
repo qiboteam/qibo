@@ -18,7 +18,9 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install package
       run: |
-        pip install .[docs]
+        pip install --upgrade pip
+        pip install tensorflow
+        python setup.py install
     - name: Test with pytest
       run: |
         pip install pytest-cov
@@ -34,7 +36,7 @@ jobs:
     - name: Sphinx compile
       if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master'
       run: |
-        pip install sphinx
+        pip install sphinx sphinx_rtd_theme recommonmark sphinxcontrib-bibtex
         make -C doc html
         KEY=$( mktemp )
         echo "$QIBO_TEAM" | base64 --decode > "$KEY"
