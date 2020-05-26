@@ -26,7 +26,7 @@ REGISTER_OP("InitialState")
         return Status::OK();                                                  \
       });
 
-#define REGISTER_NOGATE_OP(NAME)                                              \
+#define REGISTER_GATE_NOMATRIX_OP(NAME)                                       \
   REGISTER_OP(NAME)                                                           \
       .Attr("T: {complex64, complex128}")                                     \
       .Input("state: T")                                                      \
@@ -40,10 +40,10 @@ REGISTER_OP("InitialState")
       });
 
 REGISTER_GATE_OP("ApplyGate")
-REGISTER_NOGATE_OP("ApplyX")
-REGISTER_NOGATE_OP("ApplyY")
-REGISTER_NOGATE_OP("ApplyZ")
 REGISTER_GATE_OP("ApplyZPow")
+REGISTER_GATE_NOMATRIX_OP("ApplyX")
+REGISTER_GATE_NOMATRIX_OP("ApplyY")
+REGISTER_GATE_NOMATRIX_OP("ApplyZ")
 
 REGISTER_OP("ApplySwap")
     .Attr("T: {complex64, complex128}")
