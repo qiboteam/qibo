@@ -450,23 +450,22 @@ REGISTER_CPU(complex128, "ApplySwap", ApplySwapOp);
 
 
 // Register the GPU kernels.
-#define REGISTER_GPU(T, NAME, OP)                            \
-  extern template struct OP<GPUDevice, T>;                   \
-  REGISTER_KERNEL_BUILDER(                                   \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
+#define REGISTER_GPU(T, NAME, OP, FUNCTOR)                      \
+  extern template struct FUNCTOR<GPUDevice, T>;                 \
+  REGISTER_KERNEL_BUILDER(                                      \
+      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),     \
       OP<GPUDevice, T>);
-
-REGISTER_GPU(complex64, "ApplyGate", ApplyGateOp);
-REGISTER_GPU(complex128, "ApplyGate", ApplyGateOp);
-REGISTER_GPU(complex64, "ApplyX", ApplyXOp);
-REGISTER_GPU(complex128, "ApplyX", ApplyXOp);
-REGISTER_GPU(complex64, "ApplyY", ApplyYOp);
-REGISTER_GPU(complex128, "ApplyY", ApplyYOp);
-REGISTER_GPU(complex64, "ApplyZ", ApplyZOp);
-REGISTER_GPU(complex128, "ApplyZ", ApplyZOp);
-REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowOp);
-REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowOp);
-REGISTER_GPU(complex64, "ApplySwap", ApplySwapOp);
-REGISTER_GPU(complex128, "ApplySwap", ApplySwapOp);
+REGISTER_GPU(complex64, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
+REGISTER_GPU(complex128, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
+REGISTER_GPU(complex64, "ApplyX", ApplyXOp, ApplyXFunctor);
+REGISTER_GPU(complex128, "ApplyX", ApplyXOp, ApplyXFunctor);
+REGISTER_GPU(complex64, "ApplyY", ApplyYOp, ApplyYFunctor);
+REGISTER_GPU(complex128, "ApplyY", ApplyYOp, ApplyYFunctor);
+REGISTER_GPU(complex64, "ApplyZ", ApplyZOp, ApplyZFunctor);
+REGISTER_GPU(complex128, "ApplyZ", ApplyZOp, ApplyZFunctor);
+REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
+REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
+REGISTER_GPU(complex64, "ApplySwap", ApplySwapOp, ApplySwapFunctor);
+REGISTER_GPU(complex128, "ApplySwap", ApplySwapOp, ApplySwapFunctor);
 }  // namespace functor
 }  // namespace tensorflow
