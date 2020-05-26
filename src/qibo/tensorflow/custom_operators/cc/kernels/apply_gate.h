@@ -9,11 +9,11 @@ namespace functor {
 
 template <typename Device, typename T>
 struct BaseApplyGateFunctor {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL);
+  virtual void _apply(T& state1, T& state2, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d, T* state,
                   int nqubits, int target, int ncontrols,
-                  const int32* controls, const T* gate = NULL);
+                  const int32* controls, const T* gate = NULL) const;
 };
 
 template <typename Device, typename T>

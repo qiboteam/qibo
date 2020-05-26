@@ -13,9 +13,9 @@ using thread::ThreadPool;
 
 template <typename T>
 struct BaseApplyGateFunctor<CPUDevice, T> {
-  virtual inline void _apply(T& state1, T& state2, const T* gate = NULL) {}
+  virtual void _apply(T& state1, T& state2, const T* gate = NULL) {}
 
-  void _work(int64 t, int64 w, T* state, const T* gate, const int64 tk) {
+  void _work(int64 t, int64 w, T* state, const T* gate, int64 tk) {
     for (auto g = t; g < w; g += 2 * tk) {
       for (auto i = g; i < g + tk; i++) {
           _apply(state[i], state[i + tk], gate);
@@ -24,8 +24,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
   }
 
   void _singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                           const int64 tk, const int64 tk_reduced,
-                           const int64 ck, const int mask) {
+                           int64 tk, int64 tk_reduced,
+                           int64 ck, int mask) {
     const int64 inv_mask = ck - 1;
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
@@ -37,8 +37,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
   }
 
   void _multicontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          const int64 tk, const int64 tk_reduced,
-                          const std::map<int64, int64> masks) {
+                          int64 tk, int64 tk_reduced,
+                          const std::map<int64, int64>& masks) {
 
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
