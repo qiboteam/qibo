@@ -256,10 +256,10 @@ class ApplyGateOp : public OpKernel {
 };
 
 // TODO: Inherit all these ops from a single base that defines compute
-template <typename Device, typename T>
-class ApplyXOp : public OpKernel {
+template <typename Device, typename T, typename F>
+class ApplyNoGateOp : public OpKernel {
  public:
-  explicit ApplyXOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit ApplyNoGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
   }
@@ -276,7 +276,7 @@ class ApplyXOp : public OpKernel {
         errors::Unimplemented("ApplyX operator not implemented for GPU."));
 
     // call the implementation
-    ApplyXFunctor<Device, T>()(context, context->eigen_device<Device>(),
+    F()(context, context->eigen_device<Device>(),
                                state.flat<T>().data(),
                                nqubits_, target_, ncontrols,
                                controls.flat<int32>().data());
@@ -435,14 +435,19 @@ class ApplySwapOp : public OpKernel {
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
       OP<CPUDevice, T>);
 
+#define REGISTER_NOGATE_CPU(T, NAME, FUNCTOR)                 \
+  REGISTER_KERNEL_BUILDER(                                    \
+      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      ApplyNoGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>>);
+
 REGISTER_CPU(complex64, "ApplyGate", ApplyGateOp);
 REGISTER_CPU(complex128, "ApplyGate", ApplyGateOp);
-REGISTER_CPU(complex64, "ApplyX", ApplyXOp);
-REGISTER_CPU(complex128, "ApplyX", ApplyXOp);
-REGISTER_CPU(complex64, "ApplyY", ApplyYOp);
-REGISTER_CPU(complex128, "ApplyY", ApplyYOp);
-REGISTER_CPU(complex64, "ApplyZ", ApplyZOp);
-REGISTER_CPU(complex128, "ApplyZ", ApplyZOp);
+REGISTER_NOGATE_CPU(complex64, "ApplyX", ApplyXFunctor);
+REGISTER_NOGATE_CPU(complex128, "ApplyX", ApplyXFunctor);
+REGISTER_NOGATE_CPU(complex64, "ApplyY", ApplyYFunctor);
+REGISTER_NOGATE_CPU(complex128, "ApplyY", ApplyYFunctor);
+REGISTER_NOGATE_CPU(complex64, "ApplyZ", ApplyZFunctor);
+REGISTER_NOGATE_CPU(complex128, "ApplyZ", ApplyZFunctor);
 REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowOp);
 REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowOp);
 REGISTER_CPU(complex64, "ApplySwap", ApplySwapOp);
@@ -455,6 +460,7 @@ REGISTER_CPU(complex128, "ApplySwap", ApplySwapOp);
   REGISTER_KERNEL_BUILDER(                                      \
       Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),     \
       OP<GPUDevice, T>);
+/*
 REGISTER_GPU(complex64, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
 REGISTER_GPU(complex128, "ApplyGate", ApplyGateOp, ApplyGateFunctor);
 REGISTER_GPU(complex64, "ApplyX", ApplyXOp, ApplyXFunctor);
@@ -466,6 +472,6 @@ REGISTER_GPU(complex128, "ApplyZ", ApplyZOp, ApplyZFunctor);
 REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
 REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowOp, ApplyZPowFunctor);
 REGISTER_GPU(complex64, "ApplySwap", ApplySwapOp, ApplySwapFunctor);
-REGISTER_GPU(complex128, "ApplySwap", ApplySwapOp, ApplySwapFunctor);
+REGISTER_GPU(complex128, "ApplySwap", ApplySwapOp, ApplySwapFunctor);*/
 }  // namespace functor
 }  // namespace tensorflow
