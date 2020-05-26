@@ -76,7 +76,6 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
         _work(t, w, state, gate, tk);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
-
     }
     else if (ncontrols == 1) {
         const int control = controls[0];
@@ -93,7 +92,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
         const int control = controls[i];
         const int64 ck = 1 << (nqubits - control - 1);
         const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
-        masks.insert(std::pair<int64, int64>(ck, mask));
+        masks.emplace(ck, mask);
       }
 
       auto DoWork = [&](int64 t, int64 w) {
@@ -218,7 +217,7 @@ struct ApplySwapFunctor<CPUDevice, T> {
         const int control = controls[i];
         const int64 ck = 1 << (nqubits - control - 1);
         const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
-        control_masks.insert(std::pair<int64, int64>(ck, mask));
+        control_masks.emplace(ck, mask);
       }
 
       const int64 mask1 = ((1 << t1_eff) - 1) << (nqubits - t1_eff - 1);
