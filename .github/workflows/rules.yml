@@ -18,9 +18,7 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install package
       run: |
-        pip install --upgrade pip
-        pip install tensorflow
-        pip -v install .[docs]
+        pip install .[docs]
     - name: Test with pytest
       run: |
         pip install pytest-cov
