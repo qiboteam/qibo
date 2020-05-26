@@ -271,7 +271,7 @@ class ApplyNoGateOp : public OpKernel {
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+        errors::Unimplemented("ApplyNoGate operator not implemented for GPU."));
 
     // call the implementation
     F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
@@ -304,7 +304,7 @@ class ApplySwapOp : public OpKernel {
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyX operator not implemented for GPU."));
+        errors::Unimplemented("ApplySwap operator not implemented for GPU."));
 
     // call the implementation
     ApplySwapFunctor<Device, T>()(context, context->eigen_device<Device>(),
