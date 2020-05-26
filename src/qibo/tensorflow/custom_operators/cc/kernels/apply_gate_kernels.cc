@@ -165,15 +165,25 @@ struct ApplySwapFunctor<CPUDevice, T> {
     const int64 tk2 = 1 << (nqubits - t2 - 1);
     const int64 nstates = 1 << (nqubits - 2 - ncontrols);
 
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    const int ncores = (int) thread_pool->NumThreads() / 2;
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        (int64) nstates / ncores);
+
     if (ncontrols == 0) {
       const int64 mask1 = ((1 << t1) - 1) << (nqubits - t1 - 1);
       const int64 mask2 = ((1 << t2) - 1) << (nqubits - t2 - 1);
 
-      for (auto g = 0; g < nstates; g += 1) {
-        int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
-        i = ((i & mask2) << 1) + (i & (tk2 - 1));
-        std::swap(state[i + tk1], state[i + tk2]);
-      }
+      auto DoWork = [&](int64 t, int64 w) {
+        for (auto g = t; g < w; g += 1) {
+          int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
+          i = ((i & mask2) << 1) + (i & (tk2 - 1));
+          std::swap(state[i + tk1], state[i + tk2]);
+        }
+      };
+      thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else {
       int t1_eff = t1;
@@ -207,14 +217,17 @@ struct ApplySwapFunctor<CPUDevice, T> {
       const int64 mask1 = ((1 << t1_eff) - 1) << (nqubits - t1_eff - 1);
       const int64 mask2 = ((1 << t2_eff) - 1) << (nqubits - t2_eff - 1);
 
-      for (auto g = 0; g < nstates; g += 1) {
-        int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
-        i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
-        for (auto const& m : control_masks) {
-          i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
+      auto DoWork = [&](int64 t, int64 w) {
+        for (auto g = t; g < w; g += 1) {
+          int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
+          i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
+          for (auto const& m : control_masks) {
+            i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
+          }
+          std::swap(state[i + tk1], state[i + tk2]);
         }
-        std::swap(state[i + tk1], state[i + tk2]);
-      }
+      };
+      thread_pool->ParallelFor(nstates, p, DoWork);
     }
   }
 };
