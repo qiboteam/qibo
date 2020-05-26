@@ -168,9 +168,16 @@ struct ApplySwapFunctor<CPUDevice, T> {
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int) thread_pool->NumThreads() / 2;
+    int64 nreps;
+    if (ncores > 1) {
+      nreps = (int64) nstates / ncores;
+    }
+    else {
+      nreps = 0;
+    }
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        (int64) nstates / ncores);
+        nreps);
 
     if (ncontrols == 0) {
       const int64 mask1 = ((1 << t1) - 1) << (nqubits - t1 - 1);
