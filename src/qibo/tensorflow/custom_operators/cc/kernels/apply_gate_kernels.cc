@@ -173,7 +173,7 @@ struct ApplySwapFunctor<CPUDevice, T> {
       nreps = (int64) nstates / ncores;
     }
     else {
-      nreps = 0;
+      nreps = nstates;
     }
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
