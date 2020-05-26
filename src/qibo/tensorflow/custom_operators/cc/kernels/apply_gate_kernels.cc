@@ -220,7 +220,7 @@ struct ApplySwapFunctor<CPUDevice, T> {
 };
 
 
-template <typename Device, typename T>
+template <typename Device, typename T, typename F>
 class ApplyGateOp : public OpKernel {
  public:
   explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
@@ -241,11 +241,9 @@ class ApplyGateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
-    ApplyGateFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
-                                  nqubits_, target_, ncontrols,
-                                  controls.flat<int32>().data(),
-                                  gate.flat<T>().data());
+    F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+        nqubits_, target_, ncontrols, controls.flat<int32>().data(),
+        gate.flat<T>().data());
 
     context->set_output(0, state);
   }
@@ -276,46 +274,8 @@ class ApplyNoGateOp : public OpKernel {
         errors::Unimplemented("ApplyX operator not implemented for GPU."));
 
     // call the implementation
-    F()(context, context->eigen_device<Device>(),
-                               state.flat<T>().data(),
-                               nqubits_, target_, ncontrols,
-                               controls.flat<int32>().data());
-
-    context->set_output(0, state);
-  }
-
- private:
-  int nqubits_;
-  int target_;
-};
-
-
-template <typename Device, typename T>
-class ApplyZPowOp : public OpKernel {
- public:
-  explicit ApplyZPowOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
-  }
-
-  void Compute(OpKernelContext* context) override {
-    // grabe the input tensor
-    Tensor state = context->input(0);
-    const Tensor& gate = context->input(1);
-    const Tensor& controls = context->input(2);
-    const int ncontrols = controls.flat<int32>().size();
-
-    // prevent running on GPU
-    OP_REQUIRES(
-        context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyX operator not implemented for GPU."));
-
-    // call the implementation
-    ApplyZPowFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
-                                  nqubits_, target_, ncontrols,
-                                  controls.flat<int32>().data(),
-                                  gate.flat<T>().data());
+    F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+        nqubits_, target_, ncontrols, controls.flat<int32>().data());
 
     context->set_output(0, state);
   }
@@ -362,28 +322,33 @@ class ApplySwapOp : public OpKernel {
 
 
 // Register the CPU kernels.
-#define REGISTER_CPU(T, NAME, OP)                             \
+#define REGISTER_GATE_CPU(T, NAME, FUNCTOR)                   \
   REGISTER_KERNEL_BUILDER(                                    \
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
-      OP<CPUDevice, T>);
+      ApplyGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>>);
 
 #define REGISTER_NOGATE_CPU(T, NAME, FUNCTOR)                 \
   REGISTER_KERNEL_BUILDER(                                    \
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
       ApplyNoGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>>);
 
-REGISTER_CPU(complex64, "ApplyGate", ApplyGateOp);
-REGISTER_CPU(complex128, "ApplyGate", ApplyGateOp);
+#define REGISTER_SWAP_CPU(T)                                         \
+  REGISTER_KERNEL_BUILDER(                                           \
+      Name("ApplySwap").Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      ApplySwapOp<CPUDevice, T>);
+
+REGISTER_GATE_CPU(complex64, "ApplyGate", ApplyGateFunctor);
+REGISTER_GATE_CPU(complex128, "ApplyGate", ApplyGateFunctor);
+REGISTER_GATE_CPU(complex64, "ApplyZPow", ApplyZPowFunctor);
+REGISTER_GATE_CPU(complex128, "ApplyZPow", ApplyZPowFunctor);
 REGISTER_NOGATE_CPU(complex64, "ApplyX", ApplyXFunctor);
 REGISTER_NOGATE_CPU(complex128, "ApplyX", ApplyXFunctor);
 REGISTER_NOGATE_CPU(complex64, "ApplyY", ApplyYFunctor);
 REGISTER_NOGATE_CPU(complex128, "ApplyY", ApplyYFunctor);
 REGISTER_NOGATE_CPU(complex64, "ApplyZ", ApplyZFunctor);
 REGISTER_NOGATE_CPU(complex128, "ApplyZ", ApplyZFunctor);
-REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowOp);
-REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowOp);
-REGISTER_CPU(complex64, "ApplySwap", ApplySwapOp);
-REGISTER_CPU(complex128, "ApplySwap", ApplySwapOp);
+REGISTER_SWAP_CPU(complex64);
+REGISTER_SWAP_CPU(complex128);
 
 
 // Register the GPU kernels.
