@@ -387,7 +387,7 @@ def test_unitary_bad_shape(gates):
     with pytest.raises(ValueError):
         gate = gates.Unitary(matrix, (0, 1))
 
-
+# TODO: Fix X compilation and unskip this test
 @pytest.mark.skip
 @pytest.mark.parametrize("gates", _GATES)
 def test_custom_circuit(gates):
@@ -408,7 +408,10 @@ def test_custom_circuit(gates):
         o = gates.CZPow(0, 1, theta)(l2)
         return o
 
-    init = tf.reshape(c._default_initial_state(), (2, 2))
+    init = c._default_initial_state()
+    if gates == native_gates:
+        init = tf.reshape(init, (2, 2))
+
     r2 = custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r1, r2)
 
@@ -417,7 +420,6 @@ def test_custom_circuit(gates):
     np.testing.assert_allclose(r2, r3)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
 def test_compiled_circuit(gates, backend):
     """Check that compiling with `Circuit.compile` does not break results."""
@@ -440,7 +442,6 @@ def test_compiled_circuit(gates, backend):
     np.testing.assert_allclose(r1, r2)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("gates", _GATES)
 def test_compiling_twice_exception(gates):
     """Check that compiling a circuit a second time raises error."""
@@ -451,7 +452,6 @@ def test_compiling_twice_exception(gates):
         c.compile()
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("gates", _GATES)
 def test_circuit_custom_compilation(gates):
     theta = 0.1234
@@ -472,7 +472,6 @@ def test_circuit_custom_compilation(gates):
 
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
-    #init_state = tf.cast(init_state, dtype=c.dtype)
     r2 = compiled_circuit(init_state)
 
     np.testing.assert_allclose(r1, r2)
