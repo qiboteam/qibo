@@ -7,7 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest]#, macos-latest]
         python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
@@ -18,11 +18,12 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install package
       run: |
+        pip install tensorflow
         pip install .[docs]
     - name: Test with pytest
       run: |
         pip install pytest-cov
-        pytest --cov=./ --cov-report=xml
+        pytest --cov=./ --cov-report=xml --pyargs qibo
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
       with:
@@ -34,7 +35,6 @@ jobs:
     - name: Sphinx compile
       if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master'
       run: |
-        pip install sphinx
         make -C doc html
         KEY=$( mktemp )
         echo "$QIBO_TEAM" | base64 --decode > "$KEY"
