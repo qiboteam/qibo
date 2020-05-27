@@ -138,19 +138,14 @@ class EntanglementEntropy(Callback):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         # Cast state in the proper shape
-        if isinstance(state, np.ndarray):
-            if self._nqubits is None:
-                self.nqubits = int(np.log2(state.shape[0]))
-            shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
-            state = tf.convert_to_tensor(state.reshape(shape), dtype=DTYPECPX)
-        elif isinstance(state, tf.Tensor):
-            if self._nqubits is None:
-                self.nqubits = len(tuple(state.shape)) // (1 + int(is_density_matrix))
-            shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
-            state = tf.reshape(state, shape)
-        else:
+        if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
             raise TypeError("State of unknown type {} was given in callback "
                             "calculation.".format(type(state)))
+        if self._nqubits is None:
+            self.nqubits = int(np.log2(tuple(state.shape)[0]))
+
+        shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
+        state = tf.reshape(state, shape)
 
         # Construct reduced density matrix
         rho = self._partial_trace(state, is_density_matrix)

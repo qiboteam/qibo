@@ -183,7 +183,7 @@ class RX(MatrixGate, base_gates.RX):
         MatrixGate.__init__(self)
 
     def _construct_matrix(self):
-        th = tf.cast(self.theta, dtype=self.dtype)
+        th = tf.cast(self.theta, dtype=DTYPECPX)
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.X)
 
@@ -195,7 +195,7 @@ class RY(MatrixGate, base_gates.RY):
         MatrixGate.__init__(self)
 
     def _construct_matrix(self):
-        th = tf.cast(self.theta, dtype=self.dtype)
+        th = tf.cast(self.theta, dtype=DTYPECPX)
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.Y)
 
@@ -207,7 +207,7 @@ class RZ(MatrixGate, base_gates.RZ):
         MatrixGate.__init__(self)
 
     def _construct_matrix(self):
-        th = tf.cast(self.theta, dtype=self.dtype)
+        th = tf.cast(self.theta, dtype=DTYPECPX)
         phase = tf.exp(1j * th / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         self.matrix = tf.linalg.diag(diag)
@@ -219,7 +219,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         base_gates.CNOT.__init__(self, q0, q1)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
-        X.__call__(self, state, is_density_matrix)
+        return X.__call__(self, state, is_density_matrix)
 
 
 class CZPow(MatrixGate, base_gates.CZPow):
@@ -253,7 +253,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
 
     def __call__(self, state, is_density_matrix: bool = False):
-        X.__call__(self, state, is_density_matrix)
+        return X.__call__(self, state, is_density_matrix)
 
 
 class Unitary(MatrixGate, base_gates.Unitary):

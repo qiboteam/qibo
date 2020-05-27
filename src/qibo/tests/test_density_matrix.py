@@ -1,6 +1,9 @@
 import numpy as np
 import pytest
-from qibo import gates, models, callbacks
+from qibo import models, callbacks
+from qibo.tensorflow import gates
+# import Tensorflow gates temporarily because density matrices are not
+# supported by custom gate kernels.
 
 _EINSUM_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
 _atol = 1e-8

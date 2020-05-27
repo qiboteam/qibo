@@ -28,7 +28,7 @@ def test_entropy_singlet_state():
     # Pass the state as `tf.Tensor` to test this functionality as well
     import tensorflow as tf
     from qibo.config import DTYPECPX
-    state = tf.convert_to_tensor(state.reshape((2, 2)), dtype=DTYPECPX)
+    state = tf.convert_to_tensor(state, dtype=DTYPECPX)
 
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, 1.0)
