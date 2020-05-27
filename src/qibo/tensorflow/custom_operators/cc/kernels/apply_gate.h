@@ -22,7 +22,7 @@
  * All functors (except @struct ApplySwapFunctor) inherit the
  * @struct BaseApplyGateFunctor which defines BaseApplyGateFunctor::operator.
  * Each specialized functor definces the corresponding
- * BaseApplyGateFunctor::_apply method that handles how the gate acts on states.
+ * BaseApplyGateFunctor::apply method that handles how the gate acts on states.
  *
  * Gates applied by kernels defined here support a single target qubit but can
  * also be controlled to an arbitrary number of qubits. When a gate is controlled
@@ -46,7 +46,7 @@ namespace functor {
 
 template <typename Device, typename T>
 struct BaseApplyGateFunctor {
-  virtual void _apply(T& state1, T& state2, const T* gate = NULL) const;
+  virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d,
                   T* state,       //!< Total state vector.

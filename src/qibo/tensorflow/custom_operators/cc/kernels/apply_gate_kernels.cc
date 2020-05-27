@@ -13,32 +13,32 @@ using thread::ThreadPool;
 
 template <typename T>
 struct BaseApplyGateFunctor<CPUDevice, T> {
-  virtual void _apply(T& state1, T& state2, const T* gate = NULL) const {}
+  virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
-  void _work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
+  void work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
     for (auto g = t; g < w; g += 2 * tk) {
       for (auto i = g; i < g + tk; i++) {
-          _apply(state[i], state[i + tk], gate);
+          apply(state[i], state[i + tk], gate);
       }
     }
   }
 
-  void _singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                           int64 tk, int64 tk_reduced,
-                           int64 ck, int mask) const {
+  void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
+                          int64 tk, int64 tk_reduced,
+                          int64 ck, int mask) const {
     const int64 inv_mask = ck - 1;
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
         const int64 i1 = ((i & mask) << 1) + (i & inv_mask) + ck;
         const int64 i2 = i1 + tk;
-        _apply(state[i1], state[i2], gate);
+        apply(state[i1], state[i2], gate);
       }
     }
   }
 
-  void _multicontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          int64 tk, int64 tk_reduced,
-                          const std::map<int64, int64>& masks) const {
+  void multicontrol_work(int64 t, int64 w, T* state, const T* gate,
+                         int64 tk, int64 tk_reduced,
+                         const std::map<int64, int64>& masks) const {
 
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
@@ -47,7 +47,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
           i1 = ((i1 & m.second) << 1) + (i1 & (m.first - 1)) + m.first;
         }
         const int64 i2 = i1 + tk;
-        _apply(state[i1], state[i2], gate);
+        apply(state[i1], state[i2], gate);
       }
     }
   }
@@ -73,7 +73,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
 
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
-        _work(t, w, state, gate, tk);
+        work(t, w, state, gate, tk);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
@@ -82,7 +82,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
         const int64 ck = 1 << (nqubits - control - 1);
         const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
         auto DoWork = [&](int64 t, int64 w) {
-          _singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
+          singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
         };
         thread_pool->ParallelFor(nstates, p, DoWork);
     }
@@ -96,7 +96,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       }
 
       auto DoWork = [&](int64 t, int64 w) {
-        _multicontrol_work(t, w, state, gate, tk, tk_reduced, masks);
+        multicontrol_work(t, w, state, gate, tk, tk_reduced, masks);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
@@ -107,7 +107,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
 // Apply general one-qubit gate via gate matrix
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL) const override {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     const auto buffer = state1;
     state1 = gate[0] * state1 + gate[1] * state2;
     state2 = gate[2] * buffer + gate[3] * state2;
@@ -118,7 +118,7 @@ struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 // Apply X gate via swap
 template <typename T>
 struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL) const override {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     std::swap(state1, state2);
   }
 };
@@ -127,7 +127,7 @@ struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 // Apply Y gate via swap
 template <typename T>
 struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL) const override {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state1 *= T(0, 1);
     state2 *= - T(0, 1);
     std::swap(state1, state2);
@@ -138,7 +138,7 @@ struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 // Apply Z gate
 template <typename T>
 struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL) const override {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= -1;
   }
 };
@@ -147,7 +147,7 @@ struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 // Apply ZPow gate
 template <typename T>
 struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
-  inline void _apply(T& state1, T& state2, const T* gate = NULL) const override {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= gate[0];
   }
 };
