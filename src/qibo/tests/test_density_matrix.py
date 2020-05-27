@@ -383,6 +383,60 @@ def test_circuit_with_noise_exception():
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
 
 
+def test_density_matrix_measurement():
+    from qibo.tests.test_measurements import assert_results
+    """Check measurement gate on density matrices."""
+    state = np.zeros(4)
+    state[2] = 1
+    rho = np.outer(state, state.conj())
+    result = gates.M(0, 1)(rho, nshots=100, is_density_matrix=True)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_results(result,
+                   decimal_samples=2 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={2: 100},
+                   binary_frequencies={"10": 100})
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_density_matrix_circuit_measurement(einsum_choice):
+    """Check measurement gate on density matrices using circuit."""
+    from qibo.tests.test_measurements import assert_results
+    from qibo.tests.test_measurements import assert_register_results
+    state = np.zeros(16)
+    state[0] = 1
+    init_rho = np.outer(state, state.conj())
+
+    c = models.Circuit(4)
+    c.add(gates.X(1).with_backend(einsum_choice))
+    c.add(gates.X(3).with_backend(einsum_choice))
+    c.add(gates.M(0, 1, register_name="A"))
+    c.add(gates.M(3, 2, register_name="B"))
+    result = c(init_rho, nshots=100)
+
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    assert_results(result,
+                   decimal_samples=6 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={6: 100},
+                   binary_frequencies={"0110": 100})
+
+    target = {}
+    target["decimal_samples"] = {"A": np.ones((100,)),
+                                 "B": 2 * np.ones((100,))}
+    target["binary_samples"] = {"A": np.zeros((100, 2)),
+                                "B": np.zeros((100, 2))}
+    target["binary_samples"]["A"][:, 1] = 1
+    target["binary_samples"]["B"][:, 0] = 1
+    target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
+    target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
+    assert_register_results(result, **target)
+
+
 def test_entanglement_entropy():
     """Check that entanglement entropy calculation works for density matrices."""
     rho = random_density_matrix(4)
