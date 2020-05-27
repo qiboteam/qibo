@@ -5,7 +5,7 @@ import pathlib
 import numpy as np
 import pytest
 from qibo.models import Circuit, VQE
-from qibo import gates
+from qibo.tensorflow import gates
 from qibo.hamiltonians import XXZ
 
 
