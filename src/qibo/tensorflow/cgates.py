@@ -16,8 +16,6 @@ class TensorflowGate:
 
         Custom kernel gates do not have different backends
         """
-        if backend is not None:
-            raise ValueError("Custom kernel gates do not have einsum backend.")
         return self
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
