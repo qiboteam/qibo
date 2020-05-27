@@ -102,7 +102,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
         state = self._cast_initial_state(initial_state)
+
         state = tf.reshape(state, (1 + self.using_density_matrix) * self.nqubits * (2,))
+
         if self.compiled_execute is None:
             self._add_callbacks(callback)
             state, callback_results = self._execute_func(state)
@@ -112,19 +114,21 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                    "Please pass the callbacks when compiling.")
             state, callback_results = self.compiled_execute(state)
 
+        shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
+                        dtype=DTYPEINT)
+        state = tf.reshape(state, shape)
+
+        self._final_state = state
+
         # Append callback results to callbacks
         for callback, result in zip(self.callbacks, callback_results):
             callback.append(result)
 
         if self.measurement_gate is None or nshots is None:
-            shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
-                            dtype=DTYPEINT)
-            self._final_state = tf.reshape(state, shape)
             return self._final_state
 
         samples = self.measurement_gate(state, nshots, samples_only=True,
                                         is_density_matrix=self.using_density_matrix)
-        self._final_state = state
 
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
@@ -149,10 +153,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self._final_state is None:
             raise RuntimeError("Cannot access final state before the circuit "
                                "is executed.")
-        if self.measurement_gate_result is None:
-            return self._final_state
-        shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
-        return tf.reshape(self._final_state, shape)
+        return self._final_state
 
     def _cast_initial_state(self, initial_state=None) -> tf.Tensor:
         if initial_state is None:
