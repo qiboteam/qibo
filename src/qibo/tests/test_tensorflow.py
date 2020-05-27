@@ -373,6 +373,7 @@ def test_unitary_bad_shape():
 
 def test_custom_circuit():
     """Check consistency between Circuit and custom circuits"""
+    import tensorflow as tf
     theta = 0.1234
 
     c = Circuit(2)
@@ -388,11 +389,10 @@ def test_custom_circuit():
         o = gates.CZPow(0, 1, theta)(l2)
         return o
 
-    init = c._default_initial_state()
+    init = tf.reshape(c._default_initial_state(), (2, 2))
     r2 = custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r1, r2)
 
-    import tensorflow as tf
     tf_custom_circuit = tf.function(custom_circuit)
     r3 = tf_custom_circuit(init, theta).numpy().ravel()
     np.testing.assert_allclose(r2, r3)
@@ -448,7 +448,7 @@ def test_circuit_custom_compilation():
 
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
-    init_state = tf.cast(init_state.reshape((2, 2)), dtype=c.dtype)
+    #init_state = tf.cast(init_state, dtype=c.dtype)
     r2 = compiled_circuit(init_state)
 
     np.testing.assert_allclose(r1, r2)
@@ -466,10 +466,6 @@ def test_bad_initial_state():
         final_state = c(initial_state=np.zeros((2, 2)))
     with pytest.raises(ValueError):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
-    with pytest.raises(TypeError):
-        final_state = c(initial_state=tf.zeros((2, 2), dtype=tf.float32))
-    with pytest.raises(ValueError):
-        final_state = c(initial_state=tf.zeros(4, dtype=DTYPECPX))
     with pytest.raises(TypeError):
         final_state = c(initial_state=0)
 

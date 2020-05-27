@@ -4,9 +4,10 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX, DTYPEINT
-from qibo.tensorflow import gates, measurements, callbacks
-from typing import List, Optional, Tuple, Union
+from qibo import gates
+from qibo.tensorflow import measurements, callbacks
 from qibo.tensorflow import custom_operators as op
+from typing import List, Optional, Tuple, Union
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -100,49 +101,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
-        if initial_state is None:
-            state = self._default_initial_state()
-
-        else:
-            def shape_error(shape):
-                raise ValueError("Invalid initial state shape {} for circuit "
-                                 "with {} qubits.".format(shape, self.nqubits))
-
-            if isinstance(initial_state, np.ndarray):
-                shape = initial_state.shape
-                if len(shape) == 1:
-                    # Assume state vector was given
-                    if 2 ** self.nqubits != shape[0]:
-                        shape_error(shape)
-                    state = tf.cast(initial_state.reshape(self.nqubits * (2,)),
-                                    dtype=self.dtype)
-                elif len(shape) == 2:
-                    # Assume density matrix was given
-                    self.using_density_matrix = True
-                    if 2 * (2 ** self.nqubits,) != shape:
-                        shape_error(shape)
-                    state = tf.cast(initial_state.reshape(2 * self.nqubits * (2,)),
-                                    dtype=self.dtype)
-                else:
-                    shape_error(shape)
-
-            elif isinstance(initial_state, tf.Tensor):
-                shape = tuple(initial_state.shape)
-                if initial_state.dtype != self.dtype:
-                    raise TypeError("Circuit is of type {} but initial state is "
-                                    "{}.".format(self.dtype, initial_state.dtype))
-
-                if shape == self.nqubits * (2,):
-                    state = initial_state
-                elif shape == 2 * self.nqubits * (2,):
-                    self.using_density_matrix = True
-                    state = initial_state
-                else:
-                    shape_error(shape)
-            else:
-                raise TypeError("Initial state type {} is not recognized."
-                                "".format(type(initial_state)))
-
+        state = self._cast_initial_state(initial_state)
+        state = tf.reshape(state, (1 + self.using_density_matrix) * self.nqubits * (2,))
         if self.compiled_execute is None:
             self._add_callbacks(callback)
             state, callback_results = self._execute_func(state)
@@ -194,11 +154,35 @@ class TensorflowCircuit(circuit.BaseCircuit):
         shape = (1 + self.using_density_matrix) * (2 ** self.nqubits,)
         return tf.reshape(self._final_state, shape)
 
+    def _cast_initial_state(self, initial_state=None) -> tf.Tensor:
+        if initial_state is None:
+            return self._default_initial_state()
+
+        if not (isinstance(initial_state, np.ndarray) or
+                isinstance(initial_state, tf.Tensor)):
+            raise TypeError("Initial state type {} is not recognized."
+                            "".format(type(initial_state)))
+
+        shape = tuple(initial_state.shape)
+        def shape_error():
+            raise ValueError("Invalid initial state shape {} for circuit "
+                             "with {} qubits.".format(shape, self.nqubits))
+
+        if len(shape) not in {1, 2}:
+            shape_error()
+        if len(shape) == 1 and 2 ** self.nqubits != shape[0]:
+            shape_error()
+        if len(shape) == 2:
+            if 2 * (2 ** self.nqubits,) != shape:
+                shape_error()
+            self.using_density_matrix = True
+
+        return tf.cast(initial_state, dtype=self.dtype)
+
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
         zeros = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
         initial_state = op.initial_state(zeros)
-        initial_state = tf.reshape(initial_state, self.nqubits * (2,))
         return initial_state
 
     def _add_callbacks(self, callback: callbacks.Callback):
