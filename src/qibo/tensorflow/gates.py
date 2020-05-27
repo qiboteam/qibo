@@ -220,10 +220,12 @@ class M(TensorflowGate, base_gates.M):
                  samples_only: bool = False,
                  is_density_matrix: bool = False) -> tf.Tensor:
         if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // (1 + int(is_density_matrix))
+            self.nqubits = int(np.log2((tuple(state.shape)[0])))
 
         probs_dim = 2 ** len(self.target_qubits)
-        probs = self._calculate_probabilities(state, is_density_matrix)
+        shape = (1 + is_density_matrix) * self.nqubits * (2,)
+        probs = self._calculate_probabilities(
+            tf.reshape(state, shape), is_density_matrix)
         logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
 
         if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:

@@ -54,7 +54,6 @@ def test_convert_to_binary():
     # Create a result object to access `_convert_to_binary`
     state = np.zeros(4)
     state[0] = 1
-    state = state.reshape((2, 2))
     result = gates.M(0)(state, nshots=100)
 
     import itertools
@@ -70,7 +69,6 @@ def test_convert_to_decimal():
     # Create a result object to access `_convert_to_decimal`
     state = np.zeros(4)
     state[0] = 1
-    state = state.reshape((2, 2))
     result = gates.M(0)(state, nshots=100)
 
     import itertools
@@ -85,7 +83,6 @@ def test_measurement_gate():
     """Check that measurement gate works when called on the state |00>."""
     state = np.zeros(4)
     state[0] = 1
-    state = state.reshape((2, 2))
     result = gates.M(0)(state, nshots=100)
     assert_results(result,
                    decimal_samples=np.zeros((100,)),
@@ -98,7 +95,6 @@ def test_measurement_gate2():
     """Check that measurement gate works when called on the state |11>."""
     state = np.zeros(4)
     state[-1] = 1
-    state = state.reshape((2, 2))
     result = gates.M(1)(state, nshots=100)
     assert_results(result,
                    decimal_samples=np.ones((100,)),
@@ -111,7 +107,6 @@ def test_multiple_qubit_measurement_gate():
     """Check that multiple qubit measurement gate works when called on |10>."""
     state = np.zeros(4)
     state[2] = 1
-    state = state.reshape((2, 2))
     result = gates.M(0, 1)(state, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))
@@ -484,7 +479,7 @@ def test_density_matrix_measurement():
     """Check measurement gate on density matrices."""
     state = np.zeros(4)
     state[2] = 1
-    rho = np.outer(state, state.conj()).reshape(4 * (2,))
+    rho = np.outer(state, state.conj())
     result = gates.M(0, 1)(rho, nshots=100, is_density_matrix=True)
 
     target_binary_samples = np.zeros((100, 2))
