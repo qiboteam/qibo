@@ -25,6 +25,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.dtype = dtype
         self.compiled_execute = None
         self.callbacks = []
+        # Determine if we are using custom or Tensorflow gates
+        from qibo.tensorflow.gates import TensorflowGate
+        self.using_tfgates = self._GATE_MODULE.TensorflowGate == TensorflowGate
 
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
@@ -103,7 +106,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """
         state = self._cast_initial_state(initial_state)
 
-        state = tf.reshape(state, (1 + self.using_density_matrix) * self.nqubits * (2,))
+        if self.using_tfgates:
+            shape = (1 + self.using_density_matrix) * self.nqubits * (2,)
+            state = tf.reshape(state, shape)
 
         if self.compiled_execute is None:
             self._add_callbacks(callback)
@@ -114,9 +119,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                    "Please pass the callbacks when compiling.")
             state, callback_results = self.compiled_execute(state)
 
-        shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
-                        dtype=DTYPEINT)
-        state = tf.reshape(state, shape)
+        if self.using_tfgates:
+            shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
+                            dtype=DTYPEINT)
+            state = tf.reshape(state, shape)
 
         self._final_state = state
 
