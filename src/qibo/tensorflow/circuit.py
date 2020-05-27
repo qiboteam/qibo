@@ -4,7 +4,6 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
 from qibo.config import DTYPECPX, DTYPEINT
-from qibo import gates
 from qibo.tensorflow import measurements, callbacks
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -18,16 +17,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
         dtype: Tensorflow type for complex numbers.
             Read automatically from `config`.
     """
-    _GATE_MODULE = gates
 
     def __init__(self, nqubits, dtype=DTYPECPX):
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
         self.callbacks = []
-        # Determine if we are using custom or Tensorflow gates
-        from qibo.tensorflow.gates import TensorflowGate
-        self.using_tfgates = self._GATE_MODULE.TensorflowGate == TensorflowGate
 
     def __add__(self, circuit: "TensorflowCircuit") -> "TensorflowCircuit":
         return TensorflowCircuit._circuit_addition(self, circuit)
@@ -68,6 +63,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise RuntimeError("Circuit is already compiled.")
         self._add_callbacks(callback)
         self.compiled_execute = tf.function(self._execute_func)
+
+    @property
+    def using_tfgates(self) -> bool:
+        """Determines if we are using Tensorflow native or custom gates."""
+        from qibo.tensorflow import gates
+        return gates.TensorflowGate == self.gate_module.TensorflowGate
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
