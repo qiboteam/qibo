@@ -11,6 +11,15 @@ from typing import Optional, Sequence, Tuple
 
 class TensorflowGate:
 
+    def with_backend(self, backend: Optional[str] = None):
+        """Used only for test compatibility with native gates.
+
+        Custom kernel gates do not have different backends
+        """
+        if backend is not None:
+            raise ValueError("Custom kernel gates do not have einsum backend.")
+        return self
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         """Implements the `Gate` on a given state.
