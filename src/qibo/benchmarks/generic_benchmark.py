@@ -27,6 +27,7 @@ args = vars(parser.parse_args())
 import tensorflow as tf
 def limit_gpu_memory(memory_limit=None):
     """Limits GPU memory that is available to Tensorflow.
+
     Args:
         memory_limit: Memory limit in MBs.
     """
@@ -74,6 +75,7 @@ def main(nqubits_list: List[int],
         * simulation_time: List with simulation times for each number of qubits.
         * compile_time (optional): List with compile times for each number of
             qubits. This is saved only if `compile` is `True`.
+
     Args:
         nqubits_list: List with the number of qubits to run for.
         type: Type of Circuit to use.
@@ -96,6 +98,7 @@ def main(nqubits_list: List[int],
             is ignored.
         compile: If ``True`` then the Tensorflow graph is compiled using
             ``circuit.compile()``. In this case the compile time is also logged.
+
     Raises:
         FileExistsError if the file with the `name` specified exists in the
         given `directory`.
