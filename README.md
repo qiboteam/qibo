@@ -27,11 +27,12 @@ git clone git@github.com:Quantum-TII/qibo.git
 
 and then proceed with the installation with:
 ```
-python setup.py install
+pip install .
 ```
 if you prefer to keep changes always synchronized with the code then install using the `develop` option:
 ```bash
-python setup.py develop
+python setup.py build
+python setup.py develop # or pip install -e .
 ```
 
 ## Examples
