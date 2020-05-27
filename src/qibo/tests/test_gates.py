@@ -54,13 +54,73 @@ def test_flatten(gates):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-def test_xgate(gates):
+@pytest.mark.parametrize("compile", [True, False])
+def test_xgate(gates, compile):
     """Check X gate is working properly."""
     c = Circuit(2)
     c.add(gates.X(0))
+    if compile:
+        c.compile()
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("compile", [True, False])
+def test_ygate(gates, compile):
+    """Check Y gate is working properly."""
+    c = Circuit(2)
+    c.add(gates.Y(1))
+    if compile:
+        c.compile()
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = 1j
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("compile", [True, False])
+def test_zgate(gates, compile):
+    """Check Z gate is working properly."""
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.Z(0))
+    if compile:
+        c.compile()
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 2.0
+    target_state[2] *= -1.0
+    target_state[3] *= -1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_multicontrol_xgate(gates, backend):
+    """Check that fallback method for X works for one or two controls."""
+    c1 = Circuit(3)
+    c1.add(gates.X(0).with_backend(backend))
+    c1.add(gates.X(2).with_backend(backend).controlled_by(0))
+    final_state = c1.execute().numpy()
+    c2 = Circuit(3)
+    c2.add(gates.X(0))
+    c2.add(gates.CNOT(0, 2))
+    target_state = c2.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+    c1 = Circuit(3)
+    c1.add(gates.X(0).with_backend(backend))
+    c1.add(gates.X(2).with_backend(backend))
+    c1.add(gates.X(1).with_backend(backend).controlled_by(0, 2))
+    final_state = c1.execute().numpy()
+    c2 = Circuit(3)
+    c2.add(gates.X(0))
+    c2.add(gates.X(2))
+    c2.add(gates.TOFFOLI(0, 2, 1))
+    target_state = c2.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
 
@@ -387,8 +447,7 @@ def test_unitary_bad_shape(gates):
     with pytest.raises(ValueError):
         gate = gates.Unitary(matrix, (0, 1))
 
-# TODO: Fix X compilation and unskip this test
-@pytest.mark.skip
+
 @pytest.mark.parametrize("gates", _GATES)
 def test_custom_circuit(gates):
     """Check consistency between Circuit and custom circuits"""
@@ -408,15 +467,17 @@ def test_custom_circuit(gates):
         o = gates.CZPow(0, 1, theta)(l2)
         return o
 
-    init = c._default_initial_state()
+    init2 = c._default_initial_state()
+    init3 = c._default_initial_state()
     if gates == native_gates:
-        init = tf.reshape(init, (2, 2))
+        init2 = tf.reshape(init2, (2, 2))
+        init3 = tf.reshape(init3, (2, 2))
 
-    r2 = custom_circuit(init, theta).numpy().ravel()
+    r2 = custom_circuit(init2, theta).numpy().ravel()
     np.testing.assert_allclose(r1, r2)
 
     tf_custom_circuit = tf.function(custom_circuit)
-    r3 = tf_custom_circuit(init, theta).numpy().ravel()
+    r3 = tf_custom_circuit(init3, theta).numpy().ravel()
     np.testing.assert_allclose(r2, r3)
 
 

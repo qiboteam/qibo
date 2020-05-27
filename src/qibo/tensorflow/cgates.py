@@ -84,7 +84,6 @@ class X(TensorflowGate, base_gates.X):
                           self.control_qubits)
 
 
-
 class Y(TensorflowGate, base_gates.Y):
 
     def __init__(self, q):
@@ -96,7 +95,6 @@ class Y(TensorflowGate, base_gates.Y):
                           self.control_qubits)
 
 
-
 class Z(TensorflowGate, base_gates.Z):
 
     def __init__(self, q):
@@ -106,7 +104,6 @@ class Z(TensorflowGate, base_gates.Z):
         TensorflowGate.__call__(self, state, is_density_matrix)
         return op.apply_z(state, self.nqubits, self.target_qubits[0],
                           self.control_qubits)
-
 
 
 class M(TensorflowGate, base_gates.M):
