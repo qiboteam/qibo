@@ -84,8 +84,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     }
     else if (ncontrols == 1) {
         const int control = controls[0];
-        const int64 ck = 1 << (nqubits - control - 1);
-        const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
+        const int64 ck = (int64) 1 << (nqubits - control - 1);
+        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
         auto DoWork = [&](int64 t, int64 w) {
           singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
         };
@@ -95,8 +95,8 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       std::map<int64, int64> masks;
       for (int i = 0; i < ncontrols; i++) {
         const int control = controls[i];
-        const int64 ck = 1 << (nqubits - control - 1);
-        const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
+        const int64 ck = (int64) 1 << (nqubits - control - 1);
+        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
         masks.emplace(ck, mask);
       }
 
@@ -165,9 +165,9 @@ struct ApplySwapFunctor<CPUDevice, T> {
                   const int32* controls, const T* gate = NULL) {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
-    const int64 tk1 = 1 << (nqubits - t1 - 1);
-    const int64 tk2 = 1 << (nqubits - t2 - 1);
-    const int64 nstates = 1 << (nqubits - 2 - ncontrols);
+    const int64 tk1 = (int64) 1 << (nqubits - t1 - 1);
+    const int64 tk2 = (int64) 1 << (nqubits - t2 - 1);
+    const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
@@ -184,8 +184,8 @@ struct ApplySwapFunctor<CPUDevice, T> {
         nreps);
 
     if (ncontrols == 0) {
-      const int64 mask1 = ((1 << t1) - 1) << (nqubits - t1 - 1);
-      const int64 mask2 = ((1 << t2) - 1) << (nqubits - t2 - 1);
+      const int64 mask1 = (int64) (((int64) 1 << t1) - 1) << (nqubits - t1 - 1);
+      const int64 mask2 = (int64) (((int64) 1 << t2) - 1) << (nqubits - t2 - 1);
 
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
@@ -210,18 +210,18 @@ struct ApplySwapFunctor<CPUDevice, T> {
 
       int64 tk1_eff = tk1;
       if (ncontrols > 0 || t1 != t1_eff) {
-        tk1_eff = 1 << (nqubits - ncontrols - t1_eff - 1);
+        tk1_eff = (int64) 1 << (nqubits - ncontrols - t1_eff - 1);
       }
       int64 tk2_eff = tk2;
       if (ncontrols > 0 || t2 != t2_eff) {
-        tk2_eff = 1 << (nqubits - ncontrols - t2_eff - 1);
+        tk2_eff = (int64) 1 << (nqubits - ncontrols - t2_eff - 1);
       }
 
       std::map<int64, int64> control_masks;
       for (int i = 0; i < ncontrols; i++) {
         const int control = controls[i];
-        const int64 ck = 1 << (nqubits - control - 1);
-        const int64 mask = ((1 << control) - 1) << (nqubits - control - 1);
+        const int64 ck = (int64) 1 << (nqubits - control - 1);
+        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
         control_masks.emplace(ck, mask);
       }
 
