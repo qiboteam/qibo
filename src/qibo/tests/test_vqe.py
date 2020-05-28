@@ -32,7 +32,7 @@ def assert_regression_fixture(array, filename):
 
 
 test_names = "method,options,compile,filename"
-test_values = [#("BFGS", {'maxiter': 1}, True, 'vqe.out'),
+test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqe.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
