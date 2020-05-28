@@ -65,11 +65,16 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     }
     const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        2 * tk_reduced);
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
+    const int ncores = (int) thread_pool->NumThreads() / 2;
+    int64 nreps = (int64) nstates / ncores;
+    if (nreps % (2 * tk_reduced)) {
+      nreps = 2 * tk_reduced;
+    }
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        nreps);
 
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
