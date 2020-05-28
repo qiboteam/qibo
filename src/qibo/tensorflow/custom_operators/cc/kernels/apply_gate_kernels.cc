@@ -68,7 +68,13 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int) thread_pool->NumThreads() / 2;
-    int64 nreps = (int64) nstates / ncores;
+    int64 nreps;
+    if (ncores > 1) {
+      nreps = (int64) nstates / ncores;
+    }
+    else {
+      nreps = nstates;
+    }
     if (nreps % (2 * tk_reduced)) {
       nreps = 2 * tk_reduced;
     }
