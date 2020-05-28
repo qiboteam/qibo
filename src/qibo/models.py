@@ -106,11 +106,13 @@ class VQE(object):
 
         elif method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.tensorflow.einsum import MatmulEinsum
+            from qibo.tensorflow.gates import TensorflowGate
             circuit = self.ansatz(initial_state)
             for gate in circuit.queue:
-                if not isinstance(gate.einsum, MatmulEinsum):
-                    raise RuntimeError('SGD VQE requires MatmulEinsum backend.')
+                if not isinstance(gate, TensorflowGate):
+                    raise RuntimeError('SGD VQE requires native Tensorflow '
+                                       'gates because gradients are not '
+                                       'supported in the custom kernels.')
 
             sgd_options = {"nepochs": 1000000,
                            "nmessage": 1000,

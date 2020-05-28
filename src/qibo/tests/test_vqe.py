@@ -5,7 +5,6 @@ import pathlib
 import numpy as np
 import pytest
 from qibo.models import Circuit, VQE
-from qibo.tensorflow import gates
 from qibo.hamiltonians import XXZ
 
 
@@ -33,12 +32,17 @@ def assert_regression_fixture(array, filename):
 
 
 test_names = "method,options,compile,filename"
-test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
+test_values = [#("BFGS", {'maxiter': 1}, True, 'vqe.out'),
+               ("BFGS", {'maxiter': 1}, False, 'vqe.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
+    if method == "sgd":
+        from qibo.tensorflow import gates
+    else:
+        from qibo.tensorflow import cgates as gates
 
     nqubits = 6
     layers  = 4
