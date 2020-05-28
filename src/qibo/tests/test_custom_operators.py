@@ -221,3 +221,34 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
     np.testing.assert_allclose(target_state.ravel(), state.numpy())
+
+
+@pytest.mark.parametrize("compile", [False, True])
+def test_custom_op_toy_callback(compile):
+    state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
+    theta = 0.54763
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    htf = tf.cast(h, dtype=state.dtype)
+    czpow = np.eye(4)
+    czpow[-1, -1] = np.exp(1j * theta)
+
+    target_state = state.numpy()
+    target_state = np.kron(h, np.eye(2)).dot(target_state)
+    target_state = np.kron(np.eye(2), h).dot(target_state)
+    target_callback = [target_state.sum()]
+    target_state = czpow.dot(target_state)
+    target_callback.append(target_state.sum())
+
+    def apply_operator(state):
+        c = [tf.reduce_sum(state)]
+        state = op.apply_gate(state, htf, 2, 0)
+        state = op.apply_gate(state, htf, 2, 1)
+        c = [tf.reduce_sum(state)]
+        state = op.apply_zpow(state, czpow[-1, -1], 2, 1, [0])
+        c.append(tf.reduce_sum(state))
+        return tf.stack(c)
+    if compile:
+        apply_operator = tf.function(apply_operator)
+    callback = apply_operator(state)
+
+    np.testing.assert_allclose(target_callback, callback.numpy())
