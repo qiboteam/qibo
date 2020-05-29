@@ -223,6 +223,7 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     np.testing.assert_allclose(target_state.ravel(), state.numpy())
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("gate", ["h", "x", "z", "swap"])
 @pytest.mark.parametrize("compile", [False, True])
 def test_custom_op_toy_callback(gate, compile):
