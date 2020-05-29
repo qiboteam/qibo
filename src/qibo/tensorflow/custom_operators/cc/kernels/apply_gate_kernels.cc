@@ -261,9 +261,9 @@ struct ApplySwapFunctor<CPUDevice, T>: BaseApplyTwoQubitGateFunctor<CPUDevice, T
 
 
 template <typename Device, typename T, typename F, bool UseMatrix>
-class ApplyGateOp : public OpKernel {
+class OneQubitGateOp : public OpKernel {
  public:
-  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit OneQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
   }
@@ -305,9 +305,9 @@ class ApplyGateOp : public OpKernel {
 
 
 template <typename Device, typename T, typename F, bool UseMatrix>
-class ApplyTwoQubitGateOp : public OpKernel {
+class TwoQubitGateOp : public OpKernel {
  public:
-  explicit ApplyTwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit TwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
     OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
@@ -350,24 +350,27 @@ class ApplyTwoQubitGateOp : public OpKernel {
       Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
       OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
 
-// Register one-qubit kernels.
-#define REGISTER(T, NAME, OP, FUNCTOR, USEMATRIX)            \
-  REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX);    \
-  REGISTER_GPU(T, NAME, OP, FUNCTOR, USEMATRIX);
+// Register one-qubit gate kernels.
+#define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
+  REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_CPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);   \
+  REGISTER_GPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_GPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);
+
+// Register two-qubit gate kernels.
+#define REGISTER_TWOQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
+  REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);   \
+  REGISTER_GPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_GPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
 
-REGISTER(complex64, "ApplyGate", ApplyGateOp, ApplyGateFunctor, true);
-REGISTER(complex128, "ApplyGate", ApplyGateOp, ApplyGateFunctor, true);
-REGISTER(complex64, "ApplyZPow", ApplyGateOp, ApplyZPowFunctor, true);
-REGISTER(complex128, "ApplyZPow", ApplyGateOp, ApplyZPowFunctor, true);
-REGISTER(complex64, "ApplyX", ApplyGateOp, ApplyXFunctor, false);
-REGISTER(complex128, "ApplyX", ApplyGateOp, ApplyXFunctor, false);
-REGISTER(complex64, "ApplyY", ApplyGateOp, ApplyYFunctor, false);
-REGISTER(complex128, "ApplyY", ApplyGateOp, ApplyYFunctor, false);
-REGISTER(complex64, "ApplyZ", ApplyGateOp, ApplyZFunctor, false);
-REGISTER(complex128, "ApplyZ", ApplyGateOp, ApplyZFunctor, false);
-REGISTER(complex64, "ApplySwap", ApplyTwoQubitGateOp, ApplySwapFunctor, false);
-REGISTER(complex128, "ApplySwap", ApplyTwoQubitGateOp, ApplySwapFunctor, false);
+REGISTER_ONEQUBIT("ApplyGate", ApplyGateFunctor, true);
+REGISTER_ONEQUBIT("ApplyZPow", ApplyZPowFunctor, true);
+REGISTER_ONEQUBIT("ApplyX", ApplyXFunctor, false);
+REGISTER_ONEQUBIT("ApplyY", ApplyYFunctor, false);
+REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
+REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
 
 }  // namespace functor
 }  // namespace tensorflow
