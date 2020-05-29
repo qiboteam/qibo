@@ -54,13 +54,10 @@ def test_flatten(gates):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("compile", [True, False])
-def test_xgate(gates, compile):
+def test_xgate(gates):
     """Check X gate is working properly."""
     c = Circuit(2)
     c.add(gates.X(0))
-    if compile:
-        c.compile()
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
@@ -68,13 +65,10 @@ def test_xgate(gates, compile):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("compile", [True, False])
-def test_ygate(gates, compile):
+def test_ygate(gates):
     """Check Y gate is working properly."""
     c = Circuit(2)
     c.add(gates.Y(1))
-    if compile:
-        c.compile()
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[1] = 1j
@@ -82,15 +76,12 @@ def test_ygate(gates, compile):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("compile", [True, False])
-def test_zgate(gates, compile):
+def test_zgate(gates):
     """Check Z gate is working properly."""
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Z(0))
-    if compile:
-        c.compile()
     final_state = c.execute().numpy()
     target_state = np.ones_like(final_state) / 2.0
     target_state[2] *= -1.0
