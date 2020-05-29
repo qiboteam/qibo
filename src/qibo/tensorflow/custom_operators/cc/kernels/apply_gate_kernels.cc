@@ -304,10 +304,10 @@ class ApplyGateOp : public OpKernel {
 };
 
 
-template <typename Device, typename T>
-class ApplySwapOp : public OpKernel {
+template <typename Device, typename T, typename F, bool UseMatrix>
+class ApplyTwoQubitGateOp : public OpKernel {
  public:
-  explicit ApplySwapOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit ApplyTwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
     OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
@@ -325,10 +325,8 @@ class ApplySwapOp : public OpKernel {
         errors::Unimplemented("ApplySwap operator not implemented for GPU."));
 
     // call the implementation
-    ApplySwapFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
-                                  nqubits_, target1_, target2_,
-                                  ncontrols, controls.flat<int32>().data());
+    F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+        nqubits_, target1_, target2_, ncontrols, controls.flat<int32>().data());
 
     context->set_output(0, state);
   }
@@ -345,6 +343,12 @@ class ApplySwapOp : public OpKernel {
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),         \
       ApplyGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
 
+// Register two-qubit CPU kernels.
+#define REGISTER_TWOQUBIT_CPU(T, NAME, FUNCTOR, USEMATRIX)                   \
+  REGISTER_KERNEL_BUILDER(                                                   \
+      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),                  \
+      ApplyTwoQubitGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
+
 REGISTER_CPU(complex64, "ApplyGate", ApplyGateFunctor, true);
 REGISTER_CPU(complex128, "ApplyGate", ApplyGateFunctor, true);
 REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
@@ -355,15 +359,8 @@ REGISTER_CPU(complex64, "ApplyY", ApplyYFunctor, false);
 REGISTER_CPU(complex128, "ApplyY", ApplyYFunctor, false);
 REGISTER_CPU(complex64, "ApplyZ", ApplyZFunctor, false);
 REGISTER_CPU(complex128, "ApplyZ", ApplyZFunctor, false);
-
-// Register SWAP kernel on CPU.
-#define REGISTER_SWAP_CPU(T)                                         \
-  REGISTER_KERNEL_BUILDER(                                           \
-      Name("ApplySwap").Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
-      ApplySwapOp<CPUDevice, T>);
-
-REGISTER_SWAP_CPU(complex64);
-REGISTER_SWAP_CPU(complex128);
+REGISTER_TWOQUBIT_CPU(complex64, "ApplySwap", ApplySwapFunctor, false);
+REGISTER_TWOQUBIT_CPU(complex128, "ApplySwap", ApplySwapFunctor, false);
 
 
 // Register the GPU kernels.
@@ -372,6 +369,13 @@ REGISTER_SWAP_CPU(complex128);
   REGISTER_KERNEL_BUILDER(                                          \
       Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),         \
       ApplyGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+
+// Register two-qubit GPU kernels.
+#define REGISTER_TWOQUBIT_GPU(T, NAME, FUNCTOR, USEMATRIX)                   \
+  extern template struct FUNCTOR<GPUDevice, T>;                              \
+  REGISTER_KERNEL_BUILDER(                                                   \
+      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),                  \
+      ApplyTwoQubitGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
 
 REGISTER_GPU(complex64, "ApplyGate", ApplyGateFunctor, true);
 REGISTER_GPU(complex128, "ApplyGate", ApplyGateFunctor, true);
@@ -382,17 +386,9 @@ REGISTER_GPU(complex128, "ApplyX", ApplyXFunctor, false);
 REGISTER_GPU(complex64, "ApplyY", ApplyYFunctor, false);
 REGISTER_GPU(complex128, "ApplyY", ApplyYFunctor, false);
 REGISTER_GPU(complex64, "ApplyZ", ApplyZFunctor, false);
-REGISTER_GPU(complex128, "ApplyZ", ApplyZFunctor, false);
-
-// Register SWAP kernel on GPU.
-#define REGISTER_SWAP_GPU(T)                                        \
-  extern template struct ApplySwapFunctor<GPUDevice, T>;            \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name("ApplySwap").Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
-      ApplySwapOp<GPUDevice, T>);
-
-REGISTER_SWAP_GPU(complex64);
-REGISTER_SWAP_GPU(complex128);
+REGISTER_GPU(complex128, "ApplyZ", ApplyZFunctor, false)
+REGISTER_TWOQUBIT_GPU(complex64, "ApplySwap", ApplySwapFunctor, false);
+REGISTER_TWOQUBIT_GPU(complex128, "ApplySwap", ApplySwapFunctor, false);
 
 }  // namespace functor
 }  // namespace tensorflow
