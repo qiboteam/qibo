@@ -165,7 +165,9 @@ struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 
 template <typename T>
-struct ApplySwapFunctor<CPUDevice, T> {
+struct BaseApplyTwoQubitGateFunctor<CPUDevice, T> {
+  virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
+
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
                   const int32* controls, const T* gate = NULL) {
@@ -246,6 +248,14 @@ struct ApplySwapFunctor<CPUDevice, T> {
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
+  }
+};
+
+// Apply SWAP gate
+template <typename T>
+struct ApplySwapFunctor<CPUDevice, T>: BaseApplyTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
+    std::swap(state1, state2);
   }
 };
 

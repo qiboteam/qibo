@@ -74,11 +74,20 @@ template <typename Device, typename T>
 struct ApplyZPowFunctor: BaseApplyGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplySwapFunctor {
+struct BaseApplyTwoQubitGateFunctor {
+  virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
+
   void operator()(const OpKernelContext* context, const Device& d, T* state,
-                  int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const T* gate = NULL);
+                  int nqubits,
+                  int target1,
+                  int target2,
+                  int ncontrols,
+                  const int32* controls,
+                  const T* gate = NULL);
 };
+
+template <typename Device, typename T>
+struct ApplySwapFunctor: BaseApplyTwoQubitGateFunctor<Device, T> {};
 
 }  // namespace functor
 
