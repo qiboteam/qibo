@@ -439,7 +439,7 @@ def test_unitary_bad_shape(gates):
         gate = gates.Unitary(matrix, (0, 1))
 
 
-@pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("gates", [native_gates])
 def test_custom_circuit(gates):
     """Check consistency between Circuit and custom circuits"""
     import tensorflow as tf
@@ -488,13 +488,16 @@ def test_compiled_circuit(gates, backend):
 
     # Run compiled circuit
     c2 = create_circuit()
-    c2.compile()
-    r2 = c2.execute().numpy()
+    if backend is None:
+        with pytest.raises(RuntimeError):
+            c2.compile()
+    else:
+        c2.compile()
+        r2 = c2.execute().numpy()
+        np.testing.assert_allclose(r1, r2)
 
-    np.testing.assert_allclose(r1, r2)
 
-
-@pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("gates", [native_gates])
 def test_compiling_twice_exception(gates):
     """Check that compiling a circuit a second time raises error."""
     c = Circuit(2)
@@ -504,7 +507,7 @@ def test_compiling_twice_exception(gates):
         c.compile()
 
 
-@pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("gates", [native_gates])
 def test_circuit_custom_compilation(gates):
     theta = 0.1234
     init_state = np.ones(4) / 2.0
