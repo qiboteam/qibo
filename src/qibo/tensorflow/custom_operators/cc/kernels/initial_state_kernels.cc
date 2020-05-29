@@ -27,14 +27,22 @@ class InitialStateOp : public OpKernel {
 
   void Compute(OpKernelContext *context) override {
     // grabe the input tensor
-    Tensor input_tensor = context->input(0);
+    const Tensor& input_tensor = context->input(0);
+
+    // Create an output tensor
+    Tensor* output_tensor = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(0, input_tensor.shape(),
+                                                     &output_tensor));
+
+    // fill output
+    const auto N = input_tensor.flat<T>().size();
+    for (auto i = 0; i < N; i++)
+      output_tensor->flat<T>().data()[i] = input_tensor.flat<T>().data()[i];
 
     // call the implementation
     InitialStateFunctor<Device, T>()(
       context->eigen_device<Device>(),
-      input_tensor.flat<T>().data());
-
-    context->set_output(0, input_tensor);
+      output_tensor->flat<T>().data());
   }
 };
 

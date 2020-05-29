@@ -260,7 +260,17 @@ class ApplyGateOp : public OpKernel {
 
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
-    Tensor state = context->input(0);
+    const Tensor& input_tensor = context->input(0);
+
+    // Create an output tensor
+    Tensor* state = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(0, input_tensor.shape(),
+                                                     &state));
+
+    // fill output
+    const auto N = input_tensor.flat<T>().size();
+    for (auto i = 0; i < N; i++)
+      state->flat<T>().data()[i] = input_tensor.flat<T>().data()[i];
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -273,7 +283,7 @@ class ApplyGateOp : public OpKernel {
       const int ncontrols = controls.flat<int32>().size();
 
       // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+      F()(context, context->eigen_device<Device>(), state->flat<T>().data(),
           nqubits_, target_, ncontrols, controls.flat<int32>().data(),
           gate.flat<T>().data());
     }
@@ -282,10 +292,9 @@ class ApplyGateOp : public OpKernel {
       const int ncontrols = controls.flat<int32>().size();
 
       // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+      F()(context, context->eigen_device<Device>(), state->flat<T>().data(),
           nqubits_, target_, ncontrols, controls.flat<int32>().data());
     }
-    context->set_output(0, state);
   }
 
  private:
@@ -305,9 +314,19 @@ class ApplySwapOp : public OpKernel {
 
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
-    Tensor state = context->input(0);
+    const Tensor& input_tensor = context->input(0);
     const Tensor& controls = context->input(1);
     const int ncontrols = controls.flat<int32>().size();
+
+    // Create an output tensor
+    Tensor* state = NULL;
+    OP_REQUIRES_OK(context, context->allocate_output(0, input_tensor.shape(),
+                                                     &state));
+
+    // fill output
+    const auto N = input_tensor.flat<T>().size();
+    for (auto i = 0; i < N; i++)
+      state->flat<T>().data()[i] = input_tensor.flat<T>().data()[i];
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -316,11 +335,9 @@ class ApplySwapOp : public OpKernel {
 
     // call the implementation
     ApplySwapFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
+                                  state->flat<T>().data(),
                                   nqubits_, target1_, target2_,
                                   ncontrols, controls.flat<int32>().data());
-
-    context->set_output(0, state);
   }
 
  private:
