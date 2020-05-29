@@ -45,7 +45,7 @@ namespace tensorflow {
 namespace functor {
 
 template <typename Device, typename T>
-struct BaseApplyGateFunctor {
+struct BaseOneQubitGateFunctor {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d,
@@ -59,22 +59,22 @@ struct BaseApplyGateFunctor {
 };
 
 template <typename Device, typename T>
-struct ApplyGateFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyGateFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyXFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyXFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyYFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyYFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyZFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyZFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyZPowFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyZPowFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct BaseApplyTwoQubitGateFunctor {
+struct BaseTwoQubitGateFunctor {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d, T* state,
@@ -87,7 +87,7 @@ struct BaseApplyTwoQubitGateFunctor {
 };
 
 template <typename Device, typename T>
-struct ApplySwapFunctor: BaseApplyTwoQubitGateFunctor<Device, T> {};
+struct ApplySwapFunctor: BaseTwoQubitGateFunctor<Device, T> {};
 
 }  // namespace functor
 

@@ -12,7 +12,7 @@ using thread::ThreadPool;
 
 
 template <typename T>
-struct BaseApplyGateFunctor<CPUDevice, T> {
+struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
@@ -117,7 +117,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
-struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyGateFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     const auto buffer = state1;
     state1 = gate[0] * state1 + gate[1] * state2;
@@ -128,7 +128,7 @@ struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply X gate via swap
 template <typename T>
-struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyXFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     std::swap(state1, state2);
   }
@@ -137,7 +137,7 @@ struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply Y gate via swap
 template <typename T>
-struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyYFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state1 *= T(0, 1);
     state2 *= - T(0, 1);
@@ -148,7 +148,7 @@ struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply Z gate
 template <typename T>
-struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyZFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= -1;
   }
@@ -157,7 +157,7 @@ struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply ZPow gate
 template <typename T>
-struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyZPowFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= gate[0];
   }
@@ -165,7 +165,7 @@ struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 
 template <typename T>
-struct BaseApplyTwoQubitGateFunctor<CPUDevice, T> {
+struct BaseTwoQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
@@ -253,7 +253,7 @@ struct BaseApplyTwoQubitGateFunctor<CPUDevice, T> {
 
 // Apply SWAP gate
 template <typename T>
-struct ApplySwapFunctor<CPUDevice, T>: BaseApplyTwoQubitGateFunctor<CPUDevice, T> {
+struct ApplySwapFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     std::swap(state1, state2);
   }
