@@ -223,32 +223,44 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     np.testing.assert_allclose(target_state.ravel(), state.numpy())
 
 
+@pytest.mark.parametrize("gate", ["h", "x", "z", "swap"])
 @pytest.mark.parametrize("compile", [False, True])
-def test_custom_op_toy_callback(compile):
+def test_custom_op_toy_callback(gate, compile):
+    """Check calculating ``callbacks`` using intermediate state values."""
+    import functools
     state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
-    theta = 0.54763
-    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    htf = tf.cast(h, dtype=state.dtype)
-    czpow = np.eye(4)
-    czpow[-1, -1] = np.exp(1j * theta)
+    mask = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
+
+    matrices = {"h": np.array([[1, 1], [1, -1]]) / np.sqrt(2),
+                "x": np.array([[0, 1], [1, 0]]),
+                "z": np.array([[1, 0], [0, -1]])}
+    for k, v in matrices.items():
+        matrices[k] = np.kron(v, np.eye(2))
+    matrices["swap"] = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
+                                 [0, 1, 0, 0], [0, 0, 0, 1]])
 
     target_state = state.numpy()
-    target_state = np.kron(h, np.eye(2)).dot(target_state)
-    target_state = np.kron(np.eye(2), h).dot(target_state)
-    target_callback = [target_state.sum()]
-    target_state = czpow.dot(target_state)
-    target_callback.append(target_state.sum())
+    target_c1 = mask.numpy().dot(target_state)
+    target_state = matrices[gate].dot(target_state)
+    target_c2 = mask.numpy().dot(target_state)
+    assert target_c1 != target_c2
+    target_callback = [target_c1, target_c2]
+
+    htf = tf.cast(np.array([[1, 1], [1, -1]]) / np.sqrt(2), dtype=state.dtype)
+    apply_gate = {"h": functools.partial(op.apply_gate, gate=htf, nqubits=2, target=0),
+                  "x": functools.partial(op.apply_x, nqubits=2, target=0),
+                  "z": functools.partial(op.apply_z, nqubits=2, target=0),
+                  "swap": functools.partial(op.apply_swap, nqubits=2,
+                                            target1=0, target2=1)}
 
     def apply_operator(state):
-        c = [tf.reduce_sum(state)]
-        state = op.apply_gate(state, htf, 2, 0)
-        state = op.apply_gate(state, htf, 2, 1)
-        c = [tf.reduce_sum(state)]
-        state = op.apply_zpow(state, czpow[-1, -1], 2, 1, [0])
-        c.append(tf.reduce_sum(state))
-        return tf.stack(c)
+        c1 = tf.reduce_sum(mask * state)
+        state0 = apply_gate[gate](state)
+        c2 = tf.reduce_sum(mask * state0)
+        return state0, tf.stack([c1, c2])
     if compile:
         apply_operator = tf.function(apply_operator)
-    callback = apply_operator(state)
+    state, callback = apply_operator(state)
 
+    np.testing.assert_allclose(target_state, state.numpy())
     np.testing.assert_allclose(target_callback, callback.numpy())
