@@ -338,57 +338,36 @@ class ApplyTwoQubitGateOp : public OpKernel {
 
 
 // Register the CPU kernels.
-#define REGISTER_CPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),         \
-      ApplyGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
-
-// Register two-qubit CPU kernels.
-#define REGISTER_TWOQUBIT_CPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  REGISTER_KERNEL_BUILDER(                                                   \
-      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),                  \
-      ApplyTwoQubitGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
-
-REGISTER_CPU(complex64, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_CPU(complex128, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_CPU(complex64, "ApplyX", ApplyXFunctor, false);
-REGISTER_CPU(complex128, "ApplyX", ApplyXFunctor, false);
-REGISTER_CPU(complex64, "ApplyY", ApplyYFunctor, false);
-REGISTER_CPU(complex128, "ApplyY", ApplyYFunctor, false);
-REGISTER_CPU(complex64, "ApplyZ", ApplyZFunctor, false);
-REGISTER_CPU(complex128, "ApplyZ", ApplyZFunctor, false);
-REGISTER_TWOQUBIT_CPU(complex64, "ApplySwap", ApplySwapFunctor, false);
-REGISTER_TWOQUBIT_CPU(complex128, "ApplySwap", ApplySwapFunctor, false);
-
+#define REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX)         \
+  REGISTER_KERNEL_BUILDER(                                    \
+      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      OP<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
 
 // Register the GPU kernels.
-#define REGISTER_GPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  extern template struct FUNCTOR<GPUDevice, T>;                     \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),         \
-      ApplyGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+#define REGISTER_GPU(T, NAME, OP, FUNCTOR, USEMATRIX)        \
+  extern template struct FUNCTOR<GPUDevice, T>;              \
+  REGISTER_KERNEL_BUILDER(                                   \
+      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
+      OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
 
-// Register two-qubit GPU kernels.
-#define REGISTER_TWOQUBIT_GPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  extern template struct FUNCTOR<GPUDevice, T>;                              \
-  REGISTER_KERNEL_BUILDER(                                                   \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),                  \
-      ApplyTwoQubitGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+// Register one-qubit kernels.
+#define REGISTER(T, NAME, OP, FUNCTOR, USEMATRIX)            \
+  REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX);    \
+  REGISTER_GPU(T, NAME, OP, FUNCTOR, USEMATRIX);
 
-REGISTER_GPU(complex64, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_GPU(complex128, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_GPU(complex64, "ApplyX", ApplyXFunctor, false);
-REGISTER_GPU(complex128, "ApplyX", ApplyXFunctor, false);
-REGISTER_GPU(complex64, "ApplyY", ApplyYFunctor, false);
-REGISTER_GPU(complex128, "ApplyY", ApplyYFunctor, false);
-REGISTER_GPU(complex64, "ApplyZ", ApplyZFunctor, false);
-REGISTER_GPU(complex128, "ApplyZ", ApplyZFunctor, false)
-REGISTER_TWOQUBIT_GPU(complex64, "ApplySwap", ApplySwapFunctor, false);
-REGISTER_TWOQUBIT_GPU(complex128, "ApplySwap", ApplySwapFunctor, false);
+
+REGISTER(complex64, "ApplyGate", ApplyGateOp, ApplyGateFunctor, true);
+REGISTER(complex128, "ApplyGate", ApplyGateOp, ApplyGateFunctor, true);
+REGISTER(complex64, "ApplyZPow", ApplyGateOp, ApplyZPowFunctor, true);
+REGISTER(complex128, "ApplyZPow", ApplyGateOp, ApplyZPowFunctor, true);
+REGISTER(complex64, "ApplyX", ApplyGateOp, ApplyXFunctor, false);
+REGISTER(complex128, "ApplyX", ApplyGateOp, ApplyXFunctor, false);
+REGISTER(complex64, "ApplyY", ApplyGateOp, ApplyYFunctor, false);
+REGISTER(complex128, "ApplyY", ApplyGateOp, ApplyYFunctor, false);
+REGISTER(complex64, "ApplyZ", ApplyGateOp, ApplyZFunctor, false);
+REGISTER(complex128, "ApplyZ", ApplyGateOp, ApplyZFunctor, false);
+REGISTER(complex64, "ApplySwap", ApplyTwoQubitGateOp, ApplySwapFunctor, false);
+REGISTER(complex128, "ApplySwap", ApplyTwoQubitGateOp, ApplySwapFunctor, false);
 
 }  // namespace functor
 }  // namespace tensorflow
