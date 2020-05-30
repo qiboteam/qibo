@@ -75,7 +75,8 @@ struct ApplyZPowFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
 struct BaseTwoQubitGateFunctor {
-  virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
+  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                     const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d, T* state,
                   int nqubits,
@@ -85,6 +86,9 @@ struct BaseTwoQubitGateFunctor {
                   const int32* controls,
                   const T* gate = NULL);
 };
+
+template <typename Device, typename T>
+struct ApplTwoQubitGateFunctor: BaseTwoQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
 struct ApplySwapFunctor: BaseTwoQubitGateFunctor<Device, T> {};

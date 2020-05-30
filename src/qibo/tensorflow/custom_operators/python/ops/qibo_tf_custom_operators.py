@@ -54,6 +54,10 @@ def apply_zpow(state, theta, nqubits, target, controls=[]):
     check_controls(controls)
     return custom_module.apply_z_pow(state, theta, controls, nqubits, target)
 
+def apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls=[]):
+    check_controls(controls)
+    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits, target1, target2)
+
 def apply_swap(state, nqubits, target1, target2, controls=[]):
     check_controls(controls)
     return custom_module.apply_swap(state, controls, nqubits, target1, target2)

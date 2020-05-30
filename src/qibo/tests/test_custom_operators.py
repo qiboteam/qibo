@@ -173,6 +173,39 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
     np.testing.assert_allclose(target_state, state.numpy())
 
 
+@pytest.mark.parametrize(("nqubits", "target1", "target2", "controls",
+                          "compile", "einsum_str"),
+                         [(3, 0, 1, [], False, "abc,ABab->ABc"),
+                          (4, 0, 2, [], True, "abcd,ACac->AbCd")])
+                          #(4, 0, 3, [1], True, "abc,ACac->AbC"),
+                          #(4, 2, 3, [0], False, "abc,BCbc->aBC"),
+                          #(5, 4, 1, [2], False, "abcd,ADad->AbcD"),
+                          #(6, 1, 3, [0, 4], True, "abcd,ACac->AbCd"),
+                          #(6, 0, 5, [1, 2, 3], False, "abc,ACac->AbC")])
+def test_apply_twoqubit_gate_controlled(nqubits, target1, target2, controls,
+                                        compile, einsum_str):
+    """Check ``op.apply_gate`` for random controlled gates."""
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    gate = tensorflow_random_complex((4, 4), dtype=tf.float64)
+    gatenp = gate.numpy().reshape(4 * (2,))
+
+    target_state = state.numpy().reshape(nqubits * (2,))
+    slicer = nqubits * [slice(None)]
+    for c in controls:
+        slicer[c] = 1
+    slicer = tuple(slicer)
+    target_state[slicer] = np.einsum(einsum_str, target_state[slicer], gatenp)
+    target_state = target_state.ravel()
+
+    def apply_operator(state):
+      return op.apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls)
+    if compile:
+        apply_operator = tf.function(apply_operator)
+
+    state = apply_operator(state)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_with_matrix(compile):
     """Check ``apply_swap`` for two qubits."""

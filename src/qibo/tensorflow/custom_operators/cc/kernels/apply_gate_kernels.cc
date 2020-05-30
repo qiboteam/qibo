@@ -166,7 +166,8 @@ struct ApplyZPowFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
 
 template <typename T>
 struct BaseTwoQubitGateFunctor<CPUDevice, T> {
-  virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
+  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                     const T* gate = NULL) const {}
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
@@ -199,7 +200,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
         for (auto g = t; g < w; g += 1) {
           int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
           i = ((i & mask2) << 1) + (i & (tk2 - 1));
-          std::swap(state[i + tk1], state[i + tk2]);
+          apply(state, i, tk1, tk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
@@ -243,7 +244,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
           for (auto const& m : control_masks) {
             i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
           }
-          std::swap(state[i + tk1], state[i + tk2]);
+          apply(state, i, tk1, tk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
@@ -251,11 +252,36 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
   }
 };
 
+
+// Apply general one-qubit gate via gate matrix
+template <typename T>
+struct ApplTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    const int64 i1 = i + tk1;
+    const int64 i2 = i + tk2;
+    const int64 i3 = i1 + tk2;
+    const auto buffer = state[i];
+    state[i] = (gate[0] * state[i] + gate[1] * state[i1] +
+                gate[2] * state[i2] + gate[3] * state[i3]);
+    const auto buffer1 = state[i1];
+    state[i1] = (gate[4] * buffer + gate[5] * state[i1] +
+                 gate[6] * state[i2] + gate[7] * state[i3]);
+    const auto buffer2 = state[i2];
+    state[i2] = (gate[8] * buffer + gate[9] * buffer1 +
+                 gate[10] * state[i2] + gate[11] * state[i3]);
+    state[i3] = (gate[12] * buffer + gate[13] * buffer1 +
+                 gate[14] * buffer2 + gate[15] * state[i3]);
+  }
+};
+
+
 // Apply SWAP gate
 template <typename T>
 struct ApplySwapFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
-  inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
-    std::swap(state1, state2);
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    std::swap(state[i + tk1], state[i + tk2]);
   }
 };
 
@@ -316,18 +342,31 @@ class TwoQubitGateOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
-    const Tensor& controls = context->input(1);
-    const int ncontrols = controls.flat<int32>().size();
 
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplySwap operator not implemented for GPU."));
+        errors::Unimplemented("ApplyTwoQubitGate operator not implemented for GPU."));
 
-    // call the implementation
-    F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-        nqubits_, target1_, target2_, ncontrols, controls.flat<int32>().data());
+    if (UseMatrix) {
+      const Tensor& gate = context->input(1);
+      const Tensor& controls = context->input(2);
+      const int ncontrols = controls.flat<int32>().size();
 
+      // call the implementation
+      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+          nqubits_, target1_, target2_, ncontrols,
+          controls.flat<int32>().data(), gate.flat<T>().data());
+    }
+    else {
+      const Tensor& controls = context->input(1);
+      const int ncontrols = controls.flat<int32>().size();
+
+      // call the implementation
+      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+          nqubits_, target1_, target2_, ncontrols,
+          controls.flat<int32>().data());
+    }
     context->set_output(0, state);
   }
 
@@ -370,6 +409,7 @@ REGISTER_ONEQUBIT("ApplyZPow", ApplyZPowFunctor, true);
 REGISTER_ONEQUBIT("ApplyX", ApplyXFunctor, false);
 REGISTER_ONEQUBIT("ApplyY", ApplyYFunctor, false);
 REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
+REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplTwoQubitGateFunctor, true);
 REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
 
 }  // namespace functor
