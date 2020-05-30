@@ -38,10 +38,12 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
     check_controls(controls)
     return custom_module.apply_gate(state, gate, controls, nqubits, target)
 
-def apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls=[]):
+def apply_twoqubit_gate(state, gate, nqubits, targets, controls=[]):
     """Applies arbitrary two-qubit gate to a state vector."""
     check_controls(controls)
-    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits, target1, target2)
+    t1, t2 = targets
+    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits,
+                                              t1, t2)
 
 # gate specific operators
 def apply_x(state, nqubits, target, controls=[]):
@@ -64,19 +66,20 @@ def apply_zpow(state, phase, nqubits, target, controls=[]):
     check_controls(controls)
     return custom_module.apply_z_pow(state, phase, controls, nqubits, target)
 
-def apply_fsim(state, rotation, phase, nqubits, target1, target2, controls=[]):
+def apply_fsim(state, gate, nqubits, targets, controls=[]):
     """Applies fSIM gate from arXiv:2001.08343 to a state vector.
 
     Args:
-        rotation (tf.Tensor): Rotation matrix that is applied to the
-            {|01>, |10>} subspace as a tensor of shape (4,).
-        phase (DTYPECPX): Phase that is applied to the {|11>} subspace.
+        gate (tf.Tensor): Tensor of shape (5,) that contains the otation matrix
+            that is applied to the {|01>, |10>} and the phase that is applied
+            to the {|11>} subspace.
     """
     check_controls(controls)
-    gate = tf.concat([rotation, phase], axis=0)
-    return custom_module.apply_fsim(state, gate, controls, nqubits, target1, target2)
+    t1, t2 = targets
+    return custom_module.apply_fsim(state, gate, controls, nqubits, t1, t2)
 
-def apply_swap(state, nqubits, target1, target2, controls=[]):
+def apply_swap(state, nqubits, targets, controls=[]):
     """Applies SWAP gate to a state vector."""
     check_controls(controls)
-    return custom_module.apply_swap(state, controls, nqubits, target1, target2)
+    t1, t2 = targets
+    return custom_module.apply_swap(state, controls, nqubits, t1, t2)

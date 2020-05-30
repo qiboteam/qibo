@@ -247,8 +247,24 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        t1, t2 = self.target_qubits
-        return op.apply_swap(state, self.nqubits, t1, t2, self.control_qubits)
+        return op.apply_swap(state, self.nqubits, self.target_qubits,
+                             self.control_qubits)
+
+
+class fSim(MatrixGate, base_gates.fSim):
+
+    def __init__(self, q0, q1, theta, phi):
+        base_gates.fSim.__init__(self, q0, q1, theta, phi)
+
+    def _construct_matrix(self):
+        self.rotation = (tf.cos(th / 2.0) * matrices.I -
+                         1j * tf.sin(th / 2.0) * matrices.X)
+        self.phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        return op.apply_fsim(state, self.matrix, self.nqubits,
+                             self.target_qubits, self.control_qubits)
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
