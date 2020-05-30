@@ -1,4 +1,5 @@
 """Use ops in python."""
+import tensorflow as tf
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 
@@ -16,7 +17,7 @@ def check_controls(controls):
 
 # apply_gate operator
 def apply_gate(state, gate, nqubits, target, controls=[]):
-    """Applies one-qubit gates to a state vector.
+    """Applies arbitrary one-qubit gate to a state vector.
 
     Modifies ``state`` in-place.
     Gates can be controlled to multiple qubits.
@@ -37,27 +38,45 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
     check_controls(controls)
     return custom_module.apply_gate(state, gate, controls, nqubits, target)
 
+def apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls=[]):
+    """Applies arbitrary two-qubit gate to a state vector."""
+    check_controls(controls)
+    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits, target1, target2)
+
 # gate specific operators
 def apply_x(state, nqubits, target, controls=[]):
+    """Applies Pauli-X gate to a state vector."""
     check_controls(controls)
     return custom_module.apply_x(state, controls, nqubits, target)
 
 def apply_y(state, nqubits, target, controls=[]):
+    """Applies Pauli-Y gate to a state vector."""
     check_controls(controls)
     return custom_module.apply_y(state, controls, nqubits, target)
 
 def apply_z(state, nqubits, target, controls=[]):
+    """Applies Pauli-Z gate to a state vector."""
     check_controls(controls)
     return custom_module.apply_z(state, controls, nqubits, target)
 
-def apply_zpow(state, theta, nqubits, target, controls=[]):
+def apply_zpow(state, phase, nqubits, target, controls=[]):
+    """Applies ZPow gate to a state vector."""
     check_controls(controls)
-    return custom_module.apply_z_pow(state, theta, controls, nqubits, target)
+    return custom_module.apply_z_pow(state, phase, controls, nqubits, target)
 
-def apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls=[]):
+def apply_fsim(state, rotation, phase, nqubits, target1, target2, controls=[]):
+    """Applies fSIM gate from arXiv:2001.08343 to a state vector.
+
+    Args:
+        rotation (tf.Tensor): Rotation matrix that is applied to the
+            {|01>, |10>} subspace as a tensor of shape (4,).
+        phase (DTYPECPX): Phase that is applied to the {|11>} subspace.
+    """
     check_controls(controls)
-    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits, target1, target2)
+    gate = tf.concat([rotation, phase], axis=0)
+    return custom_module.apply_fsim(state, gate, controls, nqubits, target1, target2)
 
 def apply_swap(state, nqubits, target1, target2, controls=[]):
+    """Applies SWAP gate to a state vector."""
     check_controls(controls)
     return custom_module.apply_swap(state, controls, nqubits, target1, target2)

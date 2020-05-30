@@ -255,7 +255,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
-struct ApplTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+struct ApplyTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
   inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
                     const T* gate = NULL) const {
     const int64 i1 = i + tk1;
@@ -272,6 +272,28 @@ struct ApplTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice,
                  gate[10] * state[i2] + gate[11] * state[i3]);
     state[i3] = (gate[12] * buffer + gate[13] * buffer1 +
                  gate[14] * buffer2 + gate[15] * state[i3]);
+  }
+};
+
+
+// Apply fSim gate from https://arxiv.org/abs/2001.08343
+template <typename T>
+struct ApplyFsimFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    const int64 i1 = i + tk1;
+    const int64 i2 = i + tk2;
+    const int64 i3 = i1 + tk2;
+    const auto buffer = state[i1];
+
+    std::cout << i << std::endl;
+    std::cout << i1 << std::endl;
+    std::cout << i2 << std::endl;
+    std::cout << i3 << std::endl;
+
+    state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
+    state[i2] = gate[2] * buffer + gate[3] * state[i2];
+    state[i3] = gate[4] * state[i3];
   }
 };
 
@@ -409,7 +431,8 @@ REGISTER_ONEQUBIT("ApplyZPow", ApplyZPowFunctor, true);
 REGISTER_ONEQUBIT("ApplyX", ApplyXFunctor, false);
 REGISTER_ONEQUBIT("ApplyY", ApplyYFunctor, false);
 REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
-REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplTwoQubitGateFunctor, true);
+REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplyTwoQubitGateFunctor, true);
+REGISTER_TWOQUBIT("ApplyFsim", ApplyFsimFunctor, true);
 REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
 
 }  // namespace functor

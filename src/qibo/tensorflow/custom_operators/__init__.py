@@ -7,4 +7,5 @@ from .python.ops.qibo_tf_custom_operators import apply_y
 from .python.ops.qibo_tf_custom_operators import apply_z
 from .python.ops.qibo_tf_custom_operators import apply_zpow
 from .python.ops.qibo_tf_custom_operators import apply_twoqubit_gate
+from .python.ops.qibo_tf_custom_operators import apply_fsim
 from .python.ops.qibo_tf_custom_operators import apply_swap

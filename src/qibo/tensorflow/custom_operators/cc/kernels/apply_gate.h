@@ -88,7 +88,10 @@ struct BaseTwoQubitGateFunctor {
 };
 
 template <typename Device, typename T>
-struct ApplTwoQubitGateFunctor: BaseTwoQubitGateFunctor<Device, T> {};
+struct ApplyTwoQubitGateFunctor: BaseTwoQubitGateFunctor<Device, T> {};
+
+template <typename Device, typename T>
+struct ApplyFsimFunctor: BaseTwoQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
 struct ApplySwapFunctor: BaseTwoQubitGateFunctor<Device, T> {};
