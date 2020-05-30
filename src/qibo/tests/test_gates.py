@@ -247,6 +247,28 @@ def test_czpow(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_fsim(gates, backend):
+    """Check CZPow gate is working properly on |++>."""
+    theta = 0.1234
+    phi = 0.4321
+
+    c = Circuit(2)
+    c.add(gates.H(0).with_backend(backend))
+    c.add(gates.H(1).with_backend(backend))
+    c.add(gates.fSim(0, 1, theta, phi).with_backend(backend))
+    final_state = c.execute().numpy()
+
+    target_state = np.ones_like(final_state) / 2.0
+    rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
+                         [-1j * np.sin(theta), np.cos(theta)]])
+    matrix = np.eye(4, dtype=target_state.dtype)
+    matrix[1:3, 1:3] = rotation
+    matrix[3, 3] = np.exp(-1j * phi)
+    target_state = matrix.dot(target_state)
+    np.testing.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("gates", _GATES)
 def test_doubly_controlled_by_rx_no_effect(gates):
     theta = 0.1234

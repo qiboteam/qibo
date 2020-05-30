@@ -37,8 +37,8 @@ class MatrixGate(TensorflowGate):
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
-        if len(self.target_qubits) > 1:
-            raise ValueError("``MatrixGate`` does not support more than one "
+        if len(self.target_qubits) > 2:
+            raise ValueError("``MatrixGate`` does not support more than two "
                              "target qubit.")
         base_gates.Gate.nqubits.fset(self, n)
         self._construct_matrix()
@@ -257,9 +257,10 @@ class fSim(MatrixGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
 
     def _construct_matrix(self):
-        self.rotation = (tf.cos(th / 2.0) * matrices.I -
-                         1j * tf.sin(th / 2.0) * matrices.X)
-        self.phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+        th = tf.cast(self.theta, dtype=DTYPECPX)
+        rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)

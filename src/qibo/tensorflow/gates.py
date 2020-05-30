@@ -238,6 +238,23 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         self.matrix = matrices.SWAP
 
 
+class fSim(TensorflowGate, base_gates.fSim):
+
+    def __init__(self, q0, q1, theta, phi):
+        base_gates.fSim.__init__(self, q0, q1, theta, phi)
+
+        th = tf.cast(self.theta, dtype=self.dtype)
+        rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+
+        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, ids, rotation)
+        self.matrix = tf.reshape(self.matrix, 4 * (2,))
+
+
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
