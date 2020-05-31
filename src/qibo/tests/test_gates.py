@@ -249,7 +249,7 @@ def test_czpow(gates, backend):
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
 def test_fsim(gates, backend):
-    """Check CZPow gate is working properly on |++>."""
+    """Check fSim gate is working properly on |++>."""
     theta = 0.1234
     phi = 0.4321
 

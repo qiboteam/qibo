@@ -173,18 +173,20 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.parametrize(("nqubits", "target1", "target2", "controls",
+@pytest.mark.skip
+@pytest.mark.parametrize(("nqubits", "targets", "controls",
                           "compile", "einsum_str"),
-                         [(3, 0, 1, [], False, "abc,ABab->ABc"),
-                          (4, 0, 2, [], True, "abcd,ACac->AbCd")])
-                          #(4, 0, 3, [1], True, "abc,ACac->AbC"),
-                          #(4, 2, 3, [0], False, "abc,BCbc->aBC"),
+                         [(3, [0, 1], [], False, "abc,ABab->ABc"),
+                          (4, [0, 2], [], True, "abcd,ACac->AbCd"),
+                          (3, [0, 1], [2], False, "ab,ABab->AB"),
+                          (4, [0, 3], [1], True, "abc,ACac->AbC")])
+                          #(4, [2, 3], [0], False, "abc,BCbc->aBC"),
                           #(5, 4, 1, [2], False, "abcd,ADad->AbcD"),
                           #(6, 1, 3, [0, 4], True, "abcd,ACac->AbCd"),
                           #(6, 0, 5, [1, 2, 3], False, "abc,ACac->AbC")])
-def test_apply_twoqubit_gate_controlled(nqubits, target1, target2, controls,
+def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
                                         compile, einsum_str):
-    """Check ``op.apply_gate`` for random controlled gates."""
+    """Check ``op.apply_twoqubit_gate`` for random gates."""
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
     gate = tensorflow_random_complex((4, 4), dtype=tf.float64)
     gatenp = gate.numpy().reshape(4 * (2,))
@@ -198,11 +200,86 @@ def test_apply_twoqubit_gate_controlled(nqubits, target1, target2, controls,
     target_state = target_state.ravel()
 
     def apply_operator(state):
-      return op.apply_twoqubit_gate(state, gate, nqubits, target1, target2, controls)
+      return op.apply_twoqubit_gate(state, gate, nqubits, targets, controls)
     if compile:
         apply_operator = tf.function(apply_operator)
 
     state = apply_operator(state)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize(("nqubits", "targets", "controls",
+                          "compile", "einsum_str"),
+                         [(3, [0, 1], [], False, "abc,ABab->ABc"),
+                          (4, [0, 2], [], True, "abcd,ACac->AbCd"),
+                          (3, [1, 2], [0], False, "ab,ABab->AB"),
+                          (4, [0, 1], [2], False, "abc,ABab->ABc"),
+                          (5, [0, 1], [2], False, "abcd,ABab->ABcd"),
+                          (5, [3, 4], [2], False, "abcd,CDcd->abCD"),
+                          (4, [0, 3], [1], False, "abc,ACac->AbC")])
+                          #(4, [2, 3], [0], True, "abc,BCbc->aBC")])
+                          #(5, 4, 1, [2], False, "abcd,ADad->AbcD"),
+                          #(6, 1, 3, [0, 4], True, "abcd,ACac->AbCd"),
+                          #(6, 0, 5, [1, 2, 3], False, "abc,ACac->AbC")])
+def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
+    """Check ``op.apply_twoqubit_gate`` for random gates."""
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    rotation = tensorflow_random_complex((2, 2), dtype=tf.float64)
+    phase = tensorflow_random_complex((1,), dtype=tf.float64)
+
+    target_state = state.numpy().reshape(nqubits * (2,))
+    gatenp = np.eye(4, dtype=target_state.dtype)
+    gatenp[1:3, 1:3] = rotation.numpy()
+    gatenp[3, 3] = phase.numpy()[0]
+    gatenp = gatenp.reshape(4 * (2,))
+
+    slicer = nqubits * [slice(None)]
+    for c in controls:
+        slicer[c] = 1
+    slicer = tuple(slicer)
+    target_state[slicer] = np.einsum(einsum_str, target_state[slicer], gatenp)
+    target_state = target_state.ravel()
+
+    gate = tf.concat([tf.reshape(rotation, (4,)), phase], axis=0)
+    def apply_operator(state):
+      return op.apply_fsim(state, gate, nqubits, targets, controls)
+    if compile:
+        apply_operator = tf.function(apply_operator)
+
+    state = apply_operator(state)
+    np.testing.assert_allclose(target_state, state.numpy())
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize(("nqubits", "targets", "controls"),
+                         [(4, [2, 3], [0])])
+def test_apply_fsim_agreement(nqubits, targets, controls):
+    """Check ``op.apply_twoqubit_gate`` for random gates."""
+    from qibo.tensorflow import gates
+    #theta = 0.1234
+    theta = np.pi / 2
+    phi = 0
+
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    rotation = tf.cast(np.array([[np.cos(theta), -1j * np.sin(theta)],
+                                 [-1j * np.sin(theta), np.cos(theta)]]),
+                       dtype=state.dtype)
+    phase = tf.cast(np.exp(-1j * phi), dtype=state.dtype)
+
+    target_state = state.numpy().reshape(nqubits * (2,))
+    native_gate = gates.fSim(*targets, theta, phi).controlled_by(*controls)
+    target_state = native_gate(target_state).numpy().ravel()
+
+    gate = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+    state = op.apply_fsim(state, gate, nqubits, targets, controls)
+
+    print()
+    import itertools
+    confs = itertools.product([0, 1], repeat=nqubits)
+    for i, x, y in zip(confs, target_state, state.numpy()):
+        print("".join(str(e) for e in i), x - y)
+
     np.testing.assert_allclose(target_state, state.numpy())
 
 
@@ -217,7 +294,7 @@ def test_apply_swap_with_matrix(compile):
     target_state = matrix.dot(state.numpy())
 
     def apply_operator(state):
-      return op.apply_swap(state, 2, target1=0, target2=1)
+      return op.apply_swap(state, 2, targets=[0, 1])
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -227,7 +304,7 @@ def test_apply_swap_with_matrix(compile):
 @pytest.mark.parametrize(("nqubits", "targets", "controls"),
                          [(2, [0, 1], []), (3, [0, 2], []), (4, [1, 3], []),
                           (3, [1, 2], [0]), (4, [0, 2], [1]),
-                          (5, [3, 4], [1, 2])])
+                          (4, [2, 3], [0]), (5, [3, 4], [1, 2])])
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_general(nqubits, targets, controls, compile):
     """Check ``apply_swap`` for more general cases."""
@@ -249,7 +326,7 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     target_state[slicer] = reduced_state
 
     def apply_operator(state):
-      return op.apply_swap(state, nqubits, targets[0], targets[1], controls)
+      return op.apply_swap(state, nqubits, targets, controls)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -285,7 +362,7 @@ def test_custom_op_toy_callback(gate, compile):
                   "x": functools.partial(op.apply_x, nqubits=2, target=0),
                   "z": functools.partial(op.apply_z, nqubits=2, target=0),
                   "swap": functools.partial(op.apply_swap, nqubits=2,
-                                            target1=0, target2=1)}
+                                            targets=[0, 1])}
 
     def apply_operator(state):
         c1 = tf.reduce_sum(mask * state)
