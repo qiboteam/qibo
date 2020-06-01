@@ -303,8 +303,8 @@ def test_apply_swap_with_matrix(compile):
 
 @pytest.mark.parametrize(("nqubits", "targets", "controls"),
                          [(2, [0, 1], []), (3, [0, 2], []), (4, [1, 3], []),
-                          (3, [1, 2], [0]), (4, [0, 2], [1]),
-                          (4, [2, 3], [0]), (5, [3, 4], [1, 2])])
+                          (3, [1, 2], [0]), (4, [0, 2], [1]), (4, [2, 3], [0]),
+                          (5, [3, 4], [1, 2]), (6, [1, 4], [0, 2, 5])])
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_general(nqubits, targets, controls, compile):
     """Check ``apply_swap`` for more general cases."""
@@ -312,9 +312,9 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
 
     target0, target1 = targets
     for q in controls:
-        if q < target0:
+        if q < targets[0]:
             target0 -= 1
-        if q < target1:
+        if q < targets[1]:
             target1 -= 1
 
     target_state = state.numpy().reshape(nqubits * (2,))
@@ -333,9 +333,9 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     np.testing.assert_allclose(target_state.ravel(), state.numpy())
 
 
-@pytest.mark.skip
+# this test fails when compiling due to in-place updates of the state
 @pytest.mark.parametrize("gate", ["h", "x", "z", "swap"])
-@pytest.mark.parametrize("compile", [False, True])
+@pytest.mark.parametrize("compile", [False])
 def test_custom_op_toy_callback(gate, compile):
     """Check calculating ``callbacks`` using intermediate state values."""
     import functools

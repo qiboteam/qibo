@@ -24,30 +24,28 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   }
 
   void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          int64 tk, int64 tk_reduced,
-                          int64 ck, int mask) const {
-    const int64 inv_mask = ck - 1;
+                          int64 tk, int64 tk_reduced, int c) const {
+    const int64 ck = (int64) 1 << c;
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
-        const int64 i1 = ((i & mask) << 1) + (i & inv_mask) + ck;
-        const int64 i2 = i1 + tk;
-        apply(state[i1], state[i2], gate);
+        int64 i1 = ((int64) ((int64) i >> c) << (c + 1)) + (i & (ck - 1)) + ck;
+        apply(state[i1], state[i1 + tk], gate);
       }
     }
   }
 
   void multicontrol_work(int64 t, int64 w, T* state, const T* gate,
                          int64 tk, int64 tk_reduced,
-                         const std::map<int64, int64>& masks) const {
+                         const std::vector<int64>& controls) const {
 
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
         int64 i1 = i;
-        for (auto const& m : masks) {
-          i1 = ((i1 & m.second) << 1) + (i1 & (m.first - 1)) + m.first;
+        for (auto const& c: controls) {
+          int64 ck = 1 << c;
+          i1 = ((int64) ((int64) i1 >> c) << (c + 1)) + (i1 & (ck - 1)) + ck;
         }
-        const int64 i2 = i1 + tk;
-        apply(state[i1], state[i2], gate);
+        apply(state[i1], state[i1 + tk], gate);
       }
     }
   }
@@ -65,6 +63,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     }
     const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
+    // Set multi-threading
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int) thread_pool->NumThreads() / 2;
@@ -82,6 +81,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
         nreps);
 
+    // Apply gate
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
         work(t, w, state, gate, tk);
@@ -89,25 +89,19 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else if (ncontrols == 1) {
-        const int control = controls[0];
-        const int64 ck = (int64) 1 << (nqubits - control - 1);
-        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
         auto DoWork = [&](int64 t, int64 w) {
-          singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
+          singlecontrol_work(t, w, state, gate, tk, tk_reduced,
+                             nqubits - controls[0] - 1);
         };
         thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else {
-      std::map<int64, int64> masks;
+      std::vector<int64> controls_vec(ncontrols);
       for (int i = 0; i < ncontrols; i++) {
-        const int control = controls[i];
-        const int64 ck = (int64) 1 << (nqubits - control - 1);
-        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
-        masks.emplace(ck, mask);
+        controls_vec[i] = nqubits - controls[i] - 1;
       }
-
       auto DoWork = [&](int64 t, int64 w) {
-        multicontrol_work(t, w, state, gate, tk, tk_reduced, masks);
+        multicontrol_work(t, w, state, gate, tk, tk_reduced, controls_vec);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
@@ -174,8 +168,10 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
                   const int32* controls, const T* gate = NULL) {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
-    const int64 tk1 = (int64) 1 << (nqubits - t1 - 1);
-    const int64 tk2 = (int64) 1 << (nqubits - t2 - 1);
+    int m1 = nqubits - t1 - 1;
+    int m2 = nqubits - t2 - 1;
+    const int64 tk1 = (int64) 1 << m1;
+    const int64 tk2 = (int64) 1 << m2;
     const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
     auto thread_pool =
@@ -194,71 +190,48 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
         nreps);
 
     if (ncontrols == 0) {
-      const int64 mask1 = (int64) (((int64) 1 << t1) - 1) << (nqubits - t1 - 1);
-      const int64 mask2 = (int64) (((int64) 1 << t2) - 1) << (nqubits - t2 - 1);
-
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
-          i = ((i & mask2) << 1) + (i & (tk2 - 1));
+          int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+          i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
           apply(state, i, tk1, tk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else {
-      int t1_eff = t1;
-      int t2_eff = t2;
+      std::vector<int> qubits(ncontrols + 2);
+      int q = 0;
       for (int i = 0; i < ncontrols; i++) {
-        if (controls[i] < t1) {
-          t1_eff--;
+        if (q == 0 && controls[i] < t1) {
+          qubits[i + q] = m1;
+          q++;
         }
-        if (controls[i] < t2) {
-          t2_eff--;
+        if (q == 1 && controls[i] < t2) {
+          qubits[i + q] = m2;
+          q++;
         }
+        qubits[i + q] = nqubits - controls[i] - 1;
       }
-
-      int64 tk1_eff = tk1;
-      if (ncontrols > 0 || t1 != t1_eff) {
-        tk1_eff = (int64) 1 << (nqubits - ncontrols - t1_eff - 1);
+      if (q == 0) {
+        qubits[ncontrols] = m1;
+        qubits[ncontrols + 1] = m2;
       }
-      int64 tk2_eff = tk2;
-      if (ncontrols > 0 || t2 != t2_eff) {
-        tk2_eff = (int64) 1 << (nqubits - ncontrols - t2_eff - 1);
+      else if (q == 1) {
+        qubits[ncontrols + 1] = m2;
       }
-
-      std::map<int64, int64> control_masks;
-      for (int i = 0; i < ncontrols; i++) {
-        const int control = controls[i];
-        const int64 ck = (int64) 1 << (nqubits - control - 1);
-        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
-        control_masks.emplace(ck, mask);
-      }
-
-      const int64 mask1 = ((1 << t1_eff) - 1) << (nqubits - t1_eff - 1);
-      const int64 mask2 = ((1 << t2_eff) - 1) << (nqubits - t2_eff - 1);
 
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
-          i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
-          for (auto const& m : control_masks) {
-            i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
+          int64 i = g;
+          for (auto const& m : qubits) {
+            int64 k = (int64) 1 << m;
+            i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
           }
-          apply(state, i, tk1, tk2, gate);
+          apply(state, i - tk1 - tk2, tk1, tk2, gate);
         }
       };
-      //thread_pool->ParallelFor(nstates, p, DoWork);
-      for (auto g = 0; g < nstates; g += 1) {
-        std::cout << "g = " << g << std::endl;
-
-        int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
-        i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
-        for (auto const& m : control_masks) {
-          i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
-        }
-        apply(state, i, tk1, tk2, gate);
-      }
+      thread_pool->ParallelFor(nstates, p, DoWork);
     }
   }
 };

@@ -61,6 +61,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """
         if self.compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
+        if not self.queue:
+            raise RuntimeError("Cannot compile circuit without gates.")
+        if not self.using_tfgates:
+            raise RuntimeError("Cannot compile circuit that uses custom "
+                               "operators.")
         self._add_callbacks(callback)
         self.compiled_execute = tf.function(self._execute_func)
 

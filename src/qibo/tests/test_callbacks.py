@@ -99,6 +99,7 @@ def test_entropy_in_circuit():
 
 def test_entropy_in_compiled_circuit():
     """Check that entropy calculation works when circuit is compiled."""
+    from qibo.tensorflow import gates # Use native tf gates when compiling
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.H(0))
@@ -112,6 +113,7 @@ def test_entropy_in_compiled_circuit():
 
 def test_entropy_steps():
     """Check that using steps skips the appropriate number of gates."""
+    from qibo.tensorflow import gates # Use native tf gates when compiling
     entropy = callbacks.EntanglementEntropy([0], steps=2)
     c = Circuit(2)
     c.add(gates.H(0))

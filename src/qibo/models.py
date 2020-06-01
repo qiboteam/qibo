@@ -94,6 +94,9 @@ class VQE(object):
             return self.hamiltonian.expectation(s)
 
         if compile:
+            circuit = self.ansatz(initial_state)
+            if not circuit.using_tfgates:
+                raise RuntimeError("Cannot compile VQE that uses custom operators.")
             from qibo.config import K
             loss = K.function(loss)
 

@@ -1,5 +1,5 @@
 #include "tensorflow/core/framework/op.h"
-#include "tensorflow/core/framework/shape_inference.h"
+#include "tensorflow/core/framework/common_shape_fns.h"
 
 using namespace tensorflow;
 
@@ -8,10 +8,7 @@ REGISTER_OP("InitialState")
     .Attr("T: {complex64, complex128}")
     .Input("in: T")
     .Output("out: T")
-    .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
-      c->set_output(0, c->input(0));
-      return Status::OK();
-    });
+    .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 // Register one-qubit gate op with gate matrix
 #define REGISTER_GATE1_OP(NAME)                                               \
@@ -23,10 +20,7 @@ REGISTER_OP("InitialState")
       .Attr("nqubits: int")                                                   \
       .Attr("target: int")                                                    \
       .Output("out: T")                                                       \
-      .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {    \
-        c->set_output(0, c->input(0));                                        \
-        return Status::OK();                                                  \
-      });
+      .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 // Register one-qubit gate op without gate matrix
 #define REGISTER_GATE1_NOMATRIX_OP(NAME)                                      \
@@ -37,10 +31,7 @@ REGISTER_OP("InitialState")
       .Attr("nqubits: int")                                                   \
       .Attr("target: int")                                                    \
       .Output("out: T")                                                       \
-      .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {    \
-        c->set_output(0, c->input(0));                                        \
-        return Status::OK();                                                  \
-      });
+      .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 // Register two-qubit gate op with gate matrix
 #define REGISTER_GATE2_OP(NAME)                                               \

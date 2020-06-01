@@ -311,6 +311,7 @@ def test_circuit_with_unmeasured_qubits():
 
 def test_measurement_compiled_circuit():
     """Check that measurements and final state work for compiled circuits."""
+    from qibo.tensorflow import gates # use tf native gates when compiling
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
