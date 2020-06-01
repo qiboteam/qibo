@@ -195,7 +195,7 @@ def test_apply_swap_with_matrix(compile):
                          [(2, [0, 1], []), (3, [0, 2], []), (4, [1, 3], []),
                           (3, [1, 2], [0]), (4, [0, 2], [1]), (4, [2, 3], [0]),
                           (5, [3, 4], [1, 2]), (6, [1, 4], [0, 2, 5])])
-@pytest.mark.parametrize("compile", [False])
+@pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_general(nqubits, targets, controls, compile):
     """Check ``apply_swap`` for more general cases."""
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
