@@ -24,14 +24,12 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
   }
 
   void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          int64 tk, int64 tk_reduced,
-                          int64 ck, int mask) const {
-    const int64 inv_mask = ck - 1;
+                          int64 tk, int64 tk_reduced, int m) const {
+    const int64 ck = (int64) 1 << m;
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
-        const int64 i1 = ((i & mask) << 1) + (i & inv_mask) + ck;
-        const int64 i2 = i1 + tk;
-        apply(state[i1], state[i2], gate);
+        int64 i1 = ((int64) ((int64) i >> m) << (m + 1)) + (i & (ck - 1)) + ck;
+        apply(state[i1], state[i1 + tk], gate);
       }
     }
   }
@@ -89,11 +87,9 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else if (ncontrols == 1) {
-        const int control = controls[0];
-        const int64 ck = (int64) 1 << (nqubits - control - 1);
-        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
         auto DoWork = [&](int64 t, int64 w) {
-          singlecontrol_work(t, w, state, gate, tk, tk_reduced, ck, mask);
+          singlecontrol_work(t, w, state, gate, tk, tk_reduced,
+                             nqubits - controls[0] - 1);
         };
         thread_pool->ParallelFor(nstates, p, DoWork);
     }
@@ -107,7 +103,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
       }
 
       auto DoWork = [&](int64 t, int64 w) {
-        multicontrol_work(t, w, state, gate, tk, tk_reduced, masks);
+        multicontrol_work(t, w, state, gate, tk, tk_reduced, m);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
