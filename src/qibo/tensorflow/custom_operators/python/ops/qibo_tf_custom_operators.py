@@ -56,4 +56,5 @@ def apply_zpow(state, theta, nqubits, target, controls=[]):
 
 def apply_swap(state, nqubits, target1, target2, controls=[]):
     check_controls(controls)
+    controls = list(reversed(sorted(controls)))
     return custom_module.apply_swap(state, controls, nqubits, target1, target2)
