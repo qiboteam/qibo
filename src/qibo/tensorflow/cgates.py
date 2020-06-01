@@ -283,8 +283,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         MatrixGate.__init__(self)
 
-        rank = len(self.target_qubits)
-        if rank > 1:
+        rank = self.rank
+        if rank > 2:
             raise NotImplementedError("Unitary matrix gate supports only one "
                                       "qubit gates but {} target qubits were "
                                       "given.".format(len(self.target_qubits)))
@@ -296,6 +296,21 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     def _construct_matrix(self):
         self.matrix = tf.convert_to_tensor(self.unitary, dtype=DTYPECPX)
+
+    @property
+    def rank(self) -> int:
+        return len(self.target_qubits)
+
+    def __call__(self, state, is_density_matrix: bool = False) -> tf.Tensor:
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        if self.rank == 1:
+            return op.apply_gate(state, self.matrix, self.nqubits,
+                                 self.target_qubits[0],
+                                 self.control_qubits)
+        if self.rank == 2:
+            return op.apply_twoqubit_gate(state, self.matrix, self.nqubits,
+                                          self.target_qubits,
+                                          self.control_qubits)
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

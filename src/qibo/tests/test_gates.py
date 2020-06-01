@@ -261,6 +261,30 @@ def test_fsim(gates, backend):
 
 
 @pytest.mark.parametrize("gates", _GATES)
+def test_controlled_by_fsim(gates):
+    """Check ``controlled_by`` for fSim gate."""
+    theta = 0.1234
+    phi = 0.4321
+
+    c = Circuit(6)
+    c.add((gates.H(i) for i in range(6)))
+    c.add(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
+    final_state = c.execute().numpy()
+
+    target_state = np.ones_like(final_state) / np.sqrt(2 ** 6)
+    rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
+                         [-1j * np.sin(theta), np.cos(theta)]])
+    matrix = np.eye(4, dtype=target_state.dtype)
+    matrix[1:3, 1:3] = rotation
+    matrix[3, 3] = np.exp(-1j * phi)
+    ids = [56, 57, 60, 61]
+    target_state[ids] = matrix.dot(target_state[ids])
+    ids = [58, 59, 62, 63]
+    target_state[ids] = matrix.dot(target_state[ids])
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
 def test_doubly_controlled_by_rx_no_effect(gates):
     theta = 0.1234
 
@@ -448,18 +472,35 @@ def test_unitary_common_gates(gates):
     c.add(gates.X(0))
     c.add(gates.H(1))
     target_state = c.execute().numpy()
-
     c = Circuit(2)
     c.add(gates.Unitary(np.array([[0, 1], [1, 0]]), 0))
     c.add(gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1))
     final_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
 
+    thetax = 0.1234
+    thetay = 0.4321
+    c = Circuit(2)
+    c.add(gates.RX(0, theta=thetax))
+    c.add(gates.RY(1, theta=thetay))
+    c.add(gates.CNOT(0, 1))
+    target_state = c.execute().numpy()
+    c = Circuit(2)
+    rx = np.array([[np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
+                   [-1j * np.sin(thetax / 2), np.cos(thetax / 2)]])
+    ry = np.array([[np.cos(thetay / 2), -np.sin(thetay / 2)],
+                   [np.sin(thetay / 2), np.cos(thetay / 2)]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    c.add(gates.Unitary(rx, 0))
+    c.add(gates.Unitary(ry, 1))
+    c.add(gates.Unitary(cnot, 0, 1))
+    final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-def test_unitary_random_gate(gates, backend):
-    """Check that `Unitary` gate can apply random matrices."""
+def test_unitary_random_onequbit_gate(gates, backend):
+    """Check that ``Unitary`` gate can apply random 2x2 matrices."""
     init_state = np.ones(4) / 2.0
     matrix = np.random.random([2, 2])
     target_state = np.kron(np.eye(2), matrix).dot(init_state)
@@ -473,29 +514,44 @@ def test_unitary_random_gate(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_unitary_random_twoqubit_gate(gates, backend):
+    """Check that ``Unitary`` gate can apply random 4x4 matrices."""
+    init_state = np.ones(8) / np.sqrt(8)
+    matrix = np.random.random([4, 4])
+    target_state = np.kron(np.eye(2), matrix).dot(init_state)
+
+    c = Circuit(3)
+    c.add(gates.H(0).with_backend(backend))
+    c.add(gates.H(1).with_backend(backend))
+    c.add(gates.H(2).with_backend(backend))
+    c.add(gates.Unitary(matrix, 1, 2, name="random").with_backend(backend))
+    final_state = c.execute().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("gates", _GATES)
 def test_unitary_controlled_by(gates):
     """Check that `controlled_by` works as expected with `Unitary`."""
     matrix = np.random.random([2, 2])
-
-    # No effect
     c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
     c.add(gates.Unitary(matrix, 1).controlled_by(0))
     final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    target_state = np.ones_like(final_state) / 2.0
+    target_state[2:] = matrix.dot(target_state[2:])
     np.testing.assert_allclose(final_state, target_state)
 
-    # With effect
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.Unitary(matrix, 1).controlled_by(0))
-    c.add(gates.X(0))
+    matrix = np.random.random([4, 4])
+    c = Circuit(4)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
     final_state = c.execute().numpy()
-
-    c = Circuit(2)
-    c.add(gates.Unitary(matrix, 1))
-    target_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 4.0
+    ids = [10, 11, 14, 15]
+    target_state[ids] = matrix.dot(target_state[ids])
     np.testing.assert_allclose(final_state, target_state)
 
 
