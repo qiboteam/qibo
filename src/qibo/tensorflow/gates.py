@@ -255,6 +255,26 @@ class fSim(TensorflowGate, base_gates.fSim):
         self.matrix = tf.reshape(self.matrix, 4 * (2,))
 
 
+class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
+
+    def __init__(self, q0, q1, unitary, phi):
+        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        shape = tuple(self.unitary.shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+
+        rotation = tf.cast(self.unitary, dtype=self.dtype)
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+
+        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, ids, rotation)
+        self.matrix = tf.reshape(self.matrix, 4 * (2,))
+
+
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):

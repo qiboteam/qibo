@@ -285,6 +285,36 @@ def test_controlled_by_fsim(gates):
 
 
 @pytest.mark.parametrize("gates", _GATES)
+def test_generalized_fsim(gates):
+    """Check GeneralizedfSim gate is working properly on |++>."""
+    phi = np.random.random()
+    rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+
+    c = Circuit(3)
+    c.add((gates.H(i) for i in range(3)))
+    c.add(gates.GeneralizedfSim(1, 2, rotation, phi))
+    final_state = c.execute().numpy()
+
+    target_state = np.ones_like(final_state) / np.sqrt(8)
+    matrix = np.eye(4, dtype=target_state.dtype)
+    matrix[1:3, 1:3] = rotation
+    matrix[3, 3] = np.exp(-1j * phi)
+    target_state[:4] = matrix.dot(target_state[:4])
+    target_state[4:] = matrix.dot(target_state[4:])
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+def test_generalized_fsim(gates):
+    """Check GenerelizedfSim gate raises error for wrong unitary shape."""
+    phi = np.random.random()
+    rotation = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
+    c = Circuit(2)
+    with pytest.raises(ValueError):
+        c.add(gates.GeneralizedfSim(0, 1, rotation, phi))
+
+
+@pytest.mark.parametrize("gates", _GATES)
 def test_doubly_controlled_by_rx_no_effect(gates):
     theta = 0.1234
 

@@ -268,6 +268,25 @@ class fSim(MatrixGate, base_gates.fSim):
                              self.target_qubits, self.control_qubits)
 
 
+class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
+
+    def __init__(self, q0, q1, unitary, phi):
+        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        shape = tuple(self.unitary.shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+
+    def _construct_matrix(self):
+        rotation = tf.cast(self.unitary, dtype=DTYPECPX)
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+        rotation = tf.reshape(rotation, (4,))
+        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        return fSim.__call__(self, state, is_density_matrix)
+
+
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
@@ -301,7 +320,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
     def rank(self) -> int:
         return len(self.target_qubits)
 
-    def __call__(self, state, is_density_matrix: bool = False) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
         TensorflowGate.__call__(self, state, is_density_matrix)
         if self.rank == 1:
             return op.apply_gate(state, self.matrix, self.nqubits,
