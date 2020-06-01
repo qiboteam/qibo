@@ -24,11 +24,11 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
   }
 
   void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          int64 tk, int64 tk_reduced, int m) const {
-    const int64 ck = (int64) 1 << m;
+                          int64 tk, int64 tk_reduced, int c) const {
+    const int64 ck = (int64) 1 << c;
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
-        int64 i1 = ((int64) ((int64) i >> m) << (m + 1)) + (i & (ck - 1)) + ck;
+        int64 i1 = ((int64) ((int64) i >> c) << (c + 1)) + (i & (ck - 1)) + ck;
         apply(state[i1], state[i1 + tk], gate);
       }
     }
@@ -36,16 +36,16 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
 
   void multicontrol_work(int64 t, int64 w, T* state, const T* gate,
                          int64 tk, int64 tk_reduced,
-                         const std::map<int64, int64>& masks) const {
+                         const std::vector<int64>& controls) const {
 
     for (auto g = t; g < w; g += 2 * tk_reduced) {
       for (auto i = g; i < g + tk_reduced; i++) {
         int64 i1 = i;
-        for (auto const& m : masks) {
-          i1 = ((i1 & m.second) << 1) + (i1 & (m.first - 1)) + m.first;
+        for (auto const& c: controls) {
+          int64 ck = 1 << c;
+          i1 = ((int64) ((int64) i1 >> c) << (c + 1)) + (i1 & (ck - 1)) + ck;
         }
-        const int64 i2 = i1 + tk;
-        apply(state[i1], state[i2], gate);
+        apply(state[i1], state[i1 + tk], gate);
       }
     }
   }
@@ -63,6 +63,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
     }
     const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
+    // Set multi-threading
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int) thread_pool->NumThreads() / 2;
@@ -80,6 +81,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
         nreps);
 
+    // Apply gate
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
         work(t, w, state, gate, tk);
@@ -94,16 +96,12 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
         thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else {
-      std::map<int64, int64> masks;
+      std::vector<int64> controls_vec(ncontrols);
       for (int i = 0; i < ncontrols; i++) {
-        const int control = controls[i];
-        const int64 ck = (int64) 1 << (nqubits - control - 1);
-        const int64 mask = (int64) (((int64) 1 << control) - 1) << (nqubits - control - 1);
-        masks.emplace(ck, mask);
+        controls_vec[i] = nqubits - controls[i] - 1;
       }
-
       auto DoWork = [&](int64 t, int64 w) {
-        multicontrol_work(t, w, state, gate, tk, tk_reduced, m);
+        multicontrol_work(t, w, state, gate, tk, tk_reduced, controls_vec);
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
