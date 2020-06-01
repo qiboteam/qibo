@@ -202,9 +202,9 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
 
     target0, target1 = targets
     for q in controls:
-        if q < target0:
+        if q < targets[0]:
             target0 -= 1
-        if q < target1:
+        if q < targets[1]:
             target1 -= 1
 
     target_state = state.numpy().reshape(nqubits * (2,))

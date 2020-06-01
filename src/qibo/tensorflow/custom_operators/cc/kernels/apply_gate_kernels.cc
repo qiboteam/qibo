@@ -171,8 +171,10 @@ struct ApplySwapFunctor<CPUDevice, T> {
                   const int32* controls, const T* gate = NULL) {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
-    const int64 tk1 = (int64) 1 << (nqubits - t1 - 1);
-    const int64 tk2 = (int64) 1 << (nqubits - t2 - 1);
+    int m1 = nqubits - t1 - 1;
+    int m2 = nqubits - t2 - 1;
+    const int64 tk1 = (int64) 1 << m1;
+    const int64 tk2 = (int64) 1 << m2;
     const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
     auto thread_pool =
@@ -190,82 +192,56 @@ struct ApplySwapFunctor<CPUDevice, T> {
         nreps);
 
     if (ncontrols == 0) {
-      const int64 mask1 = (int64) (((int64) 1 << (t1 - 1)) - 1) << (nqubits - t1 - 1);
-      const int64 mask2 = (int64) (((int64) 1 << t2) - 1) << (nqubits - t2 - 1);
-
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((g & mask1) << 1) + (g & (tk1 - 1));
-          i = ((i & mask2) << 1) + (i & (tk2 - 1));
+          int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+          i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
           std::swap(state[i + tk1], state[i + tk2]);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
     else {
-      int t1_eff = t1;
-      int t2_eff = t2;
+      std::vector<int> qubits(ncontrols + 2);
+      int q = 0;
       for (int i = 0; i < ncontrols; i++) {
-        if (controls[i] < t1) {
-          t1_eff--;
+        if (q == 0 && controls[i] < t1) {
+          qubits[i + q] = m1;
+          q++;
         }
-        if (controls[i] < t2) {
-          t2_eff--;
+        if (q == 1 && controls[i] < t2) {
+          qubits[i + q] = m2;
+          q++;
         }
+        qubits[i + q] = nqubits - controls[i] - 1;
+      }
+      if (q == 0) {
+        qubits[ncontrols] = m1;
+        qubits[ncontrols + 1] = m2;
+      }
+      else if (q == 1) {
+        qubits[ncontrols + 1] = m2;
       }
 
-      const int exp1_ = nqubits - ncontrols - t1_eff - 1;
-      const int exp2_ = nqubits - ncontrols - t2_eff - 1;
-      int64 tk1_eff = (int64) 1 << exp1_;
-      int64 tk2_eff = tk2_eff = (int64) 1 << (nqubits - ncontrols - t1_eff - 1);
-      const int64 mask1 = (int64) (((int64) 1 << (t1_eff - 1)) - 1) << exp1_;
-      const int64 mask2 = (int64) (((int64) 1 << t2_eff) - 1) << exp2_;
-
-      std::map<int64, int64> control_masks;
-      for (int i = 0; i < ncontrols; i++) {
-        const int exp_ = nqubits - controls[i] - 1;
-        const int ceff_ = controls[i] - ncontrols + i + 1;
-
-        std::cout << i << ", " << controls[i] << ", " << ceff_ << std::endl;
-
-        const int64 ck = (int64) 1 << exp_;
-        const int64 mask = (int64) (((int64) 1 << ceff_) - 1) << exp_;
-        control_masks.emplace(ck, mask);
+      for (int i = 0; i < ncontrols + 2; i++) {
+        std::cout << qubits[i] << ", ";
       }
+      std::cout << std::endl;
 
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
-          i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
-          for (auto const& m : control_masks) {
-            i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
-          }
-          std::swap(state[i + tk1], state[i + tk2]);
-        }
-      };
+      auto DoWork = [&](int64 t, int64 w) {};
       //thread_pool->ParallelFor(nstates, p, DoWork);
+
       for (auto g = 0; g < nstates; g += 1) {
-        int64 i = ((g & mask1) << 1) + (g & (tk1_eff - 1));
-
-        std::cout << "g = " << g << std::endl;
-
-        std::cout << "mask1 = " << mask1 << std::endl;
-        std::cout << "Term1 = " << (g & mask1) << std::endl;
-        std::cout << "tk1_eff - 1 = " << (tk1_eff - 1) << std::endl;
-        std::cout << "Term2 = " << (g & (tk1_eff - 1)) << std::endl;
-
-        std::cout << "i = " << i << std::endl;
-
-        i = ((i & mask2) << 1) + (i & (tk2_eff - 1));
-        for (auto const& m : control_masks) {
-          i = ((i & m.second) << 1) + (i & (m.first - 1)) + m.first;
+        int64 i = g;
+        for (auto const& m : qubits) {
+          std::cout << "m = " << m << std::endl;
+          int64 k = (int64) 1 << m;
+          i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
         }
         std::cout << "i = " << i << std::endl;
-
-        std::cout << "i1 = " << i + tk1 << std::endl;
-        std::cout << "i2 = " << i + tk2 << std::endl;
-
-        std::swap(state[i + tk1], state[i + tk2]);
+        std::cout << "i1 = " << i - tk2 << std::endl;
+        std::cout << "i2 = " << i - tk1 << std::endl;
+        std::swap(state[i - tk2], state[i - tk1]);
       }
     }
   }
