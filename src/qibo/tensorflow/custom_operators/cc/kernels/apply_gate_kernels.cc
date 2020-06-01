@@ -269,22 +269,6 @@ struct ApplyFsimFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
     const int64 i2 = i + tk2;
     const int64 i3 = i1 + tk2;
     const auto buffer = state[i1];
-
-    /*
-    std::cout << std::endl;
-    std::cout << "Gate0 " << gate[0] << std::endl;
-    std::cout << "Gate1 " << gate[1] << std::endl;
-    std::cout << "Gate2 " << gate[2] << std::endl;
-    std::cout << "Gate3 " << gate[3] << std::endl;
-    std::cout << "Gate4 " << gate[4] << std::endl;
-    std::cout << std::endl;*/
-    std::cout << std::endl;
-    std::cout << "i " << i << std::endl;
-    std::cout << "i1 " << i1 << std::endl;
-    std::cout << "i2 " << i2 << std::endl;
-    std::cout << "i3 " << i3 << std::endl;
-    std::cout << std::endl;
-
     state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
     state[i2] = gate[2] * buffer + gate[3] * state[i2];
     state[i3] = gate[4] * state[i3];
@@ -297,12 +281,6 @@ template <typename T>
 struct ApplySwapFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
   inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
                     const T* gate = NULL) const {
-    std::cout << std::endl;
-    std::cout << "i " << i << std::endl;
-    std::cout << "i1 " << i + tk1 << std::endl;
-    std::cout << "i2 " << i + tk2 << std::endl;
-    std::cout << std::endl;
-
     std::swap(state[i + tk1], state[i + tk2]);
   }
 };
