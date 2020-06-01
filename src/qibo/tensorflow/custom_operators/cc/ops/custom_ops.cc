@@ -44,10 +44,7 @@ REGISTER_OP("InitialState")
       .Attr("target1: int")                                                   \
       .Attr("target2: int")                                                   \
       .Output("out: T")                                                       \
-      .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {    \
-        c->set_output(0, c->input(0));                                        \
-        return Status::OK();                                                  \
-      });
+      .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 // Register two-qubit gate op without gate matrix
 #define REGISTER_GATE2_NOMATRIX_OP(NAME)                                      \
@@ -59,10 +56,7 @@ REGISTER_OP("InitialState")
       .Attr("target1: int")                                                   \
       .Attr("target2: int")                                                   \
       .Output("out: T")                                                       \
-      .SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {    \
-        c->set_output(0, c->input(0));                                        \
-        return Status::OK();                                                  \
-      });
+      .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 REGISTER_GATE1_OP("ApplyGate")
 REGISTER_GATE1_OP("ApplyZPow")
