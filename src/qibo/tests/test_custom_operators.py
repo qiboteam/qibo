@@ -173,17 +173,16 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(("nqubits", "targets", "controls",
                           "compile", "einsum_str"),
                          [(3, [0, 1], [], False, "abc,ABab->ABc"),
                           (4, [0, 2], [], True, "abcd,ACac->AbCd"),
                           (3, [0, 1], [2], False, "ab,ABab->AB"),
-                          (4, [0, 3], [1], True, "abc,ACac->AbC")])
-                          #(4, [2, 3], [0], False, "abc,BCbc->aBC"),
-                          #(5, 4, 1, [2], False, "abcd,ADad->AbcD"),
-                          #(6, 1, 3, [0, 4], True, "abcd,ACac->AbCd"),
-                          #(6, 0, 5, [1, 2, 3], False, "abc,ACac->AbC")])
+                          (4, [0, 3], [1], True, "abc,ACac->AbC"),
+                          (4, [2, 3], [0], False, "abc,BCbc->aBC"),
+                          (5, [4, 1], [2], False, "abcd,BDbd->aBcD"),
+                          (6, [1, 3], [0, 4], True, "abcd,ACac->AbCd"),
+                          (6, [0, 5], [1, 2, 3], False, "abc,ACac->AbC")])
 def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
                                         compile, einsum_str):
     """Check ``op.apply_twoqubit_gate`` for random gates."""
@@ -208,7 +207,6 @@ def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
     np.testing.assert_allclose(target_state, state.numpy())
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize(("nqubits", "targets", "controls",
                           "compile", "einsum_str"),
                          [(3, [0, 1], [], False, "abc,ABab->ABc"),
@@ -217,11 +215,11 @@ def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
                           (4, [0, 1], [2], False, "abc,ABab->ABc"),
                           (5, [0, 1], [2], False, "abcd,ABab->ABcd"),
                           (5, [3, 4], [2], False, "abcd,CDcd->abCD"),
-                          (4, [0, 3], [1], False, "abc,ACac->AbC")])
-                          #(4, [2, 3], [0], True, "abc,BCbc->aBC")])
-                          #(5, 4, 1, [2], False, "abcd,ADad->AbcD"),
-                          #(6, 1, 3, [0, 4], True, "abcd,ACac->AbCd"),
-                          #(6, 0, 5, [1, 2, 3], False, "abc,ACac->AbC")])
+                          (4, [0, 3], [1], False, "abc,ACac->AbC"),
+                          (4, [2, 3], [0], True, "abc,BCbc->aBC"),
+                          (5, [1, 4], [2], False, "abcd,BDbd->aBcD"),
+                          (6, [1, 3], [0, 4], True, "abcd,ACac->AbCd"),
+                          (6, [0, 5], [1, 2, 3], False, "abc,ACac->AbC")])
 def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
     """Check ``op.apply_twoqubit_gate`` for random gates."""
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
@@ -248,38 +246,6 @@ def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
         apply_operator = tf.function(apply_operator)
 
     state = apply_operator(state)
-    np.testing.assert_allclose(target_state, state.numpy())
-
-
-@pytest.mark.skip
-@pytest.mark.parametrize(("nqubits", "targets", "controls"),
-                         [(4, [2, 3], [0])])
-def test_apply_fsim_agreement(nqubits, targets, controls):
-    """Check ``op.apply_twoqubit_gate`` for random gates."""
-    from qibo.tensorflow import gates
-    #theta = 0.1234
-    theta = np.pi / 2
-    phi = 0
-
-    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
-    rotation = tf.cast(np.array([[np.cos(theta), -1j * np.sin(theta)],
-                                 [-1j * np.sin(theta), np.cos(theta)]]),
-                       dtype=state.dtype)
-    phase = tf.cast(np.exp(-1j * phi), dtype=state.dtype)
-
-    target_state = state.numpy().reshape(nqubits * (2,))
-    native_gate = gates.fSim(*targets, theta, phi).controlled_by(*controls)
-    target_state = native_gate(target_state).numpy().ravel()
-
-    gate = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
-    state = op.apply_fsim(state, gate, nqubits, targets, controls)
-
-    print()
-    import itertools
-    confs = itertools.product([0, 1], repeat=nqubits)
-    for i, x, y in zip(confs, target_state, state.numpy()):
-        print("".join(str(e) for e in i), x - y)
-
     np.testing.assert_allclose(target_state, state.numpy())
 
 
