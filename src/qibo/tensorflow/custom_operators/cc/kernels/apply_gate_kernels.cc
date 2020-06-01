@@ -223,26 +223,17 @@ struct ApplySwapFunctor<CPUDevice, T> {
         qubits[ncontrols + 1] = m2;
       }
 
-      for (int i = 0; i < ncontrols + 2; i++) {
-        std::cout << qubits[i] << ", ";
-      }
-      std::cout << std::endl;
-
-      auto DoWork = [&](int64 t, int64 w) {};
-      //thread_pool->ParallelFor(nstates, p, DoWork);
-
-      for (auto g = 0; g < nstates; g += 1) {
-        int64 i = g;
-        for (auto const& m : qubits) {
-          std::cout << "m = " << m << std::endl;
-          int64 k = (int64) 1 << m;
-          i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
+      auto DoWork = [&](int64 t, int64 w) {
+        for (auto g = t; g < w; g += 1) {
+          int64 i = g;
+          for (auto const& m : qubits) {
+            int64 k = (int64) 1 << m;
+            i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
+          }
+          std::swap(state[i - tk2], state[i - tk1]);
         }
-        std::cout << "i = " << i << std::endl;
-        std::cout << "i1 = " << i - tk2 << std::endl;
-        std::cout << "i2 = " << i - tk1 << std::endl;
-        std::swap(state[i - tk2], state[i - tk1]);
-      }
+      };
+      thread_pool->ParallelFor(nstates, p, DoWork);
     }
   }
 };
