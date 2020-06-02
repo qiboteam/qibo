@@ -29,7 +29,6 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
-    _GATE_MODULE = gates
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -123,6 +122,17 @@ class BaseCircuit(object):
         raise TypeError("Type {} of noise map is not recognized."
                         "".format(type(noise_map)))
 
+    @property
+    def gate_module(self):
+        """Returns the module of the gates contained in the circuit queue."""
+        if self.queue:
+            import importlib
+            module_str = self.queue[0].__module__
+            module = importlib.import_module(module_str)
+        else:
+            from qibo import gates as module
+        return module
+
     def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
@@ -181,14 +191,14 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, self._GATE_MODULE.NoiseChannel):
+            if isinstance(gate, self.gate_module.NoiseChannel):
                 raise ValueError("`.with_noise` method is not available for "
                                  "circuits that already contain noise channels.")
-            noise_gates.append([self._GATE_MODULE.NoiseChannel(q, *list(p))
+            noise_gates.append([self.gate_module.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
         if measurement_noise is not None:
-            noise_gates[-1] = [self._GATE_MODULE.NoiseChannel(q, *list(p))
+            noise_gates[-1] = [self.gate_module.NoiseChannel(q, *list(p))
                                for q, p in measurement_noise.items()
                                if sum(p) > 0]
 
@@ -451,7 +461,7 @@ class BaseCircuit(object):
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
         for gate_name, qubits, param in gate_list:
-            gate = getattr(cls._GATE_MODULE, gate_name)
+            gate = getattr(circuit.gate_module, gate_name)
             if gate_name == "M":
                 circuit.add(gate(*qubits, register_name=param))
             elif param is None:

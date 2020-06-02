@@ -1,6 +1,9 @@
 import numpy as np
 import pytest
-from qibo import gates, models, callbacks
+from qibo import models, callbacks
+from qibo.tensorflow import gates
+# import Tensorflow gates temporarily because density matrices are not
+# supported by custom gate kernels.
 
 _EINSUM_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
 _atol = 1e-8
@@ -276,6 +279,162 @@ def test_controlled_by_channel():
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
         gate = gates.GeneralChannel(config).controlled_by(1)
+
+
+def test_circuit_with_noise_gates():
+    """Check that ``circuit.with_noise()`` adds the proper noise channels."""
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+
+    assert noisy_c.depth == 9
+    for i in [1, 2, 4, 5, 7, 8]:
+        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
+
+
+def test_circuit_with_noise_execution():
+    """Check ``circuit.with_noise()`` execution."""
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    noisy_c = c.with_noise((0.1, 0.2, 0.3))
+
+    target_c = models.Circuit(2)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_with_measurements():
+    """Check ``circuit.with_noise() when using measurement noise."""
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    c.add(gates.M(0))
+    noisy_c = c.with_noise(3 * (0.1,), measurement_noise = (0.3, 0.0, 0.0))
+
+    target_c = models.Circuit(2)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.3, 0.0, 0.0))
+    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_noise_map():
+    """Check ``circuit.with_noise() when giving noise map."""
+    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
+                 2: (0.0, 0.0, 0.0)}
+
+    c = models.Circuit(3)
+    c.add([gates.H(0), gates.H(1), gates.X(2)])
+    c.add(gates.M(2))
+    noisy_c = c.with_noise(noise_map, measurement_noise = (0.3, 0.0, 0.0))
+
+    target_c = models.Circuit(3)
+    target_c.add(gates.H(0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.H(1))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.X(2))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.NoiseChannel(2, 0.3, 0.0, 0.0))
+
+    final_state = noisy_c().numpy()
+    target_state = target_c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_circuit_with_noise_noise_map_exceptions():
+    """Check that proper exceptions are raised when noise map is invalid."""
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3))
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
+    with pytest.raises(TypeError):
+        noisy_c = c.with_noise({0, 1})
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.1),
+                               measurement_noise=(0.5, 0.0, 0.0))
+
+
+def test_circuit_with_noise_exception():
+    """Check that calling ``with_noise`` in a noisy circuit raises error."""
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
+    with pytest.raises(ValueError):
+        noisy_c = c.with_noise((0.2, 0.3, 0.0))
+
+
+def test_density_matrix_measurement():
+    from qibo.tests.test_measurements import assert_results
+    """Check measurement gate on density matrices."""
+    state = np.zeros(4)
+    state[2] = 1
+    rho = np.outer(state, state.conj())
+    result = gates.M(0, 1)(rho, nshots=100, is_density_matrix=True)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_results(result,
+                   decimal_samples=2 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={2: 100},
+                   binary_frequencies={"10": 100})
+
+
+@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
+def test_density_matrix_circuit_measurement(einsum_choice):
+    """Check measurement gate on density matrices using circuit."""
+    from qibo.tests.test_measurements import assert_results
+    from qibo.tests.test_measurements import assert_register_results
+    state = np.zeros(16)
+    state[0] = 1
+    init_rho = np.outer(state, state.conj())
+
+    c = models.Circuit(4)
+    c.add(gates.X(1).with_backend(einsum_choice))
+    c.add(gates.X(3).with_backend(einsum_choice))
+    c.add(gates.M(0, 1, register_name="A"))
+    c.add(gates.M(3, 2, register_name="B"))
+    result = c(init_rho, nshots=100)
+
+    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples[:, 1] = 1
+    target_binary_samples[:, 2] = 1
+    assert_results(result,
+                   decimal_samples=6 * np.ones((100,)),
+                   binary_samples=target_binary_samples,
+                   decimal_frequencies={6: 100},
+                   binary_frequencies={"0110": 100})
+
+    target = {}
+    target["decimal_samples"] = {"A": np.ones((100,)),
+                                 "B": 2 * np.ones((100,))}
+    target["binary_samples"] = {"A": np.zeros((100, 2)),
+                                "B": np.zeros((100, 2))}
+    target["binary_samples"]["A"][:, 1] = 1
+    target["binary_samples"]["B"][:, 0] = 1
+    target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
+    target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
+    assert_register_results(result, **target)
 
 
 def test_entanglement_entropy():

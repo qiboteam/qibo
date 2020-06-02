@@ -1,15 +1,19 @@
 """
-Testing tensorflow backend.
+Testing tensorflow circuit and gates.
 """
 import numpy as np
 import pytest
 from qibo.models import Circuit
-from qibo import gates
+from qibo.tensorflow import cgates as custom_gates
+from qibo.tensorflow import gates as native_gates
 
-_EINSUM_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
+_GATES = [custom_gates, native_gates]
+_BACKENDS = [(custom_gates, None), (native_gates, "DefaultEinsum"),
+             (native_gates, "MatmulEinsum")]
 
 
-def test_circuit_addition_result():
+@pytest.mark.parametrize("gates", _GATES)
+def test_circuit_addition_result(gates):
     """Check if circuit addition works properly on Tensorflow circuit."""
     c1 = Circuit(2)
     c1.add(gates.H(0))
@@ -28,18 +32,19 @@ def test_circuit_addition_result():
     np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_hadamard(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_hadamard(gates, backend):
     """Check Hadamard gate is working properly."""
     c = Circuit(2)
-    c.add(gates.H(0).with_backend(einsum_choice))
-    c.add(gates.H(1).with_backend(einsum_choice))
+    c.add(gates.H(0).with_backend(backend))
+    c.add(gates.H(1).with_backend(backend))
     final_state = c.execute().numpy()
     target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_flatten():
+@pytest.mark.parametrize("gates", _GATES)
+def test_flatten(gates):
     """Check ``Flatten`` gate works in circuits ."""
     target_state = np.ones(4) / 2.0
     c = Circuit(2)
@@ -48,7 +53,8 @@ def test_flatten():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_xgate():
+@pytest.mark.parametrize("gates", _GATES)
+def test_xgate(gates):
     """Check X gate is working properly."""
     c = Circuit(2)
     c.add(gates.X(0))
@@ -58,16 +64,67 @@ def test_xgate():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_multicontrol_xgate(einsum_choice):
+@pytest.mark.parametrize("gates", _GATES)
+def test_ygate(gates):
+    """Check Y gate is working properly."""
+    c = Circuit(2)
+    c.add(gates.Y(1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = 1j
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+def test_zgate(gates):
+    """Check Z gate is working properly."""
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.Z(0))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 2.0
+    target_state[2] *= -1.0
+    target_state[3] *= -1.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_multicontrol_xgate(gates, backend):
+    """Check that fallback method for X works for one or two controls."""
+    c1 = Circuit(3)
+    c1.add(gates.X(0).with_backend(backend))
+    c1.add(gates.X(2).with_backend(backend).controlled_by(0))
+    final_state = c1.execute().numpy()
+    c2 = Circuit(3)
+    c2.add(gates.X(0))
+    c2.add(gates.CNOT(0, 2))
+    target_state = c2.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+    c1 = Circuit(3)
+    c1.add(gates.X(0).with_backend(backend))
+    c1.add(gates.X(2).with_backend(backend))
+    c1.add(gates.X(1).with_backend(backend).controlled_by(0, 2))
+    final_state = c1.execute().numpy()
+    c2 = Circuit(3)
+    c2.add(gates.X(0))
+    c2.add(gates.X(2))
+    c2.add(gates.TOFFOLI(0, 2, 1))
+    target_state = c2.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_multicontrol_xgate(gates, backend):
     """Check that fallback method for X works for more than two controls."""
     c = Circuit(4)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.X(1).with_backend(einsum_choice))
-    c.add(gates.X(2).with_backend(einsum_choice))
-    c.add(gates.X(3).with_backend(einsum_choice).controlled_by(0, 1, 2))
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.X(2).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(1).with_backend(backend))
+    c.add(gates.X(2).with_backend(backend))
+    c.add(gates.X(3).with_backend(backend).controlled_by(0, 1, 2))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(2).with_backend(backend))
     final_state = c.execute().numpy()
 
     c = Circuit(4)
@@ -78,7 +135,8 @@ def test_multicontrol_xgate(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_rz_phase0():
+@pytest.mark.parametrize("gates", _GATES)
+def test_rz_phase0(gates):
     """Check RZ gate is working properly when qubit is on |0>."""
     theta = 0.1234
 
@@ -91,14 +149,14 @@ def test_rz_phase0():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_rz_phase1(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_rz_phase1(gates, backend):
     """Check RZ gate is working properly when qubit is on |1>."""
     theta = 0.1234
 
     c = Circuit(2)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.RZ(0, theta).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.RZ(0, theta).with_backend(backend))
     final_state = c.execute().numpy()
 
     target_state = np.zeros_like(final_state)
@@ -106,14 +164,14 @@ def test_rz_phase1(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_rx(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_rx(gates, backend):
     """Check RX gate is working properly."""
     theta = 0.1234
 
     c = Circuit(1)
-    c.add(gates.H(0).with_backend(einsum_choice))
-    c.add(gates.RX(0, theta=theta).with_backend(einsum_choice))
+    c.add(gates.H(0).with_backend(backend))
+    c.add(gates.RX(0, theta=theta).with_backend(backend))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * theta / 2.0)
@@ -123,7 +181,8 @@ def test_rx(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_ry():
+@pytest.mark.parametrize("gates", _GATES)
+def test_ry(gates):
     """Check RY gate is working properly."""
     theta = 0.1234
 
@@ -139,7 +198,8 @@ def test_ry():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_cnot_no_effect():
+@pytest.mark.parametrize("gates", _GATES)
+def test_cnot_no_effect(gates):
     """Check CNOT gate is working properly on |00>."""
     c = Circuit(2)
     c.add(gates.CNOT(0, 1))
@@ -149,27 +209,27 @@ def test_cnot_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_cnot(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_cnot(gates, backend):
     """Check CNOT gate is working properly on |10>."""
     c = Circuit(2)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.CNOT(0, 1).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.CNOT(0, 1).with_backend(backend))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_czpow(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_czpow(gates, backend):
     """Check CZPow gate is working properly on |11>."""
     theta = 0.1234
 
     c = Circuit(2)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.X(1).with_backend(einsum_choice))
-    c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(1).with_backend(backend))
+    c.add(gates.CZPow(0, 1, theta).with_backend(backend))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * theta)
@@ -178,7 +238,8 @@ def test_czpow(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_doubly_controlled_by_rx_no_effect():
+@pytest.mark.parametrize("gates", _GATES)
+def test_doubly_controlled_by_rx_no_effect(gates):
     theta = 0.1234
 
     c = Circuit(3)
@@ -193,7 +254,8 @@ def test_doubly_controlled_by_rx_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_doubly_controlled_by_rx():
+@pytest.mark.parametrize("gates", _GATES)
+def test_doubly_controlled_by_rx(gates):
     theta = 0.1234
 
     c = Circuit(3)
@@ -211,7 +273,8 @@ def test_doubly_controlled_by_rx():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_swap():
+@pytest.mark.parametrize("gates", _GATES)
+def test_swap(gates):
     """Check SWAP gate is working properly on |01>."""
     c = Circuit(2)
     c.add(gates.X(1))
@@ -222,14 +285,14 @@ def test_swap():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_multiple_swap(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_multiple_swap(gates, backend):
     """Check SWAP gate is working properly when called multiple times."""
     c = Circuit(4)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.X(2).with_backend(einsum_choice))
-    c.add(gates.SWAP(0, 1).with_backend(einsum_choice))
-    c.add(gates.SWAP(2, 3).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(2).with_backend(backend))
+    c.add(gates.SWAP(0, 1).with_backend(backend))
+    c.add(gates.SWAP(2, 3).with_backend(backend))
     final_state = c.execute().numpy()
 
     c = Circuit(4)
@@ -240,52 +303,99 @@ def test_multiple_swap(einsum_choice):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_controlled_by_swap(einsum_choice):
-    """Check controlled SWAP using controlled by."""
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_controlled_by_swap_small(gates, backend):
+    """Check controlled SWAP using controlled by for ``nqubits=3``."""
     c = Circuit(3)
-    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(einsum_choice))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(backend))
     final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    c = Circuit(3)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(3)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(einsum_choice))
-    c.add(gates.X(0).with_backend(einsum_choice))
+    c.add(gates.X(0))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(backend))
+    c.add(gates.X(0))
     final_state = c.execute().numpy()
     c = Circuit(3)
-    c.add(gates.SWAP(1, 2))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    c.add(gates.SWAP(1, 2).with_backend(backend))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_doubly_controlled_by_swap():
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_controlled_by_swap(gates, backend):
+    """Check controlled SWAP using controlled by for ``nqubits=4``."""
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).controlled_by(0).with_backend(backend))
+    final_state = c.execute().numpy()
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).controlled_by(0).with_backend(backend))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).with_backend(backend))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+def test_doubly_controlled_by_swap(gates):
     """Check controlled SWAP using controlled by two qubits."""
     c = Circuit(4)
     c.add(gates.X(0))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
     final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    c = Circuit(4)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(4)
     c.add(gates.X(0))
     c.add(gates.X(3))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
     c.add(gates.X(3))
     final_state = c.execute().numpy()
     c = Circuit(4)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_toffoli_no_effect():
+@pytest.mark.parametrize("gates", _GATES)
+def test_toffoli_no_effect(gates):
     """Check Toffoli gate is working properly on |010>."""
     c = Circuit(3)
     c.add(gates.X(1))
@@ -296,20 +406,21 @@ def test_toffoli_no_effect():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_toffoli(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_toffoli(gates, backend):
     """Check Toffoli gate is working properly on |110>."""
     c = Circuit(3)
-    c.add(gates.X(0).with_backend(einsum_choice))
-    c.add(gates.X(1).with_backend(einsum_choice))
-    c.add(gates.TOFFOLI(0, 1, 2).with_backend(einsum_choice))
+    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(1).with_backend(backend))
+    c.add(gates.TOFFOLI(0, 1, 2).with_backend(backend))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_unitary_common_gates():
+@pytest.mark.parametrize("gates", _GATES)
+def test_unitary_common_gates(gates):
     """Check that `Unitary` gate can create common gates."""
     c = Circuit(2)
     c.add(gates.X(0))
@@ -324,23 +435,24 @@ def test_unitary_common_gates():
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_unitary_random_gate(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_unitary_random_gate(gates, backend):
     """Check that `Unitary` gate can apply random matrices."""
     init_state = np.ones(4) / 2.0
-    matrix = np.random.random([4, 4])
-    target_state = matrix.dot(init_state)
+    matrix = np.random.random([2, 2])
+    target_state = np.kron(np.eye(2), matrix).dot(init_state)
 
     c = Circuit(2)
-    c.add(gates.H(0).with_backend(einsum_choice))
-    c.add(gates.H(1).with_backend(einsum_choice))
-    c.add(gates.Unitary(matrix, 0, 1, name="random").with_backend(einsum_choice))
+    c.add(gates.H(0).with_backend(backend))
+    c.add(gates.H(1).with_backend(backend))
+    c.add(gates.Unitary(matrix, 1, name="random").with_backend(backend))
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_unitary_controlled_by():
+@pytest.mark.parametrize("gates", _GATES)
+def test_unitary_controlled_by(gates):
     """Check that `controlled_by` works as expected with `Unitary`."""
     matrix = np.random.random([2, 2])
 
@@ -365,14 +477,17 @@ def test_unitary_controlled_by():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_unitary_bad_shape():
+@pytest.mark.parametrize("gates", _GATES)
+def test_unitary_bad_shape(gates):
     matrix = np.random.random((8, 8))
     with pytest.raises(ValueError):
         gate = gates.Unitary(matrix, (0, 1))
 
 
-def test_custom_circuit():
+@pytest.mark.parametrize("gates", _GATES)
+def test_custom_circuit(gates):
     """Check consistency between Circuit and custom circuits"""
+    import tensorflow as tf
     theta = 0.1234
 
     c = Circuit(2)
@@ -388,24 +503,32 @@ def test_custom_circuit():
         o = gates.CZPow(0, 1, theta)(l2)
         return o
 
-    init = c._default_initial_state()
-    r2 = custom_circuit(init, theta).numpy().ravel()
+    init2 = c._default_initial_state()
+    init3 = c._default_initial_state()
+    if gates == native_gates:
+        init2 = tf.reshape(init2, (2, 2))
+        init3 = tf.reshape(init3, (2, 2))
+
+    r2 = custom_circuit(init2, theta).numpy().ravel()
     np.testing.assert_allclose(r1, r2)
 
-    import tensorflow as tf
     tf_custom_circuit = tf.function(custom_circuit)
-    r3 = tf_custom_circuit(init, theta).numpy().ravel()
-    np.testing.assert_allclose(r2, r3)
+    if gates == native_gates:
+        r3 = tf_custom_circuit(init3, theta).numpy().ravel()
+        np.testing.assert_allclose(r2, r3)
+    elif gates == custom_gates:
+        with pytest.raises(NotImplementedError):
+            r3 = tf_custom_circuit(init3, theta).numpy().ravel()
 
 
-@pytest.mark.parametrize("einsum_choice", _EINSUM_BACKENDS)
-def test_compiled_circuit(einsum_choice):
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_compiled_circuit(gates, backend):
     """Check that compiling with `Circuit.compile` does not break results."""
     def create_circuit(theta = 0.1234):
         c = Circuit(2)
-        c.add(gates.X(0).with_backend(einsum_choice))
-        c.add(gates.X(1).with_backend(einsum_choice))
-        c.add(gates.CZPow(0, 1, theta).with_backend(einsum_choice))
+        c.add(gates.X(0).with_backend(backend))
+        c.add(gates.X(1).with_backend(backend))
+        c.add(gates.CZPow(0, 1, theta).with_backend(backend))
         return c
 
     # Run eager circuit
@@ -414,13 +537,17 @@ def test_compiled_circuit(einsum_choice):
 
     # Run compiled circuit
     c2 = create_circuit()
-    c2.compile()
-    r2 = c2.execute().numpy()
+    if backend is None:
+        with pytest.raises(RuntimeError):
+            c2.compile()
+    else:
+        c2.compile()
+        r2 = c2.execute().numpy()
+        np.testing.assert_allclose(r1, r2)
 
-    np.testing.assert_allclose(r1, r2)
 
-
-def test_compiling_twice_exception():
+@pytest.mark.parametrize("gates", [native_gates])
+def test_compiling_twice_exception(gates):
     """Check that compiling a circuit a second time raises error."""
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
@@ -429,7 +556,8 @@ def test_compiling_twice_exception():
         c.compile()
 
 
-def test_circuit_custom_compilation():
+@pytest.mark.parametrize("gates", _GATES)
+def test_circuit_custom_compilation(gates):
     theta = 0.1234
     init_state = np.ones(4) / 2.0
 
@@ -448,13 +576,17 @@ def test_circuit_custom_compilation():
 
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
-    init_state = tf.cast(init_state.reshape((2, 2)), dtype=c.dtype)
-    r2 = compiled_circuit(init_state)
 
-    np.testing.assert_allclose(r1, r2)
+    if gates == native_gates:
+        r2 = compiled_circuit(init_state)
+        np.testing.assert_allclose(r1, r2)
+    elif gates == custom_gates:
+        with pytest.raises(NotImplementedError):
+            r2 = compiled_circuit(init_state)
 
 
-def test_bad_initial_state():
+@pytest.mark.parametrize("gates", _GATES)
+def test_bad_initial_state(gates):
     """Check that errors are raised when bad initial state is passed."""
     import tensorflow as tf
     from qibo.config import DTYPECPX
@@ -467,14 +599,11 @@ def test_bad_initial_state():
     with pytest.raises(ValueError):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
     with pytest.raises(TypeError):
-        final_state = c(initial_state=tf.zeros((2, 2), dtype=tf.float32))
-    with pytest.raises(ValueError):
-        final_state = c(initial_state=tf.zeros(4, dtype=DTYPECPX))
-    with pytest.raises(TypeError):
         final_state = c(initial_state=0)
 
 
-def test_final_state_property():
+@pytest.mark.parametrize("gates", _GATES)
+def test_final_state_property(gates):
     """Check accessing final state using the circuit's property."""
     import tensorflow as tf
     from qibo.config import DTYPECPX
@@ -490,7 +619,8 @@ def test_final_state_property():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variable_theta():
+@pytest.mark.parametrize("gates", _GATES)
+def test_variable_theta(gates):
     """Check that parametrized gates accept `tf.Variable` parameters."""
     import tensorflow as tf
     from qibo.config import DTYPE
@@ -510,54 +640,8 @@ def test_variable_theta():
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variable_backpropagation():
-    """Check that backpropagation works when using `tf.Variable` parameters."""
-    import tensorflow as tf
-    from qibo.config import DTYPE
-    theta = tf.Variable(0.1234, dtype=DTYPE)
-
-    # TODO: Fix parametrized gates so that `Circuit` can be defined outside
-    # of the gradient tape
-    with tf.GradientTape() as tape:
-        c = Circuit(1)
-        c.add(gates.X(0))
-        c.add(gates.RZ(0, theta).with_backend("MatmulEinsum"))
-        loss = tf.math.real(c()[-1])
-    grad = tape.gradient(loss, theta)
-
-    target_loss = np.cos(theta.numpy() / 2.0)
-    np.testing.assert_allclose(loss.numpy(), target_loss)
-
-    target_grad = - np.sin(theta.numpy() / 2.0) / 2.0
-    np.testing.assert_allclose(grad.numpy(), target_grad)
-
-
-def test_two_variables_backpropagation():
-    """Check that backpropagation works when using `tf.Variable` parameters."""
-    import tensorflow as tf
-    from qibo.config import DTYPE
-    theta = tf.Variable([0.1234, 0.4321], dtype=DTYPE)
-
-    # TODO: Fix parametrized gates so that `Circuit` can be defined outside
-    # of the gradient tape
-    with tf.GradientTape() as tape:
-        c = Circuit(2)
-        c.add(gates.RX(0, theta[0]).with_backend("MatmulEinsum"))
-        c.add(gates.RY(1, theta[1]).with_backend("MatmulEinsum"))
-        loss = tf.math.real(c()[0])
-    grad = tape.gradient(loss, theta)
-
-    t = np.array([0.1234, 0.4321]) / 2.0
-    target_loss = np.cos(t[0]) * np.cos(t[1])
-    np.testing.assert_allclose(loss.numpy(), target_loss)
-
-    target_grad1 = - np.sin(t[0]) * np.cos(t[1])
-    target_grad2 = - np.cos(t[0]) * np.sin(t[1])
-    target_grad = np.array([target_grad1, target_grad2]) / 2.0
-    np.testing.assert_allclose(grad.numpy(), target_grad)
-
-
-def test_circuit_copy():
+@pytest.mark.parametrize("gates", _GATES)
+def test_circuit_copy(gates):
     """Check that circuit copy execution is equivalent to original circuit."""
     theta = 0.1234
 
@@ -569,105 +653,3 @@ def test_circuit_copy():
     final_state = c2.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
-
-
-def test_circuit_with_noise_gates():
-    """Check that ``circuit.with_noise()`` adds the proper noise channels."""
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-    noisy_c = c.with_noise((0.1, 0.2, 0.3))
-
-    assert noisy_c.depth == 9
-    for i in [1, 2, 4, 5, 7, 8]:
-        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
-
-
-def test_circuit_with_noise_execution():
-    """Check ``circuit.with_noise()`` execution."""
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    noisy_c = c.with_noise((0.1, 0.2, 0.3))
-
-    target_c = Circuit(2)
-    target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
-    target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
-
-    final_state = noisy_c().numpy()
-    target_state = target_c().numpy()
-    np.testing.assert_allclose(target_state, final_state)
-
-
-def test_circuit_with_noise_with_measurements():
-    """Check ``circuit.with_noise() when using measurement noise."""
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.M(0))
-    noisy_c = c.with_noise(3 * (0.1,), measurement_noise = (0.3, 0.0, 0.0))
-
-    target_c = Circuit(2)
-    target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
-    target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(0, 0.3, 0.0, 0.0))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
-
-    final_state = noisy_c().numpy()
-    target_state = target_c().numpy()
-    np.testing.assert_allclose(target_state, final_state)
-
-
-def test_circuit_with_noise_noise_map():
-    """Check ``circuit.with_noise() when giving noise map."""
-    noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
-                 2: (0.0, 0.0, 0.0)}
-
-    c = Circuit(3)
-    c.add([gates.H(0), gates.H(1), gates.X(2)])
-    c.add(gates.M(2))
-    noisy_c = c.with_noise(noise_map, measurement_noise = (0.3, 0.0, 0.0))
-
-    target_c = Circuit(3)
-    target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
-    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
-    target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
-    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
-    target_c.add(gates.X(2))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
-    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
-    target_c.add(gates.NoiseChannel(2, 0.3, 0.0, 0.0))
-
-    final_state = noisy_c().numpy()
-    target_state = target_c().numpy()
-    np.testing.assert_allclose(target_state, final_state)
-
-
-def test_circuit_with_noise_noise_map_exceptions():
-    """Check that proper exceptions are raised when noise map is invalid."""
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3))
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1), 1: (0.3, 0.1)})
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
-    with pytest.raises(TypeError):
-        noisy_c = c.with_noise({0, 1})
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3, 0.1),
-                               measurement_noise=(0.5, 0.0, 0.0))
-
-
-def test_circuit_with_noise_exception():
-    """Check that calling ``with_noise`` in a noisy circuit raises error."""
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3, 0.0))
