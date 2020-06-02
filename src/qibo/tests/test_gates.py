@@ -116,7 +116,7 @@ def test_multicontrol_xgate(gates, backend):
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-def test_multicontrol_xgate(gates, backend):
+def test_multicontrol_xgate_more_controls(gates, backend):
     """Check that fallback method for X works for more than two controls."""
     c = Circuit(4)
     c.add(gates.X(0).with_backend(backend))
@@ -305,7 +305,7 @@ def test_generalized_fsim(gates):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-def test_generalized_fsim(gates):
+def test_generalized_fsim_error(gates):
     """Check GenerelizedfSim gate raises error for wrong unitary shape."""
     phi = np.random.random()
     rotation = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
@@ -669,12 +669,6 @@ def test_circuit_custom_compilation(gates):
     theta = 0.1234
     init_state = np.ones(4) / 2.0
 
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CZPow(0, 1, theta))
-    r1 = c.execute(init_state).numpy()
-
     def run_circuit(initial_state):
         c = Circuit(2)
         c.add(gates.X(0))
@@ -682,9 +676,9 @@ def test_circuit_custom_compilation(gates):
         c.add(gates.CZPow(0, 1, theta))
         return c.execute(initial_state)
 
+    r1 = run_circuit(init_state).numpy()
     import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
-
     if gates == native_gates:
         r2 = compiled_circuit(init_state)
         np.testing.assert_allclose(r1, r2)
