@@ -97,8 +97,9 @@ class Gate(object):
             raise RuntimeError("Cannot use controlled_by on a gate that is "
                                "part of a Circuit or has been called on a "
                                "state.")
-        self.is_controlled_by = True
-        self.control_qubits = q
+        if q:
+            self.is_controlled_by = True
+            self.control_qubits = q
         return self
 
     def __call__(self, state):
