@@ -304,22 +304,59 @@ def test_multiple_swap(gates, backend):
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-def test_controlled_by_swap(gates, backend):
-    """Check controlled SWAP using controlled by."""
+def test_controlled_by_swap_small(gates, backend):
+    """Check controlled SWAP using controlled by for ``nqubits=3``."""
     c = Circuit(3)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(backend))
     final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    c = Circuit(3)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(3)
-    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(0))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0).with_backend(backend))
-    c.add(gates.X(0).with_backend(backend))
+    c.add(gates.X(0))
     final_state = c.execute().numpy()
     c = Circuit(3)
-    c.add(gates.SWAP(1, 2))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    c.add(gates.SWAP(1, 2).with_backend(backend))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_controlled_by_swap(gates, backend):
+    """Check controlled SWAP using controlled by for ``nqubits=4``."""
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).controlled_by(0).with_backend(backend))
+    final_state = c.execute().numpy()
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    target_state = c.execute().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4)
+    c.add(gates.X(0))
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).controlled_by(0).with_backend(backend))
+    c.add(gates.X(0))
+    final_state = c.execute().numpy()
+    c = Circuit(4)
+    c.add(gates.RX(2, theta=0.1234))
+    c.add(gates.RY(3, theta=0.4321))
+    c.add(gates.SWAP(2, 3).with_backend(backend))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
@@ -329,21 +366,29 @@ def test_doubly_controlled_by_swap(gates):
     """Check controlled SWAP using controlled by two qubits."""
     c = Circuit(4)
     c.add(gates.X(0))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
     final_state = c.execute().numpy()
-    target_state = np.zeros_like(final_state)
-    target_state[0] = 1.0
+    c = Circuit(4)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
+    target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(4)
     c.add(gates.X(0))
     c.add(gates.X(3))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
     c.add(gates.X(3))
     final_state = c.execute().numpy()
     c = Circuit(4)
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)

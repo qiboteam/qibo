@@ -53,7 +53,7 @@ struct BaseApplyGateFunctor {
                   int nqubits,    //!< Total number of qubits in the state.
                   int target,     //!< Target qubit id.
                   int ncontrols,  //!< Number of qubits that the gate is controlled on.
-                  const int32* controls,  //!< List of control qubits ids.
+                  const int32* controls,  //!< List of control qubits ids sorted in decreasing order.
                   const T* gate = NULL    //!< Gate matrix (used only by)
                  ) const;
 };
