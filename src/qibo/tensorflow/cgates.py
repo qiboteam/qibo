@@ -11,6 +11,11 @@ from typing import Optional, Sequence, Tuple
 
 class TensorflowGate:
 
+    def __init__(self):
+        if not tf.executing_eagerly():
+            raise NotImplementedError("Custom operator gates should not be "
+                                      "used in compiled mode.")
+
     def with_backend(self, backend: Optional[str] = None):
         """Used only for test compatibility with native gates.
 
@@ -33,6 +38,7 @@ class MatrixGate(TensorflowGate):
     """``TensorflowGate`` that uses matrix to be applied to states."""
 
     def __init__(self):
+        super(MatrixGate, self).__init__()
         self.matrix = None
 
     @base_gates.Gate.nqubits.setter
@@ -67,6 +73,7 @@ class X(TensorflowGate, base_gates.X):
 
     def __init__(self, q):
         base_gates.X.__init__(self, q)
+        TensorflowGate.__init__(self)
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
@@ -88,6 +95,7 @@ class Y(TensorflowGate, base_gates.Y):
 
     def __init__(self, q):
         base_gates.Y.__init__(self, q)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -99,6 +107,7 @@ class Z(TensorflowGate, base_gates.Z):
 
     def __init__(self, q):
         base_gates.Z.__init__(self, q)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -221,6 +230,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
         base_gates.CNOT.__init__(self, q0, q1)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return X.__call__(self, state, is_density_matrix)
@@ -244,6 +254,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __init__(self, q0, q1):
         base_gates.SWAP.__init__(self, q0, q1)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -291,6 +302,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state, is_density_matrix: bool = False):
         return X.__call__(self, state, is_density_matrix)
@@ -337,6 +349,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
+        TensorflowGate.__init__(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:

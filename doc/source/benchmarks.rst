@@ -32,7 +32,7 @@ the following options:
 
 * ``--nshots``: Number of measurement shots. If not given no measurements will be performed and the benchmark will terminate once the final state vector is found.
 
-* ``--compile``: If used, the circuit will be compiled using ``tf.function``.
+* ``--compile``: If used, the circuit will be compiled using ``tf.function``. Custom CPU operators do not support compilation.
 
 When a benchmark is executed, the total simulation time will be printed on the
 terminal once the simulation finishes. Optionally execution times can be saved
@@ -85,9 +85,9 @@ Gate Benchmark Results
 
 The following tables show the time required to run the ``one-qubit-gate`` or
 ``two-qubit-gate`` benchmark for various gates. Benchmarks were performed on
-CPU using single precistion (``complex64``).
+CPU using single precision (``complex64``).
 
-.. list-table:: One-qubit gate layer times (sec)
+.. list-table:: Single precision one-qubit gate layer times (sec)
    :widths: 50 20 20 20
    :header-rows: 1
 
@@ -121,7 +121,7 @@ CPU using single precistion (``complex64``).
      - 16.244
 
 
-.. list-table:: Two-qubit gate layer times (sec)
+.. list-table:: Single precision two-qubit gate layer times (sec)
    :widths: 50 20 20 20
    :header-rows: 1
 
