@@ -222,8 +222,8 @@ class CZ(TensorflowGate, base_gates.CZ):
     def __init__(self, q0, q1):
         base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
-        diag = tf.cast(tf.concat([tf.ones(3), -1], axis=0), dtype=self.dtype)
-        self.matrix = tf.linalg.diag(diag)
+        diag = tf.cast(tf.concat([tf.ones(3), [-1]], axis=0), dtype=self.dtype)
+        self.matrix = tf.reshape(tf.linalg.diag(diag), 4 * (2,))
 
 
 class CZPow(TensorflowGate, base_gates.CZPow):

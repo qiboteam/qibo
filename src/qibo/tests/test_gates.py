@@ -222,6 +222,25 @@ def test_cnot(gates, backend):
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_cz(gates, backend):
+    """Check CZ gate is working properly on random state."""
+    init_state = np.random.random(4) + 1j * np.random.random(4)
+    matrix = np.eye(4)
+    matrix[3, 3] = -1
+    target_state = matrix.dot(init_state)
+    c = Circuit(2)
+    c.add(gates.CZ(0, 1).with_backend(backend))
+    final_state = c.execute(init_state).numpy()
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(2)
+    c.add(gates.Z(1).with_backend(backend).controlled_by(0))
+    final_state = c.execute(init_state).numpy()
+    assert c.queue[0].name == "cz"
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
 def test_czpow(gates, backend):
     """Check CZPow gate is working properly on |11>."""
     theta = 0.1234
