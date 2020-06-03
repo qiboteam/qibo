@@ -468,6 +468,34 @@ class Unitary(Gate):
         self.target_qubits = tuple(q)
 
 
+class VariationalLayer(Gate):
+    """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
+
+    Args:
+        TODO
+    """
+
+    def __init__(self, q, one_qubit_gate, two_qubit_gate, thetas,
+                 two_qubit_pairs: Optional[List[Tuple[int, int]]] = None,
+                 name: Optional[str] = None):
+        super(Unitary, self).__init__()
+        self.name = "VariationalLayer" if name is None else name
+        self.target_qubits = tuple(q)
+
+        if len(thetas) != len(self.target_qubits):
+            raise ValueError("Cannot initialize variational layer with {} "
+                             "and {} variational parameters."
+                             "".format(len(self.target_qubits), len(thetas)))
+        self.thetas = thetas
+
+        self.one_qubit_gate = one_qubit_gate
+        self.two_qubit_gate = two_qubit_gate
+        if two_qubit_pairs is None:
+            self.two_qubit_pairs = [(i, i + 1) for i in sorted(self.target_qubits)[::2]]
+        else:
+            self.two_qubit_pairs = list(two_qubit_pairs)
+
+
 class NoiseChannel(Gate):
     """Probabilistic noise channel.
 

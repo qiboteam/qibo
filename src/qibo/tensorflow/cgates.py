@@ -345,6 +345,16 @@ class Unitary(MatrixGate, base_gates.Unitary):
                                           self.control_qubits)
 
 
+class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
+
+    def __init__(self, q, one_qubit_gate, two_qubit_gate, thetas,
+                 two_qubit_pairs: Optional[List[Tuple[int, int]]] = None,
+                 name: Optional[str] = None):
+        base_gates.VariationalLayer.__init__(self, q, one_qubit_gate,
+                                             two_qubit_gate, thetas,
+                                             two_qubit_pairs, name=name)
+        MatrixGate.__init__(self)
+
 class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
