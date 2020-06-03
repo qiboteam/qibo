@@ -73,13 +73,13 @@ def VariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
     for l in range(nlayers):
         circuit.add((gates.RY(i, next(theta)).with_backend(backend)
                      for i in range(nqubits)))
-        circuit.add((gates.CZPow(i, i + 1, np.pi).with_backend(backend)
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
                      for i in range(0, nqubits - 1, 2)))
         circuit.add((gates.RY(i, next(theta)).with_backend(backend)
                      for i in range(nqubits)))
-        circuit.add((gates.CZPow(i, i + 1, np.pi).with_backend(backend)
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
                      for i in range(1, nqubits - 2, 2)))
-        circuit.add(gates.CZPow(0, nqubits - 1, np.pi).with_backend(backend))
+        circuit.add(gates.CZ(0, nqubits - 1).with_backend(backend))
     return circuit
 
 
@@ -101,11 +101,11 @@ def OptimizedVariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
     for l in range(nlayers):
         if nqubits % 2:
             circuit.add(gates.RY(nqubits - 1, thetas[2 * l].pop(nqubits - 1)))
-        circuit.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZPow,
+        circuit.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ,
                                            thetas[2 * l]).with_backend(backend))
         if nqubits % 2:
             circuit.add(gates.RY(nqubits - 2, thetas[2 * l + 1].pop(nqubits - 2)))
-        circuit.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZPow,
+        circuit.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZ,
                                            thetas[2 * l + 1]).with_backend(backend))
     return circuit
 

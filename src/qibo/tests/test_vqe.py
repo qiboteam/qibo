@@ -55,13 +55,13 @@ def test_vqe(method, options, compile, filename):
                 c.add(gates.RY(q, theta[index]))
                 index+=1
             for q in range(0, nqubits-1, 2):
-                c.add(gates.CZPow(q, q+1, np.pi))
+                c.add(gates.CZ(q, q+1))
             for q in range(nqubits):
                 c.add(gates.RY(q, theta[index]))
                 index+=1
             for q in range(1, nqubits-2, 2):
-                c.add(gates.CZPow(q, q+1, np.pi))
-            c.add(gates.CZPow(0, nqubits-1, np.pi))
+                c.add(gates.CZ(q, q+1))
+            c.add(gates.CZ(0, nqubits-1))
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
@@ -88,7 +88,7 @@ def test_vqe_compile_error():
             c.add(gates.RY(q, theta[index]))
             index+=1
         for q in range(0, nqubits-1, 2):
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
         return c
 
     hamiltonian = XXZ(nqubits=nqubits)
