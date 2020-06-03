@@ -402,8 +402,6 @@ class CZPow(Gate):
         theta (float): the rotation angle.
     """
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q0, q1, theta):
         super(CZPow, self).__init__()
         self.name = "crz"

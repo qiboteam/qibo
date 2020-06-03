@@ -228,8 +228,6 @@ class CZ(TensorflowGate, base_gates.CZ):
 
 class CZPow(TensorflowGate, base_gates.CZPow):
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)

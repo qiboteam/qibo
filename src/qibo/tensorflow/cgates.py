@@ -252,29 +252,25 @@ class CZ(TensorflowGate, base_gates.CZ):
         base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
+    @staticmethod
+    def construct_unitary():
+        diag = tf.cast(tf.concat([tf.ones(3), [-1]], axis=0), dtype=DTYPECPX)
+        return tf.linalg.diag(diag)
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return Z.__call__(self, state, is_density_matrix)
 
 
 class CZPow(MatrixGate, base_gates.CZPow):
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)
 
     def _construct_matrix(self):
-        if self.theta == np.pi:
-            self.matrix = tf.cast(-1, dtype=DTYPECPX)
-        else:
-            self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPECPX))
+        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPECPX))
 
     @staticmethod
-    def construct_unitary(theta=np.pi):
-        if theta == np.pi:
-            m = np.eye(4)
-            m[3, 3] = -1
-            return tf.cast(m, dtype=DTYPECPX)
+    def construct_unitary(theta):
         phase = tf.exp(1j * tf.cast(theta, dtype=DTYPECPX))
         diag = tf.concat([tf.eye(3, dtype=DTYPECPX), phase], axis=0)
         return tf.linalg.diag(diag)
