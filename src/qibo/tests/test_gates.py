@@ -607,7 +607,7 @@ def test_variational_one_layer(gates, nqubits):
         c.add(gates.RY(nqubits - 1, thetas.pop(nqubits - 1)))
     c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZPow, thetas))
     final_state = c().numpy()
-    np.testing.assert_allclose(target_state, final_state, atol=1e-7)
+    np.testing.assert_allclose(target_state, final_state)
 
 
 @pytest.mark.parametrize("gates", [custom_gates])
@@ -636,7 +636,7 @@ def test_variational_two_layers(gates, nqubits):
         c.add(gates.RY(nqubits - 2, thetas1.pop(nqubits - 2)))
     c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZPow, thetas1))
     final_state = c().numpy()
-    np.testing.assert_allclose(target_state, final_state, atol=1e-7)
+    np.testing.assert_allclose(target_state, final_state)
 
 
 @pytest.mark.parametrize("gates", _GATES)

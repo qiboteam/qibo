@@ -257,7 +257,10 @@ class CZPow(MatrixGate, base_gates.CZPow):
         base_gates.CZPow.__init__(self, q0, q1, theta)
 
     def _construct_matrix(self):
-        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPECPX))
+        if self.theta == np.pi:
+            self.matrix = tf.cast(-1, dtype=DTYPECPX)
+        else:
+            self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPECPX))
 
     @staticmethod
     def construct_unitary(theta=np.pi):
