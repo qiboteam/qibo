@@ -184,7 +184,6 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     else {
       nreps = nstates;
     }
-    nreps = 0;
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
         nreps);
