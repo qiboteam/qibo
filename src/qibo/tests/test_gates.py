@@ -595,17 +595,37 @@ def test_unitary_bad_shape(gates):
 @pytest.mark.parametrize("gates", [custom_gates])
 @pytest.mark.parametrize("nqubits", [4, 6, 10])
 def test_variational_layer(gates, nqubits):
+    # One layer
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZPow(i, i + 1, np.pi) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
-
     c = Circuit(nqubits)
     qubit_pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     c.add(gates.VariationalLayer(qubit_pairs, gates.RY, gates.CZPow, theta))
     final_state = c().numpy()
+    np.testing.assert_allclose(target_state, final_state, atol=1e-7)
 
+    # Two layers
+    theta = 2 * np.pi * np.random.random(2 * nqubits)
+    theta_iter = iter(theta)
+    c = Circuit(nqubits)
+    c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
+    c.add((gates.CZPow(i, i + 1, np.pi) for i in range(0, nqubits - 1, 2)))
+    c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
+    c.add((gates.CZPow(i, i + 1, np.pi) for i in range(1, nqubits - 2, 2)))
+    c.add(gates.CZPow(0, nqubits - 1, np.pi))
+    target_state = c().numpy()
+    c = Circuit(nqubits)
+    theta = theta.reshape((2, nqubits))
+    theta[1, :-2], theta[1, -2], theta[1, -1] = theta[1, 1:-1], theta[1, 0], theta[1, -1]
+    pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
+    pairs2.append((0, nqubits - 1))
+    c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZPow, theta[0]))
+    c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZPow, theta[1]))
+    final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state, atol=1e-7)
 
 
