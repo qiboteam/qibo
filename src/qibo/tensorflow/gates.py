@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
@@ -138,6 +139,8 @@ class H(TensorflowGate, base_gates.H):
 
 class X(TensorflowGate, base_gates.X):
 
+    _MODULE = sys.modules[__name__]
+
     def __init__(self, q):
         base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
@@ -145,12 +148,7 @@ class X(TensorflowGate, base_gates.X):
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
-        if len(q) == 1:
-            gate = CNOT(q[0], self.target_qubits[0])
-        elif len(q) == 2:
-            gate = TOFFOLI(q[0], q[1], self.target_qubits[0])
-        else:
-            gate = super(X, self).controlled_by(*q)
+        gate = base_gates.X.controlled_by(self, *q)
         gate.einsum = self.einsum
         return gate
 
@@ -164,6 +162,8 @@ class Y(TensorflowGate, base_gates.Y):
 
 
 class Z(TensorflowGate, base_gates.Z):
+
+    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         base_gates.Z.__init__(self, q)
@@ -217,7 +217,18 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         self.matrix = matrices.CNOT
 
 
+class CZ(TensorflowGate, base_gates.CZ):
+
+    def __init__(self, q0, q1):
+        base_gates.CZ.__init__(self, q0, q1)
+        TensorflowGate.__init__(self)
+        diag = tf.cast(tf.concat([tf.ones(3), -1], axis=0), dtype=self.dtype)
+        self.matrix = tf.linalg.diag(diag)
+
+
 class CZPow(TensorflowGate, base_gates.CZPow):
+
+    _MODULE = sys.modules[__name__]
 
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)

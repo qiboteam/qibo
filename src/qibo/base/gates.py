@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+import sys
 from typing import List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
@@ -102,7 +103,7 @@ class Gate(object):
             self.control_qubits = q
         return self
 
-    def __call__(self, state):
+    def __call__(self, state, is_density_matrix):
         """Acts with the gate on a given state vector:
 
         Args:
@@ -134,11 +135,22 @@ class X(Gate):
     Args:
         q (int): the qubit id number.
     """
+    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         super(X, self).__init__()
         self.name = "x"
         self.target_qubits = (q,)
+
+    def controlled_by(self, *q):
+        """Fall back to CNOT and Toffoli if controls are one or two."""
+        if len(q) == 1:
+            gate = getattr(self._MODULE, "CNOT")(q[0], self.target_qubits[0])
+        elif len(q) == 2:
+            gate = getattr(self._MODULE, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+        return gate
 
 
 class Y(Gate):
@@ -161,10 +173,20 @@ class Z(Gate):
         q (int): the qubit id number.
     """
 
+    _MODULE = sys.modules[__name__]
+
     def __init__(self, q):
         super(Z, self).__init__()
         self.name = "z"
         self.target_qubits = (q,)
+
+    def controlled_by(self, *q):
+        """Fall back to CZ if control is one."""
+        if len(q) == 1:
+            gate = getattr(self._MODULE, "CZ")(q[0], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+        return gate
 
 
 class M(Gate):
@@ -334,6 +356,31 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
 
 
+class CZ(Gate):
+    """The Controlled-Phase gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super(CZ, self).__init__()
+        self.name = "cz"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+
+
 class CZPow(Gate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
@@ -354,6 +401,8 @@ class CZPow(Gate):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
+
+    _MODULE = sys.modules[__name__]
 
     def __init__(self, q0, q1, theta):
         super(CZPow, self).__init__()
