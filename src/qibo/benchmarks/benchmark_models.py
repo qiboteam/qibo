@@ -60,18 +60,22 @@ def QFT(nqubits: int, backend: str) -> models.Circuit:
     return circuit
 
 
-def VariationalCircuit(nqubits: int, backend: str, nlayers: int = 1
+def VariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
+                       theta_values: Optional[np.ndarray] = None
                        ) -> models.Circuit:
     gates = get_gates(backend)
-    theta = 2 * np.pi * np.random.random(nlayers * 2 * nqubits)
-    theta_iter = iter(theta)
+    if theta_values is None:
+        theta = iter(2 * np.pi * np.random.random(nlayers * 2 * nqubits))
+    else:
+        theta = iter(theta_values)
+
     circuit = models.Circuit(nqubits)
     for l in range(nlayers):
-        circuit.add((gates.RY(i, next(theta_iter)).with_backend(backend)
+        circuit.add((gates.RY(i, next(theta)).with_backend(backend)
                      for i in range(nqubits)))
         circuit.add((gates.CZPow(i, i + 1, np.pi).with_backend(backend)
                      for i in range(0, nqubits - 1, 2)))
-        circuit.add((gates.RY(i, next(theta_iter)).with_backend(backend)
+        circuit.add((gates.RY(i, next(theta)).with_backend(backend)
                      for i in range(nqubits)))
         circuit.add((gates.CZPow(i, i + 1, np.pi).with_backend(backend)
                      for i in range(1, nqubits - 2, 2)))
@@ -79,15 +83,20 @@ def VariationalCircuit(nqubits: int, backend: str, nlayers: int = 1
     return circuit
 
 
-def OptimizedVariationalCircuit(nqubits: int, backend: str, nlayers: int = 1
+def OptimizedVariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
+                                theta_values: Optional[np.ndarray] = None
                                 ) -> models.Circuit:
     gates = get_gates(backend)
-    theta = 2 * np.pi * np.random.random(nlayers * 2 * nqubits)
-    theta = theta.reshape((nlayers * 2, nqubits))
+    if theta_values is None:
+        theta = 2 * np.pi * np.random.random(nlayers * 2 * nqubits)
+        theta = theta.reshape((nlayers * 2, nqubits))
+    else:
+        theta = theta_values.reshape((nlayers * 2, nqubits))
+
     pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
-    thetas = [{i: theta[l, i] for i in range(nqubits)} for l in range(2 * nlayers)]
     pairs2.append((0, nqubits - 1))
+    thetas = [{i: theta[l, i] for i in range(nqubits)} for l in range(2 * nlayers)]
     circuit = models.Circuit(nqubits)
     for l in range(nlayers):
         if nqubits % 2:
