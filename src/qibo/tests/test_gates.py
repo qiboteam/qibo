@@ -593,21 +593,26 @@ def test_unitary_bad_shape(gates):
 
 
 @pytest.mark.parametrize("gates", [custom_gates])
-@pytest.mark.parametrize("nqubits", [4, 6, 10])
-def test_variational_layer(gates, nqubits):
-    # One layer
+@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
+def test_variational_one_layer(gates, nqubits):
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZPow(i, i + 1, np.pi) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
     c = Circuit(nqubits)
-    qubit_pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    c.add(gates.VariationalLayer(qubit_pairs, gates.RY, gates.CZPow, theta))
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    thetas = {i: theta[i] for i in range(nqubits)}
+    if nqubits % 2:
+        c.add(gates.RY(nqubits - 1, thetas.pop(nqubits - 1)))
+    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZPow, thetas))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state, atol=1e-7)
 
-    # Two layers
+
+@pytest.mark.parametrize("gates", [custom_gates])
+@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
+def test_variational_two_layers(gates, nqubits):
     theta = 2 * np.pi * np.random.random(2 * nqubits)
     theta_iter = iter(theta)
     c = Circuit(nqubits)
@@ -619,12 +624,17 @@ def test_variational_layer(gates, nqubits):
     target_state = c().numpy()
     c = Circuit(nqubits)
     theta = theta.reshape((2, nqubits))
-    theta[1, :-2], theta[1, -2], theta[1, -1] = theta[1, 1:-1], theta[1, 0], theta[1, -1]
     pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
     pairs2.append((0, nqubits - 1))
-    c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZPow, theta[0]))
-    c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZPow, theta[1]))
+    thetas0 = {i: theta[0, i] for i in range(nqubits)}
+    thetas1 = {i: theta[1, i] for i in range(nqubits)}
+    if nqubits % 2:
+        c.add(gates.RY(nqubits - 1, thetas0.pop(nqubits - 1)))
+    c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZPow, thetas0))
+    if nqubits % 2:
+        c.add(gates.RY(nqubits - 2, thetas1.pop(nqubits - 2)))
+    c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZPow, thetas1))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state, atol=1e-7)
 

@@ -487,6 +487,9 @@ class VariationalLayer(Gate):
         self.thetas = thetas
         self.qubit_pairs = qubit_pairs
         self.target_qubits = tuple(q for p in qubit_pairs for q in p)
+        if set(self.thetas.keys()) != set(self.target_qubits):
+            raise ValueError("Keys of theta parameters do not agree with given "
+                             "qubit pairs.")
 
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate

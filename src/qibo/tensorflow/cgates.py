@@ -384,11 +384,10 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         return tf.reshape(m, (4, 4))
 
     def _construct_matrix(self):
-        n = len(self.thetas)
         self.matrix = tf.stack([self._tfkron(
-            self.one_qubit_gate.construct_unitary(self.thetas[i]),
-            self.one_qubit_gate.construct_unitary(self.thetas[i + 1]))
-                             for i in range(0, n - 1, 2)], axis=0)
+            self.one_qubit_gate.construct_unitary(self.thetas[q1]),
+            self.one_qubit_gate.construct_unitary(self.thetas[q2]))
+                             for q1, q2 in self.qubit_pairs], axis=0)
         entangling_matrix = self.two_qubit_gate.construct_unitary()
         self.matrix = tf.matmul(entangling_matrix, self.matrix)
 
