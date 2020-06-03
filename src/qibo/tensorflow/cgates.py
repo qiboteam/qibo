@@ -43,9 +43,6 @@ class MatrixGate(TensorflowGate):
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
-        if len(self.target_qubits) > 2:
-            raise ValueError("``MatrixGate`` does not support more than two "
-                             "target qubit.")
         base_gates.Gate.nqubits.fset(self, n)
         self._construct_matrix()
 
@@ -200,6 +197,12 @@ class RX(MatrixGate, base_gates.RX):
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.X)
 
+    # TODO: Make `_construct_matrix` a static method for all relevant gates
+    @staticmethod
+    def construct_unitary(theta):
+        t = tf.cast(theta, dtype=DTYPECPX)
+        return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.X
+
 
 class RY(MatrixGate, base_gates.RY):
 
@@ -211,6 +214,11 @@ class RY(MatrixGate, base_gates.RY):
         th = tf.cast(self.theta, dtype=DTYPECPX)
         self.matrix = (tf.cos(th / 2.0) * matrices.I -
                        1j * tf.sin(th / 2.0) * matrices.Y)
+
+    @staticmethod
+    def construct_unitary(theta):
+        t = tf.cast(theta, dtype=DTYPECPX)
+        return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.Y
 
 
 class RZ(MatrixGate, base_gates.RZ):
@@ -224,6 +232,13 @@ class RZ(MatrixGate, base_gates.RZ):
         phase = tf.exp(1j * th / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         self.matrix = tf.linalg.diag(diag)
+
+    @staticmethod
+    def construct_unitary(theta):
+        t = tf.cast(theta, dtype=DTYPECPX)
+        phase = tf.exp(1j * t / 2.0)[tf.newaxis]
+        diag = tf.concat([tf.math.conj(phase), phase], axis=0)
+        return tf.linalg.diag(diag)
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -243,6 +258,16 @@ class CZPow(MatrixGate, base_gates.CZPow):
 
     def _construct_matrix(self):
         self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPECPX))
+
+    @staticmethod
+    def construct_unitary(theta=np.pi):
+        if theta == np.pi:
+            m = np.eye(4)
+            m[3, 3] = -1
+            return tf.cast(m, dtype=DTYPECPX)
+        phase = tf.exp(1j * tf.cast(theta, dtype=DTYPECPX))
+        diag = tf.concat([tf.eye(3, dtype=DTYPECPX), phase], axis=0)
+        return tf.linalg.diag(diag)
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -347,13 +372,32 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
 class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
-    def __init__(self, q, one_qubit_gate, two_qubit_gate, thetas,
-                 two_qubit_pairs: Optional[List[Tuple[int, int]]] = None,
+    def __init__(self, qubit_pairs, one_qubit_gate, two_qubit_gate, thetas,
                  name: Optional[str] = None):
-        base_gates.VariationalLayer.__init__(self, q, one_qubit_gate,
-                                             two_qubit_gate, thetas,
-                                             two_qubit_pairs, name=name)
+        base_gates.VariationalLayer.__init__(self, qubit_pairs, one_qubit_gate,
+                                             two_qubit_gate, thetas, name=name)
         MatrixGate.__init__(self)
+
+    @staticmethod
+    def _tfkron(m1, m2):
+        m = tf.transpose(tf.tensordot(m1, m2, axes=0), [0, 2, 1, 3])
+        return tf.reshape(m, (4, 4))
+
+    def _construct_matrix(self):
+        n = len(self.thetas)
+        self.matrix = tf.stack([self._tfkron(
+            self.one_qubit_gate.construct_unitary(self.thetas[i]),
+            self.one_qubit_gate.construct_unitary(self.thetas[i + 1]))
+                             for i in range(0, n - 1, 2)], axis=0)
+        entangling_matrix = self.two_qubit_gate.construct_unitary()
+        self.matrix = tf.matmul(entangling_matrix, self.matrix)
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        for i, targets in enumerate(self.qubit_pairs):
+            state = op.apply_twoqubit_gate(state, self.matrix[i], self.nqubits, targets)
+        return state
+
 
 class Flatten(TensorflowGate, base_gates.Flatten):
 

@@ -475,25 +475,21 @@ class VariationalLayer(Gate):
         TODO
     """
 
-    def __init__(self, q, one_qubit_gate, two_qubit_gate, thetas,
-                 two_qubit_pairs: Optional[List[Tuple[int, int]]] = None,
+    def __init__(self, qubit_pairs, one_qubit_gate, two_qubit_gate, thetas,
                  name: Optional[str] = None):
-        super(Unitary, self).__init__()
+        super(VariationalLayer, self).__init__()
         self.name = "VariationalLayer" if name is None else name
-        self.target_qubits = tuple(q)
 
-        if len(thetas) != len(self.target_qubits):
+        if len(thetas) != 2 * len(qubit_pairs):
             raise ValueError("Cannot initialize variational layer with {} "
-                             "and {} variational parameters."
-                             "".format(len(self.target_qubits), len(thetas)))
+                             "qubit pairs and {} variational parameters."
+                             "".format(len(qubit_pairs), len(thetas)))
         self.thetas = thetas
+        self.qubit_pairs = qubit_pairs
+        self.target_qubits = tuple(q for p in qubit_pairs for q in p)
 
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
-        if two_qubit_pairs is None:
-            self.two_qubit_pairs = [(i, i + 1) for i in sorted(self.target_qubits)[::2]]
-        else:
-            self.two_qubit_pairs = list(two_qubit_pairs)
 
 
 class NoiseChannel(Gate):

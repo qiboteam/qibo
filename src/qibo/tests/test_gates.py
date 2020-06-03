@@ -592,6 +592,23 @@ def test_unitary_bad_shape(gates):
         gate = gates.Unitary(matrix, (0, 1))
 
 
+@pytest.mark.parametrize("gates", [custom_gates])
+@pytest.mark.parametrize("nqubits", [4, 6, 10])
+def test_variational_layer(gates, nqubits):
+    theta = 2 * np.pi * np.random.random(nqubits)
+    c = Circuit(nqubits)
+    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
+    c.add((gates.CZPow(i, i + 1, np.pi) for i in range(0, nqubits - 1, 2)))
+    target_state = c().numpy()
+
+    c = Circuit(nqubits)
+    qubit_pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    c.add(gates.VariationalLayer(qubit_pairs, gates.RY, gates.CZPow, theta))
+    final_state = c().numpy()
+
+    np.testing.assert_allclose(target_state, final_state, atol=1e-7)
+
+
 @pytest.mark.parametrize("gates", _GATES)
 def test_custom_circuit(gates):
     """Check consistency between Circuit and custom circuits"""
