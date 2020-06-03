@@ -43,8 +43,8 @@ class MatrixGate(TensorflowGate):
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
-        if len(self.target_qubits) > 1:
-            raise ValueError("``MatrixGate`` does not support more than one "
+        if len(self.target_qubits) > 2:
+            raise ValueError("``MatrixGate`` does not support more than two "
                              "target qubit.")
         base_gates.Gate.nqubits.fset(self, n)
         self._construct_matrix()
@@ -258,8 +258,44 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        t1, t2 = self.target_qubits
-        return op.apply_swap(state, self.nqubits, t1, t2, self.control_qubits)
+        return op.apply_swap(state, self.nqubits, self.target_qubits,
+                             self.control_qubits)
+
+
+class fSim(MatrixGate, base_gates.fSim):
+
+    def __init__(self, q0, q1, theta, phi):
+        base_gates.fSim.__init__(self, q0, q1, theta, phi)
+
+    def _construct_matrix(self):
+        th = tf.cast(self.theta, dtype=DTYPECPX)
+        rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        return op.apply_fsim(state, self.matrix, self.nqubits,
+                             self.target_qubits, self.control_qubits)
+
+
+class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
+
+    def __init__(self, q0, q1, unitary, phi):
+        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        shape = tuple(self.unitary.shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+
+    def _construct_matrix(self):
+        rotation = tf.cast(self.unitary, dtype=DTYPECPX)
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPECPX))
+        rotation = tf.reshape(rotation, (4,))
+        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        return fSim.__call__(self, state, is_density_matrix)
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
@@ -278,8 +314,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         MatrixGate.__init__(self)
 
-        rank = len(self.target_qubits)
-        if rank > 1:
+        rank = self.rank
+        if rank > 2:
             raise NotImplementedError("Unitary matrix gate supports only one "
                                       "qubit gates but {} target qubits were "
                                       "given.".format(len(self.target_qubits)))
@@ -291,6 +327,22 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     def _construct_matrix(self):
         self.matrix = tf.convert_to_tensor(self.unitary, dtype=DTYPECPX)
+
+    @property
+    def rank(self) -> int:
+        return len(self.target_qubits)
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        if self.rank == 1:
+            return op.apply_gate(state, self.matrix, self.nqubits,
+                                 self.target_qubits[0],
+                                 self.control_qubits)
+        if self.rank == 2:
+            return op.apply_twoqubit_gate(state, self.matrix, self.nqubits,
+                                          self.target_qubits,
+                                          self.control_qubits)
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):

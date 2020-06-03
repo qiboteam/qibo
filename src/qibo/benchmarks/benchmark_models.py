@@ -2,7 +2,7 @@ import numpy as np
 from qibo import models
 from qibo.tensorflow import gates as native_gates
 from qibo.tensorflow import cgates as custom_gates
-from typing import Optional
+from typing import Dict, Optional
 
 
 def get_gates(backend: str):
@@ -60,15 +60,12 @@ def QFT(nqubits: int, backend: str) -> models.Circuit:
     return circuit
 
 
-def OneQubitGate(nqubits: int, backend: str,
-                 gate_type: str = "H", theta: Optional[float] = None,
-                 nlayers: int = 1) -> models.Circuit:
+def OneQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+                 params: Dict[str, float] = {}, nlayers: int = 1
+                 ) -> models.Circuit:
     gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    if theta is None:
-        gate = lambda q: getattr(gates, gate_type)(q)
-    else:
-        gate = lambda q: getattr(gates, gate_type)(q, theta)
+    gate = lambda q: getattr(gates, gate_type)(q, **params)
 
     for _ in range(nlayers):
         for i in range(nqubits):
@@ -76,15 +73,12 @@ def OneQubitGate(nqubits: int, backend: str,
     return circuit
 
 
-def TwoQubitGate(nqubits: int, backend: str,
-                 gate_type: str = "H", theta: Optional[float] = None,
-                 nlayers: int = 1) -> models.Circuit:
+def TwoQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+                 params: Dict[str, float] = {}, nlayers: int = 1
+                 ) -> models.Circuit:
     gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    if theta is None:
-        gate = lambda q: getattr(gates, gate_type)(q, q + 1)
-    else:
-        gate = lambda q: getattr(gates, gate_type)(q, q + 1, theta)
+    gate = lambda q: getattr(gates, gate_type)(q, q + 1, **params)
 
     for _ in range(nlayers):
         for i in range(0, nqubits - 1, 2):

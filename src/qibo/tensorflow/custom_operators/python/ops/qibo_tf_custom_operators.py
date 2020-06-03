@@ -1,4 +1,5 @@
 """Use ops in python."""
+import tensorflow as tf
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 
@@ -17,7 +18,7 @@ def sort_controls(controls):
 
 # apply_gate operator
 def apply_gate(state, gate, nqubits, target, controls=[]):
-    """Applies one-qubit gates to a state vector.
+    """Applies arbitrary one-qubit gate to a state vector.
 
     Modifies ``state`` in-place.
     Gates can be controlled to multiple qubits.
@@ -38,6 +39,13 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
     controls = sort_controls(controls)
     return custom_module.apply_gate(state, gate, controls, nqubits, target)
 
+def apply_twoqubit_gate(state, gate, nqubits, targets, controls=[]):
+    """Applies arbitrary two-qubit gate to a state vector."""
+    controls = sort_controls(controls)
+    t1, t2 = targets
+    return custom_module.apply_two_qubit_gate(state, gate, controls, nqubits,
+                                              t1, t2)
+
 # gate specific operators
 def apply_x(state, nqubits, target, controls=[]):
     controls = sort_controls(controls)
@@ -55,6 +63,12 @@ def apply_zpow(state, theta, nqubits, target, controls=[]):
     controls = sort_controls(controls)
     return custom_module.apply_z_pow(state, theta, controls, nqubits, target)
 
-def apply_swap(state, nqubits, target1, target2, controls=[]):
+def apply_fsim(state, gate, nqubits, targets, controls=[]):
     controls = sort_controls(controls)
-    return custom_module.apply_swap(state, controls, nqubits, target1, target2)
+    t1, t2 = targets
+    return custom_module.apply_fsim(state, gate, controls, nqubits, t1, t2)
+
+def apply_swap(state, nqubits, targets, controls=[]):
+    controls = sort_controls(controls)
+    t1, t2 = targets
+    return custom_module.apply_swap(state, controls, nqubits, t1, t2)

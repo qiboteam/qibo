@@ -12,7 +12,7 @@ using thread::ThreadPool;
 
 
 template <typename T>
-struct BaseApplyGateFunctor<CPUDevice, T> {
+struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
@@ -111,7 +111,7 @@ struct BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
-struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyGateFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     const auto buffer = state1;
     state1 = gate[0] * state1 + gate[1] * state2;
@@ -122,7 +122,7 @@ struct ApplyGateFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply X gate via swap
 template <typename T>
-struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyXFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     std::swap(state1, state2);
   }
@@ -131,7 +131,7 @@ struct ApplyXFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply Y gate via swap
 template <typename T>
-struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyYFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state1 *= T(0, 1);
     state2 *= - T(0, 1);
@@ -142,7 +142,7 @@ struct ApplyYFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply Z gate
 template <typename T>
-struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyZFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= -1;
   }
@@ -151,7 +151,7 @@ struct ApplyZFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 // Apply ZPow gate
 template <typename T>
-struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
+struct ApplyZPowFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= gate[0];
   }
@@ -159,7 +159,10 @@ struct ApplyZPowFunctor<CPUDevice, T>: BaseApplyGateFunctor<CPUDevice, T> {
 
 
 template <typename T>
-struct ApplySwapFunctor<CPUDevice, T> {
+struct BaseTwoQubitGateFunctor<CPUDevice, T> {
+  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                     const T* gate = NULL) const {}
+
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
                   const int32* controls, const T* gate = NULL) {
@@ -190,7 +193,7 @@ struct ApplySwapFunctor<CPUDevice, T> {
         for (auto g = t; g < w; g += 1) {
           int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
           i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
-          std::swap(state[i + tk1], state[i + tk2]);
+          apply(state, i, tk1, tk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
@@ -224,7 +227,7 @@ struct ApplySwapFunctor<CPUDevice, T> {
             int64 k = (int64) 1 << m;
             i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
           }
-          std::swap(state[i - tk2], state[i - tk1]);
+          apply(state, i - tk1 - tk2, tk1, tk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
@@ -233,10 +236,59 @@ struct ApplySwapFunctor<CPUDevice, T> {
 };
 
 
+// Apply general one-qubit gate via gate matrix
+template <typename T>
+struct ApplyTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    const int64 i1 = i + tk1;
+    const int64 i2 = i + tk2;
+    const int64 i3 = i1 + tk2;
+    const auto buffer = state[i];
+    state[i] = (gate[0] * state[i] + gate[1] * state[i1] +
+                gate[2] * state[i2] + gate[3] * state[i3]);
+    const auto buffer1 = state[i1];
+    state[i1] = (gate[4] * buffer + gate[5] * state[i1] +
+                 gate[6] * state[i2] + gate[7] * state[i3]);
+    const auto buffer2 = state[i2];
+    state[i2] = (gate[8] * buffer + gate[9] * buffer1 +
+                 gate[10] * state[i2] + gate[11] * state[i3]);
+    state[i3] = (gate[12] * buffer + gate[13] * buffer1 +
+                 gate[14] * buffer2 + gate[15] * state[i3]);
+  }
+};
+
+
+// Apply fSim gate from https://arxiv.org/abs/2001.08343
+template <typename T>
+struct ApplyFsimFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    const int64 i1 = i + tk1;
+    const int64 i2 = i + tk2;
+    const int64 i3 = i1 + tk2;
+    const auto buffer = state[i1];
+    state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
+    state[i2] = gate[2] * buffer + gate[3] * state[i2];
+    state[i3] = gate[4] * state[i3];
+  }
+};
+
+
+// Apply SWAP gate
+template <typename T>
+struct ApplySwapFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+  inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                    const T* gate = NULL) const {
+    std::swap(state[i + tk1], state[i + tk2]);
+  }
+};
+
+
 template <typename Device, typename T, typename F, bool UseMatrix>
-class ApplyGateOp : public OpKernel {
+class OneQubitGateOp : public OpKernel {
  public:
-  explicit ApplyGateOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit OneQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
   }
@@ -277,10 +329,10 @@ class ApplyGateOp : public OpKernel {
 };
 
 
-template <typename Device, typename T>
-class ApplySwapOp : public OpKernel {
+template <typename Device, typename T, typename F, bool UseMatrix>
+class TwoQubitGateOp : public OpKernel {
  public:
-  explicit ApplySwapOp(OpKernelConstruction* context) : OpKernel(context) {
+  explicit TwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
     OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
@@ -289,20 +341,31 @@ class ApplySwapOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
-    const Tensor& controls = context->input(1);
-    const int ncontrols = controls.flat<int32>().size();
 
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplySwap operator not implemented for GPU."));
+        errors::Unimplemented("ApplyTwoQubitGate operator not implemented for GPU."));
 
-    // call the implementation
-    ApplySwapFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                  state.flat<T>().data(),
-                                  nqubits_, target1_, target2_,
-                                  ncontrols, controls.flat<int32>().data());
+    if (UseMatrix) {
+      const Tensor& gate = context->input(1);
+      const Tensor& controls = context->input(2);
+      const int ncontrols = controls.flat<int32>().size();
 
+      // call the implementation
+      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+          nqubits_, target1_, target2_, ncontrols,
+          controls.flat<int32>().data(), gate.flat<T>().data());
+    }
+    else {
+      const Tensor& controls = context->input(1);
+      const int ncontrols = controls.flat<int32>().size();
+
+      // call the implementation
+      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
+          nqubits_, target1_, target2_, ncontrols,
+          controls.flat<int32>().data());
+    }
     context->set_output(0, state);
   }
 
@@ -313,59 +376,41 @@ class ApplySwapOp : public OpKernel {
 
 
 // Register the CPU kernels.
-#define REGISTER_CPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),         \
-      ApplyGateOp<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
-
-REGISTER_CPU(complex64, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_CPU(complex128, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_CPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_CPU(complex128, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_CPU(complex64, "ApplyX", ApplyXFunctor, false);
-REGISTER_CPU(complex128, "ApplyX", ApplyXFunctor, false);
-REGISTER_CPU(complex64, "ApplyY", ApplyYFunctor, false);
-REGISTER_CPU(complex128, "ApplyY", ApplyYFunctor, false);
-REGISTER_CPU(complex64, "ApplyZ", ApplyZFunctor, false);
-REGISTER_CPU(complex128, "ApplyZ", ApplyZFunctor, false);
-
-// Register SWAP kernel on CPU.
-#define REGISTER_SWAP_CPU(T)                                         \
-  REGISTER_KERNEL_BUILDER(                                           \
-      Name("ApplySwap").Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
-      ApplySwapOp<CPUDevice, T>);
-
-REGISTER_SWAP_CPU(complex64);
-REGISTER_SWAP_CPU(complex128);
-
+#define REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX)         \
+  REGISTER_KERNEL_BUILDER(                                    \
+      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
+      OP<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
 
 // Register the GPU kernels.
-#define REGISTER_GPU(T, NAME, FUNCTOR, USEMATRIX)                   \
-  extern template struct FUNCTOR<GPUDevice, T>;                     \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),         \
-      ApplyGateOp<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+#define REGISTER_GPU(T, NAME, OP, FUNCTOR, USEMATRIX)        \
+  extern template struct FUNCTOR<GPUDevice, T>;              \
+  REGISTER_KERNEL_BUILDER(                                   \
+      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
+      OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
 
-REGISTER_GPU(complex64, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_GPU(complex128, "ApplyGate", ApplyGateFunctor, true);
-REGISTER_GPU(complex64, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_GPU(complex128, "ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_GPU(complex64, "ApplyX", ApplyXFunctor, false);
-REGISTER_GPU(complex128, "ApplyX", ApplyXFunctor, false);
-REGISTER_GPU(complex64, "ApplyY", ApplyYFunctor, false);
-REGISTER_GPU(complex128, "ApplyY", ApplyYFunctor, false);
-REGISTER_GPU(complex64, "ApplyZ", ApplyZFunctor, false);
-REGISTER_GPU(complex128, "ApplyZ", ApplyZFunctor, false);
+// Register one-qubit gate kernels.
+#define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
+  REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_CPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);   \
+  REGISTER_GPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_GPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);
 
-// Register SWAP kernel on GPU.
-#define REGISTER_SWAP_GPU(T)                                        \
-  extern template struct ApplySwapFunctor<GPUDevice, T>;            \
-  REGISTER_KERNEL_BUILDER(                                          \
-      Name("ApplySwap").Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
-      ApplySwapOp<GPUDevice, T>);
+// Register two-qubit gate kernels.
+#define REGISTER_TWOQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
+  REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);   \
+  REGISTER_GPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
+  REGISTER_GPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
-REGISTER_SWAP_GPU(complex64);
-REGISTER_SWAP_GPU(complex128);
+
+REGISTER_ONEQUBIT("ApplyGate", ApplyGateFunctor, true);
+REGISTER_ONEQUBIT("ApplyZPow", ApplyZPowFunctor, true);
+REGISTER_ONEQUBIT("ApplyX", ApplyXFunctor, false);
+REGISTER_ONEQUBIT("ApplyY", ApplyYFunctor, false);
+REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
+REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplyTwoQubitGateFunctor, true);
+REGISTER_TWOQUBIT("ApplyFsim", ApplyFsimFunctor, true);
+REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
 
 }  // namespace functor
 }  // namespace tensorflow

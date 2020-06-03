@@ -45,7 +45,7 @@ namespace tensorflow {
 namespace functor {
 
 template <typename Device, typename T>
-struct BaseApplyGateFunctor {
+struct BaseOneQubitGateFunctor {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context, const Device& d,
@@ -59,26 +59,42 @@ struct BaseApplyGateFunctor {
 };
 
 template <typename Device, typename T>
-struct ApplyGateFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyGateFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyXFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyXFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyYFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyYFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyZFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyZFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplyZPowFunctor: BaseApplyGateFunctor<Device, T> {};
+struct ApplyZPowFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
-struct ApplySwapFunctor {
+struct BaseTwoQubitGateFunctor {
+  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
+                     const T* gate = NULL) const;
+
   void operator()(const OpKernelContext* context, const Device& d, T* state,
-                  int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const T* gate = NULL);
+                  int nqubits,
+                  int target1,
+                  int target2,
+                  int ncontrols,
+                  const int32* controls,
+                  const T* gate = NULL);
 };
+
+template <typename Device, typename T>
+struct ApplyTwoQubitGateFunctor: BaseTwoQubitGateFunctor<Device, T> {};
+
+template <typename Device, typename T>
+struct ApplyFsimFunctor: BaseTwoQubitGateFunctor<Device, T> {};
+
+template <typename Device, typename T>
+struct ApplySwapFunctor: BaseTwoQubitGateFunctor<Device, T> {};
 
 }  // namespace functor
 
