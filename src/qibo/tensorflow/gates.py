@@ -390,7 +390,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
             if self.additional_target is not None:
                 additional_matrix = tf.matmul(
                     self.one_qubit_gate.construct_unitary(
-                        self.params_map[self.additional_target]),
+                        self.params_map2[self.additional_target]),
                     additional_matrix)
 
         self.unitaries = [Unitary(matrices[i], *targets)

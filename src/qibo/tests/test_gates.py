@@ -697,6 +697,17 @@ def test_variational_two_layers(gates, nqubits):
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
+    c = Circuit(nqubits)
+    theta = theta.reshape((2, nqubits))
+    pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    thetas0 = {i: theta[0, i] for i in range(nqubits)}
+    thetas1 = {i: theta[1, i] for i in range(nqubits)}
+    c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ, thetas0, thetas1))
+    c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+    c.add(gates.CZ(0, nqubits - 1))
+    final_state = c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
 
 @pytest.mark.parametrize("gates", _GATES)
 def test_custom_circuit(gates):
