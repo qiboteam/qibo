@@ -88,25 +88,20 @@ def OptimizedVariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
                                 ) -> models.Circuit:
     gates = get_gates(backend)
     if theta_values is None:
-        theta = 2 * np.pi * np.random.random(nlayers * 2 * nqubits)
-        theta = theta.reshape((nlayers * 2, nqubits))
+        theta = iter(2 * np.pi * np.random.random(nlayers * 2 * nqubits))
     else:
-        theta = theta_values.reshape((nlayers * 2, nqubits))
+        theta = iter(theta_values)
 
-    pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
-    pairs2.append((0, nqubits - 1))
-    thetas = [{i: theta[l, i] for i in range(nqubits)} for l in range(2 * nlayers)]
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     circuit = models.Circuit(nqubits)
     for l in range(nlayers):
-        if nqubits % 2:
-            circuit.add(gates.RY(nqubits - 1, thetas[2 * l].pop(nqubits - 1)))
-        circuit.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ,
-                                           thetas[2 * l]).with_backend(backend))
-        if nqubits % 2:
-            circuit.add(gates.RY(nqubits - 2, thetas[2 * l + 1].pop(nqubits - 2)))
-        circuit.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZ,
-                                           thetas[2 * l + 1]).with_backend(backend))
+        thetas1 = {i: next(theta) for i in range(nqubits)}
+        thetas2 = {i: next(theta) for i in range(nqubits)}
+        circuit.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ,
+                                           thetas1, thetas2).with_backend(backend))
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
+                     for i in range(1, nqubits - 2, 2)))
+        circuit.add(gates.CZ(0, nqubits - 1).with_backend(backend))
     return circuit
 
 
