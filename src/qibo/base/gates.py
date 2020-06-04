@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 import sys
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -518,23 +518,56 @@ class Unitary(Gate):
 class VariationalLayer(Gate):
     """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
 
+    Performance is optimized by fusing the variational one-qubit gates with the
+    two-qubit entangling gates that follow them and applying a single layer of
+    two-qubit gates as 4x4 matrices.
+
     Args:
-        TODO
+        qubit_pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
+        one_qubit_gate: Type of one qubit gate to use as the variational gate.
+        two_qubit_gate: Type of two qubit gate to use as entangling gate.
+        params_map (dict): Variational parameters of one qubit gates as a dictionary
+            that maps qubit IDs to the corresponding parameter value.
+        name (str): Optional name for the gate.
+            If ``None`` the name ``"VariationalLayer"`` will be used.
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
+            # generate an array of variational parameters for 8 qubits
+            theta = 2 * np.pi * np.random.random(8)
+
+            # define qubit pairs that two qubit gates will act
+            pairs = [(i, i + 1) for i in range(7)]
+            # map variational parameters to qubit IDs
+            theta_map = {i: th for i, th in enumerate(theta}
+            # define a circuit of 8 qubits and add the variational layer
+            c = Circuit(8)
+            c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, theta_map))
+            # this will create an optimized version of the following circuit
+            c2 = Circuit(8)
+            c.add((gates.RY(i, th) for i, th in enumerate(theta)))
+            c.add((gates.CZ(i, i + 1) for i in range(7)))
     """
 
-    def __init__(self, qubit_pairs, one_qubit_gate, two_qubit_gate, thetas,
+    def __init__(self, qubit_pairs: List[Tuple[int, int]],
+                 one_qubit_gate, two_qubit_gate,
+                 params_map: Dict[int, float],
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
         self.name = "VariationalLayer" if name is None else name
 
-        if len(thetas) != 2 * len(qubit_pairs):
+        if len(params_map) != 2 * len(qubit_pairs):
             raise ValueError("Cannot initialize variational layer with {} "
                              "qubit pairs and {} variational parameters."
-                             "".format(len(qubit_pairs), len(thetas)))
-        self.thetas = thetas
+                             "".format(len(qubit_pairs), len(params_map)))
+        self.params_map = params_map
         self.qubit_pairs = qubit_pairs
         self.target_qubits = tuple(q for p in qubit_pairs for q in p)
-        if set(self.thetas.keys()) != set(self.target_qubits):
+        if set(self.params_map.keys()) != set(self.target_qubits):
             raise ValueError("Keys of theta parameters do not agree with given "
                              "qubit pairs.")
 

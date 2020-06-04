@@ -7,7 +7,7 @@ from qibo.base import gates as base_gates
 from qibo.config import DTYPEINT, DTYPE, DTYPECPX, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from qibo.config import matrices
 from qibo.tensorflow import custom_operators as op
-from typing import Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class TensorflowGate:
@@ -378,10 +378,13 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
 class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
-    def __init__(self, qubit_pairs, one_qubit_gate, two_qubit_gate, thetas,
+    def __init__(self, qubit_pairs: List[Tuple[int, int]],
+                 one_qubit_gate, two_qubit_gate,
+                 params_map: Dict[int, float],
                  name: Optional[str] = None):
         base_gates.VariationalLayer.__init__(self, qubit_pairs, one_qubit_gate,
-                                             two_qubit_gate, thetas, name=name)
+                                             two_qubit_gate, params_map,
+                                             name=name)
         MatrixGate.__init__(self)
 
     @staticmethod
@@ -391,8 +394,8 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
     def _construct_matrix(self):
         self.matrix = tf.stack([self._tfkron(
-            self.one_qubit_gate.construct_unitary(self.thetas[q1]),
-            self.one_qubit_gate.construct_unitary(self.thetas[q2]))
+            self.one_qubit_gate.construct_unitary(self.params_map[q1]),
+            self.one_qubit_gate.construct_unitary(self.params_map[q2]))
                              for q1, q2 in self.qubit_pairs], axis=0)
         entangling_matrix = self.two_qubit_gate.construct_unitary()
         self.matrix = tf.matmul(entangling_matrix, self.matrix)
