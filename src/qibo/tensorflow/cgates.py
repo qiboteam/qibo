@@ -432,11 +432,14 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
     def __init__(self, qubit_pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params_map: Dict[int, float],
+                 params_map2: Optional[Dict[int, float]] = None,
                  name: Optional[str] = None):
-        base_gates.VariationalLayer.__init__(self, qubit_pairs, one_qubit_gate,
-                                             two_qubit_gate, params_map,
+        base_gates.VariationalLayer.__init__(self, qubit_pairs,
+                                             one_qubit_gate, two_qubit_gate,
+                                             params_map, params_map2,
                                              name=name)
         MatrixGate.__init__(self)
+        self.additional_matrix = None
 
     @staticmethod
     def _tfkron(m1, m2):
@@ -450,11 +453,29 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                              for q1, q2 in self.qubit_pairs], axis=0)
         entangling_matrix = self.two_qubit_gate.construct_unitary()
         self.matrix = tf.matmul(entangling_matrix, self.matrix)
+        if self.additional_target is not None:
+            self.additional_matrix = self.one_qubit_gate.construct_unitary(
+                self.params_map[self.additional_target])
+
+        if self.params_map2 is not None:
+            matrix2 = tf.stack([self._tfkron(
+                self.one_qubit_gate.construct_unitary(self.params_map2[q1]),
+                self.one_qubit_gate.construct_unitary(self.params_map2[q2]))
+                                for q1, q2 in self.qubit_pairs], axis=0)
+            self.matrix = tf.matmul(matrix2, self.matrix)
+            if self.additional_target is not None:
+                self.additional_matrix = tf.matmul(
+                    self.one_qubit_gate.construct_unitary(
+                        self.params_map2[self.additional_target]),
+                    self.additional_matrix)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         for i, targets in enumerate(self.qubit_pairs):
             state = op.apply_twoqubit_gate(state, self.matrix[i], self.nqubits, targets)
+        if self.additional_matrix is not None:
+            state = op.apply_gate(state, self.additional_matrix, self.nqubits,
+                                  self.additional_target)
         return state
 
 

@@ -528,6 +528,8 @@ class VariationalLayer(Gate):
         two_qubit_gate: Type of two qubit gate to use as entangling gate.
         params_map (dict): Variational parameters of one qubit gates as a dictionary
             that maps qubit IDs to the corresponding parameter value.
+        params_map2 (dict): Same as ``params_map`` but for the layer of one-qubit
+            gates after the two-qubit gate ones.
         name (str): Optional name for the gate.
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
@@ -556,20 +558,31 @@ class VariationalLayer(Gate):
     def __init__(self, qubit_pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params_map: Dict[int, float],
+                 params_map2: Optional[Dict[int, float]] = None,
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
         self.name = "VariationalLayer" if name is None else name
-
-        if len(params_map) != 2 * len(qubit_pairs):
-            raise ValueError("Cannot initialize variational layer with {} "
-                             "qubit pairs and {} variational parameters."
-                             "".format(len(qubit_pairs), len(params_map)))
         self.params_map = dict(params_map)
+        targets = set(self.params_map.keys())
+        self.target_qubits = tuple(targets)
+        if params_map2 is not None:
+            self.params_map2 = dict(params_map2)
+            if targets != set(self.params_map2.keys()):
+                raise ValueError("Invalid parameter maps given in variational layer.")
+        else:
+            self.params_map2 = None
+
         self.qubit_pairs = qubit_pairs
-        self.target_qubits = tuple(q for p in qubit_pairs for q in p)
-        if set(self.params_map.keys()) != set(self.target_qubits):
-            raise ValueError("Keys of theta parameters do not agree with given "
-                             "qubit pairs.")
+        two_qubit_targets = set(q for p in qubit_pairs for q in p)
+        additional_targets = targets - two_qubit_targets
+        if not additional_targets:
+            self.additional_target = None
+        elif len(additional_targets) == 1:
+            self.additional_target = additional_targets.pop()
+        else:
+            raise ValueError("Variational layer can have at most one additional "
+                             "target for one qubit gates but has {}."
+                             "".format(additional_targets))
 
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
