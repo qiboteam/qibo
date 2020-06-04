@@ -611,20 +611,64 @@ def test_unitary_bad_shape(gates):
         gate = gates.Unitary(matrix, (0, 1))
 
 
-@pytest.mark.parametrize("gates", [custom_gates])
+@pytest.mark.parametrize("gates", _GATES)
+def test_construct_unitary(gates):
+    target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    np.testing.assert_allclose(gates.H.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[0, 1], [1, 0]])
+    np.testing.assert_allclose(gates.X.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[0, -1j], [1j, 0]])
+    np.testing.assert_allclose(gates.Y.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[1, 0], [0, -1]])
+    np.testing.assert_allclose(gates.Z.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                              [0, 0, 0, 1], [0, 0, 1, 0]])
+    np.testing.assert_allclose(gates.CNOT.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.diag([1, 1, 1, -1])
+    np.testing.assert_allclose(gates.CZ.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
+                              [0, 1, 0, 0], [0, 0, 0, 1]])
+    np.testing.assert_allclose(gates.SWAP.construct_unitary().numpy(), target_matrix)
+    target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
+                              [0, 1, 0, 0, 0, 0, 0, 0],
+                              [0, 0, 1, 0, 0, 0, 0, 0],
+                              [0, 0, 0, 1, 0, 0, 0, 0],
+                              [0, 0, 0, 0, 1, 0, 0, 0],
+                              [0, 0, 0, 0, 0, 1, 0, 0],
+                              [0, 0, 0, 0, 0, 0, 0, 1],
+                              [0, 0, 0, 0, 0, 0, 1, 0]])
+    np.testing.assert_allclose(gates.TOFFOLI.construct_unitary().numpy(), target_matrix)
+
+    theta = 0.1234
+    target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
+                              [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    np.testing.assert_allclose(gates.RX.construct_unitary(theta).numpy(), target_matrix)
+    target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+                              [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    np.testing.assert_allclose(gates.RY.construct_unitary(theta).numpy(), target_matrix)
+    target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
+    np.testing.assert_allclose(gates.RZ.construct_unitary(theta).numpy(), target_matrix)
+    target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
+    np.testing.assert_allclose(gates.CZPow.construct_unitary(theta).numpy(), target_matrix)
+
+    with pytest.raises(NotImplementedError):
+        gates.fSim.construct_unitary()
+
+
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
-def test_variational_one_layer(gates, nqubits):
+def test_variational_one_layer(gates, backend, nqubits):
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
-    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
-    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    c.add((gates.RY(i, t).with_backend(backend) for i, t in enumerate(theta)))
+    c.add((gates.CZ(i, i + 1).with_backend(backend) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
     c = Circuit(nqubits)
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     thetas = {i: theta[i] for i in range(nqubits)}
     if nqubits % 2:
-        c.add(gates.RY(nqubits - 1, thetas.pop(nqubits - 1)))
-    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas))
+        c.add(gates.RY(nqubits - 1, thetas.pop(nqubits - 1)).with_backend(backend))
+    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas).with_backend(backend))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 

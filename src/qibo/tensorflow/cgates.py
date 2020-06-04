@@ -269,7 +269,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         TensorflowGate.__init__(self)
 
     @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
+    def construct_unitary() -> tf.Tensor:
         return tf.cast([[1, 0, 0, 0], [0, 1, 0, 0],
                         [0, 0, 0, 1], [0, 0, 1, 0]], dtype=DTYPECPX)
 
@@ -303,7 +303,7 @@ class CZPow(MatrixGate, base_gates.CZPow):
     @staticmethod
     def construct_unitary(theta) -> tf.Tensor:
         phase = tf.exp(1j * tf.cast(theta, dtype=DTYPECPX))
-        diag = tf.concat([tf.ones(3, dtype=DTYPECPX), phase], axis=0)
+        diag = tf.concat([tf.ones(3, dtype=DTYPECPX), [phase]], axis=0)
         return tf.linalg.diag(diag)
 
     def __call__(self, state, is_density_matrix: bool = False):
@@ -319,7 +319,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         TensorflowGate.__init__(self)
 
     @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
+    def construct_unitary() -> tf.Tensor:
         return tf.cast([[1, 0, 0, 0], [0, 0, 1, 0],
                         [0, 1, 0, 0], [0, 0, 0, 1]], dtype=DTYPECPX)
 
@@ -372,7 +372,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         TensorflowGate.__init__(self)
 
     @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
+    def construct_unitary() -> tf.Tensor:
         return tf.cast([[1, 0, 0, 0, 0, 0, 0, 0],
                         [0, 1, 0, 0, 0, 0, 0, 0],
                         [0, 0, 1, 0, 0, 0, 0, 0],
