@@ -1,22 +1,17 @@
 #if GOOGLE_CUDA
 #define EIGEN_USE_GPU
-#endif // GOOGLE_CUDA
 
+#include "tensorflow/core/framework/op_kernel.h"
 #include "apply_gate.h"
-#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
-
-typedef Eigen::ThreadPoolDevice CPUDevice;
-typedef Eigen::GpuDevice GPUDevice;
-
 namespace functor {
 
-using thread::ThreadPool;
+typedef Eigen::GpuDevice GPUDevice;
 
 
 template <typename T>
-struct BaseOneQubitGateFunctor<CPUDevice, T> {
+struct BaseOneQubitGateFunctor<GPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
@@ -27,34 +22,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     }
   }
 
-  void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
-                          int64 tk, int64 tk_reduced, int c) const {
-    const int64 ck = (int64) 1 << c;
-    for (auto g = t; g < w; g += 2 * tk_reduced) {
-      for (auto i = g; i < g + tk_reduced; i++) {
-        int64 i1 = ((int64) ((int64) i >> c) << (c + 1)) + (i & (ck - 1)) + ck;
-        apply(state[i1], state[i1 + tk], gate);
-      }
-    }
-  }
-
-  void multicontrol_work(int64 t, int64 w, T* state, const T* gate,
-                         int64 tk, int64 tk_reduced,
-                         const std::vector<int64>& controls) const {
-
-    for (auto g = t; g < w; g += 2 * tk_reduced) {
-      for (auto i = g; i < g + tk_reduced; i++) {
-        int64 i1 = i;
-        for (auto const& c: controls) {
-          int64 ck = 1 << c;
-          i1 = ((int64) ((int64) i1 >> c) << (c + 1)) + (i1 & (ck - 1)) + ck;
-        }
-        apply(state[i1], state[i1 + tk], gate);
-      }
-    }
-  }
-
-  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+  void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
                   int nqubits, int target, int ncontrols,
                   const int32* controls, const T* gate = NULL) const {
     const int64 tk = (int64) 1 << (nqubits - target - 1);
@@ -66,7 +34,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
       }
     }
     const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
-
+    /*
     // Set multi-threading
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
@@ -109,13 +77,26 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
+    */
   }
 };
 
+template<typename T>
+__device__ T cmult(T a, T b)
+{
+  return T(a.real() * b.real() - a.imag() * b.imag(),
+           a.real() * b.imag() + a.imag() * b.real());
+}
+
+template<typename T>
+__device__ T cadd(T a, T b)
+{
+  return T(a.real() + b.real(), a.imag() + b.imag());
+}
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
-struct ApplyGateFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
+struct ApplyGateFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     const auto buffer = state1;
     state1 = gate[0] * state1 + gate[1] * state2;
@@ -126,7 +107,7 @@ struct ApplyGateFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
 
 // Apply X gate via swap
 template <typename T>
-struct ApplyXFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
+struct ApplyXFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     std::swap(state1, state2);
   }
@@ -135,7 +116,7 @@ struct ApplyXFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
 
 // Apply Y gate via swap
 template <typename T>
-struct ApplyYFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
+struct ApplyYFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state1 *= T(0, 1);
     state2 *= - T(0, 1);
@@ -146,7 +127,7 @@ struct ApplyYFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
 
 // Apply Z gate
 template <typename T>
-struct ApplyZFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
+struct ApplyZFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= -1;
   }
@@ -155,19 +136,18 @@ struct ApplyZFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
 
 // Apply ZPow gate
 template <typename T>
-struct ApplyZPowFunctor<CPUDevice, T>: BaseOneQubitGateFunctor<CPUDevice, T> {
+struct ApplyZPowFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     state2 *= gate[0];
   }
 };
 
-
 template <typename T>
-struct BaseTwoQubitGateFunctor<CPUDevice, T> {
+struct BaseTwoQubitGateFunctor<GPUDevice, T> {
   virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
                      const T* gate = NULL) const {}
 
-  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+  void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
                   const int32* controls, const T* gate = NULL) const {
     const int t1 = std::max(target1, target2);
@@ -178,6 +158,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     const int64 tk2 = (int64) 1 << m2;
     const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
+    /*
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int) thread_pool->NumThreads() / 2;
@@ -236,13 +217,14 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
+    */
   }
 };
 
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
-struct ApplyTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+struct ApplyTwoQubitGateFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
                     const T* gate = NULL) const {
     const int64 i1 = i + tk1;
@@ -265,7 +247,7 @@ struct ApplyTwoQubitGateFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice
 
 // Apply fSim gate from https://arxiv.org/abs/2001.08343
 template <typename T>
-struct ApplyFsimFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+struct ApplyFsimFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
                     const T* gate = NULL) const {
     const int64 i1 = i + tk1;
@@ -281,143 +263,28 @@ struct ApplyFsimFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
 
 // Apply SWAP gate
 template <typename T>
-struct ApplySwapFunctor<CPUDevice, T>: BaseTwoQubitGateFunctor<CPUDevice, T> {
+struct ApplySwapFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   inline void apply(T* state, int64 i, int64 tk1, int64 tk2,
                     const T* gate = NULL) const {
     std::swap(state[i + tk1], state[i + tk2]);
   }
 };
 
+// Explicitly instantiate functors for the types of OpKernels registered.
+#define REGISTER_TEMPLATE(FUNCTOR)                 \
+    template struct FUNCTOR<GPUDevice, complex64>; \
+    template struct FUNCTOR<GPUDevice, complex128>;
 
-template <typename Device, typename T, typename F, bool UseMatrix>
-class OneQubitGateOp : public OpKernel {
- public:
-  explicit OneQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
-  }
-
-  void Compute(OpKernelContext* context) override {
-    // grabe the input tensor
-    Tensor state = context->input(0);
-
-    if (UseMatrix) {
-      const Tensor& gate = context->input(1);
-      const Tensor& controls = context->input(2);
-      const int ncontrols = controls.flat<int32>().size();
-
-      // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target_, ncontrols, controls.flat<int32>().data(),
-          gate.flat<T>().data());
-    }
-    else {
-      const Tensor& controls = context->input(1);
-      const int ncontrols = controls.flat<int32>().size();
-
-      // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target_, ncontrols, controls.flat<int32>().data());
-    }
-    context->set_output(0, state);
-  }
-
- private:
-  int nqubits_;
-  int target_;
-};
-
-
-template <typename Device, typename T, typename F, bool UseMatrix>
-class TwoQubitGateOp : public OpKernel {
- public:
-  explicit TwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
-    OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
-  }
-
-  void Compute(OpKernelContext* context) override {
-    // grabe the input tensor
-    Tensor state = context->input(0);
-
-    if (UseMatrix) {
-      const Tensor& gate = context->input(1);
-      const Tensor& controls = context->input(2);
-      const int ncontrols = controls.flat<int32>().size();
-
-      // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target1_, target2_, ncontrols,
-          controls.flat<int32>().data(), gate.flat<T>().data());
-    }
-    else {
-      const Tensor& controls = context->input(1);
-      const int ncontrols = controls.flat<int32>().size();
-
-      // call the implementation
-      F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target1_, target2_, ncontrols,
-          controls.flat<int32>().data());
-    }
-    context->set_output(0, state);
-  }
-
- private:
-  int nqubits_;
-  int target1_, target2_;
-};
-
-
-// Register the CPU kernels.
-#define REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX)         \
-  REGISTER_KERNEL_BUILDER(                                    \
-      Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"),   \
-      OP<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
-
-// Register one-qubit gate kernels.
-#if GOOGLE_CUDA
-
-// Register the GPU kernels.
-#define REGISTER_GPU(T, NAME, OP, FUNCTOR, USEMATRIX)        \
-  extern template struct FUNCTOR<GPUDevice, T>;              \
-  REGISTER_KERNEL_BUILDER(                                   \
-      Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
-      OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
-
-#define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
-  REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_CPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);   \
-  REGISTER_GPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_GPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);
-
-// Register two-qubit gate kernels.
-#define REGISTER_TWOQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
-  REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);   \
-  REGISTER_GPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_GPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
-
-#else
-
-#define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
-  REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_CPU(complex128, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);
-
-// Register two-qubit gate kernels.
-#define REGISTER_TWOQUBIT(NAME, FUNCTOR, USEMATRIX)                     \
-  REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);    \
-  REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
-
-#endif
-
-REGISTER_ONEQUBIT("ApplyGate", ApplyGateFunctor, true);
-REGISTER_ONEQUBIT("ApplyZPow", ApplyZPowFunctor, true);
-REGISTER_ONEQUBIT("ApplyX", ApplyXFunctor, false);
-REGISTER_ONEQUBIT("ApplyY", ApplyYFunctor, false);
-REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
-REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplyTwoQubitGateFunctor, true);
-REGISTER_TWOQUBIT("ApplyFsim", ApplyFsimFunctor, true);
-REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
-}  // namespace functor
-}  // namespace tensorflow
+REGISTER_TEMPLATE(BaseOneQubitGateFunctor);
+REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
+REGISTER_TEMPLATE(ApplyGateFunctor);
+REGISTER_TEMPLATE(ApplyXFunctor);
+REGISTER_TEMPLATE(ApplyYFunctor);
+REGISTER_TEMPLATE(ApplyZFunctor);
+REGISTER_TEMPLATE(ApplyZPowFunctor);
+REGISTER_TEMPLATE(ApplyTwoQubitGateFunctor);
+REGISTER_TEMPLATE(ApplyFsimFunctor);
+REGISTER_TEMPLATE(ApplySwapFunctor);
+} // end namespace functor
+} // end namespace tensorflow
+#endif // GOOGLE_CUDA

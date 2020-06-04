@@ -84,7 +84,7 @@ struct BaseTwoQubitGateFunctor {
                   int target2,
                   int ncontrols,
                   const int32* controls,
-                  const T* gate = NULL);
+                  const T* gate = NULL) const;
 };
 
 template <typename Device, typename T>
