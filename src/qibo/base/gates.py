@@ -541,7 +541,7 @@ class VariationalLayer(Gate):
             theta = 2 * np.pi * np.random.random(8)
 
             # define qubit pairs that two qubit gates will act
-            pairs = [(i, i + 1) for i in range(7)]
+            pairs = [(i, i + 1) for i in range(0, 7, 2)]
             # map variational parameters to qubit IDs
             theta_map = {i: th for i, th in enumerate(theta}
             # define a circuit of 8 qubits and add the variational layer
@@ -564,7 +564,7 @@ class VariationalLayer(Gate):
             raise ValueError("Cannot initialize variational layer with {} "
                              "qubit pairs and {} variational parameters."
                              "".format(len(qubit_pairs), len(params_map)))
-        self.params_map = params_map
+        self.params_map = dict(params_map)
         self.qubit_pairs = qubit_pairs
         self.target_qubits = tuple(q for p in qubit_pairs for q in p)
         if set(self.params_map.keys()) != set(self.target_qubits):

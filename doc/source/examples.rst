@@ -248,13 +248,13 @@ Here a simple example using the Heisenberg XXZ model:
                 c.add(gates.RY(q, theta[index]))
                 index+=1
             for q in range(0, nqubits-1, 2):
-                c.add(gates.CRZ(q, q+1, 1))
+                c.add(gates.CZ(q, q+1))
             for q in range(nqubits):
                 c.add(gates.RY(q, theta[index]))
                 index+=1
             for q in range(1, nqubits-2, 2):
-                c.add(gates.CRZ(q, q+1, 1))
-            c.add(gates.CRZ(0, nqubits-1, 1))
+                c.add(gates.CZ(q, q+1))
+            c.add(gates.CZ(0, nqubits-1))
         for q in range(nqubits):
             c.add(gates.RY(q, theta[index]))
             index+=1
@@ -277,6 +277,32 @@ because custom operators currently do not support automatic differentiation.
 These gates can be accessed using ``from qibo.tensorflow import gates`` instead
 of ``from qibo import gates``.
 Check the next example on automatic differentiation for more details.
+
+A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
+This optimizes performance by fusing the layer of one-qubit parametrized gates with
+the layer of two-qubit entangling gates and applying both as a single layer of
+general two-qubit gates (as 4x4 matrices). The ansatz from the above example can
+be written using :class:`qibo.base.gates.VariationalLayer` as follows:
+
+.. code-block:: python
+
+    def ansatz(theta):
+        theta_iter = iter(theta)
+        pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+        pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
+        pairs2.append((0, nqubits - 1))
+        c = models.Circuit(nqubits)
+        for l in range(nlayers):
+            theta_map = {i: next(theta_iter) for i in range(nqubits)}
+            if nqubits % 2:
+                c.add(gates.RY(nqubits - 1, theta_map.pop(nqubits - 1)))
+            c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ, theta_map))
+            theta_map = {i: next(theta_iter) for i in range(nqubits)}
+            if nqubits % 2:
+                c.add(gates.RY(nqubits - 2, theta_map.pop(nqubits - 2)))
+            c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZ, theta_map))
+        c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
+        return c
 
 
 How to use automatic differentiation?
