@@ -293,14 +293,16 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         pairs2.append((0, nqubits - 1))
         c = models.Circuit(nqubits)
         for l in range(nlayers):
-            theta_map = {i: next(theta_iter) for i in range(nqubits)}
-            if nqubits % 2:
-                c.add(gates.RY(nqubits - 1, theta_map.pop(nqubits - 1)))
-            c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ, theta_map))
-            theta_map = {i: next(theta_iter) for i in range(nqubits)}
-            if nqubits % 2:
-                c.add(gates.RY(nqubits - 2, theta_map.pop(nqubits - 2)))
-            c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZ, theta_map))
+            # parameters for one-qubit gates before CZ layer
+            theta_map1 = {i: next(theta_iter) for i in range(nqubits)}
+            # parameters for one-qubit gates after CZ layer
+            theta_map2 = {i: next(theta_iter) for i in range(nqubits)}
+            c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ, theta_map1, theta_map2))
+            # this ``VariationalLayer`` includes two layers of RY gates with a
+            # layer of CZ in the middle.
+            # We have to add an additional CZ layer manually:
+            c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+            c.add(gates.CZ(0, nqubits - 1))
         c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
         return c
 
