@@ -272,11 +272,10 @@ The user can choose one of the following methods for minimization:
     - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
     - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
-If ``"sgd"`` is used then the user has to switch to the :class:`qibo.tensorflow.einsum.MatmulEinsum`
-backend when defining the ansatz in order to get correct gradients,
-because of an issue with the automatic differentiation of ``tf.einsum``.
-This can be done easily by calling ``.with_backend("MatmulEinsum")`` on each
-gate when defining the ansatz.
+Note that if ``"sgd"`` is used then the user has to use native Tensorflow gates
+because custom operators currently do not support automatic differentiation.
+These gates can be accessed using ``from qibo.tensorflow import gates`` instead
+of ``from qibo import gates``.
 Check the next example on automatic differentiation for more details.
 
 
@@ -292,6 +291,8 @@ output matches a target state, using the fidelity as figure of merit.
 .. code-block:: python
 
     import tensorflow as tf
+    from qibo.models import Circuit
+    from qibo.tensorflow import gates
 
     nepochs = 100
     params = tf.Variable(np.zeros(2), dtype=tf.float64)
@@ -301,8 +302,8 @@ output matches a target state, using the fidelity as figure of merit.
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
             c = Circuit(2)
-            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
-            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            c.add(RX(0, params[0]))
+            c.add(RY(0, params[1]))
             fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
 
@@ -311,12 +312,10 @@ output matches a target state, using the fidelity as figure of merit.
 
 
 Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
-the calculated gradients will be ``None``. Also, our custom einsum backend
-:class:`qibo.tensorflow.einsum.MatmulEinsum` has to be used for gates that
-contain parameters with respect to which we calculate gradients.
-This is because the gradients of the original ``tf.einsum`` do not work properly
-with complex numbers
-(see `related issue <https://github.com/tensorflow/tensorflow/issues/37307>`_).
+the calculated gradients will be ``None``. Also, native Tensorflow gates have to
+be used because currently our custom operators do not support automatic differentiation.
+These gates can be accessed using ``from qibo.tensorflow import gates`` instead
+of ``from qibo import gates``.
 
 The optimization procedure can also be compiled as follows:
 
