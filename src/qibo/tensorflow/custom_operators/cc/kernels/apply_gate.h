@@ -46,16 +46,21 @@ namespace functor {
 
 template <typename Device, typename T>
 struct BaseOneQubitGateFunctor {
+
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
-  void operator()(const OpKernelContext* context, const Device& d,
+  virtual void apply_cuda(const Device& d, T* state, int nqubits, int target,
+                          int ncontrols, const int32* controls, const T* gate = NULL) const;
+
+  void operator()(const OpKernelContext* context,
+                  const Device& d,
                   T* state,       //!< Total state vector.
                   int nqubits,    //!< Total number of qubits in the state.
                   int target,     //!< Target qubit id.
                   int ncontrols,  //!< Number of qubits that the gate is controlled on.
                   const int32* controls,  //!< List of control qubits ids sorted in decreasing order.
                   const T* gate = NULL    //!< Gate matrix (used only by)
-                 ) const;
+                  ) const;
 };
 
 template <typename Device, typename T>
@@ -75,10 +80,15 @@ struct ApplyZPowFunctor: BaseOneQubitGateFunctor<Device, T> {};
 
 template <typename Device, typename T>
 struct BaseTwoQubitGateFunctor {
-  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2,
-                     const T* gate = NULL) const;
 
-  void operator()(const OpKernelContext* context, const Device& d, T* state,
+  virtual void apply(T* state, int64 i, int64 tk1, int64 tk2, const T* gate = NULL) const;
+
+  virtual void apply_cuda(const Device& d, T* state, int nqubits, int target1, int target2,
+                          int ncontrols, const int32* controls, const T* gate = NULL) const;
+
+  void operator()(const OpKernelContext* context,
+                  const Device& d,
+                  T* state,
                   int nqubits,
                   int target1,
                   int target2,
