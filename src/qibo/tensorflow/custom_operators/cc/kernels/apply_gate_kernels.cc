@@ -56,7 +56,8 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target, int ncontrols,
-                  const int32* controls, const T* gate = NULL) const {
+                  const int32* controls, const int32* tensor_controls,
+                  const T* gate = NULL) const {
     const int64 tk = (int64) 1 << (nqubits - target - 1);
     const int64 nstates = (int64) 1 << (nqubits - ncontrols);
     int target_eff = target;
@@ -301,22 +302,23 @@ class OneQubitGateOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
+    const int ncontrols = controls_.size();
 
     if (UseMatrix) {
       const Tensor& gate = context->input(1);
-      const int ncontrols = controls_.size();
+      const Tensor& tensor_controls = context->input(2);
 
       // call the implementation
       F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target_, ncontrols, controls_.data(),
+          nqubits_, target_, ncontrols, controls_.data(), tensor_controls.flat<int32>().data(),
           gate.flat<T>().data());
     }
     else {
-      const int ncontrols = controls_.size();
+      const Tensor& tensor_controls = context->input(1);
 
       // call the implementation
       F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target_, ncontrols, controls_.data());
+          nqubits_, target_, ncontrols, controls_.data(), tensor_controls.flat<int32>().data());
     }
     context->set_output(0, state);
   }

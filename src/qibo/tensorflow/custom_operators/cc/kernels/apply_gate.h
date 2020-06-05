@@ -50,7 +50,8 @@ struct BaseOneQubitGateFunctor {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   virtual void apply_cuda(const Device& d, T* state, int nqubits, int target,
-                          int ncontrols, const int32* controls, const T* gate = NULL) const;
+                          int ncontrols, const int32* controls,
+                          const int32* tensor_controls, const T* gate = NULL) const;
 
   void operator()(const OpKernelContext* context,
                   const Device& d,
@@ -59,6 +60,7 @@ struct BaseOneQubitGateFunctor {
                   int target,     //!< Target qubit id.
                   int ncontrols,  //!< Number of qubits that the gate is controlled on.
                   const int32* controls,  //!< List of control qubits ids sorted in decreasing order.
+                  const int32* tensor_controls, //!< List of control qubits ids sorted in decreasing order and stored on Device.
                   const T* gate = NULL    //!< Gate matrix (used only by)
                   ) const;
 };
