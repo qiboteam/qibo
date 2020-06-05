@@ -36,6 +36,18 @@ def random_active_qubits(nqubits, nmin=None, nactive=None):
     return list(all_qubits[:nactive])
 
 
+def execute_cirq(cirq_gates, nqubits, initial_state=None) -> np.ndarray:
+    """Executes a Cirq circuit with the given list of gates."""
+    c = cirq.Circuit()
+    q = [cirq.LineQubit(i) for i in range(nqubits)]
+    # apply identity gates to all qubits so that they become part of the circuit
+    c.append([cirq.I(qi) for qi in q])
+    for gate, targets in cirq_gates:
+        c.append(gate(*[q[i] for i in targets]))
+    result = cirq.Simulator().simulate(c, initial_state=initial_state)
+    return result.final_state
+
+
 def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
     """Asserts that QIBO and Cirq gates have equivalent action on a random state.
 
@@ -50,16 +62,7 @@ def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
     c = Circuit(nqubits)
     c.add(qibo_gates)
     final_state = c(np.copy(initial_state)).numpy()
-
-    c = cirq.Circuit()
-    q = [cirq.LineQubit(i) for i in range(nqubits)]
-    # apply identity gates to all qubits so that they become part of the circuit
-    c.append([cirq.I(qi) for qi in q])
-    for gate, targets in cirq_gates:
-        c.append(gate(*[q[i] for i in targets]))
-    result = cirq.Simulator().simulate(c, initial_state=np.copy(initial_state))
-    target_state = result.final_state
-
+    target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=atol)
 
 
@@ -196,5 +199,12 @@ def test_unitary_matrix_gate_controlled_by(gates, nqubits, ntargets):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 13, 14])
-def test_qft()
+@pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
+def test_qft(gates, nqubits):
+    from qibo.models import QFT
+    initial_state = random_initial_state(nqubits)
+    c = QFT(nqubits, gates=gates)
+    final_state = c(np.copy(initial_state)).numpy()
+    cirq_gates = [(cirq.QFT, list(range(nqubits)))]
+    target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+    np.testing.assert_allclose(target_state, final_state, atol=1e-6)
