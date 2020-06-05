@@ -49,9 +49,16 @@ struct BaseOneQubitGateFunctor {
 
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
-  virtual void apply_cuda(const Device& d, T* state, int nqubits, int target,
-                          int ncontrols, const int32* controls,
-                          const int32* tensor_controls, const T* gate = NULL) const;
+  virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
+                             T* state, const T* gate, long tk) const;
+
+  virtual void singlecontrolwork(const Device& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk, long tk_reduced,
+                                 int c) const;
+
+  virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk, long tk_reduced,
+                                 int ncontrols, const int * controls, int nqubits) const;
 
   void operator()(const OpKernelContext* context,
                   const Device& d,
