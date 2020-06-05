@@ -36,64 +36,55 @@ class CirqCircuit:
         return result.final_state
 
 
+def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=_ATOL):
+    initial_state = random_initial_state(nqubits)
+
+    c = Circuit(nqubits)
+    c.add(qibo_gates)
+    final_state = c(np.copy(initial_state)).numpy()
+
+    c = CirqCircuit(nqubits)
+    for gate, targets in cirq_gates:
+        c.add(gate, targets)
+    target_state = c(np.copy(initial_state))
+
+    np.testing.assert_allclose(target_state, final_state, atol=atol)
+
+
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("gate_name", ["H", "X", "Y", "Z"])
 def test_one_qubit_gates(gates, gate_name):
-    initial_state = random_initial_state(1)
-    c = Circuit(1)
-    c.add(getattr(gates, gate_name)(0))
-    final_state = c(np.copy(initial_state)).numpy()
-    c = CirqCircuit(1)
-    c.add(getattr(cirq, gate_name), [0])
-    target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+    qibo_gate = getattr(gates, gate_name)(0)
+    cirq_gate = [(getattr(cirq, gate_name), (0,))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
 
 
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("gate_name", ["RX", "RY", "RZ"])
 def test_one_qubit_parametrized_gates(gates, gate_name):
-    initial_state = random_initial_state(1)
     theta = 0.1234
-    c = Circuit(1)
-    c.add(getattr(gates, gate_name)(0, theta))
-    final_state = c(np.copy(initial_state)).numpy()
-    c = CirqCircuit(1)
-    c.add(getattr(cirq, gate_name.lower())(theta), [0])
-    target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+    qibo_gate = getattr(gates, gate_name)(0, theta)
+    cirq_gate = [(getattr(cirq, gate_name.lower())(theta), (0,))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
 
 
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("gate_name", ["CNOT", "SWAP"])
 def test_two_qubit_gates(gates, gate_name):
-    initial_state = random_initial_state(2)
-    c = Circuit(2)
-    c.add(getattr(gates, gate_name)(0, 1))
-    final_state = c(np.copy(initial_state)).numpy()
-    c = CirqCircuit(2)
-    c.add(getattr(cirq, gate_name), [0, 1])
-    target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+    qibo_gate = getattr(gates, gate_name)(0, 1)
+    cirq_gate = [(getattr(cirq, gate_name), (0, 1))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
 
 
 @pytest.mark.parametrize("gates", _GATES)
 def test_two_qubit_parametrized_gates(gates):
     theta = 0.1234
     phi = 0.4321
-    initial_state = random_initial_state(2)
 
-    c = Circuit(2)
-    c.add(gates.CZPow(0, 1, np.pi * theta))
-    final_state = c(np.copy(initial_state)).numpy()
-    c = CirqCircuit(2)
-    c.add(cirq.CZPowGate(exponent=theta), [0, 1])
-    target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+    qibo_gate = gates.CZPow(0, 1, np.pi * theta)
+    cirq_gate = [(cirq.CZPowGate(exponent=theta), (0, 1))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
 
-    c = Circuit(2)
-    c.add(gates.fSim(0, 1, theta, phi))
-    final_state = c(np.copy(initial_state)).numpy()
-    c = CirqCircuit(2)
-    c.add(cirq.FSimGate(theta=theta, phi=phi), [0, 1])
-    target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+    qibo_gate = gates.fSim(0, 1, theta, phi)
+    cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), (0, 1))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
