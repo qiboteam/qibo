@@ -19,23 +19,6 @@ def random_initial_state(nqubits, dtype=np.complex128):
     return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
 
 
-class CirqCircuit:
-
-    def __init__(self, nqubits):
-        self.program = cirq.Circuit()
-        self.qubits = [cirq.LineQubit(i) for i in range(nqubits)]
-        self.simulator = cirq.Simulator()
-
-    def add(self, gate, qubit_ids):
-        targets = [self.qubits[i] for i in qubit_ids]
-        self.program.append(gate(*targets))
-
-    def __call__(self, initial_state):
-        result = self.simulator.simulate(self.program,
-                                         initial_state=initial_state)
-        return result.final_state
-
-
 def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=_ATOL):
     initial_state = random_initial_state(nqubits)
 
@@ -43,10 +26,12 @@ def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=_ATOL):
     c.add(qibo_gates)
     final_state = c(np.copy(initial_state)).numpy()
 
-    c = CirqCircuit(nqubits)
+    c = cirq.Circuit()
+    q = [cirq.LineQubit(i) for i in range(nqubits)]
     for gate, targets in cirq_gates:
-        c.add(gate, targets)
-    target_state = c(np.copy(initial_state))
+        c.append(gate(*[q[i] for i in targets]))
+    result = cirq.Simulator().simulate(c, initial_state=np.copy(initial_state))
+    target_state = result.final_state
 
     np.testing.assert_allclose(target_state, final_state, atol=atol)
 
