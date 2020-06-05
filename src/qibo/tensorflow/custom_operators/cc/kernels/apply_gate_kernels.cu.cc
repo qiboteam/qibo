@@ -29,62 +29,20 @@ struct BaseOneQubitGateFunctor<GPUDevice, T> {
   virtual void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
                           const int32* controls, const int32* tensor_controls, const T* gate = NULL) const {}
 
+  virtual void nocontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                             T* state, const T* gate, long tk) const {}
+
+  virtual void singlecontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk, long tk_reduced,
+                                 int c) const {}
+
+  virtual void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk, long tk_reduced,
+                                 int ncontrols, const int * controls, int nqubits) const {}
+
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state, int nqubits,
                   int target, int ncontrols, const int32* controls, const int32* tensor_controls,
                   const T* gate = NULL) const {
-    apply_cuda(d, state, nqubits, target, ncontrols, controls, tensor_controls, gate);
-  }
-};
-
-
-template<typename T>
-__global__ void ApplyGateWork(T* state, const T* gate, long tk) {
-  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
-  const auto i = index % tk + 2 * tk * int(index / tk);
-  const auto state1 = state[i];
-  const auto state2 = state[i + tk];
-  const auto buffer = state1;
-  state[i]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
-  state[i + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
-}
-
-template<typename T>
-__global__ void ApplyGateSingleControlWork(T* state, const T* gate, long tk, long tk_reduced, int c) {
-  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
-  const auto i = index % tk_reduced + 2 * tk_reduced * int(index / tk_reduced);
-  const long ck = (long) 1 << c;
-  const long i1 = ((long) ((long) i >> c) << (c + 1)) + (i & (ck - 1)) + ck;
-  const auto state1 = state[i1];
-  const auto state2 = state[i1 + tk];
-  const auto buffer = state1;
-  state[i1]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
-  state[i1 + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
-}
-
-template<typename T>
-__global__ void ApplyGateMultiControlWork(T* state, const T* gate, long tk, long tk_reduced,
-                                          int ncontrols, const int * controls, int nqubits) {
-  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
-  const auto i = index % tk_reduced + 2 * tk_reduced * int(index / tk_reduced);
-  auto i1 = i;
-  for (auto ic = 0; ic < ncontrols; ic++) {
-    const long c = nqubits - controls[ic] - 1;
-    const long ck = (long) 1 << c;
-    i1 = ((long) ((long) i1 >> c) << (c + 1)) + (i1 & (ck - 1)) + ck;
-  }
-  const auto state1 = state[i1];
-  const auto state2 = state[i1 + tk];
-  const auto buffer = state1;
-  state[i1]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
-  state[i1 + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
-}
-
-// Apply general one-qubit gate via gate matrix
-template <typename T>
-struct ApplyGateFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
-  inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
-                         const int32* controls, const int32* tensor_controls,
-                         const T* gate = NULL) const override {
     const int64 tk = (int64) 1 << (nqubits - target - 1);
     const int64 nstates = (int64) 1 << (nqubits - ncontrols);
     int target_eff = target;
@@ -108,19 +66,81 @@ struct ApplyGateFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
     }
 
     if (ncontrols == 0) {
-      ApplyGateWork<T>
-        <<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk);
+      nocontrolwork(d, numBlocks, blockSize, state, gate, tk);
     }
     else if (ncontrols == 1) {
-      ApplyGateSingleControlWork<T>
-        <<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk, tk_reduced,
-                                                  nqubits - controls[0] - 1);
+      singlecontrolwork(d, numBlocks, blockSize, state, gate, tk,
+                        tk_reduced, nqubits - controls[0] - 1);
     }
     else {
-      ApplyGateMultiControlWork<T>
-        <<<numBlocks, blockSize>>>(state, gate, tk, tk_reduced,
-                                   ncontrols, tensor_controls, nqubits);
+      multicontrolwork(d, numBlocks, blockSize, state, gate, tk,
+                       tk_reduced, ncontrols, tensor_controls, nqubits);
     }
+  }
+};
+
+
+template<typename T>
+__global__ void ApplyGateKernel(T* state, const T* gate, long tk) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % tk + 2 * tk * int(index / tk);
+  const auto state1 = state[i];
+  const auto state2 = state[i + tk];
+  const auto buffer = state1;
+  state[i]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
+  state[i + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
+}
+
+template<typename T>
+__global__ void ApplyGateSingleControlKernel(T* state, const T* gate, long tk, long tk_reduced, int c) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % tk_reduced + 2 * tk_reduced * int(index / tk_reduced);
+  const long ck = (long) 1 << c;
+  const long i1 = ((long) ((long) i >> c) << (c + 1)) + (i & (ck - 1)) + ck;
+  const auto state1 = state[i1];
+  const auto state2 = state[i1 + tk];
+  const auto buffer = state1;
+  state[i1]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
+  state[i1 + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
+}
+
+template<typename T>
+__global__ void ApplyGateMultiControlKernel(T* state, const T* gate, long tk, long tk_reduced,
+                                            int ncontrols, const int * controls, int nqubits) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % tk_reduced + 2 * tk_reduced * int(index / tk_reduced);
+  auto i1 = i;
+  for (auto ic = 0; ic < ncontrols; ic++) {
+    const long c = nqubits - controls[ic] - 1;
+    const long ck = (long) 1 << c;
+    i1 = ((long) ((long) i1 >> c) << (c + 1)) + (i1 & (ck - 1)) + ck;
+  }
+  const auto state1 = state[i1];
+  const auto state2 = state[i1 + tk];
+  const auto buffer = state1;
+  state[i1]      = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
+  state[i1 + tk] = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
+}
+
+// Apply general one-qubit gate via gate matrix
+template <typename T>
+struct ApplyGateFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
+
+  inline void nocontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                            T* state, const T* gate, long tk) const override {
+    ApplyGateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk);
+  }
+
+  inline void singlecontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                                T* state, const T* gate, long tk, long tk_reduced,
+                                int c) const override {
+    ApplyGateSingleControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk, tk_reduced, c);
+  }
+
+  inline void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk, long tk_reduced,
+                                 int ncontrols, const int * controls, int nqubits) const override {
+    ApplyGateMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk, tk_reduced, ncontrols, controls, nqubits);
   }
 };
 
