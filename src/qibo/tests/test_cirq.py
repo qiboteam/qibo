@@ -74,3 +74,26 @@ def test_two_qubit_gates(gates, gate_name):
     c.add(getattr(cirq, gate_name), [0, 1])
     target_state = c(np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+
+
+@pytest.mark.parametrize("gates", _GATES)
+def test_two_qubit_parametrized_gates(gates):
+    theta = 0.1234
+    phi = 0.4321
+    initial_state = random_initial_state(2)
+
+    c = Circuit(2)
+    c.add(gates.CZPow(0, 1, np.pi * theta))
+    final_state = c(np.copy(initial_state)).numpy()
+    c = CirqCircuit(2)
+    c.add(cirq.CZPowGate(exponent=theta), [0, 1])
+    target_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
+
+    c = Circuit(2)
+    c.add(gates.fSim(0, 1, theta, phi))
+    final_state = c(np.copy(initial_state)).numpy()
+    c = CirqCircuit(2)
+    c.add(cirq.FSimGate(theta=theta, phi=phi), [0, 1])
+    target_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(target_state, final_state, atol=_ATOL)
