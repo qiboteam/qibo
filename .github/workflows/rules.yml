@@ -19,6 +19,7 @@ jobs:
     - name: Install package
       run: |
         pip install tensorflow
+        pip install cirq
         pip install .[docs]
     - name: Test with pytest
       run: |
