@@ -151,21 +151,6 @@ def test_one_qubit_gates_controlled_by(gates, gate_name, nqubits):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
-@pytest.mark.skip("Cirq probably changes angle conventions when using ``controlled``.")
-@pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize(("gate_name", "nqubits"),
-                         [("RZ", 4), ("RY", 5), ("RX", 8)])
-def test_one_qubit_rotations_controlled_by(gates, gate_name, nqubits):
-    """Check one-qubit rotations controlled on arbitrary number of qubits."""
-    all_qubits = np.arange(nqubits)
-    for _ in range(5):
-        activeq = random_active_qubits(nqubits, nmin=1)
-        theta = np.random.random()
-        qibo_gate = getattr(gates, gate_name)(activeq[-1], np.pi * theta).controlled_by(*activeq[:-1])
-        cirq_gate = [(getattr(cirq, gate_name.lower())(theta).controlled(len(activeq) - 1), activeq)]
-        assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
-
-
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("nqubits", [4, 5, 8, 9, 12, 15, 17])
 def test_two_qubit_gates_controlled_by(gates, nqubits):
