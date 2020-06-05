@@ -27,12 +27,12 @@ def random_unitary_matrix(nqubits, dtype=np.complex128):
     return expm(1j * (m + m.conj().T))
 
 
-def random_active_qubits(nqubits, ntargets=None, nactive=None):
+def random_active_qubits(nqubits, nmin=None, nactive=None):
     """Generates random list of target and control qubits."""
     all_qubits = np.arange(nqubits)
     np.random.shuffle(all_qubits)
     if nactive is None:
-        nactive = np.random.randint(ntargets + 1, nqubits)
+        nactive = np.random.randint(nmin + 1, nqubits)
     return list(all_qubits[:nactive])
 
 
@@ -68,61 +68,73 @@ def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("gate_name", ["H", "X", "Y", "Z"])
-def test_one_qubit_gates(gates, gate_name):
+@pytest.mark.parametrize(("gate_name", "nqubits"),
+                         [("H", 3), ("X", 2), ("Y", 1), ("Z", 1)])
+def test_one_qubit_gates(gates, gate_name, nqubits):
     """Check simple one-qubit gates."""
-    qibo_gate = getattr(gates, gate_name)(0)
-    cirq_gate = [(getattr(cirq, gate_name), (0,))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = getattr(gates, gate_name)(*targets)
+    cirq_gate = [(getattr(cirq, gate_name), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("gate_name", ["RX", "RY", "RZ"])
-def test_one_qubit_parametrized_gates(gates, gate_name):
+@pytest.mark.parametrize(("gate_name", "nqubits"),
+                         [("RX", 3), ("RY", 2), ("RZ", 1)])
+def test_one_qubit_parametrized_gates(gates, gate_name, nqubits):
     """Check parametrized one-qubit rotations."""
     theta = 0.1234
-    qibo_gate = getattr(gates, gate_name)(0, theta)
-    cirq_gate = [(getattr(cirq, gate_name.lower())(theta), (0,))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = getattr(gates, gate_name)(*targets, theta)
+    cirq_gate = [(getattr(cirq, gate_name.lower())(theta), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("gate_name", ["CNOT", "SWAP"])
-def test_two_qubit_gates(gates, gate_name):
+@pytest.mark.parametrize("nqubits", [3, 4, 5])
+def test_two_qubit_gates(gates, gate_name, nqubits):
     """Check two-qubit gates."""
     # TODO: Add CZ gate when it is merged
-    qibo_gate = getattr(gates, gate_name)(0, 1)
-    cirq_gate = [(getattr(cirq, gate_name), (0, 1))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = getattr(gates, gate_name)(*targets)
+    cirq_gate = [(getattr(cirq, gate_name), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
 @pytest.mark.parametrize("gates", _GATES)
-def test_two_qubit_parametrized_gates(gates):
+@pytest.mark.parametrize("nqubits", [2, 6, 7])
+def test_two_qubit_parametrized_gates(gates, nqubits):
     """Check ``CZPow`` and ``fSim`` gate."""
     theta = 0.1234
     phi = 0.4321
 
-    qibo_gate = gates.CZPow(0, 1, np.pi * theta)
-    cirq_gate = [(cirq.CZPowGate(exponent=theta), (0, 1))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = gates.CZPow(*targets, np.pi * theta)
+    cirq_gate = [(cirq.CZPowGate(exponent=theta), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
-    qibo_gate = gates.fSim(0, 1, theta, phi)
-    cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), (0, 1))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = gates.fSim(*targets, theta, phi)
+    cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
 @pytest.mark.parametrize("gates", _GATES)
+@pytest.mark.parametrize("nqubits", [2, 3, 6, 9])
 def test_unitary_matrix_gate(gates):
     """Check arbitrary unitary gate."""
     matrix = random_unitary_matrix(1)
-    qibo_gate = gates.Unitary(matrix, 0)
-    cirq_gate = [(cirq.MatrixGate(matrix), (0,))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = gates.Unitary(matrix, *targets)
+    cirq_gate = [(cirq.MatrixGate(matrix), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
     matrix = random_unitary_matrix(2)
-    qibo_gate = gates.Unitary(matrix, 0, 1)
-    cirq_gate = [(cirq.MatrixGate(matrix), (0, 1))]
-    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
+    targets = random_active_qubits(nqubits, nactive=2)
+    qibo_gate = gates.Unitary(matrix, *targets)
+    cirq_gate = [(cirq.MatrixGate(matrix), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
 @pytest.mark.parametrize("gates", _GATES)
