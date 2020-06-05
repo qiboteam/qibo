@@ -71,47 +71,133 @@ struct ApplyGateFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
 };
 
 
+template <typename T>
+__global__ void ApplyXWork(const int size, const int k, T* state, const T* gate) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % k + 2 * k * int(index / k);
+  const auto buffer = state[i];
+  state[i] = state[i + k];
+  state[i + k] = buffer;
+}
+
 // Apply X gate via swap
 template <typename T>
 struct ApplyXFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
-                         const int32* controls, const T* gate = NULL) const override
-                         {
-                           std::cout << "ApplyXFunctor" << std::endl;
-                         }
+                         const int32* controls, const T* gate = NULL) const override {
+    const int64 tk = (int64) 1 << (nqubits - target - 1);
+    const int64 nstates = (int64) 1 << (nqubits - ncontrols);
+    int64 nreps = nstates;
+    int blockSize = 1024;
+    int numBlocks = (nreps / 2 + blockSize - 1) / blockSize;
+    if (nreps / 2 < blockSize)
+    {
+      numBlocks = 1;
+      blockSize = nreps / 2;
+    }
+
+    if (ncontrols == 0) {
+      ApplyXWork<T>
+        <<<numBlocks, blockSize, 0, d.stream()>>>(nreps, tk, state, gate);
+    }
+  }
 };
 
+
+template <typename T>
+__global__ void ApplyYWork(const int size, const int k, T* state, const T* gate) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % k + 2 * k * int(index / k);
+  state[i] = cmult(state[i], T(0, 1));
+  state[i + k] = cmult(state[i + k], T(0, -1));
+  const auto buffer = state[i];
+  state[i] = state[i + k];
+  state[i + k] = buffer;
+}
 
 // Apply Y gate via swap
 template <typename T>
 struct ApplyYFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
-                         const int32* controls, const T* gate = NULL) const override
-                         {
-                           std::cout << "ApplyYFunctor" << std::endl;
-                         }
+                         const int32* controls, const T* gate = NULL) const override {
+    const int64 tk = (int64) 1 << (nqubits - target - 1);
+    const int64 nstates = (int64) 1 << (nqubits - ncontrols);
+    int64 nreps = nstates;
+    int blockSize = 1024;
+    int numBlocks = (nreps / 2 + blockSize - 1) / blockSize;
+    if (nreps / 2 < blockSize)
+    {
+      numBlocks = 1;
+      blockSize = nreps / 2;
+    }
+
+    if (ncontrols == 0) {
+      ApplyYWork<T>
+        <<<numBlocks, blockSize, 0, d.stream()>>>(nreps, tk, state, gate);
+    }
+  }
 };
 
+
+template <typename T>
+__global__ void ApplyZWork(const int size, const int k, T* state, const T* gate) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % k + 2 * k * int(index / k);
+  state[i + k] = cmult(state[i + k], T(-1));
+}
 
 // Apply Z gate
 template <typename T>
 struct ApplyZFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
-                         const int32* controls, const T* gate = NULL) const override
-                        {
-                          std::cout << "ApplyZFunctor" << std::endl;
-                        }
+                         const int32* controls, const T* gate = NULL) const override {
+    const int64 tk = (int64) 1 << (nqubits - target - 1);
+    const int64 nstates = (int64) 1 << (nqubits - ncontrols);
+    int64 nreps = nstates;
+    int blockSize = 1024;
+    int numBlocks = (nreps / 2 + blockSize - 1) / blockSize;
+    if (nreps / 2 < blockSize)
+    {
+      numBlocks = 1;
+      blockSize = nreps / 2;
+    }
+
+    if (ncontrols == 0) {
+      ApplyZWork<T>
+        <<<numBlocks, blockSize, 0, d.stream()>>>(nreps, tk, state, gate);
+    }
+  }
 };
 
+
+template <typename T>
+__global__ void ApplyZPowWork(const int size, const int k, T* state, const T* gate) {
+  const auto index = blockIdx.x * blockDim.x + threadIdx.x;
+  const auto i = index % k + 2 * k * int(index / k);
+  state[i + k] = cmult(state[i + k], gate[0]);
+}
 
 // Apply ZPow gate
 template <typename T>
 struct ApplyZPowFunctor<GPUDevice, T>: BaseOneQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target, int ncontrols,
-                   const int32* controls, const T* gate = NULL) const override
-                   {
-                     std::cout << "ApplyZPowFunctor" << std::endl;
-                   }
+                   const int32* controls, const T* gate = NULL) const override {
+    const int64 tk = (int64) 1 << (nqubits - target - 1);
+    const int64 nstates = (int64) 1 << (nqubits - ncontrols);
+    int64 nreps = nstates;
+    int blockSize = 1024;
+    int numBlocks = (nreps / 2 + blockSize - 1) / blockSize;
+    if (nreps / 2 < blockSize)
+    {
+      numBlocks = 1;
+      blockSize = nreps / 2;
+    }
+
+    if (ncontrols == 0) {
+      ApplyZPowWork<T>
+        <<<numBlocks, blockSize, 0, d.stream()>>>(nreps, tk, state, gate);
+    }
+  }
 };
 
 
@@ -129,6 +215,7 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
                   const int32* controls,
                   const T* gate = NULL) const
                   {
+                    std::cout << "BaseTwoQubitGateFunctor" << std::endl;
                     apply_cuda(d, state, nqubits, target1, target2, ncontrols, controls, gate);
                   };
 };
@@ -140,6 +227,7 @@ struct ApplyTwoQubitGateFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target1, int target2,
                          int ncontrols, const int32* controls, const T* gate = NULL) const override
                          {
+                          std::cout << "ApplyTwoQubitGateFunctor" << std::endl;
                          }
 };
 
@@ -149,6 +237,7 @@ struct ApplyFsimFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target1, int target2,
                          int ncontrols, const int32* controls, const T* gate = NULL) const override
                          {
+                          std::cout << "ApplyFsimFunctor" << std::endl;
                          }
 };
 
@@ -159,6 +248,7 @@ struct ApplySwapFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   inline void apply_cuda(const GPUDevice& d, T* state, int nqubits, int target1, int target2,
                          int ncontrols, const int32* controls, const T* gate = NULL) const override
                          {
+                          std::cout << "ApplySwapFunctor" << std::endl;
                          }
 };
 
@@ -168,12 +258,12 @@ struct ApplySwapFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
     template struct FUNCTOR<GPUDevice, complex128>;
 
 REGISTER_TEMPLATE(BaseOneQubitGateFunctor);
-REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyGateFunctor);
 REGISTER_TEMPLATE(ApplyXFunctor);
 REGISTER_TEMPLATE(ApplyYFunctor);
 REGISTER_TEMPLATE(ApplyZFunctor);
 REGISTER_TEMPLATE(ApplyZPowFunctor);
+REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyFsimFunctor);
 REGISTER_TEMPLATE(ApplySwapFunctor);
