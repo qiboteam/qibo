@@ -19,6 +19,23 @@ def random_initial_state(nqubits, dtype=np.complex128):
     return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
 
 
+def random_unitary_matrix(nqubits, dtype=np.complex128):
+    """Generates a random unitary matrix of shape (2^nqubits, 2^nqubits)."""
+    from scipy.linalg import expm
+    shape = 2 * (2 ** nqubits,)
+    m = np.random.random(shape) + 1j * np.random.random(shape)
+    return expm(1j * (m + m.conj().T))
+
+
+def random_active_qubits(nqubits, ntargets=None, nactive=None):
+    """Generates random list of target and control qubits."""
+    all_qubits = np.arange(nqubits)
+    np.random.shuffle(all_qubits)
+    if nactive is None:
+        nactive = np.random.randint(ntargets + 1, nqubits)
+    return list(all_qubits[:nactive])
+
+
 def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
     """Asserts that QIBO and Cirq gates have equivalent action on a random state.
 
@@ -42,6 +59,10 @@ def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
         c.append(gate(*[q[i] for i in targets]))
     result = cirq.Simulator().simulate(c, initial_state=np.copy(initial_state))
     target_state = result.final_state
+
+    for i, (x, y) in enumerate(zip(final_state, target_state)):
+        if np.abs(x - y) > 1e-6:
+            print(i, x, y)
 
     np.testing.assert_allclose(target_state, final_state, atol=atol)
 
@@ -91,6 +112,20 @@ def test_two_qubit_parametrized_gates(gates):
 
 
 @pytest.mark.parametrize("gates", _GATES)
+def test_unitary_matrix_gate(gates):
+    """Check arbitrary unitary gate."""
+    matrix = random_unitary_matrix(1)
+    qibo_gate = gates.Unitary(matrix, 0)
+    cirq_gate = [(cirq.MatrixGate(matrix), (0,))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 1)
+
+    matrix = random_unitary_matrix(2)
+    qibo_gate = gates.Unitary(matrix, 0, 1)
+    cirq_gate = [(cirq.MatrixGate(matrix), (0, 1))]
+    assert_gates_equivalent(qibo_gate, cirq_gate, 2)
+
+
+@pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize(("gate_name", "nqubits"),
                          [("H", 3), ("Z", 4), ("Y", 5),
                           ("X", 6), ("H", 7)])
@@ -98,16 +133,13 @@ def test_one_qubit_gates_controlled_by(gates, gate_name, nqubits):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
     all_qubits = np.arange(nqubits)
     for _ in range(5):
-        # Generate control and target qubits randomly
-        np.random.shuffle(all_qubits)
-        nactive = np.random.randint(2, nqubits)
-        activeq = list(all_qubits[:nactive])
-
+        activeq = random_active_qubits(nqubits, 1)
         qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(*activeq[:-1])
-        cirq_gate = [(getattr(cirq, gate_name).controlled(nactive - 1), activeq)]
+        cirq_gate = [(getattr(cirq, gate_name).controlled(len(activeq) - 1), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
+@pytest.mark.skip("Cirq probably changes angle conventions when using ``controlled``.")
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize(("gate_name", "nqubits"),
                          [("RZ", 4), ("RY", 5), ("RX", 8)])
@@ -115,33 +147,43 @@ def test_one_qubit_rotations_controlled_by(gates, gate_name, nqubits):
     """Check one-qubit rotations controlled on arbitrary number of qubits."""
     all_qubits = np.arange(nqubits)
     for _ in range(5):
-        # Generate control and target qubits randomly
-        np.random.shuffle(all_qubits)
-        nactive = np.random.randint(2, nqubits)
-        activeq = list(all_qubits[:nactive])
-
+        activeq = random_active_qubits(nqubits, 1)
         theta = np.random.random()
-        qibo_gate = getattr(gates, gate_name)(activeq[-1], theta).controlled_by(*activeq[:-1])
-        cirq_gate = [(getattr(cirq, gate_name)(theta).controlled(nactive - 1), activeq)]
+        qibo_gate = getattr(gates, gate_name)(activeq[-1], np.pi * theta).controlled_by(*activeq[:-1])
+        cirq_gate = [(getattr(cirq, gate_name.lower())(theta).controlled(len(activeq) - 1), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("gates", _GATES)
-@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 8])
+@pytest.mark.parametrize("nqubits", [4, 5, 8, 9, 12, 15, 17])
 def test_two_qubit_gates_controlled_by(gates, nqubits):
     """Check ``SWAP`` and ``fSim`` gates controlled on arbitrary number of qubits."""
     all_qubits = np.arange(nqubits)
     for _ in range(5):
-        np.random.shuffle(all_qubits)
-        nactive = np.random.randint(3, nqubits)
-        activeq = list(all_qubits[:nactive])
-
+        activeq = random_active_qubits(nqubits, 2)
         qibo_gate = gates.SWAP(*activeq[-2:]).controlled_by(*activeq[:-2])
-        cirq_gate = [(cirq.SWAP.controlled(nactive - 2), activeq)]
+        cirq_gate = [(cirq.SWAP.controlled(len(activeq) - 2), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 
         theta = np.random.random()
         phi = np.random.random()
         qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(*activeq[:-2])
-        cirq_gate = [(cirq.FSimGate(theta, phi).controlled(nactive - 2), activeq)]
+        cirq_gate = [(cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)]
+        assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize("gates", _GATES)
+#@pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 13, 14])
+@pytest.mark.parametrize("nqubits", [5])
+@pytest.mark.parametrize("ntargets", [1, 2])
+def test_unitary_matrix_gate(gates, nqubits, ntargets):
+    """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
+    all_qubits = np.arange(nqubits)
+    for _ in range(5):
+        activeq = random_active_qubits(nqubits, nactive=5)
+        matrix = random_unitary_matrix(ntargets)
+        qibo_gate = gates.Unitary(matrix, *activeq[-ntargets:]).controlled_by(*activeq[:-ntargets])
+        cirq_gate = [(cirq.MatrixGate(matrix).controlled(len(activeq) - ntargets), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
