@@ -92,8 +92,12 @@ struct BaseTwoQubitGateFunctor {
 
   virtual void apply(T* state, int64 i, int64 tk1, int64 tk2, const T* gate = NULL) const;
 
-  virtual void apply_cuda(const Device& d, T* state, int nqubits, int target1, int target2,
-                          int ncontrols, const int32* controls, const T* gate = NULL) const;
+  virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
+                             T* state, const T* gate, long tk1, long tk2, int m1, int m2) const;
+
+  virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
+                                 T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+                                 int ncontrols, const int * controls, int nqubits, int t1, int t2) const;
 
   void operator()(const OpKernelContext* context,
                   const Device& d,
@@ -103,6 +107,7 @@ struct BaseTwoQubitGateFunctor {
                   int target2,
                   int ncontrols,
                   const int32* controls,
+                  const int32* tensor_controls,
                   const T* gate = NULL) const;
 };
 
