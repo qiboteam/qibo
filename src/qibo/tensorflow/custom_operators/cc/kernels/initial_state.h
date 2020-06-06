@@ -14,4 +14,4 @@ struct InitialStateFunctor {
 
 }  // namespace tensorflow
 
-#endif //KERNEL_TIME_TWO_H_
+#endif  // KERNEL_TIME_TWO_H_
