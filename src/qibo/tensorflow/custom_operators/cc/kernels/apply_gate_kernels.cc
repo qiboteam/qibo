@@ -170,7 +170,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const T* gate = NULL) const {
+                  const int32* controls, const int32* tensor_controls, const T* gate = NULL) const {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
     int m1 = nqubits - t1 - 1;
@@ -343,23 +343,24 @@ class TwoQubitGateOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
+    const int ncontrols = controls_.size();
 
     if (UseMatrix) {
       const Tensor& gate = context->input(1);
-      const int ncontrols = controls_.size();
+      const Tensor& tensor_controls = context->input(2);
 
       // call the implementation
       F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
-          nqubits_, target1_, target2_, ncontrols,
-          controls_.data(), gate.flat<T>().data());
+          nqubits_, target1_, target2_, ncontrols, controls_.data(), tensor_controls.flat<int32>().data(),
+          gate.flat<T>().data());
     }
     else {
-      const int ncontrols = controls_.size();
+      const Tensor& tensor_controls = context->input(1);
 
       // call the implementation
       F()(context, context->eigen_device<Device>(), state.flat<T>().data(),
           nqubits_, target1_, target2_, ncontrols,
-          controls_.data());
+          controls_.data(), tensor_controls.flat<int32>().data());
     }
     context->set_output(0, state);
   }
