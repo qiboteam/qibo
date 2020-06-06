@@ -180,7 +180,7 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
                           (3, [0, 1], [2], False, "ab,ABab->AB"),
                           (4, [0, 3], [1], True, "abc,ACac->AbC"),
                           (4, [2, 3], [0], False, "abc,BCbc->aBC"),
-                          (5, [4, 1], [2], False, "abcd,BDbd->aBcD"),
+                          (5, [1, 4], [2], False, "abcd,BDbd->aBcD"),
                           (6, [1, 3], [0, 4], True, "abcd,ACac->AbCd"),
                           (6, [0, 5], [1, 2, 3], False, "abc,ACac->AbC")])
 def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,

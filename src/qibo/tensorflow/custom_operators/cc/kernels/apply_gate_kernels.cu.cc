@@ -375,7 +375,7 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
                             T* state, const T* gate, long tk1, long tk2, int m1, int m2) const {}
 
   virtual void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+                                 T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                  int ncontrols, const int* controls, int nqubits, int t1, int t2) const {}
 
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
@@ -389,6 +389,12 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
     const int64 tk2 = (int64) 1 << m2;
     const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
+    int64 targetk1 = tk1;
+    int64 targetk2 = tk2;
+    if (target1 > target2) {
+      std::swap(targetk1, targetk2);
+    }
+
     int64 nreps = nstates;
     int blockSize = 1024;
     int numBlocks = (nreps + blockSize - 1) / blockSize;
@@ -399,11 +405,11 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
     }
 
     if (ncontrols == 0) {
-      nocontrolwork(d, numBlocks, blockSize, state, gate, tk1, tk2, m1, m2);
+      nocontrolwork(d, numBlocks, blockSize, state, gate, targetk1, targetk2, m1, m2);
     }
     else {
-      multicontrolwork(d, numBlocks, blockSize, state, gate, tk1, tk2, m1, m2,
-                       ncontrols, tensor_controls, nqubits, t1, t2);
+      multicontrolwork(d, numBlocks, blockSize, state, gate, tk1, tk2, targetk1, targetk2,
+                       m1, m2, ncontrols, tensor_controls, nqubits, t1, t2);
     }
   };
 };
@@ -431,7 +437,7 @@ __global__ void ApplyTwoQubitGateKernel(T* state, const T* gate, long tk1, long 
 }
 
 template<typename T>
-__global__ void ApplyTwoQubitGateMultiControlKernel(T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+__global__ void ApplyTwoQubitGateMultiControlKernel(T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                                     int ncontrols, const int * controls, int nqubits, int t1, int t2) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   auto i = g;
@@ -464,7 +470,7 @@ __global__ void ApplyTwoQubitGateMultiControlKernel(T* state, const T* gate, lon
   }
   delete[] qubits;
 
-  i = i - tk1 - tk2;
+  i = i - ctk1 - ctk2;
   const auto i1 = i + tk1;
   const auto i2 = i + tk2;
   const auto i3 = i1 + tk2;
@@ -491,9 +497,9 @@ struct ApplyTwoQubitGateFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice
   }
 
   inline void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+                                 T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                  int ncontrols, const int* controls, int nqubits, int t1, int t2) const override {
-    ApplyTwoQubitGateMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
+    ApplyTwoQubitGateMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, ctk1, ctk2, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
   }
 };
 
@@ -514,7 +520,7 @@ __global__ void ApplyFsimKernel(T* state, const T* gate, long tk1, long tk2, int
 }
 
 template<typename T>
-__global__ void ApplyFsimMultiControlKernel(T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+__global__ void ApplyFsimMultiControlKernel(T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                             int ncontrols, const int * controls, int nqubits, int t1, int t2) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   auto i = g;
@@ -547,7 +553,7 @@ __global__ void ApplyFsimMultiControlKernel(T* state, const T* gate, long tk1, l
   }
   delete[] qubits;
 
-  i = i - tk1 - tk2;
+  i = i - ctk1 - ctk2;
   const auto i1 = i + tk1;
   const auto i2 = i + tk2;
   const auto i3 = i1 + tk2;
@@ -566,9 +572,9 @@ struct ApplyFsimFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   }
 
   inline void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+                                 T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                  int ncontrols, const int* controls, int nqubits, int t1, int t2) const override {
-    ApplyFsimMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
+    ApplyFsimMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, ctk1, ctk2, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
   }
 };
 
@@ -585,7 +591,7 @@ __global__ void ApplySwapKernel(T* state, const T* gate, long tk1, long tk2, int
 }
 
 template<typename T>
-__global__ void ApplySwapMultiControlKernel(T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+__global__ void ApplySwapMultiControlKernel(T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                             int ncontrols, const int * controls, int nqubits, int t1, int t2) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   auto i = g;
@@ -618,7 +624,7 @@ __global__ void ApplySwapMultiControlKernel(T* state, const T* gate, long tk1, l
   }
   delete[] qubits;
 
-  i = i - tk1 - tk2;
+  i = i - ctk1 - ctk2;
   const auto buffer = state[i + tk1];
   state[i + tk1] = state[i + tk2];
   state[i + tk2] = buffer;
@@ -634,9 +640,9 @@ struct ApplySwapFunctor<GPUDevice, T>: BaseTwoQubitGateFunctor<GPUDevice, T> {
   }
 
   inline void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk1, long tk2, int m1, int m2,
+                                 T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1, int m2,
                                  int ncontrols, const int* controls, int nqubits, int t1, int t2) const override {
-    ApplySwapMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
+    ApplySwapMultiControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, ctk1, ctk2, tk1, tk2, m1, m2, ncontrols, controls, nqubits, t1, t2);
   }
 };
 
