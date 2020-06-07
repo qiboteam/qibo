@@ -171,6 +171,12 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
       std::swap(targetk1, targetk2);
     }
 
+    int64 targetk1 = tk1;
+    int64 targetk2 = tk2;
+    if (target1 > target2) {
+      std::swap(targetk1, targetk2);
+    }
+
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
     const int ncores = (int)thread_pool->NumThreads() / 2;
@@ -186,8 +192,8 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
-          i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
+          int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+          i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
           apply(state, i, targetk1, targetk2, gate);
         }
       };
