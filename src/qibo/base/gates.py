@@ -206,7 +206,7 @@ class Z(Gate):
         if len(q) == 1:
             gate = getattr(self._MODULE, "CZ")(q[0], self.target_qubits[0])
         else:
-            gate = super(X, self).controlled_by(*q)
+            gate = super(Z, self).controlled_by(*q)
         return gate
 
 
