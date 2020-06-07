@@ -15,14 +15,6 @@ template <typename T>
 struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
-  void work(int64 t, int64 w, T* state, const T* gate, int64 tk) const {
-    for (auto g = t; g < w; g += 2 * tk) {
-      for (auto i = g; i < g + tk; i++) {
-          apply(state[i], state[i + tk], gate);
-      }
-    }
-  }
-
   void singlecontrol_work(int64 t, int64 w, T* state, const T* gate,
                           int64 tk, int64 tk_reduced, int c) const {
     const int64 ck = (int64) 1 << c;
@@ -53,8 +45,9 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target, int ncontrols,
                   const int32* controls, const T* gate = NULL) {
-    const int64 tk = (int64) 1 << (nqubits - target - 1);
-    const int64 nstates = (int64) 1 << (nqubits - ncontrols);
+    const int m = nqubits - target - 1;
+    const int64 tk = (int64) 1 << m;
+    int64 nstates = (int64) 1 << (nqubits - ncontrols - 1);
     int target_eff = target;
     for (int i = 0; i < ncontrols; i++) {
       if (controls[i] < target) {
@@ -74,9 +67,14 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     else {
       nreps = nstates;
     }
-    if (nreps % (2 * tk_reduced)) {
-      nreps = 2 * tk_reduced;
+
+    if (ncontrols > 0) {
+      nstates *= 2;
+      if (nreps % (2 * tk_reduced)) {
+        nreps = 2 * tk_reduced;
+      }
     }
+
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
         nreps);
@@ -84,7 +82,10 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     // Apply gate
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
-        work(t, w, state, gate, tk);
+        for (auto g = t; g < w; g += 1) {
+          int64 i = ((int64) ((int64) g >> m) << (m + 1)) + (g & (tk - 1));
+          apply(state[i], state[i + tk], gate);
+        }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
     }
