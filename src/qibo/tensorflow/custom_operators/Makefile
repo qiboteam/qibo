@@ -21,7 +21,7 @@ ifneq ($(CUDA_PATH),)
 OBJECT_SRCS += $(CUDASRC:.cc=.o)
 NVCC := $(CUDA_PATH)/bin/nvcc
 CFLAGS += -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
-LDFLAGS += -L$(CUDA_PATH)/lib -lcudart
+LDFLAGS += -L$(CUDA_PATH)/lib64 -lcudart
 CFLAGS_CUDA = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
 endif
 
