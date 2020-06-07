@@ -29,7 +29,7 @@ class TensorflowGate(base_gates.Gate):
         self.matrix = None
 
     def _construct_matrix(self):
-        raise NotImplementedError
+        pass
 
     @staticmethod
     def construct_unitary(*args) -> tf.Tensor:
@@ -288,6 +288,8 @@ class CZ(TensorflowGate, base_gates.CZ):
     def __init__(self, q0, q1):
         base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+
+    def _construct_matrix(self):
         self.matrix = tf.reshape(self.construct_unitary(), 4 * (2,))
 
     @staticmethod
@@ -358,6 +360,7 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
 
+    def _construct_matrix(self):
         rotation = tf.cast(self.unitary, dtype=self.dtype)
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
 
@@ -414,6 +417,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                                              name=name)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
         matrices = tf.stack([self._tfkron(
             self.one_qubit_gate.construct_unitary(self.params_map[q1]),
             self.one_qubit_gate.construct_unitary(self.params_map[q2]))
