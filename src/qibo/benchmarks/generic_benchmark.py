@@ -121,7 +121,7 @@ def main(nqubits_list: List[int],
         print("Saving logs in {}.".format(file_path))
 
     # Create log dict
-    logs = {"nqubits": [], "simulation_time": []}
+    logs = {"nqubits": [], "simulation_time": [], "creation_time": []}
     if compile:
         logs["compile_time"] = []
 
@@ -138,7 +138,10 @@ def main(nqubits_list: List[int],
         if accelerators is not None:
               kwargs["calc_devices"] = accelerators
               kwargs["memory_device"] = device
+
+        start_time = time.time()
         circuit = create_circuit_func(**kwargs)
+        logs["creation_time"].append(time.time() - start_time)
 
         try:
             actual_backend = circuit.queue[0].einsum.__class__.__name__
@@ -168,6 +171,7 @@ def main(nqubits_list: List[int],
             utils.update_file(file_path, logs)
 
         # Print results during run
+        print("Creation time:", logs["creation_time"][-1])
         if compile:
             print("Compile time:", logs["compile_time"][-1])
         print("Simulation time:", logs["simulation_time"][-1])

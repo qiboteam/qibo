@@ -46,7 +46,8 @@ If the file exists in the given directory an error will be raised. The saved fil
 contains two arrays with the following keys:
 
   1. ``nqubits``: List with the number of qubits.
-  2. ``simulation_time``: List with the total execution time for each number of qubits.
+  2. ``creation_time``: List with the time required to create the circuit for each number of qubits.
+  3. ``simulation_time``: List with the total execution time for each number of qubits.
 
 If ``--compile`` option is used, then the measured simulation time is the second call,
 while the execution time of the first call is saved as ``compile_time``.
@@ -70,10 +71,18 @@ using the ``--type`` flag. This accepts one of the following options:
     Here one qubit gates are randomly selected among the set ``{RX, RY, RZ}`` and have random phases.
     Each layer of one qubit gates is followed by a layer of ``CZPow`` gates that entangle two different qubits each time.
 
+* ``variational``: Circuit with a layer of parametrized ``RY`` gates followed by a layer of entangling
+    ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly in from 0 to 2pi.
+    The two layers can be repeated using the ``--nlayers`` flag.
+
+* ``opt-variational``: Same as ``variational`` but defined using the ::class:`qibo.base.gates.VariationalLayer`
+    gate. This gate is optimized for such types of circuits by fusing the parametrized with the entangling
+    gates before applying them to the state vector.
+
 * ``one-qubit-gate``: Circuit that consists of a single one qubit gate that is applied to every qubit.
     This accepts three additional flags: ``--gate-type`` selects which one qubit gate will be used,
     ``--nlayers`` selects the number layers (number of times the gate is applied to each qubit) and
-    ``--theta`` chooses the parameter for the case of parametrized gates (such as rotations).
+    ``--theta`` and/or ``--phi`` choose the parameters for the case of parametrized gates (such as rotations).
 
 * ``two-qubit-gate``: Same as the one-qubit gate benchmark but for two qubit gates.
     The same flags as above are supported. A single layer consists of gates between

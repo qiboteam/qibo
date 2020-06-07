@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-from typing import List, Optional, Sequence, Tuple
+import sys
+from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -123,7 +124,7 @@ class Gate(object):
             self.control_qubits = q
         return self
 
-    def __call__(self, state):
+    def __call__(self, state, is_density_matrix):
         """Acts with the gate on a given state vector:
 
         Args:
@@ -155,11 +156,22 @@ class X(Gate):
     Args:
         q (int): the qubit id number.
     """
+    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         super(X, self).__init__()
         self.name = "x"
         self.target_qubits = (q,)
+
+    def controlled_by(self, *q):
+        """Fall back to CNOT and Toffoli if controls are one or two."""
+        if len(q) == 1:
+            gate = getattr(self._MODULE, "CNOT")(q[0], self.target_qubits[0])
+        elif len(q) == 2:
+            gate = getattr(self._MODULE, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+        return gate
 
 
 class Y(Gate):
@@ -182,10 +194,20 @@ class Z(Gate):
         q (int): the qubit id number.
     """
 
+    _MODULE = sys.modules[__name__]
+
     def __init__(self, q):
         super(Z, self).__init__()
         self.name = "z"
         self.target_qubits = (q,)
+
+    def controlled_by(self, *q):
+        """Fall back to CZ if control is one."""
+        if len(q) == 1:
+            gate = getattr(self._MODULE, "CZ")(q[0], self.target_qubits[0])
+        else:
+            gate = super(X, self).controlled_by(*q)
+        return gate
 
 
 class M(Gate):
@@ -355,6 +377,31 @@ class CNOT(Gate):
         self.target_qubits = (q1,)
 
 
+class CZ(Gate):
+    """The Controlled-Phase gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 0 & 0 & -1 \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+
+    def __init__(self, q0, q1):
+        super(CZ, self).__init__()
+        self.name = "cz"
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+
+
 class CZPow(Gate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
@@ -487,6 +534,79 @@ class Unitary(Gate):
         self.name = "Unitary" if name is None else name
         self.unitary = unitary
         self.target_qubits = tuple(q)
+
+
+class VariationalLayer(Gate):
+    """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
+
+    Performance is optimized by fusing the variational one-qubit gates with the
+    two-qubit entangling gates that follow them and applying a single layer of
+    two-qubit gates as 4x4 matrices.
+
+    Args:
+        qubit_pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
+        one_qubit_gate: Type of one qubit gate to use as the variational gate.
+        two_qubit_gate: Type of two qubit gate to use as entangling gate.
+        params_map (dict): Variational parameters of one qubit gates as a dictionary
+            that maps qubit IDs to the corresponding parameter value.
+        params_map2 (dict): Same as ``params_map`` but for the layer of one-qubit
+            gates after the two-qubit gate ones.
+        name (str): Optional name for the gate.
+            If ``None`` the name ``"VariationalLayer"`` will be used.
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
+            # generate an array of variational parameters for 8 qubits
+            theta = 2 * np.pi * np.random.random(8)
+
+            # define qubit pairs that two qubit gates will act
+            pairs = [(i, i + 1) for i in range(0, 7, 2)]
+            # map variational parameters to qubit IDs
+            theta_map = {i: th for i, th in enumerate(theta}
+            # define a circuit of 8 qubits and add the variational layer
+            c = Circuit(8)
+            c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, theta_map))
+            # this will create an optimized version of the following circuit
+            c2 = Circuit(8)
+            c.add((gates.RY(i, th) for i, th in enumerate(theta)))
+            c.add((gates.CZ(i, i + 1) for i in range(7)))
+    """
+
+    def __init__(self, qubit_pairs: List[Tuple[int, int]],
+                 one_qubit_gate, two_qubit_gate,
+                 params_map: Dict[int, float],
+                 params_map2: Optional[Dict[int, float]] = None,
+                 name: Optional[str] = None):
+        super(VariationalLayer, self).__init__()
+        self.name = "VariationalLayer" if name is None else name
+        self.params_map = dict(params_map)
+        targets = set(self.params_map.keys())
+        self.target_qubits = tuple(targets)
+        if params_map2 is not None:
+            self.params_map2 = dict(params_map2)
+            if targets != set(self.params_map2.keys()):
+                raise ValueError("Invalid parameter maps given in variational layer.")
+        else:
+            self.params_map2 = None
+
+        self.qubit_pairs = qubit_pairs
+        two_qubit_targets = set(q for p in qubit_pairs for q in p)
+        additional_targets = targets - two_qubit_targets
+        if not additional_targets:
+            self.additional_target = None
+        elif len(additional_targets) == 1:
+            self.additional_target = additional_targets.pop()
+        else:
+            raise ValueError("Variational layer can have at most one additional "
+                             "target for one qubit gates but has {}."
+                             "".format(additional_targets))
+
+        self.one_qubit_gate = one_qubit_gate
+        self.two_qubit_gate = two_qubit_gate
 
 
 class NoiseChannel(Gate):
