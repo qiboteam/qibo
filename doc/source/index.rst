@@ -63,6 +63,7 @@ Indices and tables
     QIBO<self>
     qibo
     examples
+    benchmarks
 
 * :ref:`genindex`
 * :ref:`modindex`

@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-"""Custom implementations of ``tf.einsum`` used to apply gates to state vectors.
-
-QIBO uses ``tf.einsum`` to apply gates to state vectors. The einsum string that
+"""
+Tensorflow gates use ``tf.einsum`` to apply gates to state vectors. The einsum string that
 specifies the contraction indices is created and cached when a gate is created
 so that it is not recalculated every time the gate is called on a state. This
 functionality is implemented in :class:`qibo.tensorflow.einsum.DefaultEinsum`.

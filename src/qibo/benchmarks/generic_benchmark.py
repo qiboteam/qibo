@@ -8,12 +8,12 @@ import os
 import time
 from typing import Dict, List, Optional
 
+_PARAM_NAMES = {"theta", "phi"}
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="3-10", type=str)
 parser.add_argument("--backend", default=None, type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
-parser.add_argument("--theta", default=None, type=float)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--accelerators", default=None, type=str)
@@ -22,6 +22,9 @@ parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
+# params
+parser.add_argument("--theta", default=None, type=float)
+parser.add_argument("--phi", default=None, type=float)
 args = vars(parser.parse_args())
 
 
@@ -49,22 +52,14 @@ limit_gpu_memory(args.pop("memory"))
 from qibo.benchmarks import utils, benchmark_models
 
 
-def get_backend(backend: str, device: str):
-    if backend is not None:
-        return backend
-    if "GPU" in device:
-        return "DefaultEinsum"
-    return "MatmulEinsum"
-
-
 def main(nqubits_list: List[int],
          type: str,
-         backend: Optional[str] = None,
+         backend: str = "Custom",
          device: Optional[str] = None,
          accelerators: Optional[Dict[str, int]] = None,
          nlayers: Optional[int] = None,
          gate_type: Optional[str] = None,
-         theta: Optional[float] = None,
+         params: Dict[str, float] = {},
          nshots: Optional[int] = None,
          directory: Optional[str] = None,
          name: Optional[str] = None,
@@ -83,11 +78,15 @@ def main(nqubits_list: List[int],
         type: Type of Circuit to use.
             See ``benchmark_models.py`` for available types.
         backend: Which einsum backend to use.
-            Available backends: ``DefaultEinsum`` and ``MatmulEinsum``.
+            Available backends: ``Custom``, ``DefaultEinsum``, ``MatmulEinsum``.
         device: Tensorflow logical device to use for the benchmark.
             If ``None`` the first available device is used.
-        nlayers: Number of layers for the supremacy-like or Hadamards circuits.
+        nlayers: Number of layers for supremacy-like or gate circuits.
             If a different circuit is used ``nlayers`` is ignored.
+        gate_type: Type of gate for gate circuits.
+            If a different circuit is used ``gate_type`` is ignored.
+        params: Gate parameter for gate circuits.
+            If a non-parametrized circuit is used then ``params`` is ignored.
         nshots: Number of measurement shots.
         directory: Directory to save the log files.
             If ``None`` then logs are not saved.
@@ -131,18 +130,21 @@ def main(nqubits_list: List[int],
     create_circuit_func = benchmark_models.circuits[type]
 
     for nqubits in nqubits_list:
-        kwargs = {"nqubits": nqubits,
-                  "backend": get_backend(backend, device)}
+        kwargs = {"nqubits": nqubits, "backend": backend}
+        params = {k: v for k, v in params.items() if v is not None}
+        if params: kwargs["params"] = params
         if nlayers is not None: kwargs["nlayers"] = nlayers
         if gate_type is not None: kwargs["gate_type"] = gate_type
-        if theta is not None: kwargs["theta"] = theta
         if accelerators is not None:
-              kwargs.pop("backend")
               kwargs["calc_devices"] = accelerators
               kwargs["memory_device"] = device
         circuit = create_circuit_func(**kwargs)
 
-        actual_backend = circuit.queue[0].einsum.__class__.__name__
+        try:
+            actual_backend = circuit.queue[0].einsum.__class__.__name__
+        except AttributeError:
+            actual_backend = "Custom"
+
         print("\nBenchmark:", type)
         print(kwargs)
         print("Actual backend:", actual_backend)
@@ -175,4 +177,5 @@ def main(nqubits_list: List[int],
 if __name__ == "__main__":
     args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
     args["accelerators"] = utils.parse_accelerators(args.pop("accelerators"))
+    args["params"] = {k: args.pop(k) for k in _PARAM_NAMES}
     main(**args)

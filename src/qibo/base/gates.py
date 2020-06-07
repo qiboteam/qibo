@@ -118,8 +118,9 @@ class Gate(object):
             raise RuntimeError("Cannot use controlled_by on a gate that is "
                                "part of a Circuit or has been called on a "
                                "state.")
-        self.is_controlled_by = True
-        self.control_qubits = q
+        if q:
+            self.is_controlled_by = True
+            self.control_qubits = q
         return self
 
     def __call__(self, state):
@@ -192,6 +193,9 @@ class M(Gate):
 
     Args:
         *q (int): id numbers of the qubits to measure.
+            It is possible to measure multiple qubits using ``gates.M(0, 1, 2, ...)``.
+            If the qubits to measure are held in an iterable (eg. list) the ``*``
+            operator can be used, for example ``gates.M(*[0, 1, 4])`` or ``gates.M(*range(5))``.
         register_name: Optional name of the register to distinguish it from
             other registers when used in circuits.
     """
@@ -392,6 +396,63 @@ class SWAP(Gate):
         super(SWAP, self).__init__()
         self.name = "swap"
         self.target_qubits = (q0, q1)
+
+
+class fSim(Gate):
+    """The fSim gate defined in `arXiv:2001.08343 <https://arxiv.org/abs/2001.08343>`_.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & \\cos \\theta & -i\\sin \\theta & 0 \\\\
+        0 & -i\\sin \\theta & \\cos \\theta & 0 \\\\
+        0 & 0 & 0 & e^{-i \\phi } \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+        theta (float): Angle for the one-qubit rotation.
+        phi (float): Angle for the |11> phase.
+    """
+    # TODO: Check how this works with QASM.
+
+    def __init__(self, q0, q1, theta, phi):
+        super(fSim, self).__init__()
+        self.name = "fsim"
+        self.target_qubits = (q0, q1)
+        self.theta = theta
+        self.phi = phi
+
+
+class GeneralizedfSim(Gate):
+    """The fSim gate with a general rotation.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & R_{00} & R_{01} & 0 \\\\
+        0 & R_{10} & R_{11} & 0 \\\\
+        0 & 0 & 0 & e^{-i \\phi } \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the first qubit to be swapped id number.
+        q1 (int): the second qubit to be swapped id number.
+        unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
+        phi (float): Angle for the |11> phase.
+    """
+
+    def __init__(self, q0, q1, unitary, phi):
+        super(GeneralizedfSim, self).__init__()
+        self.name = "generalizedfsim"
+        self.target_qubits = (q0, q1)
+        self.unitary = unitary
+        self.phi = phi
 
 
 class TOFFOLI(Gate):

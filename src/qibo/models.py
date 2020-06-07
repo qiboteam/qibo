@@ -133,6 +133,9 @@ class VQE(object):
             return self.hamiltonian.expectation(s)
 
         if compile:
+            circuit = self.ansatz(initial_state)
+            if not circuit.using_tfgates:
+                raise RuntimeError("Cannot compile VQE that uses custom operators.")
             from qibo.config import K
             loss = K.function(loss)
 
@@ -145,11 +148,13 @@ class VQE(object):
 
         elif method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.tensorflow.einsum import MatmulEinsum
+            from qibo.tensorflow.gates import TensorflowGate
             circuit = self.ansatz(initial_state)
             for gate in circuit.queue:
-                if not isinstance(gate.einsum, MatmulEinsum):
-                    raise RuntimeError('SGD VQE requires MatmulEinsum backend.')
+                if not isinstance(gate, TensorflowGate):
+                    raise RuntimeError('SGD VQE requires native Tensorflow '
+                                       'gates because gradients are not '
+                                       'supported in the custom kernels.')
 
             sgd_options = {"nepochs": 1000000,
                            "nmessage": 1000,

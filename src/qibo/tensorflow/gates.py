@@ -187,77 +187,8 @@ class Z(TensorflowGate, base_gates.Z):
         self.matrix = self.matrices.Z
 
 
-class M(TensorflowGate, base_gates.M):
-    from qibo.tensorflow import measurements
-
-    def __init__(self, *q, register_name: Optional[str] = None):
-        base_gates.M.__init__(self, *q, register_name=register_name)
-        TensorflowGate.__init__(self)
-        self._traceout = None
-
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n)
-
-    @property
-    def _traceout_str(self):
-        """Einsum string used to trace out when state is density matrix."""
-        if self._traceout is None:
-            from qibo.tensorflow.einsum import DefaultEinsum
-            qubits = set(self.unmeasured_qubits)
-            self._traceout = DefaultEinsum.partialtrace_str(
-              qubits, self.nqubits, measuring=True)
-        return self._traceout
-
-    def _calculate_probabilities(self, state: tf.Tensor,
-                                 is_density_matrix: bool = False) -> tf.Tensor:
-        """Calculates probabilities from state using Born's rule.
-
-        Args:
-            state: State vector of shape nqubits * (2,) or density matrix of
-                shape 2 * nqubits * (2,).
-            is_density_matrix: Flag that specifies whether `state` is a state
-                vector or density matrix.
-
-        Returns:
-            Probabilities for measured qubits with shape len(target_qubits)* (2,).
-        """
-        # Trace out unmeasured qubits
-        if is_density_matrix:
-            probs = tf.cast(tf.einsum(self._traceout_str, state),
-                            dtype=DTYPE)
-        else:
-            probs = tf.reduce_sum(tf.square(tf.abs(state)),
-                                  axis=self.unmeasured_qubits)
-        # Bring probs in the order specified by the user
-        return tf.transpose(probs, perm=self.reduced_target_qubits)
-
-    def __call__(self, state: tf.Tensor, nshots: int,
-                 samples_only: bool = False,
-                 is_density_matrix: bool = False) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // (1 + int(is_density_matrix))
-
-        probs_dim = 2 ** len(self.target_qubits)
-        probs = self._calculate_probabilities(state, is_density_matrix)
-        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
-
-        if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
-            # Use default device to perform sampling
-            samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                                dtype=DTYPEINT)[0]
-        else:
-            # Force using CPU to perform sampling because if GPU is used
-            # it will cause a `ResourceExhaustedError`
-            if CPU_NAME is None:
-                raise RuntimeError("Cannot find CPU device to use for sampling.")
-            with tf.device(CPU_NAME):
-                samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                                    dtype=DTYPEINT)[0]
-        if samples_only:
-            return samples_dec
-        return self.measurements.GateResult(
-            self.qubits, state, decimal_samples=samples_dec)
+# import measurement gate from ``cgates.py``
+from qibo.tensorflow.cgates import M
 
 
 class RX(TensorflowGate, base_gates.RX):
@@ -329,6 +260,43 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def _construct_matrix(self):
         self.matrix = self.matrices.SWAP
+
+
+class fSim(TensorflowGate, base_gates.fSim):
+
+    def __init__(self, q0, q1, theta, phi):
+        base_gates.fSim.__init__(self, q0, q1, theta, phi)
+
+        th = tf.cast(self.theta, dtype=self.dtype)
+        rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+
+        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, ids, rotation)
+        self.matrix = tf.reshape(self.matrix, 4 * (2,))
+
+
+class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
+
+    def __init__(self, q0, q1, unitary, phi):
+        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        shape = tuple(self.unitary.shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+
+        rotation = tf.cast(self.unitary, dtype=self.dtype)
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+
+        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        self.matrix = tf.tensor_scatter_nd_update(self.matrix, ids, rotation)
+        self.matrix = tf.reshape(self.matrix, 4 * (2,))
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):

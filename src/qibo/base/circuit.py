@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+import collections
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
@@ -28,7 +29,6 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
-    _GATE_MODULE = gates
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -125,6 +125,17 @@ class BaseCircuit(object):
         raise TypeError("Type {} of noise map is not recognized."
                         "".format(type(noise_map)))
 
+    @property
+    def gate_module(self):
+        """Returns the module of the gates contained in the circuit queue."""
+        if self.queue:
+            import importlib
+            module_str = self.queue[0].__module__
+            module = importlib.import_module(module_str)
+        else:
+            from qibo import gates as module
+        return module
+
     def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
@@ -183,14 +194,14 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, self._GATE_MODULE.NoiseChannel):
+            if isinstance(gate, self.gate_module.NoiseChannel):
                 raise ValueError("`.with_noise` method is not available for "
                                  "circuits that already contain noise channels.")
-            noise_gates.append([self._GATE_MODULE.NoiseChannel(q, *list(p))
+            noise_gates.append([self.gate_module.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
         if measurement_noise is not None:
-            noise_gates[-1] = [self._GATE_MODULE.NoiseChannel(q, *list(p))
+            noise_gates[-1] = [self.gate_module.NoiseChannel(q, *list(p))
                                for q, p in measurement_noise.items()
                                if sum(p) > 0]
 
@@ -301,6 +312,73 @@ class BaseCircuit(object):
         return len(self.queue)
 
     @property
+    def gate_types(self) -> collections.Counter:
+        """``collections.Counter`` with the number of appearances of each gate type.
+
+        The QASM names are used as gate identifiers.
+        """
+        gates = collections.Counter()
+        for gate in self.queue:
+            gates[gate.name] += 1
+        return gates
+
+    def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
+        """Finds all gate objects of specific type.
+
+        Args:
+            gate (str, type): The QASM name of a gate or the corresponding gate class.
+
+        Returns:
+            List with all gates that are in the circuit and have the same type
+            with the given ``gate``. The list contains tuples ``(i, g)`` where
+            ``i`` is the index of the gate ``g`` in the circuit's gate queue.
+        """
+        if isinstance(gate, str):
+            return [(i, g) for i, g in enumerate(self.queue)
+                    if g.name == gate]
+        if isinstance(gate, type) and issubclass(gate, gates.Gate):
+            return [(i, g) for i, g in enumerate(self.queue)
+                    if isinstance(g, gate)]
+        raise TypeError("Gate identifier {} not recognized.".format(gate))
+
+    @property
+    def summary(self) -> str:
+        """Generates a summary of the circuit.
+
+        The summary contains the circuit depths, total number of qubits and
+        the all gates sorted in decreasing number of appearance.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(3)
+                c.add(gates.H(0))
+                c.add(gates.H(1))
+                c.add(gates.CNOT(0, 2))
+                c.add(gates.CNOT(1, 2))
+                c.add(gates.H(2))
+                c.add(gates.TOFFOLI(0, 1, 2))
+                print(c.summary())
+                # Prints
+                '''
+                Circuit depth = 7
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
+        """
+        logs = ["Circuit depth = {}".format(self.depth),
+                "Number of qubits = {}".format(self.nqubits),
+                "Most common gates:"]
+        common_gates = self.gate_types.most_common()
+        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        return "\n".join(logs)
+
+    @property
     def final_state(self):
         """Returns the final state after full simulation of the circuit.
 
@@ -391,7 +469,7 @@ class BaseCircuit(object):
         nqubits, gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(nqubits)
         for gate_name, qubits, param in gate_list:
-            gate = getattr(cls._GATE_MODULE, gate_name)
+            gate = getattr(circuit.gate_module, gate_name)
             if gate_name == "M":
                 circuit.add(gate(*qubits, register_name=param))
             elif param is None:

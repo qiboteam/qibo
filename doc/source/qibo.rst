@@ -159,10 +159,27 @@ The user can create custom callbacks by inheriting the
    :member-order: bysource
 
 
-.. _Einsum:
+.. _Backends:
 
-Einsum Backends
----------------
+Backends
+--------
+
+QIBO currently uses two different backends for applying gates to vectors.
+The default backend uses custom Tensorflow operators defined under
+``tensorflow/custom_operators`` to apply gates to state vectors. These
+operators are much faster than implementations based on Tensorflow
+primitives and are used by default by ``qibo.gates``.
+The custom operators do not support the following:
+
+* GPU. If Tensorflow detects a GPU device then ``qibo.gates`` will fall back to
+  the gate implementation that uses Tensorflow primitives.
+* Density matrices, channels and noise.
+* Automatic differentiation for backpropagation of variational circuits.
+
+If the user needs to use density matrices or automatic differentiation then the
+gates that use Tensorflow primitives have to be used. These gates are accessible
+via ``qibo.tensorflow.gates`` instead of ``qibo.gates``. All gates added in a circuit should use the same backend. Gates based on Tensorflow
+primitives are described bellow.
 
 .. automodule:: qibo.tensorflow.einsum
    :members:

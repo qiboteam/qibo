@@ -5,7 +5,6 @@ import pathlib
 import numpy as np
 import pytest
 from qibo.models import Circuit, VQE
-from qibo import gates
 from qibo.hamiltonians import XXZ
 
 
@@ -34,11 +33,16 @@ def assert_regression_fixture(array, filename):
 
 test_names = "method,options,compile,filename"
 test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
+               ("BFGS", {'maxiter': 1}, False, 'vqe.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
+    if method == "sgd" or compile:
+        from qibo.tensorflow import gates
+    else:
+        from qibo.tensorflow import cgates as gates
 
     nqubits = 6
     layers  = 4
@@ -71,3 +75,25 @@ def test_vqe(method, options, compile, filename):
                               options=options, compile=compile)
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
+
+
+def test_vqe_compile_error():
+    """Check that ``RuntimeError`` is raised when compiling custom gates."""
+    from qibo import gates
+    nqubits = 6
+    def ansatz(theta):
+        c = Circuit(nqubits)
+        index = 0
+        for q in range(nqubits):
+            c.add(gates.RY(q, theta[index]))
+            index+=1
+        for q in range(0, nqubits-1, 2):
+            c.add(gates.CZPow(q, q+1, np.pi))
+        return c
+
+    hamiltonian = XXZ(nqubits=nqubits)
+    initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
+    v = VQE(ansatz, hamiltonian)
+    with pytest.raises(RuntimeError):
+        best, params = v.minimize(initial_parameters, method="BFGS",
+                                  options={'maxiter': 1}, compile=True)

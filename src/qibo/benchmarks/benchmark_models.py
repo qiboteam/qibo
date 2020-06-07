@@ -1,9 +1,20 @@
 import numpy as np
-from qibo import models, gates
-from typing import Optional
+from qibo import models
+from qibo.tensorflow import gates as native_gates
+from qibo.tensorflow import cgates as custom_gates
+from typing import Dict, Optional
+
+
+def get_gates(backend: str):
+    if backend == "Custom":
+        return custom_gates
+    if backend in {"DefaultEinsum", "MatmulEinsum"}:
+        return native_gates
+    raise ValueError("Unknown backend {}.".format(backend))
 
 
 def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Circuit:
+    gates = get_gates(backend)
     one_qubit_gates = ["RX", "RY", "RZ"]
     circuit = models.Circuit(nqubits)
     d = 1
@@ -24,6 +35,7 @@ def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Cir
 
 
 def PrepareGHZ(nqubits: int, backend: str) -> models.Circuit:
+    gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
     circuit.add(gates.H(0).with_backend(backend))
     for i in range(nqubits - 1):
@@ -32,6 +44,7 @@ def PrepareGHZ(nqubits: int, backend: str) -> models.Circuit:
 
 
 def QFT(nqubits: int, backend: str) -> models.Circuit:
+    gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1).with_backend(backend))
@@ -47,14 +60,12 @@ def QFT(nqubits: int, backend: str) -> models.Circuit:
     return circuit
 
 
-def OneQubitGate(nqubits: int, backend: str,
-                 gate_type: str = "H", theta: Optional[float] = None,
-                 nlayers: int = 1) -> models.Circuit:
+def OneQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+                 params: Dict[str, float] = {}, nlayers: int = 1
+                 ) -> models.Circuit:
+    gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    if theta is None:
-        gate = lambda q: getattr(gates, gate_type)(q)
-    else:
-        gate = lambda q: getattr(gates, gate_type)(q, theta)
+    gate = lambda q: getattr(gates, gate_type)(q, **params)
 
     for _ in range(nlayers):
         for i in range(nqubits):
@@ -62,14 +73,12 @@ def OneQubitGate(nqubits: int, backend: str,
     return circuit
 
 
-def TwoQubitGate(nqubits: int, backend: str,
-                 gate_type: str = "H", theta: Optional[float] = None,
-                 nlayers: int = 1) -> models.Circuit:
+def TwoQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+                 params: Dict[str, float] = {}, nlayers: int = 1
+                 ) -> models.Circuit:
+    gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    if theta is None:
-        gate = lambda q: getattr(gates, gate_type)(q, q + 1)
-    else:
-        gate = lambda q: getattr(gates, gate_type)(q, q + 1, theta)
+    gate = lambda q: getattr(gates, gate_type)(q, q + 1, **params)
 
     for _ in range(nlayers):
         for i in range(0, nqubits - 1, 2):
@@ -79,9 +88,22 @@ def TwoQubitGate(nqubits: int, backend: str,
     return circuit
 
 
+def ToffoliGate(nqubits: int, backend: str, nlayers: int = 1) -> models.Circuit:
+    gates = get_gates(backend)
+    circuit = models.Circuit(nqubits)
+    for _ in range(nlayers):
+        for i in range(0, nqubits - 2, 3):
+            circuit.add(gates.TOFFOLI(i, i + 1, i + 2).with_backend(backend))
+        for i in range(1, nqubits - 2, 3):
+            circuit.add(gates.TOFFOLI(i, i + 1, i + 2).with_backend(backend))
+        for i in range(2, nqubits - 2, 3):
+            circuit.add(gates.TOFFOLI(i, i + 1, i + 2).with_backend(backend))
+    return circuit
+
+
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
-            "dist-qft": models.DistributedQFT,
             "ghz": PrepareGHZ,
             "one-qubit-gate": OneQubitGate,
-            "two-qubit-gate": TwoQubitGate}
+            "two-qubit-gate": TwoQubitGate,
+            "toffoli-gate": ToffoliGate}

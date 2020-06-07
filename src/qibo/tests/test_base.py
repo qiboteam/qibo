@@ -111,6 +111,54 @@ def test_bad_circuit_addition():
         c3 = c1 + c2
 
 
+def test_gate_types():
+    """Check ``BaseCircuit.gate_types`` property."""
+    import collections
+    c = Circuit(3)
+    c.add(H(0))
+    c.add(H(1))
+    c.add(X(2))
+    c.add(CNOT(0, 2))
+    c.add(CNOT(1, 2))
+    c.add(TOFFOLI(0, 1, 2))
+    target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    assert target_counter == c.gate_types
+
+
+def test_gates_of_type():
+    """Check ``BaseCircuit.gates_of_type`` method."""
+    c = Circuit(3)
+    c.add(H(0))
+    c.add(H(1))
+    c.add(CNOT(0, 2))
+    c.add(X(1))
+    c.add(CNOT(1, 2))
+    c.add(TOFFOLI(0, 1, 2))
+    c.add(H(2))
+    h_gates = c.gates_of_type(H)
+    cx_gates = c.gates_of_type("cx")
+    assert h_gates == [(0, c.queue[0]), (1, c.queue[1]), (6, c.queue[6])]
+    assert cx_gates == [(2, c.queue[2]), (4, c.queue[4])]
+    with pytest.raises(TypeError):
+        c.gates_of_type(5)
+
+
+def test_summary():
+    """Check ``BaseCircuit.summary`` method."""
+    c = Circuit(3)
+    c.add(H(0))
+    c.add(H(1))
+    c.add(CNOT(0, 2))
+    c.add(CNOT(1, 2))
+    c.add(TOFFOLI(0, 1, 2))
+    c.add(H(2))
+    target_summary = "\n".join(["Circuit depth = 6",
+                                "Number of qubits = 3",
+                                "Most common gates:",
+                                "h: 3", "cx: 2", "ccx: 1"])
+    assert c.summary == target_summary
+
+
 def test_circuit_copy():
     """Check that ``circuit.copy()`` copies gates properly."""
     c1 = Circuit(2)
@@ -123,6 +171,7 @@ def test_circuit_copy():
 
 
 def test_circuit_deep_copy():
+    """Check that ``circuit.copy(deep=True)`` raises ``NotImplementedError``."""
     c1 = Circuit(2)
     c1.add([H(0), H(1), CNOT(0, 1)])
     with pytest.raises(NotImplementedError):
