@@ -12,7 +12,10 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
         nqubits (int): Number of qubits in the circuit.
         with_swaps (bool): Use SWAP gates at the end of the circuit so that the
             qubit order in the final state is the same as the initial state.
-        gates: Gates module to use.
+        gates: Which gates module will be used.
+            The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
+            or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
+            If ``gates`` is ``None`` then custom gates will be used.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
