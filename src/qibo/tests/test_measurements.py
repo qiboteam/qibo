@@ -388,7 +388,7 @@ def test_probabilistic_measurement():
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    # 
+    # update reference values based on device
     if tf.config.list_physical_devices("GPU"):
       decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
       binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}      
@@ -411,8 +411,13 @@ def test_unbalanced_probabilistic_measurement():
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    decimal_freqs = {0: 168, 1: 188, 2: 154, 3: 490}
-    binary_freqs = {"00": 168, "01": 188, "10": 154, "11": 490}
+    # update reference values based on device
+    if tf.config.list_physical_devices("GPU"):
+      decimal_freqs = {0: 196, 1: 153, 2: 156, 3: 495}
+      binary_freqs = {"00": 196, "01": 153, "10": 156, "11": 495}
+    else:
+      decimal_freqs = {0: 168, 1: 188, 2: 154, 3: 490}
+      binary_freqs = {"00": 168, "01": 188, "10": 154, "11": 490}
     assert sum(binary_freqs.values()) == 1000
     assert_results(result,
                    decimal_frequencies=decimal_freqs,
