@@ -388,8 +388,13 @@ def test_probabilistic_measurement():
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
-    binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
+    # 
+    if tf.config.list_physical_devices("GPU"):
+      decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
+      binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}      
+    else:
+      decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
+      binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
     assert sum(binary_freqs.values()) == 1000
     assert_results(result,
                    decimal_frequencies=decimal_freqs,
