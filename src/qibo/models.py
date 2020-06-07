@@ -7,13 +7,17 @@ else:
 from typing import Dict
 
 
-def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
+def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
         nqubits (int): Number of qubits in the circuit.
         with_swaps (bool): Use SWAP gates at the end of the circuit so that the
             qubit order in the final state is the same as the initial state.
+        gates: Which gates module will be used.
+            The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
+            or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
+            If ``gates`` is ``None`` then custom gates will be used.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -32,7 +36,8 @@ def QFT(nqubits: int, with_swaps: bool = True) -> Circuit:
             final_state = c(init_state)
     """
     import numpy as np
-    from qibo import gates
+    if gates is None:
+        from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
