@@ -174,13 +174,13 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int) thread_pool->NumThreads() / 2;
+    const int ncores = (int) thread_pool->NumThreads();
     int64 nreps;
     if (ncores > 1) {
       nreps = (int64) nstates / ncores;
     }
     else {
-      nreps = nstates;
+      nreps = 1;
     }
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
