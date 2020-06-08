@@ -129,7 +129,6 @@ def test_simple_execution():
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.skip
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
     devices = {"/GPU:0": 2, "/GPU:1": 2}
@@ -155,7 +154,6 @@ def test_distributed_circuit_addition():
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 30, 31, 32, 33])
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
@@ -183,7 +181,6 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
         assert len(c.global_qubits_list) < len(target_global_qubits)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8])
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_execution(nqubits, ndevices):
