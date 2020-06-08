@@ -341,3 +341,20 @@ def test_custom_op_toy_callback(gate, compile):
 
     np.testing.assert_allclose(target_state, state.numpy())
     np.testing.assert_allclose(target_callback, callback.numpy())
+
+
+@pytest.mark.parametrize("nqubits", [5])
+def test_split_state(nqubits):
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    global_qubits = [0]
+    nglobal = len(global_qubits)
+    pieces_shape = (2 ** nglobal, 2 ** (nqubits - nglobal))
+    pieces = tf.zeros(pieces_shape, dtype=state.dtype)
+    op.split_state(state, pieces, nqubits, global_qubits)
+
+    state_tensor = state.numpy().reshape(nqubits * (2,))
+    target_pieces = np.zeros(pieces_shape, dtype=state_tensor.dtype)
+    target_pieces[0] = state_tensor[0].ravel()
+    target_pieces[1] = state_tensor[1].ravel()
+
+    np.testing.assert_allclose(target_pieces, pieces.numpy())

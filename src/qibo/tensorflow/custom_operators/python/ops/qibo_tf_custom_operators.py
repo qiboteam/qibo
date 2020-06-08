@@ -9,6 +9,12 @@ custom_module = load_library.load_op_library(
 # initial_state operator
 initial_state = custom_module.initial_state
 
+# split state to pieces operator
+def split_state(state, pieces, nqubits, global_qubits):
+    return custom_module.split_state(state, pieces, nqubits,
+                                     sorted(global_qubits))
+
+
 def sort_controls(controls):
     """Checks if ``controls`` variable has valid type."""
     if not (isinstance(controls, list) or isinstance(controls, tuple)):
