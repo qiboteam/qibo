@@ -61,7 +61,7 @@ def DistributedQFT(nqubits: int,
                    backend: Optional[str] = None,
                    with_swaps: bool = True) -> DistributedCircuit:
     import numpy as np
-    if backend is None:
+    if backend is None or backend == "Custom":
         from qibo import gates
     elif backend == "MatmulEinsum":
         from qibo.tensorflow import gates
