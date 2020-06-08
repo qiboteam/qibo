@@ -4,7 +4,7 @@ if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
-from typing import Dict
+from typing import Dict, Optional
 
 
 def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
@@ -58,9 +58,16 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
 def DistributedQFT(nqubits: int,
                    calc_devices: Dict[str, int],
                    memory_device: str = "/CPU:0",
+                   backend: Optional[str] = None,
                    with_swaps: bool = True) -> DistributedCircuit:
     import numpy as np
-    from qibo import gates
+    if backend is None:
+        from qibo import gates
+    elif backend == "MatmulEinsum":
+        from qibo.tensorflow import gates
+    else:
+        raise ValueError("{} backend is not supported in distributed circuits."
+                         "".format(backend))
 
     circuit = DistributedCircuit(nqubits, calc_devices, memory_device)
     nqubits = circuit.nqubits
@@ -69,25 +76,25 @@ def DistributedQFT(nqubits: int,
     for i1 in range(nqubits - nglobal):
         for i2 in range(i1):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
-        circuit.add(gates.H(i1))
+            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
+        circuit.add(gates.H(i1).with_backend(backend))
 
     for i2 in range(nglobal):
         for i1 in range(nqubits - nglobal, nqubits):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
+            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
 
     for i1 in range(nqubits - nglobal, nqubits):
         for i2 in range(nglobal, i1):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
-        circuit.add(gates.H(i1))
+            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
+        circuit.add(gates.H(i1).with_backend(backend))
 
     if with_swaps:
         for i in range(nglobal, nqubits // 2):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
+            circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
         for i in range(nglobal):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
+            circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
 
     return circuit
 

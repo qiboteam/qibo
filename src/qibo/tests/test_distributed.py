@@ -1,8 +1,11 @@
 import pytest
 import numpy as np
 from qibo import gates
+from qibo.tensorflow import gates as native_gates
 from qibo import models
 
+
+_BACKENDS = [(gates, None), (native_gates, "MatmulEinsum")]
 
 def random_state(nqubits):
     shape = (2 ** nqubits,)
@@ -115,13 +118,14 @@ def test_distributed_circuit_errors():
         final_state = c.final_state
 
 
-def test_simple_execution():
+@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+def test_simple_execution(gates, backend):
     c = models.Circuit(6)
-    c.add((gates.H(i) for i in range(6)))
+    c.add((gates.H(i).with_backend(backend) for i in range(6)))
 
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     dist_c = models.DistributedCircuit(6, devices)
-    dist_c.add((gates.H(i) for i in range(6)))
+    dist_c.add((gates.H(i).with_backend(backend) for i in range(6)))
 
     initial_state = random_state(c.nqubits)
     final_state = dist_c(initial_state).numpy()
@@ -183,9 +187,10 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
 
 @pytest.mark.parametrize("nqubits", [7, 8])
 @pytest.mark.parametrize("ndevices", [2, 4])
-def test_distributed_qft_execution(nqubits, ndevices):
+@pytest.mark.parametrize("backend", [b for g, b in _BACKENDS])
+def test_distributed_qft_execution(nqubits, ndevices, backend):
     devices = {"/GPU:0": ndevices}
-    dist_c = models.DistributedQFT(nqubits, devices)
+    dist_c = models.DistributedQFT(nqubits, devices, backend=backend)
     c = models.QFT(nqubits)
 
     initial_state = random_state(nqubits)
