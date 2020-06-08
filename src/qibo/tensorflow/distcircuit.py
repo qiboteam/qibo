@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import joblib
 from qibo.config import DTYPECPX, DTYPEINT
-from qibo.tensorflow import circuit, gates, matrices, measurements, callbacks
+from qibo.tensorflow import circuit, measurements, callbacks
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 
@@ -24,7 +24,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         dtype: Tensorflow type for complex numbers.
             Read automatically from `config`.
     """
-    _GATE_MODULE = gates
 
     def __init__(self,
                  nqubits: int,
@@ -46,12 +45,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         self.queues = {d: [] for d in self.calc_devices.keys()}
         self.global_qubits_list = []
-
-        # Construct gate matrices casted in each calculation device
-        self.matrices = {}
-        for device in self.calc_devices.keys():
-            with tf.device(device):
-                self.matrices[device] = matrices.GateMatrices(self.dtype)
 
         self.pieces = None
         self._global_qubits = None
@@ -140,11 +133,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                     # TODO: Move this copy functionality to `gates.py`
                     calc_gate = copy.copy(gate)
                     calc_gate.reduce(global_qubits)
-                    calc_gate.nqubits = nlocal
                     calc_gate.original_gate = gate
+                    # Gate matrix should be constructed in the calculation device
                     with tf.device(device):
-                        calc_gate.matrices = self.matrices[device]
-                        calc_gate._construct_matrix()
+                        calc_gate.nqubits = nlocal
                     self.queues[device][-1].append(calc_gate)
 
     def compile(self, callback: Optional[callbacks.Callback] = None):
@@ -155,8 +147,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 See :class:`qibo.tensorflow.callbacks.Callback` for more details.
                 User can give a single callback or list of callbacks here.
         """
-        raise NotImplementedError("Compiling is not implemented for "
-                                  "distributed circuits yet.")
+        raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     @staticmethod
     def _device_execute(state: tf.Tensor, gates: List[gates.TensorflowGate]) -> tf.Tensor:
@@ -212,8 +203,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         In default usage the full final state vector or density matrix is returned.
         If the circuit contains measurement gates and `nshots` is given, then
         the final state is sampled and the samples are returned.
-        Circuit execution uses by default state vectors but switches automatically
-        to density matrices if
 
         Args:
             initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
@@ -240,7 +229,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if not self.global_qubits_list:
             self._set_gates()
         self.global_qubits = self.global_qubits_list[0]
-        self._set_initial_state(initial_state)
+        self._cast_initial_state(initial_state)
 
         if self.compiled_execute is None:
             #self._add_callbacks(callback)
@@ -291,30 +280,24 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """Returns a list with the last qubits to cast them as global."""
         return list(range(self.nqubits - self.nglobal, self.nqubits))
 
-    def _default_initial_piece0(self) -> tf.Tensor:
+    def _default_initial_piece(self) -> tf.Tensor:
         """Returns the 0th piece for the |000...0> state."""
-        shape = (self.nqubits - self.nglobal) * (2,)
-        _state = tf.zeros(2 ** len(shape), dtype=self.dtype)
-        update = tf.constant([1], dtype=self.dtype)
-        _state = tf.tensor_scatter_nd_update(_state,
-                                             tf.constant([[0]], dtype=DTYPEINT),
-                                             update)
-        return tf.reshape(_state, shape)
+        zeros = tf.zeros(2 ** (self.nqubits - self.nglobal), dtype=self.dtype)
+        return op.initial_state(zeros)
 
     def _create_pieces(self):
-        shape = (self.nqubits - self.nglobal) * (2,)
+        n = 2 ** (self.nqubits - self.nglobal)
         with tf.device(self.memory_device):
-            self.pieces = [tf.Variable(tf.zeros(shape, dtype=self.dtype))
+            self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        shape = (self.nqubits - self.nglobal) * (2,)
         self._create_pieces()
         with tf.device(self.memory_device):
             self.pieces[0].assign(self._default_initial_piece0())
 
-    def _set_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
+    def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
         if self.pieces is not None:
             raise RuntimeError("Attempting to initialize distributed circuit "
@@ -325,7 +308,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if initial_state is None:
             return self._default_initial_state()
 
-        state = super(TensorflowDistributedCircuit, self)._set_initial_state(initial_state)
+        state = super(TensorflowDistributedCircuit, self)._cast_initial_state(initial_state)
         self._create_pieces()
         self._split(state)
 
