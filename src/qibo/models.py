@@ -61,7 +61,7 @@ def DistributedQFT(nqubits: int,
                    with_swaps: bool = True) -> DistributedCircuit:
     import numpy as np
     from qibo import gates
-    
+
     circuit = DistributedCircuit(nqubits, calc_devices, memory_device)
     nqubits = circuit.nqubits
     nglobal = circuit.nglobal
@@ -87,7 +87,7 @@ def DistributedQFT(nqubits: int,
         for i in range(nglobal, nqubits // 2):
             circuit.add(gates.SWAP(i, nqubits - i - 1))
         for i in range(nglobal):
-            circuit.add(gates.SWAP(i, nqubits - i -1))
+            circuit.add(gates.SWAP(i, nqubits - i - 1))
 
     return circuit
 

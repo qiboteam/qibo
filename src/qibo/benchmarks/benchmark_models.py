@@ -148,6 +148,7 @@ def ToffoliGate(nqubits: int, backend: str, nlayers: int = 1) -> models.Circuit:
 
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
+            "dist-qft": models.DistributedQFT,
             "ghz": PrepareGHZ,
             "variational": VariationalCircuit,
             "opt-variational": OptimizedVariationalCircuit,

@@ -10,12 +10,12 @@ from typing import Dict, List, Optional
 
 _PARAM_NAMES = {"theta", "phi"}
 parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default="3-10", type=str)
-parser.add_argument("--backend", default=None, type=str)
+parser.add_argument("--nqubits", default="20", type=str)
+parser.add_argument("--backend", default="Custom", type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
 parser.add_argument("--nshots", default=None, type=int)
-parser.add_argument("--device", default=None, type=str)
+parser.add_argument("--device", default="/CPU:0", type=str)
 parser.add_argument("--accelerators", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
 parser.add_argument("--type", default="qft", type=str)
@@ -55,7 +55,7 @@ from qibo.benchmarks import utils, benchmark_models
 def main(nqubits_list: List[int],
          type: str,
          backend: str = "Custom",
-         device: Optional[str] = None,
+         device: Optional[str] = "/CPU:0",
          accelerators: Optional[Dict[str, int]] = None,
          nlayers: Optional[int] = None,
          gate_type: Optional[str] = None,
@@ -136,8 +136,9 @@ def main(nqubits_list: List[int],
         if nlayers is not None: kwargs["nlayers"] = nlayers
         if gate_type is not None: kwargs["gate_type"] = gate_type
         if accelerators is not None:
-              kwargs["calc_devices"] = accelerators
-              kwargs["memory_device"] = device
+            kwargs.pop("backend")
+            kwargs["calc_devices"] = accelerators
+            kwargs["memory_device"] = device
 
         start_time = time.time()
         circuit = create_circuit_func(**kwargs)
