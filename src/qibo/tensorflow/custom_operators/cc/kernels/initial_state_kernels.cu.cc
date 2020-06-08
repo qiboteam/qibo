@@ -19,14 +19,13 @@ __global__ void InitialStateCudaKernel(T* inout) {
 template <typename T>
 struct InitialStateFunctor<GPUDevice, T> {
   void operator()(const GPUDevice& d, T* inout) {
-    InitialStateCudaKernel<T>
-        <<<1, 1, 0, d.stream()>>>(inout);
+    InitialStateCudaKernel<T><<<1, 1, 0, d.stream()>>>(inout);
   }
 };
 
 // Explicitly instantiate functors for the types of OpKernels registered.
 template struct InitialStateFunctor<GPUDevice, complex64>;
 template struct InitialStateFunctor<GPUDevice, complex128>;
-} // end namespace functor
-} // end namespace tensorflow
-#endif // GOOGLE_CUDA
+}  // end namespace functor
+}  // end namespace tensorflow
+#endif  // GOOGLE_CUDA
