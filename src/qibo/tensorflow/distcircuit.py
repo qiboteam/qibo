@@ -195,7 +195,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 with tf.device(device):
                     state = self._device_execute(
                         self.pieces[i], self.queues[device][group])
-                self.pieces[i].assign(state)
+                    self.pieces[i].assign(state)
+                    del(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
