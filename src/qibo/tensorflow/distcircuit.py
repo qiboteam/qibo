@@ -177,8 +177,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
-                    state = self._device_execute(
-                        self.pieces[i], self.queues[device][group])
+                    state = tf.identity(self.pieces[i])
+                    for gate in self.queues[device][group]:
+                        state = gate(state)
+                    #state = self._device_execute(
+                        #self.pieces[i], self.queues[device][group])
                 self.pieces[i].assign(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
