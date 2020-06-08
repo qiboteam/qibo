@@ -7,9 +7,8 @@ namespace functor {
 
 template <typename Device, typename T>
 struct SplitStateFunctor {
-  void operator()(const Device &d, const T *state, T* pieces,
-                  const int* global_qubits, int nglobal,
-                  int nqubits) const;
+  void operator()(const Device &d, const T *state, T* pieces, int nqubits,
+                  const int* global_qubits, int nglobal) const;
 };
 
 }  // namespace functor

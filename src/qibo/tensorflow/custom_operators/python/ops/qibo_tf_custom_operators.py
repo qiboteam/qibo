@@ -1,4 +1,5 @@
 """Use ops in python."""
+import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
@@ -11,8 +12,8 @@ initial_state = custom_module.initial_state
 
 # split state to pieces operator
 def split_state(state, pieces, nqubits, global_qubits):
-    return custom_module.split_state(state, pieces, nqubits,
-                                     sorted(global_qubits))
+    qubits = sorted(nqubits - np.array(global_qubits) - 1)
+    return custom_module.split_state(state, pieces, nqubits, qubits)
 
 
 def sort_controls(controls):

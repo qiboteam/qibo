@@ -15,12 +15,16 @@ namespace functor {
 // CPU specialization
 template <typename T>
 struct SplitStateFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice &d, const T *state, T* pieces,
-                  const int* global_qubits, int nglobal,
-                  int nqubits) {
+  void operator()(const CPUDevice &d, const T* state, T* pieces, int nqubits,
+                  const int* global_qubits, int nglobal) {
     const int64 nstates = (int64) 1 << (nqubits - nglobal);
     const int ndevices = 1 << nglobal;
     std::vector<int64> ids(nglobal);
+
+    std::cout << "nqubits = " << nqubits << std::endl;
+    std::cout << "nglobal = " << nglobal << std::endl;
+    std::cout << "nstates = " << nstates << std::endl;
+    std::cout << "ndevices = " << ndevices << std::endl;
 
     for (auto g = 0; g < nstates; g++) {
       int64 i = g;
@@ -61,8 +65,8 @@ class SplitStateOp : public OpKernel {
     SplitStateFunctor<Device, T>()(context->eigen_device<Device>(),
                                    state.flat<T>().data(),
                                    pieces.flat<T>().data(),
-                                   global_qubits_.data(),
-                                   nqubits_, nglobal);
+                                   nqubits_,
+                                   global_qubits_.data(), nglobal);
 
     context->set_output(0, pieces);
   }
