@@ -21,11 +21,6 @@ struct SplitStateFunctor<CPUDevice, T> {
     const int ndevices = 1 << nglobal;
     std::vector<int64> ids(nglobal);
 
-    std::cout << "nqubits = " << nqubits << std::endl;
-    std::cout << "nglobal = " << nglobal << std::endl;
-    std::cout << "nstates = " << nstates << std::endl;
-    std::cout << "ndevices = " << ndevices << std::endl;
-
     for (auto g = 0; g < nstates; g++) {
       int64 i = g;
       for (auto j = 0; j < nglobal; j++) {
