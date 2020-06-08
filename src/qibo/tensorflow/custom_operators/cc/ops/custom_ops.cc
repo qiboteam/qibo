@@ -10,6 +10,18 @@ REGISTER_OP("InitialState")
     .Output("out: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
+
+// Register op that splits state to pieces for multi-GPU
+REGISTER_OP("SplitState")
+    .Attr("T: {complex64, complex128}")
+    .Input("state: T")
+    .Input("pieces: T")
+    .Attr("nqubits: int")
+    .Attr("global_qubits: list(int)")
+    .Output("out: T")
+    .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
+
+
 // Register one-qubit gate op with gate matrix
 #define REGISTER_GATE1_OP(NAME)           \
   REGISTER_OP(NAME)                       \
