@@ -490,12 +490,11 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
       std::swap(targetk1, targetk2);
     }
 
-    int64 nreps = nstates;
     int blockSize = DEFAULT_BLOCK_SIZE;
-    int numBlocks = (nreps + blockSize - 1) / blockSize;
-    if (nreps < blockSize) {
+    int numBlocks = (nstates + blockSize - 1) / blockSize;
+    if (nstates < blockSize) {
       numBlocks = 1;
-      blockSize = nreps;
+      blockSize = nstates;
     }
 
     if (ncontrols == 0) {
