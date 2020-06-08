@@ -30,7 +30,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
         target_eff--;
       }
     }
-    const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
     // Set multi-threading
     auto thread_pool =
@@ -91,9 +90,9 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
           int64 i = g;
-          for (auto const& m : qubits) {
-            int64 k = (int64) 1 << m;
-            i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
+          for (auto const& n : qubits) {
+            int64 k = (int64) 1 << n;
+            i = ((int64) ((int64) i >> n) << (n + 1)) + (i & (k - 1)) + k;
           }
           apply(state[i - tk], state[i], gate);
         }

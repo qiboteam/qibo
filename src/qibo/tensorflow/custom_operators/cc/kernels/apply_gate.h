@@ -49,16 +49,16 @@ struct BaseOneQubitGateFunctor {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const;
 
   virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
-                             T* state, const T* gate, long tk) const;
+                             T* state, const T* gate, long tk, int m) const;
 
   virtual void singlecontrolwork(const Device& d, int numBlocks, int blockSize,
                                  T* state, const T* gate, long tk,
-                                 long tk_reduced, int c) const;
+                                 long k1, long k2, int m1, int m2) const;
 
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
                                 T* state, const T* gate, long tk,
-                                long tk_reduced, int ncontrols,
-                                const int* controls, int nqubits) const;
+                                int m, int ncontrols,
+                                const int* controls, int nqubits, int target) const;
 
   void operator()(
       const OpKernelContext* context, const Device& d,

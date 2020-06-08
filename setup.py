@@ -26,7 +26,6 @@ class Build(_build_py):
         commands = [
             ["make", "-j", "%s" % os.cpu_count(),
              "-C", "src/qibo/tensorflow/custom_operators/"],]
-           #["make", "-C", "src/qibo/tensorflow/custom_functions/"]]
         for command in commands:
             if subprocess.call(command) != 0:
                 sys.exit(-1)
@@ -40,7 +39,7 @@ setup(
     author="TII-Qilimanjaro team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
-    packages=find_packages("src", exclude=["qibo/tensorflow/custom_functions"]),
+    packages=find_packages("src"),
     package_dir={"": "src"},
     cmdclass={"build_py": Build,},
     package_data={"": ["*.so", "*.out"]},
