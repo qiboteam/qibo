@@ -6,6 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPECPX, DTYPEINT
 from qibo.tensorflow import circuit, measurements, callbacks
+from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 
@@ -50,9 +51,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._global_qubits = None
         self._local_qubits = None
 
-        self.device_shape = (self.ndevices,) + (self.nqubits - self.nglobal) * (2,)
-        self.full_shape = self.nqubits * (2,)
-        self.output_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
+        n = self.nqubits - self.nglobal
+        self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=DTYPEINT)
+        self.full_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
+        self.tensor_shape = self.nqubits * (2,)
 
     @property
     def global_qubits(self) -> List[int]:
@@ -150,7 +152,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     @staticmethod
-    def _device_execute(state: tf.Tensor, gates: List[gates.TensorflowGate]) -> tf.Tensor:
+    def _device_execute(state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
         for gate in gates:
             state = gate(state)
         return state
@@ -175,7 +177,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
-                    state = self._device_execute(self.pieces[i], self.queues[device][group])
+                    state = self._device_execute(
+                        self.pieces[i], self.queues[device][group])
                 self.pieces[i].assign(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
@@ -231,20 +234,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.global_qubits = self.global_qubits_list[0]
         self._cast_initial_state(initial_state)
 
-        if self.compiled_execute is None:
-            #self._add_callbacks(callback)
-            for group, global_qubits in enumerate(self.global_qubits_list):
-                if group > 0:
-                    self._swap(global_qubits)
-                #self._sequential_execute(group)
-                self._joblib_execute(group)
-        else:
-            raise NotImplementedError("Compiling is not yet implemented for "
-                                      "distributed circuits.")
-            #if callback is not None:
-            #    raise RuntimeError("Cannot add callbacks to compiled circuit. "
-            #                       "Please pass the callbacks when compiling.")
-            #state, callback_results = self.compiled_execute(state)
+        #self._add_callbacks(callback)
+        for group, global_qubits in enumerate(self.global_qubits_list):
+            if group > 0:
+                self._swap(global_qubits)
+            #self._sequential_execute(group)
+            self._joblib_execute(group)
 
         # Append callback results to callbacks
         #for callback, result in zip(self.callbacks, callback_results):
@@ -274,7 +269,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         if self.pieces is None:
             raise ValueError("Cannot access the state tensor before being set.")
-        return tf.reshape(self._merge(self.pieces), self.output_shape)
+        return self._merge(self.pieces)
 
     def _default_global_qubits(self) -> List[int]:
         """Returns a list with the last qubits to cast them as global."""
@@ -295,7 +290,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """Creates the |000...0> state for default initialization."""
         self._create_pieces()
         with tf.device(self.memory_device):
-            self.pieces[0].assign(self._default_initial_piece0())
+            self.pieces[0].assign(self._default_initial_piece())
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
@@ -327,6 +322,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _split(self, state: tf.Tensor):
         with tf.device(self.memory_device):
+            state = tf.reshape(state, self.tensor_shape)
             state = tf.transpose(state, self.transpose_order)
             state = tf.reshape(state, self.device_shape)
             for i in range(self.ndevices):
@@ -335,14 +331,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _merge(self, states: List[tf.Tensor]) -> tf.Tensor:
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in states], axis=0)
-            state = tf.reshape(state, self.full_shape)
+            state = tf.reshape(state, self.tensor_shape)
             state = tf.transpose(state, self.reverse_transpose_order)
-            return state
+            return tf.reshape(state, self.full_shape)
 
     def _swap(self, new_global_qubits: Sequence[int]):
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
-            state = tf.reshape(state, self.full_shape)
+            state = tf.reshape(state, self.tensor_shape)
 
             order = list(self.reverse_transpose_order)
             self.global_qubits = new_global_qubits
