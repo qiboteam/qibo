@@ -30,7 +30,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
         target_eff--;
       }
     }
-    const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
     // Set multi-threading
     auto thread_pool =
