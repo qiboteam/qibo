@@ -16,7 +16,7 @@ namespace functor {
 template <typename T>
 struct SplitStateFunctor<CPUDevice, T> {
   void operator()(const CPUDevice &d, const T *state, T* pieces,
-                  const int32* global_qubits, int nglobal,
+                  const int* global_qubits, int nglobal,
                   int nqubits) {
     const int64 nstates = (int64) 1 << (nqubits - nglobal);
     const int ndevices = 1 << nglobal;
@@ -24,7 +24,7 @@ struct SplitStateFunctor<CPUDevice, T> {
 
     for (auto g = 0; g < nstates; g++) {
       int64 i = g;
-      for (auto j = 0; j < nglobal; j++)) {
+      for (auto j = 0; j < nglobal; j++) {
         const int n = global_qubits[j];
         ids[j] = (int64) 1 << n;
         i = ((int64) ((int64) i >> n) << (n + 1)) + (i & (ids[j] - 1));
@@ -46,7 +46,7 @@ template <typename Device, typename T>
 class SplitStateOp : public OpKernel {
  public:
   explicit SplitStateOp(OpKernelConstruction *context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits));
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("global_qubits", &global_qubits_));
   }
 
@@ -62,7 +62,7 @@ class SplitStateOp : public OpKernel {
                                    state.flat<T>().data(),
                                    pieces.flat<T>().data(),
                                    global_qubits_.data(),
-                                   nqubits_, nglobal_);
+                                   nqubits_, nglobal);
 
     context->set_output(0, pieces);
   }
