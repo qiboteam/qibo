@@ -19,8 +19,8 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  int nqubits, int target, int ncontrols,
-                  const int32* controls, const T* gate = NULL) {
+                  int nqubits, int target, int ncontrols, const int32* controls,
+                  const int32* tensor_controls, const T* gate = NULL) const {
     const int m = nqubits - target - 1;
     const int64 tk = (int64) 1 << m;
     int64 nstates = (int64) 1 << (nqubits - ncontrols - 1);
@@ -30,7 +30,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
         target_eff--;
       }
     }
-    const int64 tk_reduced = (int64)1 << (nqubits - target_eff - ncontrols - 1);
+    const int64 tk_reduced = (int64) 1 << (nqubits - target_eff - ncontrols - 1);
 
     // Set multi-threading
     auto thread_pool =
@@ -44,13 +44,11 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
       nreps = 1;
     }
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        nreps);
 
     // Apply gate
     if (ncontrols == 0) {
-      auto DoWork = [&](int64 t, int64 w) { work(t, w, state, gate, tk); };
-      thread_pool->ParallelFor(nstates, p, DoWork);
-    } else if (ncontrols == 1) {
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
           int64 i = ((int64) ((int64) g >> m) << (m + 1)) + (g & (tk - 1));
@@ -162,9 +160,9 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     const int t2 = std::min(target1, target2);
     int m1 = nqubits - t1 - 1;
     int m2 = nqubits - t2 - 1;
-    const int64 tk1 = (int64)1 << m1;
-    const int64 tk2 = (int64)1 << m2;
-    const int64 nstates = (int64)1 << (nqubits - 2 - ncontrols);
+    const int64 tk1 = (int64) 1 << m1;
+    const int64 tk2 = (int64) 1 << m2;
+    const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
 
     int64 targetk1 = tk1;
     int64 targetk2 = tk2;
@@ -183,7 +181,8 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
       nreps = 1;
     }
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        nreps);
 
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
@@ -194,7 +193,8 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
-    } else {
+    }
+    else {
       std::vector<int> qubits(ncontrols + 2);
       int q = 0;
       for (int i = 0; i < ncontrols; i++) {
@@ -211,7 +211,8 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
       if (q == 0) {
         qubits[ncontrols] = m1;
         qubits[ncontrols + 1] = m2;
-      } else if (q == 1) {
+      }
+      else if (q == 1) {
         qubits[ncontrols + 1] = m2;
       }
 
@@ -219,8 +220,8 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
         for (auto g = t; g < w; g += 1) {
           int64 i = g;
           for (auto const& m : qubits) {
-            int64 k = (int64)1 << m;
-            i = ((int64)((int64)i >> m) << (m + 1)) + (i & (k - 1)) + k;
+            int64 k = (int64) 1 << m;
+            i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
           }
           apply(state, i - tk1 - tk2, targetk1, targetk2, gate);
         }

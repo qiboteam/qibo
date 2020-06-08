@@ -95,8 +95,8 @@ struct BaseTwoQubitGateFunctor {
                      const T* gate = NULL) const;
 
   virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
-                             T* state, const T* gate, long tk1, long tk2,
-                             int m1, int m2) const;
+                             T* state, const T* gate, long ctk1, long ctk2,
+                             long tk1, long tk2, int m1, int m2) const;
 
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
                                 T* state, const T* gate, long ctk1, long ctk2,
