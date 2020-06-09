@@ -11,13 +11,13 @@ REGISTER_OP("InitialState")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 
-// Register op that splits state to pieces for multi-GPU
-REGISTER_OP("SplitState")
+// Register op that changes qubit order for multi-GPU
+REGISTER_OP("TransposeState")
     .Attr("T: {complex64, complex128}")
     .Input("state: T")
-    .Input("pieces: T")
+    .Input("transposed_state: T")
     .Attr("nqubits: int")
-    .Attr("global_qubits: list(int)")
+    .Attr("qubit_exponents: list(int)")
     .Output("out: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 

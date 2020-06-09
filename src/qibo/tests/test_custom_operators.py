@@ -372,3 +372,36 @@ def test_split_state(nqubits, nglobal):
         op.split_state(state, pieces, nqubits, global_qubits)
 
         np.testing.assert_allclose(target_pieces, pieces.numpy())
+
+
+@pytest.mark.parametrize(("nqubits", "nglobal"),
+                         [(3, 1), (4, 1), (4, 2), (5, 3)])
+def test_split_state(nqubits, nglobal):
+    import itertools
+
+    pieces_shape = (2 ** nglobal, 2 ** (nqubits - nglobal))
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+
+    # Generate global qubits randomly
+    all_qubits = np.arange(nqubits)
+    np.random.shuffle(all_qubits)
+    global_qubits1 = sorted(all_qubits[:nglobal])
+    np.random.shuffle(all_qubits)
+    global_qubits2 = sorted(all_qubits[:nglobal])
+
+    state_tensor = state.numpy().reshape(nqubits * (2,))
+    target_pieces = np.zeros(pieces_shape, dtype=state_tensor.dtype)
+    confs = itertools.product([0, 1], repeat=nglobal)
+    for i, conf in enumerate(confs):
+        slicer = nqubits * [slice(None)]
+        for j, s in enumerate(conf):
+            slicer[global_qubits2[j]] = s
+        target_pieces[i] = state_tensor[slicer].ravel()
+
+    pieces = tf.zeros(pieces_shape, dtype=state.dtype)
+    pieces = op.split_state(state, pieces, nqubits, global_qubits1)
+    qubits_list = global_qubits1 + [i for i in range(nqubits) if i not in global_qubits1]
+    global_qubits2_red = [qubits_list.index(i) for i in global_qubits2]
+    pieces = op.split_state(state, pieces, nqubits, global_qubits2_red)
+
+    np.testing.assert_allclose(target_pieces, pieces.numpy())
