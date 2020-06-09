@@ -230,12 +230,12 @@ def test_cz(gates, backend):
     target_state = matrix.dot(init_state)
     c = Circuit(2)
     c.add(gates.CZ(0, 1).with_backend(backend))
-    final_state = c.execute(init_state).numpy()
+    final_state = c.execute(np.copy(init_state)).numpy()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(2)
     c.add(gates.Z(1).with_backend(backend).controlled_by(0))
-    final_state = c.execute(init_state).numpy()
+    final_state = c.execute(np.copy(init_state)).numpy()
     assert c.queue[0].name == "cz"
     np.testing.assert_allclose(final_state, target_state)
 
