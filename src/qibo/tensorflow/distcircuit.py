@@ -71,7 +71,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def global_qubits(self) -> List[int]:
         if self._global_qubits is None:
             raise ValueError("Cannot access global qubits before being set.")
-        return self._global_qubits
+        return sorted(self._global_qubits)
 
     @global_qubits.setter
     def global_qubits(self, x: Sequence[int]):
@@ -345,8 +345,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _split(self, state: tf.Tensor):
         with tf.device(self.memory_device):
-            state = tf.reshape(state, self.tensor_shape)
-            state = tf.transpose(state, self.transpose_order)
+            state = op.transpose_state(state, self.nqubits, self.transpose_order)
             state = tf.reshape(state, self.device_shape)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])
@@ -354,20 +353,18 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _merge(self, states: List[tf.Tensor]) -> tf.Tensor:
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in states], axis=0)
-            state = tf.reshape(state, self.tensor_shape)
-            state = tf.transpose(state, self.reverse_transpose_order)
+            state = op.transpose_state(state, self.nqubits, self.reverse_transpose_order)
             return tf.reshape(state, self.full_shape)
 
     def _swap(self, new_global_qubits: Sequence[int]):
         with tf.device(self.memory_device):
             state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
-            state = tf.reshape(state, self.tensor_shape)
 
             order = list(self.reverse_transpose_order)
             self.global_qubits = new_global_qubits
             order = [order[v] for v in self.transpose_order]
 
-            state = tf.transpose(state, order)
+            state = op.transpose_state(state, self.nqubits, order)
             state = tf.reshape(state, self.device_shape)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])

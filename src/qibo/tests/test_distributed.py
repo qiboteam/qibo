@@ -73,7 +73,7 @@ def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c._cast_initial_state()
-    assert c.global_qubits == {4, 5}
+    assert c.global_qubits == [4, 5]
 
     final_state = c.final_state.numpy()
     target_state = np.zeros_like(final_state)
