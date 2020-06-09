@@ -60,6 +60,51 @@ def QFT(nqubits: int, backend: str) -> models.Circuit:
     return circuit
 
 
+def VariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
+                       theta_values: Optional[np.ndarray] = None
+                       ) -> models.Circuit:
+    gates = get_gates(backend)
+    if theta_values is None:
+        theta = iter(2 * np.pi * np.random.random(nlayers * 2 * nqubits))
+    else:
+        theta = iter(theta_values)
+
+    circuit = models.Circuit(nqubits)
+    for l in range(nlayers):
+        circuit.add((gates.RY(i, next(theta)).with_backend(backend)
+                     for i in range(nqubits)))
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
+                     for i in range(0, nqubits - 1, 2)))
+        circuit.add((gates.RY(i, next(theta)).with_backend(backend)
+                     for i in range(nqubits)))
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
+                     for i in range(1, nqubits - 2, 2)))
+        circuit.add(gates.CZ(0, nqubits - 1).with_backend(backend))
+    return circuit
+
+
+def OptimizedVariationalCircuit(nqubits: int, backend: str, nlayers: int = 1,
+                                theta_values: Optional[np.ndarray] = None
+                                ) -> models.Circuit:
+    gates = get_gates(backend)
+    if theta_values is None:
+        theta = iter(2 * np.pi * np.random.random(nlayers * 2 * nqubits))
+    else:
+        theta = iter(theta_values)
+
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    circuit = models.Circuit(nqubits)
+    for l in range(nlayers):
+        thetas1 = {i: next(theta) for i in range(nqubits)}
+        thetas2 = {i: next(theta) for i in range(nqubits)}
+        circuit.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ,
+                                           thetas1, thetas2).with_backend(backend))
+        circuit.add((gates.CZ(i, i + 1).with_backend(backend)
+                     for i in range(1, nqubits - 2, 2)))
+        circuit.add(gates.CZ(0, nqubits - 1).with_backend(backend))
+    return circuit
+
+
 def OneQubitGate(nqubits: int, backend: str, gate_type: str = "H",
                  params: Dict[str, float] = {}, nlayers: int = 1
                  ) -> models.Circuit:
@@ -104,6 +149,8 @@ def ToffoliGate(nqubits: int, backend: str, nlayers: int = 1) -> models.Circuit:
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
             "ghz": PrepareGHZ,
+            "variational": VariationalCircuit,
+            "opt-variational": OptimizedVariationalCircuit,
             "one-qubit-gate": OneQubitGate,
             "two-qubit-gate": TwoQubitGate,
             "toffoli-gate": ToffoliGate}
