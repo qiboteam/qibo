@@ -323,6 +323,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         if self._global_qubits is None:
             self.global_qubits = self._default_global_qubits()
+
+        self.buffer = tf.zeros(self.full_shape, dtype=self.dtype)
         if initial_state is None:
             return self._default_initial_state()
 
@@ -364,7 +366,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self.global_qubits = new_global_qubits
             order = [order[v] for v in self.transpose_order]
 
-            state = op.transpose_state(state, self.nqubits, order)
-            state = tf.reshape(state, self.device_shape)
+            self.buffer = op.transpose_state(state, self.nqubits, order, self.buffer)
+            self.buffer = tf.reshape(self.buffer, self.device_shape)
             for i in range(self.ndevices):
-                self.pieces[i].assign(state[i])
+                self.pieces[i].assign(self.buffer[i])

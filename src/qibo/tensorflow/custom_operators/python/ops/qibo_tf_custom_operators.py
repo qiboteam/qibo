@@ -16,8 +16,7 @@ def transpose_state(state, nqubits, qubit_order, new_state=None):
     if new_state is None:
         new_state = tf.zeros_like(state)
     new_state = custom_module.transpose_state(state, new_state, nqubits, qubit_order)
-    if new_state is None:
-        del(state)
+    del(state)
     return new_state
 
 
