@@ -1,7 +1,3 @@
-#if GOOGLE_CUDA
-#define EIGEN_USE_GPU
-#endif  // GOOGLE_CUDA
-
 #include "transpose_state.h"
 #include "tensorflow/core/framework/op_kernel.h"
 
@@ -11,6 +7,9 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
+
+using thread::ThreadPool;
+
 
 template <typename T>
 struct TransposeStateFunctor<CPUDevice, T> {
@@ -46,6 +45,11 @@ class TransposeStateOp : public OpKernel {
     const Tensor& state = context->input(0);
     Tensor transposed_state = context->input(1);
 
+    // prevent running on GPU
+    OP_REQUIRES(
+        context, (std::is_same<Device, CPUDevice>::value == true),
+        errors::Unimplemented("ApplyGate operator not implemented for GPU."));
+
     // call the implementation
     TransposeStateFunctor<Device, T>()(context->eigen_device<Device>(),
                                        state.flat<T>().data(),
@@ -67,7 +71,6 @@ class TransposeStateOp : public OpKernel {
 REGISTER_CPU(complex64);
 REGISTER_CPU(complex128);
 
-#ifdef GOOGLE_CUDA
 // Register the GPU kernels.
 #define REGISTER_GPU(T)                                             \
   extern template struct TransposeStateFunctor<GPUDevice, T>;           \
@@ -76,6 +79,5 @@ REGISTER_CPU(complex128);
       TransposeStateOp<GPUDevice, T>);
 REGISTER_GPU(complex64);
 REGISTER_GPU(complex128);
-#endif
 }  // namespace functor
 }  // namespace tensorflow
