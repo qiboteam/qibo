@@ -10,10 +10,8 @@ custom_module = load_library.load_op_library(
 # initial_state operator
 initial_state = custom_module.initial_state
 
-# split state to pieces operator
+# transpose_state operator (for multi-GPU)
 transpose_state = custom_module.transpose_state
-#def transpose_state(state, transposed_state, nqubits, qubit_order):
-    #return custom_module.transpose_state(state, transposed_state, nqubits, qubit_order)
 
 
 def sort_controls(controls):
