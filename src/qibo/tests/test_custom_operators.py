@@ -355,7 +355,5 @@ def test_transpose_state(nqubits):
         state_tensor = state.numpy().reshape(nqubits * (2,))
         target_state = np.transpose(state_tensor, qubit_order).ravel()
 
-        new_state = tf.zeros_like(state)
-        new_state = op.transpose_state(state, new_state, nqubits, qubit_order)
-
-        np.testing.assert_allclose(target_state, new_state.numpy())
+        state = op.transpose_state(state, nqubits, qubit_order)
+        np.testing.assert_allclose(target_state, state.numpy())

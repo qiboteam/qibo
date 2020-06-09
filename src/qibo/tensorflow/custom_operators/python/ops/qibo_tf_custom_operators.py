@@ -12,6 +12,13 @@ initial_state = custom_module.initial_state
 
 # transpose_state operator (for multi-GPU)
 transpose_state = custom_module.transpose_state
+def transpose_state(state, nqubits, qubit_order, new_state=None):
+    if new_state is None:
+        new_state = tf.zeros_like(state)
+    new_state = custom_module.transpose_state(state, new_state, nqubits, qubit_order)
+    if new_state is None:
+        del(state)
+    return new_state
 
 
 def sort_controls(controls):
