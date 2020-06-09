@@ -17,7 +17,7 @@ REGISTER_OP("TransposeState")
     .Input("state: T")
     .Input("transposed_state: T")
     .Attr("nqubits: int")
-    .Attr("qubit_exponents: list(int)")
+    .Attr("qubit_order: list(int)")
     .Output("out: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 

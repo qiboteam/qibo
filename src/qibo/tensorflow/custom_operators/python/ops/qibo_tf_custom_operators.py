@@ -11,9 +11,9 @@ custom_module = load_library.load_op_library(
 initial_state = custom_module.initial_state
 
 # split state to pieces operator
-def split_state(state, pieces, nqubits, global_qubits):
-    qubits = sorted(nqubits - np.array(global_qubits) - 1)
-    return custom_module.split_state(state, pieces, nqubits, qubits)
+transpose_state = custom_module.transpose_state
+#def transpose_state(state, transposed_state, nqubits, qubit_order):
+    #return custom_module.transpose_state(state, transposed_state, nqubits, qubit_order)
 
 
 def sort_controls(controls):

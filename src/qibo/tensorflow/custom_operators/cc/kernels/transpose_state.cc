@@ -18,14 +18,14 @@ struct TransposeStateFunctor<CPUDevice, T> {
                   int nqubits, const int* qubit_order) {
     std::vector<int64> qubit_exponents(nqubits);
     for (int q = 0; q < nqubits; q++) {
-      qubit_exponents[q] = 1 << qubit_order[q];
+      qubit_exponents[q] = (int64) 1 << (nqubits - qubit_order[q] - 1);
     }
 
     const int64 nstates = (int64) 1 << nqubits;
     for (auto g = 0; g < nstates; g++) {
       int64 k = 0;
       for (int q = 0; q < nqubits; q++) {
-        if ((g >> q) % 2) k += qubit_exponents[q];
+        if ((g >> (nqubits - q - 1)) % 2) k += qubit_exponents[q];
       }
       transposed_state[g] = state[k];
     }
@@ -38,7 +38,7 @@ class TransposeStateOp : public OpKernel {
  public:
   explicit TransposeStateOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("global_qubits", &qubit_order_));
+    OP_REQUIRES_OK(context, context->GetAttr("qubit_order", &qubit_order_));
   }
 
   void Compute(OpKernelContext *context) override {

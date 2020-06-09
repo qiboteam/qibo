@@ -343,65 +343,19 @@ def test_custom_op_toy_callback(gate, compile):
     np.testing.assert_allclose(target_callback, callback.numpy())
 
 
-@pytest.mark.parametrize(("nqubits", "nglobal"),
-                         [(3, 1), (4, 1), (4, 2), (5, 3),
-                          (7, 2), (7, 4), (8, 3), (8, 4),
-                          (10, 5)])
-def test_split_state(nqubits, nglobal):
-    import itertools
-
-    pieces_shape = (2 ** nglobal, 2 ** (nqubits - nglobal))
-    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
-
+@pytest.mark.parametrize("nqubits", [3, 4, 7, 8, 9, 10])
+def test_transpose_state(nqubits):
     for _ in range(10):
         # Generate global qubits randomly
-        global_qubits = np.arange(nqubits)
-        np.random.shuffle(global_qubits)
-        global_qubits = sorted(global_qubits[:nglobal])
+        all_qubits = np.arange(nqubits)
+        np.random.shuffle(all_qubits)
+        qubit_order = list(all_qubits)
+        state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
 
         state_tensor = state.numpy().reshape(nqubits * (2,))
-        target_pieces = np.zeros(pieces_shape, dtype=state_tensor.dtype)
-        confs = itertools.product([0, 1], repeat=nglobal)
-        for i, conf in enumerate(confs):
-            slicer = nqubits * [slice(None)]
-            for j, s in enumerate(conf):
-                slicer[global_qubits[j]] = s
-            target_pieces[i] = state_tensor[slicer].ravel()
+        target_state = np.transpose(state_tensor, qubit_order).ravel()
 
-        pieces = tf.zeros(pieces_shape, dtype=state.dtype)
-        op.split_state(state, pieces, nqubits, global_qubits)
+        new_state = tf.zeros_like(state)
+        new_state = op.transpose_state(state, new_state, nqubits, qubit_order)
 
-        np.testing.assert_allclose(target_pieces, pieces.numpy())
-
-
-@pytest.mark.parametrize(("nqubits", "nglobal"),
-                         [(3, 1), (4, 1), (4, 2), (5, 3)])
-def test_split_state(nqubits, nglobal):
-    import itertools
-
-    pieces_shape = (2 ** nglobal, 2 ** (nqubits - nglobal))
-    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
-
-    # Generate global qubits randomly
-    all_qubits = np.arange(nqubits)
-    np.random.shuffle(all_qubits)
-    global_qubits1 = sorted(all_qubits[:nglobal])
-    np.random.shuffle(all_qubits)
-    global_qubits2 = sorted(all_qubits[:nglobal])
-
-    state_tensor = state.numpy().reshape(nqubits * (2,))
-    target_pieces = np.zeros(pieces_shape, dtype=state_tensor.dtype)
-    confs = itertools.product([0, 1], repeat=nglobal)
-    for i, conf in enumerate(confs):
-        slicer = nqubits * [slice(None)]
-        for j, s in enumerate(conf):
-            slicer[global_qubits2[j]] = s
-        target_pieces[i] = state_tensor[slicer].ravel()
-
-    pieces = tf.zeros(pieces_shape, dtype=state.dtype)
-    pieces = op.split_state(state, pieces, nqubits, global_qubits1)
-    qubits_list = global_qubits1 + [i for i in range(nqubits) if i not in global_qubits1]
-    global_qubits2_red = [qubits_list.index(i) for i in global_qubits2]
-    pieces = op.split_state(state, pieces, nqubits, global_qubits2_red)
-
-    np.testing.assert_allclose(target_pieces, pieces.numpy())
+        np.testing.assert_allclose(target_state, new_state.numpy())
