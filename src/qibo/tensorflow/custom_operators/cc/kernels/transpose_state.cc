@@ -1,5 +1,6 @@
 #include "transpose_state.h"
 #include "tensorflow/core/framework/op_kernel.h"
+#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
 
@@ -10,24 +11,42 @@ namespace functor {
 
 using thread::ThreadPool;
 
-
 template <typename T>
 struct TransposeStateFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice &d, const T* state, T* transposed_state,
+  void operator()(const OpKernelContext* context, const CPUDevice &d,
+                  const T* state, T* transposed_state,
                   int nqubits, const int* qubit_order) {
+    const int64 nstates = (int64) 1 << nqubits;
     std::vector<int64> qubit_exponents(nqubits);
     for (int q = 0; q < nqubits; q++) {
       qubit_exponents[q] = (int64) 1 << (nqubits - qubit_order[nqubits - q - 1] - 1);
     }
 
-    const int64 nstates = (int64) 1 << nqubits;
-    for (auto g = 0; g < nstates; g++) {
-      int64 k = 0;
-      for (int q = 0; q < nqubits; q++) {
-        if ((g >> q) % 2) k += qubit_exponents[q];
-      }
-      transposed_state[g] = state[k];
+    // Set multi-threading
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    const int ncores = (int) thread_pool->NumThreads();
+    int64 nreps;
+    if (ncores > 1) {
+      nreps = (int64) nstates / ncores;
     }
+    else {
+      nreps = 1;
+    }
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        nreps);
+
+    auto DoWork = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g++) {
+        int64 k = 0;
+        for (int q = 0; q < nqubits; q++) {
+          if ((g >> q) % 2) k += qubit_exponents[q];
+        }
+        transposed_state[g] = state[k];
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, DoWork);
   };
 };
 
@@ -51,7 +70,7 @@ class TransposeStateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
-    TransposeStateFunctor<Device, T>()(context->eigen_device<Device>(),
+    TransposeStateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                        state.flat<T>().data(),
                                        transposed_state.flat<T>().data(),
                                        nqubits_, qubit_order_.data());
