@@ -139,13 +139,6 @@ struct ApplyXFunctor<GPUDevice, T> : BaseOneQubitGateFunctor<GPUDevice, T> {
     ApplyXKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(state, gate, tk, m);
   }
 
-  inline void singlecontrolwork(const GPUDevice& d, int numBlocks,
-                                int blockSize, T* state, const T* gate, long tk,
-                                long k1, long k2, int m1, int m2) const override {
-    ApplyXSingleControlKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
-        state, gate, tk, k1, k2, m1, m2);
-  }
-
   inline void multicontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
                                T* state, const T* gate, long tk,
                                int m, int ncontrols,
@@ -170,15 +163,6 @@ __global__ void ApplyYKernel(T* state, const T* gate, long tk, int m) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   const auto i = ((long) ((long) g >> m) << (m + 1)) + (g & (tk - 1));
   apply_y(state[i], state[i + tk]);
-}
-
-template <typename T>
-__global__ void ApplyYSingleControlKernel(T* state, const T* gate, long tk,
-                                          long k1, long k2, int m1, int m2) {
-  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
-  auto i = ((long) ((long) g >> m1) << (m1 + 1)) + (g & (k1 - 1)) + k1;
-  i = ((long) ((long) i >> m2) << (m2 + 1)) + (i & (k2 - 1)) + k2;
-  apply_y(state[i - tk], state[i]);
 }
 
 template <typename T>
