@@ -38,7 +38,8 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
             ``gate`` is applied.
     """
     check_controls(controls)
-    qubits = list(nqubits - np.array(controls) - 1) + [nqubits - target - 1]
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_gate(state, gate, qubits, nqubits, target)
 
@@ -55,25 +56,29 @@ def apply_twoqubit_gate(state, gate, nqubits, targets, controls=[]):
 # gate specific operators
 def apply_x(state, nqubits, target, controls=[]):
     check_controls(controls)
-    qubits = list(nqubits - np.array(controls) - 1) + [nqubits - target - 1]
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_x(state, qubits, nqubits, target)
 
 def apply_y(state, nqubits, target, controls=[]):
     check_controls(controls)
-    qubits = list(nqubits - np.array(controls) - 1) + [nqubits - target - 1]
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_y(state, qubits, nqubits, target)
 
 def apply_z(state, nqubits, target, controls=[]):
     check_controls(controls)
-    qubits = list(nqubits - np.array(controls) - 1) + [nqubits - target - 1]
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_z(state, qubits, nqubits, target)
 
 def apply_zpow(state, theta, nqubits, target, controls=[]):
     check_controls(controls)
-    qubits = list(nqubits - np.array(controls) - 1) + [nqubits - target - 1]
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_z_pow(state, theta, qubits, nqubits, target)
 
