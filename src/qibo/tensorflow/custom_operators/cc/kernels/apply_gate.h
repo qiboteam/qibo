@@ -51,10 +51,6 @@ struct BaseOneQubitGateFunctor {
   virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
                              T* state, const T* gate, long tk, int m) const;
 
-  virtual void singlecontrolwork(const Device& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk,
-                                 long k1, long k2, int m1, int m2) const;
-
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
                                 T* state, const T* gate, long tk,
                                 int m, int ncontrols,
@@ -68,8 +64,7 @@ struct BaseOneQubitGateFunctor {
       int ncontrols,  //!< Number of qubits that the gate is controlled on.
       const int32*
           controls,  //!< List of control qubits ids sorted in decreasing order.
-      const int32* qubits,  //!< List of control qubits ids sorted in
-                            //!< decreasing order and stored on Device.
+      const int32* qubits,  //!< List of control and target qubits in increasing order.
       const T* gate = NULL  //!< Gate matrix (used only by)
   ) const;
 };

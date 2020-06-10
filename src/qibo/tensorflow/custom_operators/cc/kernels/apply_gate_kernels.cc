@@ -24,12 +24,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     const int m = nqubits - target - 1;
     const int64 tk = (int64) 1 << m;
     int64 nstates = (int64) 1 << (nqubits - ncontrols - 1);
-    int target_eff = target;
-    for (int i = 0; i < ncontrols; i++) {
-      if (controls[i] < target) {
-        target_eff--;
-      }
-    }
 
     // Set multi-threading
     auto thread_pool =
@@ -52,23 +46,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
         for (auto g = t; g < w; g += 1) {
           int64 i = ((int64) ((int64) g >> m) << (m + 1)) + (g & (tk - 1));
           apply(state[i], state[i + tk], gate);
-        }
-      };
-      thread_pool->ParallelFor(nstates, p, DoWork);
-    }
-    else if (ncontrols == 1) {
-      const int cm = nqubits - controls[0] - 1;
-      const int m1 = std::min(m, cm);
-      const int m2 = std::max(m, cm);
-      const int64 ck = (int64) 1 << cm;
-      const int64 k1 = std::min(tk, ck);
-      const int64 k2 = std::max(tk, ck);
-
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (k1 - 1)) + k1;
-          i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (k2 - 1)) + k2;
-          apply(state[i - tk], state[i], gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
