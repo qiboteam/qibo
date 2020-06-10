@@ -70,6 +70,7 @@ struct BaseOneQubitGateFunctor {
           controls,  //!< List of control qubits ids sorted in decreasing order.
       const int32* tensor_controls,  //!< List of control qubits ids sorted in
                                      //!< decreasing order and stored on Device.
+      const int32 *qubits,
       const T* gate = NULL           //!< Gate matrix (used only by)
   ) const;
 };
@@ -107,7 +108,7 @@ struct BaseTwoQubitGateFunctor {
   void operator()(const OpKernelContext* context, const Device& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
                   const int32* controls, const int32* tensor_controls,
-                  const T* gate = NULL) const;
+                  const int32 *qubits, const T* gate = NULL) const;
 };
 
 template <typename Device, typename T>

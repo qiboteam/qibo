@@ -17,6 +17,7 @@ REGISTER_OP("InitialState")
       .Input("state: T")                  \
       .Input("gate: T")                   \
       .Input("tensor_controls: int32")    \
+      .Input("qubits: int32")             \
       .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
@@ -29,6 +30,7 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("tensor_controls: int32")    \
+      .Input("qubits: int32")             \
       .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
@@ -42,6 +44,7 @@ REGISTER_OP("InitialState")
       .Input("state: T")                  \
       .Input("gate: T")                   \
       .Input("tensor_controls: int32")    \
+      .Input("qubits: int32")             \
       .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
@@ -55,6 +58,7 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("tensor_controls: int32")    \
+      .Input("qubits: int32")             \
       .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
