@@ -80,10 +80,11 @@ def test_set_gates_controlled():
 
     assert c.device_queues.global_qubits_lists == [[1, 4], [0, 5]]
     check_device_queues(c.device_queues)
-    for queue in c.device_queues.queues:
+    print(c.device_queues.global_qubits_lists)
+    for i, queue in enumerate(c.device_queues.queues):
         assert len(queue) == 2
-        assert len(queue[0]) == 4
-        assert len(queue[1]) == 5
+        assert len(queue[0]) == 3 + (i % 2)
+        assert len(queue[1]) == 4 + (i > 1)
 
 
 def test_default_initialization():
@@ -135,11 +136,12 @@ def test_distributed_circuit_errors():
         final_state = c.final_state
 
 
-def test_simple_execution():
+@pytest.mark.parametrize("ndevices", [2, 4, 8])
+def test_simple_execution(ndevices):
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
 
-    devices = {"/GPU:0": 2, "/GPU:1": 2}
+    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
     dist_c = models.DistributedCircuit(6, devices)
     dist_c.add((gates.H(i) for i in range(6)))
 
@@ -148,8 +150,9 @@ def test_simple_execution():
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)
 
-@pytest.mark.skip
-def test_controlled_execution(ndevices=2):
+
+@pytest.mark.parametrize("ndevices", [2, 4])
+def test_controlled_execution(ndevices):
     c = models.Circuit(4)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.CNOT(0, 1))
@@ -229,9 +232,8 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     check_device_queues(c.device_queues)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("nqubits", [7, 8])
-@pytest.mark.parametrize("ndevices", [2, 4])
+@pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
+@pytest.mark.parametrize("ndevices", [2, 4, 8])
 #@pytest.mark.parametrize("backend", [b for g, b in _BACKENDS])
 @pytest.mark.parametrize("backend", [None])
 def test_distributed_qft_execution(nqubits, ndevices, backend):

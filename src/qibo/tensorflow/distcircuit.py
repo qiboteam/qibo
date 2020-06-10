@@ -14,6 +14,7 @@ class DeviceQueues:
 
     def __init__(self, calc_devices: Dict[str, int]):
         self.ndevices = sum(calc_devices.values())
+        self.nglobal = int(np.log2(self.ndevices))
         self.queues = [[] for _ in range(self.ndevices)]
 
         self.global_qubits_lists = []
@@ -44,20 +45,28 @@ class DeviceQueues:
         # "Compile" actual gates
         if len(queues) != len(self):
             raise ValueError
-
-        for global_qubits, queue in zip(self.global_qubits_lists, queues):
+        for iq, queue in enumerate(queues):
             for i in range(self.ndevices):
                 self.queues[i].append([])
             for gate in queue:
                 for device, ids in self.device_to_ids.items():
                     calc_gate = copy.copy(gate)
-                    calc_gate.reduce(global_qubits)
+                    calc_gate.reduce(self.global_qubits_lists[iq])
                     calc_gate.original_gate = gate
                     # Gate matrix should be constructed in the calculation device
                     with tf.device(device):
                         calc_gate.nqubits = nlocal
                     for i in ids:
-                        self.queues[i][-1].append(calc_gate)
+                        flag = True
+                        for control in (set(gate.control_qubits) &
+                                        self.global_qubits_sets[iq]):
+                            ic = self.global_qubits_lists[iq].index(control)
+                            ic = self.nglobal - ic - 1
+                            flag = bool((i // (2 ** ic)) % 2)
+                            if not flag:
+                                break
+                        if flag:
+                            self.queues[i][-1].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
