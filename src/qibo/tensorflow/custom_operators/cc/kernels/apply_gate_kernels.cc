@@ -19,46 +19,43 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  int nqubits, int target, int ncontrols,
-                  const int32* qubits, const T* gate = NULL) const {
+                  int nqubits, int target, int ncontrols, const int32* qubits,
+                  const T* gate = NULL) const {
     const int m = nqubits - target - 1;
-    const int64 tk = (int64) 1 << m;
-    int64 nstates = (int64) 1 << (nqubits - ncontrols - 1);
+    const int64 tk = (int64)1 << m;
+    int64 nstates = (int64)1 << (nqubits - ncontrols - 1);
 
     // Set multi-threading
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int) thread_pool->NumThreads();
+    const int ncores = (int)thread_pool->NumThreads();
     int64 nreps;
     if (ncores > 1) {
-      nreps = (int64) nstates / ncores;
-    }
-    else {
+      nreps = (int64)nstates / ncores;
+    } else {
       nreps = 1;
     }
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        nreps);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
 
     // Apply gate
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64) ((int64) g >> m) << (m + 1)) + (g & (tk - 1));
+          int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
           apply(state[i], state[i + tk], gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
-    }
-    else {
+    } else {
       const int N = ncontrols + 1;
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
           int64 i = g;
           for (auto iq = 0; iq < N; iq++) {
             const auto n = qubits[iq];
-            int64 k = (int64) 1 << n;
-            i = ((int64) ((int64) i >> n) << (n + 1)) + (i & (k - 1)) + k;
+            int64 k = (int64)1 << n;
+            i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1)) + k;
           }
           apply(state[i - tk], state[i], gate);
         }
@@ -124,9 +121,9 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     const int t2 = std::min(target1, target2);
     int m1 = nqubits - t1 - 1;
     int m2 = nqubits - t2 - 1;
-    const int64 tk1 = (int64) 1 << m1;
-    const int64 tk2 = (int64) 1 << m2;
-    const int64 nstates = (int64) 1 << (nqubits - 2 - ncontrols);
+    const int64 tk1 = (int64)1 << m1;
+    const int64 tk2 = (int64)1 << m2;
+    const int64 nstates = (int64)1 << (nqubits - 2 - ncontrols);
 
     int64 targetk1 = tk1;
     int64 targetk2 = tk2;
@@ -136,37 +133,34 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
     auto thread_pool =
         context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int) thread_pool->NumThreads();
+    const int ncores = (int)thread_pool->NumThreads();
     int64 nreps;
     if (ncores > 1) {
-      nreps = (int64) nstates / ncores;
-    }
-    else {
+      nreps = (int64)nstates / ncores;
+    } else {
       nreps = 1;
     }
     const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        nreps);
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
 
     if (ncontrols == 0) {
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64) ((int64) g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
-          i = ((int64) ((int64) i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
+          int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+          i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
           apply(state, i, targetk1, targetk2, gate);
         }
       };
       thread_pool->ParallelFor(nstates, p, DoWork);
-    }
-    else {
+    } else {
       const int N = ncontrols + 2;
       auto DoWork = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g += 1) {
           int64 i = g;
           for (auto iq = 0; iq < N; iq++) {
             const auto m = qubits[iq];
-            int64 k = (int64) 1 << m;
-            i = ((int64) ((int64) i >> m) << (m + 1)) + (i & (k - 1)) + k;
+            int64 k = (int64)1 << m;
+            i = ((int64)((int64)i >> m) << (m + 1)) + (i & (k - 1)) + k;
           }
           apply(state, i - tk1 - tk2, targetk1, targetk2, gate);
         }
@@ -243,14 +237,15 @@ class OneQubitGateOp : public OpKernel {
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
        nqubits_, target_, qubits.flat<int32>().size() - 1,
-       qubits.flat<int32>().data(),gate.flat<T>().data());
+       qubits.flat<int32>().data(), gate.flat<T>().data());
     } else {
       const Tensor& qubits = context->input(1);
 
       // call the implementation
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
-       nqubits_, target_, qubits.flat<int32>().size() - 1, qubits.flat<int32>().data());
+       nqubits_, target_, qubits.flat<int32>().size() - 1,
+       qubits.flat<int32>().data());
     }
     context->set_output(0, state);
   }

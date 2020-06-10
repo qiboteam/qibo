@@ -52,9 +52,9 @@ struct BaseOneQubitGateFunctor {
                              T* state, const T* gate, long tk, int m) const;
 
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
-                                T* state, const T* gate, long tk,
-                                int m, int ncontrols,
-                                const int* qubits, int nqubits, int target) const;
+                                T* state, const T* gate, long tk, int m,
+                                int ncontrols, const int* qubits, int nqubits,
+                                int target) const;
 
   void operator()(
       const OpKernelContext* context, const Device& d,
@@ -62,7 +62,8 @@ struct BaseOneQubitGateFunctor {
       int nqubits,    //!< Total number of qubits in the state.
       int target,     //!< Target qubit id.
       int ncontrols,  //!< Number of qubits that the gate is controlled on.
-      const int32* qubits,  //!< List of control and target qubits in increasing order.
+      const int32*
+          qubits,  //!< List of control and target qubits in increasing order.
       const T* gate = NULL  //!< Gate matrix (used only by)
   ) const;
 };
@@ -99,7 +100,7 @@ struct BaseTwoQubitGateFunctor {
 
   void operator()(const OpKernelContext* context, const Device& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
-                  const int32 *qubits, const T* gate = NULL) const;
+                  const int32* qubits, const T* gate = NULL) const;
 };
 
 template <typename Device, typename T>

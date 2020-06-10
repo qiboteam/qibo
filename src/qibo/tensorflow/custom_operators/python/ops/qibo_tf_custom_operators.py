@@ -10,6 +10,7 @@ custom_module = load_library.load_op_library(
 # initial_state operator
 initial_state = custom_module.initial_state
 
+
 def check_controls(controls):
     """Checks if ``controls`` variable has valid type."""
     if not (isinstance(controls, list) or isinstance(controls, tuple)):
@@ -43,6 +44,7 @@ def apply_gate(state, gate, nqubits, target, controls=[]):
     qubits = sorted(qubits)
     return custom_module.apply_gate(state, gate, qubits, nqubits, target)
 
+
 def apply_twoqubit_gate(state, gate, nqubits, targets, controls=[]):
     """Applies arbitrary two-qubit gate to a state vector."""
     check_controls(controls)
@@ -54,12 +56,15 @@ def apply_twoqubit_gate(state, gate, nqubits, targets, controls=[]):
                                               t1, t2)
 
 # gate specific operators
+
+
 def apply_x(state, nqubits, target, controls=[]):
     check_controls(controls)
     qubits = list(nqubits - np.array(controls) - 1)
     qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_x(state, qubits, nqubits, target)
+
 
 def apply_y(state, nqubits, target, controls=[]):
     check_controls(controls)
@@ -68,12 +73,14 @@ def apply_y(state, nqubits, target, controls=[]):
     qubits = sorted(qubits)
     return custom_module.apply_y(state, qubits, nqubits, target)
 
+
 def apply_z(state, nqubits, target, controls=[]):
     check_controls(controls)
     qubits = list(nqubits - np.array(controls) - 1)
     qubits.append(nqubits - target - 1)
     qubits = sorted(qubits)
     return custom_module.apply_z(state, qubits, nqubits, target)
+
 
 def apply_zpow(state, theta, nqubits, target, controls=[]):
     check_controls(controls)
@@ -82,6 +89,7 @@ def apply_zpow(state, theta, nqubits, target, controls=[]):
     qubits = sorted(qubits)
     return custom_module.apply_z_pow(state, theta, qubits, nqubits, target)
 
+
 def apply_fsim(state, gate, nqubits, targets, controls=[]):
     check_controls(controls)
     t1, t2 = targets
@@ -89,6 +97,7 @@ def apply_fsim(state, gate, nqubits, targets, controls=[]):
     qubits.extend(nqubits - np.array(targets) - 1)
     qubits = sorted(qubits)
     return custom_module.apply_fsim(state, gate, qubits, nqubits, t1, t2)
+
 
 def apply_swap(state, nqubits, targets, controls=[]):
     check_controls(controls)
