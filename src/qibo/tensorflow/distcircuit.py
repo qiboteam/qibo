@@ -49,14 +49,15 @@ class DeviceQueues:
             for i in range(self.ndevices):
                 self.queues[i].append([])
             for gate in queue:
-                for i in range(self.ndevices):
+                for device, ids in self.device_to_ids.items():
                     calc_gate = copy.copy(gate)
                     calc_gate.reduce(global_qubits)
                     calc_gate.original_gate = gate
                     # Gate matrix should be constructed in the calculation device
-                    with tf.device(self.ids_to_device[i]):
+                    with tf.device(device):
                         calc_gate.nqubits = nlocal
-                    self.queues[i][-1].append(calc_gate)
+                    for i in ids:
+                        self.queues[i][-1].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
