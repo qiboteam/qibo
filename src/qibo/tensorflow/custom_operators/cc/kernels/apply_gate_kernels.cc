@@ -19,7 +19,7 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  int nqubits, int target, int ncontrols, const int32* controls,
+                  int nqubits, int target, int ncontrols,
                   const int32* qubits, const T* gate = NULL) const {
     const int m = nqubits - target - 1;
     const int64 tk = (int64) 1 << m;
@@ -119,7 +119,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const int32* qubits, const T* gate = NULL) const {
+                  const int32* qubits, const T* gate = NULL) const {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
     int m1 = nqubits - t1 - 1;
@@ -227,7 +227,6 @@ template <typename Device, typename T, typename F, bool UseMatrix>
 class OneQubitGateOp : public OpKernel {
  public:
   explicit OneQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("controls", &controls_));
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
   }
@@ -235,7 +234,6 @@ class OneQubitGateOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
-    const int ncontrols = controls_.size();
 
     if (UseMatrix) {
       const Tensor& gate = context->input(1);
@@ -244,7 +242,7 @@ class OneQubitGateOp : public OpKernel {
       // call the implementation
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
-       nqubits_, target_, ncontrols, controls_.data(),
+       nqubits_, target_, qubits.flat<int32>().size() - 1,
        qubits.flat<int32>().data(),gate.flat<T>().data());
     } else {
       const Tensor& qubits = context->input(1);
@@ -252,7 +250,7 @@ class OneQubitGateOp : public OpKernel {
       // call the implementation
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
-       nqubits_, target_, ncontrols, controls_.data(), qubits.flat<int32>().data());
+       nqubits_, target_, qubits.flat<int32>().size() - 1, qubits.flat<int32>().data());
     }
     context->set_output(0, state);
   }
@@ -260,14 +258,12 @@ class OneQubitGateOp : public OpKernel {
  private:
   int nqubits_;
   int target_;
-  std::vector<int> controls_;
 };
 
 template <typename Device, typename T, typename F, bool UseMatrix>
 class TwoQubitGateOp : public OpKernel {
  public:
   explicit TwoQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
-    OP_REQUIRES_OK(context, context->GetAttr("controls", &controls_));
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
     OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
@@ -276,7 +272,6 @@ class TwoQubitGateOp : public OpKernel {
   void Compute(OpKernelContext* context) override {
     // grabe the input tensor
     Tensor state = context->input(0);
-    const int ncontrols = controls_.size();
 
     if (UseMatrix) {
       const Tensor& gate = context->input(1);
@@ -285,7 +280,7 @@ class TwoQubitGateOp : public OpKernel {
       // call the implementation
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
-       nqubits_, target1_, target2_, ncontrols, controls_.data(),
+       nqubits_, target1_, target2_, qubits.flat<int32>().size() - 2,
        qubits.flat<int32>().data(), gate.flat<T>().data());
     } else {
       const Tensor& qubits = context->input(1);
@@ -293,7 +288,7 @@ class TwoQubitGateOp : public OpKernel {
       // call the implementation
       F()
       (context, context->eigen_device<Device>(), state.flat<T>().data(),
-       nqubits_, target1_, target2_, ncontrols, controls_.data(),
+       nqubits_, target1_, target2_, qubits.flat<int32>().size() - 2,
        qubits.flat<int32>().data());
     }
     context->set_output(0, state);
@@ -302,7 +297,6 @@ class TwoQubitGateOp : public OpKernel {
  private:
   int nqubits_;
   int target1_, target2_;
-  std::vector<int> controls_;
 };
 
 // Register the CPU kernels.

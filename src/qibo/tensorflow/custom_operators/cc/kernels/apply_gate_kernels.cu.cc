@@ -33,7 +33,7 @@ struct BaseOneQubitGateFunctor<GPUDevice, T> {
                                 const int* qubits, int nqubits, int target) const {}
 
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
-                  int nqubits, int target, int ncontrols, const int32* controls,
+                  int nqubits, int target, int ncontrols,
                   const int32* qubits, const T* gate = NULL) const {
     const int m = nqubits - target - 1;
     const int64 tk = (int64)1 << m;
@@ -301,7 +301,7 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
 
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const int32* qubits, const T* gate = NULL) const {
+                  const int32* qubits, const T* gate = NULL) const {
     const int t1 = std::max(target1, target2);
     const int t2 = std::min(target1, target2);
     int m1 = nqubits - t1 - 1;
@@ -335,12 +335,8 @@ struct BaseTwoQubitGateFunctor<GPUDevice, T> {
 };
 
 template <typename T>
-__global__ void ApplyTwoQubitGateKernel(T* state, const T* gate, long ctk1, long ctk2,
-                                        long tk1, long tk2, int m1, int m2) {
-  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
-  auto i = ((long)((long)g >> m1) << (m1 + 1)) + (g & (ctk1 - 1));
-  i = ((long)((long)i >> m2) << (m2 + 1)) + (i & (ctk2 - 1));
-
+__device__ void apply_two_gate(T* state, long i, long tk1, long tk2,
+                          const T* gate = NULL) {
   const auto i1 = i + tk1;
   const auto i2 = i + tk2;
   const auto i3 = i1 + tk2;
@@ -359,6 +355,15 @@ __global__ void ApplyTwoQubitGateKernel(T* state, const T* gate, long ctk1, long
 }
 
 template <typename T>
+__global__ void ApplyTwoQubitGateKernel(T* state, const T* gate, long ctk1, long ctk2,
+                                        long tk1, long tk2, int m1, int m2) {
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  auto i = ((long)((long)g >> m1) << (m1 + 1)) + (g & (ctk1 - 1));
+  i = ((long)((long)i >> m2) << (m2 + 1)) + (i & (ctk2 - 1));
+  apply_two_gate(state, i, tk1, tk2, gate);
+}
+
+template <typename T>
 __global__ void ApplyTwoQubitGateMultiControlKernel(
     T* state, const T* gate, long ctk1, long ctk2, long tk1, long tk2, int m1,
     int m2, int ncontrols, const int* qubits, int nqubits, int t1, int t2) {
@@ -369,22 +374,7 @@ __global__ void ApplyTwoQubitGateMultiControlKernel(
     long k = (long)1 << m;
     i = ((long)((long)i >> m) << (m + 1)) + (i & (k - 1)) + k;
   }
-  i = i - ctk1 - ctk2;
-  const auto i1 = i + tk1;
-  const auto i2 = i + tk2;
-  const auto i3 = i1 + tk2;
-  const auto buffer = state[i];
-  state[i] = cadd(cadd(cmult(gate[0], state[i]), cmult(gate[1], state[i1])),
-                  cadd(cmult(gate[2], state[i2]), cmult(gate[3], state[i3])));
-  const auto buffer1 = state[i1];
-  state[i1] = cadd(cadd(cmult(gate[4], buffer), cmult(gate[5], state[i1])),
-                   cadd(cmult(gate[6], state[i2]), cmult(gate[7], state[i3])));
-  const auto buffer2 = state[i2];
-  state[i2] =
-      cadd(cadd(cmult(gate[8], buffer), cmult(gate[9], buffer1)),
-           cadd(cmult(gate[10], state[i2]), cmult(gate[11], state[i3])));
-  state[i3] = cadd(cadd(cmult(gate[12], buffer), cmult(gate[13], buffer1)),
-                   cadd(cmult(gate[14], buffer2), cmult(gate[15], state[i3])));
+  apply_two_gate(state, i - ctk1 - ctk2, tk1, tk2, gate);
 }
 
 // Apply general one-qubit gate via gate matrix
@@ -411,12 +401,8 @@ struct ApplyTwoQubitGateFunctor<GPUDevice, T>
 };
 
 template <typename T>
-__global__ void ApplyFsimKernel(T* state, const T* gate, long ctk1, long ctk2,
-                                long tk1, long tk2, int m1, int m2) {
-  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
-  auto i = ((long)((long)g >> m1) << (m1 + 1)) + (g & (ctk1 - 1));
-  i = ((long)((long)i >> m2) << (m2 + 1)) + (i & (ctk2 - 1));
-
+__device__ void apply_fsim(T* state, long i, long tk1, long tk2,
+                          const T* gate = NULL) {
   const auto i1 = i + tk1;
   const auto i2 = i + tk2;
   const auto i3 = i1 + tk2;
@@ -424,6 +410,15 @@ __global__ void ApplyFsimKernel(T* state, const T* gate, long ctk1, long ctk2,
   state[i1] = cadd(cmult(gate[0], state[i1]), cmult(gate[1], state[i2]));
   state[i2] = cadd(cmult(gate[2], buffer), cmult(gate[3], state[i2]));
   state[i3] = cmult(gate[4], state[i3]);
+}
+
+template <typename T>
+__global__ void ApplyFsimKernel(T* state, const T* gate, long ctk1, long ctk2,
+                                long tk1, long tk2, int m1, int m2) {
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  auto i = ((long)((long)g >> m1) << (m1 + 1)) + (g & (ctk1 - 1));
+  i = ((long)((long)i >> m2) << (m2 + 1)) + (i & (ctk2 - 1));
+  apply_fsim(state, i, tk1, tk2, gate);
 }
 
 template <typename T>
@@ -439,14 +434,7 @@ __global__ void ApplyFsimMultiControlKernel(T* state, const T* gate, long ctk1,
     long k = (long)1 << m;
     i = ((long)((long)i >> m) << (m + 1)) + (i & (k - 1)) + k;
   }
-  i = i - ctk1 - ctk2;
-  const auto i1 = i + tk1;
-  const auto i2 = i + tk2;
-  const auto i3 = i1 + tk2;
-  const auto buffer = state[i1];
-  state[i1] = cadd(cmult(gate[0], state[i1]), cmult(gate[1], state[i2]));
-  state[i2] = cadd(cmult(gate[2], buffer), cmult(gate[3], state[i2]));
-  state[i3] = cmult(gate[4], state[i3]);
+  apply_fsim(state, i - ctk1 - ctk2, tk1, tk2, gate);
 }
 
 template <typename T>
@@ -470,15 +458,19 @@ struct ApplyFsimFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
 };
 
 template <typename T>
+__device__ void apply_swap(T* state, long i, long tk1, long tk2) {
+  const auto buffer = state[i + tk1];
+  state[i + tk1] = state[i + tk2];
+  state[i + tk2] = buffer;
+}
+
+template <typename T>
 __global__ void ApplySwapKernel(T* state, const T* gate, long ctk1, long ctk2,
                                 long tk1, long tk2, int m1, int m2) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   auto i = ((long)((long)g >> m1) << (m1 + 1)) + (g & (ctk1 - 1));
   i = ((long)((long)i >> m2) << (m2 + 1)) + (i & (ctk2 - 1));
-
-  const auto buffer = state[i + tk1];
-  state[i + tk1] = state[i + tk2];
-  state[i + tk2] = buffer;
+  apply_swap(state, i, tk1, tk2);
 }
 
 template <typename T>
@@ -494,10 +486,7 @@ __global__ void ApplySwapMultiControlKernel(T* state, const T* gate, long ctk1,
     long k = (long)1 << m;
     i = ((long)((long)i >> m) << (m + 1)) + (i & (k - 1)) + k;
   }
-  i = i - ctk1 - ctk2;
-  const auto buffer = state[i + tk1];
-  state[i + tk1] = state[i + tk2];
-  state[i + tk2] = buffer;
+  apply_swap(state, i - ctk1 - ctk2, tk1, tk2);
 }
 
 // Apply SWAP gate

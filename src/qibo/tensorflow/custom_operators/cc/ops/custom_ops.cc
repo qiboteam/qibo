@@ -17,7 +17,6 @@ REGISTER_OP("InitialState")
       .Input("state: T")                  \
       .Input("gate: T")                   \
       .Input("qubits: int32")             \
-      .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
       .Output("out: T")                   \
@@ -29,7 +28,6 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("qubits: int32")             \
-      .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
       .Output("out: T")                   \
@@ -42,7 +40,6 @@ REGISTER_OP("InitialState")
       .Input("state: T")                  \
       .Input("gate: T")                   \
       .Input("qubits: int32")             \
-      .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
@@ -55,7 +52,6 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("qubits: int32")             \
-      .Attr("controls: list(int)")        \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
