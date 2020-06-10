@@ -10,6 +10,55 @@ from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 
+class DeviceQueues:
+
+    def __init__(self, calc_devices: Dict[str, int]):
+        self.ndevices = sum(calc_devices.values())
+        self.queues = [[] for _ in range(self.ndevices)]
+
+        self.global_qubits_lists = []
+        self.global_qubits_sets = []
+
+        self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
+        self.ids_to_device = self.ndevices * [None]
+        for device, ids in self.device_to_ids.items():
+            for i in ids:
+                self.ids_to_device[i] = device
+
+    @staticmethod
+    def _ids_gen(calc_devices) -> Tuple[str, List[int]]:
+        start = 0
+        for device, n in calc_devices.items():
+            stop = start + n
+            yield device, list(range(start, stop))
+            start = stop
+
+    def append(self, qubits):
+        self.global_qubits_sets.append(set(qubits))
+        self.global_qubits_lists.append(sorted(qubits))
+
+    def __len__(self) -> int:
+        return len(self.global_qubits_lists)
+
+    def create(self, queues, nlocal: int):
+        # "Compile" actual gates
+        if len(queues) != len(self):
+            raise ValueError
+
+        for global_qubits, queue in zip(self.global_qubits_lists, queues):
+            for i in range(self.ndevices):
+                self.queues[i].append([])
+            for gate in queue:
+                for i in range(self.ndevices):
+                    calc_gate = copy.copy(gate)
+                    calc_gate.reduce(global_qubits)
+                    calc_gate.original_gate = gate
+                    # Gate matrix should be constructed in the calculation device
+                    with tf.device(self.ids_to_device[i]):
+                        calc_gate.nqubits = nlocal
+                    self.queues[i][-1].append(calc_gate)
+
+
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
 
@@ -44,27 +93,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.memory_device = memory_device
         self.calc_devices = calc_devices
 
-        self._construct_device_maps()
+        self.device_queues = DeviceQueues(calc_devices)
         self.pieces = None
         self._global_qubits = None
         self._local_qubits = None
         self._construct_shapes()
-
-    def _construct_device_maps(self):
-      def ids_gen() -> Tuple[str, List[int]]:
-          start = 0
-          for device, n in self.calc_devices.items():
-              stop = start + n
-              yield device, list(range(start, stop))
-              start = stop
-
-      self.queues = self.ndevices * [[]]
-      self.global_qubits_list = []
-      self.device_to_ids = {d: v for d, v in ids_gen()}
-      self.ids_to_device = self.ndevices * [None]
-      for device, ids in self.device_to_ids.items():
-          for i in ids:
-              self.ids_to_device[i] = device
 
     def _construct_shapes(self):
         n = self.nqubits - self.nglobal
@@ -135,30 +168,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                     global_qubits |= set(free_qubits[self.nglobal - len(global_qubits):])
 
                 queues.append([])
-                self.global_qubits_list.append(list(sorted(global_qubits)))
+                self.device_queues.append(global_qubits)
                 global_qubits = set(all_qubits)
 
         except StopIteration:
             if len(global_qubits) > self.nglobal:
                 global_qubits = list(sorted(global_qubits))[:self.nglobal]
-            self.global_qubits_list.append(list(sorted(global_qubits)))
+            self.device_queues.append(global_qubits)
 
-        # "Compile" actual gates
-        nlocal = self.nqubits - self.nglobal
-        for global_qubits, queue in zip(self.global_qubits_list, queues):
-            for device in self.calc_devices.keys():
-                self.queues[device].append([])
-
-            for gate in queue:
-                for device in self.calc_devices.keys():
-                    # TODO: Move this copy functionality to `gates.py`
-                    calc_gate = copy.copy(gate)
-                    calc_gate.reduce(global_qubits)
-                    calc_gate.original_gate = gate
-                    # Gate matrix should be constructed in the calculation device
-                    with tf.device(device):
-                        calc_gate.nqubits = nlocal
-                    self.queues[device][-1].append(calc_gate)
+        self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
     def compile(self, callback: Optional[callbacks.Callback] = None):
         """Compiles the circuit as a Tensorflow graph.
@@ -189,24 +207,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             for i in ids:
                 with tf.device(device):
                     state = self._device_execute(
-                        self.pieces[i], self.queues[device][group])
+                        self.pieces[i], self.device_queues.queues[i][group])
                     self.pieces[i].assign(state)
                     del(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
         pool(joblib.delayed(_device_job)(ids, device)
-             for ids, device in self._joblib_config())
-
-    # Sequential execution without `joblib` (not used)
-    #def _sequential_execute(self, group):
-    #    i = 0
-    #    for device in self.calc_devices.keys():
-    #        for _ in range(self.calc_devices[device]):
-    #            with tf.device(device):
-    #                result = self._device_execute(self.pieces[i], self.queues[device][group])
-    #            self.pieces[i].assign(result)
-    #            i += 1
+             for device, ids in self.device_queues.device_to_ids.items())
 
     @property
     def using_tfgates(self) -> bool:
@@ -247,13 +255,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
-        if not self.global_qubits_list:
+        if not self.device_queues.global_qubits_lists:
             self.set_gates()
-        self.global_qubits = self.global_qubits_list[0]
+        self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
         #self._add_callbacks(callback)
-        for group, global_qubits in enumerate(self.global_qubits_list):
+        for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
             if group > 0:
                 self._swap(global_qubits)
             #self._sequential_execute(group)
