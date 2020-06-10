@@ -51,14 +51,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._global_qubits = None
         self._local_qubits = None
 
-        # Construct gate matrices casted in each calculation device
-        # TODO: Remove this when we move fully to custom kernels
-        from qibo.tensorflow import matrices
-        self.matrices = {}
-        for device in self.calc_devices.keys():
-            with tf.device(device):
-                self.matrices[device] = matrices.GateMatrices(self.dtype)
-
         n = self.nqubits - self.nglobal
         self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=DTYPEINT)
         self.full_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
@@ -148,8 +140,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                     calc_gate.reduce(global_qubits)
                     calc_gate.original_gate = gate
                     # Gate matrix should be constructed in the calculation device
-                    if self.using_tfgates:
-                        calc_gate.matrices = self.matrices[device]
                     with tf.device(device):
                         calc_gate.nqubits = nlocal
                     self.queues[device][-1].append(calc_gate)
@@ -165,12 +155,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
-        if self.using_tfgates:
-            state = tf.reshape(state, self.local_tensor_shape)
         for gate in gates:
             state = gate(state)
-        if self.using_tfgates:
-            state = tf.reshape(state, self.local_full_shape)
         return state
 
     # Old casting on CPU after runs finish. Not used because it leads to
