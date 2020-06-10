@@ -88,14 +88,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _set_nqubits(self, gate):
         # Do not set ``gate.nqubits`` during gate addition because this will
-        # be set by the ``_set_gates`` method once all gates are known.
+        # be set by the ``set_gates`` method once all gates are known.
         pass
 
     def with_noise(self, noise_map, measurement_noise):
         raise NotImplementedError("Distributed circuit does not support "
                                   "density matrices yet.")
 
-    def _set_gates(self):
+    def set_gates(self):
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
 
@@ -107,18 +107,18 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         try:
             gate = next(queue)
             while True:
-                target_qubits = set(gate.qubits)
+                target_qubits = set(gate.target_qubits)
                 global_qubits -= target_qubits
                 while len(global_qubits) > self.nglobal:
                     queues[-1].append(gate)
                     gate = next(queue)
-                    target_qubits = set(gate.qubits)
+                    target_qubits = set(gate.target_qubits)
                     global_qubits -= target_qubits
 
                 if len(global_qubits) == self.nglobal:
                     queues[-1].append(gate)
                     gate = next(queue)
-                    while not set(gate.qubits) & global_qubits:
+                    while not set(gate.target_qubits) & global_qubits:
                         queues[-1].append(gate)
                         gate = next(queue)
                 else:
@@ -253,7 +253,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
         if not self.global_qubits_list:
-            self._set_gates()
+            self.set_gates()
         self.global_qubits = self.global_qubits_list[0]
         self._cast_initial_state(initial_state)
 

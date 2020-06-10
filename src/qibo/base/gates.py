@@ -66,7 +66,8 @@ class Gate(object):
         self.target_qubits = tuple(q - self._reduction_number(q, global_qubits)
                                    for q in self.target_qubits)
         self.control_qubits = tuple(q - self._reduction_number(q, global_qubits)
-                                    for q in self.control_qubits)
+                                    for q in self.control_qubits
+                                    if q not in global_qubits)
 
     @property
     def nqubits(self) -> int:

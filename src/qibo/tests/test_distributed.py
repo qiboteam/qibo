@@ -20,7 +20,7 @@ def assert_global_qubits(global_qubits_list, gate_groups):
     for global_qubits, gate_list in zip(global_qubits_list, gate_groups):
         target_qubits = set()
         for gate in gate_list:
-            target_qubits |= set(gate.original_gate.qubits)
+            target_qubits |= set(gate.original_gate.target_qubits)
         assert not set(global_qubits) & target_qubits
 
 
@@ -43,7 +43,7 @@ def test_set_gates():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(6)))
-    c._set_gates()
+    c.set_gates()
 
     assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     assert c.global_qubits_list == [[4, 5], [0, 1]]
@@ -57,9 +57,9 @@ def test_set_gates_incomplete():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c.add([gates.H(0), gates.H(2), gates.H(3)])
-    c.add(gates.CNOT(4, 5))
+    c.add(gates.SWAP(4, 5))
     c.add([gates.X(1), gates.X(2)])
-    c._set_gates()
+    c.set_gates()
 
     assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     assert c.global_qubits_list == [[1, 5], [0, 3]]
@@ -67,6 +67,24 @@ def test_set_gates_incomplete():
         assert len(c.queues[device]) == 2
         assert len(c.queues[device][0]) == 3
         assert len(c.queues[device][1]) == 3
+
+
+def test_set_gates_controlled():
+    devices = {"/GPU:0": 2, "/GPU:1": 2}
+    c = models.DistributedCircuit(6, devices)
+    c.add([gates.H(0), gates.H(2), gates.H(3)])
+    c.add(gates.CNOT(4, 5))
+    c.add(gates.Z(1).controlled_by(0))
+    c.add(gates.SWAP(2, 3))
+    c.add([gates.X(2), gates.X(3), gates.X(4)])
+    c.set_gates()
+
+    assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
+    assert c.global_qubits_list == [[1, 4], [0, 5]]
+    for device in devices.keys():
+        assert len(c.queues[device]) == 2
+        assert len(c.queues[device][0]) == 4
+        assert len(c.queues[device][1]) == 5
 
 
 def test_default_initialization():
@@ -112,7 +130,7 @@ def test_distributed_circuit_errors():
         c.global_qubits = [1, 2, 3]
     # Attempt to set gates before adding any gate
     with pytest.raises(RuntimeError):
-        c._set_gates()
+        c.set_gates()
     # Attempt to access state before being set
     with pytest.raises(ValueError):
         final_state = c.final_state
@@ -158,13 +176,13 @@ def test_distributed_circuit_addition():
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.parametrize("nqubits", [7, 8, 30, 31, 32, 33])
+@pytest.mark.parametrize("nqubits", [7, 8, 9, 10, 30, 31, 32, 33])
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
     """Check that the generated global qubit list is the expected for QFT."""
     devices = {"/GPU:0": ndevices}
     c = models.DistributedQFT(nqubits, devices)
-    c._set_gates()
+    c.set_gates()
 
     for i, queue in enumerate(c.queues["/GPU:0"]):
         print(len(queue), c.global_qubits_list[i])
@@ -175,16 +193,18 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
 
     assert_global_qubits(c.global_qubits_list, c.queues["/GPU:0"])
     nglobal = c.nglobal
-    target_global_qubits = [list(range(nqubits - nglobal, nqubits)),
-                            list(range(nqubits - 2 * nglobal, nqubits - nglobal)),
-                            list(range(nglobal)),
-                            list(range(nglobal, 2 * nglobal))]
-    try:
-        assert target_global_qubits == c.global_qubits_list
-    except AssertionError:
-        assert len(c.global_qubits_list) < len(target_global_qubits)
+    if nglobal > 2:
+        raise NotImplementedError
+    if nqubits % 2 and nglobal == 1:
+      target_global_qubits = [[nqubits - 1], [nqubits // 2]]
+    else:
+        target_global_qubits = [list(range(nqubits - nglobal, nqubits)),
+                                list(range(nglobal)),
+                                list(range(nglobal, 2 * nglobal))]
+    assert target_global_qubits == c.global_qubits_list
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8])
 @pytest.mark.parametrize("ndevices", [2, 4])
 @pytest.mark.parametrize("backend", [b for g, b in _BACKENDS])
