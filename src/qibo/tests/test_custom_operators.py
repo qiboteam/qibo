@@ -355,5 +355,10 @@ def test_transpose_state(nqubits):
         state_tensor = state.numpy().reshape(nqubits * (2,))
         target_state = np.transpose(state_tensor, qubit_order).ravel()
 
-        state = op.transpose_state(state, nqubits, qubit_order)
-        np.testing.assert_allclose(target_state, state.numpy())
+        ndevices = 4
+        new_state = tf.zeros_like(state)
+        shape = (ndevices, int(state.shape[0]) // ndevices)
+        state = tf.reshape(state, shape)
+        pieces = [state[i] for i in range(ndevices)]
+        new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
+        np.testing.assert_allclose(target_state, new_state.numpy())

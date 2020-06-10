@@ -56,13 +56,18 @@ class TransposeStateOp : public OpKernel {
  public:
   explicit TransposeStateOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("ndevices", &ndevices_));
     OP_REQUIRES_OK(context, context->GetAttr("qubit_order", &qubit_order_));
   }
 
   void Compute(OpKernelContext *context) override {
     // grabe the input tensor
-    const Tensor& state = context->input(0);
-    Tensor transposed_state = context->input(1);
+    //const Tensor& state = context->input(0);
+    std::vector<T*> state(ndevices_);
+    for (int i = 0; i < ndevices_; i++) {
+      state[i] = context->input(i).flat<T>().data();
+    }
+    Tensor transposed_state = context->input(ndevices_);
 
     // prevent running on GPU
     OP_REQUIRES(
@@ -70,15 +75,16 @@ class TransposeStateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
+    /*
     TransposeStateFunctor<Device, T>()(context, context->eigen_device<Device>(),
-                                       state.flat<T>().data(),
-                                       transposed_state.flat<T>().data(),
+                                       state, transposed_state.flat<T>().data(),
                                        nqubits_, qubit_order_.data());
-
+    */
     context->set_output(0, transposed_state);
   }
   private:
    int nqubits_;
+   int ndevices_;
    std::vector<int> qubit_order_;
 };
 
