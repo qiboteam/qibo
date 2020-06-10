@@ -44,13 +44,29 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.memory_device = memory_device
         self.calc_devices = calc_devices
 
-        self.queues = {d: [] for d in self.calc_devices.keys()}
-        self.global_qubits_list = []
-
+        self._construct_device_maps()
         self.pieces = None
         self._global_qubits = None
         self._local_qubits = None
+        self._construct_shapes()
 
+    def _construct_device_maps(self):
+      def ids_gen() -> Tuple[str, List[int]]:
+          start = 0
+          for device, n in self.calc_devices.items():
+              stop = start + n
+              yield device, list(range(start, stop))
+              start = stop
+
+      self.queues = self.ndevices * [[]]
+      self.global_qubits_list = []
+      self.device_to_ids = {d: v for d, v in ids_gen()}
+      self.ids_to_device = self.ndevices * [None]
+      for device, ids in self.device_to_ids.items():
+          for i in ids:
+              self.ids_to_device[i] = device
+
+    def _construct_shapes(self):
         n = self.nqubits - self.nglobal
         self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=DTYPEINT)
         self.full_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
@@ -167,13 +183,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     #        for s in result:
     #            self.pieces[i].assign(s)
     #            i += 1
-
-    def _joblib_config(self) -> Tuple[Iterable[int], str]:
-        start = 0
-        for device, n in self.calc_devices.items():
-            stop = start + n
-            yield range(start, stop), device
-            start = stop
 
     def _joblib_execute(self, group: int):
         def _device_job(ids, device):
