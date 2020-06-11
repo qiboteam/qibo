@@ -1,10 +1,11 @@
 """
 Testing that Tensorflow gates' action agrees with Cirq.
 """
+import copy
 import numpy as np
 import cirq
 import pytest
-from qibo.models import Circuit
+from qibo import models
 from qibo.tensorflow import cgates as custom_gates
 from qibo.tensorflow import gates as native_gates
 
@@ -48,21 +49,29 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None) -> np.ndarray:
     return result.final_state
 
 
-def assert_gates_equivalent(qibo_gates, cirq_gates, nqubits, atol=1e-7):
+def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits, atol=1e-7):
     """Asserts that QIBO and Cirq gates have equivalent action on a random state.
 
     Args:
-        qibo_gates: QIBO gate or list of QIBO gates.
+        qibo_gate: QIBO gate.
         cirq_gates: List of tuples (cirq gate, target qubit IDs).
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
     initial_state = random_initial_state(nqubits)
-
-    c = Circuit(nqubits)
-    c.add(qibo_gates)
-    final_state = c(np.copy(initial_state)).numpy()
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+
+    nfree = nqubits - len(qibo_gate.target_qubits)
+    if isinstance(qibo_gate, custom_gates.TensorflowGate) and nfree > 1:
+        devices = {"/GPU:0": 2}
+        c = models.DistributedCircuit(nqubits, calc_devices=devices)
+        c.add(copy.copy(qibo_gate))
+        final_state = c(np.copy(initial_state)).numpy()
+        np.testing.assert_allclose(target_state, final_state, atol=atol)
+
+    c = models.Circuit(nqubits)
+    c.add(qibo_gate)
+    final_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state, atol=atol)
 
 
@@ -186,9 +195,8 @@ def test_unitary_matrix_gate_controlled_by(gates, nqubits, ntargets):
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(gates, nqubits):
-    from qibo.models import QFT
     initial_state = random_initial_state(nqubits)
-    c = QFT(nqubits, gates=gates)
+    c = models.QFT(nqubits, gates=gates)
     final_state = c(np.copy(initial_state)).numpy()
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
