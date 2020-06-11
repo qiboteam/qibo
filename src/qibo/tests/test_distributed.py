@@ -234,11 +234,9 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
 
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
-#@pytest.mark.parametrize("backend", [b for g, b in _BACKENDS])
-@pytest.mark.parametrize("backend", [None])
-def test_distributed_qft_execution(nqubits, ndevices, backend):
+def test_distributed_qft_execution(nqubits, ndevices):
     devices = {"/GPU:0": ndevices}
-    dist_c = models.DistributedQFT(nqubits, devices, backend=backend)
+    dist_c = models.DistributedQFT(nqubits, devices)
     c = models.QFT(nqubits)
 
     initial_state = random_state(nqubits)

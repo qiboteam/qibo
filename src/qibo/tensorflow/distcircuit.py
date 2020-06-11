@@ -337,7 +337,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if self._global_qubits is None:
             self.global_qubits = self._default_global_qubits()
 
-        self.buffer = tf.zeros(self.full_shape, dtype=self.dtype)
         if initial_state is None:
             return self._default_initial_state()
 
@@ -360,26 +359,35 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _split(self, state: tf.Tensor):
         with tf.device(self.memory_device):
-            state = op.transpose_state(state, self.nqubits, self.transpose_order)
+            #state = tf.reshape(state, self.tensor_shape)
+            #state = tf.transpose(state, self.transpose_order)
             state = tf.reshape(state, self.device_shape)
+            pieces = [state[i] for i in range(self.ndevices)]
+            new_state = tf.zeros(self.device_shape, dtype=self.dtype)
+            new_state = op.transpose_state(pieces, new_state, self.nqubits, self.transpose_order)
             for i in range(self.ndevices):
-                self.pieces[i].assign(state[i])
+                self.pieces[i].assign(new_state[i])
 
     def _merge(self, states: List[tf.Tensor]) -> tf.Tensor:
         with tf.device(self.memory_device):
-            state = tf.concat([s[tf.newaxis] for s in states], axis=0)
-            state = op.transpose_state(state, self.nqubits, self.reverse_transpose_order)
-            return tf.reshape(state, self.full_shape)
+            #state = tf.concat([s[tf.newaxis] for s in states], axis=0)
+            #state = tf.reshape(state, self.tensor_shape)
+            #state = tf.transpose(state, self.reverse_transpose_order)
+            state = tf.zeros(self.full_shape, dtype=self.dtype)
+            state = op.transpose_state(states, state, self.nqubits,
+                                       self.reverse_transpose_order)
+            return state
 
     def _swap(self, new_global_qubits: Sequence[int]):
+        order = list(self.reverse_transpose_order)
+        self.global_qubits = new_global_qubits
+        order = [order[v] for v in self.transpose_order]
         with tf.device(self.memory_device):
-            state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
-
-            order = list(self.reverse_transpose_order)
-            self.global_qubits = new_global_qubits
-            order = [order[v] for v in self.transpose_order]
-
-            self.buffer = op.transpose_state(state, self.nqubits, order, self.buffer)
-            self.buffer = tf.reshape(self.buffer, self.device_shape)
+            #state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
+            #state = tf.reshape(state, self.tensor_shape)
+            #state = tf.transpose(state, order)
+            #state = tf.reshape(state, self.device_shape)
+            state = tf.zeros(self.device_shape, dtype=self.dtype)
+            state = op.transpose_state(self.pieces, state, self.nqubits, order)
             for i in range(self.ndevices):
-                self.pieces[i].assign(self.buffer[i])
+                self.pieces[i].assign(state[i])
