@@ -10,7 +10,6 @@ def Circuit(nqubits: int,
             accelerators: Optional[Dict[str, int]] = None,
             memory_device: str = "/CPU:0") -> "TensorflowCircuit":
     if accelerators is None:
-        from qibo.tensorflow.circuit import TensorflowCircuit
         return SimpleCircuit(nqubits)
     else:
         return DistributedCircuit(nqubits, accelerators, memory_device)

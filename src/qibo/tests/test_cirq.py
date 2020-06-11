@@ -49,7 +49,8 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None) -> np.ndarray:
     return result.final_state
 
 
-def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits, atol=1e-7):
+def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
+                            ndevices=None, atol=1e-7):
     """Asserts that QIBO and Cirq gates have equivalent action on a random state.
 
     Args:
@@ -61,52 +62,56 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits, atol=1e-7):
     initial_state = random_initial_state(nqubits)
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
 
-    nfree = nqubits - len(qibo_gate.target_qubits)
-    if isinstance(qibo_gate, custom_gates.TensorflowGate) and nfree > 1:
-        c = models.Circuit(nqubits, accelerators={"/GPU:0": 2})
-        c.add(copy.copy(qibo_gate))
-        final_state = c(np.copy(initial_state)).numpy()
-        np.testing.assert_allclose(target_state, final_state, atol=atol)
+    if ndevices is None:
+        accelerators = None
+    else:
+        if isinstance(qibo_gate, native_gates.TensorflowGate):
+            pytest.skip("Distributed circuit does not support native gates.")
+        accelerators = {"/GPU:0": ndevices}
 
-    c = models.Circuit(nqubits)
+    c = models.Circuit(nqubits, accelerators)
     c.add(qibo_gate)
     final_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state, atol=atol)
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-@pytest.mark.parametrize(("gate_name", "nqubits"),
-                         [("H", 3), ("X", 2), ("Y", 1), ("Z", 1)])
-def test_one_qubit_gates(gates, backend, gate_name, nqubits):
+@pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
+                         [("H", 3, None), ("H", 3, 2),
+                          ("X", 2, None), ("X", 2, 2),
+                          ("Y", 1, None), ("Z", 1, None)])
+def test_one_qubit_gates(gates, backend, gate_name, nqubits, ndevices):
     """Check simple one-qubit gates."""
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets).with_backend(backend)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
-    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-@pytest.mark.parametrize(("gate_name", "nqubits"),
-                         [("RX", 3), ("RY", 2), ("RZ", 1)])
-def test_one_qubit_parametrized_gates(gates, backend, gate_name, nqubits):
+@pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
+                         [("RX", 3, None), ("RX", 3, 4),
+                          ("RY", 2, None), ("RY", 2, 2),
+                          ("RZ", 1, None)])
+def test_one_qubit_parametrized_gates(gates, backend, gate_name, nqubits, ndevices):
     """Check parametrized one-qubit rotations."""
     theta = 0.1234
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets, theta).with_backend(backend)
     cirq_gate = [(getattr(cirq, gate_name.lower())(theta), targets)]
-    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-@pytest.mark.parametrize("gate_name", ["CNOT", "SWAP"])
+@pytest.mark.parametrize("gate_name", ["CNOT", "SWAP", "CZ"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
-def test_two_qubit_gates(gates, backend, gate_name, nqubits):
+@pytest.mark.parametrize("ndevices", [None, 2])
+def test_two_qubit_gates(gates, backend, gate_name, nqubits, ndevices):
     """Check two-qubit gates."""
-    # TODO: Add CZ gate when it is merged
     targets = random_active_qubits(nqubits, nactive=2)
     qibo_gate = getattr(gates, gate_name)(*targets).with_backend(backend)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
-    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
 
 
 @pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
