@@ -51,14 +51,10 @@ struct BaseOneQubitGateFunctor {
   virtual void nocontrolwork(const Device& d, int numBlocks, int blockSize,
                              T* state, const T* gate, long tk, int m) const;
 
-  virtual void singlecontrolwork(const Device& d, int numBlocks, int blockSize,
-                                 T* state, const T* gate, long tk,
-                                 long k1, long k2, int m1, int m2) const;
-
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
-                                T* state, const T* gate, long tk,
-                                int m, int ncontrols,
-                                const int* controls, int nqubits, int target) const;
+                                T* state, const T* gate, long tk, int m,
+                                int ncontrols, const int* qubits, int nqubits,
+                                int target) const;
 
   void operator()(
       const OpKernelContext* context, const Device& d,
@@ -67,10 +63,8 @@ struct BaseOneQubitGateFunctor {
       int target,     //!< Target qubit id.
       int ncontrols,  //!< Number of qubits that the gate is controlled on.
       const int32*
-          controls,  //!< List of control qubits ids sorted in decreasing order.
-      const int32* tensor_controls,  //!< List of control qubits ids sorted in
-                                     //!< decreasing order and stored on Device.
-      const T* gate = NULL           //!< Gate matrix (used only by)
+          qubits,  //!< List of control and target qubits in increasing order.
+      const T* gate = NULL  //!< Gate matrix (used only by)
   ) const;
 };
 
@@ -101,13 +95,12 @@ struct BaseTwoQubitGateFunctor {
   virtual void multicontrolwork(const Device& d, int numBlocks, int blockSize,
                                 T* state, const T* gate, long ctk1, long ctk2,
                                 long tk1, long tk2, int m1, int m2,
-                                int ncontrols, const int* controls, int nqubits,
+                                int ncontrols, const int* qubits, int nqubits,
                                 int t1, int t2) const;
 
   void operator()(const OpKernelContext* context, const Device& d, T* state,
                   int nqubits, int target1, int target2, int ncontrols,
-                  const int32* controls, const int32* tensor_controls,
-                  const T* gate = NULL) const;
+                  const int32* qubits, const T* gate = NULL) const;
 };
 
 template <typename Device, typename T>
