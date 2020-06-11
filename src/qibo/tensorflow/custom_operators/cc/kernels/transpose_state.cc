@@ -14,9 +14,10 @@ using thread::ThreadPool;
 template <typename T>
 struct TransposeStateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice &d,
-                  const T* state, T* transposed_state,
-                  int nqubits, const int* qubit_order) {
+                  const std::vector<T*> state, T* transposed_state,
+                  int nqubits, int ndevices, const int* qubit_order) {
     const int64 nstates = (int64) 1 << nqubits;
+    const int64 npiece = (int64) nstates / ndevices;
     std::vector<int64> qubit_exponents(nqubits);
     for (int q = 0; q < nqubits; q++) {
       qubit_exponents[q] = (int64) 1 << (nqubits - qubit_order[nqubits - q - 1] - 1);
@@ -43,7 +44,7 @@ struct TransposeStateFunctor<CPUDevice, T> {
         for (int q = 0; q < nqubits; q++) {
           if ((g >> q) % 2) k += qubit_exponents[q];
         }
-        transposed_state[g] = state[k];
+        transposed_state[g] = state[(int64) k / npiece][(int64) k % npiece];
       }
     };
     thread_pool->ParallelFor(nstates, p, DoWork);
@@ -65,7 +66,7 @@ class TransposeStateOp : public OpKernel {
     //const Tensor& state = context->input(0);
     std::vector<T*> state(ndevices_);
     for (int i = 0; i < ndevices_; i++) {
-      state[i] = context->input(i).flat<T>().data();
+      state[i] = (T*) context->input(i).flat<T>().data();
     }
     Tensor transposed_state = context->input(ndevices_);
 
@@ -75,11 +76,9 @@ class TransposeStateOp : public OpKernel {
         errors::Unimplemented("ApplyGate operator not implemented for GPU."));
 
     // call the implementation
-    /*
     TransposeStateFunctor<Device, T>()(context, context->eigen_device<Device>(),
                                        state, transposed_state.flat<T>().data(),
-                                       nqubits_, qubit_order_.data());
-    */
+                                       nqubits_, ndevices_, qubit_order_.data());
     context->set_output(0, transposed_state);
   }
   private:

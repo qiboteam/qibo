@@ -344,7 +344,8 @@ def test_custom_op_toy_callback(gate, compile):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4, 7, 8, 9, 10])
-def test_transpose_state(nqubits):
+@pytest.mark.parametrize("ndevices", [2, 4, 8])
+def test_transpose_state(nqubits, ndevices):
     for _ in range(10):
         # Generate global qubits randomly
         all_qubits = np.arange(nqubits)
@@ -355,7 +356,6 @@ def test_transpose_state(nqubits):
         state_tensor = state.numpy().reshape(nqubits * (2,))
         target_state = np.transpose(state_tensor, qubit_order).ravel()
 
-        ndevices = 4
         new_state = tf.zeros_like(state)
         shape = (ndevices, int(state.shape[0]) // ndevices)
         state = tf.reshape(state, shape)
