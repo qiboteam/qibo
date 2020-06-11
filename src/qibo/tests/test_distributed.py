@@ -91,7 +91,7 @@ def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c._cast_initial_state()
-    assert c.global_qubits == [4, 5]
+    assert c.global_qubits == [0, 1]
 
     final_state = c.final_state.numpy()
     target_state = np.zeros_like(final_state)
@@ -112,10 +112,9 @@ def test_user_initialization(nqubits):
     np.testing.assert_allclose(target_state, final_state)
 
     target_state = target_state.reshape(nqubits * (2,))
-    n = nqubits - c.nglobal
     for i, s in enumerate(itertools.product([0, 1], repeat=c.nglobal)):
         piece = c.pieces[i].numpy()
-        target_piece = target_state[n * (slice(None),) + s]
+        target_piece = target_state[s]
         np.testing.assert_allclose(target_piece.ravel(), piece)
 
 

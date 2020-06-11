@@ -51,10 +51,12 @@ class DeviceQueues:
                 self.queues[i].append([])
             for gate in queue:
                 for device, ids in self.device_to_ids.items():
+                    # TODO: Move `gate.reduce` functionality in this class
                     calc_gate = copy.copy(gate)
                     calc_gate.reduce(self.global_qubits_lists[iq])
                     calc_gate.original_gate = gate
-                    # Gate matrix should be constructed in the calculation device
+                    # Gate matrix should be constructed in the calculation
+                    # device otherwise device parallelization will break
                     with tf.device(device):
                         calc_gate.nqubits = nlocal
                     for i in ids:
@@ -296,13 +298,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if self.measurement_gate is None or nshots is None:
             return state
 
-        samples = self.measurement_gate(state, nshots, samples_only=True,
-                                        is_density_matrix=self.using_density_matrix)
-
-        self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, state, decimal_samples=samples)
-        return measurements.CircuitResult(
-            self.measurement_tuples, self.measurement_gate_result)
+        with tf.device(self.memory_device):
+            samples = self.measurement_gate(state, nshots, samples_only=True,
+                                            is_density_matrix=self.using_density_matrix)
+            self.measurement_gate_result = measurements.GateResult(
+                self.measurement_gate.qubits, state, decimal_samples=samples)
+            result = measurements.CircuitResult(
+                self.measurement_tuples, self.measurement_gate_result)
+        return result
 
     @property
     def final_state(self) -> tf.Tensor:
@@ -314,11 +317,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         if self.pieces is None:
             raise ValueError("Cannot access the state tensor before being set.")
-        return self._merge(self.pieces)
+        return self._merge()
 
     def _default_global_qubits(self) -> List[int]:
         """Returns a list with the last qubits to cast them as global."""
-        return list(range(self.nqubits - self.nglobal, self.nqubits))
+        return list(range(self.nglobal))
 
     def _default_initial_piece(self) -> tf.Tensor:
         """Returns the 0th piece for the |000...0> state."""
@@ -355,8 +358,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _split(self, state: tf.Tensor):
         with tf.device(self.memory_device):
-            #state = tf.reshape(state, self.tensor_shape)
-            #state = tf.transpose(state, self.transpose_order)
             state = tf.reshape(state, self.device_shape)
             pieces = [state[i] for i in range(self.ndevices)]
             new_state = tf.zeros(self.device_shape, dtype=self.dtype)
@@ -364,26 +365,22 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
 
-    def _merge(self, states: List[tf.Tensor]) -> tf.Tensor:
-        with tf.device(self.memory_device):
-            #state = tf.concat([s[tf.newaxis] for s in states], axis=0)
-            #state = tf.reshape(state, self.tensor_shape)
-            #state = tf.transpose(state, self.reverse_transpose_order)
-            state = tf.zeros(self.full_shape, dtype=self.dtype)
-            state = op.transpose_state(states, state, self.nqubits,
-                                       self.reverse_transpose_order)
-            return state
+    def _merge(self) -> tf.Tensor:
+        new_global_qubits = list(range(self.nglobal))
+        if self.global_qubits == new_global_qubits:
+            with tf.device(self.memory_device):
+                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
+        else:
+            state = self._swap(new_global_qubits)
+        return tf.reshape(state, self.full_shape)
 
     def _swap(self, new_global_qubits: Sequence[int]):
         order = list(self.reverse_transpose_order)
         self.global_qubits = new_global_qubits
         order = [order[v] for v in self.transpose_order]
         with tf.device(self.memory_device):
-            #state = tf.concat([s[tf.newaxis] for s in self.pieces], axis=0)
-            #state = tf.reshape(state, self.tensor_shape)
-            #state = tf.transpose(state, order)
-            #state = tf.reshape(state, self.device_shape)
             state = tf.zeros(self.device_shape, dtype=self.dtype)
             state = op.transpose_state(self.pieces, state, self.nqubits, order)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])
+        return state
