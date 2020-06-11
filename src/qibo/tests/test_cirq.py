@@ -193,7 +193,7 @@ def test_two_qubit_gates_controlled_by(gates, nqubits, ndevices):
 @pytest.mark.parametrize("gates", _GATES)
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
 @pytest.mark.parametrize("ntargets", [1, 2])
-@pytest.mark.parametrize("ndevices", [None, 1, 2])
+@pytest.mark.parametrize("ndevices", [None, 2, 8])
 def test_unitary_matrix_gate_controlled_by(gates, nqubits, ntargets, ndevices):
     """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
     all_qubits = np.arange(nqubits)

@@ -243,11 +243,13 @@ class BaseCircuit(object):
         """
         if isinstance(gate, Iterable):
             for g in gate:
-                self.add(g)
-            return
-        elif not isinstance(gate, gates.Gate):
+                self._add(g)
+        elif isinstance(gate, gates.Gate):
+            self._add(gate)
+        else:
             raise TypeError("Unknown gate type {}.".format(type(gate)))
 
+    def _add(self, gate: gates.Gate):
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")

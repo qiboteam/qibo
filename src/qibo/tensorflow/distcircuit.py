@@ -95,7 +95,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                   "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
         self.nglobal = np.log2(self.ndevices)
-        if not self.nglobal.is_integer():
+        if not (self.nglobal.is_integer() and self.nglobal > 0):
             raise ValueError("Number of calculation devices should be a power "
                              "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
@@ -145,6 +145,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def with_noise(self, noise_map, measurement_noise):
         raise NotImplementedError("Distributed circuit does not support "
                                   "density matrices yet.")
+
+    def _add(self, gate):
+        if self.nqubits - len(gate.target_qubits) < self.nglobal:
+            raise ValueError("Insufficient qubits to use for global in "
+                             "distributed circuit.")
+        super(TensorflowDistributedCircuit, self)._add(gate)
 
     def set_gates(self):
         if not self.queue:
