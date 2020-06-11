@@ -1,6 +1,7 @@
 # Installation script for python
 from setuptools import setup, find_packages
 from setuptools.command.build_py import build_py as _build_py
+from setuptools.dist import Distribution
 import subprocess
 import os
 import re
@@ -32,6 +33,16 @@ class Build(_build_py):
         _build_py.run(self)
 
 
+class BinaryDistribution(Distribution):
+  """This class is needed in order to create OS specific wheels."""
+
+  def has_ext_modules(self):
+    return True
+
+  def is_pure(self):
+    return False
+
+
 setup(
     name="qibo",
     version=get_version(),
@@ -41,10 +52,11 @@ setup(
     url="https://github.com/Quantum-TII/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    cmdclass={"build_py": Build,},
+    cmdclass={"build_py": Build},
     package_data={"": ["*.so", "*.out"]},
     include_package_data=True,
     zip_safe=False,
+    distclass=BinaryDistribution,
     classifiers=[
         "Operating System :: Unix",
         "Programming Language :: Python",
