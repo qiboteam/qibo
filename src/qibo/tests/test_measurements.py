@@ -4,6 +4,8 @@ import pytest
 from qibo import gates, models
 from typing import Optional
 
+_ACCELERATORS = [None, {"/GPU:0": 2}, {"/GPU:0": 1, "/GPU:1": 1}]
+
 
 def assert_results(result,
                    decimal_samples: Optional[np.ndarray] = None,
@@ -124,9 +126,10 @@ def test_controlled_measurement_error():
         m = gates.M(0).controlled_by(1)
 
 
-def test_measurement_circuit():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_measurement_circuit(accelerators):
     """Check that measurement gate works as part of circuit."""
-    c = models.Circuit(2)
+    c = models.Circuit(2, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
     result = c(nshots=100)
@@ -137,9 +140,10 @@ def test_measurement_circuit():
                    binary_frequencies={"1": 100})
 
 
-def test_gate_after_measurement_error():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_gate_after_measurement_error(accelerators):
     """Check that reusing measured qubits is not allowed."""
-    c = models.Circuit(2)
+    c = models.Circuit(2, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
     c.add(gates.X(1))
@@ -157,9 +161,10 @@ def test_register_name_error():
         c.add(gates.M(1, register_name="a"))
 
 
-def test_multiple_qubit_measurement_circuit():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_multiple_qubit_measurement_circuit(accelerators):
     """Check multiple measurement gates in circuit."""
-    c = models.Circuit(2)
+    c = models.Circuit(2, accelerators)
     c.add(gates.X(1))
     c.add(gates.M(0))
     c.add(gates.M(1))
@@ -197,9 +202,10 @@ def test_measurement_qubit_order_simple():
     assert_results(result2, **target)
 
 
-def test_measurement_qubit_order():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_measurement_qubit_order(accelerators):
     """Check that measurement results follow order defined by user."""
-    c = models.Circuit(6)
+    c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.M(1, 5, 2, 0))
@@ -215,9 +221,10 @@ def test_measurement_qubit_order():
                    binary_frequencies={"1001": 100})
 
 
-def test_measurement_qubit_order_multiple_registers():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_measurement_qubit_order_multiple_registers(accelerators):
     """Check that measurement results follow order defined by user."""
-    c = models.Circuit(6)
+    c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.X(3))
@@ -269,9 +276,10 @@ def test_multiple_measurement_gates_circuit():
                    binary_frequencies={"011": 100})
 
 
-def test_final_state():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_final_state(accelerators):
     """Check that final state is logged correctly when using measurements."""
-    c = models.Circuit(4)
+    c = models.Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 1))
@@ -280,7 +288,7 @@ def test_final_state():
     result = c(nshots=100)
     logged_final_state = c.final_state.numpy()
 
-    c = models.Circuit(4)
+    c = models.Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.X(3))
@@ -289,9 +297,10 @@ def test_final_state():
     np.testing.assert_allclose(logged_final_state, target_state)
 
 
-def test_circuit_with_unmeasured_qubits():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_circuit_with_unmeasured_qubits(accelerators):
     """Check that unmeasured qubits are not taken into account."""
-    c = models.Circuit(5)
+    c = models.Circuit(5, accelerators)
     c.add(gates.X(4))
     c.add(gates.X(2))
     c.add(gates.M(0, 2))
@@ -356,9 +365,10 @@ def test_register_measurements():
     assert_register_results(result, **target)
 
 
-def test_registers_in_circuit_with_unmeasured_qubits():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_registers_in_circuit_with_unmeasured_qubits(accelerators):
     """Check that register measurements are unaffected by unmeasured qubits."""
-    c = models.Circuit(5)
+    c = models.Circuit(5, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
     c.add(gates.M(0, 2, register_name="A"))
@@ -378,11 +388,12 @@ def test_registers_in_circuit_with_unmeasured_qubits():
     assert_register_results(result, **target)
 
 
-def test_probabilistic_measurement():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_probabilistic_measurement(accelerators):
     import tensorflow as tf
     tf.random.set_seed(1234)
 
-    c = models.Circuit(2)
+    c = models.Circuit(2, accelerators)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.M(0, 1))
@@ -391,7 +402,7 @@ def test_probabilistic_measurement():
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"):
       decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
-      binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}      
+      binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
     else:
       decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
       binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
@@ -438,14 +449,15 @@ def test_circuit_addition_with_measurements():
     assert c.measurement_tuples == {"register0": (0, 1)}
 
 
-def test_circuit_addition_with_measurements_in_both_circuits():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_circuit_addition_with_measurements_in_both_circuits(accelerators):
     """Check if measurements of two circuits are added during circuit addition."""
-    c1 = models.Circuit(2)
+    c1 = models.Circuit(2, accelerators)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
     c1.add(gates.M(1, register_name="a"))
 
-    c2 = models.Circuit(2)
+    c2 = models.Circuit(2, accelerators)
     c2.add(gates.X(0))
     c2.add(gates.M(0, register_name="b"))
 
@@ -454,19 +466,20 @@ def test_circuit_addition_with_measurements_in_both_circuits():
     assert c.measurement_tuples == {"a": (1,), "b": (0,)}
 
 
-def test_gate_after_measurement_with_addition_error():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_gate_after_measurement_with_addition_error(accelerators):
     """Check that measured qubits cannot be reused by adding gates."""
-    c = models.Circuit(2)
+    c = models.Circuit(2, accelerators)
     c.add(gates.H(0))
     c.add(gates.M(1))
 
     # Try to add gate to qubit that is already measured
-    c2 = models.Circuit(2)
+    c2 = models.Circuit(2, accelerators)
     c2.add(gates.H(1))
     with pytest.raises(ValueError):
         c += c2
     # Try to add measurement to qubit that is already measured
-    c2 = models.Circuit(2)
+    c2 = models.Circuit(2, accelerators)
     c2.add(gates.M(1, register_name="a"))
     with pytest.raises(ValueError):
         c += c2
@@ -486,9 +499,10 @@ def test_registers_with_same_name_error():
         c = c1 + c2
 
 
-def test_copy_measurements():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+def test_copy_measurements(accelerators):
     """Check that ``circuit.copy()`` properly copies measurements."""
-    c1 = models.Circuit(6)
+    c1 = models.Circuit(6, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.X(3)])
     c1.add(gates.M(5, 1, 3, register_name="a"))
     c1.add(gates.M(2, 0, register_name="b"))

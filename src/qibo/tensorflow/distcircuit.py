@@ -5,6 +5,7 @@ import numpy as np
 import tensorflow as tf
 import joblib
 from qibo.config import DTYPECPX, DTYPEINT
+from qibo.base.gates import M as measurement_gate
 from qibo.tensorflow import circuit, measurements, callbacks
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -147,7 +148,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                   "density matrices yet.")
 
     def _add(self, gate):
-        if self.nqubits - len(gate.target_qubits) < self.nglobal:
+        if (self.nqubits - len(gate.target_qubits) < self.nglobal and
+            not isinstance(gate, measurement_gate)):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)

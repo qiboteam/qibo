@@ -1,7 +1,6 @@
 """
 Testing that Tensorflow gates' action agrees with Cirq.
 """
-import copy
 import numpy as np
 import cirq
 import pytest
