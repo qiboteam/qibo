@@ -1,10 +1,19 @@
 from qibo.config import BACKEND_NAME
-if BACKEND_NAME == "tensorflow":
-    from qibo.tensorflow.circuit import TensorflowCircuit as Circuit
-    from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
-else:
+if BACKEND_NAME != "tensorflow":
     raise NotImplementedError("Only Tensorflow backend is implemented.")
+from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
+from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from typing import Dict, Optional
+
+
+def Circuit(nqubits: int,
+            accelerators: Optional[Dict[str, int]] = None,
+            memory_device: str = "/CPU:0") -> "TensorflowCircuit":
+    if accelerators is None:
+        from qibo.tensorflow.circuit import TensorflowCircuit
+        return SimpleCircuit(nqubits)
+    else:
+        return DistributedCircuit(nqubits, accelerators, memory_device)
 
 
 def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
@@ -56,10 +65,10 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
 
 
 def DistributedQFT(nqubits: int,
-                   calc_devices: Dict[str, int],
+                   accelerators: Dict[str, int],
                    memory_device: str = "/CPU:0",
                    backend: Optional[str] = None,
-                   with_swaps: bool = True) -> DistributedCircuit:
+                   with_swaps: bool = True) -> "TensorflowDistributedCircuit":
     import numpy as np
     if backend is None or backend == "Custom":
         from qibo import gates
@@ -69,7 +78,7 @@ def DistributedQFT(nqubits: int,
         raise ValueError("{} backend is not supported in distributed circuits."
                          "".format(backend))
 
-    circuit = DistributedCircuit(nqubits, calc_devices, memory_device)
+    circuit = DistributedCircuit(nqubits, accelerators, memory_device)
     nqubits = circuit.nqubits
     nglobal = circuit.nglobal
 

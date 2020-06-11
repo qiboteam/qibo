@@ -63,8 +63,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits, atol=1e-7):
 
     nfree = nqubits - len(qibo_gate.target_qubits)
     if isinstance(qibo_gate, custom_gates.TensorflowGate) and nfree > 1:
-        devices = {"/GPU:0": 2}
-        c = models.DistributedCircuit(nqubits, calc_devices=devices)
+        c = models.Circuit(nqubits, accelerators={"/GPU:0": 2})
         c.add(copy.copy(qibo_gate))
         final_state = c(np.copy(initial_state)).numpy()
         np.testing.assert_allclose(target_state, final_state, atol=atol)

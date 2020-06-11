@@ -87,13 +87,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def __init__(self,
                  nqubits: int,
-                 calc_devices: Dict[str, int],
+                 accelerators: Dict[str, int],
                  memory_device: str = "/CPU:0",
                  dtype=DTYPECPX):
         super(TensorflowDistributedCircuit, self).__init__(nqubits, dtype)
-        self._init_kwargs.update({"calc_devices": calc_devices,
+        self._init_kwargs.update({"accelerators": accelerators,
                                   "memory_device": memory_device})
-        self.ndevices = sum(calc_devices.values())
+        self.ndevices = sum(accelerators.values())
         self.nglobal = np.log2(self.ndevices)
         if not self.nglobal.is_integer():
             raise ValueError("Number of calculation devices should be a power "
@@ -101,9 +101,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.nglobal = int(self.nglobal)
 
         self.memory_device = memory_device
-        self.calc_devices = calc_devices
+        self.calc_devices = accelerators
 
-        self.device_queues = DeviceQueues(calc_devices)
+        self.device_queues = DeviceQueues(accelerators)
         self.pieces = None
         self._global_qubits = None
         self._local_qubits = None
@@ -270,7 +270,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
-        #self._add_callbacks(callback)
+        if callback is not None:
+            raise NotImplementedError("Callbacks are not implemented for "
+                                      "distributed circuits.")
+
         for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
             if group > 0:
                 self._swap(global_qubits)
@@ -281,19 +284,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         #for callback, result in zip(self.callbacks, callback_results):
         #    callback.append(result)
 
+        state = self.final_state
         if self.measurement_gate is None or nshots is None:
-            return self.final_state
+            return state
 
-        raise NotImplementedError("Measurements are not implemented for "
-                                  "distributed circuits.")
-        #samples = self.measurement_gate(state, nshots, samples_only=True,
-        #                                is_density_matrix=self.using_density_matrix)
-        #self._final_state = state
+        samples = self.measurement_gate(state, nshots, samples_only=True,
+                                        is_density_matrix=self.using_density_matrix)
 
-        #self.measurement_gate_result = measurements.GateResult(
-        #    self.measurement_gate.qubits, state, decimal_samples=samples)
-        #return measurements.CircuitResult(
-        #    self.measurement_tuples, self.measurement_gate_result)
+        self.measurement_gate_result = measurements.GateResult(
+            self.measurement_gate.qubits, state, decimal_samples=samples)
+        return measurements.CircuitResult(
+            self.measurement_tuples, self.measurement_gate_result)
 
     @property
     def final_state(self) -> tf.Tensor:
@@ -343,19 +344,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         state = super(TensorflowDistributedCircuit, self)._cast_initial_state(initial_state)
         self._create_pieces()
         self._split(state)
-
-    def _add_callbacks(self, callback: callbacks.Callback):
-        """Adds callbacks in the circuit."""
-        raise NotImplementedError("Callbacks are not implemented for "
-                                  "distributed circuits.")
-        #n = len(self.callbacks)
-        #if isinstance(callback, list):
-        #    self.callbacks += callback
-        #elif isinstance(callback, callbacks.Callback):
-        #    self.callbacks.append(callback)
-        # Set number of qubits in new callbacks
-        #for cb in self.callbacks[n:]:
-        #    cb.nqubits = self.nqubits
 
     def _split(self, state: tf.Tensor):
         with tf.device(self.memory_device):
