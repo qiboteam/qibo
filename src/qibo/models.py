@@ -6,13 +6,26 @@ from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as Distribu
 from typing import Dict, Optional
 
 
-def Circuit(nqubits: int,
-            accelerators: Optional[Dict[str, int]] = None,
-            memory_device: str = "/CPU:0") -> "TensorflowCircuit":
-    if accelerators is None:
-        return SimpleCircuit(nqubits)
-    else:
-        return DistributedCircuit(nqubits, accelerators, memory_device)
+class Circuit:
+
+    def __new__(cls, nqubits: int,
+                accelerators: Optional[Dict[str, int]] = None,
+                memory_device: str = "/CPU:0"):
+        if accelerators is None:
+            return SimpleCircuit(nqubits)
+        else:
+            return DistributedCircuit(nqubits, accelerators, memory_device)
+
+    @classmethod
+    def from_qasm(cls, qasm_code: str,
+                  accelerators: Optional[Dict[str, int]] = None,
+                  memory_device: str = "/CPU:0"):
+      if accelerators is None:
+          return SimpleCircuit.from_qasm(qasm_code)
+      else:
+          return DistributedCircuit.from_qasm(qasm_code,
+                                              accelerators=accelerators,
+                                              memory_device=memory_device)
 
 
 def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
