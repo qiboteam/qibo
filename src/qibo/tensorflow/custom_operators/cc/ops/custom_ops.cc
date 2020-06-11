@@ -16,8 +16,7 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("gate: T")                   \
-      .Input("tensor_controls: int32")    \
-      .Attr("controls: list(int)")        \
+      .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
       .Output("out: T")                   \
@@ -28,8 +27,7 @@ REGISTER_OP("InitialState")
   REGISTER_OP(NAME)                       \
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
-      .Input("tensor_controls: int32")    \
-      .Attr("controls: list(int)")        \
+      .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
       .Output("out: T")                   \
@@ -41,8 +39,7 @@ REGISTER_OP("InitialState")
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
       .Input("gate: T")                   \
-      .Input("tensor_controls: int32")    \
-      .Attr("controls: list(int)")        \
+      .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
@@ -54,8 +51,7 @@ REGISTER_OP("InitialState")
   REGISTER_OP(NAME)                       \
       .Attr("T: {complex64, complex128}") \
       .Input("state: T")                  \
-      .Input("tensor_controls: int32")    \
-      .Attr("controls: list(int)")        \
+      .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
