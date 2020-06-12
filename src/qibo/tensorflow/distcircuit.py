@@ -401,7 +401,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         executed more than once, only the last final state is returned.
         """
         if self.pieces is None:
-            raise ValueError("Cannot access the state tensor before being set.")
+            raise RuntimeError("Cannot access the state tensor before being set.")
         return self._merge()
 
     def _default_global_qubits(self) -> List[int]:

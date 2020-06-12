@@ -8,23 +8,25 @@ from qibo.tensorflow import cgates as custom_gates
 from qibo.tensorflow import gates as native_gates
 
 _GATES = [custom_gates, native_gates]
+_DEVICE_GATES = [(custom_gates, None), (native_gates, None),
+                 (custom_gates, {"/GPU:0": 1, "/GPU:1": 1})]
 _BACKENDS = [(custom_gates, None), (native_gates, "DefaultEinsum"),
              (native_gates, "MatmulEinsum")]
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_circuit_addition_result(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_circuit_addition_result(gates, accelerators):
     """Check if circuit addition works properly on Tensorflow circuit."""
-    c1 = Circuit(2)
+    c1 = Circuit(2, accelerators)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
 
-    c2 = Circuit(2)
+    c2 = Circuit(2, accelerators)
     c2.add(gates.CNOT(0, 1))
 
     c3 = c1 + c2
 
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
@@ -53,10 +55,10 @@ def test_flatten(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_xgate(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_xgate(gates, accelerators):
     """Check X gate is working properly."""
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.X(0))
     final_state = c.execute().numpy()
     target_state = np.zeros_like(final_state)
@@ -75,10 +77,10 @@ def test_ygate(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_zgate(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_zgate(gates, accelerators):
     """Check Z gate is working properly."""
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Z(0))
@@ -115,16 +117,16 @@ def test_multicontrol_xgate(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-def test_multicontrol_xgate_more_controls(gates, backend):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_multicontrol_xgate_more_controls(gates, accelerators):
     """Check that fallback method for X works for more than two controls."""
-    c = Circuit(4)
-    c.add(gates.X(0).with_backend(backend))
-    c.add(gates.X(1).with_backend(backend))
-    c.add(gates.X(2).with_backend(backend))
-    c.add(gates.X(3).with_backend(backend).controlled_by(0, 1, 2))
-    c.add(gates.X(0).with_backend(backend))
-    c.add(gates.X(2).with_backend(backend))
+    c = Circuit(4, accelerators)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.X(3).controlled_by(0, 1, 2))
+    c.add(gates.X(0))
+    c.add(gates.X(2))
     final_state = c.execute().numpy()
 
     c = Circuit(4)
@@ -240,15 +242,15 @@ def test_cz(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
-def test_czpow(gates, backend):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_czpow(gates, accelerators):
     """Check CZPow gate is working properly on |11>."""
     theta = 0.1234
 
-    c = Circuit(2)
-    c.add(gates.X(0).with_backend(backend))
-    c.add(gates.X(1).with_backend(backend))
-    c.add(gates.CZPow(0, 1, theta).with_backend(backend))
+    c = Circuit(2, accelerators)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.CZPow(0, 1, theta))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * theta)
@@ -279,13 +281,13 @@ def test_fsim(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_controlled_by_fsim(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_controlled_by_fsim(gates, accelerators):
     """Check ``controlled_by`` for fSim gate."""
     theta = 0.1234
     phi = 0.4321
 
-    c = Circuit(6)
+    c = Circuit(6, accelerators)
     c.add((gates.H(i) for i in range(6)))
     c.add(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
     final_state = c.execute().numpy()
@@ -303,13 +305,13 @@ def test_controlled_by_fsim(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_generalized_fsim(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_generalized_fsim(gates, accelerators):
     """Check GeneralizedfSim gate is working properly on |++>."""
     phi = np.random.random()
     rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
 
-    c = Circuit(3)
+    c = Circuit(3, accelerators)
     c.add((gates.H(i) for i in range(3)))
     c.add(gates.GeneralizedfSim(1, 2, rotation, phi))
     final_state = c.execute().numpy()
@@ -349,11 +351,11 @@ def test_doubly_controlled_by_rx_no_effect(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_doubly_controlled_by_rx(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_doubly_controlled_by_rx(gates, accelerators):
     theta = 0.1234
 
-    c = Circuit(3)
+    c = Circuit(3, accelerators)
     c.add(gates.RX(2, theta))
     target_state = c.execute().numpy()
 
@@ -456,10 +458,10 @@ def test_controlled_by_swap(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_doubly_controlled_by_swap(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_doubly_controlled_by_swap(gates, accelerators):
     """Check controlled SWAP using controlled by two qubits."""
-    c = Circuit(4)
+    c = Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
@@ -472,7 +474,7 @@ def test_doubly_controlled_by_swap(gates):
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
 
-    c = Circuit(4)
+    c = Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(3))
     c.add(gates.RX(1, theta=0.1234))
@@ -580,11 +582,11 @@ def test_unitary_random_twoqubit_gate(gates, backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_unitary_controlled_by(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_unitary_controlled_by(gates, accelerators):
     """Check that `controlled_by` works as expected with `Unitary`."""
     matrix = np.random.random([2, 2])
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Unitary(matrix, 1).controlled_by(0))
@@ -594,7 +596,7 @@ def test_unitary_controlled_by(gates):
     np.testing.assert_allclose(final_state, target_state)
 
     matrix = np.random.random([4, 4])
-    c = Circuit(4)
+    c = Circuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
     final_state = c.execute().numpy()
@@ -819,12 +821,12 @@ def test_circuit_custom_compilation(gates):
             r2 = compiled_circuit(init_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_bad_initial_state(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_bad_initial_state(gates, accelerators):
     """Check that errors are raised when bad initial state is passed."""
     import tensorflow as tf
     from qibo.config import DTYPECPX
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
         final_state = c(initial_state=np.zeros(2**3))
@@ -836,12 +838,12 @@ def test_bad_initial_state(gates):
         final_state = c(initial_state=0)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_final_state_property(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_final_state_property(gates, accelerators):
     """Check accessing final state using the circuit's property."""
     import tensorflow as tf
     from qibo.config import DTYPECPX
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add([gates.H(0), gates.H(1)])
 
     with pytest.raises(RuntimeError):
@@ -853,15 +855,15 @@ def test_final_state_property(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_variable_theta(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_variable_theta(gates, accelerators):
     """Check that parametrized gates accept `tf.Variable` parameters."""
     import tensorflow as tf
     from qibo.config import DTYPE
     theta1 = tf.Variable(0.1234, dtype=DTYPE)
     theta2 = tf.Variable(0.4321, dtype=DTYPE)
 
-    cvar = Circuit(2)
+    cvar = Circuit(2, accelerators)
     cvar.add(gates.RX(0, theta1))
     cvar.add(gates.RY(1, theta2))
     final_state = cvar().numpy()
@@ -874,12 +876,12 @@ def test_variable_theta(gates):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("gates", _GATES)
-def test_circuit_copy(gates):
+@pytest.mark.parametrize(("gates", "accelerators"), _DEVICE_GATES)
+def test_circuit_copy(gates, accelerators):
     """Check that circuit copy execution is equivalent to original circuit."""
     theta = 0.1234
 
-    c1 = Circuit(2)
+    c1 = Circuit(2, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
     c2 = c1.copy()
 
