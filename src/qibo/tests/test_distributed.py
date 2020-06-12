@@ -197,8 +197,7 @@ def test_distributed_circuit_addition():
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
     """Check that the generated global qubit list is the expected for QFT."""
-    devices = {"/GPU:0": ndevices}
-    c = models.DistributedQFT(nqubits, devices)
+    c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
     c.set_gates()
 
     #for i, queue in enumerate(c.queues["/GPU:0"]):
@@ -225,17 +224,18 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
-    devices = {"/GPU:0": ndevices}
-    c = models.DistributedQFT(nqubits, devices)
+    c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
     c.set_gates()
     check_device_queues(c.device_queues)
 
 
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
-@pytest.mark.parametrize("ndevices", [2, 4, 8])
-def test_distributed_qft_execution(nqubits, ndevices):
-    devices = {"/GPU:0": ndevices}
-    dist_c = models.DistributedQFT(nqubits, devices)
+@pytest.mark.parametrize("accelerators",
+                         [{"/GPU:0": 2},
+                          {"/GPU:0": 2, "/GPU:1": 2},
+                          {"/GPU:0": 2, "/GPU:1": 5, "/GPU:2": 1}])
+def test_distributed_qft_execution(nqubits, accelerators):
+    dist_c = models.QFT(nqubits, accelerators=accelerators)
     c = models.QFT(nqubits)
 
     initial_state = random_state(nqubits)

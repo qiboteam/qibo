@@ -28,17 +28,25 @@ class Circuit:
                                               memory_device=memory_device)
 
 
-def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
+def QFT(nqubits: int, with_swaps: bool = True,
+        accelerators: Optional[Dict[str, int]] = None,
+        memory_device: str = "/CPU:0",
+        gates=None) -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
         nqubits (int): Number of qubits in the circuit.
         with_swaps (bool): Use SWAP gates at the end of the circuit so that the
             qubit order in the final state is the same as the initial state.
+        accelerators (dict): Accelerator device dictionary in order to use a
+            distributed circuit
+            If ``None`` a simple (non-distributed) circuit will be used.
+        memory_device (str): Device to use for memory in case a distributed circuit
+            is used. Ignored for non-distributed circuits.
         gates: Which gates module will be used.
             The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
             or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
-            If ``gates`` is ``None`` then custom gates will be used.
+            If ``None`` custom gates will be used.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -56,6 +64,11 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
             # Execute the circuit
             final_state = c(init_state)
     """
+    if accelerators is not None:
+        if gates is not None:
+            raise TypeError("Distributed QFT supports only custom operator gates.")
+        return _DistributedQFT(nqubits, accelerators, memory_device, with_swaps)
+
     import numpy as np
     if gates is None:
         from qibo import gates
@@ -76,46 +89,40 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
     return circuit
 
 
-def DistributedQFT(nqubits: int,
-                   accelerators: Dict[str, int],
-                   memory_device: str = "/CPU:0",
-                   backend: Optional[str] = None,
-                   with_swaps: bool = True) -> "TensorflowDistributedCircuit":
+def _DistributedQFT(nqubits: int,
+                    accelerators: Dict[str, int],
+                    memory_device: str = "/CPU:0",
+                    with_swaps: bool = True) -> DistributedCircuit:
+    """QFT with the order of gates optimized for reduced multi-device communication."""
     import numpy as np
-    if backend is None or backend == "Custom":
-        from qibo import gates
-    elif backend == "MatmulEinsum":
-        from qibo.tensorflow import gates
-    else:
-        raise ValueError("{} backend is not supported in distributed circuits."
-                         "".format(backend))
+    from qibo.tensorflow import cgates as gates
 
-    circuit = DistributedCircuit(nqubits, accelerators, memory_device)
+    circuit = Circuit(nqubits, accelerators, memory_device)
     nqubits = circuit.nqubits
     nglobal = circuit.nglobal
 
     for i1 in range(nqubits - nglobal):
         for i2 in range(i1):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
-        circuit.add(gates.H(i1).with_backend(backend))
+            circuit.add(gates.CZPow(i1, i2, theta))
+        circuit.add(gates.H(i1))
 
     for i2 in range(nglobal):
         for i1 in range(nqubits - nglobal, nqubits):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
+            circuit.add(gates.CZPow(i1, i2, theta))
 
     for i1 in range(nqubits - nglobal, nqubits):
         for i2 in range(nglobal, i1):
             theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta).with_backend(backend))
-        circuit.add(gates.H(i1).with_backend(backend))
+            circuit.add(gates.CZPow(i1, i2, theta))
+        circuit.add(gates.H(i1))
 
     if with_swaps:
         for i in range(nglobal, nqubits // 2):
-            circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
+            circuit.add(gates.SWAP(i, nqubits - i - 1))
         for i in range(nglobal):
-            circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
+            circuit.add(gates.SWAP(i, nqubits - i - 1))
 
     return circuit
 
