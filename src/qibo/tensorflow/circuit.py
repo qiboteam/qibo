@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPECPX, DTYPEINT
+from qibo.config import DTYPES
 from qibo.tensorflow import measurements, callbacks
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -18,7 +18,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             Read automatically from `config`.
     """
 
-    def __init__(self, nqubits, dtype=DTYPECPX):
+    def __init__(self, nqubits, dtype=DTYPES.get('DTYPECPX')):
         super(TensorflowCircuit, self).__init__(nqubits)
         self.dtype = dtype
         self.compiled_execute = None
@@ -127,7 +127,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         if self.using_tfgates:
             shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
-                            dtype=DTYPEINT)
+                            dtype=DTYPES.get('DTYPEINT'))
             state = tf.reshape(state, shape)
 
         self._final_state = state
