@@ -7,6 +7,10 @@ from typing import Dict, Optional
 
 
 class Circuit:
+    """Factory class for circuits.
+
+    Creates both normal and distributed circuits.
+    """
 
     def __new__(cls, nqubits: int,
                 accelerators: Optional[Dict[str, int]] = None,
