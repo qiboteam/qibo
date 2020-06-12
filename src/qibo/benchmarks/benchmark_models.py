@@ -13,6 +13,14 @@ def get_gates(backend: str):
     raise ValueError("Unknown backend {}.".format(backend))
 
 
+def QFT(nqubits: int, with_swaps: bool = True,
+        accelerators: Optional[Dict[str, int]] = None,
+        memory_device: str = "/CPU:0",
+        backend: Optional[str] = None):
+    return models.QFT(nqubits, with_swaps, accelerators, memory_device,
+                      gates=get_gates(backend), backend=backend)
+
+
 def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Circuit:
     gates = get_gates(backend)
     one_qubit_gates = ["RX", "RY", "RZ"]
@@ -40,23 +48,6 @@ def PrepareGHZ(nqubits: int, backend: str) -> models.Circuit:
     circuit.add(gates.H(0).with_backend(backend))
     for i in range(nqubits - 1):
         circuit.add(gates.CNOT(i, i + 1).with_backend(backend))
-    return circuit
-
-
-def QFT(nqubits: int, backend: str) -> models.Circuit:
-    gates = get_gates(backend)
-    circuit = models.Circuit(nqubits)
-    for i1 in range(nqubits):
-        circuit.add(gates.H(i1).with_backend(backend))
-        m = 2
-        for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (m - 1)
-            circuit.add(gates.CZPow(i2, i1, theta).with_backend(backend))
-            m += 1
-
-    for i in range(nqubits // 2):
-        circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
-
     return circuit
 
 
@@ -148,7 +139,6 @@ def ToffoliGate(nqubits: int, backend: str, nlayers: int = 1) -> models.Circuit:
 
 circuits = {"supremacy": SupremacyLikeCircuit,
             "qft": QFT,
-            "dist-qft": models.DistributedQFT,
             "ghz": PrepareGHZ,
             "variational": VariationalCircuit,
             "opt-variational": OptimizedVariationalCircuit,

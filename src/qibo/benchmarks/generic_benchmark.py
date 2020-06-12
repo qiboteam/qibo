@@ -135,8 +135,8 @@ def main(nqubits_list: List[int],
         if params: kwargs["params"] = params
         if nlayers is not None: kwargs["nlayers"] = nlayers
         if gate_type is not None: kwargs["gate_type"] = gate_type
-        if accelerators is not None:                
-            kwargs["calc_devices"] = accelerators
+        if accelerators is not None:
+            kwargs["accelerators"] = accelerators
             kwargs["memory_device"] = device
 
         start_time = time.time()

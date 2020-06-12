@@ -31,7 +31,8 @@ class Circuit:
 def QFT(nqubits: int, with_swaps: bool = True,
         accelerators: Optional[Dict[str, int]] = None,
         memory_device: str = "/CPU:0",
-        gates=None) -> Circuit:
+        gates=None,
+        backend: Optional[str] = None) -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
@@ -47,6 +48,8 @@ def QFT(nqubits: int, with_swaps: bool = True,
             The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
             or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
             If ``None`` custom gates will be used.
+        backend: Which backend to use among ``'DefaultEinusm'`` and ``'MatmulEinsum'``.
+            If custom gates are used ``backend`` is ignored.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -75,16 +78,16 @@ def QFT(nqubits: int, with_swaps: bool = True,
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
-        circuit.add(gates.H(i1))
+        circuit.add(gates.H(i1).with_backend(backend))
         m = 2
         for i2 in range(i1 + 1, nqubits):
             theta = np.pi / 2 ** (m - 1)
-            circuit.add(gates.CZPow(i2, i1, theta))
+            circuit.add(gates.CZPow(i2, i1, theta).with_backend(backend))
             m += 1
 
     if with_swaps:
         for i in range(nqubits // 2):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
+            circuit.add(gates.SWAP(i, nqubits - i - 1).with_backend(backend))
 
     return circuit
 
