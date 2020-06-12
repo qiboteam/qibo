@@ -18,7 +18,6 @@ class TensorflowGate(base_gates.Gate):
         qubits: List with the qubits that the gate is applied to.
     """
 
-    dtype = matrices.dtype
     einsum = einsum
 
     def __init__(self):
@@ -299,11 +298,11 @@ class fSim(TensorflowGate, base_gates.fSim):
     def __init__(self, q0, q1, theta, phi):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
 
-        th = tf.cast(self.theta, dtype=self.dtype)
+        th = tf.cast(self.theta, dtype=DTYPES.get("DTYPECPX"))
         rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPES.get("DTYPECPX")))
 
-        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.eye(4, dtype=DTYPES.get("DTYPECPX"))
         self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
         rotation = tf.reshape(rotation, (4,))
         ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
@@ -320,10 +319,10 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
 
-        rotation = tf.cast(self.unitary, dtype=self.dtype)
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=self.dtype))
+        rotation = tf.cast(self.unitary, dtype=DTYPES.get("DTYPECPX"))
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPES.get("DTYPECPX")))
 
-        self.matrix = tf.eye(4, dtype=self.dtype)
+        self.matrix = tf.eye(4, dtype=DTYPES.get("DTYPECPX"))
         self.matrix = tf.tensor_scatter_nd_update(self.matrix, [[3, 3]], [phase])
         rotation = tf.reshape(rotation, (4,))
         ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
@@ -355,7 +354,7 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))
 
-        self.matrix = tf.cast(self.unitary, dtype=self.dtype)
+        self.matrix = tf.cast(self.unitary, dtype=DTYPES.get("DTYPECPX"))
         self.matrix = tf.reshape(self.matrix, 2 * rank * (2,))
 
 
@@ -433,7 +432,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
             shape = self.nqubits * (2,)
 
         _state = np.array(self.coefficients).reshape(shape)
-        return tf.convert_to_tensor(_state, dtype=self.dtype)
+        return tf.convert_to_tensor(_state, dtype=DTYPES.get("DTYPECPX"))
 
 
 class TensorflowChannel(TensorflowGate):

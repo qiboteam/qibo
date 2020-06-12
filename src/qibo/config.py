@@ -57,7 +57,7 @@ if BACKEND_NAME == "tensorflow":
         CPU_NAME = None
 
     from qibo.tensorflow import matrices as tensorflow_matrices
-    matrices = tensorflow_matrices.GateMatrices(DTYPES.get('DTYPECPX'))
+    matrices = tensorflow_matrices.GateMatrices()
 
     def set_precision(dtype='double'):
         """Set precision for states and gates simulation.
@@ -74,7 +74,7 @@ if BACKEND_NAME == "tensorflow":
             DTYPES['DTYPECPX'] = tf.complex128
         else:
             raise RuntimeError(f'dtype {dtype} not supported.')
-
+        matrices.allocate_gates()
 
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
