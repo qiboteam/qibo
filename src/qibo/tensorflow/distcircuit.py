@@ -248,7 +248,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         # be set by the ``set_gates`` method once all gates are known.
         pass
 
-    def with_noise(self, noise_map, measurement_noise):
+    def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "
                                   "density matrices yet.")
 
@@ -428,10 +428,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
-        if self.pieces is not None:
-            raise RuntimeError("Attempting to initialize distributed circuit "
-                               "state that is already initialized.")
-
         if self._global_qubits is None:
             self.global_qubits = self._default_global_qubits()
 
@@ -439,7 +435,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             return self._default_initial_state()
 
         state = super(TensorflowDistributedCircuit, self)._cast_initial_state(initial_state)
-        self._create_pieces()
+        if self.pieces is None:
+            self._create_pieces()
         self._split(state)
 
     def _split(self, state: tf.Tensor):

@@ -120,7 +120,7 @@ def test_user_initialization(nqubits):
 
 def test_distributed_circuit_errors():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(6, devices)
+    c = models.Circuit(6, devices)
     # Access global qubits before setting them
     with pytest.raises(ValueError):
         global_qubits = c.global_qubits
@@ -133,6 +133,16 @@ def test_distributed_circuit_errors():
     # Attempt to access state before being set
     with pytest.raises(ValueError):
         final_state = c.final_state
+    # Attempt to add gate so that available global qubits are not enough
+    small_c = models.Circuit(2, {"/GPU:0": 2})
+    with pytest.raises(ValueError):
+        small_c.add(gates.SWAP(0, 1))
+    # Attempt to compile
+    with pytest.raises(RuntimeError):
+        c.compile()
+    # Attempt to use ``.with_noise``
+    with pytest.raises(NotImplementedError):
+        noisy_c = c.with_noise((0.1, 0.2, 0.1))
 
 
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
