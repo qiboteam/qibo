@@ -43,6 +43,9 @@ General purpose models
 .. autoclass:: qibo.tensorflow.circuit.TensorflowCircuit
     :members:
     :member-order: bysource
+.. autoclass:: qibo.tensorflow.distcircuit.TensorflowDistributedCircuit
+    :members:
+    :member-order: bysource
 
 
 .. _applicationspecific:

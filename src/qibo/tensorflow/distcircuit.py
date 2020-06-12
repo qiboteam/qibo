@@ -73,19 +73,39 @@ class DeviceQueues:
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
-    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+    """Distributed implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+
+    Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
+    The full state vector is saved in the given `memory device` (usually the CPU)
+    during the simulation. A gate is applied by splitting the state to pieces
+    and copying each piece to an accelerator device that is used to perform the
+    matrix multiplication. An `accelerator` device can be used more than once
+    resulting to logical devices that are more than the physical accelerators in
+    the system.
+
+    Distributed circuits currently do not support native tensorflow gates,
+    compilation and callbacks.
+
+    Example:
+        ::
+
+            from qibo.models import Circuit
+            # The system has two GPUs and we would like to use each GPU twice
+            # resulting to four total logical accelerators
+            accelerators = {'/GPU:0': 2, '/GPU:1': 2}
+            # Define a circuit on 32 qubits to be run in the above GPUs keeping
+            # the full state vector in the CPU memory.
+            c = Circuit(32, accelerators, memory_device="/CPU:0")
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
-        calc_devices (dict): Dictionary from device names to the number of
+        accelerators (dict): Dictionary that maps device names to the number of
             times each device will be used.
-            For example if ``calc_devices = {'/GPU:0': 2, '/GPU:1': 2}``
-            then two distinct GPUs will be used twice each for a total of 4
-            logical devices. The number of logical devices must be a power of 2.
+            The total number of logical devices must be a power of 2.
         memory_device (str): Name of the device where the full state will be
-            saved. This is usually the CPU.
+            saved (usually the CPU).
         dtype: Tensorflow type for complex numbers.
-            Read automatically from `config`.
+            Read automatically from ``config``.
     """
 
     def __init__(self,
@@ -109,10 +129,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.device_queues = DeviceQueues(accelerators)
         self.pieces = None
         self._global_qubits = None
-        self._local_qubits = None
         self._construct_shapes()
 
     def _construct_shapes(self):
+        """Useful shapes for the simulation."""
         n = self.nqubits - self.nglobal
         self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=DTYPEINT)
         self.full_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
@@ -123,19 +143,32 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     @property
     def global_qubits(self) -> List[int]:
+        """Returns the global qubits IDs in a sorted list.
+
+        The global qubits are used to split the state to multiple pieces.
+        Gates that have global qubits as their target qubits cannot be applied
+        using the accelerators. In order to apply such gates we have to swap
+        the target global qubit with a different (local) qubit.
+        """
         if self._global_qubits is None:
             raise ValueError("Cannot access global qubits before being set.")
         return sorted(self._global_qubits)
 
     @global_qubits.setter
     def global_qubits(self, x: Sequence[int]):
+        """Sets the current global qubits.
+
+        At the same time the ``transpose_order`` and ``reverse_transpose_order``
+        lists are set. These lists are used in order to transpose the state pieces
+        when we want to swap global qubits.
+        """
         if len(x) != self.nglobal:
             raise ValueError("Invalid number of global qubits {} for using {} "
                              "calculation devices.".format(len(x), self.ndevices))
         self._global_qubits = set(x)
-        self._local_qubits = [i for i in range(self.nqubits) if i not in self._global_qubits]
+        local_qubits = [i for i in range(self.nqubits) if i not in self._global_qubits]
 
-        self.transpose_order = list(sorted(self._global_qubits)) + self._local_qubits
+        self.transpose_order = list(sorted(self._global_qubits)) + local_qubits
         self.reverse_transpose_order = self.nqubits * [0]
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
@@ -150,6 +183,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                   "density matrices yet.")
 
     def _add(self, gate):
+        """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
+
+        We do an additional check that there are sufficient qubits to use as global.
+        """
         if (self.nqubits - len(gate.target_qubits) < self.nglobal and
             not isinstance(gate, measurement_gate)):
             raise ValueError("Insufficient qubits to use for global in "
@@ -199,13 +236,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
     def compile(self, callback: Optional[callbacks.Callback] = None):
-        """Compiles the circuit as a Tensorflow graph.
-
-        Args:
-            callback: A Callback to calculate during circuit execution.
-                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
-                User can give a single callback or list of callbacks here.
-        """
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
@@ -236,44 +266,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pool(joblib.delayed(_device_job)(ids, device)
              for device, ids in self.device_queues.device_to_ids.items())
 
-    @property
-    def using_tfgates(self) -> bool:
-        """Determines if we are using Tensorflow native or custom gates."""
-        from qibo.tensorflow import gates
-        return gates.TensorflowGate == self.gate_module.TensorflowGate
-
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None,
                 callback: Optional[callbacks.Callback] = None
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Propagates the state through the circuit applying the corresponding gates.
+        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
 
-        In default usage the full final state vector or density matrix is returned.
-        If the circuit contains measurement gates and `nshots` is given, then
-        the final state is sampled and the samples are returned.
-
-        Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
-                or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
-                A Tensorflow tensor with shape ``nqubits * (2,)`` (or ``2 * nqubits * (2,)`` for density matrices)
-                is also allowed as an initial state but must have the `dtype` of the circuit.
-                If ``initial_state`` is ``None`` the |000...0> state will be used.
-            nshots (int): Number of shots to sample if the circuit contains
-                measurement gates.
-                If ``nshots`` None the measurement gates will be ignored.
-            callback: A Callback to calculate during circuit execution.
-                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
-                User can give a single callback or list of callbacks here.
-                Note that if the Circuit is compiled then all callbacks should
-                be passed when ``compile`` is called, not during execution.
-                Otherwise an ``RuntimeError`` will be raised.
-
-        Returns:
-            If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
-            If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+        Currently callbacks are not supported.
         """
         if not self.device_queues.global_qubits_lists:
             self.set_gates()
@@ -309,10 +309,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     @property
     def final_state(self) -> tf.Tensor:
-        """Final state as a Tensorflow tensor of shape (2 ** nqubits,).
+        """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
 
         The circuit has to be executed at least once before accessing this
-        property, otherwise a `ValueError` is raised. If the circuit is
+        property, otherwise a ``ValueError`` is raised. If the circuit is
         executed more than once, only the last final state is returned.
         """
         if self.pieces is None:
@@ -329,13 +329,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         return op.initial_state(zeros)
 
     def _create_pieces(self):
+        """Creates the state pieces as ``tf.Variable``s stored in the ``memory_device``."""
         n = 2 ** (self.nqubits - self.nglobal)
         with tf.device(self.memory_device):
             self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
     def _default_initial_state(self) -> tf.Tensor:
-        """Creates the |000...0> state for default initialization."""
+        """Assigns the default |000...0> state to the state pieces."""
         self._create_pieces()
         with tf.device(self.memory_device):
             self.pieces[0].assign(self._default_initial_piece())
@@ -357,6 +358,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._split(state)
 
     def _split(self, state: tf.Tensor):
+        """Splits a given state vector and assigns it to the ``tf.Variable`` pieces.
+
+        Args:
+            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
+        """
         with tf.device(self.memory_device):
             state = tf.reshape(state, self.device_shape)
             pieces = [state[i] for i in range(self.ndevices)]
@@ -366,6 +372,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 self.pieces[i].assign(new_state[i])
 
     def _merge(self) -> tf.Tensor:
+        """Merges the current ``tf.Variable`` pieces to a full state vector.
+
+        Returns:
+            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
+        """
         new_global_qubits = list(range(self.nglobal))
         if self.global_qubits == new_global_qubits:
             with tf.device(self.memory_device):
@@ -375,6 +386,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         return tf.reshape(state, self.full_shape)
 
     def _swap(self, new_global_qubits: Sequence[int]):
+        """Changes the list of global qubits in order to apply gates.
+
+        This is done by `transposing` the state vector so that global qubits
+        hold the first ``nglobal`` indices at all times.
+        """
         order = list(self.reverse_transpose_order)
         self.global_qubits = new_global_qubits
         order = [order[v] for v in self.transpose_order]

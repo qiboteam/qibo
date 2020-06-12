@@ -15,7 +15,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     Args:
         nqubits (int): Total number of qubits in the circuit.
         dtype: Tensorflow type for complex numbers.
-            Read automatically from `config`.
+            Read automatically from ``config``.
     """
 
     def __init__(self, nqubits, dtype=DTYPECPX):
@@ -153,10 +153,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def final_state(self) -> tf.Tensor:
-        """Final state as a Tensorflow tensor of shape (2 ** nqubits,).
+        """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
 
         The circuit has to be executed at least once before accessing this
-        property, otherwise a `ValueError` is raised. If the circuit is
+        property, otherwise a ``ValueError`` is raised. If the circuit is
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
