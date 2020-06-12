@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 import joblib
 from qibo.config import DTYPECPX, DTYPEINT
-from qibo.base.gates import M as measurement_gate
+from qibo.base import gates
 from qibo.tensorflow import circuit, measurements, callbacks
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
@@ -54,6 +54,7 @@ class DeviceQueues:
 
     @staticmethod
     def _ids_gen(calc_devices) -> Tuple[str, List[int]]:
+        """Generator of device piece indices."""
         start = 0
         for device, n in calc_devices.items():
             stop = start + n
@@ -75,7 +76,38 @@ class DeviceQueues:
         """Number of different gate groups."""
         return len(self.global_qubits_lists)
 
-    def create(self, queues: List[List["Gate"]], nlocal: int):
+    def _create_reduced_gate(self, iq: int, gate: gates.Gate) -> gates.Gate:
+        """Creates a copy of a gate for specific device application.
+
+        Target and control qubits are modified according to the local qubits of
+        the circuit when this gate will be applied.
+
+        Args:
+            iq (int): Index of the ``self.global_qubits_lists`` that corresponds
+                to the gate's gate group.
+            gate: The :class:`qibo.base.gates.Gate` object of the gate to copy.
+
+        Returns:
+            A :class:`qibo.base.gates.Gate` object with the proper target and
+            control qubit indices for device-specific application.
+        """
+        def reduction_number(q: int) -> int:
+            for i, gq in enumerate(self.global_qubits_lists[iq]):
+                if gq > q:
+                    return i
+            return i + 1
+
+        calc_gate = copy.copy(gate)
+        # Recompute the target/control indices considering only local qubits.
+        calc_gate.target_qubits = tuple(q - reduction_number(q)
+                                        for q in calc_gate.target_qubits)
+        calc_gate.control_qubits = tuple(q - reduction_number(q)
+                                         for q in calc_gate.control_qubits
+                                         if q not in self.global_qubits_sets[iq])
+        calc_gate.original_gate = gate
+        return calc_gate
+
+    def create(self, queues: List[List[gates.Gate]], nlocal: int):
         """Creates the gate objects for each device and stores them in ``self.queues``.
 
         Args:
@@ -90,10 +122,7 @@ class DeviceQueues:
                 self.queues[i].append([])
             for gate in queue:
                 for device, ids in self.device_to_ids.items():
-                    # TODO: Move `gate.reduce` functionality in this class
-                    calc_gate = copy.copy(gate)
-                    calc_gate.reduce(self.global_qubits_lists[iq])
-                    calc_gate.original_gate = gate
+                    calc_gate = self._create_reduced_gate(iq, gate)
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
                     with tf.device(device):
@@ -223,13 +252,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         raise NotImplementedError("Distributed circuit does not support "
                                   "density matrices yet.")
 
-    def _add(self, gate):
+    def _add(self, gate: gates.Gate):
         """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
 
         We do an additional check that there are sufficient qubits to use as global.
         """
         if (self.nqubits - len(gate.target_qubits) < self.nglobal and
-            not isinstance(gate, measurement_gate)):
+            not isinstance(gate, gates.M)):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
