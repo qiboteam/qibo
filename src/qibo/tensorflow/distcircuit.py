@@ -12,6 +12,31 @@ from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
 
 class DeviceQueues:
+    """Data structure that holds gate queues for each accelerator device.
+
+    For a distributed simulation we have to swap global qubits multiple times.
+    For each global qubit configuration a several gates can be applied to the
+    state forming a gate group. Once all gates in the group are applied the
+    global qubits are swapped and we proceed to the next gate group.
+
+    ``DeviceQueues`` holds the following data that define the gate groups and
+    corresponding global qubits:
+    * ``ndevices``: Number of logical accelerator devices.
+    * ``nglobal``: Number of global qubits (= log2(ndevices)).
+    * ``global_qubits_lists``: List of sorted global qubit lists. Each list
+        corresponds to a gate group.
+    * ``global_qubits_sets``: List of global qubit sets. This follows ``global_qubits_lists``
+        but a set is used to allow O(1) search.
+    * ``device_to_ids``: Dictionary that maps device (str) to list of piece indices.
+        When a device is used multiple times then it is responsible for updating
+        multiple state pieces. The list of indices specifies which pieces the device
+        will update.
+    * ``ids_to_device``: Inverse dictionary of ``device_to_ids``.
+    * ``queues``: List of length ``ndevices``. For each device we store the queues
+        of each gate group in a list of lists.
+        For example ``queues[2][1]`` gives the queue (list) of the 1st gate group
+        to be run in the 2nd device.
+    """
 
     def __init__(self, calc_devices: Dict[str, int]):
         self.ndevices = sum(calc_devices.values())
@@ -36,14 +61,28 @@ class DeviceQueues:
             start = stop
 
     def append(self, qubits):
+        """Appends a new global qubit lists.
+
+        Appending a global qubit lists defines a new group.
+
+        Args:
+            qubits: Any iterable that contains the global qubit ids.
+        """
         self.global_qubits_sets.append(set(qubits))
         self.global_qubits_lists.append(sorted(qubits))
 
     def __len__(self) -> int:
+        """Number of different gate groups."""
         return len(self.global_qubits_lists)
 
-    def create(self, queues, nlocal: int):
-        # "Compile" actual gates
+    def create(self, queues: List[List["Gate"]], nlocal: int):
+        """Creates the gate objects for each device and stores them in ``self.queues``.
+
+        Args:
+            queues (list): List of gate queues that defines the gate groups using
+                general (non device specific gates).
+            nlocal: Number of local qubits in the circuit (``= nqubits - nglobal``).
+        """
         if len(queues) != len(self):
             raise ValueError
         for iq, queue in enumerate(queues):
@@ -61,6 +100,8 @@ class DeviceQueues:
                         calc_gate.nqubits = nlocal
                     for i in ids:
                         flag = True
+                        # If there are control qubits that are global then
+                        # the gate should not be applied by all devices
                         for control in (set(gate.control_qubits) &
                                         self.global_qubits_sets[iq]):
                             ic = self.global_qubits_lists[iq].index(control)
@@ -194,6 +235,20 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         super(TensorflowDistributedCircuit, self)._add(gate)
 
     def set_gates(self):
+        """Prepares gates for device-specific gate execution.
+
+        Each gate has to be recreated in the device that will be executed to
+        allow parallel execution. The global qubit lists and gate groups are
+        also specified here.
+        A gate group is identified by looping through the circuit's gate queue
+        and adding gates in the group until the number of global becomes ``nglobal``.
+        Once this happens no more gates can be added in the group. In order to
+        apply new gates some global qubits have to be swapped to global and a
+        new gate group will be defined for the new global qubit configuration.
+
+        The final global qubit lists and gate queues that are used for execution
+        are storred in ``self.device_queues`` which is a ``DeviceQueues`` object.
+        """
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
 
@@ -203,6 +258,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         global_qubits = set(all_qubits)
         queue = iter(self.queue)
         try:
+            # Loop through the gate queue to define gate groups and
+            # global qubit lists
             gate = next(queue)
             while True:
                 target_qubits = set(gate.target_qubits)
@@ -287,7 +344,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
             if group > 0:
                 self._swap(global_qubits)
-            #self._sequential_execute(group)
             self._joblib_execute(group)
 
         # Append callback results to callbacks

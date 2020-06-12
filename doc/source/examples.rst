@@ -22,7 +22,7 @@ Here is an example of a circuit with 2 qubits:
     # Define an initial state (optional - default initial state is |00>)
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
-    final_state = c.execute(initial_state) # c(initial_state) also works
+    final_state = c(initial_state) # c(initial_state) also works
     print(final_state.numpy())
     # should print `np.array([1, 0, 0, 0])`
 
@@ -32,7 +32,8 @@ If you are planning to freeze the circuit and just query for different initial s
 
     import numpy as np
     from qibo.models import Circuit
-    from qibo import gates
+    # import native tensorflow gates (slower than default gates)
+    from qibo.tensorflow import gates
 
     c = Circuit(2)
     c.add(gates.X(0))
@@ -43,6 +44,9 @@ If you are planning to freeze the circuit and just query for different initial s
     for i in range(100):
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
+
+Note that compiling is only supported when native tensorflow gates are used.
+These are much slower than the default gates which use custom operators.
 
 It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
@@ -85,6 +89,53 @@ For example for the circuit of the previous example:
 
     all_h_gates = c.gates_of_type("h")
     # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, H(2))]
+
+
+.. _gpu-examples:
+How to execute circuits on GPU?
+-------------------------------
+
+If a GPU is available in the system and Tensorflow is installed with GPU support
+then circuits will be executed on the GPU automatically unless the user specifies
+otherwise. In order to force the device a circuit will be executed one can use:
+
+.. code-block::  python
+
+    with tf.device("/CPU:0"):
+        # execute circuit on CPU with default initial state |000...0>.
+        final_state = c()
+
+GPUs provide much faster execution but have limited memory. A standard 12-16GB
+GPU can simulate up to 30 qubits with single-precision or 29 qubits with
+double-precision.
+
+In order to simulate more qubits on a GPU one can use the
+:class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. This allows
+running the simulation on multiple GPUs (if available) or re-using a single GPU
+multiple times. This can be done as follows:
+
+.. code-block::  python
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    # Define GPU configuration
+    accelerators = {"/GPU:0": 3, "/GPU:1": 1}
+    # this will use the first GPU three times and the second one time
+    # leading to four total logical devices
+    # construct the distributed circuit for 32 qubits
+    c = Circuit(32, accelerators, memory_device="/CPU:0")
+
+Gates can then be added normally using ``c.add`` and the circuit can be executed
+using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
+(if this is not passed the CPU will be used by default). This device does not perform
+any gate calculations but is used to store the full state. Therefore the
+distributed simulation is limited by the amount of CPU memory.
+
+Distributed circuits are much slower than using a single GPU due to communication
+bottleneck. However for specific applications (such as the QFT) they can
+be faster than using just the CPU for cases where the a single GPU does not have
+sufficient memory.
 
 
 .. _measurement-examples:
