@@ -353,7 +353,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
-        self.matrix = self.matrices.TOFFOLI
+        self.matrix = matrices.TOFFOLI
 
     @staticmethod
     def construct_unitary() -> tf.Tensor:
@@ -438,6 +438,9 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
+
+    def _construct_matrix(self):
+        pass
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:

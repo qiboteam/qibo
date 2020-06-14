@@ -4,7 +4,7 @@ import copy
 import numpy as np
 import tensorflow as tf
 import joblib
-from qibo.config import DTYPECPX, DTYPEINT
+from qibo.config import DTYPES
 from qibo.base import gates
 from qibo.tensorflow import circuit, measurements, callbacks
 from qibo.tensorflow import custom_operators as op
@@ -174,16 +174,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             The total number of logical devices must be a power of 2.
         memory_device (str): Name of the device where the full state will be
             saved (usually the CPU).
-        dtype: Tensorflow type for complex numbers.
-            Read automatically from ``config``.
     """
 
     def __init__(self,
                  nqubits: int,
                  accelerators: Dict[str, int],
-                 memory_device: str = "/CPU:0",
-                 dtype=DTYPECPX):
-        super(TensorflowDistributedCircuit, self).__init__(nqubits, dtype)
+                 memory_device: str = "/CPU:0"):
+        super(TensorflowDistributedCircuit, self).__init__(nqubits)
         self._init_kwargs.update({"accelerators": accelerators,
                                   "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
@@ -203,12 +200,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _construct_shapes(self):
         """Useful shapes for the simulation."""
+        dtype = DTYPES.get('DTYPEINT')
         n = self.nqubits - self.nglobal
-        self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=DTYPEINT)
-        self.full_shape = tf.cast((2 ** self.nqubits,), dtype=DTYPEINT)
+        self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=dtype)
+        self.full_shape = tf.cast((2 ** self.nqubits,), dtype=dtype)
         self.tensor_shape = self.nqubits * (2,)
 
-        self.local_full_shape = tf.cast((2 ** n,), dtype=DTYPEINT)
+        self.local_full_shape = tf.cast((2 ** n,), dtype=dtype)
         self.local_tensor_shape = n * (2,)
 
     @property
@@ -410,14 +408,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _default_initial_piece(self) -> tf.Tensor:
         """Returns the 0th piece for the |000...0> state."""
-        zeros = tf.zeros(2 ** (self.nqubits - self.nglobal), dtype=self.dtype)
+        zeros = tf.zeros(2 ** (self.nqubits - self.nglobal), dtype=DTYPES.get('DTYPECPX'))
         return op.initial_state(zeros)
 
     def _create_pieces(self):
         """Creates the state pieces as ``tf.Variable``s stored in the ``memory_device``."""
         n = 2 ** (self.nqubits - self.nglobal)
         with tf.device(self.memory_device):
-            self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
+            self.pieces = [tf.Variable(tf.zeros(n, dtype=DTYPES.get('DTYPECPX')))
                            for _ in range(self.ndevices)]
 
     def _default_initial_state(self) -> tf.Tensor:
@@ -448,7 +446,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         with tf.device(self.memory_device):
             state = tf.reshape(state, self.device_shape)
             pieces = [state[i] for i in range(self.ndevices)]
-            new_state = tf.zeros(self.device_shape, dtype=self.dtype)
+            new_state = tf.zeros(self.device_shape, dtype=DTYPES.get('DTYPECPX'))
             new_state = op.transpose_state(pieces, new_state, self.nqubits, self.transpose_order)
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
@@ -477,7 +475,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.global_qubits = new_global_qubits
         order = [order[v] for v in self.transpose_order]
         with tf.device(self.memory_device):
-            state = tf.zeros(self.device_shape, dtype=self.dtype)
+            state = tf.zeros(self.device_shape, dtype=DTYPES.get('DTYPECPX'))
             state = op.transpose_state(self.pieces, state, self.nqubits, order)
             for i in range(self.ndevices):
                 self.pieces[i].assign(state[i])
