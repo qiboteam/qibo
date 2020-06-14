@@ -400,7 +400,7 @@ def test_probabilistic_measurement(accelerators):
     result = c(nshots=1000)
 
     # update reference values based on device
-    if tf.config.list_physical_devices("GPU"):
+    if tf.config.list_physical_devices("GPU") and not accelerators:
       decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
       binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
     else:
