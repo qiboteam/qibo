@@ -63,7 +63,6 @@ class TransposeStateOp : public OpKernel {
 
   void Compute(OpKernelContext *context) override {
     // grabe the input tensor
-    //const Tensor& state = context->input(0);
     std::vector<T*> state(ndevices_);
     for (int i = 0; i < ndevices_; i++) {
       state[i] = (T*) context->input(i).flat<T>().data();
@@ -73,7 +72,7 @@ class TransposeStateOp : public OpKernel {
     // prevent running on GPU
     OP_REQUIRES(
         context, (std::is_same<Device, CPUDevice>::value == true),
-        errors::Unimplemented("ApplyGate operator not implemented for GPU."));
+        errors::Unimplemented("TransposeStateOp operator not implemented for GPU."));
 
     // call the implementation
     TransposeStateFunctor<Device, T>()(context, context->eigen_device<Device>(),
