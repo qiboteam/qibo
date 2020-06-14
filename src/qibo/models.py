@@ -35,8 +35,7 @@ class Circuit:
 def QFT(nqubits: int, with_swaps: bool = True,
         accelerators: Optional[Dict[str, int]] = None,
         memory_device: str = "/CPU:0",
-        gates=None,
-        backend: Optional[str] = None) -> Circuit:
+        backend: str = "Custom") -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
@@ -48,12 +47,8 @@ def QFT(nqubits: int, with_swaps: bool = True,
             If ``None`` a simple (non-distributed) circuit will be used.
         memory_device (str): Device to use for memory in case a distributed circuit
             is used. Ignored for non-distributed circuits.
-        gates: Which gates module will be used.
-            The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
-            or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
-            If ``None`` custom gates will be used.
-        backend: Which backend to use among ``'DefaultEinusm'`` and ``'MatmulEinsum'``.
-            If custom gates are used ``backend`` is ignored.
+        backend: Which backend to use among ``'Custom'``, ``'DefaultEinsum'``
+            or ``'MatmulEinsum'``.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -72,13 +67,17 @@ def QFT(nqubits: int, with_swaps: bool = True,
             final_state = c(init_state)
     """
     if accelerators is not None:
-        if gates is not None:
+        if backend != "Custom":
             raise TypeError("Distributed QFT supports only custom operator gates.")
         return _DistributedQFT(nqubits, accelerators, memory_device, with_swaps)
 
     import numpy as np
-    if gates is None:
+    if backend == "Custom":
         from qibo import gates
+    elif backend == "DefaultEinsum" or backend == "MatmulEinsum":
+        from qibo.tensorflow import gates
+    else:
+        raise ValueError("Unknown backend {}.".format(backend))
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):

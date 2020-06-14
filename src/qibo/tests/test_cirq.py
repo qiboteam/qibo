@@ -204,11 +204,13 @@ def test_unitary_matrix_gate_controlled_by(gates, nqubits, ntargets, ndevices):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
 
 
-@pytest.mark.parametrize(("gates", "backend"), _BACKENDS)
+@pytest.mark.parametrize(("backend", "accelerators"),
+                         [("Custom", None), ("Custom", {"/GPU:0": 4}),
+                          ("DefaultEinsum", None), ("MatmulEinsum", None)])
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
-def test_qft(gates, nqubits, backend):
+def test_qft(nqubits, backend, accelerators):
     initial_state = random_initial_state(nqubits)
-    c = models.QFT(nqubits, gates=gates, backend=backend)
+    c = models.QFT(nqubits, accelerators=accelerators, backend=backend)
     final_state = c(np.copy(initial_state)).numpy()
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
