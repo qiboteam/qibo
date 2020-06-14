@@ -29,10 +29,6 @@ parser.add_argument("--phi", default=None, type=float)
 args = vars(parser.parse_args())
 
 
-import qibo
-qibo.set_precision(args.pop("precision"))
-
-
 import tensorflow as tf
 def limit_gpu_memory(memory_limit=None):
     """Limits GPU memory that is available to Tensorflow.
@@ -54,6 +50,9 @@ def limit_gpu_memory(memory_limit=None):
     print()
 
 limit_gpu_memory(args.pop("memory"))
+
+import qibo
+qibo.set_precision(args.pop("precision"))
 from qibo.benchmarks import utils, benchmark_models
 
 
