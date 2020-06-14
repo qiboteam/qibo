@@ -22,11 +22,13 @@ Here is an example of a circuit with 2 qubits:
     # Define an initial state (optional - default initial state is |00>)
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
-    final_state = c(initial_state) # c(initial_state) also works
+    final_state = c(initial_state) # c.execute(initial_state) also works
     print(final_state.numpy())
     # should print `np.array([1, 0, 0, 0])`
 
-If you are planning to freeze the circuit and just query for different initial states then you can use the ``Circuit.compile`` method which will improve the evaluation performance, e.g.:
+If you are planning to freeze the circuit and just query for different initial
+states then you can use the ``Circuit.compile`` method which will improve
+evaluation performance, e.g.:
 
 .. code-block:: python
 
@@ -46,7 +48,7 @@ If you are planning to freeze the circuit and just query for different initial s
         c(init_state)
 
 Note that compiling is only supported when native tensorflow gates are used.
-These are much slower than the default gates which use custom operators.
+These are much slower than the default gates which use custom tensorflow operators.
 
 It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
@@ -95,9 +97,10 @@ For example for the circuit of the previous example:
 How to execute circuits on GPU?
 -------------------------------
 
-If a GPU is available in the system and Tensorflow is installed with GPU support
-then circuits will be executed on the GPU automatically unless the user specifies
-otherwise. In order to force the device a circuit will be executed one can use:
+If a GPU with CUDA support is available in the system and Tensorflow is installed
+for CUDA then circuits will be executed on the GPU automatically unless the user
+specifies otherwise. In order to force the device a circuit will be executed
+one can use:
 
 .. code-block::  python
 
@@ -105,14 +108,16 @@ otherwise. In order to force the device a circuit will be executed one can use:
         # execute circuit on CPU with default initial state |000...0>.
         final_state = c()
 
-GPUs provide much faster execution but have limited memory. A standard 12-16GB
-GPU can simulate up to 30 qubits with single-precision or 29 qubits with
-double-precision.
+Alternatively, running the command ``CUDA_VISIBLE_DEVICES="-1"`` in a terminal
+hides GPUs from tensorflow. As a result, any program executed from the same
+terminal will run on CPU even if ``tf.device`` is not used.
 
-In order to simulate more qubits on a GPU one can use the
-:class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. This allows
-running the simulation on multiple GPUs (if available) or re-using a single GPU
-multiple times. This can be done as follows:
+GPUs provide much faster execution compared to CPU but have limited memory.
+A standard 12-16GB GPU can simulate up to 30 qubits with single-precision
+or 29 qubits with double-precision when QIBO's default gates are used.
+
+QIBO supports distributed circuit execution on multiple GPUs. This feature can
+be used as follows:
 
 .. code-block::  python
 
@@ -132,10 +137,26 @@ using ``c()``. Note that a ``memory_device`` is passed in the distributed circui
 any gate calculations but is used to store the full state. Therefore the
 distributed simulation is limited by the amount of CPU memory.
 
-Distributed circuits are much slower than using a single GPU due to communication
-bottleneck. However for specific applications (such as the QFT) they can
-be faster than using just the CPU for cases where the a single GPU does not have
-sufficient memory.
+Also, note that it is possible to reuse a single GPU multiple times increasing the number of
+"logical" devices in the distributed calculation. This allows users to execute
+circuits with more than 30 qubits on a single GPU by reusing several times using
+``accelerators = {"/GPU:0": ndevices}``. Such a simulation will still be limited
+by CPU memory only.
+
+For systems without GPUs, the distributed implementation can be used with any
+type of device. For example if multiple CPUs, the user can pass these CPUs in the
+accelerator dictionary.
+
+Distributed circuits are generally slower than using a single GPU due to communication
+bottleneck. However for more than 30 qubits (which do not fit in single GPU) and
+specific applications (such as the QFT) the multi-GPU scheme can be faster than
+using only CPU.
+
+For more details in the distributed implementation one can look in the related
+code: :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. When
+``models.Circuit`` is called then this distributed implementation is used automatically
+if the ``accelerators`` dictionary is passed, otherwise the standard single device
+:class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
 
 
 .. _measurement-examples:
