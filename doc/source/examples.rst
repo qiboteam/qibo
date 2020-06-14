@@ -569,3 +569,20 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
+
+
+How to modify the simulation precision?
+---------------------------------------
+
+By default the simulation is performed in ``double`` precision (``complex128``).
+We provide the ``qibo.set_precision`` function to modify the default behaviour.
+Note that `qibo.set_precision` must be called before allocating circuits:
+
+.. code-block:: python
+
+        import qibo
+        qibo.set_precision("single") # enables complex64
+        # or
+        qibo.set_precision("double") # re-enables complex128
+
+        # ... continue with circuit creation and execution

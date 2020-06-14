@@ -825,7 +825,6 @@ def test_circuit_custom_compilation(gates):
 def test_bad_initial_state(gates, accelerators):
     """Check that errors are raised when bad initial state is passed."""
     import tensorflow as tf
-    from qibo.config import DTYPECPX
     c = Circuit(2, accelerators)
     c.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
@@ -842,7 +841,6 @@ def test_bad_initial_state(gates, accelerators):
 def test_final_state_property(gates, accelerators):
     """Check accessing final state using the circuit's property."""
     import tensorflow as tf
-    from qibo.config import DTYPECPX
     c = Circuit(2, accelerators)
     c.add([gates.H(0), gates.H(1)])
 
@@ -859,9 +857,9 @@ def test_final_state_property(gates, accelerators):
 def test_variable_theta(gates, accelerators):
     """Check that parametrized gates accept `tf.Variable` parameters."""
     import tensorflow as tf
-    from qibo.config import DTYPE
-    theta1 = tf.Variable(0.1234, dtype=DTYPE)
-    theta2 = tf.Variable(0.4321, dtype=DTYPE)
+    from qibo.config import DTYPES
+    theta1 = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
+    theta2 = tf.Variable(0.4321, dtype=DTYPES.get('DTYPE'))
 
     cvar = Circuit(2, accelerators)
     cvar.add(gates.RX(0, theta1))

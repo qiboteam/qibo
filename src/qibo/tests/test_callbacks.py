@@ -27,8 +27,8 @@ def test_entropy_singlet_state():
     state = state / np.sqrt(2)
     # Pass the state as `tf.Tensor` to test this functionality as well
     import tensorflow as tf
-    from qibo.config import DTYPECPX
-    state = tf.convert_to_tensor(state, dtype=DTYPECPX)
+    from qibo.config import DTYPES
+    state = tf.convert_to_tensor(state, dtype=DTYPES.get('DTYPECPX'))
 
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, 1.0)
@@ -72,11 +72,11 @@ def test_state_invalid_type():
 def test_entropy_numerical():
     """Check that entropy calculation does not fail for tiny eigenvalues."""
     import tensorflow as tf
-    from qibo.config import DTYPECPX
+    from qibo.config import DTYPES
     eigvals = np.array([-1e-10, -1e-15, -2e-17, -1e-18, -5e-60, 1e-48, 4e-32,
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
                         1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
-    rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPECPX)
+    rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPES.get('DTYPECPX'))
     result = callbacks.EntanglementEntropy._entropy(rho).numpy()
 
     mask = eigvals > 0

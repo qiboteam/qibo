@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPECPX, DTYPEINT
+from qibo.config import DTYPES
 from qibo.tensorflow import measurements, callbacks
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -14,14 +14,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
-        dtype: Tensorflow type for complex numbers.
-            Read automatically from ``config``.
     """
 
-    def __init__(self, nqubits, dtype=DTYPECPX):
+    def __init__(self, nqubits):
         super(TensorflowCircuit, self).__init__(nqubits)
-        self._init_kwargs["dtype"] = dtype
-        self.dtype = dtype
         self.compiled_execute = None
         self.callbacks = []
 
@@ -124,7 +120,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         if self.using_tfgates:
             shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
-                            dtype=DTYPEINT)
+                            dtype=DTYPES.get('DTYPEINT'))
             state = tf.reshape(state, shape)
 
         self._final_state = state
@@ -187,11 +183,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 shape_error()
             self.using_density_matrix = True
 
-        return tf.cast(initial_state, dtype=self.dtype)
+        return tf.cast(initial_state, dtype=DTYPES.get('DTYPECPX'))
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        zeros = tf.zeros(2 ** self.nqubits, dtype=self.dtype)
+        zeros = tf.zeros(2 ** self.nqubits, dtype=DTYPES.get('DTYPECPX'))
         initial_state = op.initial_state(zeros)
         return initial_state
 

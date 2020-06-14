@@ -40,9 +40,11 @@ if BACKEND_NAME == "tensorflow":
         einsum = MatmulEinsum()
 
     # Default types
-    DTYPE = tf.float64
-    DTYPEINT = tf.int64
-    DTYPECPX = tf.complex128
+    DTYPES = {
+        'DTYPEINT': tf.int64,
+        'DTYPE': tf.float64,
+        'DTYPECPX': tf.complex128
+    }
 
     # Set memory cut-off for using GPU when sampling
     GPU_MEASUREMENT_CUTOFF = 1300000000
@@ -55,7 +57,24 @@ if BACKEND_NAME == "tensorflow":
         CPU_NAME = None
 
     from qibo.tensorflow import matrices as tensorflow_matrices
-    matrices = tensorflow_matrices.GateMatrices(DTYPECPX)
+    matrices = tensorflow_matrices.GateMatrices()
+
+    def set_precision(dtype='double'):
+        """Set precision for states and gates simulation.
+
+        Args:
+            dtype (str): possible options are 'single' for single precision
+                (complex64) and 'double' for double precision (complex128).
+        """
+        if dtype == 'single':
+            DTYPES['DTYPE'] = tf.float32
+            DTYPES['DTYPECPX'] = tf.complex64
+        elif dtype == 'double':
+            DTYPES['DTYPE'] = tf.float64
+            DTYPES['DTYPECPX'] = tf.complex128
+        else:
+            raise RuntimeError(f'dtype {dtype} not supported.')
+        matrices.allocate_gates()
 
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
