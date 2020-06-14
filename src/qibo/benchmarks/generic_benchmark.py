@@ -21,10 +21,15 @@ parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
+parser.add_argument("--precision", default="double", type=str)
 # params
 parser.add_argument("--theta", default=None, type=float)
 parser.add_argument("--phi", default=None, type=float)
 args = vars(parser.parse_args())
+
+
+import qibo
+qibo.set_precision(args.pop("precision"))
 
 
 import tensorflow as tf

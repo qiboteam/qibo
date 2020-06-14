@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from qibo.config import DTYPES
 
 
 class GateMatrices:
@@ -7,26 +8,27 @@ class GateMatrices:
 
     _AVAILABLE_GATES = ["I", "H", "X", "Y", "Z", "CNOT"]
 
-    def __init__(self, dtype):
-        self.dtype = dtype
+    def __init__(self):
+        self.allocate_gates()
 
-        self.I = tf.convert_to_tensor(self._npI(), dtype=self.dtype)
-        self.H = tf.convert_to_tensor(self._npH(), dtype=self.dtype)
-        self.X = tf.convert_to_tensor(self._npX(), dtype=self.dtype)
-        self.Y = tf.convert_to_tensor(self._npY(), dtype=self.dtype)
-        self.Z = tf.convert_to_tensor(self._npZ(), dtype=self.dtype)
-        self.CNOT = tf.convert_to_tensor(self._npCNOT(), dtype=self.dtype)
-        self.SWAP = tf.convert_to_tensor(self._npSWAP(), dtype=self.dtype)
-        self.TOFFOLI = tf.convert_to_tensor(self._npTOFFOLI(), dtype=self.dtype)
+    def allocate_gates(self):
+        self.I = tf.convert_to_tensor(self._npI(), dtype=DTYPES.get('DTYPECPX'))
+        self.H = tf.convert_to_tensor(self._npH(), dtype=DTYPES.get("DTYPECPX"))
+        self.X = tf.convert_to_tensor(self._npX(), dtype=DTYPES.get("DTYPECPX"))
+        self.Y = tf.convert_to_tensor(self._npY(), dtype=DTYPES.get("DTYPECPX"))
+        self.Z = tf.convert_to_tensor(self._npZ(), dtype=DTYPES.get("DTYPECPX"))
+        self.CNOT = tf.convert_to_tensor(self._npCNOT(), dtype=DTYPES.get("DTYPECPX"))
+        self.SWAP = tf.convert_to_tensor(self._npSWAP(), dtype=DTYPES.get("DTYPECPX"))
+        self.TOFFOLI = tf.convert_to_tensor(self._npTOFFOLI(), dtype=DTYPES.get("DTYPECPX"))
 
     @property
     def nptype(self):
-        if self.dtype == tf.complex128:
+        if DTYPES.get("DTYPECPX") == tf.complex128:
             return np.complex128
-        elif self.dtype == tf.complex64:
+        elif DTYPES.get("DTYPECPX") == tf.complex64:
             return np.complex64
         else:
-            raise TypeError("Unknown complex type {}.".format(self.dtype))
+            raise TypeError("Unknown complex type {}.".format(DTYPES.get("DTYPECPX")))
 
     def _npI(self):
         return np.eye(2, dtype=self.nptype)

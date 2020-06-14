@@ -188,3 +188,28 @@ def test_circuit_copy_with_measurements():
 
     assert c2.measurement_gate is c1.measurement_gate
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
+
+
+@pytest.mark.parametrize("precision", ["single", "double"])
+def test_precision(precision):
+    import qibo
+    qibo.set_precision(precision)
+    c1 = Circuit(2)
+    c1.add([H(0), H(1)])
+    final_state = c1()
+    if precision == "single":
+        expected_dtype = tf.complex64
+    else:
+        expected_dtype = tf.complex128
+    assert final_state.dtype == expected_dtype
+
+
+@pytest.mark.parametrize("precision", ["single", "double"])
+def test_precision(precision):
+    import qibo
+    from qibo.config import DTYPES
+    qibo.set_precision(precision)
+    if precision == "single":
+        assert DTYPES.get("DTYPECPX") == tf.complex64
+    else:
+        assert DTYPES.get("DTYPECPX") == tf.complex128

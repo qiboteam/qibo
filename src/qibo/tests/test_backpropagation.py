@@ -10,8 +10,8 @@ _BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
 def test_variable_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
     import tensorflow as tf
-    from qibo.config import DTYPE
-    theta = tf.Variable(0.1234, dtype=DTYPE)
+    from qibo.config import DTYPES
+    theta = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
 
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
@@ -33,8 +33,8 @@ def test_variable_backpropagation(backend):
 def test_two_variables_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
     import tensorflow as tf
-    from qibo.config import DTYPE
-    theta = tf.Variable([0.1234, 0.4321], dtype=DTYPE)
+    from qibo.config import DTYPES
+    theta = tf.Variable([0.1234, 0.4321], dtype=DTYPES.get('DTYPE'))
 
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
