@@ -11,6 +11,13 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 class TensorflowGate:
 
+    def __new__(cls, *args, **kwargs):
+        if BACKEND.get('GATES') == 'custom':
+            return super(TensorflowGate, cls).__new__(cls)
+        else:
+            from qibo.tensorflow import gates
+            return getattr(gates, cls.__name__)(*args, **kwargs)
+
     def __init__(self):
         if not tf.executing_eagerly():
             raise NotImplementedError("Custom operator gates should not be "
@@ -75,13 +82,6 @@ class MatrixGate(TensorflowGate):
 
 
 class H(MatrixGate, base_gates.H):
-
-    def __new__(cls, q):
-        if BACKEND.get('GATES') == 'custom':
-            return super(H, cls).__new__(cls)
-        else:
-            from qibo.tensorflow import gates
-            return gates.H(q)
 
     def __init__(self, q):
         base_gates.H.__init__(self, q)
