@@ -11,7 +11,7 @@ from typing import Dict, List, Optional
 _PARAM_NAMES = {"theta", "phi"}
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="20", type=str)
-parser.add_argument("--backend", default="Custom", type=str)
+parser.add_argument("--backend", default="custom", type=str)
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
 parser.add_argument("--nshots", default=None, type=int)
@@ -52,13 +52,13 @@ def limit_gpu_memory(memory_limit=None):
 limit_gpu_memory(args.pop("memory"))
 
 import qibo
+qibo.set_backend(args.pop("backend"))
 qibo.set_precision(args.pop("precision"))
 from qibo.benchmarks import utils, benchmark_models
 
 
 def main(nqubits_list: List[int],
          type: str,
-         backend: str = "Custom",
          device: Optional[str] = "/CPU:0",
          accelerators: Optional[Dict[str, int]] = None,
          nlayers: Optional[int] = None,
@@ -81,8 +81,6 @@ def main(nqubits_list: List[int],
         nqubits_list: List with the number of qubits to run for.
         type: Type of Circuit to use.
             See ``benchmark_models.py`` for available types.
-        backend: Which einsum backend to use.
-            Available backends: ``Custom``, ``DefaultEinsum``, ``MatmulEinsum``.
         device: Tensorflow logical device to use for the benchmark.
             If ``None`` the first available device is used.
         nlayers: Number of layers for supremacy-like or gate circuits.
@@ -134,7 +132,7 @@ def main(nqubits_list: List[int],
     create_circuit_func = benchmark_models.circuits[type]
 
     for nqubits in nqubits_list:
-        kwargs = {"nqubits": nqubits, "backend": backend}
+        kwargs = {"nqubits": nqubits}
         params = {k: v for k, v in params.items() if v is not None}
         if params: kwargs["params"] = params
         if nlayers is not None: kwargs["nlayers"] = nlayers

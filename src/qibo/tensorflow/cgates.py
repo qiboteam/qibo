@@ -4,12 +4,19 @@ import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class TensorflowGate:
+
+    def __new__(cls, *args, **kwargs):
+        if BACKEND.get('GATES') == 'custom':
+            return super(TensorflowGate, cls).__new__(cls)
+        else:
+            from qibo.tensorflow import gates
+            return getattr(gates, cls.__name__)(*args, **kwargs)
 
     def __init__(self):
         if not tf.executing_eagerly():
@@ -27,13 +34,6 @@ class TensorflowGate:
             *args: Variational parameters for parametrized gates.
         """
         raise NotImplementedError
-
-    def with_backend(self, backend: Optional[str] = None):
-        """Used only for test compatibility with native gates.
-
-        Custom kernel gates do not have different backends
-        """
-        return self
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -143,6 +143,9 @@ class Z(TensorflowGate, base_gates.Z):
 
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
+
+    def __new__(cls, *args, **kwargs):
+        return super(TensorflowGate, cls).__new__(cls)
 
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
@@ -501,4 +504,22 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         return tf.convert_to_tensor(_state, dtype=state.dtype)
 
 
-# TODO: Add channels once density matrices are supported by custom operators
+# Density matrices are not supported by custom operators yet so channels fall
+# back to native tensorflow gates
+class TensorflowChannel(TensorflowGate):
+
+    def __new__(cls, *args, **kwargs):
+        if BACKEND.get('GATES') == 'custom':
+            raise NotImplementedError("Density matrices are not supported by "
+                                      "custom operator gates.")
+        else:
+            from qibo.tensorflow import gates
+            return getattr(gates, cls.__name__)(*args, **kwargs)
+
+
+class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
+    pass
+
+
+class GeneralChannel(TensorflowChannel, base_gates.NoiseChannel):
+    pass

@@ -1,8 +1,7 @@
 import pytest
 import numpy as np
-from qibo import gates
-from qibo.tensorflow import gates as native_gates
-from qibo import models
+import qibo
+from qibo import models, gates
 
 
 def random_state(nqubits):
@@ -147,6 +146,7 @@ def test_distributed_circuit_errors():
 
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution(ndevices):
+    qibo.set_backend("custom")
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
 
@@ -162,6 +162,7 @@ def test_simple_execution(ndevices):
 
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_controlled_execution(ndevices):
+    qibo.set_backend("custom")
     c = models.Circuit(4)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.CNOT(0, 1))
@@ -180,6 +181,7 @@ def test_controlled_execution(ndevices):
 
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
+    qibo.set_backend("custom")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c1 = models.DistributedCircuit(6, devices)
     c2 = models.DistributedCircuit(6, {"/GPU:0": 2})
@@ -245,6 +247,7 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
                           {"/GPU:0": 2, "/GPU:1": 2},
                           {"/GPU:0": 2, "/GPU:1": 5, "/GPU:2": 1}])
 def test_distributed_qft_execution(nqubits, accelerators):
+    qibo.set_backend("custom")
     dist_c = models.QFT(nqubits, accelerators=accelerators)
     c = models.QFT(nqubits)
 

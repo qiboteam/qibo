@@ -5,7 +5,8 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
-from qibo.config import einsum, matrices, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import matrices
+from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -17,14 +18,14 @@ class TensorflowGate(base_gates.Gate):
             This is (2, 2) for 1-qubit gates and (4, 4) for 2-qubit gates.
         qubits: List with the qubits that the gate is applied to.
     """
-    einsum = einsum
-
     def __init__(self):
         self.calculation_cache = None
         # For `controlled_by` gates (see `cache.ControlCache` for more details)
         self.control_cache = None
         # Gate matrices
         self.matrix = None
+        # Einsum backend
+        self.einsum = BACKEND.get('EINSUM')
 
     def _construct_matrix(self):
         self.matrix = self.construct_unitary()
@@ -37,23 +38,6 @@ class TensorflowGate(base_gates.Gate):
             *args: Variational parameters for parametrized gates.
         """
         raise NotImplementedError
-
-    def with_backend(self, einsum_choice: str) -> "TensorflowGate":
-        """Uses a different einsum backend than the one defined in config.
-
-        Useful for testing.
-
-        Args:
-            einsum_choice: Which einsum backend to use.
-                One of `DefaultEinsum` or `MatmulEinsum`.
-
-        Returns:
-            The gate object with the calculation backend switched to the
-            selection.
-        """
-        from qibo.tensorflow import einsum
-        self.einsum = getattr(einsum, einsum_choice)()
-        return self
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
@@ -194,10 +178,6 @@ class Z(TensorflowGate, base_gates.Z):
         return matrices.Z
 
 
-# import measurement gate from ``cgates.py``
-from qibo.tensorflow.cgates import M
-
-
 class RX(TensorflowGate, base_gates.RX):
 
     def __init__(self, q, theta):
@@ -329,6 +309,7 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        TensorflowGate.__init__(self)
         shape = tuple(self.unitary.shape)
         if shape != (2, 2):
             raise ValueError("Invalid shape {} of rotation for generalized "
@@ -438,6 +419,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
+        TensorflowGate.__init__(self)
 
     def _construct_matrix(self):
         pass
@@ -464,12 +446,6 @@ class TensorflowChannel(TensorflowGate):
 
     All channels should inherit this class.
     """
-
-    def with_backend(self, einsum_choice: str) -> "TensorflowChannel":
-        super(TensorflowChannel, self).with_backend(einsum_choice)
-        for gate in self.gates:
-            gate.einsum = self.einsum
-        return self
 
     @TensorflowGate.nqubits.setter
     def nqubits(self, n: int):
