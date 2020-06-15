@@ -320,7 +320,9 @@ def test_circuit_with_unmeasured_qubits(accelerators):
 
 def test_measurement_compiled_circuit():
     """Check that measurements and final state work for compiled circuits."""
-    from qibo.tensorflow import gates # use tf native gates when compiling
+    # use native gates because custom gates do not support compilation
+    import qibo
+    qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0))
@@ -339,6 +341,10 @@ def test_measurement_compiled_circuit():
     final_state = c.final_state.numpy()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1
+
+    # reset backend for next tests
+    qibo.set_backend("custom")
+
     np.testing.assert_allclose(final_state, target_state)
 
 

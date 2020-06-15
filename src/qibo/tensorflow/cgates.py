@@ -144,6 +144,9 @@ class Z(TensorflowGate, base_gates.Z):
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
+    def __new__(cls, *args, **kwargs):
+        return super(TensorflowGate, cls).__new__(cls)
+
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
         self._traceout = None

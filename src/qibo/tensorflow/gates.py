@@ -178,10 +178,6 @@ class Z(TensorflowGate, base_gates.Z):
         return matrices.Z
 
 
-# import measurement gate from ``cgates.py``
-from qibo.tensorflow.cgates import M
-
-
 class RX(TensorflowGate, base_gates.RX):
 
     def __init__(self, q, theta):
