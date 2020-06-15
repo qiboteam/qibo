@@ -504,6 +504,28 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         return tf.convert_to_tensor(_state, dtype=state.dtype)
 
 
+class CallbackGate(TensorflowGate, base_gates.CallbackGate):
+
+    def __new__(cls, *args, **kwargs):
+        return super(TensorflowGate, cls).__new__(cls)
+
+    def __init__(self, callback):
+        base_gates.CallbackGate.__init__(self, callback)
+        TensorflowGate.__init__(self)
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        self.callback.append(self.callback(state, is_density_matrix))
+        return state
+
+    def _compiled_call(self, state: tf.Tensor, is_density_matrix: bool = False
+                       ) -> Tuple[tf.Tensor, tf.Tensor]:
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        callback = self.callback(state, is_density_matrix)
+        return state, callback
+
+
 # Density matrices are not supported by custom operators yet so channels fall
 # back to native tensorflow gates
 class TensorflowChannel(TensorflowGate):

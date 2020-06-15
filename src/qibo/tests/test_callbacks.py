@@ -3,8 +3,6 @@ Testing tensorflow callbacks.
 """
 import pytest
 import numpy as np
-import qibo
-qibo.set_backend("custom")
 from qibo.models import Circuit
 from qibo import gates, callbacks
 
@@ -91,51 +89,60 @@ def test_entropy_in_circuit():
     """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
-    state = c(callback=entropy)
+    c.add(gates.CallbackGate(entropy))
+    state = c()
 
     target = [0, 0, 1.0]
-    np.testing.assert_allclose(entropy[0].numpy(), target, atol=_atol)
+    np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
-
+@pytest.mark.skip
 def test_entropy_in_compiled_circuit():
     """Check that entropy calculation works when circuit is compiled."""
     import qibo
     qibo.set_backend("matmuleinsum")
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
-    c.compile(callback=entropy)
+    c.add(gates.CallbackGate(entropy))
+    c.compile()
     state = c()
     qibo.set_backend("custom")
 
     target = [0, 0, 1.0]
-    np.testing.assert_allclose(entropy[0].numpy(), target, atol=_atol)
+    np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
 
-@pytest.mark.skip
 def test_entropy_multiple_executions():
     """Check entropy calculation when the callback is used in multiple executions."""
     entropy = callbacks.EntanglementEntropy([0])
 
     c = Circuit(2)
     c.add(gates.RY(0, 0.1234))
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
-    state = c(callback=entropy)
+    c.add(gates.CallbackGate(entropy))
+    state = c()
 
     c = Circuit(2)
     c.add(gates.RY(0, 0.4321))
+    c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
-    state = c(callback=entropy)
+    c.add(gates.CallbackGate(entropy))
+    state = c()
 
     def target_entropy(t):
         cos = np.cos(t / 2.0) ** 2
         sin = np.sin(t / 2.0) ** 2
         return - cos * np.log2(cos) - sin * np.log2(sin)
 
-    target = [[0, target_entropy(0.1234)], [0, target_entropy(0.4321)]]
+    target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     np.testing.assert_allclose(entropy[:].numpy(), target)
 
 
@@ -145,7 +152,8 @@ def test_entropy_bad_indexing():
     c = Circuit(2)
     c.add(gates.RY(0, 0.1234))
     c.add(gates.CNOT(0, 1))
-    state = c(callback=entropy)
+    c.add(gates.CallbackGate(entropy))
+    state = c()
 
     with pytest.raises(IndexError):
         entropy[1]
@@ -153,6 +161,7 @@ def test_entropy_bad_indexing():
         entropy["a"]
 
 
+@pytest.mark.skip
 def test_entropy_distributed_not_implemented():
     """Check that adding callback in distributed circuit raises ``NotImplementedError``."""
     entropy = callbacks.EntanglementEntropy([0, 1, 2])
