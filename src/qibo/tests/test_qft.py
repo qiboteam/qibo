@@ -3,6 +3,8 @@ Testing Quantum Fourier Transform (QFT) circuit.
 """
 import numpy as np
 import pytest
+import qibo
+qibo.set_backend("custom")
 from qibo import gates, models
 
 _atol = 1e-7

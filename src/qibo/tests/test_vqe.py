@@ -81,6 +81,9 @@ def test_vqe(method, options, compile, filename):
 
 def test_vqe_compile_error():
     """Check that ``RuntimeError`` is raised when compiling custom gates."""
+    import qibo
+    qibo.set_backend("custom")
+
     nqubits = 6
     def ansatz(theta):
         c = Circuit(nqubits)

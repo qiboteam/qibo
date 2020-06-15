@@ -1,6 +1,8 @@
 import collections
 import numpy as np
 import pytest
+import qibo
+qibo.set_backend("custom")
 from qibo import gates, models
 from typing import Optional
 

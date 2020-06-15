@@ -3,6 +3,7 @@ Test imports and basic functionality that is indepedent of calculation backend.
 """
 import numpy as np
 import pytest
+import qibo
 from qibo.models import *
 from qibo.gates import *
 
@@ -60,6 +61,7 @@ def test_circuit_add_bad_gate():
 
 def test_circuit_add_iterable():
     """Check if `circuit.add` works with iterables."""
+    qibo.set_backend("custom")
     c = Circuit(2)
     # Try adding list
     c.add([H(0), H(1), CNOT(0, 1)])
@@ -73,6 +75,7 @@ def test_circuit_add_iterable():
 
 def test_circuit_add_generator():
     """Check if `circuit.add` works with generators."""
+    qibo.set_backend("custom")
     def gen():
         yield H(0)
         yield H(1)
@@ -85,6 +88,7 @@ def test_circuit_add_generator():
 
 def test_circuit_addition():
     """Check if circuit addition increases depth."""
+    qibo.set_backend("custom")
     c1 = Circuit(2)
     c1.add(H(0))
     c1.add(H(1))
