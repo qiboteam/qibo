@@ -164,6 +164,23 @@ if the ``accelerators`` dictionary is passed, otherwise the standard single devi
 :class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
 
 
+How to modify the simulation precision?
+---------------------------------------
+
+By default the simulation is performed in ``double`` precision (``complex128``).
+We provide the ``qibo.set_precision`` function to modify the default behaviour.
+Note that `qibo.set_precision` must be called before allocating circuits:
+
+.. code-block:: python
+
+        import qibo
+        qibo.set_precision("single") # enables complex64
+        # or
+        qibo.set_precision("double") # re-enables complex128
+
+        # ... continue with circuit creation and execution
+
+
 .. _measurement-examples:
 How to perform measurements?
 ----------------------------
@@ -235,7 +252,7 @@ the measurements and not the qubit ids.
 
 
 How to use callbacks?
------------------------------------
+---------------------
 
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
@@ -466,6 +483,9 @@ the initial state. For example
 
 .. code-block:: python
 
+    import qibo
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    qibo.set_backend("matmuleinsum")
     from qibo import models, gates
 
     # Define circuit
@@ -486,6 +506,9 @@ will perform the transformation
 
 .. math::
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
+
+Note that the calculation backend was switched to ``"matmuleinsum"`` because the
+default ``"custom"`` backend does not support density matrices.
 
 The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
 If this or any other channel is used in a ``Circuit``, then the execution will automatically
@@ -596,20 +619,3 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
-
-
-How to modify the simulation precision?
----------------------------------------
-
-By default the simulation is performed in ``double`` precision (``complex128``).
-We provide the ``qibo.set_precision`` function to modify the default behaviour.
-Note that `qibo.set_precision` must be called before allocating circuits:
-
-.. code-block:: python
-
-        import qibo
-        qibo.set_precision("single") # enables complex64
-        # or
-        qibo.set_precision("double") # re-enables complex128
-
-        # ... continue with circuit creation and execution
