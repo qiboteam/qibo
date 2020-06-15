@@ -7,7 +7,7 @@ import pytest
 import qibo
 from qibo import models, gates
 
-_BACKENDS = ['custom', 'matmuleinsum']
+_BACKENDS = ['custom', 'defaulteinsum', 'matmuleinsum']
 
 
 def random_initial_state(nqubits, dtype=np.complex128):
