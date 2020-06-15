@@ -43,6 +43,9 @@ class Callback:
     def append(self, result: tf.Tensor):
         self._results.append(result)
 
+    def extend(self, result: tf.Tensor):
+        self._results.extend(result)
+
 
 class EntanglementEntropy(Callback):
     """Von Neumann entanglement entropy callback.

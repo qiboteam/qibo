@@ -99,7 +99,7 @@ def test_entropy_in_circuit():
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
-@pytest.mark.skip
+
 def test_entropy_in_compiled_circuit():
     """Check that entropy calculation works when circuit is compiled."""
     import qibo

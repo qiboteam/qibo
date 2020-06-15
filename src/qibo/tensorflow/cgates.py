@@ -519,12 +519,6 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         self.callback.append(self.callback(state, is_density_matrix))
         return state
 
-    def _compiled_call(self, state: tf.Tensor, is_density_matrix: bool = False
-                       ) -> Tuple[tf.Tensor, tf.Tensor]:
-        TensorflowGate.__call__(self, state, is_density_matrix)
-        callback = self.callback(state, is_density_matrix)
-        return state, callback
-
 
 # Density matrices are not supported by custom operators yet so channels fall
 # back to native tensorflow gates
