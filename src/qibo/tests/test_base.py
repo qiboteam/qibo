@@ -191,8 +191,9 @@ def test_circuit_copy_with_measurements():
 
 
 @pytest.mark.parametrize("precision", ["single", "double"])
-def test_precision(precision):
+def test_state_precision(precision):
     import qibo
+    import tensorflow as tf
     qibo.set_precision(precision)
     c1 = Circuit(2)
     c1.add([H(0), H(1)])
@@ -205,8 +206,9 @@ def test_precision(precision):
 
 
 @pytest.mark.parametrize("precision", ["single", "double"])
-def test_precision(precision):
+def test_precision_dictionary(precision):
     import qibo
+    import tensorflow as tf
     from qibo.config import DTYPES
     qibo.set_precision(precision)
     if precision == "single":
