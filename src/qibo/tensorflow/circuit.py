@@ -36,8 +36,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
             state = gate(state, is_density_matrix=self.using_density_matrix)
             for ic, callback in enumerate(self.callbacks):
-                if (ig + 1) % callback.steps == 0:
-                    callback_results[ic].append(callback(state))
+                callback_results[ic].append(callback(state))
 
         # Stack all results for each callback
         callback_results = [tf.stack(r) for r in callback_results]

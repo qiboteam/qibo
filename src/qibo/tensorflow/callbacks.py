@@ -11,14 +11,9 @@ class Callback:
     `__call__` method.
 
     Results of a callback can be accessed by indexing the corresponding object.
-
-    Args:
-        steps (int): Every how many gates to perform the callback calculation.
-            Defaults at 1 for which the calculation is done after every gate.
     """
 
-    def __init__(self, steps: int = 1):
-        self.steps = steps
+    def __init__(self):
         self._results = []
         self._nqubits = None
 
@@ -57,8 +52,6 @@ class EntanglementEntropy(Callback):
             for the entropy calculation.
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
-        steps (int): Every how many gates to perform the entropy calculation.
-            Defaults at 1 for which the calculation is done after every gate.
 
     Example:
         ::
@@ -79,8 +72,8 @@ class EntanglementEntropy(Callback):
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
     _chars = EINSUM_CHARS
 
-    def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
-        super(EntanglementEntropy, self).__init__(steps)
+    def __init__(self, partition: Optional[List[int]] = None):
+        super(EntanglementEntropy, self).__init__()
         self.partition = partition
         self.rho_dim = None
         self._traceout = None
