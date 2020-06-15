@@ -33,9 +33,12 @@ evaluation performance, e.g.:
 .. code-block:: python
 
     import numpy as np
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    # (slower than default "custom" backend)
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo.models import Circuit
-    # import native tensorflow gates (slower than default gates)
-    from qibo.tensorflow import gates
+    from qibo import gates
 
     c = Circuit(2)
     c.add(gates.X(0))
@@ -48,7 +51,9 @@ evaluation performance, e.g.:
         c(init_state)
 
 Note that compiling is only supported when native tensorflow gates are used.
-These are much slower than the default gates which use custom tensorflow operators.
+This happens when the calculation backend is switched to ``"matmuleinsum"``
+or ``"defaulteinsum"``. This backend is much slower than the default ``"custom"``
+backend which uses custom tensorflow operators to apply gates.
 
 It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
@@ -344,10 +349,10 @@ The user can choose one of the following methods for minimization:
     - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
     - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
-Note that if ``"sgd"`` is used then the user has to use native Tensorflow gates
-because custom operators currently do not support automatic differentiation.
-These gates can be accessed using ``from qibo.tensorflow import gates`` instead
-of ``from qibo import gates``.
+Note that if ``"sgd"`` is used then the user has to use a backend based on
+tensorflow primitives and not the default custom backend because custom operators
+currently do not support automatic differentiation. To switch the backend one
+can do ``qibo.set_backend("matmuleinsum")``.
 Check the next example on automatic differentiation for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
@@ -391,8 +396,11 @@ output matches a target state, using the fidelity as figure of merit.
 .. code-block:: python
 
     import tensorflow as tf
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo.models import Circuit
-    from qibo.tensorflow import gates
+    from qibo import gates
 
     nepochs = 100
     params = tf.Variable(np.zeros(2), dtype=tf.float64)
@@ -412,16 +420,14 @@ output matches a target state, using the fidelity as figure of merit.
 
 
 Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
-the calculated gradients will be ``None``. Also, native Tensorflow gates have to
-be used because currently our custom operators do not support automatic differentiation.
-These gates can be accessed using ``from qibo.tensorflow import gates`` instead
-of ``from qibo import gates``.
+the calculated gradients will be ``None``. Also, a backend that uses tensorflow
+primitives gates (either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be
+used because currently the default ``"custom"`` backend does not support automatic
+differentiation.
 
 The optimization procedure can also be compiled as follows:
 
 .. code-block:: python
-
-    import tensorflow as tf
 
     nepochs = 100
     params = tf.Variable(np.zeros(2), dtype=tf.float64)
@@ -432,8 +438,8 @@ The optimization procedure can also be compiled as follows:
     def optimize(params):
         with tf.GradientTape() as tape:
             c = Circuit(2)
-            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
-            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            c.add(RX(0, params[0]))
+            c.add(RY(0, params[1]))
             fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
 
