@@ -155,7 +155,9 @@ propagates through the circuit. Example of such quantity is the entanglement
 entropy, which is currently the only callback implemented in
 :class:`qibo.tensorflow.callbacks.EntanglementEntropy`.
 The user can create custom callbacks by inheriting the
-:class:`qibo.tensorflow.callbacks.Callback` class.
+:class:`qibo.tensorflow.callbacks.Callback` class. The point each callback is
+calculated inside the circuit is defined by adding a :class:`qibo.base.gates.CallbackGate`.
+This can be added similarly to a standard gate and does not affect the state vector.
 
 .. automodule:: qibo.tensorflow.callbacks
    :members:

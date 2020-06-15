@@ -64,11 +64,15 @@ class EntanglementEntropy(Callback):
             entropy = callbacks.EntanglementEntropy([0])
             # initialize circuit with 2 qubits and add gates
             c = models.Circuit(2)
+            # add callback gates between normal gates
+            c.add(gates.CallbackGate(entropy))
             c.add(gates.H(0))
+            c.add(gates.CallbackGate(entropy))
             c.add(gates.CNOT(0, 1))
-            # execute the circuit using the callback
-            final_state = c(callback=entropy)
-            print(entropy[0])
+            c.add(gates.CallbackGate(entropy))
+            # execute the circuit
+            final_state = c()
+            print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
     """
