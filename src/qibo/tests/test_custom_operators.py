@@ -367,4 +367,4 @@ def test_transpose_state(nqubits, ndevices):
                                                qubit_order)
         else:
             new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
-        np.testing.assert_allclose(target_state, new_state.numpy())
+            np.testing.assert_allclose(target_state, new_state.numpy())
