@@ -3,8 +3,6 @@ Testing tensorflow callbacks.
 """
 import pytest
 import numpy as np
-import qibo
-qibo.set_backend("custom")
 from qibo.models import Circuit
 from qibo import gates, callbacks
 
