@@ -31,13 +31,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return state
 
     def compile(self):
-        """Compiles the circuit as a Tensorflow graph.
-
-        Args:
-            callback: A Callback to calculate during circuit execution.
-                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
-                User can give a single callback or list of callbacks here.
-        """
+        """Compiles the circuit as a Tensorflow graph."""
         from qibo import gates
         if self._compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
@@ -95,12 +89,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
             nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
                 If ``nshots`` None the measurement gates will be ignored.
-            callback: A Callback to calculate during circuit execution.
-                See :class:`qibo.tensorflow.callbacks.Callback` for more details.
-                User can give a single callback or list of callbacks here.
-                Note that if the Circuit is compiled then all callbacks should
-                be passed when ``compile`` is called, not during execution.
-                Otherwise an ``RuntimeError`` will be raised.
 
         Returns:
             If ``nshots`` is given and the circuit contains measurements
@@ -186,14 +174,3 @@ class TensorflowCircuit(circuit.BaseCircuit):
         zeros = tf.zeros(2 ** self.nqubits, dtype=DTYPES.get('DTYPECPX'))
         initial_state = op.initial_state(zeros)
         return initial_state
-
-    def _add_callbacks(self):
-        """Adds callbacks in the circuit."""
-        n = len(self.callbacks)
-        if isinstance(callback, list):
-            self.callbacks += callback
-        elif isinstance(callback, callbacks.Callback):
-            self.callbacks.append(callback)
-        # Set number of qubits in new callbacks
-        for cb in self.callbacks[n:]:
-            cb.nqubits = self.nqubits

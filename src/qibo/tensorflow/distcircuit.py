@@ -6,7 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPES
 from qibo.base import gates
-from qibo.tensorflow import circuit, measurements, callbacks
+from qibo.tensorflow import circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -319,7 +319,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
-    def compile(self, callback: Optional[callbacks.Callback] = None):
+    def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
@@ -353,29 +353,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None,
-                callback: Optional[callbacks.Callback] = None
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
-
-        Currently callbacks are not supported.
-        """
+        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
         if not self.device_queues.global_qubits_lists:
             self.set_gates()
         self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
-        if callback is not None:
-            raise NotImplementedError("Callbacks are not implemented for "
-                                      "distributed circuits.")
-
         for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
             if group > 0:
                 self._swap(global_qubits)
             self._joblib_execute(group)
-
-        # Append callback results to callbacks
-        #for callback, result in zip(self.callbacks, callback_results):
-        #    callback.append(result)
 
         state = self.final_state
         if self.measurement_gate is None or nshots is None:

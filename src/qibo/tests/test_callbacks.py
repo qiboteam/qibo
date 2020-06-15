@@ -159,13 +159,3 @@ def test_entropy_bad_indexing():
         entropy[1]
     with pytest.raises(IndexError):
         entropy["a"]
-
-
-@pytest.mark.skip
-def test_entropy_distributed_not_implemented():
-    """Check that adding callback in distributed circuit raises ``NotImplementedError``."""
-    entropy = callbacks.EntanglementEntropy([0, 1, 2])
-    c = Circuit(6, {"/GPU:0": 2})
-    c.add([gates.H(i) for i in range(6)])
-    with pytest.raises(NotImplementedError):
-        final_state = c(callback=entropy)
