@@ -360,5 +360,11 @@ def test_transpose_state(nqubits, ndevices):
         shape = (ndevices, int(state.shape[0]) // ndevices)
         state = tf.reshape(state, shape)
         pieces = [state[i] for i in range(ndevices)]
-        new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
+        if tf.config.list_physical_devices("GPU"):
+            error = tensorflow.python.framework.errors_impl.UnimplementedError
+            with pytest.raises(error):
+                new_state = op.transpose_state(pieces, new_state, nqubits,
+                                               qubit_order)
+        else:
+            new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
         np.testing.assert_allclose(target_state, new_state.numpy())
