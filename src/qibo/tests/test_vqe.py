@@ -4,6 +4,7 @@ Testing Variational Quantum Eigensolver.
 import pathlib
 import numpy as np
 import pytest
+from qibo import gates
 from qibo.models import Circuit, VQE
 from qibo.hamiltonians import XXZ
 
@@ -39,10 +40,11 @@ test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
+    import qibo
     if method == "sgd" or compile:
-        from qibo.tensorflow import gates
+        qibo.set_backend("matmuleinsum")
     else:
-        from qibo.tensorflow import cgates as gates
+        qibo.set_backend("custom")
 
     nqubits = 6
     layers  = 4
@@ -79,7 +81,6 @@ def test_vqe(method, options, compile, filename):
 
 def test_vqe_compile_error():
     """Check that ``RuntimeError`` is raised when compiling custom gates."""
-    from qibo import gates
     nqubits = 6
     def ansatz(theta):
         c = Circuit(nqubits)

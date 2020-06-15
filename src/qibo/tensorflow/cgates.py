@@ -504,4 +504,22 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         return tf.convert_to_tensor(_state, dtype=state.dtype)
 
 
-# TODO: Add channels once density matrices are supported by custom operators
+# Density matrices are not supported by custom operators yet so channels fall
+# back to native tensorflow gates
+class TensorflowChannel(TensorflowGate):
+
+    def __new__(cls, *args, **kwargs):
+        if BACKEND.get('GATES') == 'custom':
+            raise NotImplementedError("Density matrices are not supported by "
+                                      "custom operator gates.")
+        else:
+            from qibo.tensorflow import gates
+            return getattr(gates, cls.__name__)(*args, **kwargs)
+
+
+class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
+    pass
+
+
+class GeneralChannel(TensorflowChannel, base_gates.NoiseChannel):
+    pass
