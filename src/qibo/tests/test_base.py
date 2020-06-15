@@ -215,3 +215,29 @@ def test_precision_dictionary(precision):
         assert DTYPES.get("DTYPECPX") == tf.complex64
     else:
         assert DTYPES.get("DTYPECPX") == tf.complex128
+
+
+@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
+def test_set_backend(backend):
+    import qibo
+    qibo.set_backend(backend)
+    from qibo import gates
+    if backend == "custom":
+        from qibo.tensorflow import cgates as custom_gates
+        assert isinstance(gates.H(0), custom_gates.TensorflowGate)
+    else:
+        from qibo.tensorflow import gates as native_gates
+        from qibo.tensorflow import einsum
+        einsums = {"defaulteinsum": einsum.DefaultEinsum,
+                   "matmuleinsum": einsum.MatmulEinsum}
+        h = gates.H(0)
+        assert isinstance(h, native_gates.TensorflowGate)
+        assert isinstance(h.einsum, einsums[backend])
+
+
+def test_config_set_errors():
+    import qibo
+    with pytest.raises(RuntimeError):
+        qibo.set_precision('test')
+    with pytest.raises(RuntimeError):
+        qibo.set_precision('test')

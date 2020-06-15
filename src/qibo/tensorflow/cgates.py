@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -75,6 +75,13 @@ class MatrixGate(TensorflowGate):
 
 
 class H(MatrixGate, base_gates.H):
+
+    def __new__(cls, q):
+        if BACKEND.get('GATES') == 'custom':
+            return super(H, cls).__new__(cls)
+        else:
+            from qibo.tensorflow import gates
+            return gates.H(q)
 
     def __init__(self, q):
         base_gates.H.__init__(self, q)

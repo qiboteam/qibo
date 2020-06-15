@@ -5,7 +5,8 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
-from qibo.config import einsum, matrices, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import matrices
+from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -17,14 +18,14 @@ class TensorflowGate(base_gates.Gate):
             This is (2, 2) for 1-qubit gates and (4, 4) for 2-qubit gates.
         qubits: List with the qubits that the gate is applied to.
     """
-    einsum = einsum
-
     def __init__(self):
         self.calculation_cache = None
         # For `controlled_by` gates (see `cache.ControlCache` for more details)
         self.control_cache = None
         # Gate matrices
         self.matrix = None
+        # Einsum backend
+        self.einsum = BACKEND.get('EINSUM')
 
     def _construct_matrix(self):
         self.matrix = self.construct_unitary()
