@@ -244,4 +244,4 @@ def test_config_set_errors():
     with pytest.raises(RuntimeError):
         qibo.set_precision('test')
     with pytest.raises(RuntimeError):
-        qibo.set_precision('test')
+        qibo.set_backend('test')
