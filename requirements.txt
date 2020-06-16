@@ -1,0 +1,7 @@
+# Runtime requirements for qibo
+
+numpy
+tensorflow>=2.1
+scipy
+cma
+joblib
