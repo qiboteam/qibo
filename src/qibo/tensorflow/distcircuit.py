@@ -6,7 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPES
 from qibo.base import gates
-from qibo.tensorflow import circuit, measurements
+from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -253,7 +253,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _add(self, gate: gates.Gate):
         """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
 
-        We do an additional check that there are sufficient qubits to use as global.
+        We do additional checks that:
+          * there are sufficient qubits to use as global,
+          * only supported callbacks (EntanglementEntropy) are added.
         """
         if (self.nqubits - len(gate.target_qubits) < self.nglobal and
             not isinstance(gate, gates.M)):
@@ -288,34 +290,60 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             # Loop through the gate queue to define gate groups and
             # global qubit lists
             gate = next(queue)
+            # special gates are gates without target qubits
+            # (eg. ``CallbackGate`` or ``Flatten``)
+            special_gates = []
             while True:
                 target_qubits = set(gate.target_qubits)
-                global_qubits -= target_qubits
-                while len(global_qubits) > self.nglobal:
+                if not target_qubits:
+                    special_gates.append(gate)
+                else:
+                    global_qubits -= target_qubits
+                while len(global_qubits) > self.nglobal and not special_gates:
                     queues[-1].append(gate)
                     gate = next(queue)
                     target_qubits = set(gate.target_qubits)
-                    global_qubits -= target_qubits
+                    if not target_qubits:
+                        special_gates.append(gate)
+                    else:
+                        global_qubits -= target_qubits
 
                 if len(global_qubits) == self.nglobal:
                     queues[-1].append(gate)
-                    gate = next(queue)
-                    while not set(gate.target_qubits) & global_qubits:
-                        queues[-1].append(gate)
+                    if not special_gates:
                         gate = next(queue)
+                        target_qubits = set(gate.target_qubits)
+                        if not target_qubits:
+                            special_gates.append(gate)
+                        while not target_qubits & global_qubits and not special_gates:
+                            queues[-1].append(gate)
+                            gate = next(queue)
+                            target_qubits = set(gate.target_qubits)
+                            if not target_qubits:
+                                special_gates.append(gate)
+
+                elif len(global_qubits) > self.nglobal:
+                    global_qubits = list(sorted(global_qubits))[:self.nglobal]
+
                 else:
                     # must be len(global_qubits) < self.nglobal
                     free_qubits = list(sorted(target_qubits))
                     global_qubits |= set(free_qubits[self.nglobal - len(global_qubits):])
 
-                queues.append([])
                 self.device_queues.append(global_qubits)
+                if special_gates:
+                    self.device_queues.append([])
+                    queues.append([special_gates.pop()])
+                queues.append([])
                 global_qubits = set(all_qubits)
 
         except StopIteration:
             if len(global_qubits) > self.nglobal:
                 global_qubits = list(sorted(global_qubits))[:self.nglobal]
             self.device_queues.append(global_qubits)
+            if special_gates:
+                self.device_queues.append([])
+                queues.append([special_gates.pop()])
 
         self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
