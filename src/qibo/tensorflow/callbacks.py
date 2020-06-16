@@ -50,6 +50,10 @@ class Callback:
 class PartialTrace(Callback):
     """Calculates reduced density matrix of a state.
 
+    This is used by the :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+    callback. It can also be used as a standalone callback in order to access
+    a reduced density matrix in the middle of a circuit execution.
+
     Args:
         partition (list): List with qubit ids that defines the first subsystem.
             If `partition` is not given then the first subsystem is the first
