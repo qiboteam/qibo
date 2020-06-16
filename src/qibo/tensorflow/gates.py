@@ -415,32 +415,6 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return state
 
 
-class Flatten(TensorflowGate, base_gates.Flatten):
-
-    def __init__(self, coefficients):
-        base_gates.Flatten.__init__(self, coefficients)
-        TensorflowGate.__init__(self)
-
-    def _construct_matrix(self):
-        pass
-
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor:
-        if self._nqubits is None:
-            if is_density_matrix:
-                self.nqubits = len(tuple(state.shape)) // 2
-            else:
-                self.nqubits = len(tuple(state.shape))
-
-        if is_density_matrix:
-            shape = 2 * self.nqubits * (2,)
-        else:
-            shape = self.nqubits * (2,)
-
-        _state = np.array(self.coefficients).reshape(shape)
-        return tf.convert_to_tensor(_state, dtype=DTYPES.get("DTYPECPX"))
-
-
 class TensorflowChannel(TensorflowGate):
     """Base Tensorflow channels.
 

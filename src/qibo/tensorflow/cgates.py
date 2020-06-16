@@ -493,15 +493,26 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
 class Flatten(TensorflowGate, base_gates.Flatten):
 
+    def __new__(cls, *args, **kwargs):
+        return super(TensorflowGate, cls).__new__(cls)
+
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
         TensorflowGate.__init__(self)
 
+    def _construct_matrix(self):
+        pass
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
-        TensorflowGate.__call__(self, state, is_density_matrix)
-        _state = np.array(self.coefficients).reshape(state.shape)
-        return tf.convert_to_tensor(_state, dtype=state.dtype)
+        shape = tuple(state.shape)
+        if self._nqubits is None:
+            if is_density_matrix:
+                self.nqubits = len(shape) // 2
+            else:
+                self.nqubits = len(shape)
+        _state = np.array(self.coefficients).reshape(shape)
+        return tf.convert_to_tensor(_state, dtype=DTYPES.get("DTYPECPX"))
 
 
 class CallbackGate(TensorflowGate, base_gates.CallbackGate):
