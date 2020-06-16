@@ -97,3 +97,9 @@ autodoc_member_order = "bysource"
 def setup(app):
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
+
+html_logo = "logo.png"
+
+html_theme_options = {
+    'logo_only': True,
+}
