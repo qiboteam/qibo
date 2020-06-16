@@ -41,7 +41,9 @@ class DeviceQueues:
     def __init__(self, calc_devices: Dict[str, int]):
         self.ndevices = sum(calc_devices.values())
         self.nglobal = int(np.log2(self.ndevices))
+
         self.queues = [[] for _ in range(self.ndevices)]
+        self.special_queue = []
 
         self.global_qubits_lists = []
         self.global_qubits_sets = []
@@ -118,28 +120,34 @@ class DeviceQueues:
         if len(queues) != len(self):
             raise ValueError
         for iq, queue in enumerate(queues):
-            for i in range(self.ndevices):
-                self.queues[i].append([])
-            for gate in queue:
-                for device, ids in self.device_to_ids.items():
-                    calc_gate = self._create_reduced_gate(iq, gate)
-                    # Gate matrix should be constructed in the calculation
-                    # device otherwise device parallelization will break
-                    with tf.device(device):
-                        calc_gate.nqubits = nlocal
-                    for i in ids:
-                        flag = True
-                        # If there are control qubits that are global then
-                        # the gate should not be applied by all devices
-                        for control in (set(gate.control_qubits) &
-                                        self.global_qubits_sets[iq]):
-                            ic = self.global_qubits_lists[iq].index(control)
-                            ic = self.nglobal - ic - 1
-                            flag = bool((i // (2 ** ic)) % 2)
-                            if not flag:
-                                break
-                        if flag:
-                            self.queues[i][-1].append(calc_gate)
+            if not self.global_qubits_lists[iq]:
+                assert len(queue) == 1
+                gate = queue[0]
+                gate.nqubits = self.nglobal + nlocal
+                self.special_queue.append(gate)
+            else:
+                for i in range(self.ndevices):
+                    self.queues[i].append([])
+                for gate in queue:
+                    for device, ids in self.device_to_ids.items():
+                        calc_gate = self._create_reduced_gate(iq, gate)
+                        # Gate matrix should be constructed in the calculation
+                        # device otherwise device parallelization will break
+                        with tf.device(device):
+                            calc_gate.nqubits = nlocal
+                        for i in ids:
+                            flag = True
+                            # If there are control qubits that are global then
+                            # the gate should not be applied by all devices
+                            for control in (set(gate.control_qubits) &
+                                            self.global_qubits_sets[iq]):
+                                ic = self.global_qubits_lists[iq].index(control)
+                                ic = self.nglobal - ic - 1
+                                flag = bool((i // (2 ** ic)) % 2)
+                                if not flag:
+                                    break
+                            if flag:
+                                self.queues[i][-1].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -388,10 +396,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
-        for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
-            if group > 0:
-                self._swap(global_qubits)
-            self._joblib_execute(group)
+        ispecial = 0
+        for iall, global_qubits in enumerate(self.device_queues.global_qubits_lists):
+            if not global_qubits: # special gate
+                state = self._merge()
+                self.device_queues.special_queue[ispecial](state)
+                ispecial += 1
+            else:
+                if iall > 0:
+                    self._swap(global_qubits)
+                self._joblib_execute(iall - ispecial)
 
         state = self.final_state
         if self.measurement_gate is None or nshots is None:
