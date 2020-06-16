@@ -9,7 +9,7 @@ import sys
 
 PACKAGE = "qibo"
 
-
+# Returns the qibo version
 def get_version():
     """ Gets the version from the package's __init__ file
     if there is some problem, let it happily fail """
@@ -21,7 +21,7 @@ def get_version():
         if mo:
             return mo.group(1)
 
-
+# Custom compilation step
 class Build(_build_py):
     def run(self):
         commands = [
@@ -33,6 +33,7 @@ class Build(_build_py):
         _build_py.run(self)
 
 
+# Register wheel with binary version
 class BinaryDistribution(Distribution):
   """This class is needed in order to create OS specific wheels."""
 
@@ -43,11 +44,16 @@ class BinaryDistribution(Distribution):
     return False
 
 
+# Read in requirements
+requirements = open('requirements.txt').readlines()
+requirements = [r.strip() for r in requirements]
+
+
 setup(
     name="qibo",
     version=get_version(),
     description="Quantum computing framework",
-    author="TII-Qilimanjaro team",
+    author="Quantum-TII team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
     packages=find_packages("src"),
@@ -58,17 +64,15 @@ setup(
     zip_safe=False,
     distclass=BinaryDistribution,
     classifiers=[
-        "Operating System :: Unix",
-        "Programming Language :: Python",
         "Programming Language :: Python :: 3",
-        "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    setup_requires=["tensorflow>=2.1"],
-    install_requires=["numpy", "tensorflow>=2.1", "scipy", "cma"],
+    setup_requires=requirements,
+    install_requires=requirements,
     extras_require={
-        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"]
+        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"],
+        "tests": ["cirq"],
     },
-    python_requires=">=3.6",
+    python_requires=">=3.6.0",
     long_description="See readthedocs webpage with the documentation",
 )
