@@ -11,14 +11,9 @@ class Callback:
     `__call__` method.
 
     Results of a callback can be accessed by indexing the corresponding object.
-
-    Args:
-        steps (int): Every how many gates to perform the callback calculation.
-            Defaults at 1 for which the calculation is done after every gate.
     """
 
-    def __init__(self, steps: int = 1):
-        self.steps = steps
+    def __init__(self):
         self._results = []
         self._nqubits = None
 
@@ -48,6 +43,9 @@ class Callback:
     def append(self, result: tf.Tensor):
         self._results.append(result)
 
+    def extend(self, result: tf.Tensor):
+        self._results.extend(result)
+
 
 class EntanglementEntropy(Callback):
     """Von Neumann entanglement entropy callback.
@@ -57,8 +55,6 @@ class EntanglementEntropy(Callback):
             for the entropy calculation.
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
-        steps (int): Every how many gates to perform the entropy calculation.
-            Defaults at 1 for which the calculation is done after every gate.
 
     Example:
         ::
@@ -68,19 +64,23 @@ class EntanglementEntropy(Callback):
             entropy = callbacks.EntanglementEntropy([0])
             # initialize circuit with 2 qubits and add gates
             c = models.Circuit(2)
+            # add callback gates between normal gates
+            c.add(gates.CallbackGate(entropy))
             c.add(gates.H(0))
+            c.add(gates.CallbackGate(entropy))
             c.add(gates.CNOT(0, 1))
-            # execute the circuit using the callback
-            final_state = c(callback=entropy)
-            print(entropy[0])
+            c.add(gates.CallbackGate(entropy))
+            # execute the circuit
+            final_state = c()
+            print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
     _chars = EINSUM_CHARS
 
-    def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
-        super(EntanglementEntropy, self).__init__(steps)
+    def __init__(self, partition: Optional[List[int]] = None):
+        super(EntanglementEntropy, self).__init__()
         self.partition = partition
         self.rho_dim = None
         self._traceout = None

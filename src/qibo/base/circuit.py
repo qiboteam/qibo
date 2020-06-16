@@ -130,7 +130,10 @@ class BaseCircuit(object):
         """Returns the module of the gates contained in the circuit queue."""
         if self.queue:
             import importlib
-            module_str = self.queue[0].__module__
+            for gate in self.queue:
+                if not isinstance(gate, gates.CallbackGate):
+                    break
+            module_str = gate.__module__
             module = importlib.import_module(module_str)
         else:
             from qibo import gates as module

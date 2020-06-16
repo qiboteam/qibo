@@ -258,23 +258,26 @@ Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
 implemented easily using :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
-as follows:
+and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 
 .. code-block::  python
 
     from qibo import models, gates, callbacks
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
     c.add(gates.H(0)) # state is |+0> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
     c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
     # create entropy callback where qubit 0 is the first subsystem
     entropy = callbacks.EntanglementEntropy([0])
     # execute the circuit using the callback
-    final_state = c(callback=entropy)
+    final_state = c()
 
 The results can be accessed using indexing on the callback objects. In this
-example ``entropy[0]`` will return ``tf.Tensor([0, 0, 1])`` which are the
+example ``entropy[:]`` will return ``tf.Tensor([0, 0, 1])`` which are the
 values of entropy after every gate in the circuit.
 
 The same callback object can be used in a second execution of this or a different
@@ -283,18 +286,13 @@ circuit. For example
 .. code-block::  python
 
     # c is the same circuit as above
-    entropy = callbacks.EntanglementEntropy([0])
-    # execute the circuit using the callback
-    final_state = c(callback=entropy)
-    # execute the circuit again using the same callback
-    final_state = c(callback=entropy)
+    # execute the circuit
+    final_state = c()
+    # execute the circuit a second time
+    final_state = c()
 
-    # print result of first execution
-    print(entropy[0]) # tf.Tensor([0, 0, 1])
-    # print result of second execution
-    print(entropy[1]) # tf.Tensor([0, 0, 1])
-    # print result of all executions
-    print(entropy[:]) # tf.Tensor([[0, 0, 1], [0, 0, 1]])
+    # print result
+    print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
 
 The callback for entanglement entropy can also be used on state vectors directly.
 For example

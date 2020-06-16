@@ -688,3 +688,23 @@ class Flatten(Gate):
         self.coefficients = coefficients
         import math
         self.target_qubits = tuple(range(int(math.log2(len(coefficients)))))
+
+
+class CallbackGate(Gate):
+    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
+
+    This gate performs the callback calulation without affecting the state vector.
+
+    Args:
+        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
+    """
+
+    def __init__(self, callback: "Callback"):
+        super(CallbackGate, self).__init__()
+        self.name = callback.__class__.__name__
+        self.callback = callback
+
+    @Gate.nqubits.setter
+    def nqubits(self, n: int):
+        Gate.nqubits.fset(self, n)
+        self.callback.nqubits = n
