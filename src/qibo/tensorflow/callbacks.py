@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPES, EINSUM_CHARS, EIGVAL_CUTOFF
+from qibo.config import DTYPES, EIGVAL_CUTOFF
 from typing import List, Optional, Union
 
 
@@ -47,7 +47,72 @@ class Callback:
         self._results.extend(result)
 
 
-class EntanglementEntropy(Callback):
+class PartialTrace(Callback):
+    """Calculates reduced density matrix of a state.
+
+    Args:
+        partition (list): List with qubit ids that defines the first subsystem.
+            If `partition` is not given then the first subsystem is the first
+            half of the qubits.
+    """
+
+    def __init__(self, partition: Optional[List[int]] = None):
+        super(PartialTrace, self).__init__()
+        self.partition = partition
+        self.rho_dim = None
+        self._traceout = None
+
+    @property
+    def nqubits(self) -> int:
+        return self._nqubits
+
+    @nqubits.setter
+    def nqubits(self, n: int):
+        self._nqubits = n
+        if self.partition is None:
+            self.partition = list(range(n // 2 + n % 2))
+
+        if len(self.partition) < n // 2:
+            # Revert parition so that we diagonalize a smaller matrix
+            self.partition = [i for i in range(n)
+                              if i not in set(self.partition)]
+        self.rho_dim = 2 ** (n - len(self.partition))
+        self._traceout = None
+
+    @property
+    def _traceout_str(self):
+        """Einsum string used to trace out when state is density matrix."""
+        if self._traceout is None:
+            from qibo.tensorflow.einsum import DefaultEinsum
+            partition = set(self.partition)
+            self._traceout = DefaultEinsum.partialtrace_str(partition, self.nqubits)
+        return self._traceout
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        """Calculates reduced density matrix.
+
+        Traces out all qubits contained in `self.partition`.
+        """
+        # Cast state in the proper shape
+        if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
+            raise TypeError("State of unknown type {} was given in callback "
+                            "calculation.".format(type(state)))
+        if self._nqubits is None:
+            self.nqubits = int(np.log2(tuple(state.shape)[0]))
+
+        shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
+        state = tf.reshape(state, shape)
+
+        if is_density_matrix:
+            rho = tf.einsum(self._traceout_str, state)
+        else:
+            rho = tf.tensordot(state, tf.math.conj(state),
+                               axes=[self.partition, self.partition])
+        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
+
+
+class EntanglementEntropy(PartialTrace):
     """Von Neumann entanglement entropy callback.
 
     Args:
@@ -77,7 +142,6 @@ class EntanglementEntropy(Callback):
             # after every gate in the calculation.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
-    _chars = EINSUM_CHARS
 
     def __init__(self, partition: Optional[List[int]] = None):
         super(EntanglementEntropy, self).__init__()
@@ -85,49 +149,9 @@ class EntanglementEntropy(Callback):
         self.rho_dim = None
         self._traceout = None
 
-    @property
-    def nqubits(self) -> int:
-        return self._nqubits
-
-    @nqubits.setter
-    def nqubits(self, n: int):
-        self._nqubits = n
-        if self.partition is None:
-            self.partition = list(range(n // 2 + n % 2))
-
-        if len(self.partition) < n // 2:
-            # Revert parition so that we diagonalize a smaller matrix
-            self.partition = [i for i in range(n)
-                              if i not in set(self.partition)]
-        self.rho_dim = 2 ** (n - len(self.partition))
-        self._traceout = None
-
-    @property
-    def _traceout_str(self):
-        """Einsum string used to trace out when state is density matrix."""
-        if self._traceout is None:
-            from qibo.tensorflow.einsum import DefaultEinsum
-            partition = set(self.partition)
-            self._traceout = DefaultEinsum.partialtrace_str(partition, self.nqubits)
-
-        return self._traceout
-
-    def _partial_trace(self, state: tf.Tensor, is_density_matrix: bool = False
-                       ) -> tf.Tensor:
-        """Calculates reduced density matrix.
-
-        Traces out all qubits contained in `self.partition`.
-        """
-        if is_density_matrix:
-            rho = tf.einsum(self._traceout_str, state)
-        else:
-            rho = tf.tensordot(state, tf.math.conj(state),
-                               axes=[self.partition, self.partition])
-        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
-
     @classmethod
     def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
-      """Calculates entropy of a density matrix."""
+      """Calculates entropy by diagonalizing the density matrix."""
       # Diagonalize
       eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
       # Treating zero and negative eigenvalues
@@ -137,17 +161,7 @@ class EntanglementEntropy(Callback):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
-        # Cast state in the proper shape
-        if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
-            raise TypeError("State of unknown type {} was given in callback "
-                            "calculation.".format(type(state)))
-        if self._nqubits is None:
-            self.nqubits = int(np.log2(tuple(state.shape)[0]))
-
-        shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
-        state = tf.reshape(state, shape)
-
         # Construct reduced density matrix
-        rho = self._partial_trace(state, is_density_matrix)
+        rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
         return self._entropy(rho)
