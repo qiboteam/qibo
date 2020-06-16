@@ -245,3 +245,4 @@ def test_config_set_errors():
         qibo.set_precision('test')
     with pytest.raises(RuntimeError):
         qibo.set_backend('test')
+    qibo.set_backend("custom")

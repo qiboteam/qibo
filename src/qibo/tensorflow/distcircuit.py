@@ -36,6 +36,9 @@ class DeviceQueues:
         of each gate group in a list of lists.
         For example ``queues[2][1]`` gives the queue (list) of the 1st gate group
         to be run in the 2nd device.
+    * ``special_queue``: List with special gates than run on the full state vector
+        on ``memory_device``. Special gates have no target qubits and currently
+        are the ``CallbackGate`` and ``Flatten``.
     """
 
     def __init__(self, calc_devices: Dict[str, int]):
@@ -374,6 +377,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     #            i += 1
 
     def _joblib_execute(self, group: int):
+        """Executes gates in ``accelerators`` in parallel."""
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
@@ -388,6 +392,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
              for device, ids in self.device_queues.device_to_ids.items())
 
     def _special_gate_execute(self, ispecial: int):
+        """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
+
+        These gates require the full state vector (cannot be executed in the state pieces).
+        """
         state = self._merge()
         gate = self.device_queues.special_queue[ispecial]
         if isinstance(gate, gates.CallbackGate):
