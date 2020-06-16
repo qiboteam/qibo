@@ -342,6 +342,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 if special_gates:
                     self.device_queues.append([])
                     queues.append([special_gates.pop()])
+                    gate = next(queue)
+
                 queues.append([])
                 global_qubits = set(all_qubits)
 
@@ -386,6 +388,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pool(joblib.delayed(_device_job)(ids, device)
              for device, ids in self.device_queues.device_to_ids.items())
 
+    def _special_gate_execute(self, ispecial: int):
+        state = self._merge()
+        gate = self.device_queues.special_queue[ispecial]
+        if isinstance(gate, gates.CallbackGate):
+            gate(state)
+        else:
+            state = gate(state)
+            self._split(state)
+
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None,
@@ -399,8 +410,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         ispecial = 0
         for iall, global_qubits in enumerate(self.device_queues.global_qubits_lists):
             if not global_qubits: # special gate
-                state = self._merge()
-                self.device_queues.special_queue[ispecial](state)
+                self._special_gate_execute(ispecial)
                 ispecial += 1
             else:
                 if iall > 0:
