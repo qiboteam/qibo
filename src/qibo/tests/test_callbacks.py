@@ -85,10 +85,11 @@ def test_entropy_numerical():
     np.testing.assert_allclose(result, target)
 
 
-def test_entropy_in_circuit():
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_entropy_in_circuit(accelerators):
     """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0])
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))

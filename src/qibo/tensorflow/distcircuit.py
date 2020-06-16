@@ -118,7 +118,10 @@ class DeviceQueues:
             nlocal: Number of local qubits in the circuit (``= nqubits - nglobal``).
         """
         if len(queues) != len(self):
-            raise ValueError
+            print(queues)
+            print(self.global_qubits_lists)
+            raise ValueError("Global qubits lists are {} while given queues "
+                             "are {}.".format(len(self), len(queues)))
         for iq, queue in enumerate(queues):
             if not self.global_qubits_lists[iq]:
                 assert len(queue) == 1
@@ -261,9 +264,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _add(self, gate: gates.Gate):
         """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
 
-        We do additional checks that:
-          * there are sufficient qubits to use as global,
-          * only supported callbacks (EntanglementEntropy) are added.
+        Also checks that there are sufficient qubits to use as global.
         """
         if (self.nqubits - len(gate.target_qubits) < self.nglobal and
             not isinstance(gate, gates.M)):
@@ -350,10 +351,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         except StopIteration:
             if len(global_qubits) > self.nglobal:
                 global_qubits = list(sorted(global_qubits))[:self.nglobal]
-            self.device_queues.append(global_qubits)
-            if special_gates:
-                self.device_queues.append([])
-                queues.append([special_gates.pop()])
+            if target_qubits:
+                self.device_queues.append(global_qubits)
 
         self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
