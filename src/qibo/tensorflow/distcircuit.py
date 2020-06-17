@@ -269,8 +269,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if (self.nqubits - len(gate.target_qubits) < self.nglobal and
-            not isinstance(gate, gates.M)):
+        if isinstance(gate, gates.VariationalLayer):
+            gate._prepare()
+        elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
+              not isinstance(gate, gates.M)):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)

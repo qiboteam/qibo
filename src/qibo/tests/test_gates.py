@@ -693,11 +693,9 @@ def test_construct_unitary(gates):
         gates.fSim.construct_unitary()
 
 
-#@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("nqubits", [6])
-#@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
-def test_variational_one_layer(backend, nqubits):
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
+def test_variational_one_layer(backend, accelerators, nqubits):
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
@@ -705,17 +703,18 @@ def test_variational_one_layer(backend, nqubits):
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
 
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     thetas = {i: theta[i] for i in range(nqubits)}
     c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas))
+    print(c.queue)
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
-def test_variational_two_layers(backend, nqubits):
+def test_variational_two_layers(backend, accelerators, nqubits):
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random(2 * nqubits)
     theta_iter = iter(theta)
@@ -727,7 +726,7 @@ def test_variational_two_layers(backend, nqubits):
     c.add(gates.CZ(0, nqubits - 1))
     target_state = c().numpy()
 
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     theta = theta.reshape((2, nqubits))
     pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
@@ -739,7 +738,7 @@ def test_variational_two_layers(backend, nqubits):
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     theta = theta.reshape((2, nqubits))
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     thetas0 = {i: theta[0, i] for i in range(nqubits)}
