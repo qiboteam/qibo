@@ -129,10 +129,9 @@ def main(nqubits_list: List[int],
 
     # Set circuit type
     print("Running {} benchmarks.".format(type))
-    create_circuit_func = benchmark_models.circuits[type]
 
     for nqubits in nqubits_list:
-        kwargs = {"nqubits": nqubits}
+        kwargs = {"nqubits": nqubits, "circuit_type": type}
         params = {k: v for k, v in params.items() if v is not None}
         if params: kwargs["params"] = params
         if nlayers is not None: kwargs["nlayers"] = nlayers
@@ -142,7 +141,7 @@ def main(nqubits_list: List[int],
             kwargs["memory_device"] = device
 
         start_time = time.time()
-        circuit = create_circuit_func(**kwargs)
+        circuit = benchmark_models.CircuitFactory(**kwargs)
         logs["creation_time"].append(time.time() - start_time)
 
         try:
@@ -150,8 +149,9 @@ def main(nqubits_list: List[int],
         except AttributeError:
             actual_backend = "Custom"
 
-        print("\nBenchmark:", type)
-        print(kwargs)
+        #print("\nBenchmark:", type)
+        #print(kwargs)
+        print("\nBenchmark parameters:", kwargs)          
         print("Actual backend:", actual_backend)
         with tf.device(device):
             if compile:
