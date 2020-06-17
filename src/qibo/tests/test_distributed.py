@@ -160,6 +160,24 @@ def test_simple_execution(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
+@pytest.mark.parametrize("ndevices", [2])
+def test_execution_special_gate(ndevices):
+    qibo.set_backend("custom")
+    c = models.Circuit(6)
+    initial_state = random_state(c.nqubits)
+    c.add(gates.Flatten(np.copy(initial_state)))
+    c.add((gates.H(i) for i in range(6)))
+
+    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
+    dist_c = models.DistributedCircuit(6, devices)
+    dist_c.add(gates.Flatten(np.copy(initial_state)))
+    dist_c.add((gates.H(i) for i in range(6)))
+
+    final_state = dist_c().numpy()
+    target_state = c().numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_controlled_execution(ndevices):
     qibo.set_backend("custom")

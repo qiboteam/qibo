@@ -85,10 +85,11 @@ def test_entropy_numerical():
     np.testing.assert_allclose(result, target)
 
 
-def test_entropy_in_circuit():
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_entropy_in_circuit(accelerators):
     """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0])
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))
@@ -98,6 +99,59 @@ def test_entropy_in_circuit():
 
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
+
+
+def test_entropy_in_distributed_circuit():
+    """Check that various entropy configurations work in distributed circuit."""
+    target_c = Circuit(2)
+    target_c.add([gates.H(0), gates.CNOT(0, 1)])
+    target_state = target_c().numpy()
+    accelerators = {"/GPU:0": 1, "/GPU:1": 1}
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.H(0), gates.CNOT(0, 1), gates.CallbackGate(entropy)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [1.0], atol=_atol)
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.H(0), gates.CallbackGate(entropy), gates.CNOT(0, 1)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [0.0], atol=_atol)
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.CallbackGate(entropy), gates.H(0), gates.CNOT(0, 1)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [0.0], atol=_atol)
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.CallbackGate(entropy), gates.H(0),
+           gates.CNOT(0, 1), gates.CallbackGate(entropy)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [0, 1.0], atol=_atol)
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.H(0), gates.CallbackGate(entropy),
+           gates.CNOT(0, 1), gates.CallbackGate(entropy)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [0, 1.0], atol=_atol)
+
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add([gates.CallbackGate(entropy), gates.H(0),
+           gates.CallbackGate(entropy), gates.CNOT(0, 1)])
+    final_state = c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(entropy[:].numpy(), [0, 0], atol=_atol)
 
 
 def test_entropy_in_compiled_circuit():
@@ -119,23 +173,34 @@ def test_entropy_in_compiled_circuit():
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
 
-def test_entropy_multiple_executions():
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_entropy_multiple_executions(accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
     entropy = callbacks.EntanglementEntropy([0])
 
-    c = Circuit(2)
+    target_c = Circuit(2)
+    target_c.add([gates.RY(0, 0.1234), gates.CNOT(0, 1)])
+    target_state = target_c().numpy()
+
+    c = Circuit(2, accelerators)
     c.add(gates.RY(0, 0.1234))
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     state = c()
+    np.testing.assert_allclose(state.numpy(), target_state)
 
-    c = Circuit(2)
+    target_c = Circuit(2)
+    target_c.add([gates.RY(0, 0.4321), gates.CNOT(0, 1)])
+    target_state = target_c().numpy()
+
+    c = Circuit(2, accelerators)
     c.add(gates.RY(0, 0.4321))
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     state = c()
+    np.testing.assert_allclose(state.numpy(), target_state)
 
     def target_entropy(t):
         cos = np.cos(t / 2.0) ** 2
@@ -144,6 +209,52 @@ def test_entropy_multiple_executions():
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     np.testing.assert_allclose(entropy[:].numpy(), target)
+
+
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2},
+                                          {"/GPU:0": 2, "/GPU:1": 2},
+                                          {"/GPU:0": 3, "/GPU:1": 1,
+                                           "/GPU:2": 4}])
+def test_entropy_large_circuit(accelerators):
+    """Check that entropy calculation works for variational like circuit."""
+    thetas = np.pi * np.random.random((3, 8))
+    target_entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
+    c1 = Circuit(8)
+    c1.add((gates.RY(i, thetas[0, i]) for i in range(8)))
+    c1.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
+    state1 = c1()
+    e1 = target_entropy(state1)
+
+    c2 = Circuit(8)
+    c2.add((gates.RY(i, thetas[1, i]) for i in range(8)))
+    c2.add((gates.CZ(i, i + 1) for i in range(1, 7, 2)))
+    c2.add(gates.CZ(0, 7))
+    state2 = (c1 + c2)()
+    e2 = target_entropy(state2)
+
+    c3 = Circuit(8)
+    c3.add((gates.RY(i, thetas[2, i]) for i in range(8)))
+    c3.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
+    state3 = (c1 + c2 + c3)()
+    e3 = target_entropy(state3)
+
+    entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
+    c = Circuit(8, accelerators)
+    c.add(gates.CallbackGate(entropy))
+    c.add((gates.RY(i, thetas[0, i]) for i in range(8)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
+    c.add(gates.CallbackGate(entropy))
+    c.add((gates.RY(i, thetas[1, i]) for i in range(8)))
+    c.add((gates.CZ(i, i + 1) for i in range(1, 7, 2)))
+    c.add(gates.CZ(0, 7))
+    c.add(gates.CallbackGate(entropy))
+    c.add((gates.RY(i, thetas[2, i]) for i in range(8)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
+    c.add(gates.CallbackGate(entropy))
+    state = c()
+
+    np.testing.assert_allclose(state3.numpy(), state.numpy())
+    np.testing.assert_allclose(entropy[:].numpy(), [0, e1, e2, e3])
 
 
 def test_entropy_bad_indexing():

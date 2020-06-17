@@ -6,7 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPES
 from qibo.base import gates
-from qibo.tensorflow import circuit, measurements
+from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
 
@@ -36,12 +36,17 @@ class DeviceQueues:
         of each gate group in a list of lists.
         For example ``queues[2][1]`` gives the queue (list) of the 1st gate group
         to be run in the 2nd device.
+    * ``special_queue``: List with special gates than run on the full state vector
+        on ``memory_device``. Special gates have no target qubits and currently
+        are the ``CallbackGate`` and ``Flatten``.
     """
 
     def __init__(self, calc_devices: Dict[str, int]):
         self.ndevices = sum(calc_devices.values())
         self.nglobal = int(np.log2(self.ndevices))
+
         self.queues = [[] for _ in range(self.ndevices)]
+        self.special_queue = []
 
         self.global_qubits_lists = []
         self.global_qubits_sets = []
@@ -116,30 +121,39 @@ class DeviceQueues:
             nlocal: Number of local qubits in the circuit (``= nqubits - nglobal``).
         """
         if len(queues) != len(self):
-            raise ValueError
+            print(queues)
+            print(self.global_qubits_lists)
+            raise ValueError("Global qubits lists are {} while given queues "
+                             "are {}.".format(len(self), len(queues)))
         for iq, queue in enumerate(queues):
-            for i in range(self.ndevices):
-                self.queues[i].append([])
-            for gate in queue:
-                for device, ids in self.device_to_ids.items():
-                    calc_gate = self._create_reduced_gate(iq, gate)
-                    # Gate matrix should be constructed in the calculation
-                    # device otherwise device parallelization will break
-                    with tf.device(device):
-                        calc_gate.nqubits = nlocal
-                    for i in ids:
-                        flag = True
-                        # If there are control qubits that are global then
-                        # the gate should not be applied by all devices
-                        for control in (set(gate.control_qubits) &
-                                        self.global_qubits_sets[iq]):
-                            ic = self.global_qubits_lists[iq].index(control)
-                            ic = self.nglobal - ic - 1
-                            flag = bool((i // (2 ** ic)) % 2)
-                            if not flag:
-                                break
-                        if flag:
-                            self.queues[i][-1].append(calc_gate)
+            if not self.global_qubits_lists[iq]:
+                assert len(queue) == 1
+                gate = queue[0]
+                gate.nqubits = self.nglobal + nlocal
+                self.special_queue.append(gate)
+            else:
+                for i in range(self.ndevices):
+                    self.queues[i].append([])
+                for gate in queue:
+                    for device, ids in self.device_to_ids.items():
+                        calc_gate = self._create_reduced_gate(iq, gate)
+                        # Gate matrix should be constructed in the calculation
+                        # device otherwise device parallelization will break
+                        with tf.device(device):
+                            calc_gate.nqubits = nlocal
+                        for i in ids:
+                            flag = True
+                            # If there are control qubits that are global then
+                            # the gate should not be applied by all devices
+                            for control in (set(gate.control_qubits) &
+                                            self.global_qubits_sets[iq]):
+                                ic = self.global_qubits_lists[iq].index(control)
+                                ic = self.nglobal - ic - 1
+                                flag = bool((i // (2 ** ic)) % 2)
+                                if not flag:
+                                    break
+                            if flag:
+                                self.queues[i][-1].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -253,7 +267,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _add(self, gate: gates.Gate):
         """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
 
-        We do an additional check that there are sufficient qubits to use as global.
+        Also checks that there are sufficient qubits to use as global.
         """
         if (self.nqubits - len(gate.target_qubits) < self.nglobal and
             not isinstance(gate, gates.M)):
@@ -288,34 +302,60 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             # Loop through the gate queue to define gate groups and
             # global qubit lists
             gate = next(queue)
+            # special gates are gates without target qubits
+            # (eg. ``CallbackGate`` or ``Flatten``)
+            special_gates = []
             while True:
                 target_qubits = set(gate.target_qubits)
-                global_qubits -= target_qubits
-                while len(global_qubits) > self.nglobal:
+                if not target_qubits:
+                    special_gates.append(gate)
+                else:
+                    global_qubits -= target_qubits
+                while len(global_qubits) > self.nglobal and not special_gates:
                     queues[-1].append(gate)
                     gate = next(queue)
                     target_qubits = set(gate.target_qubits)
-                    global_qubits -= target_qubits
+                    if not target_qubits:
+                        special_gates.append(gate)
+                    else:
+                        global_qubits -= target_qubits
 
                 if len(global_qubits) == self.nglobal:
                     queues[-1].append(gate)
-                    gate = next(queue)
-                    while not set(gate.target_qubits) & global_qubits:
-                        queues[-1].append(gate)
+                    if not special_gates:
                         gate = next(queue)
+                        target_qubits = set(gate.target_qubits)
+                        if not target_qubits:
+                            special_gates.append(gate)
+                        while not target_qubits & global_qubits and not special_gates:
+                            queues[-1].append(gate)
+                            gate = next(queue)
+                            target_qubits = set(gate.target_qubits)
+                            if not target_qubits:
+                                special_gates.append(gate)
+
+                elif len(global_qubits) > self.nglobal:
+                    global_qubits = list(sorted(global_qubits))[:self.nglobal]
+
                 else:
                     # must be len(global_qubits) < self.nglobal
                     free_qubits = list(sorted(target_qubits))
                     global_qubits |= set(free_qubits[self.nglobal - len(global_qubits):])
 
-                queues.append([])
                 self.device_queues.append(global_qubits)
+                if special_gates:
+                    self.device_queues.append([])
+                    queues.append([special_gates.pop()])
+                    gate = next(queue)
+
+                queues.append([])
                 global_qubits = set(all_qubits)
 
         except StopIteration:
             if len(global_qubits) > self.nglobal:
                 global_qubits = list(sorted(global_qubits))[:self.nglobal]
-            self.device_queues.append(global_qubits)
+            if target_qubits:
+                self.device_queues.append(global_qubits)
 
         self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
 
@@ -337,6 +377,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     #            i += 1
 
     def _joblib_execute(self, group: int):
+        """Executes gates in ``accelerators`` in parallel."""
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
@@ -350,6 +391,19 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pool(joblib.delayed(_device_job)(ids, device)
              for device, ids in self.device_queues.device_to_ids.items())
 
+    def _special_gate_execute(self, ispecial: int):
+        """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
+
+        These gates require the full state vector (cannot be executed in the state pieces).
+        """
+        state = self._merge()
+        gate = self.device_queues.special_queue[ispecial]
+        if isinstance(gate, gates.CallbackGate):
+            gate(state)
+        else:
+            state = gate(state)
+            self._split(state)
+
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None,
@@ -360,10 +414,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
-        for group, global_qubits in enumerate(self.device_queues.global_qubits_lists):
-            if group > 0:
-                self._swap(global_qubits)
-            self._joblib_execute(group)
+        ispecial = 0
+        for iall, global_qubits in enumerate(self.device_queues.global_qubits_lists):
+            if not global_qubits: # special gate
+                self._special_gate_execute(ispecial)
+                ispecial += 1
+            else:
+                if iall > 0:
+                    self._swap(global_qubits)
+                self._joblib_execute(iall - ispecial)
 
         state = self.final_state
         if self.measurement_gate is None or nshots is None:

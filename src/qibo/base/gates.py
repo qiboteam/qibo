@@ -686,8 +686,6 @@ class Flatten(Gate):
         super(Flatten, self).__init__()
         self.name = "Flatten"
         self.coefficients = coefficients
-        import math
-        self.target_qubits = tuple(range(int(math.log2(len(coefficients)))))
 
 
 class CallbackGate(Gate):
