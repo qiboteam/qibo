@@ -693,8 +693,10 @@ def test_construct_unitary(gates):
         gates.fSim.construct_unitary()
 
 
+#@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
+@pytest.mark.parametrize("nqubits", [6])
+#@pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
 def test_variational_one_layer(backend, nqubits):
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random(nqubits)
