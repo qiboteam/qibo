@@ -421,7 +421,11 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     @staticmethod
     def construct_unitary(unitary) -> tf.Tensor:
-        return tf.convert_to_tensor(unitary, dtype=DTYPES.get('DTYPECPX'))
+        if isinstance(unitary, tf.Tensor):
+            return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
+        elif isinstance(unitary, np.ndarray):
+            return tf.convert_to_tensor(unitary, dtype=DTYPES.get('DTYPECPX'))
+        raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
 
     def _prepare(self):
         self.matrix = self.construct_unitary(self.unitary)

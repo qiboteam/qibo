@@ -355,8 +355,15 @@ class Unitary(TensorflowGate, base_gates.Unitary):
 
     def _construct_matrix(self):
         rank = len(self.target_qubits)
-        self.matrix = tf.cast(self.unitary, dtype=DTYPES.get("DTYPECPX"))
-        self.matrix = tf.reshape(self.matrix, 2 * rank * (2,))
+        dtype = DTYPES.get('DTYPECPX')
+        if isinstance(self.unitary, tf.Tensor):
+            matrix = tf.identity(tf.cast(self.unitary, dtype=dtype))
+        elif isinstance(self.unitary, np.ndarray):
+            matrix = tf.convert_to_tensor(self.unitary, dtype=dtype)
+        else:
+            raise TypeError("Unknown type {} of unitary matrix"
+                            "".format(type(self.unitary)))
+        self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
