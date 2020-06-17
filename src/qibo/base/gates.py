@@ -587,6 +587,9 @@ class VariationalLayer(Gate):
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
 
+        self.unitaries = []
+        self.additional_unitary = None
+
 
 class NoiseChannel(Gate):
     """Probabilistic noise channel.

@@ -421,7 +421,11 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     @staticmethod
     def construct_unitary(unitary) -> tf.Tensor:
-        return tf.convert_to_tensor(unitary, dtype=DTYPES.get('DTYPECPX'))
+        if isinstance(unitary, tf.Tensor):
+            return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
+        elif isinstance(unitary, np.ndarray):
+            return tf.convert_to_tensor(unitary, dtype=DTYPES.get('DTYPECPX'))
+        raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
 
     def _prepare(self):
         self.matrix = self.construct_unitary(self.unitary)
@@ -451,7 +455,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                                              params_map, params_map2,
                                              name=name)
         MatrixGate.__init__(self)
-        self.additional_matrix = None
+        self.unitary_constructor = Unitary
 
     @staticmethod
     def _tfkron(m1, m2):
@@ -459,35 +463,39 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         return tf.reshape(m, (4, 4))
 
     def _prepare(self):
-        self.matrix = tf.stack([self._tfkron(
+        matrices = tf.stack([self._tfkron(
             self.one_qubit_gate.construct_unitary(self.params_map[q1]),
             self.one_qubit_gate.construct_unitary(self.params_map[q2]))
                              for q1, q2 in self.qubit_pairs], axis=0)
         entangling_matrix = self.two_qubit_gate.construct_unitary()
-        self.matrix = tf.matmul(entangling_matrix, self.matrix)
+        matrices = tf.matmul(entangling_matrix, matrices)
         if self.additional_target is not None:
-            self.additional_matrix = self.one_qubit_gate.construct_unitary(
+            additional_matrix = self.one_qubit_gate.construct_unitary(
                 self.params_map[self.additional_target])
-
         if self.params_map2 is not None:
-            matrix2 = tf.stack([self._tfkron(
+            matrices2 = tf.stack([self._tfkron(
                 self.one_qubit_gate.construct_unitary(self.params_map2[q1]),
                 self.one_qubit_gate.construct_unitary(self.params_map2[q2]))
                                 for q1, q2 in self.qubit_pairs], axis=0)
-            self.matrix = tf.matmul(matrix2, self.matrix)
+            matrices = tf.matmul(matrices2, matrices)
             if self.additional_target is not None:
-                self.additional_matrix = tf.matmul(
+                additional_matrix = tf.matmul(
                     self.one_qubit_gate.construct_unitary(
                         self.params_map2[self.additional_target]),
-                    self.additional_matrix)
+                    additional_matrix)
+
+        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
+                          for i, targets in enumerate(self.qubit_pairs)]
+        if self.additional_target is not None:
+            self.additional_unitary = self.unitary_constructor(
+                additional_matrix, self.additional_target)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
-        for i, targets in enumerate(self.qubit_pairs):
-            state = op.apply_twoqubit_gate(state, self.matrix[i], self.nqubits, targets)
-        if self.additional_matrix is not None:
-            state = op.apply_gate(state, self.additional_matrix, self.nqubits,
-                                  self.additional_target)
+        for i, unitary in enumerate(self.unitaries):
+            state = unitary(state, is_density_matrix)
+        if self.additional_unitary is not None:
+            state = self.additional_unitary(state, is_density_matrix)
         return state
 
 
