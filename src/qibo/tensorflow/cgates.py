@@ -493,20 +493,11 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                         self.params_map2[self.additional_target]),
                     additional_matrix)
 
-        self.unitaries = []
-        for i, targets in enumerate(self.qubit_pairs):
-            unitary = self.unitary_constructor(matrices[i], *targets)
-            if self._nqubits is not None:
-                unitary.nqubits = self._nqubits
-            self.unitaries.append(unitary)
-
+        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
+                          for i, targets in enumerate(self.qubit_pairs)]
         if self.additional_target is not None:
             self.additional_unitary = self.unitary_constructor(
                 additional_matrix, self.additional_target)
-            if self._nqubits is not None:
-                self.additional_unitary.nqubits = self._nqubits
-        else:
-            self.additional_unitary = None
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:

@@ -311,8 +311,10 @@ class BaseCircuit(object):
     def _add_layer(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement."""
         for unitary in gate.unitaries:
+            self._set_nqubits(unitary)
             self.queue.append(unitary)
         if gate.additional_unitary is not None:
+            self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
     @property
