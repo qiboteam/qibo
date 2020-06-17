@@ -441,6 +441,19 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
 class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
+    #def __new__(cls, *args, **kwargs):
+    #    return super(TensorflowGate, cls).__new__(cls)
+
+    #def __new__(cls, *args, **kwargs):
+    #    if BACKEND.get('GATES') == 'custom':
+    #        return super(TensorflowGate, cls).__new__(cls)
+    #    else:
+    #        from qibo.tensorflow import gates
+    #        obj = super(TensorflowGate, cls).__new__(cls)
+    #        obj.unitary_constructor = gates.Unitary
+    #        return obj
+    #        #return getattr(gates, cls.__name__)(*args, **kwargs)
+
     def __init__(self, qubit_pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params_map: Dict[int, float],
@@ -451,7 +464,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                                              params_map, params_map2,
                                              name=name)
         MatrixGate.__init__(self)
-        self.additional_matrix = None
+        self.unitary_constructor = Unitary
 
     @staticmethod
     def _tfkron(m1, m2):
@@ -480,12 +493,15 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                         self.params_map2[self.additional_target]),
                     additional_matrix)
 
-        self.unitaries = [Unitary(matrices[i], *targets)
+        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.qubit_pairs)]
         if self.additional_target is not None:
-            self.additional_unitary = Unitary(additional_matrix, self.additional_target)
+            self.additional_unitary = self.unitary_constructor(
+                additional_matrix, self.additional_target)
         else:
             self.additional_unitary = None
+
+        print(self.unitaries)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:

@@ -361,6 +361,8 @@ class Unitary(TensorflowGate, base_gates.Unitary):
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
+    from qibo.tensorflow import cgates
+
     def __init__(self, qubit_pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params_map: Dict[int, float],
@@ -371,48 +373,17 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                                              params_map, params_map2,
                                              name=name)
         TensorflowGate.__init__(self)
+        self.unitary_constructor = Unitary
+
+    def _tfkron(self, m1, m2):
+        return self.cgates.VariationalLayer._tfkron(m1, m2)
 
     def _construct_matrix(self):
-        matrices = tf.stack([self._tfkron(
-            self.one_qubit_gate.construct_unitary(self.params_map[q1]),
-            self.one_qubit_gate.construct_unitary(self.params_map[q2]))
-                             for q1, q2 in self.qubit_pairs], axis=0)
-        entangling_matrix = self.two_qubit_gate.construct_unitary()
-        matrices = tf.matmul(entangling_matrix, matrices)
-        if self.additional_target is not None:
-            additional_matrix = self.one_qubit_gate.construct_unitary(
-                self.params_map[self.additional_target])
-        if self.params_map2 is not None:
-            matrices2 = tf.stack([self._tfkron(
-                self.one_qubit_gate.construct_unitary(self.params_map2[q1]),
-                self.one_qubit_gate.construct_unitary(self.params_map2[q2]))
-                                for q1, q2 in self.qubit_pairs], axis=0)
-            matrices = tf.matmul(matrices2, matrices)
-            if self.additional_target is not None:
-                additional_matrix = tf.matmul(
-                    self.one_qubit_gate.construct_unitary(
-                        self.params_map2[self.additional_target]),
-                    additional_matrix)
-
-        self.unitaries = [Unitary(matrices[i], *targets)
-                          for i, targets in enumerate(self.qubit_pairs)]
-        if self.additional_target is not None:
-            self.additional_unitary = Unitary(additional_matrix, self.additional_target)
-        else:
-            self.additional_unitary = None
-
-    @staticmethod
-    def _tfkron(m1, m2):
-        m = tf.transpose(tf.tensordot(m1, m2, axes=0), [0, 2, 1, 3])
-        return tf.reshape(m, (4, 4))
+        self.cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
-        for i, unitary in enumerate(self.unitaries):
-            state = unitary(state, is_density_matrix)
-        if self.additional_unitary is not None:
-            state = self.additional_unitary(state, is_density_matrix)
-        return state
+        return self.cgates.VariationalLayer.__call__(self, state, is_density_matrix)
 
 
 class TensorflowChannel(TensorflowGate):
