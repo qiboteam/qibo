@@ -441,19 +441,6 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
 class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
-    #def __new__(cls, *args, **kwargs):
-    #    return super(TensorflowGate, cls).__new__(cls)
-
-    #def __new__(cls, *args, **kwargs):
-    #    if BACKEND.get('GATES') == 'custom':
-    #        return super(TensorflowGate, cls).__new__(cls)
-    #    else:
-    #        from qibo.tensorflow import gates
-    #        obj = super(TensorflowGate, cls).__new__(cls)
-    #        obj.unitary_constructor = gates.Unitary
-    #        return obj
-    #        #return getattr(gates, cls.__name__)(*args, **kwargs)
-
     def __init__(self, qubit_pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params_map: Dict[int, float],

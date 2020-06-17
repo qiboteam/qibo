@@ -121,8 +121,6 @@ class DeviceQueues:
             nlocal: Number of local qubits in the circuit (``= nqubits - nglobal``).
         """
         if len(queues) != len(self):
-            print(queues)
-            print(self.global_qubits_lists)
             raise ValueError("Global qubits lists are {} while given queues "
                              "are {}.".format(len(self), len(queues)))
         for iq, queue in enumerate(queues):

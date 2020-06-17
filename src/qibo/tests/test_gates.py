@@ -707,7 +707,6 @@ def test_variational_one_layer(backend, accelerators, nqubits):
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     thetas = {i: theta[i] for i in range(nqubits)}
     c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas))
-    print(c.queue)
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
