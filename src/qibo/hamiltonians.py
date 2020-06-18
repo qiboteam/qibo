@@ -51,7 +51,6 @@ class Hamiltonian(object):
             raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
                                        'not implemented.')
 
-
     def __sub__(self, o):
         """Subtraction operator."""
         if isinstance(o, self.__class__):
@@ -64,7 +63,6 @@ class Hamiltonian(object):
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
                                        'not implemented.')
-
 
     def __mul__(self, o):
         """Add operator."""
