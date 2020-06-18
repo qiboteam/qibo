@@ -38,6 +38,48 @@ class Hamiltonian(object):
         n = K.math.real(K.reduce_sum(a*b))
         return n
 
+    def __add__(self, o):
+        """Add operator."""
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise RuntimeError('Only hamiltonians with the same '
+                                   'number of qubits can be added.')
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = self.hamiltonian + o.hamiltonian
+            return r
+        else:
+            raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
+                                       'not implemented.')
+
+
+    def __sub__(self, o):
+        """Subtraction operator."""
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise RuntimeError('Only hamiltonians with the same '
+                                   'number of qubits can be added.')
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = self.hamiltonian - o.hamiltonian
+            return r
+        else:
+            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
+                                       'not implemented.')
+
+
+    def __mul__(self, o):
+        """Add operator."""
+        if isinstance(o, (np.float, np.int, np.complex)):
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = self.hamiltonian * o
+            return r
+        else:
+            raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
+                                       'not implemented.')
+
+    def __rmul__(self, o):
+        """Right multiplication."""
+        return self.__mul__(o)
+
 
 class XXZ(Hamiltonian):
     """This class implements the Heisenberg XXZ model.
