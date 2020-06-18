@@ -6,17 +6,10 @@ Welcome to QIBO!
 ================
 
 QIBO is a Python library for classical simulation of
-quantum algorithms.
+quantum algorithms. QIBO provides a standard interface for the implementation and extension of quantum algorithms in double precision. Simulation takes full advantage of hardware accelerators such as GPU and CPU with multi-threading support. The package includes a multi-GPU distributed approach for circuit simulation.
 
-Some of the key features of QIBO are:
-
-      - A standard interface for the implementation and extension of quantum algorithms.
-      - Modular implementation on GPU and CPU with multi-threading support.
-      - Availability of multi-GPU distributed approach for circuit simulation.
-      - Full support of double precision simulation.
-
-Documentation
-=============
+User Documentation
+==================
 
 .. toctree::
     :maxdepth: 2
@@ -33,12 +26,7 @@ Documentation
 
 .. toctree::
     :maxdepth: 2
-    :caption: Development
+    :caption: Developer documentation
 
     benchmarks
     general
-
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
