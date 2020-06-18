@@ -181,7 +181,8 @@ class single_qubit_classifier:
     def eval_test_set_fidelity(self):
         labels = [[0]] * len(self.test_set[0])
         for j, x in enumerate(self.test_set[0]):
-            state = self.circuit(x)
+            C = self.circuit(x)
+            state = C.execute()
             fids = np.empty(len(self.target))
             for i, t in enumerate(self.target):
                 fids[i] = fidelity(state, t)
