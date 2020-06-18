@@ -3,6 +3,7 @@ SRCS = $(wildcard cc/kernels/*.cc) $(wildcard cc/ops/*.cc)
 CUDASRC = $(wildcard cc/kernels/*.cu.cc)
 
 CXX := g++
+NVCC := $(CUDA_PATH)/bin/nvcc
 PYTHON_BIN_PATH = python
 
 SOURCES = $(filter-out $(CUDASRC), $(SRCS))
@@ -11,31 +12,39 @@ TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".j
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
 CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
+CFLAGS_CUDA = $(CFLAGS) -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
+
 LDFLAGS = -shared ${TF_LFLAGS}
+LDFLAGS_CUDA = $(LDFLAGS) -L$(CUDA_PATH)/lib64 -lcudart
 
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
+TARGET_LIB_CUDA = python/ops/_qibo_tf_custom_operators_cuda.so
+TARGETS = $(TARGET_LIB)
 
 OBJECT_SRCS = $(SOURCES:.cc=.o)
+OBJECT_SRCS_CUDA = $(CUDASRC:.cc=.cudao)
 
 ifneq ($(CUDA_PATH),)
-OBJECT_SRCS += $(CUDASRC:.cc=.o)
-NVCC := $(CUDA_PATH)/bin/nvcc
-CFLAGS += -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
-LDFLAGS += -L$(CUDA_PATH)/lib64 -lcudart
-CFLAGS_CUDA = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
+	TARGETS += $(TARGET_LIB_CUDA)
 endif
 
-all: $(TARGET_LIB)
+all: $(TARGETS)
 
 $(TARGET_LIB): $(OBJECT_SRCS)
 	$(CXX) -o $@ $(CFLAGS) $^ $(LDFLAGS)
 
+$(TARGET_LIB_CUDA): $(OBJECT_SRCS_CUDA)
+	$(CXX) -o $@ $(CFLAGS_FLAGS) $^ $(LDFLAGS_CUDA)
+
 %.o: %.cc
 	$(CXX) -c $(CFLAGS) $^ -o $@
 
-%.cu.o: %.cu.cc
+%.cudao: %.cc
+	$(CXX) -c $(CFLAGS_FLAGS) $^ -o $@
+
+%.cu.cudao: %.cu.cc
 	$(NVCC) -c -o $@ $^ $(CFLAGS_CUDA)
 
 clean:
-	rm -f $(TARGET_LIB) $(OBJECT_SRCS) $(OBJECT_CUDASRCS)
+	rm -f $(TARGET_LIB) $(TARGET_LIB_CUDA) $(OBJECT_SRCS) $(OBJECT_SRCS_CUDA)
 
