@@ -65,7 +65,7 @@ class Hamiltonian(object):
                                        'not implemented.')
 
     def __mul__(self, o):
-        """Add operator."""
+        """Multiplication to scalar operator."""
         if isinstance(o, (np.float, np.int, np.complex)):
             r = self.__class__(nqubits=self.nqubits)
             r.hamiltonian = self.hamiltonian * o
@@ -75,7 +75,7 @@ class Hamiltonian(object):
                                        'not implemented.')
 
     def __rmul__(self, o):
-        """Right multiplication."""
+        """Right scalar multiplication."""
         return self.__mul__(o)
 
 
