@@ -1,3 +1,8 @@
+# Compilers
+CXX := g++
+NVCC := $(CUDA_PATH)/bin/nvcc
+PYTHON_BIN_PATH = python
+
 # TARGET LIBRARIES
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
 TARGET_LIB_CUDA = python/ops/_qibo_tf_custom_operators_cuda.so
@@ -10,11 +15,6 @@ endif
 
 SRCS = $(wildcard cc/kernels/*.cc) $(wildcard cc/ops/*.cc)
 CUDASRC = $(wildcard cc/kernels/*.cu.cc)
-
-CXX := g++
-NVCC := $(CUDA_PATH)/bin/nvcc
-PYTHON_BIN_PATH = python
-
 SOURCES = $(filter-out $(CUDASRC), $(SRCS))
 
 TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))')
@@ -28,7 +28,7 @@ LDFLAGS = -shared ${TF_LFLAGS}
 LDFLAGS_CUDA = $(LDFLAGS) -L$(CUDA_PATH)/lib64 -lcudart
 
 OBJECT_SRCS = $(SOURCES:.cc=.o)
-OBJECT_SRCS_CUDA = $(CUDASRC:.cc=.cudao)
+OBJECT_SRCS_CUDA = $(SRCS:.cc=.cudao)
 
 all: $(TARGETS)
 
