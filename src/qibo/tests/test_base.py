@@ -86,6 +86,21 @@ def test_circuit_add_generator():
     assert isinstance(c.queue[-1], CNOT)
 
 
+def test_circuit_add_nested_generator():
+    """Check if `circuit.add` works with nested generators."""
+    qibo.set_backend("custom")
+    def gen():
+        yield H(0)
+        yield H(1)
+        yield CNOT(0, 1)
+    c = Circuit(2)
+    c.add((gen() for _ in range(3)))
+    assert c.depth == 9
+    assert isinstance(c.queue[2], CNOT)
+    assert isinstance(c.queue[5], CNOT)
+    assert isinstance(c.queue[7], H)
+
+
 def test_circuit_addition():
     """Check if circuit addition increases depth."""
     qibo.set_backend("custom")
