@@ -20,11 +20,29 @@ def test_hamiltonian_overloading():
     HT1 = transformation_a(H1, H2)
     HT2 = transformation_b(H1, H2)
 
-    np.allclose(hH1, HT1.hamiltonian)
-    np.allclose(hH2, HT2.hamiltonian)
+    np.testing.assert_allclose(hH1, HT1.hamiltonian)
+    np.testing.assert_allclose(hH2, HT2.hamiltonian)
 
-    try:
-        H3 = XXZ(nqubits=3, delta=0.1)
-        HT3 = H1 + H3
-    except RuntimeError:
-        pass
+
+def test_hamiltonian_runtime_errors():
+    """Testing hamiltonian runtime errors."""
+    H1 = XXZ(nqubits=2, delta=0.5)
+    H2 = XXZ(nqubits=3, delta=0.1)
+
+    with pytest.raises(RuntimeError):
+        R = H1 + H2
+    with pytest.raises(RuntimeError):
+        R = H1 - H2
+
+
+def test_hamiltonian_notimplemented_errors():
+    """Testing hamiltonian not implemented errors."""
+    H1 = XXZ(nqubits=2, delta=0.5)
+    H2 = XXZ(nqubits=2, delta=0.1)
+
+    with pytest.raises(NotImplementedError):
+        R = H1 * H2
+    with pytest.raises(NotImplementedError):
+        R = H1 - 1
+    with pytest.raises(NotImplementedError):
+        R = 2.5 + H2
