@@ -246,7 +246,7 @@ class BaseCircuit(object):
         """
         if isinstance(gate, Iterable):
             for g in gate:
-                self._add(g)
+                self.add(g)
         elif isinstance(gate, gates.Gate):
             self._add(gate)
         else:

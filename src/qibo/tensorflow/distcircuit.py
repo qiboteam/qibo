@@ -416,13 +416,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         ispecial = 0
         for iall, global_qubits in enumerate(self.device_queues.global_qubits_lists):
-            if not global_qubits: # special gate
-                self._special_gate_execute(ispecial)
-                ispecial += 1
-            else:
+            if global_qubits:  # standard gate
                 if iall > 0:
                     self._swap(global_qubits)
                 self._joblib_execute(iall - ispecial)
+            else: # special gate
+                self._special_gate_execute(ispecial)
+                ispecial += 1
 
         state = self.final_state
         if self.measurement_gate is None or nshots is None:
