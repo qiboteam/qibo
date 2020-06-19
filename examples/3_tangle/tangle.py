@@ -1,16 +1,22 @@
-from tangle_aux import *
-import time
-seed = 'GHZ'
-for t in range(6):
-    folder = 'results_simulation/seed_{}/error_{}/'.format(seed, t)
-    f = np.loadtxt(folder + 'opti_info.txt')[0]
-    if f > t * 0.02 + 0.001:
-        print('seed', seed)
-        print('error', t)
-        write_optimizer_sampling(seed, t)
-        write_tangles(seed, t, norm=False)
-        write_tangles(seed, t, norm=True)
-measured_tangles(1000, error=0, tol=0.0)
-#relative_errors(1000, 5, tol=0.02)
-compute_chi(1000, max_error=5, tol=0.02)
+from canonizator import *
+import numpy as np
+import matplotlib.pyplot as plt
 
+N = 10
+
+tangles = np.empty(N)
+opt_tangles = np.empty(N)
+
+for i in range(N):
+    state = create_random_state(i)
+    tangles[i] = compute_random_tangle(i)
+    print(tangles[i])
+
+    fun, params = canonize(state)
+    opt_tangles[i] = canonical_tangle(state, params, post_selection=False)
+    print(fun, opt_tangles[i])
+
+fig, ax = plt.subplots()
+ax.scatter(tangles, opt_tangles)
+ax.plot([0., 1.], [0., 1.], color=black)
+plt.show()
