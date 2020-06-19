@@ -133,6 +133,23 @@ class BaseCircuit(object):
             from qibo import gates as module
         return module
 
+    def decompose(self, *free: int) -> "BaseCircuit":
+        """Decomposes circuit's gates to gates supported by OpenQASM.
+
+        Args:
+            free: Ids of free (work) qubits to use for gate decomposition.
+
+        Returns:
+            Circuit that contains only gates that are supported by OpenQASM
+            and has the same effect as the original circuit.
+        """
+        decomp_circuit = self.__class__(self.nqubits)
+        for i, gate in enumerate(self.queue):
+            decomp_circuit.queue.add(gate.decompose(*free))
+        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
+        decomp_circuit.measurement_gate = self.measurement_gate
+        return decomp_circuit
+
     def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
@@ -204,7 +221,6 @@ class BaseCircuit(object):
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
-        noisy_circuit.queue = []
         for i, gate in enumerate(self.queue):
             # Do not use `circuit.add` here because these gates are already
             # added in the original circuit
