@@ -1,6 +1,14 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import XXZ, NUMERIC_TYPES
+from qibo.hamiltonians import Hamiltonian, XXZ, NUMERIC_TYPES
+
+
+def test_hamiltonian_initialization():
+    """Testing hamiltonian not implemented errors."""
+    H1 = Hamiltonian(nqubits=2)
+
+    with pytest.raises(RuntimeError):
+        H2 = Hamiltonian(np.eye(2))
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)

@@ -18,6 +18,8 @@ class Hamiltonian(object):
     __metaclass__ = ABCMeta
 
     def __init__(self, nqubits):
+        if not isinstance(nqubits, int):
+            raise RuntimeError(f'nqubits must be an integer')
         self.hamiltonian = None
         self.nqubits = nqubits
         self._eigenvalues = None
