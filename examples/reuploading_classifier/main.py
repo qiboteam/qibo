@@ -2,9 +2,9 @@ import datasets as ds
 import numpy as np
 from qlassifier import single_qubit_classifier
 
-ql = single_qubit_classifier('tricrown', 5)
-'''result, parameters = ql.minimize(method='l-bfgs-b', options={'disp':True}, compile=True, fidelity=True) # minimizador no va muy allá
-print(parameters)'''
+ql = single_qubit_classifier('4 squares', 1)
+result, parameters = ql.minimize(method='l-bfgs-b', options={'disp':True}, compile=True, fidelity=True) # minimizador no va muy allá
+print(parameters)
 
 params_tricrown = [ 1.71505633,  1.18816839, -0.41820971, -1.17124703, -1.96595341,  1.67279085,
  -2.67943218,  1.75290379,  0.95497698,  1.16126111, -1.48343009, -0.5020429,
@@ -14,9 +14,24 @@ params_tricrown = [ 1.71505633,  1.18816839, -0.41820971, -1.17124703, -1.965953
    1.41132915  -9.14847509   3.10432847   0.13614464  -3.34835193
  -12.54425487  -0.05034364   1.36279703  -1.51664904   3.13465347
    1.50204086   1.49518814  -1.65829912  -0.403254     0.94934493]'''
+
+'''
+params_squares=[-0.84473     4.24390032  1.27736312  0.80276002 -1.54913785  0.04686538
+ -5.20078482 -0.19160421  0.69841276 -2.8405493  -6.32958487 -0.95669097
+  1.4900534  -0.66069993  1.69358983  1.0905915  -0.02985153 -1.22017979
+  0.91846948 -0.43978762]
+ 
+params_squares_10 = [-0.75715989  0.99219255 -4.79581759 -0.17913203 -1.44257876  1.95759742
+ -2.66592692  0.42142399 -3.96243756 -2.49553222 -2.29161126 -0.58760354
+  1.94113689 -2.15002418  3.15059349  0.25864218  3.14987586 -1.65280137
+ -3.0307082  -2.13887509  2.22928     0.5828466  -1.32874681  2.72984513
+  2.7482387   1.18311452  3.29304992  1.05770582  1.44128208  0.45645804
+  2.00794876  0.23315446 -2.1750342  -0.13682044  3.18191949 -0.49349563
+ -0.37477565  2.15306374 -0.49637616  0.99190335]
+'''
 #parameters = np.array([-9.22309909e-07,  1.82987902e+00, -1.65534402e+00,  1.53644454e-01])
 #parameters = 20 * np.pi * (.5 - np.random.rand(4))
-ql.set_parameters(params_tricrown)
+ql.set_parameters(parameters)
 labels = ql.eval_test_set_fidelity()
-# ql.paint_results()
+ql.paint_results()
 ql.paint_world_map()

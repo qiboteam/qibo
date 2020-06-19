@@ -44,7 +44,7 @@ def create_target(name):
     return targets
 
 def fig_template(name):
-    fig, axs = plt.subplots(ncols=2, figsize=(9.5, 4))
+    fig, axs = plt.subplots(ncols=2, figsize=(9, 4))
     if name == 'circle':
         for ax in axs:
             circle = plt.Circle((0, 0), np.sqrt(2 / np.pi), color='black', fill=False, zorder=10)
@@ -89,7 +89,7 @@ def fig_template(name):
             ax.plot(x, fun1(x), color='black', zorder=10)
             ax.plot(x, fun2(x), color='black', zorder=10)
 
-    axs[0].set(xlabel=r'$x_0$', ylabel=r'$x_1$', xlim=[-1,1], ylim=[-1,1])
+    axs[0].set(xlabel=r'$x_0$', ylabel=r'$x_1$', xlim=[-1, 1], ylim=[-1, 1])
     axs[0].axis('equal')
     axs[1].set(xlabel=r'$x_0$', xlim=[-1, 1], ylim=[-1, 1])
     axs[1].axis('equal')
@@ -186,7 +186,7 @@ def _4squares(points):
     for i, p in enumerate(points):
         if p[0] < 0 and p[1] > 0: labels[i] = 1
         elif p[0] > 0 and p[1] < 0: labels[i] = 2
-        elif p[0] > 0 and p[1] > 0: labels[i] = 2
+        elif p[0] > 0 and p[1] > 0: labels[i] = 3
 
     return points, labels
 
