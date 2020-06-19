@@ -102,7 +102,7 @@ class VQE(object):
             circuit = self.ansatz(initial_state)
             if not circuit.using_tfgates:
                 raise RuntimeError("Cannot compile VQE that uses custom operators. "
-                                   "Set the compile flat to False.")
+                                   "Set the compile flag to False.")
             from qibo.config import K
             loss = K.function(loss)
 
