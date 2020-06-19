@@ -143,6 +143,8 @@ class BaseCircuit(object):
             Circuit that contains only gates that are supported by OpenQASM
             and has the same effect as the original circuit.
         """
+        # FIXME: This method is not completed until the ``decompose`` is
+        # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
         for i, gate in enumerate(self.queue):
             decomp_circuit.add(gate.decompose(*free))

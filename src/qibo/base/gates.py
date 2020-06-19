@@ -116,8 +116,9 @@ class Gate(object):
         Returns:
             List with gates that have the same effect as applying the original gate.
         """
-        # Return the same gate temporarily until we implement the proper
-        # decomposition for all gates
+        # FIXME: Implement this method for all gates not supported by OpenQASM.
+        # If the method is not implemented this returns a deep copy of the
+        # original gate
         return [self.__class__(*self._init_args, **self._init_kwargs)]
 
     def __call__(self, state, is_density_matrix):
