@@ -145,7 +145,7 @@ class BaseCircuit(object):
         """
         decomp_circuit = self.__class__(self.nqubits)
         for i, gate in enumerate(self.queue):
-            decomp_circuit.queue.add(gate.decompose(*free))
+            decomp_circuit.add(gate.decompose(*free))
         decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
         decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit

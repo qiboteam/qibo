@@ -49,6 +49,20 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
         np.testing.assert_allclose(theta, qibo_gate.theta)
 
 
+def assert_circuit_same_gates(circuit1, circuit2):
+    """Asserts that two circuits contain the same gates."""
+    for g1, g2 in zip(circuit1.queue, circuit2.queue):
+        assert g1.__class__ == g2.__class__
+        assert g1.target_qubits == g2.target_qubits
+        assert g1.control_qubits == g2.control_qubits
+    mg1 = circuit1.measurement_gate
+    mg2 = circuit2.measurement_gate
+    assert mg1.__class__ == mg2.__class__
+    if mg1 is not None:
+        assert mg1.target_qubits == mg2.target_qubits
+    assert circuit1.measurement_tuples == circuit2.measurement_tuples
+
+
 @pytest.mark.parametrize(("target", "controls", "free"),
                          [(0, (1,), ()), (2, (0, 1), ()),
                           (3, (0, 1, 4), (2, 5)),
@@ -104,3 +118,44 @@ def test_x_decomposition_errors(use_toffolis):
     c.add(gate)
     with pytest.raises(ValueError):
         decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
+
+
+def test_circuit_decompose():
+    """Check ``circuit.decompose`` agrees with multi-control ``X`` decomposition."""
+    c = Circuit(6)
+    c.add(gates.RX(0, 0.1234))
+    c.add(gates.RY(1, 0.4321))
+    c.add((gates.H(i) for i in range(2, 6)))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.X(3).controlled_by(0, 1, 2, 4))
+
+    decomp_c = c.decompose(5)
+
+    init_state = random_initial_state(c.nqubits)
+    target_state = c(np.copy(init_state)).numpy()
+    final_state = decomp_c(np.copy(init_state)).numpy()
+    np.testing.assert_allclose(final_state, target_state, atol=_ATOL)
+
+    target_c = Circuit(c.nqubits)
+    target_c.add(gates.RX(0, 0.1234))
+    target_c.add(gates.RY(1, 0.4321))
+    target_c.add((gates.H(i) for i in range(2, 6)))
+    target_c.add(gates.CNOT(0, 1))
+    target_c.add(gates.X(3).controlled_by(0, 1, 2, 4).decompose(5))
+    assert_circuit_same_gates(decomp_c, target_c)
+
+
+def test_circuit_decompose_with_measurements():
+    """Check ``circuit.decompose`` for circuit with measurements."""
+    c = Circuit(8)
+    c.add(gates.X(4).controlled_by(0, 2, 5, 6, 7))
+    c.add(gates.M(0, 2, 4, 6, register_name="A"))
+    c.add(gates.M(1, 3, 5, 7, register_name="B"))
+
+    target_c = Circuit(8)
+    target_c.add(gates.X(4).controlled_by(0, 2, 5, 6, 7).decompose(1, 3))
+    target_c.add(gates.M(0, 2, 4, 6, register_name="A"))
+    target_c.add(gates.M(1, 3, 5, 7, register_name="B"))
+
+    decomp_c = c.decompose(1, 3)
+    assert_circuit_same_gates(decomp_c, target_c)
