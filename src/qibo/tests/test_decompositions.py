@@ -58,6 +58,7 @@ def test_x_decomposition_gates(target, controls, free):
     gate = gates.X(target).controlled_by(*controls)
     qibo_decomp = gate.decompose(*free, use_toffolis=False)
 
+    # Calculate the decomposition using Cirq.
     nqubits = max((target,) + controls + free) + 1
     qubits = [cirq.LineQubit(i) for i in range(nqubits)]
     controls = [qubits[i] for i in controls]
@@ -77,6 +78,7 @@ def test_x_decomposition_gates(target, controls, free):
                           (8, (0, 2, 4, 6, 9), (3, 5, 7))])
 @pytest.mark.parametrize("use_toffolis", [True, False])
 def test_x_decomposition_execution(target, controls, free, use_toffolis):
+    """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
     init_state = random_initial_state(nqubits)
@@ -94,6 +96,7 @@ def test_x_decomposition_execution(target, controls, free, use_toffolis):
 
 @pytest.mark.parametrize("use_toffolis", [True, False])
 def test_x_decomposition_errors(use_toffolis):
+    """Check ``X`` decomposition errors."""
     gate = gates.X(0).controlled_by(1, 2, 3, 4)
     with pytest.raises(ValueError):
         decomp = gate.decompose(2, 3, use_toffolis=use_toffolis)
@@ -101,26 +104,3 @@ def test_x_decomposition_errors(use_toffolis):
     c.add(gate)
     with pytest.raises(ValueError):
         decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
-
-
-def test_x_decomposition_execution_cirq():
-    # TODO: Remove this test
-    init_state = random_initial_state(8)
-    sim = cirq.Simulator()
-
-    qubits = [cirq.LineQubit(i) for i in range(8)]
-    controls = qubits[:5]
-    free = qubits[5:-1]
-    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[-1], free)
-
-    targetc = cirq.Circuit()
-    targetc.append(cirq.X.controlled(5)(*(controls + [qubits[-1]])))
-    target_state = sim.simulate(targetc, initial_state=np.copy(init_state),
-                                qubit_order=qubits).final_state
-
-    c = cirq.Circuit()
-    c.append(cirq_decomp)
-    final_state = sim.simulate(c, initial_state=np.copy(init_state),
-                               qubit_order=qubits).final_state
-
-    np.testing.assert_allclose(final_state, target_state, atol=_ATOL)

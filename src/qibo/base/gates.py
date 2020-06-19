@@ -106,6 +106,8 @@ class Gate(object):
     def decompose(self, *free) -> List["Gate"]:
         """Decomposes multi-control gates to gates supported by OpenQASM.
 
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+
         Args:
             free: Ids of free qubits to use for the gate decomposition.
         """
@@ -163,7 +165,14 @@ class X(Gate):
         return gate
 
     def decompose(self, *free: int, use_toffolis: bool = True) -> List[Gate]:
-        """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates."""
+        """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+                See :class:`qibo.base.gates.TOFFOLI` for more details on this representation.
+        """
         if set(free) & set(self.qubits):
             raise ValueError("Cannot decompose multi-control X gate if free "
                              "qubits coincide with target or controls.")
@@ -573,6 +582,18 @@ class TOFFOLI(Gate):
         return [self.__class__(c0, c1, t)]
 
     def congruent(self, use_toffolis: bool = True) -> List[Gate]:
+        """Congruent representation of ``TOFFOLI`` gate.
+
+        This is a helper method for the decomposition of multi-control ``X`` gates.
+        The congruent representation is based on Sec. 6.2 of
+        `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        The sequence of the gates produced here has the same effect as ``TOFFOLI``
+        with the phase of the |101> state reversed.
+
+        Args:
+            use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.
+                If ``False`` the congruent representation is returned.
+        """
         if use_toffolis:
             return self.decompose()
 
