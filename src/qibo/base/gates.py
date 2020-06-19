@@ -152,6 +152,44 @@ class X(Gate):
             gate = super(X, self).controlled_by(*q)
         return gate
 
+    def _congruent(self, control0: int, control1: int, target: int) -> List[Gate]:
+        RY = self._MODULE.RY
+        CNOT = self._MODULE.CNOT
+        return [RY(-np.pi / 4).on(target),
+                CNOT(control1, target),
+                RY(-np.pi / 4).on(target),
+                CNOT(control0, target),
+                RY(np.pi / 4).on(target),
+                CNOT(control1, target),
+                RY(np.pi / 4).on(target)]
+
+    def decompose(self, *free) -> List[Gate]:
+        """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates."""
+        controls = self.control_qubits
+        target = self.target_qubits[0]
+        m = len(controls)
+        if m == 0:
+            return self.__class__(target)
+        elif m == 1:
+            return self._MODULE.CNOT(controls[0], target)
+        elif m == 2:
+            c1, c2 = controls
+            return self._MODULE.CNOT(c1, c2, target)
+
+        n = m + 1 + len(free)
+        if (n >= 2 * m - 1) and (m >= 3):
+            gates1 = [self._congruent(controls[m - 2 - i], free[m - 4 - i], free(m - 3 - i))
+                      for i in range(m - 3)]
+            gates2 = self._congruent(controls[0], controls[1], free[0])
+            gates3 = _flatten(gates1) + gates2 + _flatten(gates1[::-1])
+            first_toffoli = self._MODULE.TOFFOLI(controls[m - 1], free[m - 3], target)
+            return [first_toffoli, *gates3, first_ccnot, *gates3]
+
+
+
+
+
+
 
 class Y(Gate):
     """The Pauli Y gate.
