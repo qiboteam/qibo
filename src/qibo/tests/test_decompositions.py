@@ -1,8 +1,12 @@
+import re
 import numpy as np
 import pytest
 import cirq
 from qibo import gates
 from qibo.models import Circuit
+
+_QIBO_TO_CIRQ = {"CNOT": "CNOT", "RY": "Ry", "TOFFOLI": "TOFFOLI"}
+_ATOL = 1e-6
 
 
 def random_initial_state(nqubits, dtype=np.complex128):
@@ -11,22 +15,59 @@ def random_initial_state(nqubits, dtype=np.complex128):
     return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
 
 
-def test_x_decomposition_gates():
-    gate = gates.X(7).controlled_by(0, 1, 2, 3, 4)
-    qibo_decomp = gate.decompose(5, 6)
+def assert_gates_equivalent(qibo_gate, cirq_gate):
+    """Asserts that qibo gate is equivalent to cirq gate.
 
-    qubits = [cirq.LineQubit(i) for i in range(8)]
-    controls = qubits[:5]
-    free = qubits[5:-1]
-    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[-1], free)
+    Checks that:
+        * Gate type agrees.
+        * Target and control qubits agree.
+        * Parameter (if applicable) agrees.
 
-    for x, y in zip(qibo_decomp, cirq_decomp):
-        print(x, y)
-        # TODO: Parse cirq gate attributes from str(y)
-    assert False
+    Cirq gate parameters are extracted by parsing the gate string.
+    """
+    pieces = [x for x in re.split("[()]", str(cirq_gate)) if x]
+    if len(pieces) == 2:
+        gatename, targets = pieces
+        theta = None
+    elif len(pieces) == 3:
+        gatename, theta, targets = pieces
+    else:
+        raise RuntimeError("Cirq gate parsing failed with {}.".format(pieces))
+
+    qubits = list(int(x) for x in targets.replace(" ", "").split(","))
+    targets = (qubits.pop(),)
+    controls = set(qubits)
+
+    assert _QIBO_TO_CIRQ[qibo_gate.__class__.__name__] == gatename
+    assert qibo_gate.target_qubits == targets
+    assert set(qibo_gate.control_qubits) == controls
+    if theta is not None:
+        if "π" in theta:
+            theta = np.pi * float(theta.replace("π", ""))
+        else:
+            theta = float(theta)
+        np.testing.assert_allclose(theta, qibo_gate.theta)
 
 
-@pytest.mark.skip
+@pytest.mark.parametrize(("target", "controls", "free"),
+                         [(0, (1,), ()), (2, (0, 1), ()),
+                          (3, (0, 1, 4), (2, 5)),
+                          (7, (0, 1, 2, 3, 4), (5, 6))])
+def test_x_decomposition_gates(target, controls, free):
+    """Check that decomposition of multi-control ``X`` agrees with Cirq."""
+    gate = gates.X(target).controlled_by(*controls)
+    qibo_decomp = gate.decompose(*free)
+
+    nqubits = max((target,) + controls + free) + 1
+    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
+    controls = [qubits[i] for i in controls]
+    free = [qubits[i] for i in free]
+    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[target], free)
+
+    for qibo_gate, cirq_gate in zip(qibo_decomp, cirq_decomp):
+        assert_gates_equivalent(qibo_gate, cirq_gate)
+
+
 def test_x_decomposition_execution():
     gate = gates.X(7).controlled_by(0, 1, 2, 3, 4)
     init_state = random_initial_state(8)
@@ -39,4 +80,27 @@ def test_x_decomposition_execution():
     c.add(gate.decompose(5, 6))
     final_state = c(np.copy(init_state)).numpy()
 
-    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(final_state, target_state, atol=_ATOL)
+
+
+def test_x_decomposition_execution_cirq():
+    # TODO: Remove this test
+    init_state = random_initial_state(8)
+    sim = cirq.Simulator()
+
+    qubits = [cirq.LineQubit(i) for i in range(8)]
+    controls = qubits[:5]
+    free = qubits[5:-1]
+    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[-1], free)
+
+    targetc = cirq.Circuit()
+    targetc.append(cirq.X.controlled(5)(*(controls + [qubits[-1]])))
+    target_state = sim.simulate(targetc, initial_state=np.copy(init_state),
+                                qubit_order=qubits).final_state
+
+    c = cirq.Circuit()
+    c.append(cirq_decomp)
+    final_state = sim.simulate(c, initial_state=np.copy(init_state),
+                               qubit_order=qubits).final_state
+
+    np.testing.assert_allclose(final_state, target_state, atol=_ATOL)
