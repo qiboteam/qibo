@@ -4,6 +4,11 @@ from qibo.config import matrices, K
 from abc import ABCMeta, abstractmethod
 
 
+NUMERIC_TYPES = (np.int, np.float, np.complex,
+                 np.int32, np.int64, np.float32,
+                 np.float64, np.complex64, np.complex128)
+
+
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
@@ -47,12 +52,17 @@ class Hamiltonian(object):
             r = self.__class__(nqubits=self.nqubits)
             r.hamiltonian = self.hamiltonian + o.hamiltonian
             return r
+        elif isinstance(o, NUMERIC_TYPES):
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = self.hamiltonian + o * \
+                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
+            return r
         else:
             raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
-                                       'not implemented.')
+                                      'not implemented.')
 
     def __radd__(self, o):
-        """Right scalar addition."""
+        """Right operator addition."""
         return self.__add__(o)
 
     def __sub__(self, o):
@@ -64,23 +74,48 @@ class Hamiltonian(object):
             r = self.__class__(nqubits=self.nqubits)
             r.hamiltonian = self.hamiltonian - o.hamiltonian
             return r
+        elif isinstance(o, NUMERIC_TYPES):
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = self.hamiltonian - o * \
+                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
+            return r
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                       'not implemented.')
+                                      'not implemented.')
 
     def __rsub__(self, o):
-        """Right scalar addition."""
-        return self.__sub__(o)
+        """Right subtraction operator."""
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise RuntimeError('Only hamiltonians with the same '
+                                   'number of qubits can be added.')
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = o.hamiltonian - self.hamiltonian
+            return r
+        elif isinstance(o, NUMERIC_TYPES):
+            r = self.__class__(nqubits=self.nqubits)
+            r.hamiltonian = o * \
+                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype) - \
+                self.hamiltonian
+            return r
+        else:
+            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
+                                      'not implemented.')
 
     def __mul__(self, o):
         """Multiplication to scalar operator."""
-        if isinstance(o, (np.float, np.int, np.complex)):
+        if isinstance(o, NUMERIC_TYPES):
             r = self.__class__(nqubits=self.nqubits)
             r.hamiltonian = self.hamiltonian * o
+            if self._eigenvalues is not None:
+                if o.real >= 0:
+                    r._eigenvalues = o * self._eigenvalues
+                else:
+                    r._eigenvalues = o * self._eigenvalues[::-1]
             return r
         else:
             raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
-                                       'not implemented.')
+                                      'not implemented.')
 
     def __rmul__(self, o):
         """Right scalar multiplication."""
@@ -105,6 +140,7 @@ class XXZ(Hamiltonian):
             from qibo.hamiltonian import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+
     def __init__(self, delta=0.5, **kwargs):
         """Initialize XXZ model."""
         Hamiltonian.__init__(self, **kwargs)
