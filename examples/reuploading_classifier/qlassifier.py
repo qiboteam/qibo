@@ -1,18 +1,21 @@
 from qibo.models import Circuit
 from qibo import gates
 import numpy as np
-from datasets import create_dataset, create_target
+from datasets import create_dataset, create_target, fig_template, world_map_template
 from qibo.hamiltonians import Hamiltonian
 from qibo.config import matrices
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import tensorflow_probability as tfp
+from matplotlib.cm import get_cmap
+from matplotlib.colors import Normalize
 
 np.random.seed(0)
 
 class single_qubit_classifier:
     def __init__(self, name, layers, grid=11, test_samples=1000):
         #Circuit.__init__(self, nqubits)
+        self.name = name
         self.layers = layers
         self.training_set = create_dataset(name, grid=grid)
         self.test_set = create_dataset(name, samples = test_samples)
@@ -67,13 +70,13 @@ class single_qubit_classifier:
         C = self.circuit(x)
         state = C.execute()
         values = [h.expectation(state) for h in self.H]
-        cf = .5 * (1 - np.dot(values, self.target_values[y])) ** 2
+        cf = tf.constant(np.arccos(np.dot(values, self.target_values[y])) ** 2)
         return cf
 
     def cost_function_observables(self, params):
         self.set_parameters(params)
         cf = 0
-        for x, y in self.training_set:
+        for x, y in zip(self.training_set[0], self.training_set[1]):
             cf += self.cost_function_one_point_observables(x, y)
         cf /= len(self.training_set[0])
         return cf
@@ -82,6 +85,7 @@ class single_qubit_classifier:
         if fidelity:
             loss = self.cost_function_fidelity
         else:
+            self.create_target_hamiltonians()
             loss = self.cost_function_observables
         if method == 'cma':
             # Genetic optimizer
@@ -192,8 +196,49 @@ class single_qubit_classifier:
 
 
     def paint_results(self):
-        # Pintar los resultados
-        pass
+        fig, axs = fig_template(self.name)
+        guess_labels = self.eval_test_set_fidelity()
+        colors_classes = get_cmap('tab10')
+        norm_class = Normalize(vmin=0, vmax=10)
+        x = self.test_set[0]
+        x_0, x_1 = x[:, 0], x[:, 1]
+        axs[0].scatter(x_0, x_1, c=guess_labels, s=2, cmap=colors_classes, norm=norm_class)
+        colors_rightwrong = get_cmap('RdYlGn')
+        norm_rightwrong = Normalize(vmin=-.1, vmax=1.1)
+
+        checks = [int(g == l) for g, l in zip(guess_labels, self.test_set[1])]
+        axs[1].scatter(x_0, x_1, c=checks, s=2, cmap=colors_rightwrong, norm=norm_rightwrong)
+
+        plt.show()
+
+
+    def paint_world_map(self):
+        angles = np.zeros((len(self.test_set[0]), 2))
+        from datasets import laea_x, laea_y
+        fig, ax = world_map_template()
+        colors_classes = get_cmap('tab10')
+        norm_class = Normalize(vmin=0, vmax=10)
+        for i, x in enumerate(self.test_set[0]):
+            C = self.circuit(x)
+            state = C.execute().numpy()
+            angles[i, 0] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
+            angles[i, 1] = np.angle(state[1] / state[0])
+
+        ax.scatter(laea_x(angles[:, 1], angles[:, 0]), laea_y(angles[:, 1], angles[:, 0]), c=self.test_set[1],
+                          cmap=colors_classes, s=15, norm=norm_class)
+
+        angles_0 = np.zeros(len(self.target))
+        angles_1 = np.zeros(len(self.target))
+        for i, state in enumerate(self.target):
+            angles_0[i] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
+            angles_1[i] = np.angle(state[1] / state[0])
+
+        ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=list(range(i + 1)),
+                       cmap=colors_classes, s=500, norm=norm_class, marker='P')
+
+        ax.axis('off')
+
+        plt.show()
 
 
     # La minimización puede ser como en el VQE de qibo, la misma estructura es válida, y todos los minimizadores deberían funcionar bien
