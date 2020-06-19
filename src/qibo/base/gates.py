@@ -173,6 +173,15 @@ class X(Gate):
 
     def decompose(self, *free: int) -> List[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates."""
+        if set(free) & set(self.qubits):
+            raise ValueError("Cannot decompose multi-control X gate if free "
+                             "qubits coincide with target or controls.")
+        if self._nqubits is not None:
+            for q in free:
+                if q >= self.nqubits:
+                    raise ValueError("Gate acts on {} qubits but {} was given "
+                                     "as free qubit.".format(self.nqubits, q))
+
         controls = self.control_qubits
         target = self.target_qubits[0]
         m = len(controls)

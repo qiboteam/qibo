@@ -68,19 +68,36 @@ def test_x_decomposition_gates(target, controls, free):
         assert_gates_equivalent(qibo_gate, cirq_gate)
 
 
-def test_x_decomposition_execution():
-    gate = gates.X(7).controlled_by(0, 1, 2, 3, 4)
-    init_state = random_initial_state(8)
+@pytest.mark.parametrize(("target", "controls", "free"),
+                         [(0, (1,), ()), (2, (0, 1), ()),
+                          (3, (0, 1, 4), (2, 5)),
+                          (7, (0, 1, 2, 3, 4), (5, 6)),
+                          (5, (0, 2, 4, 6, 7), (1, 3)),
+                          (8, (0, 2, 4, 6, 9), (3, 5, 7))])
+def test_x_decomposition_execution(target, controls, free):
+    gate = gates.X(target).controlled_by(*controls)
+    nqubits = max((target,) + controls + free) + 1
+    init_state = random_initial_state(nqubits)
 
-    targetc = Circuit(8)
+    targetc = Circuit(nqubits)
     targetc.add(gate)
     target_state = targetc(np.copy(init_state)).numpy()
 
-    c = Circuit(8)
-    c.add(gate.decompose(5, 6))
+    c = Circuit(nqubits)
+    c.add(gate.decompose(*free))
     final_state = c(np.copy(init_state)).numpy()
 
     np.testing.assert_allclose(final_state, target_state, atol=_ATOL)
+
+
+def test_x_decomposition_errors():
+    gate = gates.X(0).controlled_by(1, 2, 3, 4)
+    with pytest.raises(ValueError):
+        decomp = gate.decompose(2, 3)
+    c = Circuit(6)
+    c.add(gate)
+    with pytest.raises(ValueError):
+        decomp = gate.decompose(5, 6)
 
 
 def test_x_decomposition_execution_cirq():
