@@ -162,16 +162,7 @@ class X(Gate):
             gate = super(X, self).controlled_by(*q)
         return gate
 
-    def _congruent(self, control0: int, control1: int, target: int) -> List[Gate]:
-        import numpy as np
-        RY = self._MODULE.RY
-        CNOT = self._MODULE.CNOT
-        return [RY(target, -np.pi / 4), CNOT(control1, target),
-                RY(target, -np.pi / 4), CNOT(control0, target),
-                RY(target, np.pi / 4), CNOT(control1, target),
-                RY(target, np.pi / 4)]
-
-    def decompose(self, *free: int) -> List[Gate]:
+    def decompose(self, *free: int, use_toffolis: bool = True) -> List[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates."""
         if set(free) & set(self.qubits):
             raise ValueError("Cannot decompose multi-control X gate if free "
@@ -190,11 +181,16 @@ class X(Gate):
 
         decomp_gates = []
         n = m + 1 + len(free)
+        TOFFOLI = self._MODULE.TOFFOLI
         if (n >= 2 * m - 1) and (m >= 3):
-            gates1 = [self._congruent(controls[m - 2 - i], free[m - 4 - i], free[m - 3 - i])
+            gates1 = [TOFFOLI(controls[m - 2 - i],
+                              free[m - 4 - i],
+                              free[m - 3 - i]
+                              ).congruent(use_toffolis=use_toffolis)
                       for i in range(m - 3)]
-            gates2 = self._congruent(controls[0], controls[1], free[0])
-            first_toffoli = self._MODULE.TOFFOLI(controls[m - 1], free[m - 3], target)
+            gates2 = TOFFOLI(controls[0], controls[1], free[0]
+                             ).congruent(use_toffolis=use_toffolis)
+            first_toffoli = TOFFOLI(controls[m - 1], free[m - 3], target)
 
             decomp_gates.append(first_toffoli)
             for gates in gates1:
@@ -207,12 +203,12 @@ class X(Gate):
             m1 = n // 2
             free1 = controls[m1:] + (target,) + tuple(free[1:])
             x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
-            part1 = x1.decompose(*free1)
+            part1 = x1.decompose(*free1, use_toffolis=use_toffolis)
 
             free2 = controls[:m1] + tuple(free[1:])
             controls2 = controls[m1:] + (free[0],)
             x2 = self.__class__(target).controlled_by(*controls2)
-            part2 = x2.decompose(*free2)
+            part2 = x2.decompose(*free2, use_toffolis=use_toffolis)
 
             decomp_gates = [*part1, *part2]
 
@@ -426,6 +422,10 @@ class CNOT(Gate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
 
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        q0, q1 = self.control_qubits[0], self.target_qubits[0]
+        return [self.__class__(q0, q1)]
+
 
 class CZ(Gate):
     """The Controlled-Phase gate.
@@ -566,6 +566,27 @@ class TOFFOLI(Gate):
         self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        c0, c1 = self.control_qubits
+        t = self.target_qubits[0]
+        return [self.__class__(c0, c1, t)]
+
+    def congruent(self, use_toffolis: bool = True) -> List[Gate]:
+        if use_toffolis:
+            return self.decompose()
+
+        control0, control1 = self.control_qubits
+        target = self.target_qubits[0]
+        import importlib
+        import numpy as np
+        module = importlib.import_module(self.__module__)
+        RY = module.RY
+        CNOT = module.CNOT
+        return [RY(target, -np.pi / 4), CNOT(control1, target),
+                RY(target, -np.pi / 4), CNOT(control0, target),
+                RY(target, np.pi / 4), CNOT(control1, target),
+                RY(target, np.pi / 4)]
 
 
 class Unitary(Gate):
