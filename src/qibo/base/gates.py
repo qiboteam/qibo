@@ -103,6 +103,16 @@ class Gate(object):
             self.control_qubits = q
         return self
 
+    def decompose(self, *free) -> List["Gate"]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+        """
+        # Return the same gate temporarily until we implement the proper
+        # decomposition for all gates
+        return [self]
+
     def __call__(self, state, is_density_matrix):
         """Acts with the gate on a given state vector:
 
@@ -153,42 +163,56 @@ class X(Gate):
         return gate
 
     def _congruent(self, control0: int, control1: int, target: int) -> List[Gate]:
+        import numpy as np
         RY = self._MODULE.RY
         CNOT = self._MODULE.CNOT
-        return [RY(-np.pi / 4).on(target),
-                CNOT(control1, target),
-                RY(-np.pi / 4).on(target),
-                CNOT(control0, target),
-                RY(np.pi / 4).on(target),
-                CNOT(control1, target),
-                RY(np.pi / 4).on(target)]
+        return [RY(target, -np.pi / 4), CNOT(control1, target),
+                RY(target, -np.pi / 4), CNOT(control0, target),
+                RY(target, np.pi / 4), CNOT(control1, target),
+                RY(target, np.pi / 4)]
 
-    def decompose(self, *free) -> List[Gate]:
+    def decompose(self, *free: int) -> List[Gate]:
         """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates."""
         controls = self.control_qubits
         target = self.target_qubits[0]
         m = len(controls)
-        if m == 0:
-            return self.__class__(target)
-        elif m == 1:
-            return self._MODULE.CNOT(controls[0], target)
-        elif m == 2:
-            c1, c2 = controls
-            return self._MODULE.CNOT(c1, c2, target)
+        if m < 3:
+            return [self.__class__(target).controlled_by(*controls)]
 
+        decomp_gates = []
         n = m + 1 + len(free)
         if (n >= 2 * m - 1) and (m >= 3):
-            gates1 = [self._congruent(controls[m - 2 - i], free[m - 4 - i], free(m - 3 - i))
+            gates1 = [self._congruent(controls[m - 2 - i], free[m - 4 - i], free[m - 3 - i])
                       for i in range(m - 3)]
             gates2 = self._congruent(controls[0], controls[1], free[0])
-            gates3 = _flatten(gates1) + gates2 + _flatten(gates1[::-1])
             first_toffoli = self._MODULE.TOFFOLI(controls[m - 1], free[m - 3], target)
-            return [first_toffoli, *gates3, first_ccnot, *gates3]
 
+            decomp_gates.append(first_toffoli)
+            for gates in gates1:
+                decomp_gates.extend(gates)
+            decomp_gates.extend(gates2)
+            for gates in gates1[::-1]:
+                decomp_gates.extend(gates)
 
+        elif len(free) >= 1:
+            m1 = n // 2
+            free1 = controls[m1:] + (target,) + tuple(free[1:])
+            x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
+            part1 = x1.decompose(*free1)
 
+            free2 = controls[:m1] + tuple(free[1:])
+            controls2 = controls[m1:] + (free[0],)
+            x2 = self.__class__(target).controlled_by(*controls2)
+            part2 = x2.decompose(*free2)
 
+            decomp_gates = [*part1, *part2]
 
+        else:
+            raise NotImplementedError("X decomposition is not implemented for "
+                                      "zero free qubits.")
+
+        decomp_gates.extend(decomp_gates)
+        return decomp_gates
 
 
 class Y(Gate):
