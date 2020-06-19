@@ -9,6 +9,13 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.float64, np.complex64, np.complex128)
 
 
+def isclassinstance(o, w):
+    """Check if objects are from the same base class."""
+    return (isinstance(o, w.__class__) or \
+            issubclass(o.__class__, w.__class__) or \
+            issubclass(w.__class__, o.__class__))
+
+
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
@@ -47,7 +54,7 @@ class Hamiltonian(object):
 
     def __add__(self, o):
         """Add operator."""
-        if isinstance(o, self.__class__):
+        if isclassinstance(o, self):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
@@ -69,7 +76,7 @@ class Hamiltonian(object):
 
     def __sub__(self, o):
         """Subtraction operator."""
-        if isinstance(o, self.__class__):
+        if isclassinstance(o, self):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
@@ -87,7 +94,7 @@ class Hamiltonian(object):
 
     def __rsub__(self, o):
         """Right subtraction operator."""
-        if isinstance(o, self.__class__):
+        if isclassinstance(o, self):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
