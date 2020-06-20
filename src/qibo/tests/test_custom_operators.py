@@ -370,38 +370,61 @@ def test_transpose_state(nqubits, ndevices):
             np.testing.assert_allclose(target_state, new_state.numpy())
 
 
-@pytest.mark.parametrize("nqubits", [3])
+@pytest.mark.parametrize("nqubits", [4, 5, 7, 8, 9, 10])
+def test_swap_pieces_zero_global(nqubits):
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    target_state = tf.cast(np.copy(state.numpy()), dtype=state.dtype)
+    shape = (2, int(state.shape[0]) // 2)
+    state = tf.reshape(state, shape)
+
+    for _ in range(10):
+        local = np.random.randint(1, nqubits)
+
+        target_state = op.apply_swap(target_state, nqubits, [0, local])
+        target_state = tf.reshape(target_state, shape)
+
+        piece0, piece1 = state[0], state[1]
+        if tf.config.list_physical_devices("GPU"):
+            error = tf.python.framework.errors_impl.UnimplementedError
+            with pytest.raises(error):
+                op.swap_pieces(piece0, piece1, local - 1, nqubits - 1)
+        else:
+            op.swap_pieces(piece0, piece1, local - 1, nqubits - 1)
+            np.testing.assert_allclose(target_state[0], piece0.numpy())
+            np.testing.assert_allclose(target_state[1], piece1.numpy())
+
+
+@pytest.mark.parametrize("nqubits", [5, 7, 8, 9, 10])
 def test_swap_pieces(nqubits):
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
-    #new_global = np.random.randint(1, nqubits)
-    new_global = 2
+    target_state = tf.cast(np.copy(state.numpy()), dtype=state.dtype)
     shape = (2, int(state.shape[0]) // 2)
 
-    #state_np = state.numpy().reshape(nqubits * (2,))
-    #target_state = np.zeros(shape, dtype=state_np.dtype)
-    #slicer = nqubits * [slice(None)]
-    #slicer[new_global] = 0
-    #target_state[0] = state_np[tuple(slicer)].ravel()
-    #slicer[new_global] = 1
-    #target_state[1] = state_np[tuple(slicer)].ravel()
+    for _ in range(10):
+        global_qubit = np.random.randint(0, nqubits)
+        local_qubit = np.random.randint(0, nqubits)
+        while local_qubit == global_qubit:
+            local_qubit = np.random.randint(0, nqubits)
 
-    target_state = tf.identity(state)
-    target_state = op.apply_swap(target_state, nqubits, [0, 2])
-    target_state = tf.reshape(target_state, shape)
+        transpose_order = ([global_qubit] + list(range(global_qubit)) +
+                           list(range(global_qubit + 1, nqubits)))
 
-    state = tf.reshape(state, shape)
-    piece0, piece1 = state[0], state[1]
-    if tf.config.list_physical_devices("GPU"):
-        error = tf.python.framework.errors_impl.UnimplementedError
-        with pytest.raises(error):
-            pass
-    else:
-        op.swap_pieces(piece0, piece1, new_global - 1, nqubits - 1)
+        target_state = op.apply_swap(target_state, nqubits, [global_qubit, local_qubit])
+        target_state = tf.reshape(target_state, nqubits * (2,))
+        target_state = tf.transpose(target_state, transpose_order)
+        target_state = tf.reshape(target_state, shape)
 
-        for i, (x, y) in enumerate(zip(target_state[0], piece0.numpy())):
-            print(i, x - y)
-        for i, (x, y) in enumerate(zip(target_state[1], piece1.numpy())):
-            print(i, x - y)
-
-        np.testing.assert_allclose(target_state[0], piece0.numpy())
-        np.testing.assert_allclose(target_state[1], piece1.numpy())
+        state = tf.reshape(state, nqubits * (2,))
+        state = tf.transpose(state, transpose_order)
+        state = tf.reshape(state, shape)
+        piece0, piece1 = state[0], state[1]
+        if tf.config.list_physical_devices("GPU"):
+            error = tf.python.framework.errors_impl.UnimplementedError
+            with pytest.raises(error):
+                op.swap_pieces(piece0, piece1, local_qubit - 1, nqubits - 1)
+        else:
+            op.swap_pieces(piece0, piece1,
+                           local_qubit - int(global_qubit < local_qubit),
+                           nqubits - 1)
+            np.testing.assert_allclose(target_state[0], piece0.numpy())
+            np.testing.assert_allclose(target_state[1], piece1.numpy())
