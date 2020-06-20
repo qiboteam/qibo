@@ -368,3 +368,40 @@ def test_transpose_state(nqubits, ndevices):
         else:
             new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
             np.testing.assert_allclose(target_state, new_state.numpy())
+
+
+@pytest.mark.parametrize("nqubits", [3])
+def test_swap_pieces(nqubits):
+    state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+    #new_global = np.random.randint(1, nqubits)
+    new_global = 2
+    shape = (2, int(state.shape[0]) // 2)
+
+    #state_np = state.numpy().reshape(nqubits * (2,))
+    #target_state = np.zeros(shape, dtype=state_np.dtype)
+    #slicer = nqubits * [slice(None)]
+    #slicer[new_global] = 0
+    #target_state[0] = state_np[tuple(slicer)].ravel()
+    #slicer[new_global] = 1
+    #target_state[1] = state_np[tuple(slicer)].ravel()
+
+    target_state = tf.identity(state)
+    target_state = op.apply_swap(target_state, nqubits, [0, 2])
+    target_state = tf.reshape(target_state, shape)
+
+    state = tf.reshape(state, shape)
+    piece0, piece1 = state[0], state[1]
+    if tf.config.list_physical_devices("GPU"):
+        error = tf.python.framework.errors_impl.UnimplementedError
+        with pytest.raises(error):
+            pass
+    else:
+        op.swap_pieces(piece0, piece1, new_global - 1, nqubits - 1)
+
+        for i, (x, y) in enumerate(zip(target_state[0], piece0.numpy())):
+            print(i, x - y)
+        for i, (x, y) in enumerate(zip(target_state[1], piece1.numpy())):
+            print(i, x - y)
+
+        np.testing.assert_allclose(target_state[0], piece0.numpy())
+        np.testing.assert_allclose(target_state[1], piece1.numpy())
