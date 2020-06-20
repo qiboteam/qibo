@@ -14,6 +14,12 @@ struct TransposeStateFunctor {
                   int nqubits, int ndevices, const int* qubit_order) const;
 };
 
+template <typename Device, typename T>
+struct SwapPiecesFunctor {
+  void operator()(const OpKernelContext* context, const Device &d,
+                  T* piece0, T* piece1, int new_global, int nqubits) const;
+};
+
 }  // namespace functor
 
 }  // namespace tensorflow

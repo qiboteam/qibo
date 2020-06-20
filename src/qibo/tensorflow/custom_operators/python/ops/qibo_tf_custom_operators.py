@@ -14,6 +14,9 @@ initial_state = custom_module.initial_state
 # transpose_state operator (for multi-GPU)
 transpose_state = custom_module.transpose_state
 
+# swap state pieces operator (for multi-GPU)
+swap_pieces = custom_module.swap_pieces
+
 
 def check_controls(controls):
     """Checks if ``controls`` variable has valid type."""
