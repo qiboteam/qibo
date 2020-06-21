@@ -54,8 +54,11 @@ class DeviceQueues:
         self.global_qubits_list = sorted(global_qubits)
         self.local_qubits = [q for q in range(self.nqubits)
                              if q not in self.global_qubits_set]
-        self.local_qubits_reduced = [q - self.reduction_number(q)
-                                     for q in self.local_qubits]
+
+        self.global_qubits_reduced = {q: self.global_qubits_list.index(q)
+                                      for q in self.global_qubits_list}
+        self.local_qubits_reduced = {q: q - self.reduction_number(q)
+                                     for q in self.local_qubits}
 
         self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
         self.ids_to_device = self.ndevices * [None]
@@ -332,7 +335,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
              for device, ids in self.device_queues.device_to_ids.items())
 
     def _swap(self, global_qubit: int, local_qubit: int):
-        m = self.nglobal - global_qubit - 1
+        m = self.device_queues.global_qubits_reduced[global_qubit]
+        m = self.nglobal - m - 1
         t = 1 << m
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))

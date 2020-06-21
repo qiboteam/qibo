@@ -205,6 +205,26 @@ def test_controlled_execution(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
+@pytest.mark.parametrize("ndevices", [2, 4])
+def test_execution_with_swap_global(ndevices):
+    qibo.set_backend("custom")
+    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
+    dist_c = models.DistributedCircuit(4, devices)
+    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+    dist_c.add(gates.SWAP(0, 2))
+    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+
+    c = models.Circuit(4)
+    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+    c.add(gates.SWAP(0, 2))
+    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+
+    initial_state = random_state(c.nqubits)
+    final_state = dist_c(np.copy(initial_state)).numpy()
+    target_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
 @pytest.mark.skip
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
@@ -268,7 +288,6 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     check_device_queues(c.device_queues)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("accelerators",
                          [{"/GPU:0": 2},
