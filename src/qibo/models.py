@@ -64,6 +64,9 @@ def QFT(nqubits: int, with_swaps: bool = True,
             final_state = c(init_state)
     """
     if accelerators is not None:
+        if not with_swaps:
+            raise NotImplementedError("Distributed QFT is only implemented "
+                                      "with SWAPs.")
         return _DistributedQFT(nqubits, accelerators, memory_device)
 
     import numpy as np
@@ -91,10 +94,14 @@ def _DistributedQFT(nqubits: int,
     from qibo import gates
 
     circuit = Circuit(nqubits, accelerators, memory_device)
+    icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
         circuit.global_qubits = range(circuit.nlocal, nqubits)
+        if icrit < circuit.nglobal:
+            raise NotImplementedError("Cannot implement QFT for {} qubits "
+                                      "using {} global qubits."
+                                      "".format(nqubits, circuit.nglobal))
 
-    icrit = nqubits // 2 + nqubits % 2
     for i1 in range(nqubits):
         if i1 < icrit:
             i1eff = i1
