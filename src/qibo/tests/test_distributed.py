@@ -36,7 +36,7 @@ def test_ndevices():
     assert c.ndevices == 4
     assert c.nglobal == 2
 
-
+@pytest.mark.skip
 def test_set_gates():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
@@ -50,7 +50,7 @@ def test_set_gates():
         assert len(queue[0]) == 4
         assert len(queue[1]) == 2
 
-
+@pytest.mark.skip
 def test_set_gates_incomplete():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
@@ -66,7 +66,7 @@ def test_set_gates_incomplete():
         assert len(queue[0]) == 3
         assert len(queue[1]) == 3
 
-
+@pytest.mark.skip
 def test_set_gates_controlled():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
@@ -143,7 +143,7 @@ def test_distributed_circuit_errors():
     with pytest.raises(NotImplementedError):
         noisy_c = c.with_noise((0.1, 0.2, 0.1))
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution(ndevices):
     qibo.set_backend("custom")
@@ -159,7 +159,7 @@ def test_simple_execution(ndevices):
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_execution_special_gate(ndevices):
     qibo.set_backend("custom")
@@ -177,7 +177,7 @@ def test_execution_special_gate(ndevices):
     target_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_controlled_execution(ndevices):
     qibo.set_backend("custom")
@@ -196,7 +196,7 @@ def test_controlled_execution(ndevices):
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)
 
-
+@pytest.mark.skip
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
     qibo.set_backend("custom")
@@ -222,7 +222,7 @@ def test_distributed_circuit_addition():
     assert c.depth == dist_c.depth
     np.testing.assert_allclose(target_state, final_state)
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 9, 10, 30, 31, 32, 33])
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
@@ -249,7 +249,7 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
                                 list(range(nglobal, 2 * nglobal))]
     assert target_global_qubits == c.device_queues.global_qubits_lists
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
@@ -258,7 +258,7 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     c.set_gates()
     check_device_queues(c.device_queues)
 
-
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("accelerators",
                          [{"/GPU:0": 2},

@@ -8,7 +8,7 @@ from qibo.config import DTYPES
 from qibo.base import gates
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
 
 class DeviceQueues:
@@ -45,12 +45,17 @@ class DeviceQueues:
         self.nqubits = nqubits
         self.ndevices = sum(calc_devices.values())
         self.nglobal = int(np.log2(self.ndevices))
+        self.nlocal = self.nqubits - self.nglobal
 
         self.queues = []
         self.special_queue = []
 
         self.global_qubits_set = global_qubits
         self.global_qubits_list = sorted(global_qubits)
+        self.local_qubits = [q for q in range(self.nqubits)
+                             if q not in self.global_qubits_set]
+        self.local_qubits_reduced = [q - self.reduction_number(q)
+                                     for q in self.local_qubits]
 
         self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
         self.ids_to_device = self.ndevices * [None]
@@ -67,6 +72,12 @@ class DeviceQueues:
             yield device, list(range(start, stop))
             start = stop
 
+    def reduction_number(self, q: int) -> int:
+        for i, gq in enumerate(self.global_qubits_list):
+            if gq > q:
+                return i
+        return i + 1
+
     def _create_reduced_gate(self, gate: gates.Gate) -> gates.Gate:
         """Creates a copy of a gate for specific device application.
 
@@ -80,19 +91,13 @@ class DeviceQueues:
             A :class:`qibo.base.gates.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
-        def reduction_number(q: int) -> int:
-            for i, gq in enumerate(self.global_qubits_list):
-                if gq > q:
-                    return i
-            return i + 1
-
         calc_gate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
-        calc_gate.target_qubits = tuple(q - reduction_number(q)
+        calc_gate.target_qubits = tuple(q - self.reduction_number(q)
                                         for q in calc_gate.target_qubits)
-        calc_gate.control_qubits = tuple(q - reduction_number(q)
+        calc_gate.control_qubits = tuple(q - self.reduction_number(q)
                                          for q in calc_gate.control_qubits
-                                         if q not in self.global_qubits_set])
+                                         if q not in self.global_qubits_set)
         calc_gate.original_gate = gate
         return calc_gate
 
@@ -125,7 +130,7 @@ class DeviceQueues:
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
                     with tf.device(device):
-                        calc_gate.nqubits = nlocal
+                        calc_gate.nqubits = self.nlocal
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then
@@ -188,6 +193,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Number of calculation devices should be a power "
                              "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
+        self.nlocal = self.nqubits - self.nglobal
 
         self.memory_device = memory_device
         self.calc_devices = accelerators
@@ -233,9 +239,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "calculation devices.".format(len(x), self.ndevices))
 
         self.device_queues = DeviceQueues(self.nqubits, self.calc_devices, set(x))
-        local_qubits = [i for i in range(self.nqubits) if i not in self._global_qubits]
 
-        self.transpose_order = list(sorted(self._global_qubits)) + local_qubits
+        self.transpose_order = (self.device_queues.global_qubits_list +
+                                self.device_queues.local_qubits)
         self.reverse_transpose_order = self.nqubits * [0]
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
@@ -315,8 +321,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
              for device, ids in self.device_queues.device_to_ids.items())
 
     def _swap(self, global_qubit: int, local_qubit: int):
-        # TODO: Implement this
-        pass
+        m = self.nglobal - global_qubit - 1
+        t = 1 << m
+        for g in range(self.ndevices // 2):
+            i = ((g >> m) << (m + 1)) + (g & (t - 1))
+            local_eff = self.device_queues.local_qubits_reduced[local_qubit]
+            op.swap_pieces(self.pieces[i], self.pieces[i + t],
+                           local_eff, self.nlocal)
 
     def _special_gate_execute(self, gate: Union["TensorflowGate", Tuple[int, int]]):
         """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
@@ -402,7 +413,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
-        if self._global_qubits is None:
+        if self.device_queues is None:
             self.global_qubits = self._default_global_qubits()
 
         if initial_state is None:
@@ -434,7 +445,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
         """
         with tf.device(self.memory_device):
-            state = tf.zeros(self.full_shape, dtype=self.dtype)
-            state = op.transpose_state(states, state, self.nqubits,
+            state = tf.zeros(self.full_shape, dtype=DTYPES.get('DTYPECPX'))
+            state = op.transpose_state(self.pieces, state, self.nqubits,
                                        self.reverse_transpose_order)
         return state
