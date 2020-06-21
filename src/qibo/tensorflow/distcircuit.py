@@ -106,8 +106,7 @@ class DeviceQueues:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
-                for i in range(self.ndevices):
-                    self.queues.append([])
+                self.queues.append([])
 
             elif set(gate.target_qubits) & self.global_qubits_set: # global swap gate
                 global_qubits = set(gate.target_qubits) & self.global_qubits_set
@@ -121,12 +120,16 @@ class DeviceQueues:
                 local_qubit = gate.target_qubits[0]
                 if local_qubit == global_qubit:
                     local_qubit = gate.target_qubits[1]
+
                 self.special_queue.append((global_qubit, local_qubit))
+                self.queues.append([])
 
             else:
-                self.queues.append([[] for _ in range(self.ndevices)])
+                if not self.queues or not self.queues[-1]:
+                    self.queues.append([[] for _ in range(self.ndevices)])
+                
                 for device, ids in self.device_to_ids.items():
-                    calc_gate = self._create_reduced_gate(iq, gate)
+                    calc_gate = self._create_reduced_gate(gate)
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
                     with tf.device(device):
@@ -136,8 +139,8 @@ class DeviceQueues:
                         # If there are control qubits that are global then
                         # the gate should not be applied by all devices
                         for control in (set(gate.control_qubits) &
-                                        self.global_qubits_sets[iq]):
-                            ic = self.global_qubits_lists[iq].index(control)
+                                        self.global_qubits_set):
+                            ic = self.global_qubits_list.index(control)
                             ic = self.nglobal - ic - 1
                             flag = bool((i // (2 ** ic)) % 2)
                             if not flag:
@@ -307,7 +310,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     #            i += 1
 
     def _joblib_execute(self, queues: List[List["TensorflowGate"]]):
-        """Executes gates in ``accelerators`` in parallel."""
+        """Executes gates in ``accelerators`` in parallel.
+
+        Args:
+            queues: List that holds the gates to be applied by each accelerator.
+                Has shape ``(ndevices, ngates_i)`` where ``ngates_i`` is the
+                number of gates to be applied by accelerator ``i``.
+        """
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):

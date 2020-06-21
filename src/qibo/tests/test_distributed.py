@@ -13,13 +13,12 @@ def random_state(nqubits):
 
 def check_device_queues(device_queues):
     """Asserts that global qubits do not collide with the gates to be applied."""
-    for gate_groups in device_queues.queues:
-        assert len(device_queues.global_qubits_lists) == len(gate_groups)
-        for global_qubits, gate_list in zip(device_queues.global_qubits_lists, gate_groups):
+    for gate_group in device_queues.queues:
+        for device_gates in gate_group:
             target_qubits = set()
-            for gate in gate_list:
+            for gate in device_gates:
                 target_qubits |= set(gate.original_gate.target_qubits)
-            assert not set(global_qubits) & target_qubits
+            assert not device_queues.global_qubits_set & target_qubits
 
 
 def test_invalid_devices():
@@ -36,19 +35,19 @@ def test_ndevices():
     assert c.ndevices == 4
     assert c.nglobal == 2
 
-@pytest.mark.skip
-def test_set_gates():
+
+def test_set_gates_simple():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
-    c.add((gates.H(i) for i in range(6)))
+    c.add((gates.H(i) for i in range(4)))
+    c.global_qubits = [4, 5]
     c.set_gates()
 
-    assert c.device_queues.global_qubits_lists == [[4, 5], [0, 1]]
     check_device_queues(c.device_queues)
-    for queue in c.device_queues.queues:
-        assert len(queue) == 2
-        assert len(queue[0]) == 4
-        assert len(queue[1]) == 2
+    assert len(c.device_queues.queues) == 1
+    assert len(c.device_queues.queues[0]) == 4
+    for device_queue in c.device_queues.queues[0]:
+        assert len(device_queue) == 4
 
 @pytest.mark.skip
 def test_set_gates_incomplete():
