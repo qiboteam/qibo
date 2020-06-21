@@ -377,8 +377,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for gate in special_gates:
             self._special_gate_execute(next(special_gates))
 
-        # FIXME: The final state will use the transpose op and run out of
-        # memory for 34 qubits
+        # NOTE: The final state will use the transpose op if ``global_qubits``
+        # are not [0, 1, ..., nglobal] or [nlocal, nlocal+1, ..., nqubits].
         state = self.final_state
         if self.measurement_gate is None or nshots is None:
             return state
@@ -459,8 +459,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         Returns:
             state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
         """
-        with tf.device(self.memory_device):
-            state = tf.zeros(self.full_shape, dtype=DTYPES.get('DTYPECPX'))
-            state = op.transpose_state(self.pieces, state, self.nqubits,
-                                       self.reverse_transpose_order)
+        if self.global_qubits == list(range(self.nglobal)):
+            with tf.device(self.memory_device):
+                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
+                state = tf.reshape(state, self.full_shape)
+        elif self.global_qubits == list(range(self.nlocal, self.nqubits)):
+            with tf.device(self.memory_device):
+                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
+                state = tf.reshape(state, self.full_shape)
+        else: # fall back to the transpose op
+            with tf.device(self.memory_device):
+                state = tf.zeros(self.full_shape, dtype=DTYPES.get('DTYPECPX'))
+                state = op.transpose_state(self.pieces, state, self.nqubits,
+                                           self.reverse_transpose_order)
         return state
