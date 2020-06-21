@@ -127,7 +127,7 @@ class DeviceQueues:
             else:
                 if not self.queues or not self.queues[-1]:
                     self.queues.append([[] for _ in range(self.ndevices)])
-                
+
                 for device, ids in self.device_to_ids.items():
                     calc_gate = self._create_reduced_gate(gate)
                     # Gate matrix should be constructed in the calculation
@@ -237,11 +237,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         lists are set. These lists are used in order to transpose the state pieces
         when we want to swap global qubits.
         """
-        if len(x) != self.nglobal:
+        global_qubit_set = set(x)
+        if len(global_qubit_set) != self.nglobal:
             raise ValueError("Invalid number of global qubits {} for using {} "
                              "calculation devices.".format(len(x), self.ndevices))
 
-        self.device_queues = DeviceQueues(self.nqubits, self.calc_devices, set(x))
+        self.device_queues = DeviceQueues(self.nqubits, self.calc_devices,
+                                          global_qubit_set)
 
         self.transpose_order = (self.device_queues.global_qubits_list +
                                 self.device_queues.local_qubits)
@@ -358,7 +360,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 nshots: Optional[int] = None,
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
-        if not self.device_queues.queues:
+        if self.device_queues is None or not self.device_queues.queues:
             self.set_gates()
         self._cast_initial_state(initial_state)
 
