@@ -341,8 +341,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.device_queues.local_qubits_reduced[local_qubit]
-            op.swap_pieces(self.pieces[i], self.pieces[i + t],
-                           local_eff, self.nlocal)
+            with tf.device(self.memory_device):
+                op.swap_pieces(self.pieces[i], self.pieces[i + t],
+                               local_eff, self.nlocal)
 
     def _special_gate_execute(self, gate: Union["TensorflowGate", Tuple[int, int]]):
         """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
@@ -352,12 +353,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if isinstance(gate, tuple): # SWAP global
             self._swap(*gate)
         else: # ``Flatten`` or callback
-            state = self._merge()
-            if isinstance(gate, gates.CallbackGate):
-                gate(state)
-            else:
-                state = gate(state)
-                self._split(state)
+            with tf.device(self.memory_device):
+                state = self._merge()
+                if isinstance(gate, gates.CallbackGate):
+                    gate(state)
+                else:
+                    state = gate(state)
+                    self._split(state)
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,

@@ -60,10 +60,28 @@ struct SwapPiecesFunctor<CPUDevice, T> {
     const int64 tk = (int64)1 << m;
     const int64 nstates = (int64)1 << (nqubits - 1);
 
-    for (auto g = 0; g < nstates; g += 1) {
-      int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
-      std::swap(piece0[i + tk], piece1[i]);
+    // Set multi-threading
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    const int ncores = (int) thread_pool->NumThreads();
+    int64 nreps;
+    if (ncores > 1) {
+      nreps = (int64) nstates / ncores;
     }
+    else {
+      nreps = 1;
+    }
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
+        nreps);
+
+    auto DoWork = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g++) {
+        int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
+        std::swap(piece0[i + tk], piece1[i]);
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, DoWork);
   }
 };
 
