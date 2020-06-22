@@ -11,14 +11,14 @@ def random_state(nqubits):
     return x
 
 
-def check_device_queues(device_queues):
+def check_device_queues(queues):
     """Asserts that global qubits do not collide with the gates to be applied."""
-    for gate_group in device_queues.queues:
+    for gate_group in queues.queues:
         for device_gates in gate_group:
             target_qubits = set()
             for gate in device_gates:
                 target_qubits |= set(gate.original_gate.target_qubits)
-            assert not device_queues.global_qubits_set & target_qubits
+            assert not queues.global_qubits_set & target_qubits
 
 
 def test_invalid_devices():
@@ -43,11 +43,11 @@ def test_set_gates_simple():
     c.global_qubits = [4, 5]
     c.set_gates()
 
-    check_device_queues(c.device_queues)
-    assert len(c.device_queues.queues) == 1
-    assert len(c.device_queues.queues[0]) == 4
-    for device_queue in c.device_queues.queues[0]:
-        assert len(device_queue) == 4
+    check_device_queues(c.queues)
+    assert len(c.queues.queues) == 1
+    assert len(c.queues.queues[0]) == 4
+    for queues in c.queues.queues[0]:
+        assert len(queues) == 4
 
 
 def test_set_gates_with_global_swap():
@@ -59,16 +59,30 @@ def test_set_gates_with_global_swap():
     c.global_qubits = [4, 5]
     c.set_gates()
 
-    check_device_queues(c.device_queues)
-    assert len(c.device_queues.special_queue) == 1
-    assert len(c.device_queues.queues) == 3
-    assert len(c.device_queues.queues[0]) == 4
-    assert len(c.device_queues.queues[1]) == 0
-    assert len(c.device_queues.queues[2]) == 4
-    for device_group in c.device_queues.queues[0]:
+    check_device_queues(c.queues)
+    assert len(c.queues.special_queue) == 1
+    assert len(c.queues.queues) == 3
+    assert len(c.queues.queues[0]) == 4
+    assert len(c.queues.queues[1]) == 0
+    assert len(c.queues.queues[2]) == 4
+    for device_group in c.queues.queues[0]:
         assert len(device_group) == 3
-    for device_group in c.device_queues.queues[2]:
+    for device_group in c.queues.queues[2]:
         assert len(device_group) == 2
+
+
+def test_transform_queue_simple():
+    devices = {"/GPU:0": 1, "/GPU:1": 1}
+    c = models.DistributedCircuit(6, devices)
+    c.add((gates.H(i) for i in range(6)))
+    c.global_qubits = [0, 1]
+    c.queues._transform_queue([], c.queue)
+
+    check_device_queues(c.queues)
+    assert len(c.queues.queues) == 1
+    assert len(c.queues.queues[0]) == 4
+    for queue in c.queues.queues[0]:
+        assert len(queue) == 4
 
 
 @pytest.mark.skip
@@ -82,10 +96,10 @@ def test_set_gates_controlled():
     c.add([gates.X(2), gates.X(3), gates.X(4)])
     c.set_gates()
 
-    assert c.device_queues.global_qubits_lists == [[1, 4], [0, 5]]
-    check_device_queues(c.device_queues)
-    print(c.device_queues.global_qubits_lists)
-    for i, queue in enumerate(c.device_queues.queues):
+    assert c.queues.global_qubits_lists == [[1, 4], [0, 5]]
+    check_device_queues(c.queues)
+    print(c.queues.global_qubits_lists)
+    for i, queue in enumerate(c.queues.queues):
         assert len(queue) == 2
         assert len(queue[0]) == 3 + (i % 2)
         assert len(queue[1]) == 4 + (i > 1)
@@ -266,7 +280,7 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
     #    print()
     #    print()
 
-    check_device_queues(c.device_queues)
+    check_device_queues(c.queues)
     nglobal = c.nglobal
     if nglobal > 2:
         raise NotImplementedError
@@ -276,18 +290,20 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
         target_global_qubits = [list(range(nqubits - nglobal, nqubits)),
                                 list(range(nglobal)),
                                 list(range(nglobal, 2 * nglobal))]
-    assert target_global_qubits == c.device_queues.global_qubits_lists
+    assert target_global_qubits == c.queues.global_qubits_lists
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
     c.set_gates()
-    check_device_queues(c.device_queues)
+    check_device_queues(c.queues)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("accelerators",
                          [{"/GPU:0": 2},

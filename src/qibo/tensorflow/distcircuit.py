@@ -281,7 +281,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.memory_device = memory_device
         self.calc_devices = accelerators
 
-        self.device_queues = None
+        self.queues = None
         self.pieces = None
         self._construct_shapes()
 
@@ -305,9 +305,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         using the accelerators. In order to apply such gates we have to swap
         the target global qubit with a different (local) qubit.
         """
-        if self.device_queues is None:
+        if self.queues is None:
             raise ValueError("Cannot access global qubits before being set.")
-        return self.device_queues.global_qubits_list
+        return self.queues.global_qubits_list
 
     @global_qubits.setter
     def global_qubits(self, x: Sequence[int]):
@@ -322,11 +322,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Invalid number of global qubits {} for using {} "
                              "calculation devices.".format(len(x), self.ndevices))
 
-        self.device_queues = DeviceQueues(self.nqubits, self.calc_devices,
-                                          global_qubit_set)
+        self.queues = DeviceQueues(self.nqubits, self.calc_devices,
+                                   global_qubit_set)
 
-        self.transpose_order = (self.device_queues.global_qubits_list +
-                                self.device_queues.local_qubits)
+        self.transpose_order = (self.queues.global_qubits_list +
+                                self.queues.local_qubits)
         self.reverse_transpose_order = self.nqubits * [0]
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
@@ -366,17 +366,18 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         new gate group will be defined for the new global qubit configuration.
 
         The final global qubit lists and gate queues that are used for execution
-        are storred in ``self.device_queues`` which is a ``DeviceQueues`` object.
+        are storred in ``self.queues`` which is a ``DeviceQueues`` object.
         """
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
 
         # Count how many gates target each qubit to identify global qubits
         counter = DeviceQueues.count(self.queue, self.nqubits)
-        if self.device_queues is None:
+        if self.queues is None:
             self.global_qubits = counter.argsort()[:self.nglobal]
 
-        self.device_queues.create(self.queue)
+        transformed_queue = self.queues.transform(self.queue, counter)
+        self.queues.create(transformed_queue)
 
     def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
@@ -413,15 +414,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
         pool(joblib.delayed(_device_job)(ids, device)
-             for device, ids in self.device_queues.device_to_ids.items())
+             for device, ids in self.queues.device_to_ids.items())
 
     def _swap(self, global_qubit: int, local_qubit: int):
-        m = self.device_queues.global_qubits_reduced[global_qubit]
+        m = self.queues.global_qubits_reduced[global_qubit]
         m = self.nglobal - m - 1
         t = 1 << m
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
-            local_eff = self.device_queues.local_qubits_reduced[local_qubit]
+            local_eff = self.queues.local_qubits_reduced[local_qubit]
             with tf.device(self.memory_device):
                 op.swap_pieces(self.pieces[i], self.pieces[i + t],
                                local_eff, self.nlocal)
@@ -447,14 +448,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 nshots: Optional[int] = None,
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
-        if self.device_queues is None or not self.device_queues.queues:
+        if self.queues is None or not self.queues.queues:
             self.set_gates()
         self._cast_initial_state(initial_state)
 
-        special_gates = iter(self.device_queues.special_queue)
-        for i, device_queues in enumerate(self.device_queues.queues):
-            if device_queues:  # standard gate
-                self._joblib_execute(device_queues)
+        special_gates = iter(self.queues.special_queue)
+        for i, queues in enumerate(self.queues.queues):
+            if queues:  # standard gate
+                self._joblib_execute(queues)
             else: # special gate
                 self._special_gate_execute(next(special_gates))
         for gate in special_gates:
@@ -511,7 +512,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
-        if self.device_queues is None:
+        if self.queues is None:
             self.global_qubits = self._default_global_qubits()
 
         if initial_state is None:
