@@ -60,6 +60,8 @@ class DeviceQueues:
         self.local_qubits_reduced = {q: q - self.reduction_number(q)
                                      for q in self.local_qubits}
 
+        self.swaps_list = []
+
         self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
@@ -104,8 +106,64 @@ class DeviceQueues:
         calc_gate.original_gate = gate
         return calc_gate
 
-    def create(self, queue: List[gates.Gate]):
-        for gate in queue:
+    def _transform_queue(self, queue: List[gates.Gate],
+                         remaining_queue: List[gates.Gate],
+                         counter: np.ndarray) -> List[gates.Gate]:
+        #print(queue)
+        #print(remaining_queue)
+        #print()
+
+        new_remaining_queue = []
+        for gate in remaining_queue:
+            global_targets = set(gate.target_qubits) & self.global_qubits_set
+            accept = isinstance(gate, gates.SWAP) and len(global_targets) == 1
+            accept = accept or not global_targets
+            for skipped_gate in new_remaining_queue:
+                accept = skipped_gate.commutes(gate)
+                if not accept:
+                    break
+            if accept:
+                queue.append(gate)
+                for q in gate.target_qubits:
+                    counter[q] -= 1
+            else:
+                new_remaining_queue.append(gate)
+
+        if not new_remaining_queue:
+            return queue
+
+        # Find which qubits to swap
+        gate = new_remaining_queue[0]
+        target_set = set(gate.target_qubits)
+        global_targets = target_set & self.global_qubits_set
+        if isinstance(gate, gates.SWAP): # special case of swap on two global qubits
+            assert len(global_targets) == 2
+            global_targets.remove(target_set.pop())
+        available_swaps = (q for q in counter.argsort()
+                           if q not in (self.global_qubits_set | target_set))
+
+        # Generate qubit map that holds the swaps
+        qubit_map = {q: q for q in range(self.nqubits)}
+        for q in global_targets:
+            qs = next(available_swaps)
+            qubit_map[q] = qs
+            # Keep all swaps in memory so that we can reset them in the end
+            self.swaps_list.append((min(q, qs), max(q, qs)))
+            # Add ``SWAP`` gate in ``queue``.
+            queue.append(gates.SWAP(q, qs))
+            #  Modify ``counter`` to take into account the swaps
+            counter[q], counter[qs] = counter[qs], counter[q]
+
+        # Modify gates to take into account the swaps
+        for gate in remaining_queue:
+            gate.target_qubits = (qubit_map[q] for q in gate.target_qubits)
+            gate.control_qubits = (qubit_map[q] for q in gate.control_qubits)
+
+        return self._transform_queue(queue, new_remaining_queue, counter)
+
+    def create(self, queue: List[gates.Gate], counter: np.ndarray):
+        transformed_queue = self._transform_queue([], queue, counter)
+        for gate in transformed_queue:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
@@ -293,9 +351,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
+
+        # Count how many gates target each qubit to identify global qubits
+        counter = np.zeros(self.nqubits, dtype=np.int32)
+        for gate in self.queue:
+            for qubit in gate.target_qubits:
+                counter[qubit] += 1
+
         if self.device_queues is None:
-            self.global_qubits = self._default_global_qubits()
-        self.device_queues.create(self.queue)
+            self.global_qubits = counter.argsort()[:self.nglobal]
+
+        self.device_queues.create(self.queue, counter)
 
     def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
