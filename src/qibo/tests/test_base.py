@@ -209,6 +209,17 @@ def test_circuit_copy_with_measurements():
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 
+def test_gates_commute():
+    """Check ``gate.commutes`` for various gate configurations."""
+    assert H(0).commutes(X(1))
+    assert H(0).commutes(H(0))
+    assert not H(0).commutes(Y(0))
+    assert not CNOT(0, 1).commutes(SWAP(1, 2))
+    assert not CNOT(0, 1).commutes(H(1))
+    assert not CNOT(0, 1).commutes(Y(0).controlled_by(2))
+    assert CNOT(0, 1).commutes(Y(2).controlled_by(0))
+
+
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_state_precision(precision):
     import qibo

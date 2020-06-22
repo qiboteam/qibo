@@ -80,6 +80,11 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
 
+    def commutes(self, gate: "Gate") -> bool:
+        x = (set(self.target_qubits) & set(gate.qubits) or
+             set(gate.target_qubits) & set(self.qubits))
+        return (not x) or self.__class__ == gate.__class__
+
     def controlled_by(self, *q: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
