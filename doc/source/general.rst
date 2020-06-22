@@ -1,5 +1,5 @@
 Code Overview
-================
+=============
 
 The QIBO framework in this repository implements a common system to deal with classical hardware and future quantum hardware.
 

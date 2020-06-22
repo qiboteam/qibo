@@ -28,5 +28,6 @@ User Documentation
     :maxdepth: 2
     :caption: Developer documentation
 
-    benchmarks
     general
+    contributing
+    benchmarks
