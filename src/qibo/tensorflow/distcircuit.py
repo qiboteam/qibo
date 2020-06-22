@@ -106,9 +106,23 @@ class DeviceQueues:
         calc_gate.original_gate = gate
         return calc_gate
 
-    def _transform_queue(self, queue: List[gates.Gate],
-                         remaining_queue: List[gates.Gate],
-                         counter: np.ndarray) -> List[gates.Gate]:
+    @staticmethod
+    def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
+        """Counts how many gates target each qubit.
+
+        Returns:
+            Array of integers with shape (nqubits,) with the number of gates
+            for each qubit id.
+        """
+        counter = np.zeros(nqubits, dtype=np.int32)
+        for gate in queue:
+            for qubit in gate.target_qubits:
+                counter[qubit] += 1
+        return counter
+
+    def _transform(self, queue: List[gates.Gate],
+                   remaining_queue: List[gates.Gate],
+                   counter: np.ndarray) -> List[gates.Gate]:
         #print(queue)
         #print(remaining_queue)
         #print()
@@ -156,14 +170,19 @@ class DeviceQueues:
 
         # Modify gates to take into account the swaps
         for gate in remaining_queue:
-            gate.target_qubits = (qubit_map[q] for q in gate.target_qubits)
-            gate.control_qubits = (qubit_map[q] for q in gate.control_qubits)
+            gate.target_qubits = tuple(qubit_map[q] for q in gate.target_qubits)
+            gate.control_qubits = tuple(qubit_map[q] for q in gate.control_qubits)
 
         return self._transform_queue(queue, new_remaining_queue, counter)
 
-    def create(self, queue: List[gates.Gate], counter: np.ndarray):
-        transformed_queue = self._transform_queue([], queue, counter)
-        for gate in transformed_queue:
+    def transform(self, queue: List[gates.Gate],
+                  counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
+        if counter is None:
+            counter = self.count(queue, self.nqubits)
+        return self._transform([], queue, counter)
+
+    def create(self, queue: List[gates.Gate]):
+        for gate in queue:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
@@ -353,15 +372,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise RuntimeError("No gates available to set for distributed run.")
 
         # Count how many gates target each qubit to identify global qubits
-        counter = np.zeros(self.nqubits, dtype=np.int32)
-        for gate in self.queue:
-            for qubit in gate.target_qubits:
-                counter[qubit] += 1
-
+        counter = DeviceQueues.count(self.queue, self.nqubits)
         if self.device_queues is None:
             self.global_qubits = counter.argsort()[:self.nglobal]
 
-        self.device_queues.create(self.queue, counter)
+        self.device_queues.create(self.queue)
 
     def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
