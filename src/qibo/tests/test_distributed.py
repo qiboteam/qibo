@@ -77,7 +77,7 @@ def test_transform_queue_simple():
     c.add((gates.H(i) for i in range(4)))
     c.global_qubits = [0]
     tqueue = c.queues.transform(c.queue)
-    assert len(tqueue) == 5
+    assert len(tqueue) == 6
     for i in range(3):
         assert isinstance(tqueue[i], gates.H)
         assert tqueue[i].target_qubits == (i + 1,)
@@ -85,6 +85,8 @@ def test_transform_queue_simple():
     assert tqueue[3].target_qubits == (0, 1)
     assert isinstance(tqueue[4], gates.H)
     assert tqueue[4].target_qubits == (1,)
+    assert isinstance(tqueue[5], gates.SWAP)
+    assert tqueue[5].target_qubits == (0, 1)
 
 
 def test_transform_variational_layer():
@@ -99,6 +101,7 @@ def test_transform_variational_layer():
     c.global_qubits = [2, 3]
     tqueue = c.queues.transform(c.queue)
 
+    assert len(tqueue) == 10
     assert isinstance(tqueue[0], gates.H)
     assert tqueue[0].target_qubits == (0,)
     assert isinstance(tqueue[1], gates.H)
@@ -115,8 +118,12 @@ def test_transform_variational_layer():
     assert set(tqueue[6].target_qubits) == {0, 2}
     assert isinstance(tqueue[7], gates.CNOT)
     assert tqueue[7].target_qubits == (0,)
+    assert isinstance(tqueue[8], gates.SWAP)
+    assert set(tqueue[8].target_qubits) == {0, 2}
+    assert isinstance(tqueue[9], gates.SWAP)
+    assert set(tqueue[9].target_qubits) == {1, 3}
 
-
+# FIXME: Unskip this test
 @pytest.mark.skip
 def test_set_gates_controlled():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
@@ -206,6 +213,23 @@ def test_simple_execution(ndevices):
 
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(dist_c.nlocal)))
+
+    initial_state = random_state(c.nqubits)
+    final_state = dist_c(np.copy(initial_state)).numpy()
+    target_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+@pytest.mark.parametrize("ndevices", [2])
+def test_simple_execution_global(ndevices):
+    qibo.set_backend("custom")
+    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
+
+    dist_c = models.DistributedCircuit(6, devices)
+    dist_c.add((gates.H(i) for i in range(6)))
+
+    c = models.Circuit(6)
+    c.add((gates.H(i) for i in range(6)))
 
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()

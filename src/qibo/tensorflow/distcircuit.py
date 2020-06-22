@@ -122,13 +122,20 @@ class DeviceQueues:
                 counter[qubit] += 1
         return counter
 
+    def _reset_swaps(self):
+        qubit_map = {q: q for q in range(self.nqubits)}
+        for q1, q2 in self.swaps_list:
+            qubit_map[q1], qubit_map[q2] = q2, q1
+
+        for q1 in range(self.nqubits):
+            if qubit_map[q1] != q1:
+                q2 = qubit_map[q1]
+                qubit_map[q2] = q2
+                yield self.circuit.gate_module.SWAP(q1, q2)
+
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
                    counter: np.ndarray) -> List[gates.Gate]:
-        #print(queue)
-        #print(remaining_queue)
-        #print()
-
         new_remaining_queue = []
         for gate in remaining_queue:
             global_targets = set(gate.target_qubits) & self.global_qubits_set
@@ -184,7 +191,9 @@ class DeviceQueues:
                   counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
         if counter is None:
             counter = self.count(queue, self.nqubits)
-        return self._transform([], queue, counter)
+        new_queue = self._transform([], queue, counter)
+        new_queue.extend(self._reset_swaps())
+        return new_queue
 
     def create(self, queue: List[gates.Gate]):
         for gate in queue:
