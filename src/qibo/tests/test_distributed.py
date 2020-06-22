@@ -73,16 +73,48 @@ def test_set_gates_with_global_swap():
 
 def test_transform_queue_simple():
     devices = {"/GPU:0": 1, "/GPU:1": 1}
-    c = models.DistributedCircuit(6, devices)
-    c.add((gates.H(i) for i in range(6)))
-    c.global_qubits = [0, 1]
-    c.queues._transform_queue([], c.queue)
+    c = models.DistributedCircuit(4, devices)
+    c.add((gates.H(i) for i in range(4)))
+    c.global_qubits = [0]
+    tqueue = c.queues.transform(c.queue)
+    assert len(tqueue) == 5
+    for i in range(3):
+        assert isinstance(tqueue[i], gates.H)
+        assert tqueue[i].target_qubits == (i + 1,)
+    assert isinstance(tqueue[3], gates.SWAP)
+    assert tqueue[3].target_qubits == (0, 1)
+    assert isinstance(tqueue[4], gates.H)
+    assert tqueue[4].target_qubits == (1,)
 
-    check_device_queues(c.queues)
-    assert len(c.queues.queues) == 1
-    assert len(c.queues.queues[0]) == 4
-    for queue in c.queues.queues[0]:
-        assert len(queue) == 4
+
+def test_transform_variational_layer():
+    devices = {"/GPU:0": 2, "/GPU:1": 2}
+    c = models.DistributedCircuit(4, devices)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(2, 3))
+    c.add(gates.CZ(0, 1))
+    c.add(gates.CNOT(3, 0))
+    c.add(gates.CNOT(1, 2))
+    c.global_qubits = [2, 3]
+    tqueue = c.queues.transform(c.queue)
+
+    assert isinstance(tqueue[0], gates.H)
+    assert tqueue[0].target_qubits == (0,)
+    assert isinstance(tqueue[1], gates.H)
+    assert tqueue[1].target_qubits == (1,)
+    assert isinstance(tqueue[2], gates.CZ)
+    assert tqueue[2].target_qubits == (1,)
+    assert isinstance(tqueue[3], gates.SWAP)
+    assert set(tqueue[3].target_qubits) == {1, 3}
+    assert isinstance(tqueue[4], gates.CNOT)
+    assert tqueue[4].target_qubits == (1,)
+    assert isinstance(tqueue[5], gates.CNOT)
+    assert tqueue[5].target_qubits == (0,)
+    assert isinstance(tqueue[6], gates.SWAP)
+    assert set(tqueue[6].target_qubits) == {0, 2}
+    assert isinstance(tqueue[7], gates.CNOT)
+    assert tqueue[7].target_qubits == (0,)
 
 
 @pytest.mark.skip

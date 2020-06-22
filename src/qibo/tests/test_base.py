@@ -217,6 +217,7 @@ def test_gates_commute():
     assert not CNOT(0, 1).commutes(SWAP(1, 2))
     assert not CNOT(0, 1).commutes(H(1))
     assert not CNOT(0, 1).commutes(Y(0).controlled_by(2))
+    assert not CNOT(2, 3).commutes(CNOT(3, 0))
     assert CNOT(0, 1).commutes(Y(2).controlled_by(0))
 
 

@@ -41,11 +41,13 @@ class DeviceQueues:
         are the ``CallbackGate`` and ``Flatten``.
     """
 
-    def __init__(self, nqubits: int, calc_devices: Dict[str, int], global_qubits: Set[int]):
-        self.nqubits = nqubits
-        self.ndevices = sum(calc_devices.values())
-        self.nglobal = int(np.log2(self.ndevices))
-        self.nlocal = self.nqubits - self.nglobal
+    def __init__(self, circuit: "TensorflowDistributedCircuit",
+                 global_qubits: Set[int]):
+        self.circuit = circuit
+        self.nqubits = circuit.nqubits
+        self.ndevices = circuit.ndevices
+        self.nglobal = circuit.nglobal
+        self.nlocal = circuit.nlocal
 
         self.queues = []
         self.special_queue = []
@@ -60,19 +62,19 @@ class DeviceQueues:
         self.local_qubits_reduced = {q: q - self.reduction_number(q)
                                      for q in self.local_qubits}
 
+        # Qubit map that holds the SWAPs
         self.swaps_list = []
 
-        self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
+        self.device_to_ids = {d: v for d, v in self._ids()}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
             for i in ids:
                 self.ids_to_device[i] = device
 
-    @staticmethod
-    def _ids_gen(calc_devices) -> Tuple[str, List[int]]:
+    def _ids(self) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
-        for device, n in calc_devices.items():
+        for device, n in self.circuit.calc_devices.items():
             stop = start + n
             yield device, list(range(start, stop))
             start = stop
@@ -156,24 +158,27 @@ class DeviceQueues:
         available_swaps = (q for q in counter.argsort()
                            if q not in (self.global_qubits_set | target_set))
 
-        # Generate qubit map that holds the swaps
-        qubit_map = {q: q for q in range(self.nqubits)}
+        qubit_map = {}
         for q in global_targets:
             qs = next(available_swaps)
+            # Update qubit map that holds the swaps
             qubit_map[q] = qs
-            # Keep all swaps in memory so that we can reset them in the end
+            qubit_map[qs] = q
+            # Keep SWAPs in memory to reset them in the end
             self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
-            queue.append(gates.SWAP(q, qs))
+            queue.append(self.circuit.gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
             counter[q], counter[qs] = counter[qs], counter[q]
 
         # Modify gates to take into account the swaps
-        for gate in remaining_queue:
-            gate.target_qubits = tuple(qubit_map[q] for q in gate.target_qubits)
-            gate.control_qubits = tuple(qubit_map[q] for q in gate.control_qubits)
+        for gate in new_remaining_queue:
+            gate.target_qubits = tuple(qubit_map[q] if q in qubit_map else q
+                                       for q in gate.target_qubits)
+            gate.control_qubits = tuple(qubit_map[q] if q in qubit_map else q
+                                        for q in gate.control_qubits)
 
-        return self._transform_queue(queue, new_remaining_queue, counter)
+        return self._transform(queue, new_remaining_queue, counter)
 
     def transform(self, queue: List[gates.Gate],
                   counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
@@ -322,8 +327,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Invalid number of global qubits {} for using {} "
                              "calculation devices.".format(len(x), self.ndevices))
 
-        self.queues = DeviceQueues(self.nqubits, self.calc_devices,
-                                   global_qubit_set)
+        self.queues = DeviceQueues(self, global_qubit_set)
 
         self.transpose_order = (self.queues.global_qubits_list +
                                 self.queues.local_qubits)
