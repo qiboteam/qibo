@@ -72,13 +72,16 @@ def rw_circuit_inv(qubits, parameters, X=True):
 
     else:
         mid = int((qubits-1)/2) #The random walk starts from the middle qubit
-        for i in range(mid, -1, -1):
+        for i in range(mid - 1, -1, -1):
+            # Cuando el número de qubits es impar, hay algún error en el cálculo que estropea los resultados. Entiendo que debe estar aquí
             #SWAP-Ry gates
             #-------------------------------------------------
-            yield gates.fSim(mid-i, mid-i-1, -parameters[mid-i-1], 0)
+            yield gates.fSim(mid-i, mid-i-1, -parameters[mid-i-1]/2, 0)
             #-------------------------------------------------
+            print(mid+i)
             yield gates.fSim(mid+i, mid+i+1, -parameters[mid+i]/2, 0)
             #-------------------------------------------------
+
         if X:
             yield gates.X(mid)
 
@@ -147,7 +150,7 @@ def get_pdf(qu, S0, sig, r, T):
     values = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
     pdf = log_normal(values, mu, sig * np.sqrt(T))
 
-    return (values, pdf), (mu, mean, variance)
+    return values, pdf
 
 def load_quantum_sim(qu, S0, sig, r, T):
     """
@@ -160,18 +163,13 @@ def load_quantum_sim(qu, S0, sig, r, T):
     :param T: Maturity date
     :return: quantum circuit, backend, (values of prices, prob. distri. function), (mu, mean, variance)
     """
-    mu = (r - 0.5 * sig ** 2) * T + np.log(S0) # Define all the parameters to be used in the computation
-    mean = np.exp(mu + 0.5 * T * sig ** 2) # Set the relevant zone of study and create the mapping between qubit and option price, and generate the target lognormal distribution within the interval
-    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
-    values = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), qu)
-    pdf = log_normal(values, mu, sig * np.sqrt(T))
-    (values, pdf), (mu, mean, variance) = get_pdf(qu, S0, sig, r, T)
+    (values, pdf) = get_pdf(qu, S0, sig, r, T)
     q, ancilla, circuit = create_qc(qu)
     lognormal_parameters = rw_parameters(qu, pdf) # Solve for the parameters needed to create the target lognormal distribution
     circuit.add(rw_circuit(qu, lognormal_parameters)) # Build the probaility loading circuit with the adjusted parameters
     circuit.add(measure_probability(q)) #Circuit to test the precision of the probability loading algorithm
 
-    return circuit, (values, pdf), (mu, mean, variance)
+    return circuit, (values, pdf)
 
 def run_quantum_sim(qubits, circuit, shots):
     """
@@ -303,13 +301,6 @@ def test_inversion_payoff(qu, S0, sig, r, T, K, shots):
     ln = log_normal(S, mu, sig * np.sqrt(T))
     lognormal_parameters = rw_parameters(qu,
                                          ln)  # Solve for the parameters needed to create the target lognormal distribution
-    prob_loading = rw_circuit(qu,
-                              lognormal_parameters)  # Build the probaility loading circuit with the adjusted parameters
-    prob_loading_inv = rw_circuit_inv(qu,
-                              lognormal_parameters)
-
-    payoff = payoff_circuit(qu, K, S)
-    payoff_inv = payoff_circuit_inv(qu, K, S)
     q, ancilla, circuit = create_qc(qu)
     circuit.add(rw_circuit(qu, lognormal_parameters))
     circuit.add(payoff_circuit(qu, K, S))
@@ -396,7 +387,31 @@ def run_Q_operator(qu, circuit, shots):
 
     return ones, zeroes
 
+def get_payoff_from_prob(prob, qu, S, K):
+    qu_payoff_sim = prob * (S[qu - 1]-K)
+    return qu_payoff_sim
 
+def get_payoff_error_from_prob_error(prob_error, qu, S, K):
+    qu_payoff_error = prob_error * (S[qu - 1]-K)
+    return qu_payoff_error
+
+def paint_AE(a, a_conf, cl_payoff, bins, S0, sig, r, T, K):
+    values, pdf = get_pdf(bins, S0, sig, r, T)
+    a_un = np.sum(pdf[values >= K] * (values[values >= K] - K))
+    fig, ax = plt.subplots()
+    M = len(a) - 1
+    un_data = get_payoff_from_prob(a, bins, values, K)
+    un_conf = get_payoff_error_from_prob_error(a_conf, bins, values, K)
+    print(un_data)
+    ax.scatter(np.arange(M + 1), un_data, c='C0', marker='x', zorder=10, label='Measurements')
+    ax.fill_between(np.arange(M + 1), un_data - un_conf, un_data + un_conf, color='C0', alpha=0.3)
+    # ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
+    ax.plot([0, M], [cl_payoff, cl_payoff], c='black', ls='--', label='Cl. payoff')
+    ax.plot([0, M], [a_un, a_un], c='blue', ls='--', label='Optimal approximation')
+    ax.set(ylim = [0.15, 0.17])
+    ax.legend()
+
+    plt.show()
 
 
 

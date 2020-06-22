@@ -471,7 +471,7 @@ def run_Q_operator(qc, shots, basis_gates, noise_model):
     return ones, zeroes
 
 
-'''def get_payoff_from_prob(prob, qu, S, K):
+def get_payoff_from_prob(prob, qu, S, K):
     """
     Function to execute quantum circuit for the unary representation to return an approximate payoff.
         This function is thought to be preceded by load_quantum_sim
@@ -484,9 +484,9 @@ def run_Q_operator(qc, shots, basis_gates, noise_model):
     :return: approximate payoff
     """
     qu_payoff_sim = prob * (S[qu - 1]-K)
-    return qu_payoff_sim'''
+    return qu_payoff_sim
 
-'''def get_payoff_error_from_prob_error(prob_error, qu, S, K):
+def get_payoff_error_from_prob_error(prob_error, qu, S, K):
     # Quizás esta función pueda separarse de las demás
     """
     Function to execute quantum circuit for the unary representation to return an approximate error of payoff.
@@ -500,7 +500,7 @@ def run_Q_operator(qc, shots, basis_gates, noise_model):
     :return: approximate payoff
     """
     qu_payoff_error = prob_error * (S[qu - 1]-K)
-    return qu_payoff_error'''
+    return qu_payoff_error
 
 
 
