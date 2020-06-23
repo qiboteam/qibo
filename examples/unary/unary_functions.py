@@ -73,13 +73,12 @@ def rw_circuit_inv(qubits, parameters, X=True):
     else:
         mid = int((qubits-1)/2) #The random walk starts from the middle qubit
         for i in range(mid - 1, -1, -1):
-            # Cuando el número de qubits es impar, hay algún error en el cálculo que estropea los resultados. Entiendo que debe estar aquí
+            # Error solucionado, había que invertir el orden de aplicacion de las puertas
             #SWAP-Ry gates
             #-------------------------------------------------
-            yield gates.fSim(mid-i, mid-i-1, -parameters[mid-i-1]/2, 0)
+            yield gates.fSim(mid + i, mid + i + 1, -parameters[mid + i] / 2, 0)
             #-------------------------------------------------
-            print(mid+i)
-            yield gates.fSim(mid+i, mid+i+1, -parameters[mid+i]/2, 0)
+            yield gates.fSim(mid - i, mid - i - 1, -parameters[mid - i - 1] / 2, 0)
             #-------------------------------------------------
 
         if X:
@@ -395,24 +394,90 @@ def get_payoff_error_from_prob_error(prob_error, qu, S, K):
     qu_payoff_error = prob_error * (S[qu - 1]-K)
     return qu_payoff_error
 
-def paint_AE(a, a_conf, cl_payoff, bins, S0, sig, r, T, K):
+def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
+    from scipy.integrate import trapz
+    mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
+    mean = np.exp(
+        mu + 0.5 * T * sig ** 2)
+    variance = (np.exp(T * sig ** 2) - 1) * np.exp(2 * mu + T * sig ** 2)
+
+    S = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance),
+                    bins)  # Generate a the exact target distribution to benchmark against quantum results
+    # lnp = aux.log_normal(Sp, mu, sig, T)
+    width = (S[1] - S[0]) / 1.2
+
+    fig, ax = plt.subplots()
+    ax.bar(S, prob_sim, width, label='Quantum', alpha=0.8)
+
+    x = np.linspace(max(mean - 3 * np.sqrt(variance), 0), mean + 3 * np.sqrt(variance), bins * 100)
+    y = log_normal(x, mu, sig * np.sqrt(T))
+    y = y * trapz(prob_sim, S) / trapz(y, x)
+
+    ax.plot(x, y, label='PDF', color='black')
+    plt.ylabel('Probability')
+    plt.xlabel('Option price')
+    plt.title('Option price distribution for {} qubits '.format(bins))
+    ax.legend()
+    fig.tight_layout()
+
+    fig.savefig('Probability distribution.pdf')
+
+def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
+    S0, sig, r, T, K = data
     values, pdf = get_pdf(bins, S0, sig, r, T)
     a_un = np.sum(pdf[values >= K] * (values[values >= K] - K))
+    cl_payoff = classical_payoff(S0, sig, r, T, K, samples=1000000)
     fig, ax = plt.subplots()
-    M = len(a) - 1
     un_data = get_payoff_from_prob(a, bins, values, K)
     un_conf = get_payoff_error_from_prob_error(a_conf, bins, values, K)
-    print(un_data)
     ax.scatter(np.arange(M + 1), un_data, c='C0', marker='x', zorder=10, label='Measurements')
     ax.fill_between(np.arange(M + 1), un_data - un_conf, un_data + un_conf, color='C0', alpha=0.3)
-    # ax.plot([0, M], [a_un, a_un], c='blue', ls='--')
     ax.plot([0, M], [cl_payoff, cl_payoff], c='black', ls='--', label='Cl. payoff')
     ax.plot([0, M], [a_un, a_un], c='blue', ls='--', label='Optimal approximation')
-    ax.set(ylim = [0.15, 0.17])
+    ax.set(ylim=[0.15, 0.17])
     ax.legend()
+    fig.tight_layout()
 
-    plt.show()
+    fig.savefig('Amplitude Estimation Results.pdf')
 
+    from scipy.special import erfinv
+    z = erfinv(1 - alpha / 2)
 
+    fig, bx = plt.subplots()
+    bx.scatter(np.arange(M + 1), un_conf, c='C0', marker='x', zorder=10, label='Measurements')
+    a_max = (np.max(values) - K)
+    bound_down = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.cumsum(
+        1 + 2 * (np.arange(M + 1)))
+    bound_up = np.sqrt(un_data) * np.sqrt(a_max - un_data) * z / np.sqrt(shots) / np.sqrt(np.cumsum(
+        1 + 2 * (np.arange(M + 1))))
+    bx.plot(np.arange(M + 1), bound_up, ls=':', c='C0', label='Classical sampling')
+    bx.plot(np.arange(M + 1), bound_down, ls='-.', c='C0', label='Optimal Quantum Sampling')
+    bx.legend()
+    bx.set(yscale='log')
+    fig.tight_layout()
+
+    fig.savefig('Amplitude Estimation Uncertainties.pdf')
+
+def amplitude_estimation(bins, M, data, shots=10000):
+    S0, sig, r, T, K = data
+    circuit, S = load_payoff_quantum_sim(bins, S0, sig, r, T, K)
+    qu_payoff_sim = run_payoff_quantum_sim(bins, circuit, shots, S, K)
+
+    m_s = np.arange(0, M + 1, 1)
+    circuits = [[]]*len(m_s)
+    for j, m in enumerate(m_s):
+        qc = load_Q_operator(bins, m, S0, sig, r, T, K)
+        circuits[j] = qc
+
+    ones_s = [[]]*len(m_s)
+    zeroes_s = [[]] * len(m_s)
+    for j, m in enumerate(m_s):
+        ones, zeroes = run_Q_operator(bins, circuits[j], shots)
+        ones_s[j] = int(ones)
+        zeroes_s[j] = int(zeroes)
+    theta_max_s, error_theta_s = get_theta(m_s, ones_s, zeroes_s)
+    a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
+
+    return a_s, error_s
 
 
