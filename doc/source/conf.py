@@ -21,8 +21,8 @@ import qibo
 # -- Project information -----------------------------------------------------
 
 project = "QIBO"
-copyright = "2020, TII-Qilimanjaro"
-author = "TII-Qilimanjaro team"
+copyright = "2020 by Quantum-TII team"
+author = "Quantum-TII team"
 
 # The full version, including alpha/beta/rc tags
 release = qibo.__version__
@@ -100,6 +100,4 @@ def setup(app):
 
 html_logo = "logo.png"
 
-html_theme_options = {
-    'logo_only': True,
-}
+html_show_sourcelink = False

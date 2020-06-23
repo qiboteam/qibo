@@ -3,39 +3,58 @@
 ![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
 
-QIBO is an open-source high-level API, written in Python and capable of performing classical simulation of quantum algorithms.
+QIBO is a Python library for classical simulation of quantum algorithms.
 
 Some of the key features of QIBO are:
 - A standard interface for the implementation and extension of quantum algorithms.
-- Modular implementation on single (multi-threading) CPU and GPU.
-- Good performance on GPU, with emphasis on double precision, through a custom classical simulation back-end based on [TensorFlow](https://tensorflow.org/).
+- Modular implementation on GPU and CPU with multi-threading support.
+- Availability of multi-GPU distributed approach for circuit simulation.
+- Full support of double precision simulation.
 
 ## Documentation
 
-Visit the [Link to the private documentation server](http://34.240.99.72/) and use the following credentials:
-```
-username: qiboteam
-password: qilimanjaro
+QIBO documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
+
+- [Installation](http://34.240.99.72/installation.html)
+- [Documentation](http://34.240.99.72)
+- [Components](http://34.240.99.72/qibo.html)
+- [Examples](http://34.240.99.72/examples.html)
+- [Benchmarks](http://34.240.99.72/benchmarks.html)
+
+## Minimum Working Examples
+
+A simple [Quantum Fourier Transform (QFT)](https://en.wikipedia.org/wiki/Quantum_Fourier_transform) example to test your installation:
+```python
+from qibo.models import QFT
+
+# Create a QFT circuit with 15 qubits
+circuit = QFT(15)
+
+# Simulate final state wavefunction default initial state is |00>
+final_state = c()
 ```
 
-## Installation
+Here another example with more gates and shots simulation:
 
-In order to install you can simply clone this repository with
-```bash
-git clone git@github.com:Quantum-TII/qibo.git
+```python
+import numpy as np
+from qibo.models import Circuit
+from qibo import gates
+
+c = Circuit(2)
+c.add(gates.X(0))
+
+# Add a measurement register on both qubits
+c.add(gates.M(0, 1))
+
+# Execute the circuit with the default initial state |00>.
+result = c(nshots=100)
 ```
 
-and then proceed with the installation with:
-```
-pip install .
-```
-if you prefer to keep changes always synchronized with the code then install using the `develop` option:
-```bash
-python setup.py build
-python setup.py develop # or pip install -e .
-```
+In both cases, the simulation will run in a single device CPU or GPU in double precision `complex128`.
 
-## Examples
+## Citation policy
 
-There are code examples in the `src/qibo/benchmarks` and `src/qibo/tests` folders.
-Full detailed examples with respective explanation are available directly in the documentation.
+If you use the package please cite the following references:
+- https://doi.org/xx.xxxx/zenodo.xxxxx
+- https://arxiv.org/abs/xxxx.xxxxx
