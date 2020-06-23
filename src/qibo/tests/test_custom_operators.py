@@ -343,6 +343,12 @@ def test_custom_op_toy_callback(gate, compile):
     np.testing.assert_allclose(target_callback, callback.numpy())
 
 
+def check_unimplemented_error(func, *args):
+    error = tf.python.framework.errors_impl.UnimplementedError
+    with pytest.raises(error):
+        func(*args)
+
+
 @pytest.mark.parametrize("nqubits", [3, 4, 7, 8, 9, 10])
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_transpose_state(nqubits, ndevices):
@@ -361,10 +367,8 @@ def test_transpose_state(nqubits, ndevices):
         state = tf.reshape(state, shape)
         pieces = [state[i] for i in range(ndevices)]
         if tf.config.list_physical_devices("GPU"):
-            error = tf.python.framework.errors_impl.UnimplementedError
-            with pytest.raises(error):
-                new_state = op.transpose_state(pieces, new_state, nqubits,
-                                               qubit_order)
+            check_unimplemented_error(op.transpose_state,
+                                      pieces, new_state, nqubits, qubit_order)
         else:
             new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
             np.testing.assert_allclose(target_state, new_state.numpy())
@@ -385,9 +389,8 @@ def test_swap_pieces_zero_global(nqubits):
 
         piece0, piece1 = state[0], state[1]
         if tf.config.list_physical_devices("GPU"):
-            error = tf.python.framework.errors_impl.UnimplementedError
-            with pytest.raises(error):
-                op.swap_pieces(piece0, piece1, local - 1, nqubits - 1)
+            check_unimplemented_error(op.swap_pieces,
+                                      piece0, piece1, local - 1, nqubits - 1)
         else:
             op.swap_pieces(piece0, piece1, local - 1, nqubits - 1)
             np.testing.assert_allclose(target_state[0], piece0.numpy())
@@ -419,9 +422,8 @@ def test_swap_pieces(nqubits):
         state = tf.reshape(state, shape)
         piece0, piece1 = state[0], state[1]
         if tf.config.list_physical_devices("GPU"):
-            error = tf.python.framework.errors_impl.UnimplementedError
-            with pytest.raises(error):
-                op.swap_pieces(piece0, piece1, local_qubit - 1, nqubits - 1)
+            check_unimplemented_error(op.swap_pieces,
+                                      piece0, piece1, local_qubit - 1, nqubits - 1)
         else:
             op.swap_pieces(piece0, piece1,
                            local_qubit - int(global_qubit < local_qubit),

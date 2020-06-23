@@ -144,8 +144,6 @@ def test_set_gates_controlled():
         assert len(device_group) == 7
     for device_group in c.queues.queues[2]:
         assert len(device_group) == 1
-    for device_group in c.queues.queues[3]:
-        assert len(device_group) == 1
 
 
 def test_default_initialization():
@@ -206,6 +204,21 @@ def test_distributed_circuit_errors():
         noisy_c = c.with_noise((0.1, 0.2, 0.1))
 
 
+def test_unsupported_gates_errors():
+    c = models.Circuit(4, {"/GPU:0": 2})
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.global_qubits = [0]
+    with pytest.raises(ValueError):
+        c.queues.create(c.queue)
+
+    c = models.Circuit(4, {"/GPU:0": 4})
+    c.add(gates.SWAP(0, 1))
+    c.global_qubits = [0, 1]
+    with pytest.raises(ValueError):
+        c.queues.create(c.queue)
+
+
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution(ndevices):
     qibo.set_backend("custom")
@@ -224,6 +237,26 @@ def test_simple_execution(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
+@pytest.mark.parametrize("ndevices", [2, 4])
+def test_execution_pretransformed_circuit(ndevices):
+    qibo.set_backend("custom")
+    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
+    dist_c = models.DistributedCircuit(4, devices)
+    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+    dist_c.add(gates.SWAP(0, 2))
+    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+
+    c = models.Circuit(4)
+    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+    c.add(gates.SWAP(0, 2))
+    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
+
+    initial_state = random_state(c.nqubits)
+    final_state = dist_c(np.copy(initial_state)).numpy()
+    target_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution_global(ndevices):
     qibo.set_backend("custom")
@@ -234,6 +267,25 @@ def test_simple_execution_global(ndevices):
 
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
+
+    initial_state = random_state(c.nqubits)
+    final_state = dist_c(np.copy(initial_state)).numpy()
+    target_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
+def test_execution_with_global_swap():
+    qibo.set_backend("custom")
+    devices = {"/GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}
+
+    dist_c = models.DistributedCircuit(6, devices)
+    dist_c.add((gates.H(i) for i in range(6)))
+    dist_c.add((gates.SWAP(i, i + 1) for i in range(5)))
+    dist_c.global_qubits = [0, 1]
+
+    c = models.Circuit(6)
+    c.add((gates.H(i) for i in range(6)))
+    c.add((gates.SWAP(i, i + 1) for i in range(5)))
 
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
@@ -295,26 +347,6 @@ def test_controlled_execution_large(ndevices):
     c.add(gates.Z(1).controlled_by(0))
     c.add(gates.SWAP(2, 3))
     c.add([gates.X(2), gates.X(3), gates.X(4)])
-
-    initial_state = random_state(c.nqubits)
-    final_state = dist_c(np.copy(initial_state)).numpy()
-    target_state = c(np.copy(initial_state)).numpy()
-    np.testing.assert_allclose(target_state, final_state)
-
-
-@pytest.mark.parametrize("ndevices", [2, 4])
-def test_execution_with_swap_global(ndevices):
-    qibo.set_backend("custom")
-    devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
-    dist_c = models.DistributedCircuit(4, devices)
-    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
-    dist_c.add(gates.SWAP(0, 2))
-    dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
-
-    c = models.Circuit(4)
-    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
-    c.add(gates.SWAP(0, 2))
-    c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
 
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
