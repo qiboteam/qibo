@@ -826,7 +826,11 @@ def test_compiled_circuit(backend):
     else:
         c2.compile()
         r2 = c2.execute().numpy()
+        init_state = c2._default_initial_state()
+        r3, _ = c2._execute_for_compile(init_state.numpy().reshape((2, 2)))
+        r3 = r3.numpy().ravel()
         np.testing.assert_allclose(r1, r2)
+        np.testing.assert_allclose(r1, r3)
 
 
 def test_compiling_twice_exception():

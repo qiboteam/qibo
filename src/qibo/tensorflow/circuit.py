@@ -30,9 +30,28 @@ class TensorflowCircuit(circuit.BaseCircuit):
             state = gate(state, is_density_matrix=self.using_density_matrix)
         return state
 
+    def _execute_for_compile(self, state):
+        from qibo import gates
+        callback_results = {gate.callback: [] for gate in self.queue
+                            if hasattr(gate, "callback")}
+        for gate in self.queue:
+            if gate.is_channel and not self.using_density_matrix:
+                # Switch from vector to density matrix
+                self.using_density_matrix = True
+                state = tf.tensordot(state, tf.math.conj(state), axes=0)
+            if isinstance(gate, gates.CallbackGate):
+                callback = gate.callback
+                value = callback(state,
+                                 is_density_matrix=self.using_density_matrix)
+                callback_results[callback].append(value)
+            else:
+                state = gate(state,
+                             is_density_matrix=self.using_density_matrix)
+
+        return state, callback_results
+
     def compile(self):
         """Compiles the circuit as a Tensorflow graph."""
-        from qibo import gates
         if self._compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
         if not self.queue:
@@ -40,27 +59,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if not self.using_tfgates:
             raise RuntimeError("Cannot compile circuit that uses custom "
                                "operators.")
-
-        def _execute(state):
-            callback_results = {gate.callback: [] for gate in self.queue
-                                if hasattr(gate, "callback")}
-            for gate in self.queue:
-                if gate.is_channel and not self.using_density_matrix:
-                    # Switch from vector to density matrix
-                    self.using_density_matrix = True
-                    state = tf.tensordot(state, tf.math.conj(state), axes=0)
-                if isinstance(gate, gates.CallbackGate):
-                    callback = gate.callback
-                    value = callback(state,
-                                     is_density_matrix=self.using_density_matrix)
-                    callback_results[callback].append(value)
-                else:
-                    state = gate(state,
-                                 is_density_matrix=self.using_density_matrix)
-
-            return state, callback_results
-
-        self._compiled_execute = tf.function(_execute)
+        self._compiled_execute = tf.function(self._execute_for_compile)
 
     @property
     def using_tfgates(self) -> bool:
