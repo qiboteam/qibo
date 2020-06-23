@@ -927,7 +927,7 @@ def test_circuit_copy(backend, accelerators):
 
     c1 = Circuit(2, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
-    c2 = c1.copy()
+    c2 = c1.copy(deep=True)
 
     target_state = c1.execute().numpy()
     final_state = c2.execute().numpy()

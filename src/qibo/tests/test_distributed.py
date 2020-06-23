@@ -72,6 +72,7 @@ def test_set_gates_with_global_swap():
 
 
 def test_transform_queue_simple():
+    qibo.set_backend("custom")
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = models.DistributedCircuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
@@ -89,7 +90,8 @@ def test_transform_queue_simple():
     assert tqueue[5].target_qubits == (0, 1)
 
 
-def test_transform_variational_layer():
+def test_transform_queue_more_gates():
+    qibo.set_backend("custom")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(4, devices)
     c.add(gates.H(0))
@@ -320,20 +322,14 @@ def test_distributed_circuit_addition():
     assert c.depth == dist_c.depth
     np.testing.assert_allclose(target_state, final_state)
 
-@pytest.mark.skip
+
+@pytest.mark.skip("Global qubits do not change in the SWAP gate implementation.")
 @pytest.mark.parametrize("nqubits", [7, 8, 9, 10, 30, 31, 32, 33])
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_distributed_qft_global_qubits(nqubits, ndevices):
     """Check that the generated global qubit list is the expected for QFT."""
     c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
     c.set_gates()
-
-    #for i, queue in enumerate(c.queues["/GPU:0"]):
-    #    print(len(queue), c.global_qubits_list[i])
-    #    for g in queue:
-    #        print(g.name, g.original_gate.qubits)
-    #    print()
-    #    print()
 
     check_device_queues(c.queues)
     nglobal = c.nglobal
@@ -348,7 +344,6 @@ def test_distributed_qft_global_qubits(nqubits, ndevices):
     assert target_global_qubits == c.queues.global_qubits_lists
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
@@ -358,7 +353,6 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     check_device_queues(c.queues)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("accelerators",
                          [{"/GPU:0": 2},

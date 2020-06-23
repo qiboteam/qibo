@@ -90,20 +90,22 @@ class BaseCircuit(object):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
         Args:
-            deep (bool): If True new gate objects will be created that act in the same
-                qubits as in ``circuit``. Otherwise, the same gate objects of
+            deep (bool): If ``True`` copies of the  gate objects will be created
+                for the new circuit. If ``False``, the same gate objects of
                 ``circuit`` will be used.
 
         Returns:
             The copied circuit object.
         """
-        if deep:
-            raise NotImplementedError("Deep copy is not implemented yet.")
-
         new_circuit = self.__class__(**self._init_kwargs)
-        new_circuit.queue = list(self.queue)
+        if deep:
+            import copy
+            new_circuit.queue = [copy.copy(gate) for gate in self.queue]
+            new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        else:
+            new_circuit.queue = list(self.queue)
+            new_circuit.measurement_gate = self.measurement_gate
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        new_circuit.measurement_gate = self.measurement_gate
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
