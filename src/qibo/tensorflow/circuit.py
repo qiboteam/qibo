@@ -47,7 +47,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
             else:
                 state = gate(state,
                              is_density_matrix=self.using_density_matrix)
-
         return state, callback_results
 
     def compile(self):
