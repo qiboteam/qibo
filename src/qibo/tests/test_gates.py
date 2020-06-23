@@ -920,16 +920,19 @@ def test_variable_theta(backend, accelerators):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_circuit_copy(backend, accelerators):
+@pytest.mark.parametrize("deep", [False, True])
+def test_circuit_copy(backend, accelerators, deep):
     """Check that circuit copy execution is equivalent to original circuit."""
     qibo.set_backend(backend)
     theta = 0.1234
 
     c1 = Circuit(2, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
-    c2 = c1.copy(deep=True)
-
-    target_state = c1.execute().numpy()
-    final_state = c2.execute().numpy()
-
-    np.testing.assert_allclose(final_state, target_state)
+    if not deep and accelerators is not None:
+        with pytest.raises(ValueError):
+            c2 = c1.copy(deep)
+    else:
+        c2 = c1.copy(deep)
+        target_state = c1.execute().numpy()
+        final_state = c2.execute().numpy()
+        np.testing.assert_allclose(final_state, target_state)

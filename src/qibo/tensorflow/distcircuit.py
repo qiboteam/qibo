@@ -63,9 +63,9 @@ class DeviceQueues:
                                      for q in self.local_qubits}
 
         # Set that holds the SWAP pairs
-        self.swaps_set = set()
+        self.swaps_list = []
         # Set that holds which local qubits have been used for SWAPs
-        self.used_swaps = set()
+        #self.used_swaps = set()
 
         self.device_to_ids = {d: v for d, v in self._ids()}
         self.ids_to_device = self.ndevices * [None]
@@ -126,18 +126,20 @@ class DeviceQueues:
 
     def _reset_swaps(self):
         qubit_map = {}
-        for q1, q2 in self.swaps_set:
-            if q1 in qubit_map:
-                assert q2 not in qubit_map
-                q1 = qubit_map.pop(q1)
-            if q2 in qubit_map:
-                assert q1 not in qubit_map
-                q2 = qubit_map.pop(q2)
-            qubit_map[q1], qubit_map[q2] = q2, q1
+        #for q1, q2 in self.swaps_set:
+        #    if q1 in qubit_map:
+        #        assert q2 not in qubit_map
+        #        q1 = qubit_map.pop(q1)
+        #    if q2 in qubit_map:
+        #        assert q1 not in qubit_map
+        #        q2 = qubit_map.pop(q2)
+        #    qubit_map[q1], qubit_map[q2] = q2, q1
 
-        for q1, q2 in qubit_map.items():
-            if q1 < q2:
-                yield self.circuit.gate_module.SWAP(q1, q2)
+        #for q1, q2 in qubit_map.items():
+        #    if q1 < q2:
+        #        yield self.circuit.gate_module.SWAP(q1, q2)
+        for q1, q2 in reversed(self.swaps_list):
+            yield self.circuit.gate_module.SWAP(q1, q2)
 
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
@@ -179,18 +181,14 @@ class DeviceQueues:
         qubit_map = {}
         for q in global_targets:
             qs = next(available_swaps)
-            while qs in self.used_swaps:
-                qs = next(available_swaps)
+            #while qs in self.used_swaps:
+            #    qs = next(available_swaps)
             # Update qubit map that holds the swaps
             qubit_map[q] = qs
             qubit_map[qs] = q
             # Keep SWAPs in memory to reset them in the end
-            self.used_swaps.add(qs)
-            new_pair = (min(q, qs), max(q, qs))
-            if new_pair in self.swaps_set:
-                self.swaps_set.remove(new_pair)
-            else:
-                self.swaps_set.add(new_pair)
+            #self.used_swaps.add(qs)
+            self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
             queue.append(self.circuit.gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
@@ -371,6 +369,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         # Do not set ``gate.nqubits`` during gate addition because this will
         # be set by the ``set_gates`` method once all gates are known.
         pass
+
+    def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
+        if not deep:
+            raise ValueError("Non-deep copy is not allowed for distributed "
+                             "circuits because they modify gate objects.")
+        return super(TensorflowDistributedCircuit, self).copy(deep)
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "
