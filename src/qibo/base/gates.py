@@ -24,7 +24,9 @@ class Gate(object):
         self.name = None
         self.is_channel = False
         self.is_controlled_by = False
-        self.parameters = []
+
+        self._init_args = []
+        self._init_kwargs = {}
 
         self.target_qubits = tuple()
         self._control_qubits = tuple()
@@ -75,8 +77,8 @@ class Gate(object):
         The user is not supposed to set `nqubits` by hand.
         """
         if self._nqubits is not None:
-            raise ValueError("The number of qubits for this gates is already "
-                             "set to {}.".format(self._nqubits))
+            raise RuntimeError("The number of qubits for this gates is already "
+                               "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
 
@@ -91,9 +93,9 @@ class Gate(object):
             controlled in the given qubits.
         """
         if self.control_qubits:
-            raise ValueError("Cannot use `controlled_by` method on gate {} "
-                             "because it is already controlled by {}."
-                             "".format(self, self.control_qubits))
+            raise RuntimeError("Cannot use `controlled_by` method on gate {} "
+                               "because it is already controlled by {}."
+                               "".format(self, self.control_qubits))
         if self._nqubits is not None:
             raise RuntimeError("Cannot use controlled_by on a gate that is "
                                "part of a Circuit or has been called on a "
@@ -102,6 +104,22 @@ class Gate(object):
             self.is_controlled_by = True
             self.control_qubits = q
         return self
+
+    def decompose(self, *free) -> List["Gate"]:
+        """Decomposes multi-control gates to gates supported by OpenQASM.
+
+        Decompositions are based on `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+
+        Returns:
+            List with gates that have the same effect as applying the original gate.
+        """
+        # FIXME: Implement this method for all gates not supported by OpenQASM.
+        # If the method is not implemented this returns a deep copy of the
+        # original gate
+        return [self.__class__(*self._init_args, **self._init_kwargs)]
 
     def __call__(self, state, is_density_matrix):
         """Acts with the gate on a given state vector:
@@ -127,6 +145,7 @@ class H(Gate):
         super(H, self).__init__()
         self.name = "h"
         self.target_qubits = (q,)
+        self._init_args = [q]
 
 
 class X(Gate):
@@ -141,6 +160,7 @@ class X(Gate):
         super(X, self).__init__()
         self.name = "x"
         self.target_qubits = (q,)
+        self._init_args = [q]
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
@@ -151,6 +171,74 @@ class X(Gate):
         else:
             gate = super(X, self).controlled_by(*q)
         return gate
+
+    def decompose(self, *free: int, use_toffolis: bool = True) -> List[Gate]:
+        """Decomposes multi-control ``X`` gate to one-qubit, ``CNOT`` and ``TOFFOLI`` gates.
+
+        Args:
+            free: Ids of free qubits to use for the gate decomposition.
+            use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
+                If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
+                See :class:`qibo.base.gates.TOFFOLI` for more details on this representation.
+
+        Returns:
+            List with one-qubit, ``CNOT`` and ``TOFFOLI`` gates that have the
+            same effect as applying the original multi-control gate.
+        """
+        if set(free) & set(self.qubits):
+            raise ValueError("Cannot decompose multi-control X gate if free "
+                             "qubits coincide with target or controls.")
+        if self._nqubits is not None:
+            for q in free:
+                if q >= self.nqubits:
+                    raise ValueError("Gate acts on {} qubits but {} was given "
+                                     "as free qubit.".format(self.nqubits, q))
+
+        controls = self.control_qubits
+        target = self.target_qubits[0]
+        m = len(controls)
+        if m < 3:
+            return [self.__class__(target).controlled_by(*controls)]
+
+        decomp_gates = []
+        n = m + 1 + len(free)
+        TOFFOLI = self._MODULE.TOFFOLI
+        if (n >= 2 * m - 1) and (m >= 3):
+            gates1 = [TOFFOLI(controls[m - 2 - i],
+                              free[m - 4 - i],
+                              free[m - 3 - i]
+                              ).congruent(use_toffolis=use_toffolis)
+                      for i in range(m - 3)]
+            gates2 = TOFFOLI(controls[0], controls[1], free[0]
+                             ).congruent(use_toffolis=use_toffolis)
+            first_toffoli = TOFFOLI(controls[m - 1], free[m - 3], target)
+
+            decomp_gates.append(first_toffoli)
+            for gates in gates1:
+                decomp_gates.extend(gates)
+            decomp_gates.extend(gates2)
+            for gates in gates1[::-1]:
+                decomp_gates.extend(gates)
+
+        elif len(free) >= 1:
+            m1 = n // 2
+            free1 = controls[m1:] + (target,) + tuple(free[1:])
+            x1 = self.__class__(free[0]).controlled_by(*controls[:m1])
+            part1 = x1.decompose(*free1, use_toffolis=use_toffolis)
+
+            free2 = controls[:m1] + tuple(free[1:])
+            controls2 = controls[m1:] + (free[0],)
+            x2 = self.__class__(target).controlled_by(*controls2)
+            part2 = x2.decompose(*free2, use_toffolis=use_toffolis)
+
+            decomp_gates = [*part1, *part2]
+
+        else:
+            raise NotImplementedError("X decomposition is not implemented for "
+                                      "zero free qubits.")
+
+        decomp_gates.extend(decomp_gates)
+        return decomp_gates
 
 
 class Y(Gate):
@@ -164,6 +252,7 @@ class Y(Gate):
         super(Y, self).__init__()
         self.name = "y"
         self.target_qubits = (q,)
+        self._init_args = [q]
 
 
 class Z(Gate):
@@ -179,6 +268,7 @@ class Z(Gate):
         super(Z, self).__init__()
         self.name = "z"
         self.target_qubits = (q,)
+        self._init_args = [q]
 
     def controlled_by(self, *q):
         """Fall back to CZ if control is one."""
@@ -207,6 +297,9 @@ class M(Gate):
         self.target_qubits = tuple(q)
         self._control_qubits = tuple()
         self.register_name = register_name
+
+        self._init_args = q
+        self._init_kwargs = {"register_name": register_name}
 
         self._unmeasured_qubits = None # Tuple
         self._reduced_target_qubits = None # List
@@ -292,6 +385,9 @@ class RX(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
+        self._init_args = [q]
+        self._init_kwargs = {"theta": theta}
+
 
 class RY(Gate):
     """Rotation around the Y-axis of the Bloch sphere.
@@ -317,6 +413,9 @@ class RY(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
+        self._init_args = [q]
+        self._init_kwargs = {"theta": theta}
+
 
 class RZ(Gate):
     """Rotation around the X-axis of the Bloch sphere.
@@ -340,6 +439,9 @@ class RZ(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
+        self._init_args = [q]
+        self._init_kwargs = {"theta": theta}
+
 
 class CNOT(Gate):
     """The Controlled-NOT gate.
@@ -354,6 +456,11 @@ class CNOT(Gate):
         self.name = "cx"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
+        self._init_args = [q0, q1]
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        q0, q1 = self.control_qubits[0], self.target_qubits[0]
+        return [self.__class__(q0, q1)]
 
 
 class CZ(Gate):
@@ -379,6 +486,7 @@ class CZ(Gate):
         self.name = "cz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
+        self._init_args = [q0, q1]
 
 
 class CZPow(Gate):
@@ -409,6 +517,9 @@ class CZPow(Gate):
         self.target_qubits = (q1,)
         self.theta = theta
 
+        self._init_args = [q0, q1]
+        self._init_kwargs = {"theta": theta}
+
 
 class SWAP(Gate):
     """The swap gate.
@@ -422,6 +533,7 @@ class SWAP(Gate):
         super(SWAP, self).__init__()
         self.name = "swap"
         self.target_qubits = (q0, q1)
+        self._init_args = [q0, q1]
 
 
 class fSim(Gate):
@@ -452,6 +564,9 @@ class fSim(Gate):
         self.theta = theta
         self.phi = phi
 
+        self._init_args = [q0, q1]
+        self._init_kwargs = {"theta": theta, "phi": phi}
+
 
 class GeneralizedfSim(Gate):
     """The fSim gate with a general rotation.
@@ -480,6 +595,9 @@ class GeneralizedfSim(Gate):
         self.unitary = unitary
         self.phi = phi
 
+        self._init_args = [q0, q1]
+        self._init_kwargs = {"unitary": unitary, "phi": phi}
+
 
 class TOFFOLI(Gate):
     """The Toffoli gate.
@@ -495,6 +613,44 @@ class TOFFOLI(Gate):
         self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
+        self._init_args = [q0, q1, q2]
+
+    def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
+        c0, c1 = self.control_qubits
+        t = self.target_qubits[0]
+        return [self.__class__(c0, c1, t)]
+
+    def congruent(self, use_toffolis: bool = True) -> List[Gate]:
+        """Congruent representation of ``TOFFOLI`` gate.
+
+        This is a helper method for the decomposition of multi-control ``X`` gates.
+        The congruent representation is based on Sec. 6.2 of
+        `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
+        The sequence of the gates produced here has the same effect as ``TOFFOLI``
+        with the phase of the |101> state reversed.
+
+        Args:
+            use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.
+                If ``False`` the congruent representation is returned.
+
+        Returns:
+            List with ``RY`` and ``CNOT`` gates that have the same effect as
+            applying the original ``TOFFOLI`` gate.
+        """
+        if use_toffolis:
+            return self.decompose()
+
+        import importlib
+        import numpy as np
+        control0, control1 = self.control_qubits
+        target = self.target_qubits[0]
+        module = importlib.import_module(self.__module__)
+        RY = module.RY
+        CNOT = module.CNOT
+        return [RY(target, -np.pi / 4), CNOT(control1, target),
+                RY(target, -np.pi / 4), CNOT(control0, target),
+                RY(target, np.pi / 4), CNOT(control1, target),
+                RY(target, np.pi / 4)]
 
 
 class Unitary(Gate):
@@ -513,6 +669,9 @@ class Unitary(Gate):
         self.name = "Unitary" if name is None else name
         self.unitary = unitary
         self.target_qubits = tuple(q)
+
+        self._init_args = [unitary] + list(q)
+        self._init_kwargs = {"name": name}
 
 
 class VariationalLayer(Gate):
@@ -561,6 +720,11 @@ class VariationalLayer(Gate):
                  params_map2: Optional[Dict[int, float]] = None,
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
+        self._init_args = [qubit_pairs, one_qubit_gate, two_qubit_gate]
+        self._init_kwargs = {"params_map": params_map,
+                             "params_map2": params_map2,
+                             "name": name}
+
         self.name = "VariationalLayer" if name is None else name
         self.params_map = dict(params_map)
         targets = set(self.params_map.keys())
@@ -616,6 +780,9 @@ class NoiseChannel(Gate):
         self.p = (px, py, pz)
         self.total_p = sum(self.p)
 
+        self._init_args = [q]
+        self._init_kwargs = {"px": px, "py": py, "pz": pz}
+
     def controlled_by(self, *q):
         """"""
         raise ValueError("Noise channel cannot be controlled on qubits.")
@@ -663,6 +830,7 @@ class GeneralChannel(Gate):
         self.is_channel = True
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
+        self._init_args = [A]
 
         # Check that given operators have the proper shape
         for qubits, matrix in A:
@@ -689,6 +857,7 @@ class Flatten(Gate):
         super(Flatten, self).__init__()
         self.name = "Flatten"
         self.coefficients = coefficients
+        self._init_args = [coefficients]
 
 
 class CallbackGate(Gate):
@@ -704,6 +873,7 @@ class CallbackGate(Gate):
         super(CallbackGate, self).__init__()
         self.name = callback.__class__.__name__
         self.callback = callback
+        self._init_args = [callback]
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):
