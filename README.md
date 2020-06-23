@@ -7,7 +7,7 @@ QIBO is a Python library for classical simulation of quantum algorithms.
 
 Some of the key features of QIBO are:
 - A standard interface for the implementation and extension of quantum algorithms.
-- Modular implementation on GPU and CPU with multi-threading support. 
+- Modular implementation on GPU and CPU with multi-threading support.
 - Availability of multi-GPU distributed approach for circuit simulation.
 - Full support of double precision simulation.
 
@@ -15,7 +15,7 @@ Some of the key features of QIBO are:
 
 QIBO documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
 
-- [Installation](http://34.240.99.72/#installation)
+- [Installation](http://34.240.99.72/installation.html)
 - [Documentation](http://34.240.99.72)
 - [Components](http://34.240.99.72/qibo.html)
 - [Examples](http://34.240.99.72/examples.html)
@@ -41,21 +41,14 @@ import numpy as np
 from qibo.models import Circuit
 from qibo import gates
 
-# Construct the circuit
 c = Circuit(2)
+c.add(gates.X(0))
 
-# Add some gates
-c.add(gates.H(0))
-c.add(gates.H(1))
+# Add a measurement register on both qubits
+c.add(gates.M(0, 1))
 
-# Define an initial state (optional - default initial state is |00>)
-initial_state = np.ones(4) / 2.0
-
-# Execute the circuit and obtain the final state
-final_state = c.execute(initial_state) # c(initial_state) also works
-
-# should print `np.array([1, 0, 0, 0])`
-print(final_state.numpy())
+# Execute the circuit with the default initial state |00>.
+result = c(nshots=100)
 ```
 
 In both cases, the simulation will run in a single device CPU or GPU in double precision `complex128`.

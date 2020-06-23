@@ -40,7 +40,7 @@ When commits are pushed to the branches in the GitHub repository,
 we perform integrity checks to ensure that the new features do
 not break QIBO functionalities and meets our coding standards.
 
-Where the current code standards that are applied to any new changes:
+The current code standards that are applied to any new changes:
 
-- **Tests**: We use pytest to run our tests thus tests must continues to pass when new changes are integrated in the code.
-- **Coverage**: Code should be at least mantain code coverage when new features are implemented.
+- **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code.
+- **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
