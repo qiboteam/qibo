@@ -139,7 +139,6 @@ def test_set_gates_controlled():
 
     assert c.queues.global_qubits_lists == [[1, 4], [0, 5]]
     check_device_queues(c.queues)
-    print(c.queues.global_qubits_lists)
     for i, queue in enumerate(c.queues.queues):
         assert len(queue) == 2
         assert len(queue[0]) == 3 + (i % 2)
