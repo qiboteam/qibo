@@ -693,6 +693,22 @@ def test_construct_unitary(gates):
         gates.fSim.construct_unitary()
 
 
+def test_variational_layer_call():
+    qibo.set_backend("custom")
+    nqubits = 6
+    theta = 2 * np.pi * np.random.random(nqubits)
+    c = Circuit(nqubits)
+    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    target_state = c().numpy()
+
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    thetas = {i: theta[i] for i in range(nqubits)}
+    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    final_state = gate(c._default_initial_state()).numpy()
+    np.testing.assert_allclose(target_state, final_state)
+
+
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
 def test_variational_one_layer(backend, accelerators, nqubits):
