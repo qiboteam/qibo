@@ -125,7 +125,7 @@ class DeviceQueues:
         return counter
 
     def _reset_swaps(self):
-        qubit_map = {}
+        #qubit_map = {}
         #for q1, q2 in self.swaps_set:
         #    if q1 in qubit_map:
         #        assert q2 not in qubit_map
@@ -146,6 +146,9 @@ class DeviceQueues:
                    counter: np.ndarray) -> List[gates.Gate]:
         new_remaining_queue = []
         for gate in remaining_queue:
+            if gate.is_special_gate:
+                gate.swap_reset = list(self.swaps_list)
+
             global_targets = set(gate.target_qubits) & self.global_qubits_set
             accept = isinstance(gate, gates.SWAP) and len(global_targets) == 1
             accept = accept or not global_targets
@@ -467,6 +470,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 op.swap_pieces(self.pieces[i], self.pieces[i + t],
                                local_eff, self.nlocal)
 
+    def _revert_swaps(self, swap_pairs: List[Tuple[int, int]]):
+        for q1, q2 in swap_pairs:
+            if q1 not in self.queues.global_qubits_set:
+                q1, q2 = q2, q1
+            self._swap(q1, q2)
+
     def _special_gate_execute(self, gate: Union["TensorflowGate", Tuple[int, int]]):
         """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
 
@@ -476,12 +485,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self._swap(*gate)
         else: # ``Flatten`` or callback
             with tf.device(self.memory_device):
+                # Reverse all global SWAPs that happened so far
+                self._revert_swaps(reversed(gate.swap_reset))
                 state = self._merge()
                 if isinstance(gate, gates.CallbackGate):
                     gate(state)
                 else:
                     state = gate(state)
                     self._split(state)
+                # Redo all global SWAPs that happened so far
+                self._revert_swaps(gate.swap_reset)
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,

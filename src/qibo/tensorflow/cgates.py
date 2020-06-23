@@ -305,6 +305,7 @@ class CZPow(MatrixGate, base_gates.CZPow):
 
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)
+        MatrixGate.__init__(self)
 
     def _prepare(self):
         self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
@@ -507,6 +508,7 @@ class Flatten(TensorflowGate, base_gates.Flatten):
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
         TensorflowGate.__init__(self)
+        self.swap_reset = []
 
     def _construct_matrix(self):
         pass
@@ -531,6 +533,7 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
     def __init__(self, callback):
         base_gates.CallbackGate.__init__(self, callback)
         TensorflowGate.__init__(self)
+        self.swap_reset = []
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
