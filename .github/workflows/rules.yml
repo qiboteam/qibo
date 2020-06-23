@@ -21,6 +21,11 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install .[docs,tests]
+    - name: Test with pylint
+      run: |
+        pip install pylint
+        pylint src/*/*.py -E
+        pylint src/*/*.py --exit-zero
     - name: Test with pytest
       run: |
         pip install pytest-cov
