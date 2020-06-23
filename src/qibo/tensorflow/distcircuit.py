@@ -63,7 +63,7 @@ class DeviceQueues:
                                      for q in self.local_qubits}
 
         # Qubit map that holds the SWAPs
-        self.swaps_list = []
+        self.swaps_set = set()
 
         self.device_to_ids = {d: v for d, v in self._ids()}
         self.ids_to_device = self.ndevices * [None]
@@ -123,14 +123,18 @@ class DeviceQueues:
         return counter
 
     def _reset_swaps(self):
-        qubit_map = {q: q for q in range(self.nqubits)}
-        for q1, q2 in self.swaps_list:
+        qubit_map = {}
+        for q1, q2 in self.swaps_set:
+            if q1 in qubit_map:
+                assert q2 not in qubit_map
+                q1 = qubit_map.pop(q1)
+            if q2 in qubit_map:
+                assert q1 not in qubit_map
+                q2 = qubit_map.pop(q2)
             qubit_map[q1], qubit_map[q2] = q2, q1
 
-        for q1 in range(self.nqubits):
-            if qubit_map[q1] != q1:
-                q2 = qubit_map[q1]
-                qubit_map[q2] = q2
+        for q1, q2 in qubit_map.items():
+            if q1 < q2:
                 yield self.circuit.gate_module.SWAP(q1, q2)
 
     def _transform(self, queue: List[gates.Gate],
@@ -142,7 +146,7 @@ class DeviceQueues:
             accept = isinstance(gate, gates.SWAP) and len(global_targets) == 1
             accept = accept or not global_targets
             for skipped_gate in new_remaining_queue:
-                accept = skipped_gate.commutes(gate)
+                accept = accept and skipped_gate.commutes(gate)
                 if not accept:
                     break
             if accept:
@@ -162,6 +166,10 @@ class DeviceQueues:
         if isinstance(gate, gates.SWAP): # special case of swap on two global qubits
             assert len(global_targets) == 2
             global_targets.remove(target_set.pop())
+
+        # FIXME: Do not allow using the same local qubit for more than one
+        # SWAPs because in the end it may lead to SWAP between global qubits.
+        # OR decompose the swap between globals in ``_reset_swaps``
         available_swaps = (q for q in counter.argsort()
                            if q not in (self.global_qubits_set | target_set))
 
@@ -172,7 +180,11 @@ class DeviceQueues:
             qubit_map[q] = qs
             qubit_map[qs] = q
             # Keep SWAPs in memory to reset them in the end
-            self.swaps_list.append((min(q, qs), max(q, qs)))
+            new_pair = (min(q, qs), max(q, qs))
+            if new_pair in self.swaps_set:
+                self.swaps_set.remove(new_pair)
+            else:
+                self.swaps_set.add(new_pair)
             # Add ``SWAP`` gate in ``queue``.
             queue.append(self.circuit.gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
@@ -196,6 +208,11 @@ class DeviceQueues:
         return new_queue
 
     def create(self, queue: List[gates.Gate]):
+
+        print(self.global_qubits_list)
+        for gate in queue:
+            print(gate.name, gate.control_qubits, gate.target_qubits)
+
         for gate in queue:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits

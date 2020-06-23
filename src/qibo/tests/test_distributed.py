@@ -220,7 +220,7 @@ def test_simple_execution(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.parametrize("ndevices", [2])
+@pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution_global(ndevices):
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
