@@ -166,11 +166,7 @@ class DeviceQueues:
             qubit_map[q] = qs
             qubit_map[qs] = q
             # Keep SWAPs in memory to reset them in the end
-            new_pair = (min(q, qs), max(q, qs))
-            if new_pair in self.swaps_list:
-                self.swaps_list.remove(new_pair)
-            else:
-                self.swaps_list.append(new_pair)
+            self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
             queue.append(self.circuit.gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
@@ -190,22 +186,11 @@ class DeviceQueues:
         if counter is None:
             counter = self.count(queue, self.nqubits)
         new_queue = self._transform([], queue, counter)
-        # Reset SWAPs
-        #def _swaps():
-            #reset_set = set()
-            #for pair in reversed(self.swaps_list):
-                #if pair not in reset_set:
-                #    reset_set.add(pair)
-                #    yield self.circuit.gate_module.SWAP(*pair)
         new_queue.extend((self.circuit.gate_module.SWAP(*p)
                           for p in reversed(self.swaps_list)))
         return new_queue
 
     def create(self, queue: List[gates.Gate]):
-        #for gate in queue:
-        #    print(gate.name, gate.target_qubits)
-        #    if gate.is_special_gate:
-        #        print(gate.swap_reset)
         for gate in queue:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
