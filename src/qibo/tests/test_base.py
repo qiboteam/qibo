@@ -209,6 +209,22 @@ def test_circuit_copy_with_measurements():
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 
+def test_base_gate_errors():
+    """Check errors in ``base.gates.Gate`` for coverage."""
+    gate = H(0)
+    with pytest.raises(ValueError):
+        nqubits = gate.nqubits
+    with pytest.raises(ValueError):
+        nstates = gate.nstates
+    with pytest.raises(RuntimeError):
+        gate.nqubits = 2
+        gate.nqubits = 3
+    with pytest.raises(RuntimeError):
+        cgate = gate.controlled_by(1)
+    with pytest.raises(RuntimeError):
+        gate = H(0).controlled_by(1).controlled_by(2)
+
+
 def test_gates_commute():
     """Check ``gate.commutes`` for various gate configurations."""
     assert H(0).commutes(X(1))

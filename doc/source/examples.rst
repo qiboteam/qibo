@@ -55,6 +55,10 @@ This happens when the calculation backend is switched to ``"matmuleinsum"``
 or ``"defaulteinsum"``. This backend is much slower than the default ``"custom"``
 backend which uses custom tensorflow operators to apply gates.
 
+
+How to print a circuit summary?
+-------------------------------
+
 It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
 total number of qubits and all gates in order of the number of times they appear.
@@ -96,6 +100,14 @@ For example for the circuit of the previous example:
 
     all_h_gates = c.gates_of_type("h")
     # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, H(2))]
+
+A circuit may contain multi-controlled or other gates that are not supported by
+OpenQASM. The ``circuit.decompose(*free)`` method decomposes such gates to
+others that are supported by OpenQASM. For this decomposition to work the user
+has to specify which qubits can be used as free/work. For more information on
+this decomposition we refer to the related publication on
+`arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_. Currently only the
+decomposition of multi-controlled ``X`` gates is implemented.
 
 
 .. _gpu-examples:
@@ -617,3 +629,23 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
+<<<<<<< HEAD
+=======
+
+
+How to modify the simulation precision?
+---------------------------------------
+
+By default the simulation is performed in ``double`` precision (``complex128``).
+We provide the ``qibo.set_precision`` function to modify the default behaviour.
+Note that `qibo.set_precision` must be called before allocating circuits:
+
+.. code-block:: python
+
+        import qibo
+        qibo.set_precision("single") # enables complex64
+        # or
+        qibo.set_precision("double") # re-enables complex128
+
+        # ... continue with circuit creation and execution
+>>>>>>> master
