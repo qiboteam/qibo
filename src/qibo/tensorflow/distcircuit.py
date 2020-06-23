@@ -62,8 +62,10 @@ class DeviceQueues:
         self.local_qubits_reduced = {q: q - self.reduction_number(q)
                                      for q in self.local_qubits}
 
-        # Qubit map that holds the SWAPs
+        # Set that holds the SWAP pairs
         self.swaps_set = set()
+        # Set that holds which local qubits have been used for SWAPs
+        self.used_swaps = set()
 
         self.device_to_ids = {d: v for d, v in self._ids()}
         self.ids_to_device = self.ndevices * [None]
@@ -170,16 +172,20 @@ class DeviceQueues:
         # FIXME: Do not allow using the same local qubit for more than one
         # SWAPs because in the end it may lead to SWAP between global qubits.
         # OR decompose the swap between globals in ``_reset_swaps``
+        unavailable_swaps = self.global_qubits_set | target_set
         available_swaps = (q for q in counter.argsort()
-                           if q not in (self.global_qubits_set | target_set))
+                           if q not in unavailable_swaps)
 
         qubit_map = {}
         for q in global_targets:
             qs = next(available_swaps)
+            while qs in self.used_swaps:
+                qs = next(available_swaps)
             # Update qubit map that holds the swaps
             qubit_map[q] = qs
             qubit_map[qs] = q
             # Keep SWAPs in memory to reset them in the end
+            self.used_swaps.add(qs)
             new_pair = (min(q, qs), max(q, qs))
             if new_pair in self.swaps_set:
                 self.swaps_set.remove(new_pair)

@@ -295,7 +295,6 @@ def test_execution_with_swap_global(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.skip
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
     qibo.set_backend("custom")
