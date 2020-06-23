@@ -1,12 +1,9 @@
 # A single CI script with github workflow
 name: Pip upload
 
-# before merge change this line
-on: [push]
-# with:
-#on:
-#  release:
-#    types: [created]
+on:
+  release:
+    types: [created]
 
 jobs:
   build:
