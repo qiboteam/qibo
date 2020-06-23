@@ -18,5 +18,5 @@ for i in range(N):
 
 fig, ax = plt.subplots()
 ax.scatter(tangles, opt_tangles)
-ax.plot([0., 1.], [0., 1.], color=black)
+ax.plot([0., 1.], [0., 1.], color='black')
 plt.show()
