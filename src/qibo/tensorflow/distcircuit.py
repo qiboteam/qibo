@@ -21,33 +21,47 @@ class DeviceQueues:
 
     ``DeviceQueues`` holds the following data that define the gate groups and
     corresponding global qubits:
+    * ``nqubits``: Total number of qubits in the circuit.
     * ``ndevices``: Number of logical accelerator devices.
     * ``nglobal``: Number of global qubits (= log2(ndevices)).
-    * ``global_qubits_lists``: List of sorted global qubit lists. Each list
-        corresponds to a gate group.
-    * ``global_qubits_sets``: List of global qubit sets. This follows ``global_qubits_lists``
-        but a set is used to allow O(1) search.
+    * ``nlocal``: Number of local qubits (= nqubits - nglobal).
+    * ``gate_module``: Gate module used by the circuit. This is used to create
+        new SWAP gates when needed.
+
+    * ``global_qubits_list``: Sorted list with the ids of global qubits.
+    * ``global_qubits_set``: Same as ``global_qubits_list`` but in a set to
+        allow O(1) search.
+    * ``local_qubits``: Sorted list with the ids of local qubits.
+    * ``global_qubits_reduced``: Map from global qubit ids to their reduced
+        value. The reduced value is the effective id in a hypothetical circuit
+        that does not contain the local qubits.
+    * ``local_qubits_reduced``: Map from local qubit ids to their reduced
+        value. The reduced value is the effective id in a hypothetical circuit
+        that does not contain the global qubits.
+
     * ``device_to_ids``: Dictionary that maps device (str) to list of piece indices.
         When a device is used multiple times then it is responsible for updating
         multiple state pieces. The list of indices specifies which pieces the device
         will update.
     * ``ids_to_device``: Inverse dictionary of ``device_to_ids``.
-    * ``queues``: List of length ``ndevices``. For each device we store the queues
-        of each gate group in a list of lists.
-        For example ``queues[2][1]`` gives the queue (list) of the 1st gate group
-        to be run in the 2nd device.
+
+    * ``queues``: Nested list of shape ``(ngroups, ndevices, group size)``.
+        For example ``queues[2][1]`` gives the gate queue of the second gate
+        group to be run in the first device.
+        If ``gate[i]`` is an empty list it means that this the i-th group
+        consists of a special gate to be run on ``memory_device``.
     * ``special_queue``: List with special gates than run on the full state vector
-        on ``memory_device``. Special gates have no target qubits and currently
-        are the ``CallbackGate`` and ``Flatten``.
+        on ``memory_device``. Special gates have no target qubits and can be
+        ``CallbackGate``, ``Flatten`` or SWAPs between local and global qubits.
     """
 
     def __init__(self, circuit: "TensorflowDistributedCircuit",
                  global_qubits: Set[int]):
-        self.circuit = circuit
         self.nqubits = circuit.nqubits
         self.ndevices = circuit.ndevices
         self.nglobal = circuit.nglobal
         self.nlocal = circuit.nlocal
+        self.gate_module = circuit.gate_module
 
         self.queues = []
         self.special_queue = []
@@ -62,24 +76,26 @@ class DeviceQueues:
         self.local_qubits_reduced = {q: q - self.reduction_number(q)
                                      for q in self.local_qubits}
 
-        # Set that holds the SWAP pairs
+        # List that holds the global-local SWAP pairs so that we can reset them
+        # in the end
         self.swaps_list = []
 
-        self.device_to_ids = {d: v for d, v in self._ids()}
+        self.device_to_ids = {d: v for d, v in self._ids(circuit.calc_devices)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
             for i in ids:
                 self.ids_to_device[i] = device
 
-    def _ids(self) -> Tuple[str, List[int]]:
+    def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
-        for device, n in self.circuit.calc_devices.items():
+        for device, n in calc_devices.items():
             stop = start + n
             yield device, list(range(start, stop))
             start = stop
 
     def reduction_number(self, q: int) -> int:
+        """Calculates the effective id in a circuit without the global qubits."""
         for i, gq in enumerate(self.global_qubits_list):
             if gq > q:
                 return i
@@ -112,6 +128,10 @@ class DeviceQueues:
     def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
         """Counts how many gates target each qubit.
 
+        Args:
+            queue: List of gates.
+            nqubits: Number of total qubits in the circuit.
+
         Returns:
             Array of integers with shape (nqubits,) with the number of gates
             for each qubit id.
@@ -125,6 +145,7 @@ class DeviceQueues:
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
                    counter: np.ndarray) -> List[gates.Gate]:
+        """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
             if gate.is_special_gate:
@@ -155,10 +176,8 @@ class DeviceQueues:
             assert len(global_targets) == 2
             global_targets.remove(target_set.pop())
 
-        unavailable_swaps = self.global_qubits_set | target_set
         available_swaps = (q for q in counter.argsort()
-                           if q not in unavailable_swaps)
-
+                           if q not in self.global_qubits_set | target_set)
         qubit_map = {}
         for q in global_targets:
             qs = next(available_swaps)
@@ -168,7 +187,7 @@ class DeviceQueues:
             # Keep SWAPs in memory to reset them in the end
             self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
-            queue.append(self.circuit.gate_module.SWAP(q, qs))
+            queue.append(self.gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
             counter[q], counter[qs] = counter[qs], counter[q]
 
@@ -183,14 +202,36 @@ class DeviceQueues:
 
     def transform(self, queue: List[gates.Gate],
                   counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
+        """Transforms gate queue to be compatible with distributed simulation.
+
+        Adds SWAP gates between global and local qubits so that no gates are
+        applied to global qubits.
+
+        Args:
+            queue (list): Original gate queue.
+            counter (np.ndarray): Counter of how many gates target each qubit.
+                If ``None`` this is calculated using the ``count`` method.
+
+        Returns:
+            List of gates that have the same effect as the original queue but
+            are compatible with distributed run (do not have global qubits as
+            targets).
+        """
         if counter is None:
             counter = self.count(queue, self.nqubits)
         new_queue = self._transform([], queue, counter)
-        new_queue.extend((self.circuit.gate_module.SWAP(*p)
+        new_queue.extend((self.gate_module.SWAP(*p)
                           for p in reversed(self.swaps_list)))
         return new_queue
 
     def create(self, queue: List[gates.Gate]):
+        """Creates the queues for each accelerator device.
+
+        Args:
+            queue (list): List of gates compatible with distributed run.
+            If the original ``queue`` contains gates that target global qubits
+            then ``transform` should be used to obtain a compatible queue.
+        """
         for gate in queue:
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
