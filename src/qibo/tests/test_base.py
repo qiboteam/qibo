@@ -269,6 +269,9 @@ def test_matrices_dtype():
     qibo.set_precision("double")
     # Check that ``qibo.matrices`` also works.
     np.testing.assert_allclose(qibo.matrices.H, H)
+    CNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                     [0, 0, 0, 1], [0, 0, 1, 0]])
+    np.testing.assert_allclose(qibo.matrices.CNOT, CNOT)
 
 
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
