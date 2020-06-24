@@ -67,7 +67,6 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    setup_requires=requirements,
     install_requires=requirements,
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"],
