@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
-from qibo.config import matrices
+from qibo.config import tfmatrices as matrices
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
