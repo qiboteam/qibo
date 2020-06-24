@@ -1,14 +1,16 @@
 import numpy as np
 import pytest
+import qibo
+from qibo import gates
 from qibo.models import Circuit
-from qibo.tensorflow import gates
 
-_BACKENDS = ["DefaultEinsum", "MatmulEinsum"]
+_BACKENDS = ["defaulteinsum", "matmuleinsum"]
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_variable_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
+    qibo.set_backend(backend)
     import tensorflow as tf
     from qibo.config import DTYPES
     theta = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
@@ -17,8 +19,8 @@ def test_variable_backpropagation(backend):
     # of the gradient tape
     with tf.GradientTape() as tape:
         c = Circuit(1)
-        c.add(gates.X(0).with_backend(backend))
-        c.add(gates.RZ(0, theta).with_backend(backend))
+        c.add(gates.X(0))
+        c.add(gates.RZ(0, theta))
         loss = tf.math.real(c()[-1])
     grad = tape.gradient(loss, theta)
 
@@ -32,6 +34,7 @@ def test_variable_backpropagation(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_two_variables_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
+    qibo.set_backend(backend)
     import tensorflow as tf
     from qibo.config import DTYPES
     theta = tf.Variable([0.1234, 0.4321], dtype=DTYPES.get('DTYPE'))
@@ -40,8 +43,8 @@ def test_two_variables_backpropagation(backend):
     # of the gradient tape
     with tf.GradientTape() as tape:
         c = Circuit(2)
-        c.add(gates.RX(0, theta[0]).with_backend(backend))
-        c.add(gates.RY(1, theta[1]).with_backend(backend))
+        c.add(gates.RX(0, theta[0]))
+        c.add(gates.RY(1, theta[1]))
         loss = tf.math.real(c()[0])
     grad = tape.gradient(loss, theta)
 

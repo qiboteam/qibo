@@ -10,6 +10,19 @@ REGISTER_OP("InitialState")
     .Output("out: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
+
+// Register op that changes qubit order for multi-GPU
+REGISTER_OP("TransposeState")
+    .Attr("T: {complex64, complex128}")
+    .Attr("ndevices: int")
+    .Input("state: ndevices * T")
+    .Input("transposed_state: T")
+    .Attr("nqubits: int")
+    .Attr("qubit_order: list(int)")
+    .Output("out: T")
+    .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
+
+
 // Register one-qubit gate op with gate matrix
 #define REGISTER_GATE1_OP(NAME)           \
   REGISTER_OP(NAME)                       \

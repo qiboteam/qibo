@@ -24,7 +24,7 @@ the following options:
 
 * ``--nqubits``: Number of qubits in the circuit. Can be a single integer or an interval defined with a dash (``-``) as ``a-b``. For example ``--nqubits 5-10`` will run the benchmark for all ``nqubits`` from 5 to 10 inclusive.
 
-* ``--backend``: QIBO backend to use for the calculation. Available backends are ``"DefaultEinsum"``, ``"MatmulEinsum"`` and ``"Custom"``. ``"Custom"`` is the default backend.
+* ``--backend``: QIBO backend to use for the calculation. Available backends are ``"custom"``, ``"matmuleinsum"`` and ``"defaulteinsum"``. ``"custom"`` is the default backend.
 
 * ``--device``: Tensorflow device to use for the benchmarks, for example ``/GPU:0`` or ``/CPU:0``.
 
