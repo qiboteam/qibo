@@ -238,11 +238,15 @@ def test_precision_dictionary(precision):
 def test_matrices_dtype():
     """Check if ``set_precision`` changes matrices types."""
     import qibo
+    # Check that matrices can be imported
     from qibo import matrices
     assert matrices.I.dtype == np.complex128
     np.testing.assert_allclose(matrices.I, np.eye(2))
+    # Check that matrices precision is succesfully switched
     qibo.set_precision("single")
     assert matrices.H.dtype == np.complex64
     H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     np.testing.assert_allclose(matrices.H, H)
     qibo.set_precision("double")
+    # Check that ``qibo.matrices`` also works.
+    np.testing.assert_allclose(qibo.matrices.H, H)
