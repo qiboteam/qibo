@@ -274,6 +274,13 @@ def test_matrices_dtype():
     np.testing.assert_allclose(qibo.matrices.CNOT, CNOT)
 
 
+def test_modifying_matrices_error():
+    """Check that modifying matrices raises ``AttributeError``."""
+    from qibo import matrices
+    with pytest.raises(AttributeError):
+        matrices.I = np.zeros((2, 2))
+
+
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
 def test_set_backend(backend):
     import qibo
