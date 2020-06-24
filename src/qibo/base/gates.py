@@ -751,6 +751,9 @@ class VariationalLayer(Gate):
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
 
+        self.unitaries = []
+        self.additional_unitary = None
+
 
 class NoiseChannel(Gate):
     """Probabilistic noise channel.
@@ -854,6 +857,25 @@ class Flatten(Gate):
         super(Flatten, self).__init__()
         self.name = "Flatten"
         self.coefficients = coefficients
-        import math
-        self.target_qubits = tuple(range(int(math.log2(len(coefficients)))))
         self._init_args = [coefficients]
+
+
+class CallbackGate(Gate):
+    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
+
+    This gate performs the callback calulation without affecting the state vector.
+
+    Args:
+        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
+    """
+
+    def __init__(self, callback: "Callback"):
+        super(CallbackGate, self).__init__()
+        self.name = callback.__class__.__name__
+        self.callback = callback
+        self._init_args = [callback]
+
+    @Gate.nqubits.setter
+    def nqubits(self, n: int):
+        Gate.nqubits.fset(self, n)
+        self.callback.nqubits = n

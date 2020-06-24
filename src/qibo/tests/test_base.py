@@ -3,6 +3,7 @@ Test imports and basic functionality that is indepedent of calculation backend.
 """
 import numpy as np
 import pytest
+import qibo
 from qibo.models import *
 from qibo.gates import *
 
@@ -60,6 +61,7 @@ def test_circuit_add_bad_gate():
 
 def test_circuit_add_iterable():
     """Check if `circuit.add` works with iterables."""
+    qibo.set_backend("custom")
     c = Circuit(2)
     # Try adding list
     c.add([H(0), H(1), CNOT(0, 1)])
@@ -73,6 +75,7 @@ def test_circuit_add_iterable():
 
 def test_circuit_add_generator():
     """Check if `circuit.add` works with generators."""
+    qibo.set_backend("custom")
     def gen():
         yield H(0)
         yield H(1)
@@ -83,8 +86,24 @@ def test_circuit_add_generator():
     assert isinstance(c.queue[-1], CNOT)
 
 
+def test_circuit_add_nested_generator():
+    """Check if `circuit.add` works with nested generators."""
+    qibo.set_backend("custom")
+    def gen():
+        yield H(0)
+        yield H(1)
+        yield CNOT(0, 1)
+    c = Circuit(2)
+    c.add((gen() for _ in range(3)))
+    assert c.depth == 9
+    assert isinstance(c.queue[2], CNOT)
+    assert isinstance(c.queue[5], CNOT)
+    assert isinstance(c.queue[7], H)
+
+
 def test_circuit_addition():
     """Check if circuit addition increases depth."""
+    qibo.set_backend("custom")
     c1 = Circuit(2)
     c1.add(H(0))
     c1.add(H(1))
@@ -250,3 +269,30 @@ def test_matrices_dtype():
     qibo.set_precision("double")
     # Check that ``qibo.matrices`` also works.
     np.testing.assert_allclose(qibo.matrices.H, H)
+
+
+@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
+def test_set_backend(backend):
+    import qibo
+    qibo.set_backend(backend)
+    from qibo import gates
+    if backend == "custom":
+        from qibo.tensorflow import cgates as custom_gates
+        assert isinstance(gates.H(0), custom_gates.TensorflowGate)
+    else:
+        from qibo.tensorflow import gates as native_gates
+        from qibo.tensorflow import einsum
+        einsums = {"defaulteinsum": einsum.DefaultEinsum,
+                   "matmuleinsum": einsum.MatmulEinsum}
+        h = gates.H(0)
+        assert isinstance(h, native_gates.TensorflowGate)
+        assert isinstance(h.einsum, einsums[backend])
+
+
+def test_config_set_errors():
+    import qibo
+    with pytest.raises(RuntimeError):
+        qibo.set_precision('test')
+    with pytest.raises(RuntimeError):
+        qibo.set_backend('test')
+    qibo.set_backend("custom")

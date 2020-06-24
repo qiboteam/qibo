@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPES, EINSUM_CHARS, EIGVAL_CUTOFF
+from qibo.config import DTYPES, EIGVAL_CUTOFF
 from typing import List, Optional, Union
 
 
@@ -11,14 +11,9 @@ class Callback:
     `__call__` method.
 
     Results of a callback can be accessed by indexing the corresponding object.
-
-    Args:
-        steps (int): Every how many gates to perform the callback calculation.
-            Defaults at 1 for which the calculation is done after every gate.
     """
 
-    def __init__(self, steps: int = 1):
-        self.steps = steps
+    def __init__(self):
         self._results = []
         self._nqubits = None
 
@@ -48,39 +43,25 @@ class Callback:
     def append(self, result: tf.Tensor):
         self._results.append(result)
 
+    def extend(self, result: tf.Tensor):
+        self._results.extend(result)
 
-class EntanglementEntropy(Callback):
-    """Von Neumann entanglement entropy callback.
+
+class PartialTrace(Callback):
+    """Calculates reduced density matrix of a state.
+
+    This is used by the :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+    callback. It can also be used as a standalone callback in order to access
+    a reduced density matrix in the middle of a circuit execution.
 
     Args:
-        partition (list): List with qubit ids that defines the first subsystem
-            for the entropy calculation.
+        partition (list): List with qubit ids that defines the first subsystem.
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
-        steps (int): Every how many gates to perform the entropy calculation.
-            Defaults at 1 for which the calculation is done after every gate.
-
-    Example:
-        ::
-
-            from qibo import models, gates, callbacks
-            # create entropy callback where qubit 0 is the first subsystem
-            entropy = callbacks.EntanglementEntropy([0])
-            # initialize circuit with 2 qubits and add gates
-            c = models.Circuit(2)
-            c.add(gates.H(0))
-            c.add(gates.CNOT(0, 1))
-            # execute the circuit using the callback
-            final_state = c(callback=entropy)
-            print(entropy[0])
-            # Should print [0, 0, 1] which is the entanglement entropy
-            # after every gate in the calculation.
     """
-    _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
-    _chars = EINSUM_CHARS
 
-    def __init__(self, partition: Optional[List[int]] = None, steps: int = 1):
-        super(EntanglementEntropy, self).__init__(steps)
+    def __init__(self, partition: Optional[List[int]] = None):
+        super(PartialTrace, self).__init__()
         self.partition = partition
         self.rho_dim = None
         self._traceout = None
@@ -109,34 +90,14 @@ class EntanglementEntropy(Callback):
             from qibo.tensorflow.einsum import DefaultEinsum
             partition = set(self.partition)
             self._traceout = DefaultEinsum.partialtrace_str(partition, self.nqubits)
-
         return self._traceout
 
-    def _partial_trace(self, state: tf.Tensor, is_density_matrix: bool = False
-                       ) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
         """Calculates reduced density matrix.
 
         Traces out all qubits contained in `self.partition`.
         """
-        if is_density_matrix:
-            rho = tf.einsum(self._traceout_str, state)
-        else:
-            rho = tf.tensordot(state, tf.math.conj(state),
-                               axes=[self.partition, self.partition])
-        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
-
-    @classmethod
-    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
-      """Calculates entropy of a density matrix."""
-      # Diagonalize
-      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
-      # Treating zero and negative eigenvalues
-      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
-      return entropy / cls._log2
-
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor:
         # Cast state in the proper shape
         if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
             raise TypeError("State of unknown type {} was given in callback "
@@ -147,7 +108,64 @@ class EntanglementEntropy(Callback):
         shape = (1 + int(is_density_matrix)) * self.nqubits * (2,)
         state = tf.reshape(state, shape)
 
+        if is_density_matrix:
+            rho = tf.einsum(self._traceout_str, state)
+        else:
+            rho = tf.tensordot(state, tf.math.conj(state),
+                               axes=[self.partition, self.partition])
+        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
+
+
+class EntanglementEntropy(PartialTrace):
+    """Von Neumann entanglement entropy callback.
+
+    Args:
+        partition (list): List with qubit ids that defines the first subsystem
+            for the entropy calculation.
+            If `partition` is not given then the first subsystem is the first
+            half of the qubits.
+
+    Example:
+        ::
+
+            from qibo import models, gates, callbacks
+            # create entropy callback where qubit 0 is the first subsystem
+            entropy = callbacks.EntanglementEntropy([0])
+            # initialize circuit with 2 qubits and add gates
+            c = models.Circuit(2)
+            # add callback gates between normal gates
+            c.add(gates.CallbackGate(entropy))
+            c.add(gates.H(0))
+            c.add(gates.CallbackGate(entropy))
+            c.add(gates.CNOT(0, 1))
+            c.add(gates.CallbackGate(entropy))
+            # execute the circuit
+            final_state = c()
+            print(entropy[:])
+            # Should print [0, 0, 1] which is the entanglement entropy
+            # after every gate in the calculation.
+    """
+    _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
+
+    def __init__(self, partition: Optional[List[int]] = None):
+        super(EntanglementEntropy, self).__init__()
+        self.partition = partition
+        self.rho_dim = None
+        self._traceout = None
+
+    @classmethod
+    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
+      """Calculates entropy by diagonalizing the density matrix."""
+      # Diagonalize
+      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+      # Treating zero and negative eigenvalues
+      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
+      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
+      return entropy / cls._log2
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
         # Construct reduced density matrix
-        rho = self._partial_trace(state, is_density_matrix)
+        rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
         return self._entropy(rho)

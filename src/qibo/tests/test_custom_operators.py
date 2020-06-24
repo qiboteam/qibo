@@ -341,3 +341,30 @@ def test_custom_op_toy_callback(gate, compile):
 
     np.testing.assert_allclose(target_state, state.numpy())
     np.testing.assert_allclose(target_callback, callback.numpy())
+
+
+@pytest.mark.parametrize("nqubits", [3, 4, 7, 8, 9, 10])
+@pytest.mark.parametrize("ndevices", [2, 4, 8])
+def test_transpose_state(nqubits, ndevices):
+    for _ in range(10):
+        # Generate global qubits randomly
+        all_qubits = np.arange(nqubits)
+        np.random.shuffle(all_qubits)
+        qubit_order = list(all_qubits)
+        state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
+
+        state_tensor = state.numpy().reshape(nqubits * (2,))
+        target_state = np.transpose(state_tensor, qubit_order).ravel()
+
+        new_state = tf.zeros_like(state)
+        shape = (ndevices, int(state.shape[0]) // ndevices)
+        state = tf.reshape(state, shape)
+        pieces = [state[i] for i in range(ndevices)]
+        if tf.config.list_physical_devices("GPU"):
+            error = tf.python.framework.errors_impl.UnimplementedError
+            with pytest.raises(error):
+                new_state = op.transpose_state(pieces, new_state, nqubits,
+                                               qubit_order)
+        else:
+            new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
+            np.testing.assert_allclose(target_state, new_state.numpy())

@@ -29,22 +29,15 @@ if BACKEND_NAME == "tensorflow":
     # Eigenvalues smaller than this cut-off are ignored in entropy calculation
     EIGVAL_CUTOFF = 1e-14
 
-    # Einsum backend switcher according to device
-    if tf.config.list_physical_devices("GPU"):
-        # If GPU is available use `tf.einsum`
-        from qibo.tensorflow.einsum import DefaultEinsum
-        einsum = DefaultEinsum()
-    else:
-        # If only CPU is available then fall back to `tf.matmul`
-        from qibo.tensorflow.einsum import MatmulEinsum
-        einsum = MatmulEinsum()
-
     # Default types
     DTYPES = {
         'DTYPEINT': tf.int64,
         'DTYPE': tf.float64,
         'DTYPECPX': tf.complex128
     }
+
+    # Gate backends
+    BACKEND = {'GATES': 'custom', 'EINSUM': None}
 
     # Set memory cut-off for using GPU when sampling
     GPU_MEASUREMENT_CUTOFF = 1300000000
@@ -59,6 +52,31 @@ if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import matrices as _matrices
     matrices = _matrices.NumpyMatrices()
     tfmatrices = _matrices.TensorflowMatrices()
+
+
+    def set_backend(backend='custom'):
+        """Sets backend used to implement gates.
+
+        Args:
+            backend (str): possible options are 'custom' for the gates that use
+                custom tensorflow operator and 'defaulteinsum' or 'matmuleinsum'
+                for the gates that use tensorflow primitives (``tf.einsum`` or
+                ``tf.matmul`` respectively).
+        """
+        if backend == 'custom':
+            BACKEND['GATES'] = 'custom'
+            BACKEND['EINSUM'] = None
+        elif backend == 'defaulteinsum':
+            from qibo.tensorflow import einsum
+            BACKEND['GATES'] = 'native'
+            BACKEND['EINSUM'] = einsum.DefaultEinsum()
+        elif backend == 'matmuleinsum':
+            from qibo.tensorflow import einsum
+            BACKEND['GATES'] = 'native'
+            BACKEND['EINSUM'] = einsum.MatmulEinsum()
+        else:
+            raise RuntimeError(f"Gate backend '{backend}' not supported.")
+
 
     def set_precision(dtype='double'):
         """Set precision for states and gates simulation.

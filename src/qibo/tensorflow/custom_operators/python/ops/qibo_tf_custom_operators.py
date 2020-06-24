@@ -1,4 +1,5 @@
 """Use ops in python."""
+import numpy as np
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.framework import load_library
@@ -14,6 +15,9 @@ custom_module = load_library.load_op_library(
 
 # initial_state operator
 initial_state = custom_module.initial_state
+
+# transpose_state operator (for multi-GPU)
+transpose_state = custom_module.transpose_state
 
 
 def check_controls(controls):

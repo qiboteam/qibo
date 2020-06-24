@@ -3,7 +3,7 @@ Various utilities used by the benchmark scripts.
 """
 import h5py
 import numpy as np
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 
 def update_file(file_path: str, logs: Dict[str, List]):
@@ -50,3 +50,33 @@ def parse_nqubits(nqubits_str: str) -> List[int]:
         return list(range(int(n_start), int(n_end) + 1))
 
     return [int(x) for x in nqubits_str.split(",")]
+
+
+def parse_accelerators(accelerators: Optional[str]) -> Dict[str, int]:
+    """Transforms string that specifies accelerators to the dictionary.
+
+    The string that is parsed has the following format:
+        n1device1,n2device2,n3device3,...
+    and is transformed to the dictionary:
+        {'device1': n1, 'device2': n2, 'device3': n3, ...}
+
+    Example:
+        2/GPU:0,2/GPU:1 --> {'/GPU:0': 2, '/GPU:1': 2}
+    """
+    if accelerators is None:
+        return None
+
+    def read_digit(x):
+        i = 0
+        while x[i].isdigit():
+            i += 1
+        return x[i:], int(x[:i])
+
+    acc_dict = {}
+    for entry in accelerators.split(","):
+        device, n = read_digit(entry)
+        if device in acc_dict:
+            acc_dict[device] += n
+        else:
+            acc_dict[device] = n
+    return acc_dict
