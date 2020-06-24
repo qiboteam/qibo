@@ -37,3 +37,12 @@ jobs:
         export CUDA_PATH=/usr/local/cuda-10.2/
         python setup.py sdist bdist_wheel
         # twine upload dist/*
+    - name: Upload to server
+      run: |
+        KEY=$( mktemp )
+        echo "$QIBO_TEAM" | base64 --decode > "$KEY"
+        scp -r -i "$KEY" -o StrictHostKeyChecking=no\
+          dist/* \
+          ubuntu@34.240.99.72:/var/www/html/packages/
+      env:
+        QIBO_TEAM: ${{ secrets.QIBO_TEAM }}
