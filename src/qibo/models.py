@@ -103,7 +103,7 @@ class VQE(object):
             if not circuit.using_tfgates:
                 raise RuntimeError("Cannot compile VQE that uses custom operators. "
                                    "Set the compile flag to False.")
-            from qibo.config import K
+            from qibo import K
             loss = K.function(loss)
 
         if method == 'cma':
@@ -131,7 +131,7 @@ class VQE(object):
                 sgd_options.update(options)
 
             # proceed with the training
-            from qibo.config import K
+            from qibo import K
             vparams = K.Variable(initial_state)
             optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
               learning_rate=sgd_options["learning_rate"])

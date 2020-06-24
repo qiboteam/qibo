@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import matrices
-from qibo.config import K
+from qibo import K
 from abc import ABCMeta, abstractmethod
 
 
