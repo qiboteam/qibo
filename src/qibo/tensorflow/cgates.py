@@ -22,6 +22,7 @@ class TensorflowGate:
         if not tf.executing_eagerly():
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
+        self.nqubits = None
 
     @staticmethod
     def construct_unitary(*args) -> tf.Tensor:
@@ -42,7 +43,7 @@ class TensorflowGate:
         Args:
             state (tf.Tensor): State vector with shape (2 ** nqubits,).
         """
-        if self._nqubits is None:
+        if self.nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
 
