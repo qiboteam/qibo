@@ -49,8 +49,9 @@ if BACKEND_NAME == "tensorflow":
     else:
         CPU_NAME = None
 
-    from qibo.tensorflow import matrices as tensorflow_matrices
-    matrices = tensorflow_matrices.GateMatrices()
+    from qibo.tensorflow import matrices as _matrices
+    matrices = _matrices.NumpyMatrices()
+    tfmatrices = _matrices.TensorflowMatrices()
 
 
     def set_backend(backend='custom'):
@@ -91,8 +92,9 @@ if BACKEND_NAME == "tensorflow":
             DTYPES['DTYPE'] = tf.float64
             DTYPES['DTYPECPX'] = tf.complex128
         else:
-            raise RuntimeError(f"dtype '{dtype}' not supported.")
-        matrices.allocate_gates()
+            raise RuntimeError(f'dtype {dtype} not supported.')
+        matrices.allocate_matrices()
+        tfmatrices.allocate_matrices()
 
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")

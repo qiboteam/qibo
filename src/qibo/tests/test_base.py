@@ -237,6 +237,7 @@ def test_gates_commute():
 
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_state_precision(precision):
+    """Check ``set_precision`` in state dtype."""
     import qibo
     import tensorflow as tf
     qibo.set_precision(precision)
@@ -252,6 +253,7 @@ def test_state_precision(precision):
 
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_precision_dictionary(precision):
+    """Check if ``set_precision`` changes the ``DTYPES`` dictionary."""
     import qibo
     import tensorflow as tf
     from qibo.config import DTYPES
@@ -260,6 +262,33 @@ def test_precision_dictionary(precision):
         assert DTYPES.get("DTYPECPX") == tf.complex64
     else:
         assert DTYPES.get("DTYPECPX") == tf.complex128
+
+
+def test_matrices_dtype():
+    """Check if ``set_precision`` changes matrices types."""
+    import qibo
+    # Check that matrices can be imported
+    from qibo import matrices
+    assert matrices.I.dtype == np.complex128
+    np.testing.assert_allclose(matrices.I, np.eye(2))
+    # Check that matrices precision is succesfully switched
+    qibo.set_precision("single")
+    assert matrices.H.dtype == np.complex64
+    H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    np.testing.assert_allclose(matrices.H, H)
+    qibo.set_precision("double")
+    # Check that ``qibo.matrices`` also works.
+    np.testing.assert_allclose(qibo.matrices.H, H)
+    CNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                     [0, 0, 0, 1], [0, 0, 1, 0]])
+    np.testing.assert_allclose(qibo.matrices.CNOT, CNOT)
+
+
+def test_modifying_matrices_error():
+    """Check that modifying matrices raises ``AttributeError``."""
+    from qibo import matrices
+    with pytest.raises(AttributeError):
+        matrices.I = np.zeros((2, 2))
 
 
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
