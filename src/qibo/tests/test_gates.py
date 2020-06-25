@@ -644,7 +644,7 @@ def test_unitary_bad_shape(backend):
     with pytest.raises(ValueError):
         gate = gates.Unitary(matrix, 0, 1)
 
-    if gates == custom_gates:
+    if backend == "custom":
         with pytest.raises(NotImplementedError):
             gate = gates.Unitary(matrix, 0, 1, 2)
 

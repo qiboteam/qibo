@@ -6,7 +6,7 @@ from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as Distribu
 from typing import Dict, Optional
 
 
-class Circuit:
+class Circuit(DistributedCircuit):
     """Factory class for circuits.
 
     Creates both normal and distributed circuits.

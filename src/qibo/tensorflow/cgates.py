@@ -12,7 +12,8 @@ from typing import Dict, List, Optional, Sequence, Tuple
 class TensorflowGate(base_gates.Gate):
 
     def __new__(cls, *args, **kwargs):
-        if BACKEND.get('GATES') == 'custom':
+        cgate_only = {"M", "Flatten", "CallbackGate"}
+        if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
             from qibo.tensorflow import gates
@@ -143,9 +144,6 @@ class Z(TensorflowGate, base_gates.Z):
 
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
-
-    def __new__(cls, *args, **kwargs):
-        return super(TensorflowGate, cls).__new__(cls)
 
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
@@ -499,9 +497,6 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
 class Flatten(TensorflowGate, base_gates.Flatten):
 
-    def __new__(cls, *args, **kwargs):
-        return super(TensorflowGate, cls).__new__(cls)
-
     def __init__(self, coefficients):
         base_gates.Flatten.__init__(self, coefficients)
         TensorflowGate.__init__(self)
@@ -523,9 +518,6 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 
 
 class CallbackGate(TensorflowGate, base_gates.CallbackGate):
-
-    def __new__(cls, *args, **kwargs):
-        return super(TensorflowGate, cls).__new__(cls)
 
     def __init__(self, callback):
         base_gates.CallbackGate.__init__(self, callback)
