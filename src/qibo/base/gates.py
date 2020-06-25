@@ -890,5 +890,5 @@ class CallbackGate(Gate):
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):
-        Gate.nqubits.fset(self, n)
+        Gate.nqubits.fset(self, n) # pylint: disable=no-member
         self.callback.nqubits = n

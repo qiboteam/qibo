@@ -399,7 +399,11 @@ class TensorflowChannel(TensorflowGate):
     All channels should inherit this class.
     """
 
-    @TensorflowGate.nqubits.setter
+    def __init__(self):
+        super(TensorflowChannel, self).__init__()
+        self.gates = []
+
+    @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         for gate in self.gates:
