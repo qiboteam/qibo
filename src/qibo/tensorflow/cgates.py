@@ -200,7 +200,7 @@ class M(TensorflowGate, base_gates.M):
             # Use default device to perform sampling
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPES.get('DTYPEINT'))[0]
-        else:
+        else: # pragma: no cover
             # Force using CPU to perform sampling because if GPU is used
             # it will cause a `ResourceExhaustedError`
             if CPU_NAME is None:
