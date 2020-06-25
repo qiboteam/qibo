@@ -608,7 +608,11 @@ def test_unitary_controlled_by(gates):
 def test_unitary_bad_shape(gates):
     matrix = np.random.random((8, 8))
     with pytest.raises(ValueError):
-        gate = gates.Unitary(matrix, (0, 1))
+        gate = gates.Unitary(matrix, 0, 1)
+
+    if gates == custom_gates:
+        with pytest.raises(NotImplementedError):
+            gate = gates.Unitary(matrix, 0, 1, 2)
 
 
 @pytest.mark.parametrize("gates", _GATES)
