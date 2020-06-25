@@ -44,6 +44,10 @@ If you are planning to freeze the circuit and just query for different initial s
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
 
+
+How to print a circuit summary?
+-------------------------------
+
 It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
 total number of qubits and all gates in order of the number of times they appear.
@@ -85,6 +89,14 @@ For example for the circuit of the previous example:
 
     all_h_gates = c.gates_of_type("h")
     # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, H(2))]
+
+A circuit may contain multi-controlled or other gates that are not supported by
+OpenQASM. The ``circuit.decompose(*free)`` method decomposes such gates to
+others that are supported by OpenQASM. For this decomposition to work the user
+has to specify which qubits can be used as free/work. For more information on
+this decomposition we refer to the related publication on
+`arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_. Currently only the
+decomposition of multi-controlled ``X`` gates is implemented.
 
 
 .. _measurement-examples:
