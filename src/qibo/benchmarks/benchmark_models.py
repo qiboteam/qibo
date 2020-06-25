@@ -20,7 +20,7 @@ def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Cir
     d = 1
     for l in range(nlayers):
         for i in range(nqubits):
-            gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+            gate = getattr(gates, one_qubit_gates[int(np.random.randint(0, len(one_qubit_gates)))])
             circuit.add(gate(i, np.pi / 2.0).with_backend(backend))
         for i in range(nqubits):
             circuit.add(gates.CZPow(i, (i + d) % nqubits, np.pi / 6.0).with_backend(backend))
@@ -28,7 +28,7 @@ def SupremacyLikeCircuit(nqubits: int, backend: str, nlayers: int) -> models.Cir
         if d > nqubits - 1:
             d = 1
     for i in range(nqubits):
-        gate = getattr(gates, one_qubit_gates[np.random.randint(0, len(one_qubit_gates))])
+        gate = getattr(gates, one_qubit_gates[int(np.random.randint(0, len(one_qubit_gates)))])
         circuit.add(gate(i, np.pi / 2.0).with_backend(backend))
         circuit.add(gates.M(i).with_backend(backend))
     return circuit
@@ -123,7 +123,7 @@ def TwoQubitGate(nqubits: int, backend: str, gate_type: str = "H",
                  ) -> models.Circuit:
     gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    gate = lambda q: getattr(gates, gate_type)(q, q + 1, **params)
+    gate = lambda q: getattr(gates, gate_type)(q, **params)
 
     for _ in range(nlayers):
         for i in range(0, nqubits - 1, 2):
