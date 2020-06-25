@@ -17,7 +17,7 @@ To run a particular instance of the problem we have to set up the initial argume
 - problem_hamiltonian (qibo.hamiltonians): problem hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
 ## Results
-We can now compute different instances of the problem by varying the number of qubits and the number of layers of our ansatz. Once we have the final energies on each instance, we can compute the logarithm of the difference between the AAVQE result and the exact groundstate energy as log(1/(E<sub>AAVQE</sub> - E<sub>0</sub>)). These are the results that we may obtain:
+We can now compute different instances of the problem by varying the number of qubits and layers of our ansatz. Once we have the final energies on each instance, we can compute the logarithm of the difference between the AAVQE result and the exact groundstate energy as log(1/(E<sub>AAVQE</sub> - E<sub>0</sub>)). These are the results that we may obtain:
 
 <img src="ising.png" width="510px"> <img src="XXZ.png" width="484px">
 
