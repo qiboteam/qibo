@@ -5,11 +5,14 @@ on:
   release:
     types: [created]
 
+env:
+  TEST_CUDA_PATH: /usr/local/cuda-10.2/
+
 jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, macos-latest]
         python-version: [3.6,3.7,3.8]
     runs-on: ${{ matrix.os }}
     steps:
@@ -34,7 +37,9 @@ jobs:
         pip install -r requirements.txt
     - name: Build and publish
       run: |
-        export CUDA_PATH=/usr/local/cuda-10.2/
+        # check if CUDA is installed
+        [ -d $TEST_CUDA_PATH ] && export CUDA_PATH=$TEST_CUDA_PATH
+        # build wheels
         python setup.py sdist bdist_wheel
         # twine upload dist/*
     - name: Upload to server
