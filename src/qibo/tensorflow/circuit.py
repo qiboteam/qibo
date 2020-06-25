@@ -51,7 +51,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def compile(self):
         """Compiles the circuit as a Tensorflow graph."""
-        from qibo import gates
         if self._compiled_execute is not None:
             raise RuntimeError("Circuit is already compiled.")
         if not self.queue:

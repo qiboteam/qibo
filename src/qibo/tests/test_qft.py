@@ -66,3 +66,15 @@ def test_qft_transformation_random(nqubits):
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, exact_state, atol=_atol)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
+def test_distributed_qft_agreement(nqubits):
+    """Check ``_DistributedQFT`` agrees with normal ``QFT``."""
+    initial_state = random_state(nqubits)
+    exact_state = exact_qft(initial_state)
+
+    c = models._DistributedQFT(nqubits)
+    final_state = c(np.copy(initial_state)).numpy()
+
+    np.testing.assert_allclose(final_state, exact_state, atol=_atol)

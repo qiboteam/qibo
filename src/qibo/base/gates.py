@@ -24,6 +24,8 @@ class Gate(object):
         self.name = None
         self.is_channel = False
         self.is_controlled_by = False
+        self.is_special_gate = False
+        # special gates are ``CallbackGate`` and ``Flatten``
 
         self._init_args = []
         self._init_kwargs = {}
@@ -81,6 +83,15 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
+
+    def commutes(self, gate: "Gate") -> bool:
+        if self.is_special_gate or gate.is_special_gate:
+            return False
+        t1 = set(self.target_qubits)
+        t2 = set(gate.target_qubits)
+        a = self.__class__ == gate.__class__ and t1 == t2
+        b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
+        return a or b
 
     def controlled_by(self, *q: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
@@ -858,6 +869,7 @@ class Flatten(Gate):
         self.name = "Flatten"
         self.coefficients = coefficients
         self._init_args = [coefficients]
+        self.is_special_gate = True
 
 
 class CallbackGate(Gate):
@@ -874,6 +886,7 @@ class CallbackGate(Gate):
         self.name = callback.__class__.__name__
         self.callback = callback
         self._init_args = [callback]
+        self.is_special_gate = True
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):

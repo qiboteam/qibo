@@ -8,7 +8,7 @@ from qibo.config import DTYPES
 from qibo.base import gates
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple, Union
+from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
 
 
 class DeviceQueues:
@@ -21,44 +21,72 @@ class DeviceQueues:
 
     ``DeviceQueues`` holds the following data that define the gate groups and
     corresponding global qubits:
+    * ``nqubits``: Total number of qubits in the circuit.
     * ``ndevices``: Number of logical accelerator devices.
     * ``nglobal``: Number of global qubits (= log2(ndevices)).
-    * ``global_qubits_lists``: List of sorted global qubit lists. Each list
-        corresponds to a gate group.
-    * ``global_qubits_sets``: List of global qubit sets. This follows ``global_qubits_lists``
-        but a set is used to allow O(1) search.
+    * ``nlocal``: Number of local qubits (= nqubits - nglobal).
+    * ``gate_module``: Gate module used by the circuit. This is used to create
+        new SWAP gates when needed.
+
+    * ``global_qubits_list``: Sorted list with the ids of global qubits.
+    * ``global_qubits_set``: Same as ``global_qubits_list`` but in a set to
+        allow O(1) search.
+    * ``local_qubits``: Sorted list with the ids of local qubits.
+    * ``global_qubits_reduced``: Map from global qubit ids to their reduced
+        value. The reduced value is the effective id in a hypothetical circuit
+        that does not contain the local qubits.
+    * ``local_qubits_reduced``: Map from local qubit ids to their reduced
+        value. The reduced value is the effective id in a hypothetical circuit
+        that does not contain the global qubits.
+
     * ``device_to_ids``: Dictionary that maps device (str) to list of piece indices.
         When a device is used multiple times then it is responsible for updating
         multiple state pieces. The list of indices specifies which pieces the device
         will update.
     * ``ids_to_device``: Inverse dictionary of ``device_to_ids``.
-    * ``queues``: List of length ``ndevices``. For each device we store the queues
-        of each gate group in a list of lists.
-        For example ``queues[2][1]`` gives the queue (list) of the 1st gate group
-        to be run in the 2nd device.
+
+    * ``queues``: Nested list of shape ``(ngroups, ndevices, group size)``.
+        For example ``queues[2][1]`` gives the gate queue of the second gate
+        group to be run in the first device.
+        If ``gate[i]`` is an empty list it means that this the i-th group
+        consists of a special gate to be run on ``memory_device``.
     * ``special_queue``: List with special gates than run on the full state vector
-        on ``memory_device``. Special gates have no target qubits and currently
-        are the ``CallbackGate`` and ``Flatten``.
+        on ``memory_device``. Special gates have no target qubits and can be
+        ``CallbackGate``, ``Flatten`` or SWAPs between local and global qubits.
     """
 
-    def __init__(self, calc_devices: Dict[str, int]):
-        self.ndevices = sum(calc_devices.values())
-        self.nglobal = int(np.log2(self.ndevices))
+    def __init__(self, circuit: "TensorflowDistributedCircuit",
+                 global_qubits: Set[int]):
+        self.nqubits = circuit.nqubits
+        self.ndevices = circuit.ndevices
+        self.nglobal = circuit.nglobal
+        self.nlocal = circuit.nlocal
+        self.gate_module = circuit.gate_module
 
-        self.queues = [[] for _ in range(self.ndevices)]
+        self.queues = []
         self.special_queue = []
 
-        self.global_qubits_lists = []
-        self.global_qubits_sets = []
+        self.global_qubits_set = global_qubits
+        self.global_qubits_list = sorted(global_qubits)
+        self.local_qubits = [q for q in range(self.nqubits)
+                             if q not in self.global_qubits_set]
 
-        self.device_to_ids = {d: v for d, v in self._ids_gen(calc_devices)}
+        self.global_qubits_reduced = {q: self.global_qubits_list.index(q)
+                                      for q in self.global_qubits_list}
+        self.local_qubits_reduced = {q: q - self.reduction_number(q)
+                                     for q in self.local_qubits}
+
+        # List that holds the global-local SWAP pairs so that we can reset them
+        # in the end
+        self.swaps_list = []
+
+        self.device_to_ids = {d: v for d, v in self._ids(circuit.calc_devices)}
         self.ids_to_device = self.ndevices * [None]
         for device, ids in self.device_to_ids.items():
             for i in ids:
                 self.ids_to_device[i] = device
 
-    @staticmethod
-    def _ids_gen(calc_devices) -> Tuple[str, List[int]]:
+    def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
         for device, n in calc_devices.items():
@@ -66,92 +94,189 @@ class DeviceQueues:
             yield device, list(range(start, stop))
             start = stop
 
-    def append(self, qubits):
-        """Appends a new global qubit lists.
+    def reduction_number(self, q: int) -> int:
+        """Calculates the effective id in a circuit without the global qubits."""
+        for i, gq in enumerate(self.global_qubits_list):
+            if gq > q:
+                return i
+        return i + 1
 
-        Appending a global qubit lists defines a new group.
-
-        Args:
-            qubits: Any iterable that contains the global qubit ids.
-        """
-        self.global_qubits_sets.append(set(qubits))
-        self.global_qubits_lists.append(sorted(qubits))
-
-    def __len__(self) -> int:
-        """Number of different gate groups."""
-        return len(self.global_qubits_lists)
-
-    def _create_reduced_gate(self, iq: int, gate: gates.Gate) -> gates.Gate:
+    def _create_reduced_gate(self, gate: gates.Gate) -> gates.Gate:
         """Creates a copy of a gate for specific device application.
 
         Target and control qubits are modified according to the local qubits of
         the circuit when this gate will be applied.
 
         Args:
-            iq (int): Index of the ``self.global_qubits_lists`` that corresponds
-                to the gate's gate group.
             gate: The :class:`qibo.base.gates.Gate` object of the gate to copy.
 
         Returns:
             A :class:`qibo.base.gates.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
-        def reduction_number(q: int) -> int:
-            for i, gq in enumerate(self.global_qubits_lists[iq]):
-                if gq > q:
-                    return i
-            return i + 1
-
         calc_gate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
-        calc_gate.target_qubits = tuple(q - reduction_number(q)
+        calc_gate.target_qubits = tuple(q - self.reduction_number(q)
                                         for q in calc_gate.target_qubits)
-        calc_gate.control_qubits = tuple(q - reduction_number(q)
+        calc_gate.control_qubits = tuple(q - self.reduction_number(q)
                                          for q in calc_gate.control_qubits
-                                         if q not in self.global_qubits_sets[iq])
+                                         if q not in self.global_qubits_set)
         calc_gate.original_gate = gate
         return calc_gate
 
-    def create(self, queues: List[List[gates.Gate]], nlocal: int):
-        """Creates the gate objects for each device and stores them in ``self.queues``.
+    @staticmethod
+    def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
+        """Counts how many gates target each qubit.
 
         Args:
-            queues (list): List of gate queues that defines the gate groups using
-                general (non device specific gates).
-            nlocal: Number of local qubits in the circuit (``= nqubits - nglobal``).
+            queue: List of gates.
+            nqubits: Number of total qubits in the circuit.
+
+        Returns:
+            Array of integers with shape (nqubits,) with the number of gates
+            for each qubit id.
         """
-        if len(queues) != len(self):
-            raise ValueError("Global qubits lists are {} while given queues "
-                             "are {}.".format(len(self), len(queues)))
-        for iq, queue in enumerate(queues):
-            if not self.global_qubits_lists[iq]:
-                assert len(queue) == 1
-                gate = queue[0]
-                gate.nqubits = self.nglobal + nlocal
-                self.special_queue.append(gate)
+        counter = np.zeros(nqubits, dtype=np.int32)
+        for gate in queue:
+            for qubit in gate.target_qubits:
+                counter[qubit] += 1
+        return counter
+
+    def _transform(self, queue: List[gates.Gate],
+                   remaining_queue: List[gates.Gate],
+                   counter: np.ndarray) -> List[gates.Gate]:
+        """Helper recursive method for ``transform``."""
+        new_remaining_queue = []
+        for gate in remaining_queue:
+            if gate.is_special_gate:
+                gate.swap_reset = list(self.swaps_list)
+
+            global_targets = set(gate.target_qubits) & self.global_qubits_set
+            accept = isinstance(gate, gates.SWAP) and len(global_targets) == 1
+            accept = accept or not global_targets
+            for skipped_gate in new_remaining_queue:
+                accept = accept and skipped_gate.commutes(gate)
+                if not accept:
+                    break
+            if accept:
+                queue.append(gate)
+                for q in gate.target_qubits:
+                    counter[q] -= 1
             else:
-                for i in range(self.ndevices):
-                    self.queues[i].append([])
-                for gate in queue:
-                    for device, ids in self.device_to_ids.items():
-                        calc_gate = self._create_reduced_gate(iq, gate)
-                        # Gate matrix should be constructed in the calculation
-                        # device otherwise device parallelization will break
-                        with tf.device(device):
-                            calc_gate.nqubits = nlocal
-                        for i in ids:
-                            flag = True
-                            # If there are control qubits that are global then
-                            # the gate should not be applied by all devices
-                            for control in (set(gate.control_qubits) &
-                                            self.global_qubits_sets[iq]):
-                                ic = self.global_qubits_lists[iq].index(control)
-                                ic = self.nglobal - ic - 1
-                                flag = bool((i // (2 ** ic)) % 2)
-                                if not flag:
-                                    break
-                            if flag:
-                                self.queues[i][-1].append(calc_gate)
+                new_remaining_queue.append(gate)
+
+        if not new_remaining_queue:
+            return queue
+
+        # Find which qubits to swap
+        gate = new_remaining_queue[0]
+        target_set = set(gate.target_qubits)
+        global_targets = target_set & self.global_qubits_set
+        if isinstance(gate, gates.SWAP): # special case of swap on two global qubits
+            assert len(global_targets) == 2
+            global_targets.remove(target_set.pop())
+
+        available_swaps = (q for q in counter.argsort()
+                           if q not in self.global_qubits_set | target_set)
+        qubit_map = {}
+        for q in global_targets:
+            qs = next(available_swaps)
+            # Update qubit map that holds the swaps
+            qubit_map[q] = qs
+            qubit_map[qs] = q
+            # Keep SWAPs in memory to reset them in the end
+            self.swaps_list.append((min(q, qs), max(q, qs)))
+            # Add ``SWAP`` gate in ``queue``.
+            queue.append(self.gate_module.SWAP(q, qs))
+            #  Modify ``counter`` to take into account the swaps
+            counter[q], counter[qs] = counter[qs], counter[q]
+
+        # Modify gates to take into account the swaps
+        for gate in new_remaining_queue:
+            gate.target_qubits = tuple(qubit_map[q] if q in qubit_map else q
+                                       for q in gate.target_qubits)
+            gate.control_qubits = tuple(qubit_map[q] if q in qubit_map else q
+                                        for q in gate.control_qubits)
+
+        return self._transform(queue, new_remaining_queue, counter)
+
+    def transform(self, queue: List[gates.Gate],
+                  counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
+        """Transforms gate queue to be compatible with distributed simulation.
+
+        Adds SWAP gates between global and local qubits so that no gates are
+        applied to global qubits.
+
+        Args:
+            queue (list): Original gate queue.
+            counter (np.ndarray): Counter of how many gates target each qubit.
+                If ``None`` this is calculated using the ``count`` method.
+
+        Returns:
+            List of gates that have the same effect as the original queue but
+            are compatible with distributed run (do not have global qubits as
+            targets).
+        """
+        if counter is None:
+            counter = self.count(queue, self.nqubits)
+        new_queue = self._transform([], queue, counter)
+        new_queue.extend((self.gate_module.SWAP(*p)
+                          for p in reversed(self.swaps_list)))
+        return new_queue
+
+    def create(self, queue: List[gates.Gate]):
+        """Creates the queues for each accelerator device.
+
+        Args:
+            queue (list): List of gates compatible with distributed run.
+            If the original ``queue`` contains gates that target global qubits
+            then ``transform` should be used to obtain a compatible queue.
+        """
+        for gate in queue:
+            if not gate.target_qubits: # special gate
+                gate.nqubits = self.nqubits
+                self.special_queue.append(gate)
+                self.queues.append([])
+
+            elif set(gate.target_qubits) & self.global_qubits_set: # global swap gate
+                global_qubits = set(gate.target_qubits) & self.global_qubits_set
+                if not isinstance(gate, gates.SWAP):
+                    raise ValueError("Only SWAP gates are supported for "
+                                     "global qubits.")
+                if len(global_qubits) > 1:
+                    raise ValueError("SWAPs between global qubits are not allowed.")
+
+                global_qubit = global_qubits.pop()
+                local_qubit = gate.target_qubits[0]
+                if local_qubit == global_qubit:
+                    local_qubit = gate.target_qubits[1]
+
+                self.special_queue.append((global_qubit, local_qubit))
+                self.queues.append([])
+
+            else:
+                if not self.queues or not self.queues[-1]:
+                    self.queues.append([[] for _ in range(self.ndevices)])
+
+                for device, ids in self.device_to_ids.items():
+                    calc_gate = self._create_reduced_gate(gate)
+                    # Gate matrix should be constructed in the calculation
+                    # device otherwise device parallelization will break
+                    with tf.device(device):
+                        calc_gate.nqubits = self.nlocal
+                    for i in ids:
+                        flag = True
+                        # If there are control qubits that are global then
+                        # the gate should not be applied by all devices
+                        for control in (set(gate.control_qubits) &
+                                        self.global_qubits_set):
+                            ic = self.global_qubits_list.index(control)
+                            ic = self.nglobal - ic - 1
+                            flag = bool((i // (2 ** ic)) % 2)
+                            if not flag:
+                                break
+                        if flag:
+                            self.queues[-1][i].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -201,13 +326,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Number of calculation devices should be a power "
                              "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
+        self.nlocal = self.nqubits - self.nglobal
 
         self.memory_device = memory_device
         self.calc_devices = accelerators
 
-        self.device_queues = DeviceQueues(accelerators)
+        self.queues = None
         self.pieces = None
-        self._global_qubits = None
         self._construct_shapes()
 
     def _construct_shapes(self):
@@ -230,9 +355,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         using the accelerators. In order to apply such gates we have to swap
         the target global qubit with a different (local) qubit.
         """
-        if self._global_qubits is None:
+        if self.queues is None:
             raise ValueError("Cannot access global qubits before being set.")
-        return sorted(self._global_qubits)
+        return self.queues.global_qubits_list
 
     @global_qubits.setter
     def global_qubits(self, x: Sequence[int]):
@@ -242,13 +367,15 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         lists are set. These lists are used in order to transpose the state pieces
         when we want to swap global qubits.
         """
-        if len(x) != self.nglobal:
+        global_qubit_set = set(x)
+        if len(global_qubit_set) != self.nglobal:
             raise ValueError("Invalid number of global qubits {} for using {} "
                              "calculation devices.".format(len(x), self.ndevices))
-        self._global_qubits = set(x)
-        local_qubits = [i for i in range(self.nqubits) if i not in self._global_qubits]
 
-        self.transpose_order = list(sorted(self._global_qubits)) + local_qubits
+        self.queues = DeviceQueues(self, global_qubit_set)
+
+        self.transpose_order = (self.queues.global_qubits_list +
+                                self.queues.local_qubits)
         self.reverse_transpose_order = self.nqubits * [0]
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
@@ -257,6 +384,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         # Do not set ``gate.nqubits`` during gate addition because this will
         # be set by the ``set_gates`` method once all gates are known.
         pass
+
+    def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
+        if not deep:
+            raise ValueError("Non-deep copy is not allowed for distributed "
+                             "circuits because they modify gate objects.")
+        return super(TensorflowDistributedCircuit, self).copy(deep)
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "
@@ -288,76 +421,18 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         new gate group will be defined for the new global qubit configuration.
 
         The final global qubit lists and gate queues that are used for execution
-        are storred in ``self.device_queues`` which is a ``DeviceQueues`` object.
+        are storred in ``self.queues`` which is a ``DeviceQueues`` object.
         """
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
 
-        all_qubits = set(range(self.nqubits))
-        queues = [[]]
+        # Count how many gates target each qubit to identify global qubits
+        counter = DeviceQueues.count(self.queue, self.nqubits)
+        if self.queues is None:
+            self.global_qubits = counter.argsort()[:self.nglobal]
 
-        global_qubits = set(all_qubits)
-        queue = iter(self.queue)
-        try:
-            # Loop through the gate queue to define gate groups and
-            # global qubit lists
-            gate = next(queue)
-            # special gates are gates without target qubits
-            # (eg. ``CallbackGate`` or ``Flatten``)
-            special_gates = []
-            while True:
-                target_qubits = set(gate.target_qubits)
-                if not target_qubits:
-                    special_gates.append(gate)
-                else:
-                    global_qubits -= target_qubits
-                while len(global_qubits) > self.nglobal and not special_gates:
-                    queues[-1].append(gate)
-                    gate = next(queue)
-                    target_qubits = set(gate.target_qubits)
-                    if not target_qubits:
-                        special_gates.append(gate)
-                    else:
-                        global_qubits -= target_qubits
-
-                if len(global_qubits) == self.nglobal:
-                    queues[-1].append(gate)
-                    if not special_gates:
-                        gate = next(queue)
-                        target_qubits = set(gate.target_qubits)
-                        if not target_qubits:
-                            special_gates.append(gate)
-                        while not target_qubits & global_qubits and not special_gates:
-                            queues[-1].append(gate)
-                            gate = next(queue)
-                            target_qubits = set(gate.target_qubits)
-                            if not target_qubits:
-                                special_gates.append(gate)
-
-                elif len(global_qubits) > self.nglobal:
-                    global_qubits = list(sorted(global_qubits))[:self.nglobal]
-
-                else:
-                    # must be len(global_qubits) < self.nglobal
-                    free_qubits = list(sorted(target_qubits))
-                    global_qubits |= set(free_qubits[self.nglobal - len(global_qubits):])
-
-                self.device_queues.append(global_qubits)
-                if special_gates:
-                    self.device_queues.append([])
-                    queues.append([special_gates.pop()])
-                    gate = next(queue)
-
-                queues.append([])
-                global_qubits = set(all_qubits)
-
-        except StopIteration:
-            if len(global_qubits) > self.nglobal:
-                global_qubits = list(sorted(global_qubits))[:self.nglobal]
-            if target_qubits:
-                self.device_queues.append(global_qubits)
-
-        self.device_queues.create(queues, nlocal=self.nqubits - self.nglobal)
+        transformed_queue = self.queues.transform(self.queue, counter)
+        self.queues.create(transformed_queue)
 
     def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
@@ -376,54 +451,83 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     #            self.pieces[i].assign(s)
     #            i += 1
 
-    def _joblib_execute(self, group: int):
-        """Executes gates in ``accelerators`` in parallel."""
+    def _joblib_execute(self, queues: List[List["TensorflowGate"]]):
+        """Executes gates in ``accelerators`` in parallel.
+
+        Args:
+            queues: List that holds the gates to be applied by each accelerator.
+                Has shape ``(ndevices, ngates_i)`` where ``ngates_i`` is the
+                number of gates to be applied by accelerator ``i``.
+        """
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
-                    state = self._device_execute(
-                        self.pieces[i], self.device_queues.queues[i][group])
+                    state = self._device_execute(self.pieces[i], queues[i])
                     self.pieces[i].assign(state)
                     del(state)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
         pool(joblib.delayed(_device_job)(ids, device)
-             for device, ids in self.device_queues.device_to_ids.items())
+             for device, ids in self.queues.device_to_ids.items())
 
-    def _special_gate_execute(self, ispecial: int):
+    def _swap(self, global_qubit: int, local_qubit: int):
+        m = self.queues.global_qubits_reduced[global_qubit]
+        m = self.nglobal - m - 1
+        t = 1 << m
+        for g in range(self.ndevices // 2):
+            i = ((g >> m) << (m + 1)) + (g & (t - 1))
+            local_eff = self.queues.local_qubits_reduced[local_qubit]
+            with tf.device(self.memory_device):
+                op.swap_pieces(self.pieces[i], self.pieces[i + t],
+                               local_eff, self.nlocal)
+
+    def _revert_swaps(self, swap_pairs: List[Tuple[int, int]]):
+        for q1, q2 in swap_pairs:
+            if q1 not in self.queues.global_qubits_set:
+                q1, q2 = q2, q1
+            self._swap(q1, q2)
+
+    def _special_gate_execute(self, gate: Union["TensorflowGate", Tuple[int, int]]):
         """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
 
         These gates require the full state vector (cannot be executed in the state pieces).
         """
-        state = self._merge()
-        gate = self.device_queues.special_queue[ispecial]
-        if isinstance(gate, gates.CallbackGate):
-            gate(state)
-        else:
-            state = gate(state)
-            self._split(state)
+        if isinstance(gate, tuple): # SWAP global
+            self._swap(*gate)
+        else: # ``Flatten`` or callback
+            with tf.device(self.memory_device):
+                # Reverse all global SWAPs that happened so far
+                self._revert_swaps(reversed(gate.swap_reset))
+                state = self._merge()
+                if isinstance(gate, gates.CallbackGate):
+                    gate(state)
+                else:
+                    state = gate(state)
+                    self._split(state)
+                # Redo all global SWAPs that happened so far
+                self._revert_swaps(gate.swap_reset)
 
     def execute(self,
                 initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
                 nshots: Optional[int] = None,
                 ) -> Union[tf.Tensor, measurements.CircuitResult]:
         """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
-        if not self.device_queues.global_qubits_lists:
+        if self.queues is None or not self.queues.queues:
             self.set_gates()
-        self.global_qubits = self.device_queues.global_qubits_lists[0]
         self._cast_initial_state(initial_state)
 
-        ispecial = 0
-        for iall, global_qubits in enumerate(self.device_queues.global_qubits_lists):
-            if global_qubits:  # standard gate
-                if iall > 0:
-                    self._swap(global_qubits)
-                self._joblib_execute(iall - ispecial)
+        special_gates = iter(self.queues.special_queue)
+        for i, queues in enumerate(self.queues.queues):
+            if queues:  # standard gate
+                self._joblib_execute(queues)
             else: # special gate
-                self._special_gate_execute(ispecial)
-                ispecial += 1
+                self._special_gate_execute(next(special_gates))
+        for gate in special_gates:
+            self._special_gate_execute(next(special_gates))
 
+        # NOTE: The final state will use the transpose op if ``global_qubits``
+        # are not [0, 1, ..., nglobal] or [nlocal, nlocal+1, ..., nqubits].
         state = self.final_state
         if self.measurement_gate is None or nshots is None:
             return state
@@ -473,7 +577,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
-        if self._global_qubits is None:
+        if self.queues is None:
             self.global_qubits = self._default_global_qubits()
 
         if initial_state is None:
@@ -504,26 +608,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         Returns:
             state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
         """
-        new_global_qubits = list(range(self.nglobal))
-        if self.global_qubits == new_global_qubits:
+        if self.global_qubits == list(range(self.nglobal)):
             with tf.device(self.memory_device):
                 state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
-        else:
-            state = self._swap(new_global_qubits)
-        return tf.reshape(state, self.full_shape)
-
-    def _swap(self, new_global_qubits: Sequence[int]):
-        """Changes the list of global qubits in order to apply gates.
-
-        This is done by `transposing` the state vector so that global qubits
-        hold the first ``nglobal`` indices at all times.
-        """
-        order = list(self.reverse_transpose_order)
-        self.global_qubits = new_global_qubits
-        order = [order[v] for v in self.transpose_order]
-        with tf.device(self.memory_device):
-            state = tf.zeros(self.device_shape, dtype=DTYPES.get('DTYPECPX'))
-            state = op.transpose_state(self.pieces, state, self.nqubits, order)
-            for i in range(self.ndevices):
-                self.pieces[i].assign(state[i])
+                state = tf.reshape(state, self.full_shape)
+        elif self.global_qubits == list(range(self.nlocal, self.nqubits)):
+            with tf.device(self.memory_device):
+                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
+                state = tf.reshape(state, self.full_shape)
+        else: # fall back to the transpose op
+            with tf.device(self.memory_device):
+                state = tf.zeros(self.full_shape, dtype=DTYPES.get('DTYPECPX'))
+                state = op.transpose_state(self.pieces, state, self.nqubits,
+                                           self.reverse_transpose_order)
         return state

@@ -64,7 +64,10 @@ def QFT(nqubits: int, with_swaps: bool = True,
             final_state = c(init_state)
     """
     if accelerators is not None:
-        return _DistributedQFT(nqubits, accelerators, memory_device, with_swaps)
+        if not with_swaps:
+            raise NotImplementedError("Distributed QFT is only implemented "
+                                      "with SWAPs.")
+        return _DistributedQFT(nqubits, accelerators, memory_device)
 
     import numpy as np
     from qibo import gates
@@ -72,11 +75,9 @@ def QFT(nqubits: int, with_swaps: bool = True,
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1))
-        m = 2
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (m - 1)
+            theta = np.pi / 2 ** (i2 - i1)
             circuit.add(gates.CZPow(i2, i1, theta))
-            m += 1
 
     if with_swaps:
         for i in range(nqubits // 2):
@@ -86,39 +87,32 @@ def QFT(nqubits: int, with_swaps: bool = True,
 
 
 def _DistributedQFT(nqubits: int,
-                    accelerators: Dict[str, int],
-                    memory_device: str = "/CPU:0",
-                    with_swaps: bool = True) -> DistributedCircuit:
+                    accelerators: Optional[Dict[str, int]] = None,
+                    memory_device: str = "/CPU:0") -> DistributedCircuit:
     """QFT with the order of gates optimized for reduced multi-device communication."""
     import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits, accelerators, memory_device)
-    nqubits = circuit.nqubits
-    nglobal = circuit.nglobal
+    icrit = nqubits // 2 + nqubits % 2
+    if accelerators is not None:
+        circuit.global_qubits = range(circuit.nlocal, nqubits)
+        if icrit < circuit.nglobal:
+            raise NotImplementedError("Cannot implement QFT for {} qubits "
+                                      "using {} global qubits."
+                                      "".format(nqubits, circuit.nglobal))
 
-    for i1 in range(nqubits - nglobal):
-        for i2 in range(i1):
-            theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
-        circuit.add(gates.H(i1))
+    for i1 in range(nqubits):
+        if i1 < icrit:
+            i1eff = i1
+        else:
+            i1eff = nqubits - i1 - 1
+            circuit.add(gates.SWAP(i1, i1eff))
 
-    for i2 in range(nglobal):
-        for i1 in range(nqubits - nglobal, nqubits):
-            theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
-
-    for i1 in range(nqubits - nglobal, nqubits):
-        for i2 in range(nglobal, i1):
-            theta = np.pi / 2 ** (i1 - i2)
-            circuit.add(gates.CZPow(i1, i2, theta))
-        circuit.add(gates.H(i1))
-
-    if with_swaps:
-        for i in range(nglobal, nqubits // 2):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
-        for i in range(nglobal):
-            circuit.add(gates.SWAP(i, nqubits - i - 1))
+        circuit.add(gates.H(i1eff))
+        for i2 in range(i1 + 1, nqubits):
+            theta = np.pi / 2 ** (i2 - i1)
+            circuit.add(gates.CZPow(i2, i1eff, theta))
 
     return circuit
 
