@@ -4,7 +4,7 @@ Strongly-correlated many-body systems can give rise to exceptional quantum pheno
 ## Implement the solution
 The code herein aims to reproduce the results of the manuscript ["Scaling of variational quantum circuit depth for condensed matter systems"](https://quantum-journal.org/papers/q-2020-05-28-272/). The idea is to benchmark the accuracy of the [Variational Quantum Eigensolver (VQE)](https://www.nature.com/articles/ncomms5213) based on a finite-depth variational quantum circuit encoding ground states of local Hamiltonian, namely, the Ising and XXZ models. 
 
-Notice that any potential advantage of the VQE could be lost without practical approaches to perform the parameter optimization due to the optimization in the high-dimensional parameter landscape. A particular proposal to try to solve this optimization problem is the [Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)](https://arxiv.org/abs/1806.02287). The AAVQE is a strategy circumventing the convergence issue, inspired by the adiabatic theorem. The AAVQE method consists of parametrizing a Hamiltonian as H = (1-s)H{<sub>0} + sH<sub>P where $H_0$ is a Hamiltonian which ground state can be easily prepared, $H_P$ is the problem Hamiltonian, and $s\in [0,1]$ is the interpolation parameter. The interpolation parameter is used to adjust the Hamiltonian from one VQE run to the next, and the state preparation parameters at each step are initialized by the optimized parameters of the previous step.
+Notice that any potential advantage of the VQE could be lost without practical approaches to perform the parameter optimization due to the optimization in the high-dimensional parameter landscape. A particular proposal to try to solve this optimization problem is the [Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)](https://arxiv.org/abs/1806.02287). The AAVQE is a strategy circumventing the convergence issue, inspired by the adiabatic theorem. The AAVQE method consists of parametrizing a Hamiltonian as H = (1-s)H<sub>0; + sH<sub>P; where H<sub>0; is a Hamiltonian which ground state can be easily prepared, $H_P$ is the problem Hamiltonian, and $s\in [0,1]$ is the interpolation parameter. The interpolation parameter is used to adjust the Hamiltonian from one VQE run to the next, and the state preparation parameters at each step are initialized by the optimized parameters of the previous step.
 
 ## How to run an example
 To run a particular instance of the problem we have to set up the initial arguments:
@@ -17,7 +17,7 @@ To run a particular instance of the problem we have to set up the initial argume
 - problem_hamiltonian (qibo.hamiltonians): problem hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
 ## Results
-We can now compute different instances of the problem by varying the number of qubits and the number of layers of our ansatz. Once we have the final energies on each instance, we can compute the logarithm of the difference between the AAVQE result and the exact groundstate energy as $\log(1/(E_{AAVQE} - E_0))$. These are the results that we may obtain:
+We can now compute different instances of the problem by varying the number of qubits and the number of layers of our ansatz. Once we have the final energies on each instance, we can compute the logarithm of the difference between the AAVQE result and the exact groundstate energy as log(1/(E<sub>AAVQE; - E<sub>0;)). These are the results that we may obtain:
 
 <img src="ising.png" width="510px"> <img src="XXZ.png" width="487px">
 
