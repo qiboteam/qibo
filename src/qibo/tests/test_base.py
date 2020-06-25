@@ -223,6 +223,13 @@ def test_base_gate_errors():
         gate = H(0).controlled_by(1).controlled_by(2)
 
 
+def test_gate_with_repeated_qubits():
+    with pytest.raises(ValueError):
+        gate = SWAP(0, 0)
+    with pytest.raises(ValueError):
+        gate = H(0).controlled_by(1, 2, 3, 1)
+
+
 def test_gates_commute():
     """Check ``gate.commutes`` for various gate configurations."""
     assert H(0).commutes(X(1))
