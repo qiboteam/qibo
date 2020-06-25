@@ -118,12 +118,12 @@ def OneQubitGate(nqubits: int, backend: str, gate_type: str = "H",
     return circuit
 
 
-def TwoQubitGate(nqubits: int, backend: str, gate_type: str = "H",
+def TwoQubitGate(nqubits: int, backend: str, gate_type: str = "CNOT",
                  params: Dict[str, float] = {}, nlayers: int = 1
                  ) -> models.Circuit:
     gates = get_gates(backend)
     circuit = models.Circuit(nqubits)
-    gate = lambda q: getattr(gates, gate_type)(q, **params)
+    gate = lambda q: getattr(gates, gate_type)(q, q + 1, **params)
 
     for _ in range(nlayers):
         for i in range(0, nqubits - 1, 2):
