@@ -19,6 +19,6 @@ To run a particular instance of the problem we have to set up the initial argume
 ## Results
 We can now compute different instances of the problem by varying the number of qubits and the number of layers of our ansatz. Once we have the final energies on each instance, we can compute the logarithm of the difference between the AAVQE result and the exact groundstate energy as $\log(1/(E_{AAVQE} - E_0))$. These are the results that we may obtain:
 
-<img src="ising.png" width="370px"> <img src="XXZ.png" width="370px">
+<img src="ising.png" width="500px"> <img src="XXZ.png" width="470px">
 
 If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps and T_max, is required, especially for a large number of qubits.
