@@ -116,11 +116,12 @@ class DeviceQueues:
         """
         calc_gate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
-        calc_gate.target_qubits = tuple(q - self.reduction_number(q)
-                                        for q in calc_gate.target_qubits)
-        calc_gate.control_qubits = tuple(q - self.reduction_number(q)
-                                         for q in calc_gate.control_qubits
-                                         if q not in self.global_qubits_set)
+        new_target_qubits = tuple(q - self.reduction_number(q)
+                                  for q in calc_gate.target_qubits)
+        new_control_qubits = tuple(q - self.reduction_number(q)
+                                   for q in calc_gate.control_qubits
+                                   if q not in self.global_qubits_set)
+        calc_gate.set_targets_and_controls(new_target_qubits, new_control_qubits)
         calc_gate.original_gate = gate
         return calc_gate
 
@@ -193,10 +194,11 @@ class DeviceQueues:
 
         # Modify gates to take into account the swaps
         for gate in new_remaining_queue:
-            gate.target_qubits = tuple(qubit_map[q] if q in qubit_map else q
+            new_target_qubits = tuple(qubit_map[q] if q in qubit_map else q
                                        for q in gate.target_qubits)
-            gate.control_qubits = tuple(qubit_map[q] if q in qubit_map else q
+            new_control_qubits = tuple(qubit_map[q] if q in qubit_map else q
                                         for q in gate.control_qubits)
+            gate.set_targets_and_controls(new_target_qubits, new_control_qubits)
 
         return self._transform(queue, new_remaining_queue, counter)
 

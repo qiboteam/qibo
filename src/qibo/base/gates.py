@@ -41,33 +41,55 @@ class Gate(object):
         """Tuple with ids of target qubits."""
         return self._target_qubits
 
-    @target_qubits.setter
-    def target_qubits(self, qubits: Sequence[int]):
-        """Sets control qubits tuple."""
+    @property
+    def control_qubits(self) -> Tuple[int]:
+        """Tuple with ids of control qubits sorted in increasing order."""
+        return tuple(sorted(self._control_qubits))
+
+    @property
+    def qubits(self) -> Tuple[int]:
+        """Tuple with ids of all qubits (control and target) that the gate acts."""
+        return self.control_qubits + self.target_qubits
+
+    def _set_target_qubits(self, qubits: Sequence[int]):
+        """Helper method for setting target qubits."""
         self._target_qubits = tuple(qubits)
         if len(self._target_qubits) != len(set(qubits)):
             repeated = self._find_repeated(qubits)
             raise ValueError("Target qubit {} was given twice for gate {}."
                              "".format(repeated, self.name))
 
-    @property
-    def control_qubits(self) -> Tuple[int]:
-        """Tuple with ids of control qubits sorted in increasing order."""
-        return tuple(sorted(self._control_qubits))
-
-    @control_qubits.setter
-    def control_qubits(self, qubits: Sequence[int]):
-        """Sets control qubits set."""
+    def _set_control_qubits(self, qubits: Sequence[int]):
+        """Helper method for setting control qubits."""
         self._control_qubits = set(qubits)
-        if len(qubits) != len(self._control_qubits):
+        if len(self._control_qubits) != len(qubits):
             repeated = self._find_repeated(qubits)
             raise ValueError("Control qubit {} was given twice for gate {}."
                              "".format(repeated, self.name))
 
-    @property
-    def qubits(self) -> Tuple[int]:
-        """Tuple with ids of all qubits (control and target) that the gate acts."""
-        return self.control_qubits + self.target_qubits
+    @target_qubits.setter
+    def target_qubits(self, qubits: Sequence[int]):
+        """Sets control qubits tuple."""
+        self._set_target_qubits(qubits)
+        self._check_control_target_overlap()
+
+    @control_qubits.setter
+    def control_qubits(self, qubits: Sequence[int]):
+        """Sets control qubits set."""
+        self._set_control_qubits(qubits)
+        self._check_control_target_overlap()
+
+    def set_targets_and_controls(self, target_qubits: Sequence[int],
+                                 control_qubits: Sequence[int]):
+        """Sets target and control qubits simultaneously.
+
+        This is used for the reduced qubit updates in the distributed circuits
+        because using the individual setters may raise errors due to temporary
+        overlap of control and target qubits.
+        """
+        self._set_target_qubits(target_qubits)
+        self._set_control_qubits(control_qubits)
+        self._check_control_target_overlap()
 
     @staticmethod
     def _find_repeated(qubits: Sequence[int]) -> int:
@@ -77,6 +99,13 @@ class Gate(object):
             if qubit in temp_set:
                 return qubit
             temp_set.add(qubit)
+
+    def _check_control_target_overlap(self):
+        """Checks that there are no qubits that are both target and controls."""
+        common = set(self._target_qubits) & self._control_qubits
+        if common:
+            raise ValueError("{} qubits are both targets and controls for "
+                             "gate {}.".format(common, self.name))
 
     @property
     def nqubits(self) -> int:
@@ -112,6 +141,14 @@ class Gate(object):
         self._nstates = 2**n
 
     def commutes(self, gate: "Gate") -> bool:
+        """Checks if two gates commute.
+
+        Args:
+            gate: Gate to check if it commutes with the current gate.
+
+        Returns:
+            ``True`` if the gates commute, otherwise ``False``.
+        """
         if self.is_special_gate or gate.is_special_gate:
             return False
         t1 = set(self.target_qubits)

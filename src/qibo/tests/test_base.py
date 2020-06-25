@@ -228,6 +228,10 @@ def test_gate_with_repeated_qubits():
         gate = SWAP(0, 0)
     with pytest.raises(ValueError):
         gate = H(0).controlled_by(1, 2, 3, 1)
+    with pytest.raises(ValueError):
+        gate = CNOT(1, 1)
+    with pytest.raises(ValueError):
+        gate = Y(1).controlled_by(0, 1, 2)
 
 
 def test_gates_commute():
