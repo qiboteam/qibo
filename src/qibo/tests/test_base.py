@@ -306,7 +306,7 @@ def test_set_backend(backend):
                    "matmuleinsum": einsum.MatmulEinsum}
         h = gates.H(0)
         assert isinstance(h, native_gates.TensorflowGate)
-        assert isinstance(h.einsum, einsums[backend])
+        assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
 
 
 def test_config_set_errors():

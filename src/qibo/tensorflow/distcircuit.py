@@ -321,7 +321,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._init_kwargs.update({"accelerators": accelerators,
                                   "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
-        self.nglobal = np.log2(self.ndevices)
+        self.nglobal = float(np.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
             raise ValueError("Number of calculation devices should be a power "
                              "of 2 but is {}.".format(self.ndevices))
