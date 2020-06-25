@@ -49,7 +49,7 @@ class TensorflowGate(base_gates.Gate):
         When `nqubits` is set we also calculate the einsum string so that it
         is calculated only once per gate.
         """
-        base_gates.Gate.nqubits.fset(self, n)
+        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         if self.is_controlled_by:
             self.control_cache = cache.ControlCache(self)
             nactive = n - len(self.control_qubits)
@@ -401,8 +401,7 @@ class TensorflowChannel(TensorflowGate):
 
     @TensorflowGate.nqubits.setter
     def nqubits(self, n: int):
-        self._nqubits = n
-        self._nstates = 2 ** n
+        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         for gate in self.gates:
             gate.nqubits = n
 

@@ -9,7 +9,7 @@ from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
-class TensorflowGate:
+class TensorflowGate(base_gates.Gate):
 
     def __new__(cls, *args, **kwargs):
         if BACKEND.get('GATES') == 'custom':
@@ -22,7 +22,6 @@ class TensorflowGate:
         if not tf.executing_eagerly():
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
-        self.nqubits = None
 
     @staticmethod
     def construct_unitary(*args) -> tf.Tensor:
@@ -43,7 +42,7 @@ class TensorflowGate:
         Args:
             state (tf.Tensor): State vector with shape (2 ** nqubits,).
         """
-        if self.nqubits is None:
+        if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
 
@@ -56,7 +55,7 @@ class MatrixGate(TensorflowGate):
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n)
+        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         self._prepare()
 
     def _prepare(self):
@@ -151,10 +150,6 @@ class M(TensorflowGate, base_gates.M):
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
         self._traceout = None
-
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n)
 
     @property
     def _traceout_str(self):
