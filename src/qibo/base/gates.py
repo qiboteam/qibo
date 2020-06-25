@@ -30,26 +30,82 @@ class Gate(object):
         self._init_args = []
         self._init_kwargs = {}
 
-        self.target_qubits = tuple()
-        self._control_qubits = tuple()
+        self._target_qubits = tuple()
+        self._control_qubits = set()
 
         self._nqubits = None
         self._nstates = None
 
     @property
+    def target_qubits(self) -> Tuple[int]:
+        """Tuple with ids of target qubits."""
+        return self._target_qubits
+
+    @property
     def control_qubits(self) -> Tuple[int]:
         """Tuple with ids of control qubits sorted in increasing order."""
-        return self._control_qubits
-
-    @control_qubits.setter
-    def control_qubits(self, q: Sequence[int]):
-        """Sets control qubits sorted."""
-        self._control_qubits = tuple(sorted(q))
+        return tuple(sorted(self._control_qubits))
 
     @property
     def qubits(self) -> Tuple[int]:
         """Tuple with ids of all qubits (control and target) that the gate acts."""
         return self.control_qubits + self.target_qubits
+
+    def _set_target_qubits(self, qubits: Sequence[int]):
+        """Helper method for setting target qubits."""
+        self._target_qubits = tuple(qubits)
+        if len(self._target_qubits) != len(set(qubits)):
+            repeated = self._find_repeated(qubits)
+            raise ValueError("Target qubit {} was given twice for gate {}."
+                             "".format(repeated, self.name))
+
+    def _set_control_qubits(self, qubits: Sequence[int]):
+        """Helper method for setting control qubits."""
+        self._control_qubits = set(qubits)
+        if len(self._control_qubits) != len(qubits):
+            repeated = self._find_repeated(qubits)
+            raise ValueError("Control qubit {} was given twice for gate {}."
+                             "".format(repeated, self.name))
+
+    @target_qubits.setter
+    def target_qubits(self, qubits: Sequence[int]):
+        """Sets control qubits tuple."""
+        self._set_target_qubits(qubits)
+        self._check_control_target_overlap()
+
+    @control_qubits.setter
+    def control_qubits(self, qubits: Sequence[int]):
+        """Sets control qubits set."""
+        self._set_control_qubits(qubits)
+        self._check_control_target_overlap()
+
+    def set_targets_and_controls(self, target_qubits: Sequence[int],
+                                 control_qubits: Sequence[int]):
+        """Sets target and control qubits simultaneously.
+
+        This is used for the reduced qubit updates in the distributed circuits
+        because using the individual setters may raise errors due to temporary
+        overlap of control and target qubits.
+        """
+        self._set_target_qubits(target_qubits)
+        self._set_control_qubits(control_qubits)
+        self._check_control_target_overlap()
+
+    @staticmethod
+    def _find_repeated(qubits: Sequence[int]) -> int:
+        """Finds the first qubit id that is repeated in a sequence of qubit ids."""
+        temp_set = set()
+        for qubit in qubits:
+            if qubit in temp_set:
+                return qubit
+            temp_set.add(qubit)
+
+    def _check_control_target_overlap(self):
+        """Checks that there are no qubits that are both target and controls."""
+        common = set(self._target_qubits) & self._control_qubits
+        if common:
+            raise ValueError("{} qubits are both targets and controls for "
+                             "gate {}.".format(common, self.name))
 
     @property
     def nqubits(self) -> int:
@@ -85,6 +141,14 @@ class Gate(object):
         self._nstates = 2**n
 
     def commutes(self, gate: "Gate") -> bool:
+        """Checks if two gates commute.
+
+        Args:
+            gate: Gate to check if it commutes with the current gate.
+
+        Returns:
+            ``True`` if the gates commute, otherwise ``False``.
+        """
         if self.is_special_gate or gate.is_special_gate:
             return False
         t1 = set(self.target_qubits)
@@ -93,11 +157,11 @@ class Gate(object):
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def controlled_by(self, *q: int) -> "Gate":
+    def controlled_by(self, *qubits: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
         Args:
-            *q (int): Ids of the qubits that the gate will be controlled on.
+            *qubits (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
             A :class:`qibo.base.gates.Gate` object in with the corresponding gate being
@@ -111,9 +175,9 @@ class Gate(object):
             raise RuntimeError("Cannot use controlled_by on a gate that is "
                                "part of a Circuit or has been called on a "
                                "state.")
-        if q:
+        if qubits:
             self.is_controlled_by = True
-            self.control_qubits = q
+            self.control_qubits = qubits
         return self
 
     def decompose(self, *free) -> List["Gate"]:
@@ -305,8 +369,7 @@ class M(Gate):
     def __init__(self, *q, register_name: Optional[str] = None):
         super(M, self).__init__()
         self.name = "measure"
-        self.target_qubits = tuple(q)
-        self._control_qubits = tuple()
+        self.target_qubits = q
         self.register_name = register_name
 
         self._init_args = q
