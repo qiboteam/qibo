@@ -108,9 +108,20 @@ if BACKEND_NAME == "tensorflow":
         """Set default execution device.
 
         Args:
-            device_name (str): Device name recognized by Tensorflow,
-                for example '/GPU:0'.
+            device_name (str): Device name. Should follow the pattern
+                '/{device type}:{device number}' where device type is one of
+                CPU or GPU.
         """
+        parts = device_name[1:].split(":")
+        if device_name[0] != "/" or len(parts) != 2:
+            raise ValueError("Device name should follow the pattern: "
+                             "/{device type}:{device number}.")
+        device_type, device_number = parts[0], int(parts[1])
+        if device_type not in {"CPU", "GPU"}:
+            raise ValueError(f"Unknown device type {device_type}.")
+        if device_number >= len(DEVICES[device_type]):
+            raise ValueError(f"Device {device_name} does not exist.")
+
         DEVICES['DEFAULT'] = device_name
         with tf.device(device_name):
             tfmatrices.allocate_matrices()

@@ -333,6 +333,14 @@ def test_config_set_errors():
 
 
 def test_set_device():
-    """Check device switcher."""
+    """Check device switcher and errors in device name."""
     import qibo
-    qibo.set_device("/GPU:0")
+    qibo.set_device("/CPU:0")
+    with pytest.raises(ValueError):
+        qibo.set_device("test")
+    with pytest.raises(ValueError):
+        qibo.set_device("/TPU:0")
+    with pytest.raises(ValueError):
+        qibo.set_device("/gpu:10")
+    with pytest.raises(ValueError):
+        qibo.set_device("/GPU:10")

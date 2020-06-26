@@ -133,7 +133,12 @@ or switch the default QIBO device using ``qibo.set_device`` as:
     qibo.set_device("/CPU:0")
     final_state = c() # circuit will now be executed on CPU
 
-Alternatively, running the command ``CUDA_VISIBLE_DEVICES="-1"`` in a terminal
+The syntax of device names follows the pattern ``'/{device type}:{device number}'``
+where device type can be CPU or GPU and the device number is an integer that
+distinguishes multiple devices of the same type starting from 0. For more details
+we refer to `Tensorflow's tutorial <https://www.tensorflow.org/guide/gpu#manual_device_placement>`_
+on manual device placement.
+Alternatively, running the command ``CUDA_VISIBLE_DEVICES=""`` in a terminal
 hides GPUs from tensorflow. As a result, any program executed from the same
 terminal will run on CPU even if ``tf.device`` is not used.
 
