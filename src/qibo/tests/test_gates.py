@@ -960,3 +960,12 @@ def test_circuit_copy(backend, accelerators, deep):
         target_state = c1.execute().numpy()
         final_state = c2.execute().numpy()
         np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_memory_error(accelerators):
+    """Check that ``RuntimeError`` is raised if device runs out of memory."""
+    c = Circuit(40, accelerators=accelerators)
+    c.add((gates.H(i) for i in range(0, 40, 5)))
+    with pytest.raises(RuntimeError):
+        final_state = c()

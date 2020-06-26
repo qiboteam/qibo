@@ -224,6 +224,7 @@ def test_base_gate_errors():
 
 
 def test_gate_with_repeated_qubits():
+    """Check that repeating the same qubit in a gate raises errors."""
     with pytest.raises(ValueError):
         gate = SWAP(0, 0)
     with pytest.raises(ValueError):
@@ -304,6 +305,7 @@ def test_modifying_matrices_error():
 
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
 def test_set_backend(backend):
+    """Check ``set_backend`` for switching gate backends."""
     import qibo
     qibo.set_backend(backend)
     from qibo import gates
@@ -321,9 +323,24 @@ def test_set_backend(backend):
 
 
 def test_config_set_errors():
+    """Check set precision and backend errors."""
     import qibo
     with pytest.raises(RuntimeError):
         qibo.set_precision('test')
     with pytest.raises(RuntimeError):
         qibo.set_backend('test')
     qibo.set_backend("custom")
+
+
+def test_set_device():
+    """Check device switcher and errors in device name."""
+    import qibo
+    qibo.set_device("/CPU:0")
+    with pytest.raises(ValueError):
+        qibo.set_device("test")
+    with pytest.raises(ValueError):
+        qibo.set_device("/TPU:0")
+    with pytest.raises(ValueError):
+        qibo.set_device("/gpu:10")
+    with pytest.raises(ValueError):
+        qibo.set_device("/GPU:10")

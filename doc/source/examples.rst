@@ -125,13 +125,28 @@ one can use:
         # execute circuit on CPU with default initial state |000...0>.
         final_state = c()
 
-Alternatively, running the command ``CUDA_VISIBLE_DEVICES="-1"`` in a terminal
+or switch the default QIBO device using ``qibo.set_device`` as:
+
+.. code-block::  python
+
+    import qibo
+    qibo.set_device("/CPU:0")
+    final_state = c() # circuit will now be executed on CPU
+
+The syntax of device names follows the pattern ``'/{device type}:{device number}'``
+where device type can be CPU or GPU and the device number is an integer that
+distinguishes multiple devices of the same type starting from 0. For more details
+we refer to `Tensorflow's tutorial <https://www.tensorflow.org/guide/gpu#manual_device_placement>`_
+on manual device placement.
+Alternatively, running the command ``CUDA_VISIBLE_DEVICES=""`` in a terminal
 hides GPUs from tensorflow. As a result, any program executed from the same
 terminal will run on CPU even if ``tf.device`` is not used.
 
 GPUs provide much faster execution compared to CPU but have limited memory.
 A standard 12-16GB GPU can simulate up to 30 qubits with single-precision
-or 29 qubits with double-precision when QIBO's default gates are used.
+or 29 qubits with double-precision when QIBO's default gates are used. If the
+used device runs out of memory during a circuit execution an error will be
+raised prompting the user to switch the default device using ``qibo.set_device``.
 
 QIBO supports distributed circuit execution on multiple GPUs. This feature can
 be used as follows:

@@ -10,7 +10,7 @@ BACKEND_NAME = "tensorflow"
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
 
-if LEAST_SIGNIFICANT_QUBIT != 0:
+if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
     raise NotImplementedError("The least significant qubit should be 0.")
 
 # Load backend specifics
@@ -39,16 +39,22 @@ if BACKEND_NAME == "tensorflow":
     # Gate backends
     BACKEND = {'GATES': 'custom', 'EINSUM': None}
 
-    # Set memory cut-off for using GPU when sampling
-    GPU_MEASUREMENT_CUTOFF = 1300000000
+    # Set devices recognized by tensorflow
+    DEVICES = {
+        'CPU': tf.config.list_logical_devices("CPU"),
+        'GPU': tf.config.list_logical_devices("GPU")
+    }
+    # set default device to GPU if it exists
+    if DEVICES['GPU']: # pragma: no cover
+        DEVICES['DEFAULT'] = DEVICES['GPU'][0].name
+    elif DEVICES['CPU']:
+        DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
+    else: # pragma: no cover
+        raise RuntimeError("Unable to find Tensorflow devices.")
 
-    # Find available CPUs as they may be needed for sampling
-    _available_cpus = tf.config.list_logical_devices("CPU")
-    if _available_cpus:
-        CPU_NAME = _available_cpus[0].name
-    else:
-        CPU_NAME = None
-
+    # Define numpy and tensorflow matrices
+    # numpy matrices are exposed to user via ``from qibo import matrices``
+    # tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
     from qibo.tensorflow import matrices as _matrices
     matrices = _matrices.NumpyMatrices()
     tfmatrices = _matrices.TensorflowMatrices()
@@ -96,5 +102,29 @@ if BACKEND_NAME == "tensorflow":
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
 
-else:
+
+    def set_device(device_name: str):
+        """Set default execution device.
+
+        Args:
+            device_name (str): Device name. Should follow the pattern
+                '/{device type}:{device number}' where device type is one of
+                CPU or GPU.
+        """
+        parts = device_name[1:].split(":")
+        if device_name[0] != "/" or len(parts) != 2:
+            raise ValueError("Device name should follow the pattern: "
+                             "/{device type}:{device number}.")
+        device_type, device_number = parts[0], int(parts[1])
+        if device_type not in {"CPU", "GPU"}:
+            raise ValueError(f"Unknown device type {device_type}.")
+        if device_number >= len(DEVICES[device_type]):
+            raise ValueError(f"Device {device_name} does not exist.")
+
+        DEVICES['DEFAULT'] = device_name
+        with tf.device(device_name):
+            tfmatrices.allocate_matrices()
+
+
+else: # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")

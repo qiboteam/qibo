@@ -9,6 +9,8 @@ from qibo.base import gates
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
+InitStateType = Union[np.ndarray, tf.Tensor]
+OutputType = Union[tf.Tensor, measurements.CircuitResult]
 
 
 class DeviceQueues:
@@ -348,6 +350,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.local_full_shape = tf.cast((2 ** n,), dtype=dtype)
         self.local_tensor_shape = n * (2,)
 
+    def _set_nqubits(self, gate):
+        # Do not set ``gate.nqubits`` during gate addition because this will
+        # be set by the ``set_gates`` method once all gates are known.
+        if gate._nqubits is not None:
+            raise ValueError("Attempting to add gate with preset number of "
+                             "qubits in distributed circuit.")
+
     @property
     def global_qubits(self) -> List[int]:
         """Returns the global qubits IDs in a sorted list.
@@ -382,11 +391,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
 
-    def _set_nqubits(self, gate):
-        # Do not set ``gate.nqubits`` during gate addition because this will
-        # be set by the ``set_gates`` method once all gates are known.
-        pass
-
     def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
         if not deep:
             raise ValueError("Non-deep copy is not allowed for distributed "
@@ -402,6 +406,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
+        from qibo.tensorflow import gates as native_gates
+        if isinstance(gate, native_gates.TensorflowGate):
+            raise NotImplementedError("Distributed circuit does not support "
+                                      "native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):
             gate._prepare()
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
@@ -510,11 +518,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 # Redo all global SWAPs that happened so far
                 self._revert_swaps(gate.swap_reset)
 
-    def execute(self,
-                initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
-                nshots: Optional[int] = None,
-                ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
+    def _execute(self, initial_state: Optional[InitStateType] = None,
+                 nshots: Optional[int] = None) -> OutputType:
+        """Performs ``circuit.execute``."""
         if self.queues is None or not self.queues.queues:
             self.set_gates()
         self._cast_initial_state(initial_state)
@@ -542,6 +548,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             result = measurements.CircuitResult(
                 self.measurement_tuples, self.measurement_gate_result)
         return result
+
+    def execute(self, initial_state: Optional[InitStateType] = None,
+                nshots: Optional[int] = None) -> OutputType:
+        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        try:
+            return self._execute(initial_state=initial_state, nshots=nshots)
+        except oom_error:
+            raise RuntimeError("State does not fit in memory during distributed "
+                               "execution. Please create a new circuit with "
+                               "different device configuration and try again.")
 
     @property
     def final_state(self) -> tf.Tensor:

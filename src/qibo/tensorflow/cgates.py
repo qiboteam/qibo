@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import BACKEND, DTYPES, DEVICES
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -36,6 +36,15 @@ class TensorflowGate(base_gates.Gate):
         """
         raise NotImplementedError
 
+    def _prepare(self):
+        """Prepares the gate for application to state vectors.
+
+        Called automatically by the ``nqubits`` setter.
+        Calculates the ``matrix`` required to apply the gate to state vectors.
+        This is not necessarily the same as the unitary matrix of the gate.
+        """
+        pass
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         """Implements the `Gate` on a given state.
@@ -54,18 +63,7 @@ class MatrixGate(TensorflowGate):
         super(MatrixGate, self).__init__()
         self.matrix = None
 
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        self._prepare()
-
-    def _prepare(self):
-        """Prepares the gate for application to state vectors.
-
-        Called automatically by the ``nqubits`` setter.
-        Calculates the ``matrix`` required to apply the gate to state vectors.
-        This is not necessarily the same as the unitary matrix of the gate.
-        """
+    def _prepare(self): # pragma: no cover
         raise NotImplementedError
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -194,16 +192,16 @@ class M(TensorflowGate, base_gates.M):
             tf.reshape(state, shape), is_density_matrix)
         logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
 
-        if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
-            # Use default device to perform sampling
+
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        try:
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPES.get('DTYPEINT'))[0]
-        else: # pragma: no cover
-            # Force using CPU to perform sampling because if GPU is used
-            # it will cause a `ResourceExhaustedError`
-            if CPU_NAME is None:
+        except oom_error: # pragma: no cover
+            # Force using CPU to perform sampling
+            if not DEVICES['CPU']:
                 raise RuntimeError("Cannot find CPU device to use for sampling.")
-            with tf.device(CPU_NAME):
+            with tf.device(DEVICES['CPU'][0]):
                 samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                     dtype=DTYPES.get('DTYPEINT'))[0]
         if samples_only:
@@ -502,9 +500,6 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         TensorflowGate.__init__(self)
         self.swap_reset = []
 
-    def _construct_matrix(self):
-        pass
-
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         shape = tuple(state.shape)
@@ -536,7 +531,7 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
 class TensorflowChannel(TensorflowGate):
 
     def __new__(cls, *args, **kwargs):
-        if BACKEND.get('GATES') == 'custom':
+        if BACKEND.get('GATES') == 'custom': # pragma: no cover
             raise NotImplementedError("Density matrices are not supported by "
                                       "custom operator gates.")
         else:
