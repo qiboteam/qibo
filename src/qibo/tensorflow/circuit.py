@@ -8,7 +8,7 @@ from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
 InitStateType = Union[np.ndarray, tf.Tensor]
-ExecOutType = Union[tf.Tensor, measurements.CircuitResult]
+OutputType = Union[tf.Tensor, measurements.CircuitResult]
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -76,7 +76,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return gates.TensorflowGate == self.gate_module.TensorflowGate
 
     def _execute(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> ExecOutType:
+                 nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute`` on specified device."""
         state = self._cast_initial_state(initial_state)
 
@@ -109,7 +109,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             self.measurement_tuples, self.measurement_gate_result)
 
     def execute(self, initial_state: Optional[InitStateType] = None,
-                nshots: Optional[int] = None) -> ExecOutType:
+                nshots: Optional[int] = None) -> OutputType:
         """Propagates the state through the circuit applying the corresponding gates.
 
         In default usage the full final state vector or density matrix is returned.
@@ -139,13 +139,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         try:
             with tf.device(device):
                 return self._execute(initial_state=initial_state, nshots=nshots)
-        except oom_error: # pragma: no cover
+        except oom_error:
             raise RuntimeError(f"State does not fit in {device} memory."
                                "Please switch the execution device to a "
                                "different one using ``qibo.set_device``.")
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> ExecOutType:
+                 nshots: Optional[int] = None) -> OutputType:
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 

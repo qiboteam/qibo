@@ -105,6 +105,12 @@ if BACKEND_NAME == "tensorflow":
 
 
     def set_device(device_name: str):
+        """Set default execution device.
+
+        Args:
+            device_name (str): Device name recognized by Tensorflow,
+                for example '/GPU:0'.
+        """
         DEVICES['DEFAULT'] = device_name
         with tf.devices(device_name):
             tfmatrices.allocate_matrices()

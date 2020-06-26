@@ -9,6 +9,8 @@ from qibo.base import gates
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
+InitStateType = Union[np.ndarray, tf.Tensor]
+OutputType = Union[tf.Tensor, measurements.CircuitResult]
 
 
 class DeviceQueues:
@@ -512,11 +514,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 # Redo all global SWAPs that happened so far
                 self._revert_swaps(gate.swap_reset)
 
-    def execute(self,
-                initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
-                nshots: Optional[int] = None,
-                ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
+    def _execute(self, initial_state: Optional[InitStateType] = None,
+                 nshots: Optional[int] = None) -> OutputType:
+        """Performs ``circuit.execute``."""
         if self.queues is None or not self.queues.queues:
             self.set_gates()
         self._cast_initial_state(initial_state)
@@ -544,6 +544,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             result = measurements.CircuitResult(
                 self.measurement_tuples, self.measurement_gate_result)
         return result
+
+    def execute(self, initial_state: Optional[InitStateType] = None,
+                nshots: Optional[int] = None) -> OutputType:
+        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        try:
+            return self._execute(initial_state=initial_state, nshots=nshots)
+        except oom_error:
+            raise RuntimeError("State does not fit in memory during distributed "
+                               "execution. Please create a new circuit with "
+                               "different device configuration and try again.")
 
     @property
     def final_state(self) -> tf.Tensor:
