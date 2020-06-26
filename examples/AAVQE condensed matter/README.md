@@ -24,7 +24,7 @@ We may begin by considering the results for λ=10 in the Ising model. Notice tha
 
 <img src="Lambda10_Ising.png" width="510px">
 
-If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps, T_max or the optimizer itself, is required, especially for a large number of qubits. Now we can repeat the same analysis as we decrease λ towards the phase transition, i.e. at λ=1. 
+If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps, T_max or the optimizer itself, is required, especially for a large number of qubits. Now we can repeat the same analysis for 12 qubits as we decrease λ towards the phase transition, i.e. at λ=1. 
 
 <img src="Lambdas_Ising.png" width="510px">
 
