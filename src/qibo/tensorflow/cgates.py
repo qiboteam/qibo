@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import BACKEND, DTYPES, GPU_MEASUREMENT_CUTOFF, CPU_NAME
+from qibo.config import BACKEND, DTYPES, DEVICES
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -194,16 +194,16 @@ class M(TensorflowGate, base_gates.M):
             tf.reshape(state, shape), is_density_matrix)
         logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
 
-        if nshots * probs_dim < GPU_MEASUREMENT_CUTOFF:
+        if nshots * probs_dim < DEVICES['MEASUREMENT_CUTOFF']:
             # Use default device to perform sampling
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPES.get('DTYPEINT'))[0]
         else: # pragma: no cover
             # Force using CPU to perform sampling because if GPU is used
             # it will cause a `ResourceExhaustedError`
-            if CPU_NAME is None:
+            if not DEVICES['CPU']:
                 raise RuntimeError("Cannot find CPU device to use for sampling.")
-            with tf.device(CPU_NAME):
+            with tf.device(DEVICES['CPU'][0]):
                 samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                     dtype=DTYPES.get('DTYPEINT'))[0]
         if samples_only:

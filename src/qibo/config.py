@@ -39,16 +39,22 @@ if BACKEND_NAME == "tensorflow":
     # Gate backends
     BACKEND = {'GATES': 'custom', 'EINSUM': None}
 
-    # Set memory cut-off for using GPU when sampling
-    GPU_MEASUREMENT_CUTOFF = 1300000000
-
-    # Find available CPUs as they may be needed for sampling
-    _available_cpus = tf.config.list_logical_devices("CPU")
-    if _available_cpus:
-        CPU_NAME = _available_cpus[0].name
+    # Set devices recognized by tensorflow
+    DEVICES = {
+        'CPU': tf.config.list_logical_devices("CPU"),
+        'GPU': tf.config.list_physical_devices("GPU"),
+        'MEASUREMENT_CUTOFF': 1300000000
+    }
+    if DEVICES['GPU']:
+        DEVICES['DEFAULT'] = DEVICES['GPU'][0]
+    elif DEVICES['CPU']:
+        DEVICES['DEFAULT'] = DEVICES['CPU'][0]
     else:
-        CPU_NAME = None
+        raise RuntimeError("Unable to find Tensorflow devices.")
 
+    # Define numpy and tensorflow matrices
+    # numpy matrices are exposed to user via ``from qibo import matrices``
+    # tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
     from qibo.tensorflow import matrices as _matrices
     matrices = _matrices.NumpyMatrices()
     tfmatrices = _matrices.TensorflowMatrices()
@@ -95,6 +101,13 @@ if BACKEND_NAME == "tensorflow":
             raise RuntimeError(f'dtype {dtype} not supported.')
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
+
+
+    def set_device(device_name: str):
+        DEVICES['DEFAULT'] = device_name
+        with tf.devices(device_name):
+            tfmatrices.allocate_matrices()
+
 
 else:
     raise NotImplementedError("Only Tensorflow backend is implemented.")
