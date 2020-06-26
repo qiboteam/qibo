@@ -42,7 +42,7 @@ if BACKEND_NAME == "tensorflow":
     # Set devices recognized by tensorflow
     DEVICES = {
         'CPU': tf.config.list_logical_devices("CPU"),
-        'GPU': tf.config.list_physical_devices("GPU"),
+        'GPU': tf.config.list_logical_devices("GPU"),
         'MEASUREMENT_CUTOFF': 1300000000
     }
     #DEVICE['NAMES'] = set(d.name for d in DEVICES['CPU'] + DEVICES['GPU'])
