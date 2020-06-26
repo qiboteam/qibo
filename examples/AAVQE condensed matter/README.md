@@ -29,7 +29,7 @@ If you do not get those results, do not despair. Sometimes, fine-tuning of the a
 
 For λ=2, we still appreciate an exponential scaling of the accuracy, but as expected, the slope of the semi-logarithmic plot is lower.  For λ=1, we appreciate that the behavior of the AAVQE ground state energy accuracy as a function of the number of layers changes drastically from the behavior observed at larger λ. Recall that λ=1 in the thermodynamic limit is the location of the phase transition between the two gapped phases. 
 
-We can now perform numerical simulations of quantum circuits of several layers that are optimized to encode the ground state of systems with different sizes from 6 to 16 qubits with periodic boundary conditions. We can use the two Hamiltonians (Ising and XXZ Hamiltonians). In both cases, the Hamiltonians are tuned to a critical point, choosing λ=1 for the Ising model and delta=1/2 for the XXZ model.
+We can now perform numerical simulations of quantum circuits of several layers that are optimized to encode the ground state of systems with different sizes from 6 to 16 qubits with periodic boundary conditions. We can use the two Hamiltonians (Ising and XXZ Hamiltonians). In both cases, the Hamiltonians are tuned to a critical point, choosing λ=1 for the Ising model (left) and Δ=1/2 for the XXZ model (right).
 
 <img src="ising.png" width="510px"> <img src="XXZ.png" width="485px">
 
