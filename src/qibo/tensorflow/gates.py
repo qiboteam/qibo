@@ -27,7 +27,7 @@ class TensorflowGate(base_gates.Gate):
         # Einsum backend
         self.einsum = BACKEND.get('EINSUM')
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = self.construct_unitary()
 
     @staticmethod
@@ -58,7 +58,6 @@ class TensorflowGate(base_gates.Gate):
         else:
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
         self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
-        self._construct_matrix()
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -184,7 +183,7 @@ class RX(TensorflowGate, base_gates.RX):
         base_gates.RX.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = self.construct_unitary(self.theta)
 
     @staticmethod
@@ -199,7 +198,7 @@ class RY(TensorflowGate, base_gates.RY):
         base_gates.RY.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = self.construct_unitary(self.theta)
 
     @staticmethod
@@ -214,7 +213,7 @@ class RZ(TensorflowGate, base_gates.RZ):
         base_gates.RZ.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = self.construct_unitary(self.theta)
 
     @staticmethod
@@ -231,7 +230,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         base_gates.CNOT.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = matrices.CNOT
 
     @staticmethod
@@ -245,7 +244,7 @@ class CZ(TensorflowGate, base_gates.CZ):
         base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = tf.reshape(self.construct_unitary(), 4 * (2,))
 
     @staticmethod
@@ -260,7 +259,7 @@ class CZPow(TensorflowGate, base_gates.CZPow):
         base_gates.CZPow.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = tf.reshape(self.construct_unitary(self.theta), 4 * (2,))
 
     @staticmethod
@@ -277,7 +276,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         base_gates.SWAP.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = matrices.SWAP
 
     @staticmethod
@@ -292,7 +291,7 @@ class fSim(TensorflowGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         dtype = DTYPES.get("DTYPECPX")
         th = tf.cast(self.theta, dtype=dtype)
         rotation = tf.cos(th) * matrices.I - 1j * tf.sin(th) * matrices.X
@@ -315,7 +314,7 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
 
-    def _construct_matrix(self):
+    def _prepare(self):
         dtype = DTYPES.get("DTYPECPX")
         rotation = tf.cast(self.unitary, dtype=dtype)
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
@@ -333,7 +332,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         TensorflowGate.__init__(self)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.matrix = matrices.TOFFOLI
 
     @staticmethod
@@ -353,7 +352,7 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))
 
-    def _construct_matrix(self):
+    def _prepare(self):
         rank = len(self.target_qubits)
         dtype = DTYPES.get('DTYPECPX')
         if isinstance(self.unitary, tf.Tensor):
@@ -385,7 +384,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
     def _tfkron(self, m1, m2):
         return self.cgates.VariationalLayer._tfkron(m1, m2)
 
-    def _construct_matrix(self):
+    def _prepare(self):
         self.cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -402,6 +401,9 @@ class TensorflowChannel(TensorflowGate):
     def __init__(self):
         super(TensorflowChannel, self).__init__()
         self.gates = []
+
+    def _prepare(self):
+        pass
 
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):

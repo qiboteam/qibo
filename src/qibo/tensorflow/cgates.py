@@ -36,6 +36,15 @@ class TensorflowGate(base_gates.Gate):
         """
         raise NotImplementedError
 
+    def _prepare(self):
+        """Prepares the gate for application to state vectors.
+
+        Called automatically by the ``nqubits`` setter.
+        Calculates the ``matrix`` required to apply the gate to state vectors.
+        This is not necessarily the same as the unitary matrix of the gate.
+        """
+        pass
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         """Implements the `Gate` on a given state.
@@ -54,18 +63,7 @@ class MatrixGate(TensorflowGate):
         super(MatrixGate, self).__init__()
         self.matrix = None
 
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        self._prepare()
-
     def _prepare(self):
-        """Prepares the gate for application to state vectors.
-
-        Called automatically by the ``nqubits`` setter.
-        Calculates the ``matrix`` required to apply the gate to state vectors.
-        This is not necessarily the same as the unitary matrix of the gate.
-        """
         raise NotImplementedError
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False

@@ -139,6 +139,16 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
+        self._prepare()
+
+    def _prepare(self):
+        """Prepares the gate for application to state vectors.
+
+        Called automatically by the ``nqubits`` setter.
+        Calculates the ``matrix`` required to apply the gate to state vectors.
+        This is not necessarily the same as the unitary matrix of the gate.
+        """
+        raise NotImplementedError
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
