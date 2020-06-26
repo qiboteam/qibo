@@ -10,7 +10,7 @@ BACKEND_NAME = "tensorflow"
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
 
-if LEAST_SIGNIFICANT_QUBIT != 0:
+if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
     raise NotImplementedError("The least significant qubit should be 0.")
 
 # Load backend specifics
@@ -45,12 +45,12 @@ if BACKEND_NAME == "tensorflow":
         'GPU': tf.config.list_logical_devices("GPU"),
         'MEASUREMENT_CUTOFF': 1300000000
     }
-    #DEVICE['NAMES'] = set(d.name for d in DEVICES['CPU'] + DEVICES['GPU'])
-    if DEVICES['GPU']: # set default device to GPU if it exists
+    # set default device to GPU if it exists
+    if DEVICES['GPU']: # pragma: no cover
         DEVICES['DEFAULT'] = DEVICES['GPU'][0].name
     elif DEVICES['CPU']:
         DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
-    else:
+    else: # pragma: no cover
         raise RuntimeError("Unable to find Tensorflow devices.")
 
     # Define numpy and tensorflow matrices
@@ -116,5 +116,5 @@ if BACKEND_NAME == "tensorflow":
             tfmatrices.allocate_matrices()
 
 
-else:
+else: # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
