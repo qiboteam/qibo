@@ -1,3 +1,4 @@
+# Scaling of variational quantum circuit depth for condensed matter systems
 ## Problem
 Strongly-correlated many-body systems can give rise to exceptional quantum phenomena. In particular, the Ising model or the XXZ model have fundamental significance in condensed matter physics, and thus the realization of these systems may attract tremendous interest. Indeed, it is then an ambitious goal to prepare the ground state of those systems, and gain some insight into the physics of the problem.
 
@@ -23,7 +24,7 @@ We may begin by considering the results for λ=10 in the Ising model. Notice tha
 
 <img src="Lambda10_Ising.png" width="510px">
 
-If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps and T_max, is required, especially for a large number of qubits. Now we can repeat the same analysis as we decrease λ towards the phase transition, i.e. at λ=1. 
+If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps, T_max or the optimizer itself, is required, especially for a large number of qubits. Now we can repeat the same analysis as we decrease λ towards the phase transition, i.e. at λ=1. 
 
 <img src="Lambdas_Ising.png" width="510px">
 
