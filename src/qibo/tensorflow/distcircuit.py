@@ -406,6 +406,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
+        from qibo.tensorflow import gates as native_gates
+        if isinstance(gate, native_gates.TensorflowGate):
+            raise NotImplementedError("Distributed circuit does not support "
+                                      "native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):
             gate._prepare()
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and

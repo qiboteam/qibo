@@ -6,6 +6,8 @@ import cirq
 import pytest
 import qibo
 from qibo import models, gates
+from qibo.tensorflow import gates as native_gates
+
 
 _BACKENDS = ['custom', 'defaulteinsum', 'matmuleinsum']
 
@@ -57,19 +59,17 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     """
     initial_state = random_initial_state(nqubits)
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
-
-    if ndevices is None:
-        accelerators = None
+    accelerators = None if ndevices is None else {"/GPU:0": ndevices}
+    
+    if isinstance(qibo_gate, native_gates.TensorflowGate) and accelerators:
+        with pytest.raises(NotImplementedError):
+            c = models.Circuit(nqubits, accelerators)
+            c.add(qibo_gate)
     else:
-        from qibo.tensorflow import gates as native_gates
-        if isinstance(qibo_gate, native_gates.TensorflowGate):
-            pytest.skip("Distributed circuit does not support native gates.")
-        accelerators = {"/GPU:0": ndevices}
-
-    c = models.Circuit(nqubits, accelerators)
-    c.add(qibo_gate)
-    final_state = c(np.copy(initial_state)).numpy()
-    np.testing.assert_allclose(target_state, final_state, atol=atol)
+        c = models.Circuit(nqubits, accelerators)
+        c.add(qibo_gate)
+        final_state = c(np.copy(initial_state)).numpy()
+        np.testing.assert_allclose(target_state, final_state, atol=atol)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
