@@ -3,10 +3,12 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPES
+from qibo.config import DTYPES, DEVICES
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
+InitStateType = Union[np.ndarray, tf.Tensor]
+ExecOutType = Union[tf.Tensor, measurements.CircuitResult]
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -19,6 +21,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __init__(self, nqubits):
         super(TensorflowCircuit, self).__init__(nqubits)
         self._compiled_execute = None
+
+    def _set_nqubits(self, gate):
+        if gate._nqubits is None:
+            with tf.device(DEVICES['DEFAULT']):
+                gate.nqubits = self.nqubits
+        elif gate.nqubits != self.nqubits:
+            super(TensorflowCircuit, self)._set_nqubits(gate)
 
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
@@ -66,34 +75,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         from qibo.tensorflow import gates
         return gates.TensorflowGate == self.gate_module.TensorflowGate
 
-    def execute(self,
-                initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None,
-                nshots: Optional[int] = None,
-                ) -> Union[tf.Tensor, measurements.CircuitResult]:
-        """Propagates the state through the circuit applying the corresponding gates.
-
-        In default usage the full final state vector or density matrix is returned.
-        If the circuit contains measurement gates and `nshots` is given, then
-        the final state is sampled and the samples are returned.
-        Circuit execution uses by default state vectors but switches automatically
-        to density matrices if
-
-        Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
-                or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
-                A Tensorflow tensor with shape ``nqubits * (2,)`` (or ``2 * nqubits * (2,)`` for density matrices)
-                is also allowed as an initial state but must have the `dtype` of the circuit.
-                If ``initial_state`` is ``None`` the |000...0> state will be used.
-            nshots (int): Number of shots to sample if the circuit contains
-                measurement gates.
-                If ``nshots`` None the measurement gates will be ignored.
-
-        Returns:
-            If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
-            If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
-        """
+    def _execute(self, initial_state: Optional[InitStateType] = None,
+                 nshots: Optional[int] = None) -> ExecOutType:
+        """Performs ``circuit.execute`` on specified device."""
         state = self._cast_initial_state(initial_state)
 
         if self.using_tfgates:
@@ -124,8 +108,44 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return measurements.CircuitResult(
             self.measurement_tuples, self.measurement_gate_result)
 
-    def __call__(self, initial_state: Optional[tf.Tensor] = None,
-                 nshots: Optional[int] = None) -> tf.Tensor:
+    def execute(self, initial_state: Optional[InitStateType] = None,
+                nshots: Optional[int] = None) -> ExecOutType:
+        """Propagates the state through the circuit applying the corresponding gates.
+
+        In default usage the full final state vector or density matrix is returned.
+        If the circuit contains measurement gates and `nshots` is given, then
+        the final state is sampled and the samples are returned.
+        Circuit execution uses by default state vectors but switches automatically
+        to density matrices if
+
+        Args:
+            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
+                or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+                A Tensorflow tensor with shape ``nqubits * (2,)`` (or ``2 * nqubits * (2,)`` for density matrices)
+                is also allowed as an initial state but must have the `dtype` of the circuit.
+                If ``initial_state`` is ``None`` the |000...0> state will be used.
+            nshots (int): Number of shots to sample if the circuit contains
+                measurement gates.
+                If ``nshots`` None the measurement gates will be ignored.
+
+        Returns:
+            If ``nshots`` is given and the circuit contains measurements
+                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
+            If ``nshots`` is ``None`` or the circuit does not contain measurements.
+                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+        """
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        device = DEVICES['DEFAULT']
+        try:
+            with tf.device(device):
+                return self._execute(initial_state=initial_state, nshots=nshots)
+        except oom_error: # pragma: no cover
+            raise RuntimeError(f"State does not fit in {device} memory."
+                               "Please switch the execution device to a "
+                               "different one using ``qibo.set_device``.")
+
+    def __call__(self, initial_state: Optional[InitStateType] = None,
+                 nshots: Optional[int] = None) -> ExecOutType:
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
 

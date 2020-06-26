@@ -348,6 +348,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.local_full_shape = tf.cast((2 ** n,), dtype=dtype)
         self.local_tensor_shape = n * (2,)
 
+    def _set_nqubits(self, gate):
+        # Do not set ``gate.nqubits`` during gate addition because this will
+        # be set by the ``set_gates`` method once all gates are known.
+        if gate._nqubits is not None:
+            raise ValueError("Attempting to add gate with preset number of "
+                             "qubits in distributed circuit.")
+
     @property
     def global_qubits(self) -> List[int]:
         """Returns the global qubits IDs in a sorted list.
@@ -381,11 +388,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.reverse_transpose_order = self.nqubits * [0]
         for i, v in enumerate(self.transpose_order):
             self.reverse_transpose_order[v] = i
-
-    def _set_nqubits(self, gate):
-        # Do not set ``gate.nqubits`` during gate addition because this will
-        # be set by the ``set_gates`` method once all gates are known.
-        pass
 
     def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
         if not deep:

@@ -297,8 +297,8 @@ class BaseCircuit(object):
 
         Helper method for ``circuit.add(gate)``.
         """
-        if gate._nqubits is None:
-            gate.nqubits = self.nqubits
+        if gate._nqubits is None: # pragma: no cover
+            raise NotImplementedError
         elif gate.nqubits != self.nqubits:
             raise ValueError("Attempting to add gate with {} total qubits to "
                              "a circuit with {} qubits."

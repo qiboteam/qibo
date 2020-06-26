@@ -45,10 +45,11 @@ if BACKEND_NAME == "tensorflow":
         'GPU': tf.config.list_physical_devices("GPU"),
         'MEASUREMENT_CUTOFF': 1300000000
     }
-    if DEVICES['GPU']:
-        DEVICES['DEFAULT'] = DEVICES['GPU'][0]
+    #DEVICE['NAMES'] = set(d.name for d in DEVICES['CPU'] + DEVICES['GPU'])
+    if DEVICES['GPU']: # set default device to GPU if it exists
+        DEVICES['DEFAULT'] = DEVICES['GPU'][0].name
     elif DEVICES['CPU']:
-        DEVICES['DEFAULT'] = DEVICES['CPU'][0]
+        DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
     else:
         raise RuntimeError("Unable to find Tensorflow devices.")
 
