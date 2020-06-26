@@ -112,7 +112,7 @@ if BACKEND_NAME == "tensorflow":
                 for example '/GPU:0'.
         """
         DEVICES['DEFAULT'] = device_name
-        with tf.devices(device_name):
+        with tf.device(device_name):
             tfmatrices.allocate_matrices()
 
 
