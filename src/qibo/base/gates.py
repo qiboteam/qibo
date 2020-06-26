@@ -141,7 +141,7 @@ class Gate(object):
         self._nstates = 2**n
         self._prepare()
 
-    def _prepare(self):
+    def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.
 
         Called automatically by the ``nqubits`` setter.
@@ -206,7 +206,7 @@ class Gate(object):
         # original gate
         return [self.__class__(*self._init_args, **self._init_kwargs)]
 
-    def __call__(self, state, is_density_matrix):
+    def __call__(self, state, is_density_matrix): # pragma: no cover
         """Acts with the gate on a given state vector:
 
         Args:
@@ -318,7 +318,7 @@ class X(Gate):
 
             decomp_gates = [*part1, *part2]
 
-        else:
+        else: # pragma: no cover
             raise NotImplementedError("X decomposition is not implemented for "
                                       "zero free qubits.")
 

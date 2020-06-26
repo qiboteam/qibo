@@ -63,7 +63,7 @@ class MatrixGate(TensorflowGate):
         super(MatrixGate, self).__init__()
         self.matrix = None
 
-    def _prepare(self):
+    def _prepare(self): # pragma: no cover
         raise NotImplementedError
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -500,9 +500,6 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         TensorflowGate.__init__(self)
         self.swap_reset = []
 
-    def _construct_matrix(self):
-        pass
-
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         shape = tuple(state.shape)
@@ -534,7 +531,7 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
 class TensorflowChannel(TensorflowGate):
 
     def __new__(cls, *args, **kwargs):
-        if BACKEND.get('GATES') == 'custom':
+        if BACKEND.get('GATES') == 'custom': # pragma: no cover
             raise NotImplementedError("Density matrices are not supported by "
                                       "custom operator gates.")
         else:

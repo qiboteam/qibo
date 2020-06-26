@@ -415,7 +415,7 @@ class BaseCircuit(object):
         return "\n".join(logs)
 
     @property
-    def final_state(self):
+    def final_state(self): # pragma: no cover
         """Returns the final state after full simulation of the circuit.
 
         If the circuit is executed more than once, only the last final state
@@ -424,11 +424,11 @@ class BaseCircuit(object):
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, *args):
+    def execute(self, *args): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
 
-    def __call__(self, *args):
+    def __call__(self, *args): # pragma: no cover
         """Equivalent to ``circuit.execute``."""
         return self.execute(*args)
 
