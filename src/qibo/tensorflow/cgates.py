@@ -192,13 +192,13 @@ class M(TensorflowGate, base_gates.M):
             tf.reshape(state, shape), is_density_matrix)
         logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
 
-        if nshots * probs_dim < DEVICES['MEASUREMENT_CUTOFF']:
-            # Use default device to perform sampling
+
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        try:
             samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
                                                 dtype=DTYPES.get('DTYPEINT'))[0]
-        else: # pragma: no cover
-            # Force using CPU to perform sampling because if GPU is used
-            # it will cause a `ResourceExhaustedError`
+        except oom_error: # pragma: no cover
+            # Force using CPU to perform sampling
             if not DEVICES['CPU']:
                 raise RuntimeError("Cannot find CPU device to use for sampling.")
             with tf.device(DEVICES['CPU'][0]):

@@ -42,8 +42,7 @@ if BACKEND_NAME == "tensorflow":
     # Set devices recognized by tensorflow
     DEVICES = {
         'CPU': tf.config.list_logical_devices("CPU"),
-        'GPU': tf.config.list_logical_devices("GPU"),
-        'MEASUREMENT_CUTOFF': 1300000000
+        'GPU': tf.config.list_logical_devices("GPU")
     }
     # set default device to GPU if it exists
     if DEVICES['GPU']: # pragma: no cover
