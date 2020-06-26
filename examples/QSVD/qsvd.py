@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jun 17 13:41:47 2020
-
-@author: diego
-"""
 
 import numpy as np
 from qibo.models import Circuit
 from qibo import gates
-
 
 
 ##########################
@@ -39,11 +33,11 @@ def ansatz_RY(theta, sub_size):
         # CZ gates
         for q in range(0, sub_size-1, 2): # U
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
         for q in range(sub_size, nqubits-1, 2): # V
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
         # Ry rotations   `
         for q in range(nqubits):
@@ -54,21 +48,21 @@ def ansatz_RY(theta, sub_size):
         # CZ gates
         for q in range(1, sub_size-1, 2): # U
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
-        c.add(gates.CZPow(0, sub_size-1, np.pi))
+        c.add(gates.CZ(0, sub_size-1))
         
         for q in range(sub_size+1, nqubits-1, 2): # V
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
-        c.add(gates.CZPow(sub_size, nqubits-1, np.pi))
+        c.add(gates.CZ(sub_size, nqubits-1))
         
     # Final Ry rotations    
     for q in range(nqubits):
         
         c.add(gates.RY(q, theta[index]))
-        #c.add(gates.M(q))
+        c.add(gates.M(q))
         index+=1    
  
     return c
@@ -103,11 +97,11 @@ def ansatz(theta, sub_size):
         # CZ gates
         for q in range(0, sub_size-1, 2): # U
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
         for q in range(sub_size, nqubits-1, 2): #V
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
         # Rx,Rz,Rx rotations   `
         for q in range(nqubits):
@@ -124,15 +118,15 @@ def ansatz(theta, sub_size):
         # CZ gates
         for q in range(1, sub_size-1, 2): # U
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
-        c.add(gates.CZPow(0, sub_size-1, np.pi))
+        c.add(gates.CZ(0, sub_size-1))
         
         for q in range(sub_size+1, nqubits-1, 2): # V
             
-            c.add(gates.CZPow(q, q+1, np.pi))
+            c.add(gates.CZ(q, q+1))
             
-        c.add(gates.CZPow(0, nqubits-1, np.pi))
+        c.add(gates.CZ(0, nqubits-1))
         
     # Final Rx,Rz,Rx rotations    
     for q in range(nqubits):
@@ -148,7 +142,6 @@ def ansatz(theta, sub_size):
         
         c.add(gates.M(q)) # Measurements
 
-
     return c
 
 
@@ -160,22 +153,15 @@ def Hamming(string1, string2):
     
     l1 = len(string1)
     l2 = len(string2)    
-    length = min(l1, l2)
     
-    h = 0
-    
-    for i in range(length):
-        
-        if string1[i] != string2[i]:
-            
-            h+=1
-            
+    h = sum(q1 != q2 for q1,q2 in zip(string1,string2))
+
     h += abs(l1-l2)
     
     return h
 
     
-def QSVD_circuit(theta, sub_size, RY=False):
+def QSVD_circuit(theta, sub_size=None, RY=False):
     
     if not RY:
         
@@ -192,12 +178,11 @@ def QSVD_circuit(theta, sub_size, RY=False):
         
 
 
-def QSVD(theta, initial_state=None, subsize=nqubits//2, RY=False, nshots=10000, display=True):
+def QSVD(theta, subsize=None, init_state=None, RY=False, nshots=10000):
     
-    Circuit = QSVD_circuit(theta, subsize, RY=RY)
-    Circuit = Circuit(initial_state, nshots)
-    
-    result = circ.frequencies(binary=True)
+    Circuit = QSVD_circuit(theta, sub_size=subsize, RY=RY)
+    Circuit = Circuit(init_state, nshots)
+    result = Circuit.frequencies(binary=True)
 
     loss = 0
     
@@ -209,17 +194,17 @@ def QSVD(theta, initial_state=None, subsize=nqubits//2, RY=False, nshots=10000, 
         if a != b:
             
             loss += Hamming(a,b) * result[bit_string]
-            
-    if display:
-        print(loss/nshots)
+    
+    loss = loss/nshots
+    print(loss)
         
-    return loss/nshots
+    return loss
 
 
-def Schmidt_coeff(theta, initial_state, subsize=nqubits//2, nshots=10000, RY=False):
+def Schmidt_coeff(theta, subsize, init_state, nshots=10000, RY=False):
     
     qsvd = QSVD_circuit(theta, subsize, RY=RY)
-    qsvd = qsvd(initial_state, nshots)
+    qsvd = qsvd(init_state, nshots)
     
     result = qsvd.frequencies(binary=True)
     
@@ -251,12 +236,7 @@ def QSVD_SWAP(theta, initial_state):
     pass
 
 
-def QSVD_Encoder(theta, initial_state)
+def QSVD_Encoder(theta, initial_state):
 
     pass
         
-        
-        
-        
-
-
