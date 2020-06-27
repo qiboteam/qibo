@@ -16,6 +16,7 @@ if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
 # Load backend specifics
 if BACKEND_NAME == "tensorflow":
     import os
+    import warnings
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
@@ -31,10 +32,14 @@ if BACKEND_NAME == "tensorflow":
 
     # Default types
     DTYPES = {
+        'STRING': 'double',
         'DTYPEINT': tf.int64,
         'DTYPE': tf.float64,
         'DTYPECPX': tf.complex128
     }
+
+    # Flag for raising warning in ``set_precision`` and ``set_backend``
+    ALLOW_SWITCHERS = True
 
     # Gate backends
     BACKEND = {'GATES': 'custom', 'EINSUM': None}
@@ -91,6 +96,9 @@ if BACKEND_NAME == "tensorflow":
             dtype (str): possible options are 'single' for single precision
                 (complex64) and 'double' for double precision (complex128).
         """
+        if not ALLOW_SWITCHERS and dtype != DTYPES['STRING']:
+            warnings.warn("Precision changed after gates are allocated.",
+                          category=RuntimeWarning)
         if dtype == 'single':
             DTYPES['DTYPE'] = tf.float32
             DTYPES['DTYPECPX'] = tf.complex64
@@ -99,6 +107,7 @@ if BACKEND_NAME == "tensorflow":
             DTYPES['DTYPECPX'] = tf.complex128
         else:
             raise RuntimeError(f'dtype {dtype} not supported.')
+        DTYPES['STRING'] = dtype
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
 

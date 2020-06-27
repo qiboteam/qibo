@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 import sys
+from qibo import config
 from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
@@ -35,6 +36,8 @@ class Gate(object):
 
         self._nqubits = None
         self._nstates = None
+
+        config.ALLOW_SWITCHERS = False
 
     @property
     def target_qubits(self) -> Tuple[int]:
