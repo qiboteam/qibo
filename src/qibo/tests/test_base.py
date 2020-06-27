@@ -247,7 +247,6 @@ def test_gates_commute():
     assert CNOT(0, 1).commutes(Y(2).controlled_by(0))
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_state_precision(precision):
     """Check ``set_precision`` in state dtype."""
@@ -264,7 +263,6 @@ def test_state_precision(precision):
     assert final_state.dtype == expected_dtype
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_precision_dictionary(precision):
     """Check if ``set_precision`` changes the ``DTYPES`` dictionary."""
@@ -278,7 +276,6 @@ def test_precision_dictionary(precision):
         assert DTYPES.get("DTYPECPX") == tf.complex128
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_matrices_dtype():
     """Check if ``set_precision`` changes matrices types."""
     import qibo
@@ -306,7 +303,6 @@ def test_modifying_matrices_error():
         matrices.I = np.zeros((2, 2))
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
 def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
@@ -326,7 +322,6 @@ def test_set_backend(backend):
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_switcher_errors():
     """Check set precision and backend errors."""
     import qibo
@@ -345,11 +340,12 @@ def test_switcher_warnings():
     qibo.set_precision("double")
     with pytest.warns(RuntimeWarning):
         qibo.set_precision("single")
+        qibo.set_precision("double")
     with pytest.warns(RuntimeWarning):
         qibo.set_backend("matmuleinsum")
+        qibo.set_backend("custom")
 
 
-@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_set_device():
     """Check device switcher and errors in device name."""
     import qibo
