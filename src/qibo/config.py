@@ -74,6 +74,9 @@ if BACKEND_NAME == "tensorflow":
                 for the gates that use tensorflow primitives (``tf.einsum`` or
                 ``tf.matmul`` respectively).
         """
+        if not ALLOW_SWITCHERS and backend != BACKEND['GATES']:
+            warnings.warn("Backend should not be changed after allocating gates.",
+                          category=RuntimeWarning)
         if backend == 'custom':
             BACKEND['GATES'] = 'custom'
             BACKEND['EINSUM'] = None
@@ -97,7 +100,7 @@ if BACKEND_NAME == "tensorflow":
                 (complex64) and 'double' for double precision (complex128).
         """
         if not ALLOW_SWITCHERS and dtype != DTYPES['STRING']:
-            warnings.warn("Precision changed after gates are allocated.",
+            warnings.warn("Precision should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if dtype == 'single':
             DTYPES['DTYPE'] = tf.float32
@@ -120,6 +123,9 @@ if BACKEND_NAME == "tensorflow":
                 '/{device type}:{device number}' where device type is one of
                 CPU or GPU.
         """
+        if not ALLOW_SWITCHERS and device_name != DEVICES['DEFAULT']: # pragma: no cover
+            warnings.warn("Device should not be changed after allocating gates.",
+                          category=RuntimeWarning)
         parts = device_name[1:].split(":")
         if device_name[0] != "/" or len(parts) != 2:
             raise ValueError("Device name should follow the pattern: "

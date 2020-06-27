@@ -345,8 +345,11 @@ def test_switcher_warnings():
     qibo.set_precision("double")
     with pytest.warns(RuntimeWarning):
         qibo.set_precision("single")
+    with pytest.warns(RuntimeWarning):
+        qibo.set_backend("matmuleinsum")
 
 
+@pytest.mark.filterwarnings("ignore::RuntimeWarning")
 def test_set_device():
     """Check device switcher and errors in device name."""
     import qibo
