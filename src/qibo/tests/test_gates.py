@@ -962,6 +962,7 @@ def test_circuit_copy(backend, accelerators, deep):
         np.testing.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.linux
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_memory_error(accelerators):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
