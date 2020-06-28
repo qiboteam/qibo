@@ -77,35 +77,6 @@ class FusionGroup:
         self.gates1.append([])
 
 
-def fuse_queue_recursive(remaining_queue: List[gates.Gate],
-                         group_queue: List[FusionGroup] = []
-                         ) -> List[FusionGroup]:
-    if not remaining_queue:
-        return group_queue
-
-    new_remaining_queue = []
-    gates = iter(remaining_queue)
-    new_group = FusionGroup()
-    new_group.add(next(gates))
-    for gate in gates:
-        commutes = True
-        for blocking_gate in new_remaining_queue:
-            commutes = commutes and gate.commutes(blocking_gate)
-            if not commutes:
-                break
-
-        if commutes:
-            try:
-                new_group.add(gate)
-            except ValueError:
-                new_remaining_queue.append(gate)
-        else:
-            new_remaining_queue.append(gate)
-
-    group_queue.append(new_group)
-    return fuse_queue_recursive(new_remaining_queue, group_queue)
-
-
 def fuse_queue(queue: List[gates.Gate]) -> List[FusionGroup]:
     group_queue = []
     remaining_queue = list(queue)
@@ -131,9 +102,5 @@ def fuse_queue(queue: List[gates.Gate]) -> List[FusionGroup]:
 
         group_queue.append(new_group)
         remaining_queue = list(new_remaining_queue)
-
-        #print(group_queue)
-        print(remaining_queue)
-        print()
 
     return group_queue
