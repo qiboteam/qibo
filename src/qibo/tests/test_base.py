@@ -322,7 +322,7 @@ def test_set_backend(backend):
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
 
 
-def test_config_set_errors():
+def test_switcher_errors():
     """Check set precision and backend errors."""
     import qibo
     with pytest.raises(RuntimeError):
@@ -330,6 +330,20 @@ def test_config_set_errors():
     with pytest.raises(RuntimeError):
         qibo.set_backend('test')
     qibo.set_backend("custom")
+
+
+def test_switcher_warnings():
+    """Check set precision and backend warnings."""
+    import qibo
+    from qibo import gates
+    g = gates.H(0)
+    qibo.set_precision("double")
+    with pytest.warns(RuntimeWarning):
+        qibo.set_precision("single")
+        qibo.set_precision("double")
+    with pytest.warns(RuntimeWarning):
+        qibo.set_backend("matmuleinsum")
+        qibo.set_backend("custom")
 
 
 def test_set_device():
