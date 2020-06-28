@@ -3,12 +3,8 @@ from qibo.models import Circuit
 import numpy as np
 
 
-def bitstring(bits):
-    return ''.join(str(int(b)) for b in bits)
-
-
 def read_file(file_name):
-    """Collect data from .tex file that characterizes the problem instance
+    """Collect data from .txt file that characterizes the problem instance
     Args:
         file_name (str): name of the file that contains the instance information. Available
             in \data are examples for instances with 4, 8, 10, 12 and 16 qubits.
@@ -22,9 +18,7 @@ def read_file(file_name):
     file = open('data/{}'.format(file_name), 'r')
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
-    clauses = []
-    for i in range(control[1]):
-        clauses.append(list(map(int, file.readline().split())))
+    clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]
     return control, solution, clauses
 
 
@@ -42,8 +36,8 @@ def create_qc(qubits, clause_num):
     """
     q = [i for i in range(qubits)]
     ancilla = qubits
-    c = [i+qubits+1 for i in range(clause_num)]
-    circuit = Circuit(qubits+clause_num+1)
+    c = [i + qubits + 1 for i in range(clause_num)]
+    circuit = Circuit(qubits + clause_num + 1)
     return q, c, ancilla, circuit
 
 
@@ -77,18 +71,18 @@ def oracle(q, c, ancilla, clauses):
     """
     k = 0
     for clause in clauses:
-        yield gates.CNOT(q[clause[0]-1], c[k])
-        yield gates.CNOT(q[clause[1]-1], c[k])
-        yield gates.CNOT(q[clause[2]-1], c[k])
-        yield gates.X(c[k]).controlled_by(q[clause[0]-1], q[clause[1]-1], q[clause[2]-1])
+        yield gates.CNOT(q[clause[0] - 1], c[k])
+        yield gates.CNOT(q[clause[1] - 1], c[k])
+        yield gates.CNOT(q[clause[2] - 1], c[k])
+        yield gates.X(c[k]).controlled_by(q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1])
         k += 1
     yield gates.X(ancilla).controlled_by(*c)
     k = 0
     for clause in clauses:
-        yield gates.CNOT(q[clause[0]-1], c[k])
-        yield gates.CNOT(q[clause[1]-1], c[k])
-        yield gates.CNOT(q[clause[2]-1], c[k])
-        yield gates.X(c[k]).controlled_by(q[clause[0]-1], q[clause[1]-1], q[clause[2]-1])
+        yield gates.CNOT(q[clause[0] - 1], c[k])
+        yield gates.CNOT(q[clause[1] - 1], c[k])
+        yield gates.CNOT(q[clause[2] - 1], c[k])
+        yield gates.X(c[k]).controlled_by(q[clause[0] - 1], q[clause[1] - 1], q[clause[2] - 1])
         k += 1
 
         
@@ -133,24 +127,3 @@ def grover(circuit, q, c, ancilla, clauses, steps):
     return circuit
 
 
-def main(file_name):
-    """Grover search for the instance defined by the file_name.
-    Args:
-        file_name (str): name of the file that contains the information of a 3SAT instance
-
-    Returns:
-        result of the Grover search and comparison with the expected solution if given.
-    """
-    control, solution, clauses = read_file(file_name)
-    qubits = control[0]
-    clauses_num = control[1]
-    steps = int((np.pi/4)*np.sqrt(2**qubits))
-    print('# of qubits used: {}\n'.format(qubits+clauses_num+1))
-    q, c, ancilla, circuit = create_qc(qubits, clauses_num)
-    circuit = grover(circuit, q, c, ancilla, clauses, steps)
-    result = circuit(nshots=100)
-    frequencies = result.frequencies(binary=True, registers=False)
-    print('Sampled results:\n{}\n'.format(frequencies))
-    most_common_bitstring = frequencies.most_common(1)[0][0]
-    print('Most common bitstring: {}\n'.format(most_common_bitstring))
-    print('Exact cover solution: {}\n'.format(''.join(solution)))
