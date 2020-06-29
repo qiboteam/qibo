@@ -110,7 +110,7 @@ of measurements.
 
 We propose a manner to mitigate random errors occurring when computing the tangle, via post-selection. After the 
 optimization is completed, and a low value of the cost function is obtained, it is licit to assume that $\ket\psi_{ABC}$ 
-has been properly transformed into $\ket{\tilde{\varphi}}$. Thus, if the outcome of a measurement is either 
+has been properly transformed into \($\ket{\tilde{\varphi}}$\). Thus, if the outcome of a measurement is either 
 $\ket{001}, \ket{010} {\rm \, or \,} \ket{011}$ after the transformation into the up-to-phases canonical form, 
 it is due to an error in the circuit. In this case, this outcome can be discarded.
 

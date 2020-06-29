@@ -3,10 +3,19 @@ from qibo import gates
 import numpy as np
 from scipy.optimize import minimize
 
-p_ = 0
-shots_ = 10000
 
 def ansatz(theta, p=0):
+    """Ansatz for driving a random state into its up-tp-phases canonical form.
+        Args:
+            theta (array): parameters of the unitary rotations
+            p=0 (float): probability of occuring a single-qubit depolarizing error
+        Returns:
+            Qibo circuit
+    """
+    if p != 0:
+        from qibo import set_backend
+        set_backend("matmuleinsum")
+        # raise RuntimeWarning('Backend changed to MatmulEinsum')
     C = Circuit(3)
     index = 0
     if p == 0:
@@ -19,9 +28,6 @@ def ansatz(theta, p=0):
             C.add(gates.M(i))
 
     else:
-        from qibo import set_backend
-        set_backend("matmuleinsum")
-        raise RuntimeWarning('Backend changed to MatmulEinsum')
         for i in range(3):
             C.add(gates.RZ(i, theta[index]))
             C.add(gates.RY(i, theta[index + 1]))
@@ -34,18 +40,47 @@ def ansatz(theta, p=0):
 
     return C
 
-def cost_function(theta, state, p=p_, shots=shots_):
+
+def cost_function(theta, state, p=0, shots=1000):
+    """Cost function encoding the difference between a state and its up-to-phases canonical form
+        Args:
+            theta (array): parameters of the unitary rotations
+            state (cplx array): three-qubit random state
+            p=0 (float): probability of occuring a single-qubit depolarizing error
+            shots (int): Shots used for measuring every circuit.
+        Returns:
+            float, cost function
+    """
     C = ansatz(theta, p)
     measurements = C.execute(state, nshots=shots).frequencies(binary=False)
 
     return (measurements[1] + measurements[2] + measurements[3]) / shots
 
-def canonize(state, p=p_, shots=shots_):
+
+def canonize(state, p=0, shots=1000):
+    """Function to transform a given state into its up-to-phases canonical form
+        Args:
+            state (cplx array): three-qubit random state
+            p=0 (float): probability of occuring a single-qubit depolarizing error
+            shots (int): Shots used for measuring every circuit.
+        Returns:
+            Value cost function, parameters to canonize the given state
+        """
     theta = np.zeros(9)
     result = minimize(cost_function, theta, args=(state, p, shots), method='powell')
     return result.fun, result.x
 
-def canonical_tangle(state, theta, p=p_, shots=shots_, post_selection=True):
+def canonical_tangle(state, theta, p=0, shots=1000, post_selection=True):
+    """Tangle of a canonized quantum state
+        Args:
+            state (cplx array): three-qubit random state
+            theta (array): parameters of the unitary rotations
+            p=0 (float): probability of occuring a single-qubit depolarizing error
+            shots (int): Shots used for measuring every circuit.
+            post_selection (bool): whether post selection is applied or not
+        Returns:
+            tangle
+    """
     C = ansatz(theta, p)
     result = C.execute(state, nshots=shots).frequencies(binary=False)
     measures = np.zeros(8)
@@ -62,39 +97,55 @@ def canonical_tangle(state, theta, p=p_, shots=shots_, post_selection=True):
 
     return 4*opt_hyperdeterminant(measures)
 
+
 def hyperdeterminant(state):
+    """Hyperdeterminant of any quantum state
+        Args:
+            state (cplx array): three-qubit random state
+        Returns:
+            Hyperdeterminant
     """
-    :param state: quantum state
-    :return: the hyperdeterminant of the state
-    """
-    hyp = (
-    state[0]**2 * state[7]**2 + state[1]**2 * state[6]**2 + state[2]**2 * state[5]**2 + state[3]**2 * state[4]**2
-    ) - 2*(
-    state[0]*state[7]*state[3]*state[4] + state[0]*state[7]*state[5]*state[2] + state[0]*state[7]*state[6]*state[1] + state[3]*state[4]*state[5]*state[2] + state[3]*state[4]*state[6]*state[1] + state[5]*state[2]*state[6]*state[1]
-    ) + 4 * (
-    state[0]*state[6]*state[5]*state[3] + state[7]*state[1]*state[2]*state[4]
-    )
+    indices = [(1, [(0, 0, 7, 7), (1, 1, 6, 6), (2, 2, 5, 5), (3, 3, 4, 4)]),
+               (-2, [(0, 7, 3, 4), (0, 7, 5, 2), (0, 7, 6, 1), (3, 4, 5, 2), (3, 4, 6, 1), (5, 2, 6, 1)]),
+               (4, [(0, 6, 5, 3), (7, 1, 2, 4)])]
+    hyp = sum(coeff * sum(state[i] * state[j] * state[k] * state[l] for i, j, k, l in ids)
+              for coeff, ids in indices)
+
     return hyp
+
 
 def opt_hyperdeterminant(measures):
+    """Hyperdeterminant of a canonized quantum state from its outcomes
+        Args:
+            measures (array): outcomes of the canonized state
+        Returns:
+            Hyperdeterminant
     """
-
-    :param state: quantum state
-    :return: the hyperdeterminant of the state
-    """
-    hyp = (
-    measures[0] * measures[7]
-    )
+    hyp = measures[0] * measures[7]
     return hyp
 
+
 def create_random_state(seed):
+    """Function to create a random quantum state from sees
+        Args:
+            seed (int): random seed
+        Returns:
+            Random quantum state
+    """
     np.random.seed(seed)
     state = (np.random.rand(8) - .5) + 1j*(np.random.rand(8) - .5)
     state = state / np.linalg.norm(state)
 
     return state
 
+
 def compute_random_tangle(seed):
+    """Function to compute the tangle of a randomly created random quantum state from seed
+        Args:
+            seed (int): random seed
+        Returns:
+            Tangle
+    """
     state = create_random_state(seed)
     return 4 * np.abs(hyperdeterminant(state))
 
