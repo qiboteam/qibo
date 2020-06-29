@@ -9,6 +9,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
+import os
 
 np.random.seed(0)
 
@@ -18,10 +19,14 @@ class single_qubit_classifier:
         self.name = name
         self.layers = layers
         self.training_set = create_dataset(name, grid=grid)
-        self.test_set = create_dataset(name, samples = test_samples)
+        self.test_set = create_dataset(name, samples=test_samples)
         self.target = create_target(name)
         self.hamiltonian = self.create_hamiltonian()
         self.params = np.random.randn(layers * 4)
+        try:
+            os.makedirs('results/'+self.name+'/%s_layers'%self.layers)
+        except:
+            pass
 
     def set_parameters(self, new_params):
         self.params = new_params
@@ -209,7 +214,7 @@ class single_qubit_classifier:
         checks = [int(g == l) for g, l in zip(guess_labels, self.test_set[1])]
         axs[1].scatter(x_0, x_1, c=checks, s=2, cmap=colors_rightwrong, norm=norm_rightwrong)
 
-        plt.show()
+        fig.savefig('results/'+self.name+'/%s_layers/test_set.pdf'%self.layers)
 
 
     def paint_world_map(self):
@@ -238,70 +243,7 @@ class single_qubit_classifier:
 
         ax.axis('off')
 
-        plt.show()
-
-
-    # La minimización puede ser como en el VQE de qibo, la misma estructura es válida, y todos los minimizadores deberían funcionar bien
-    # Otro cantar será saber cuál es el minimizador bueno
-
-    def paint_representation_1D(self):
-        fig, axs = plt.subplots(nrows=self.num_functions)
-
-        if self.num_functions == 1:
-                axs.plot(self.domain, self.functions[0](self.domain), color='black', label='Target Function')
-                outcomes = np.zeros_like(self.domain)
-                for j, x in enumerate(self.domain):
-                    C = self.circuit(x)
-                    state = C.execute()
-                    outcomes[j] = self.hamiltonian[0].expectation(state)
-
-                axs.plot(self.domain, outcomes, color='C0',label='Approximation')
-                axs.legend()
-        else:
-            for i in range(self.num_functions):
-                axs[i].plot(self.domain, self.functions[i](self.domain).flatten(), color='black')
-                outcomes = np.zeros_like(self.domain)
-                for j, x in enumerate(self.domain):
-                    C = self.circuit(x)
-                    state = C.execute()
-                    outcomes[j] = self.hamiltonian[i].expectation(state)
-
-                axs[i].plot(self.domain, outcomes, label=self.measurements[i])
-                axs[i].legend()
-
-        plt.show()
-
-    def paint_representation_2D(self):
-        from mpl_toolkits.mplot3d import Axes3D
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-
-        if self.num_functions == 1:
-            ax = fig.gca(projection='3d')
-            print('shape', self.target[0].shape)
-            ax.plot_trisurf(self.domain[:, 0], self.domain[:, 1], self.target[:, 0], label='Target Function',  linewidth=0.2, antialiased=True)
-            outcomes = np.zeros_like(self.domain)
-            for j, x in enumerate(self.domain):
-                C = self.circuit(x)
-                state = C.execute()
-                outcomes[j] = self.hamiltonian[0].expectation(state)
-
-            ax.plot_trisurf(self.domain[:, 0], self.domain[:, 1], outcomes[:, 0] + 0.1,label='Approximation',  linewidth=0.2, antialiased=True)
-            #ax.legend()
-        else:
-            for i in range(self.num_functions):
-                ax = fig.add_subplot(1,1,i + 1, projection='3d')
-                ax.plot(self.domain, self.functions[i](self.domain).flatten(), color='black')
-                outcomes = np.zeros_like(self.domain)
-                for j, x in enumerate(self.domain):
-                    C = self.circuit(x)
-                    state = C.execute()
-                    outcomes[j] = self.hamiltonian[i].expectation(state)
-
-                ax.scatter(self.domain[:, 0], self.domain[:, 1], outcomes, color='C0', label=self.measurements[i])
-                ax.legend()
-
-        plt.show()
+        fig.savefig('results/'+self.name+'/%s_layers/world_map.pdf'%self.layers)
 
 def fidelity(state1, state2):
     return tf.constant(np.abs(tf.reduce_sum(np.conj(state2) * state1))**2)
