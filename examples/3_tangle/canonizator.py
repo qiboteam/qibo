@@ -19,7 +19,9 @@ def ansatz(theta, p=0):
             C.add(gates.M(i))
 
     else:
-        raise NotImplementedError('Error channels are not implemented yet')
+        from qibo import set_backend
+        set_backend("matmuleinsum")
+        raise RuntimeWarning('Backend changed to MatmulEinsum')
         for i in range(3):
             C.add(gates.RZ(i, theta[index]))
             C.add(gates.RY(i, theta[index + 1]))
