@@ -4,7 +4,6 @@ import functions
 import argparse
 
 
-_PARAM_NAMES = {"theta", "phi"}
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=10, type=int)
 args = vars(parser.parse_args())
