@@ -47,9 +47,10 @@ However, our proposal also returns the canonical form of the state.
 ## Mathematical description of the problem
 
 An arbitrary three-qubit quantum state in its most general form can be written as 
-$$
-\vert \psi \rangle = \sum_{i,j,k = 0}^{1} t_{ijk}\vert ijk \rangle,
-$$
+
+<img src="https://render.githubusercontent.com/render/math?math=
+\vert \psi \rangle = \sum_{i,j,k = 0}^{1} t_{ijk}\vert ijk \rangle,">
+
 where $\{| ijk \rangle \}$ are the computational-basis states, and the complex coefficients in the tensor $t_{ijk}$ obey
 a normalization relation. A genuine entanglement measure of a three-qubit system $\vert \psi \rangle $ is the
 tangle, denoted by $\tau$. It can be obtained from Cayley’s hyperdeterminant, which is a generalization
