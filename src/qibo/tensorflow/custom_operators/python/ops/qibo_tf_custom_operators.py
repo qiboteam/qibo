@@ -1,14 +1,26 @@
 """Use ops in python."""
+import numpy as np
 import tensorflow as tf
 import numpy as np
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 
+if tf.config.list_physical_devices("GPU"):
+    library_path = '_qibo_tf_custom_operators_cuda.so'
+else:
+    library_path = '_qibo_tf_custom_operators.so'
+
 custom_module = load_library.load_op_library(
-    resource_loader.get_path_to_datafile('_qibo_tf_custom_operators.so'))
+    resource_loader.get_path_to_datafile(library_path))
 
 # initial_state operator
 initial_state = custom_module.initial_state
+
+# transpose_state operator (for multi-GPU)
+transpose_state = custom_module.transpose_state
+
+# swap state pieces operator (for multi-GPU)
+swap_pieces = custom_module.swap_pieces
 
 
 def check_controls(controls):
