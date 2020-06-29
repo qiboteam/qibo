@@ -10,12 +10,13 @@ BACKEND_NAME = "tensorflow"
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
 
-if LEAST_SIGNIFICANT_QUBIT != 0:
+if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
     raise NotImplementedError("The least significant qubit should be 0.")
 
 # Load backend specifics
 if BACKEND_NAME == "tensorflow":
     import os
+    import warnings
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import tensorflow as tf
@@ -29,35 +30,67 @@ if BACKEND_NAME == "tensorflow":
     # Eigenvalues smaller than this cut-off are ignored in entropy calculation
     EIGVAL_CUTOFF = 1e-14
 
-    # Einsum backend switcher according to device
-    if tf.config.list_physical_devices("GPU"):
-        # If GPU is available use `tf.einsum`
-        from qibo.tensorflow.einsum import DefaultEinsum
-        einsum = DefaultEinsum()
-    else:
-        # If only CPU is available then fall back to `tf.matmul`
-        from qibo.tensorflow.einsum import MatmulEinsum
-        einsum = MatmulEinsum()
-
     # Default types
     DTYPES = {
+        'STRING': 'double',
         'DTYPEINT': tf.int64,
         'DTYPE': tf.float64,
         'DTYPECPX': tf.complex128
     }
 
-    # Set memory cut-off for using GPU when sampling
-    GPU_MEASUREMENT_CUTOFF = 1300000000
+    # Flag for raising warning in ``set_precision`` and ``set_backend``
+    ALLOW_SWITCHERS = True
 
-    # Find available CPUs as they may be needed for sampling
-    _available_cpus = tf.config.list_logical_devices("CPU")
-    if _available_cpus:
-        CPU_NAME = _available_cpus[0].name
-    else:
-        CPU_NAME = None
+    # Gate backends
+    BACKEND = {'GATES': 'custom', 'EINSUM': None}
 
-    from qibo.tensorflow import matrices as tensorflow_matrices
-    matrices = tensorflow_matrices.GateMatrices()
+    # Set devices recognized by tensorflow
+    DEVICES = {
+        'CPU': tf.config.list_logical_devices("CPU"),
+        'GPU': tf.config.list_logical_devices("GPU")
+    }
+    # set default device to GPU if it exists
+    if DEVICES['GPU']: # pragma: no cover
+        DEVICES['DEFAULT'] = DEVICES['GPU'][0].name
+    elif DEVICES['CPU']:
+        DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
+    else: # pragma: no cover
+        raise RuntimeError("Unable to find Tensorflow devices.")
+
+    # Define numpy and tensorflow matrices
+    # numpy matrices are exposed to user via ``from qibo import matrices``
+    # tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
+    from qibo.tensorflow import matrices as _matrices
+    matrices = _matrices.NumpyMatrices()
+    tfmatrices = _matrices.TensorflowMatrices()
+
+
+    def set_backend(backend='custom'):
+        """Sets backend used to implement gates.
+
+        Args:
+            backend (str): possible options are 'custom' for the gates that use
+                custom tensorflow operator and 'defaulteinsum' or 'matmuleinsum'
+                for the gates that use tensorflow primitives (``tf.einsum`` or
+                ``tf.matmul`` respectively).
+        """
+        if not ALLOW_SWITCHERS and backend != BACKEND['GATES']:
+            warnings.warn("Backend should not be changed after allocating gates.",
+                          category=RuntimeWarning)
+        if backend == 'custom':
+            BACKEND['GATES'] = 'custom'
+            BACKEND['EINSUM'] = None
+        elif backend == 'defaulteinsum':
+            from qibo.tensorflow import einsum
+            BACKEND['GATES'] = 'native'
+            BACKEND['EINSUM'] = einsum.DefaultEinsum()
+        elif backend == 'matmuleinsum':
+            from qibo.tensorflow import einsum
+            BACKEND['GATES'] = 'native'
+            BACKEND['EINSUM'] = einsum.MatmulEinsum()
+        else:
+            raise RuntimeError(f"Gate backend '{backend}' not supported.")
+
 
     def set_precision(dtype='double'):
         """Set precision for states and gates simulation.
@@ -66,6 +99,9 @@ if BACKEND_NAME == "tensorflow":
             dtype (str): possible options are 'single' for single precision
                 (complex64) and 'double' for double precision (complex128).
         """
+        if not ALLOW_SWITCHERS and dtype != DTYPES['STRING']:
+            warnings.warn("Precision should not be changed after allocating gates.",
+                          category=RuntimeWarning)
         if dtype == 'single':
             DTYPES['DTYPE'] = tf.float32
             DTYPES['DTYPECPX'] = tf.complex64
@@ -74,7 +110,36 @@ if BACKEND_NAME == "tensorflow":
             DTYPES['DTYPECPX'] = tf.complex128
         else:
             raise RuntimeError(f'dtype {dtype} not supported.')
-        matrices.allocate_gates()
+        DTYPES['STRING'] = dtype
+        matrices.allocate_matrices()
+        tfmatrices.allocate_matrices()
 
-else:
+
+    def set_device(device_name: str):
+        """Set default execution device.
+
+        Args:
+            device_name (str): Device name. Should follow the pattern
+                '/{device type}:{device number}' where device type is one of
+                CPU or GPU.
+        """
+        if not ALLOW_SWITCHERS and device_name != DEVICES['DEFAULT']: # pragma: no cover
+            warnings.warn("Device should not be changed after allocating gates.",
+                          category=RuntimeWarning)
+        parts = device_name[1:].split(":")
+        if device_name[0] != "/" or len(parts) != 2:
+            raise ValueError("Device name should follow the pattern: "
+                             "/{device type}:{device number}.")
+        device_type, device_number = parts[0], int(parts[1])
+        if device_type not in {"CPU", "GPU"}:
+            raise ValueError(f"Unknown device type {device_type}.")
+        if device_number >= len(DEVICES[device_type]):
+            raise ValueError(f"Device {device_name} does not exist.")
+
+        DEVICES['DEFAULT'] = device_name
+        with tf.device(device_name):
+            tfmatrices.allocate_matrices()
+
+
+else: # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
