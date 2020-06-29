@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo.config import matrices, K
+from qibo import matrices
+from qibo import K
 from abc import ABCMeta, abstractmethod
 
 
@@ -153,15 +154,15 @@ class XXZ(Hamiltonian):
     def __init__(self, delta=0.5, **kwargs):
         """Initialize XXZ model."""
         Hamiltonian.__init__(self, **kwargs)
-        hx = self._build(matrices._npX())
-        hy = self._build(matrices._npY())
-        hz = self._build(matrices._npZ())
+        hx = self._build(matrices.X)
+        hy = self._build(matrices.Y)
+        hz = self._build(matrices.Z)
         self.hamiltonian = hx + hy + delta * hz
 
     def _build(self, *args, **kwargs):
         """Builds the Heisenber model for a given operator sigma"""
         hamiltonian = 0
-        eye = matrices._npI()
+        eye = matrices.I
         n = self.nqubits
         for i in range(n):
             h = 1

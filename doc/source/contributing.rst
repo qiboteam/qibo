@@ -44,3 +44,4 @@ The current code standards that are applied to any new changes:
 
 - **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code.
 - **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
+- **Pylint**: Test code for anomalies, such as bad coding practices, missing documentation, unused variables.

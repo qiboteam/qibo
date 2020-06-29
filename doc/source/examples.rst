@@ -22,15 +22,21 @@ Here is an example of a circuit with 2 qubits:
     # Define an initial state (optional - default initial state is |00>)
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
-    final_state = c.execute(initial_state) # c(initial_state) also works
+    final_state = c(initial_state) # c.execute(initial_state) also works
     print(final_state.numpy())
     # should print `np.array([1, 0, 0, 0])`
 
-If you are planning to freeze the circuit and just query for different initial states then you can use the ``Circuit.compile`` method which will improve the evaluation performance, e.g.:
+If you are planning to freeze the circuit and just query for different initial
+states then you can use the ``Circuit.compile`` method which will improve
+evaluation performance, e.g.:
 
 .. code-block:: python
 
     import numpy as np
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    # (slower than default "custom" backend)
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo.models import Circuit
     from qibo import gates
 
@@ -43,6 +49,11 @@ If you are planning to freeze the circuit and just query for different initial s
     for i in range(100):
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
+
+Note that compiling is only supported when native tensorflow gates are used.
+This happens when the calculation backend is switched to ``"matmuleinsum"``
+or ``"defaulteinsum"``. This backend is much slower than the default ``"custom"``
+backend which uses custom tensorflow operators to apply gates.
 
 
 How to print a circuit summary?
@@ -97,6 +108,104 @@ has to specify which qubits can be used as free/work. For more information on
 this decomposition we refer to the related publication on
 `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_. Currently only the
 decomposition of multi-controlled ``X`` gates is implemented.
+
+
+.. _gpu-examples:
+How to execute circuits on GPU?
+-------------------------------
+
+If a GPU with CUDA support is available in the system and Tensorflow is installed
+for CUDA then circuits will be executed on the GPU automatically unless the user
+specifies otherwise. In order to force the device a circuit will be executed
+one can use:
+
+.. code-block::  python
+
+    with tf.device("/CPU:0"):
+        # execute circuit on CPU with default initial state |000...0>.
+        final_state = c()
+
+or switch the default QIBO device using ``qibo.set_device`` as:
+
+.. code-block::  python
+
+    import qibo
+    qibo.set_device("/CPU:0")
+    final_state = c() # circuit will now be executed on CPU
+
+The syntax of device names follows the pattern ``'/{device type}:{device number}'``
+where device type can be CPU or GPU and the device number is an integer that
+distinguishes multiple devices of the same type starting from 0. For more details
+we refer to `Tensorflow's tutorial <https://www.tensorflow.org/guide/gpu#manual_device_placement>`_
+on manual device placement.
+Alternatively, running the command ``CUDA_VISIBLE_DEVICES=""`` in a terminal
+hides GPUs from tensorflow. As a result, any program executed from the same
+terminal will run on CPU even if ``tf.device`` is not used.
+
+GPUs provide much faster execution compared to CPU but have limited memory.
+A standard 12-16GB GPU can simulate up to 30 qubits with single-precision
+or 29 qubits with double-precision when QIBO's default gates are used. If the
+used device runs out of memory during a circuit execution an error will be
+raised prompting the user to switch the default device using ``qibo.set_device``.
+
+QIBO supports distributed circuit execution on multiple GPUs. This feature can
+be used as follows:
+
+.. code-block::  python
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    # Define GPU configuration
+    accelerators = {"/GPU:0": 3, "/GPU:1": 1}
+    # this will use the first GPU three times and the second one time
+    # leading to four total logical devices
+    # construct the distributed circuit for 32 qubits
+    c = Circuit(32, accelerators, memory_device="/CPU:0")
+
+Gates can then be added normally using ``c.add`` and the circuit can be executed
+using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
+(if this is not passed the CPU will be used by default). This device does not perform
+any gate calculations but is used to store the full state. Therefore the
+distributed simulation is limited by the amount of CPU memory.
+
+Also, note that it is possible to reuse a single GPU multiple times increasing the number of
+"logical" devices in the distributed calculation. This allows users to execute
+circuits with more than 30 qubits on a single GPU by reusing several times using
+``accelerators = {"/GPU:0": ndevices}``. Such a simulation will still be limited
+by CPU memory only.
+
+For systems without GPUs, the distributed implementation can be used with any
+type of device. For example if multiple CPUs, the user can pass these CPUs in the
+accelerator dictionary.
+
+Distributed circuits are generally slower than using a single GPU due to communication
+bottleneck. However for more than 30 qubits (which do not fit in single GPU) and
+specific applications (such as the QFT) the multi-GPU scheme can be faster than
+using only CPU.
+
+For more details in the distributed implementation one can look in the related
+code: :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. When
+``models.Circuit`` is called then this distributed implementation is used automatically
+if the ``accelerators`` dictionary is passed, otherwise the standard single device
+:class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
+
+
+How to modify the simulation precision?
+---------------------------------------
+
+By default the simulation is performed in ``double`` precision (``complex128``).
+We provide the ``qibo.set_precision`` function to modify the default behaviour.
+Note that `qibo.set_precision` must be called before allocating circuits:
+
+.. code-block:: python
+
+        import qibo
+        qibo.set_precision("single") # enables complex64
+        # or
+        qibo.set_precision("double") # re-enables complex128
+
+        # ... continue with circuit creation and execution
 
 
 .. _measurement-examples:
@@ -170,29 +279,32 @@ the measurements and not the qubit ids.
 
 
 How to use callbacks?
------------------------------------
+---------------------
 
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
 implemented easily using :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
-as follows:
+and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 
 .. code-block::  python
 
     from qibo import models, gates, callbacks
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
     c.add(gates.H(0)) # state is |+0> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
     c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
     # create entropy callback where qubit 0 is the first subsystem
     entropy = callbacks.EntanglementEntropy([0])
     # execute the circuit using the callback
-    final_state = c(callback=entropy)
+    final_state = c()
 
 The results can be accessed using indexing on the callback objects. In this
-example ``entropy[0]`` will return ``tf.Tensor([0, 0, 1])`` which are the
+example ``entropy[:]`` will return ``tf.Tensor([0, 0, 1])`` which are the
 values of entropy after every gate in the circuit.
 
 The same callback object can be used in a second execution of this or a different
@@ -201,18 +313,13 @@ circuit. For example
 .. code-block::  python
 
     # c is the same circuit as above
-    entropy = callbacks.EntanglementEntropy([0])
-    # execute the circuit using the callback
-    final_state = c(callback=entropy)
-    # execute the circuit again using the same callback
-    final_state = c(callback=entropy)
+    # execute the circuit
+    final_state = c()
+    # execute the circuit a second time
+    final_state = c()
 
-    # print result of first execution
-    print(entropy[0]) # tf.Tensor([0, 0, 1])
-    # print result of second execution
-    print(entropy[1]) # tf.Tensor([0, 0, 1])
-    # print result of all executions
-    print(entropy[:]) # tf.Tensor([[0, 0, 1], [0, 0, 1]])
+    # print result
+    print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
 
 The callback for entanglement entropy can also be used on state vectors directly.
 For example
@@ -284,10 +391,10 @@ The user can choose one of the following methods for minimization:
     - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
     - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
-Note that if ``"sgd"`` is used then the user has to use native Tensorflow gates
-because custom operators currently do not support automatic differentiation.
-These gates can be accessed using ``from qibo.tensorflow import gates`` instead
-of ``from qibo import gates``.
+Note that if ``"sgd"`` is used then the user has to use a backend based on
+tensorflow primitives and not the default custom backend because custom operators
+currently do not support automatic differentiation. To switch the backend one
+can do ``qibo.set_backend("matmuleinsum")``.
 Check the next example on automatic differentiation for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
@@ -331,8 +438,11 @@ output matches a target state, using the fidelity as figure of merit.
 .. code-block:: python
 
     import tensorflow as tf
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo.models import Circuit
-    from qibo.tensorflow import gates
+    from qibo import gates
 
     nepochs = 100
     params = tf.Variable(np.zeros(2), dtype=tf.float64)
@@ -352,16 +462,14 @@ output matches a target state, using the fidelity as figure of merit.
 
 
 Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
-the calculated gradients will be ``None``. Also, native Tensorflow gates have to
-be used because currently our custom operators do not support automatic differentiation.
-These gates can be accessed using ``from qibo.tensorflow import gates`` instead
-of ``from qibo import gates``.
+the calculated gradients will be ``None``. Also, a backend that uses tensorflow
+primitives gates (either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be
+used because currently the default ``"custom"`` backend does not support automatic
+differentiation.
 
 The optimization procedure can also be compiled as follows:
 
 .. code-block:: python
-
-    import tensorflow as tf
 
     nepochs = 100
     params = tf.Variable(np.zeros(2), dtype=tf.float64)
@@ -372,8 +480,8 @@ The optimization procedure can also be compiled as follows:
     def optimize(params):
         with tf.GradientTape() as tape:
             c = Circuit(2)
-            c.add(RX(0, params[0]).with_backend("MatmulEinsum"))
-            c.add(RY(0, params[1]).with_backend("MatmulEinsum"))
+            c.add(RX(0, params[0]))
+            c.add(RY(0, params[1]))
             fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
 
@@ -400,6 +508,9 @@ the initial state. For example
 
 .. code-block:: python
 
+    import qibo
+    # switch backend to "matmuleinsum" or "defaulteinsum"
+    qibo.set_backend("matmuleinsum")
     from qibo import models, gates
 
     # Define circuit
@@ -420,6 +531,9 @@ will perform the transformation
 
 .. math::
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
+
+Note that the calculation backend was switched to ``"matmuleinsum"`` because the
+default ``"custom"`` backend does not support density matrices.
 
 The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
 If this or any other channel is used in a ``Circuit``, then the execution will automatically
@@ -530,6 +644,8 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
+<<<<<<< HEAD
+=======
 
 
 How to modify the simulation precision?
@@ -547,3 +663,4 @@ Note that `qibo.set_precision` must be called before allocating circuits:
         qibo.set_precision("double") # re-enables complex128
 
         # ... continue with circuit creation and execution
+>>>>>>> master

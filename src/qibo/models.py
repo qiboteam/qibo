@@ -1,21 +1,51 @@
 from qibo.config import BACKEND_NAME
-if BACKEND_NAME == "tensorflow":
-    from qibo.tensorflow.circuit import TensorflowCircuit as Circuit
-else:
+if BACKEND_NAME != "tensorflow":
     raise NotImplementedError("Only Tensorflow backend is implemented.")
+from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
+from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
+from typing import Dict, Optional
 
 
-def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
+class Circuit(DistributedCircuit):
+    """Factory class for circuits.
+
+    Creates both normal and distributed circuits.
+    """
+
+    def __new__(cls, nqubits: int,
+                accelerators: Optional[Dict[str, int]] = None,
+                memory_device: str = "/CPU:0"):
+        if accelerators is None:
+            return SimpleCircuit(nqubits)
+        else:
+            return DistributedCircuit(nqubits, accelerators, memory_device)
+
+    @classmethod
+    def from_qasm(cls, qasm_code: str,
+                  accelerators: Optional[Dict[str, int]] = None,
+                  memory_device: str = "/CPU:0"):
+      if accelerators is None:
+          return SimpleCircuit.from_qasm(qasm_code)
+      else:
+          return DistributedCircuit.from_qasm(qasm_code,
+                                              accelerators=accelerators,
+                                              memory_device=memory_device)
+
+
+def QFT(nqubits: int, with_swaps: bool = True,
+        accelerators: Optional[Dict[str, int]] = None,
+        memory_device: str = "/CPU:0") -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
         nqubits (int): Number of qubits in the circuit.
         with_swaps (bool): Use SWAP gates at the end of the circuit so that the
             qubit order in the final state is the same as the initial state.
-        gates: Which gates module will be used.
-            The user can choose between the native tensorflow gates (:class:`qibo.tensorflow.gates`)
-            or the gates that use custom operators (:class:`qibo.tensorflow.cgates`).
-            If ``gates`` is ``None`` then custom gates will be used.
+        accelerators (dict): Accelerator device dictionary in order to use a
+            distributed circuit
+            If ``None`` a simple (non-distributed) circuit will be used.
+        memory_device (str): Device to use for memory in case a distributed circuit
+            is used. Ignored for non-distributed circuits.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -33,22 +63,56 @@ def QFT(nqubits: int, with_swaps: bool = True, gates=None) -> Circuit:
             # Execute the circuit
             final_state = c(init_state)
     """
+    if accelerators is not None:
+        if not with_swaps:
+            raise NotImplementedError("Distributed QFT is only implemented "
+                                      "with SWAPs.")
+        return _DistributedQFT(nqubits, accelerators, memory_device)
+
     import numpy as np
-    if gates is None:
-        from qibo import gates
+    from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1))
-        m = 2
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (m - 1)
+            theta = np.pi / 2 ** (i2 - i1)
             circuit.add(gates.CZPow(i2, i1, theta))
-            m += 1
 
     if with_swaps:
         for i in range(nqubits // 2):
             circuit.add(gates.SWAP(i, nqubits - i - 1))
+
+    return circuit
+
+
+def _DistributedQFT(nqubits: int,
+                    accelerators: Optional[Dict[str, int]] = None,
+                    memory_device: str = "/CPU:0") -> DistributedCircuit:
+    """QFT with the order of gates optimized for reduced multi-device communication."""
+    import numpy as np
+    from qibo import gates
+
+    circuit = Circuit(nqubits, accelerators, memory_device)
+    icrit = nqubits // 2 + nqubits % 2
+    if accelerators is not None:
+        circuit.global_qubits = range(circuit.nlocal, nqubits)
+        if icrit < circuit.nglobal:
+            raise NotImplementedError("Cannot implement QFT for {} qubits "
+                                      "using {} global qubits."
+                                      "".format(nqubits, circuit.nglobal))
+
+    for i1 in range(nqubits):
+        if i1 < icrit:
+            i1eff = i1
+        else:
+            i1eff = nqubits - i1 - 1
+            circuit.add(gates.SWAP(i1, i1eff))
+
+        circuit.add(gates.H(i1eff))
+        for i2 in range(i1 + 1, nqubits):
+            theta = np.pi / 2 ** (i2 - i1)
+            circuit.add(gates.CZPow(i2, i1eff, theta))
 
     return circuit
 
@@ -103,7 +167,7 @@ class VQE(object):
             if not circuit.using_tfgates:
                 raise RuntimeError("Cannot compile VQE that uses custom operators. "
                                    "Set the compile flag to False.")
-            from qibo.config import K
+            from qibo import K
             loss = K.function(loss)
 
         if method == 'cma':
@@ -131,7 +195,7 @@ class VQE(object):
                 sgd_options.update(options)
 
             # proceed with the training
-            from qibo.config import K
+            from qibo import K
             vparams = K.Variable(initial_state)
             optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
               learning_rate=sgd_options["learning_rate"])

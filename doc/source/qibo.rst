@@ -43,6 +43,9 @@ General purpose models
 .. autoclass:: qibo.tensorflow.circuit.TensorflowCircuit
     :members:
     :member-order: bysource
+.. autoclass:: qibo.tensorflow.distcircuit.TensorflowDistributedCircuit
+    :members:
+    :member-order: bysource
 
 
 .. _applicationspecific:
@@ -152,7 +155,9 @@ propagates through the circuit. Example of such quantity is the entanglement
 entropy, which is currently the only callback implemented in
 :class:`qibo.tensorflow.callbacks.EntanglementEntropy`.
 The user can create custom callbacks by inheriting the
-:class:`qibo.tensorflow.callbacks.Callback` class.
+:class:`qibo.tensorflow.callbacks.Callback` class. The point each callback is
+calculated inside the circuit is defined by adding a :class:`qibo.base.gates.CallbackGate`.
+This can be added similarly to a standard gate and does not affect the state vector.
 
 .. automodule:: qibo.tensorflow.callbacks
    :members:
@@ -167,20 +172,21 @@ Backends
 QIBO currently uses two different backends for applying gates to vectors.
 The default backend uses custom Tensorflow operators defined under
 ``tensorflow/custom_operators`` to apply gates to state vectors. These
-operators are much faster than implementations based on Tensorflow
-primitives and are used by default by ``qibo.gates``.
-The custom operators do not support the following:
+operators are much faster than implementations based on Tensorflow.
+Currently custom operators do not support the following:
 
-* GPU. If Tensorflow detects a GPU device then ``qibo.gates`` will fall back to
-  the gate implementation that uses Tensorflow primitives.
 * Density matrices, channels and noise.
 * Automatic differentiation for backpropagation of variational circuits.
 
-If the user needs to use density matrices or automatic differentiation then the
-gates that use Tensorflow primitives have to be used. These gates are accessible
-via ``qibo.tensorflow.gates`` instead of ``qibo.gates``. All gates added in a circuit should use the same backend. Gates based on Tensorflow
-primitives are described bellow.
+It is possible to use these features in QIBO by using a backend that uses
+Tensorflow primitives. There are two such backends available: the ``"defaulteinsum"``
+backend based on ``tf.einsum`` and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
+The user can switch backends using
 
-.. automodule:: qibo.tensorflow.einsum
-   :members:
-   :member-order: bysource
+.. code-block::  python
+
+    import qibo
+    qibo.set_backend("matmuleinsum")
+
+before creating any circuits or gates. The default backend is ``"custom"`` and
+uses the custom Tensorflow operators.
