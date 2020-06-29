@@ -11,11 +11,22 @@ from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 import os
 
-np.random.seed(0)
 
 class single_qubit_classifier:
-    def __init__(self, name, layers, grid=11, test_samples=1000):
-        #Circuit.__init__(self, nqubits)
+    def __init__(self, name, layers, grid=11, test_samples=1000, seed=0):
+        """Class with all computations needed for classification.
+            Args:
+                name (str): Name of the problem to create the dataset, to choose between ['circle', '3 circles', 'square',
+                                                                    '4 squares', 'crown', 'tricrown', 'wavy lines']
+                layers (int): Number of layers to use in the classifier
+                grid (int): Number of points in one direction defining the grid of points. If not specified, the dataset
+                            does not follow a regular grid.
+                samples (int): Number of points in the set, randomly located. This argument is ignored if grid is specified.
+                seed (0): Random seed
+            Returns:
+                Dataset for the given problem (x, y)
+        """
+        np.random.seed(seed)
         self.name = name
         self.layers = layers
         self.training_set = create_dataset(name, grid=grid)
@@ -29,11 +40,21 @@ class single_qubit_classifier:
             pass
 
     def set_parameters(self, new_params):
+        """Method for updating parameters of the class.
+            Args:
+                new_params (array): New parameters to update
+        """
+
         self.params = new_params
 
     def circuit(self, x):
+        """Method creating the circuit for a point (in the datasets)
+            Args:
+                x (array): Point to create the circuit
+            return:
+                Qibo circuit
+        """
         C = Circuit(1)
-        # x = x.transpose()
         index = 0
         for l in range(self.layers):
             C.add(gates.RY(0, self.params[index] * x[0] + self.params[index + 1]))
@@ -43,12 +64,28 @@ class single_qubit_classifier:
         return C
 
     def cost_function_one_point_fidelity(self, x, y):
+        """Method for computing the cost function for a given sample (in the datasets), using fidelity
+            Args:
+                x (array): Point to create the circuit
+                y (int): label of x
+            return:
+                float with the cost function
+        """
         C = self.circuit(x)
         state = C.execute()
         cf = .5 * (1 - fidelity(state, self.target[y])) ** 2
         return cf
 
-    def cost_function_fidelity(self, params):
+    def cost_function_fidelity(self, params=None):
+        """Method for computing the cost function for the training set, using fidelity
+            Args:
+                params(array): new parameters to update before computing
+            return:
+                float with the cost function
+        """
+        if params is None:
+            params = self.params
+
         self.set_parameters(params)
         cf = 0
         for x, y in zip(self.training_set[0], self.training_set[1]):
@@ -188,6 +225,11 @@ class single_qubit_classifier:
         return result, parameters
 
     def eval_test_set_fidelity(self):
+        """Method for evaluating points in the training set, using fidelity
+            Args:
+            return:
+                list of guesses
+        """
         labels = [[0]] * len(self.test_set[0])
         for j, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
@@ -201,6 +243,12 @@ class single_qubit_classifier:
 
 
     def paint_results(self):
+        """Method for plotting the guessed labels and the right guesses
+            Args:
+
+            return:
+                plot with results
+        """
         fig, axs = fig_template(self.name)
         guess_labels = self.eval_test_set_fidelity()
         colors_classes = get_cmap('tab10')
@@ -218,6 +266,12 @@ class single_qubit_classifier:
 
 
     def paint_world_map(self):
+        """Method for plotting the proper labels on the Bloch sphere
+            Args:
+
+            return:
+                plot with 2D representation of Bloch sphere
+        """
         angles = np.zeros((len(self.test_set[0]), 2))
         from datasets import laea_x, laea_y
         fig, ax = world_map_template()
