@@ -6,8 +6,8 @@ import pickle
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--name", default='wavy_lines', help="Name of the example", type=str)
-parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
+parser.add_argument("--name", default='crown', help="Name of the example", type=str)
+parser.add_argument("--layers", default=2, help="Number of layers.", type=int)
 
 def main(name, layers):
     """Perform classification for a given problem and number of layers
