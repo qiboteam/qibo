@@ -441,7 +441,7 @@ def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
         T (real): maturity time.
 
     Returns:
-        image of the probability histogram in a .pdf file.
+        image of the probability histogram in a .png file.
     """
     from scipy.integrate import trapz
     mu = (r - 0.5 * sig ** 2) * T + np.log(S0)
@@ -460,7 +460,7 @@ def paint_prob_distribution(bins, prob_sim, S0, sig, r, T):
     plt.title('Option price distribution for {} qubits '.format(bins))
     ax.legend()
     fig.tight_layout()
-    fig.savefig('Probability distribution.pdf')
+    fig.savefig('Probability_distribution.png')
 
 
 def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
@@ -475,7 +475,7 @@ def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
         alpha (real): confidence interval.
 
     Returns:
-        images of the results and uncertainties of performing amplitude estimation up to M times in .pdf format.
+        images of the results and uncertainties of performing amplitude estimation up to M times in .png format.
     """
     S0, sig, r, T, K = data
     values, pdf = get_pdf(bins, S0, sig, r, T)
@@ -491,7 +491,7 @@ def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
     ax.set(ylim=[0.15, 0.17])
     ax.legend()
     fig.tight_layout()
-    fig.savefig('Amplitude Estimation Results.pdf')
+    fig.savefig('Amplitude_Estimation_Results.png')
     from scipy.special import erfinv
     z = erfinv(1 - alpha / 2)
     fig, bx = plt.subplots()
@@ -506,7 +506,7 @@ def paint_AE(a, a_conf, bins, M, data, shots=10000, alpha = 0.05):
     bx.legend()
     bx.set(yscale='log')
     fig.tight_layout()
-    fig.savefig('Amplitude Estimation Uncertainties.pdf')
+    fig.savefig('Amplitude_Estimation_Uncertainties.png')
 
 
 def amplitude_estimation(bins, M, data, shots=10000):
