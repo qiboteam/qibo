@@ -71,7 +71,7 @@ larger than the optimal quantum uncertainties. The reason is that the depth of t
 linearly, in order to control de errors in the circuit. 
 
 The ultimate strength of this algorithm is its resilience to errors in the circuit. The figure below describes the errors
-obtained for our algorithm as compared to the method proposed in [arXiv:1905.02666](https://arxiv.org/abs/1905.02666)
+obtained for our algorithm (left) as compared to the method proposed in [arXiv:1905.02666](https://arxiv.org/abs/1905.02666) (right)
 when noise is considered for 8 bins. 
 
 <img src="unary_AE.png" width="300px"> <img src="binary_AE.png" width="300px">
