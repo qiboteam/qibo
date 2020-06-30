@@ -1,31 +1,77 @@
-# Quantum unary approacih to option pricing
+# Quantum unary approach to option pricing
 
-Based in the paper [arXiv:1912.01618](https://arxiv.org/abs/1912.01618). Here a quick explanation is given.
-For further details and references, go to the original source.
+Based in the paper [arXiv:1912.01618](https://arxiv.org/abs/1912.01618). In this `README.md` file you can see a short
+set of instructions for the usage of the example. 
 
-## Introduction
+#### What this example does?
 
-Quantum computing provides new strategies to address problems that nowadays are considered difficult to solve by 
-classical means. The first quantum algorithms showing a theoretical advantage over their classical counterparts are 
-known since the 1990s.
-Nevertheless, current quantum devices are not powerful enough to run quantum algorithms that are able to compete against
-state-of-the-art classical algorithms. Indeed, available quantum computers are in their Noisy Intermediate-Scale 
-Quantum (NISQ) stage, as errors due to decoherence, noisy gate application or error read-out limit the performance of 
-these new machines. These NISQ devices may nonetheless be useful tools for a variety of applications due to the 
-introduction of hybrid variational methods. Some exact, non-variational, quantum algorithms are also well suited for NISQ devices. 
+This example provides a new strategy to compute the expected payoff of a given (European) option using quantum computing. 
+It is based on three previous results:
+- the Black-Scholes model, a classical model that models the behavior of an asset in the market
+- Amplitude Estimation, a quantum procedure to estimate the probability of obtaining some outcomes from a quantum circuit,
+providing quantum advantage
+- option pricing in quantum computers, a previous paper [arXiv:1905.02666](https://arxiv.org/abs/1905.02666)
 
-A field that is expected to be transformed by the improvement of quantum devices is quantitative finance. In recent 
-years, there has been a surge of new methods and algorithms dealing with financial problems using quantum resources, 
-such as optimization problems, which are in general hard.
+The main feature of this procedure is to use the unary encoding of prices, that is, we work in the subspace of the 
+Hilbert space where only one qubit is in the |1> state. This allows for a simplification of the circuit and resilience 
+against errors, what makes the algorithm more suitable for NISQ devices. In contradistinction, it has an exponential 
+overhead in the number of qubits as compared to the standard approaches. That makes our algorithm more efficient only when the problem is not 
+very large.
 
-Notably, pricing of financial derivatives is a prominent problem, where many of its computational obstacles are suited 
-to be overcome via quantum computation. In this example we will deal with options, which are a particular type of 
-financial derivatives. Options are contracts that allow the holder to buy (__call__) or sell (__put__) some asset at a pre-established price (\textit{strike}), or at a future point in time (\textit{maturity date}). The payoff of an option depends on the evolution of the asset's price, which follows a stochastic process. A simple, yet successful model for pricing options is the Black-Scholes model \cite{blackscholes-black1973}. This is an analytically-solvable model that predicts the asset's price evolution to follow a log-normal probability distribution, at a future time $t$. Then, a specified payoff function, which depends on the particular option considered, has to be integrated over this distribution to obtain the expected return of the option. Current classical algorithms rely on computationally-costly Monte Carlo simulations to estimate the expected return of options.
+The algorithm is divided in three steps. First, the probability distribution as computed in the Black-Scholes model is 
+loaded into the quantum circuit by means of an exact circuit using *iSWAP* gates. Then, the payoff is computed by applying
+some controlled rotations on an ancilla qubit. Amplitude Estimation can be applied if the algorithm is applied and reversed
+together with some extra operations to achieve quantum advantage. 
 
-A few quantum algorithms have been proposed to improve on classical option pricing \cite{qfinance-stamatopoulos2019, qfinance-rebentrost2018, qfinance-woerner2019}. It has been shown that quantum computers can provide a quadratic speedup in the number of quantum circuit runs as compared to the number of classical Monte Carlo runs needed to reach a certain precision in the estimation. The basic idea is to exploit quantum Amplitude Estimation \cite{amplitude_estimation-brassard2002, counting-aaronson2019, montecarlo-montanaro2015quantum}. Nonetheless, this can only be achieved when an efficient way of loading the probability distribution of the asset price is available. The idea of using quantum Generative Adversarial Networks (qGANs) \cite{qGAN-lloyd2018, qGAN-dallaire2018} to address this issue has been analyzed \cite{qGAN-zoufal2019}.
+#### Usage
+In this example there are only three files
+- `aux_functions.py` contains the classical functions that are needed to run the experiment.
+- `functions.py` encodes all quantum circuits and procedures needed to run the circuits.
+- `main.py` is the file calling all other functions. The action of every line of code is commented in the source code. 
 
-In the following, we propose a quantum algorithm for option pricing. The key new idea is to construct a quantum circuit that works in the unary basis of the asset's value, \ie in a subspace of the full Hilbert space of $n$ qubits. Then, the evolution of the asset's price is computed using an amplitude distributor module. Furthermore, the computation of the payoff greatly simplifies. A third part of the algorithm is common to previous approaches, namely it uses Amplitude Estimation. The unary scheme brings further advantage since it allows for a post-selection strategy that results in error mitigation. Let us recall that error mitigation techniques are likely to be crucial for the success of quantum algorithms in the NISQ era. On the negative side, the number of qubits in the unary algorithm scales linearly with the number of bins, while in the binary algorithm it is logarithmic with the target precision. This results in a worse asymptotic scaling for the unary algorithm. Yet, our estimates for the number of gates indicate that the crossing point between these two is located at a number of qubits that renders a good precision ($< 1\%$) for real-world applications. Moreover, the performance of the unary algorithm is more robust to noise, as we show in simulations. Hence, our proposal seems to be better suited to be run on NISQ devices. Unary representations have also been considered in previous works \cite{spectral-poulin2018, babbush2018,steudtner2019}.
+The parameters to be fixed for a run of the experiment are
+- S0: initial price of the asset
+- K: strike of the European option
+- sig: volatility of the asset
+- r: interest rate of the asset
+- T: maturity date
+- shots: number of times the quantum experiments are ran
+- bins: number of bins (qubits) used for the experiment
+- max_m: number of applications of the Q operator in Amplitude Estimation for the last step, increasing linearly (see 
+the original paper for more details)
 
-We will illustrate our new algorithm focusing on a simple European option, whose payoff is a function of only the asset's price at maturity date, the only date the contract can be executed at. This straightforward example has been chosen as a proof of concept for this new approach. We will compare the performance of our unary quantum circuit with the previous binary quantum circuit proposal, for a fixed precision or binning of the probability distribution.
+#### Results
 
-The paper is organized as follows. We first introduce the basic ideas on option pricing, both classical and quantum, in Sec. \ref{sec:background}. The unary quantum algorithm is presented and analyzed in Sec. \ref{sec:unary}. We devote Sec. \ref{sec:un-vs-bin} to outline the circuit specifications and compare them for the unary and binary quantum algorithms. Sec. \ref{sec:simulations} is dedicated to describe the results obtained by means of classical simulations for both algorithms. Lastly, conclusions are drawn in Sec. \ref{sec:conclusions}. Further details on several topics are described in the Appendices.
+Three different results are presented in this example. First, it is shown how the amplitude distributor fits the predictions
+of the Black-Scholes model. As more qubits are added to the simulation, the approximation gets closer to the classical prediction.
+ 
+<img src="Probability_distribution.pdf" width="510px">
+
+The second result is printed in the console after every run of the example. It returns the exact classical value of the 
+expected payoff, the expected payoff ret<img src="Probability_distribution.png" width="510px">urned in the quantum experiment and the percentage error. 
+```
+Exact value of the expected payoff:      0.15950474339651186
+
+Expected payoff from quantum simulation: 0.16071698625159084
+
+Percentage error: 0.7600042664972508 %
+```
+
+Finally, results in amplitude estimation are provided. 
+
+First, it is clear to see how the expected results converge to the 
+optimal quantum result. Notice that the optimal quantum result is not exactly the exact classical value. This is due to 
+discretization errors. 
+
+<img src="Amplitude_Estimation_Uncertainties.pdf" width="510px">
+
+Second, it is worthy to study how the uncertainties in the outcomes evolve with the number of Amplitude Estimation 
+iterations. Here it is depicted how these uncertainties are always lower than the classical standard Monte Carlo ones, but
+larger than the optimal quantum uncertainties. The reason is that the depth of the circuit is controlled to increase
+linearly, in order to control de errors in the circuit. 
+
+The ultimate strength of this algorithm is its resilience to errors in the circuit. The figure below describes the errors
+obtained for our algorithm as compared to the method proposed in [arXiv:1905.02666](https://arxiv.org/abs/1905.02666)
+when noise is considered for 8 bins. 
+
+<img src="unary_AE.pdf" width="510px"> <img src="binary_AE.pdf" width="510px">
