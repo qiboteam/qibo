@@ -17,7 +17,9 @@ for noiseless devices. The circuit is just
 
 <img src="circuit.png" width="410px">
 
-with <img src="canonical.png" width="200px">. The tangle is computed through <img src="tangle.png" width="200px">
+with <img src="canonical.png" width="400px">. 
+
+The tangle is computed through <img src="tangle.png" width="250px">
 
 #### Usage
 In this example there are only two files
