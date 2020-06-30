@@ -18,7 +18,7 @@ To run a particular instance of the problem we have to set up the initial argume
 - problem_hamiltonian (qibo.hamiltonians): problem hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
 ## Results
-A legitimate question is how accurate a variational circuit can be, and how close can the state we extract by running a AAVQE on our set of quantum circuits get to exact ground state of the system. Since we are dealing with finite systems, the Hamiltonians we are considering always have a gap (at least proportional to 1/n). We can bound the distance from our trial wave-function to the exact groundstate with the difference on the energies ε = (E<sub>AAVQE</sub> - E<sub>0</sub>).   We will use this error in the ground state energy as a measure of the quality of the circuit. 
+A legitimate question is how accurate a variational circuit can be, and how close can the state we extract by running a AAVQE on our set of quantum circuits get to exact ground state of the system. Since we are dealing with finite systems, the Hamiltonians we are considering always have a gap (at least proportional to 1/n). We can bound the distance from our trial wave-function to the exact ground state with the difference on the energies ε = (E<sub>AAVQE</sub> - E<sub>0</sub>).   We will use this error in the ground state energy as a measure of the quality of the circuit. 
 
 We may begin by considering the results for λ=10 in the Ising model. Notice that we can obtain the ground state in this regime in perturbation theory. Using the perturbation theory in the form of a continuous unitary transformation, we expect that the precision of our ansatz will scale exponentially with the number of layers. Our expectations are confirmed in the numerical results:
 
