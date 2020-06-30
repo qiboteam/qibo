@@ -4,11 +4,6 @@ import functions
 import argparse
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default=10, type=int)
-args = vars(parser.parse_args())
-
-
 def main(file_name):
     """Grover search for the instance defined by the file_name.
     Args:
@@ -33,5 +28,9 @@ def main(file_name):
         print('Exact cover solution:  {}\n'.format(''.join(solution)))
 
 
-file_name = 'n{}.txt'.format(args.get('nqubits'))
-main(file_name)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--nqubits", default=10, type=int)
+    args = vars(parser.parse_args())
+    file_name = 'n{}.txt'.format(args.get('nqubits'))
+    main(file_name)
