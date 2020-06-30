@@ -288,9 +288,14 @@ class single_qubit_classifier:
 
         angles_0 = np.zeros(len(self.target))
         angles_1 = np.zeros(len(self.target))
-        for i, state in enumerate(self.target):
-            angles_0[i] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
-            angles_1[i] = np.angle(state[1] / state[0])
+        if len(self.target) == 2:
+            angles_0[0] = np.pi / 2
+            angles_0[1] = -np.pi / 2
+            i = 1
+        else:
+            for i, state in enumerate(self.target):
+                angles_0[i] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
+                angles_1[i] = np.angle(state[1] / state[0])
 
         ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=list(range(i + 1)),
                        cmap=colors_classes, s=500, norm=norm_class, marker='P')

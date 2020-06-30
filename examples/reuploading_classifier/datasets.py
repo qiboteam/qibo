@@ -74,7 +74,7 @@ def fig_template(name):
     elif name == 'square':
         p = .5 * np.sqrt(2)
         for ax in axs:
-            ax.plot([-p, p, p, -p], [-p, -p, p, p], color='black', zorder=10)
+            ax.plot([-p, p, p, -p, -p], [-p, -p, p, p, -p], color='black', zorder=10)
 
     elif name == '4_squares':
         for ax in axs:
@@ -99,8 +99,8 @@ def fig_template(name):
             return -s + np.sin(freq * np.pi * s)
         x = np.linspace(-1, 1)
         for ax in axs:
-            ax.plot(x, fun1(x), color='black', zorder=10)
-            ax.plot(x, fun2(x), color='black', zorder=10)
+            ax.plot(x, np.clip(fun1(x), -1, 1), color='black', zorder=10)
+            ax.plot(x, np.clip(fun2(x), -1, 1), color='black', zorder=10)
 
     axs[0].set(xlabel=r'$x_0$', ylabel=r'$x_1$', xlim=[-1, 1], ylim=[-1, 1])
     axs[0].axis('equal')
@@ -180,7 +180,7 @@ def laea_y(lamb, phi):
 
 def _circle(points):
     labels = np.zeros(len(points), dtype=np.int32)
-    ids = np.where(np.linalg.norm(points) > np.sqrt(2 / np.pi))
+    ids = np.where(np.linalg.norm(points, axis=1) > np.sqrt(2 / np.pi))
     labels[ids] = 1
 
     return points, labels
@@ -191,7 +191,7 @@ def _3_circles(points):
     radii = np.array([1, np.sqrt(6 / np.pi - 1), 1 / 2])
     labels = np.zeros(len(points), dtype=np.int32)
     for j, (c, r) in enumerate(zip(centers, radii)):
-        ids = np.where(np.linalg.norm(points - c) < r)
+        ids = np.where(np.linalg.norm(points - c, axis=1) < r)
         labels[ids] = 1 + j
 
     return points, labels
@@ -206,11 +206,11 @@ def _square(points):
 
 def _4_squares(points):
     labels = np.zeros(len(points), dtype=np.int32)
-    ids = np.where(np.logical_and(points[:, 1] < 0, points[:, 1] > 0))
+    ids = np.where(np.logical_and(points[:, 0] < 0, points[:, 1] > 0))
     labels[ids] = 1
-    ids = np.where(np.logical_and(points[:, 1] > 0, points[:, 1] < 0))
+    ids = np.where(np.logical_and(points[:, 0] > 0, points[:, 1] < 0))
     labels[ids] = 2
-    ids = np.where(np.logical_and(points[:, 1] > 0, points[:, 1] > 0))
+    ids = np.where(np.logical_and(points[:, 0] > 0, points[:, 1] > 0))
     labels[ids] = 3
 
     return points, labels
