@@ -63,12 +63,14 @@ First, it is clear to see how the expected results converge to the
 optimal quantum result. Notice that the optimal quantum result is not exactly the exact classical value. This is due to 
 discretization errors. 
 
-<img src="Amplitude_Estimation_Uncertainties.png" width="510px">
+<img src="Amplitude_Estimation_Results.png" width="510px">
 
 Second, it is worthy to study how the uncertainties in the outcomes evolve with the number of Amplitude Estimation 
 iterations. Here it is depicted how these uncertainties are always lower than the classical standard Monte Carlo ones, but
 larger than the optimal quantum uncertainties. The reason is that the depth of the circuit is controlled to increase
 linearly, in order to control de errors in the circuit. 
+
+<img src="Amplitude_Estimation_Uncertainties.png" width="510px">
 
 The ultimate strength of this algorithm is its resilience to errors in the circuit. The figure below describes the errors
 obtained for our algorithm (left) as compared to the method proposed in [arXiv:1905.02666](https://arxiv.org/abs/1905.02666) (right)
