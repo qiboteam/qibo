@@ -48,7 +48,7 @@ of the Black-Scholes model. As more qubits are added to the simulation, the appr
 <img src="Probability_distribution.png" width="510px">
 
 The second result is printed in the console after every run of the example. It returns the exact classical value of the 
-expected payoff, the expected payoff ret<img src="Probability_distribution.png" width="510px">urned in the quantum experiment and the percentage error. 
+expected payoff, the expected payoff returned in the quantum experiment and the percentage error. 
 ```
 Exact value of the expected payoff:      0.15950474339651186
 
