@@ -24,6 +24,15 @@ class TensorflowGate(base_gates.Gate):
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
 
+    def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
+        if self.qubits != other.qubits:
+            raise NotImplementedError("Cannot multiply gates that target "
+                                      "different qubits.")
+        matrix1 = self.construct_unitary(*self.unitary_params)
+        matrix2 = other.construct_unitary(*other.unitary_params)
+        gate = Unitary(tf.matmul(matrix1, matrix2), *self.qubits)
+        return gate
+
     def _prepare(self):
         """Prepares the gate for application to state vectors.
 
@@ -325,9 +334,9 @@ class fSim(MatrixGate, base_gates.fSim):
     def construct_unitary(theta, phi):
         dtype = DTYPES.get("DTYPECPX")
         th = tf.cast(theta, dtype=dtype)
-        I = tf.eye(2, dtype=dtype)
-        X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
-        rotation = tf.cos(th) * I - 1j * tf.sin(th) * X
+        eyemat = tf.eye(2, dtype=dtype)
+        xmat = tf.cast([[0, 1], [1, 0]], dtype=dtype)
+        rotation = tf.cos(th) * eyemat - 1j * tf.sin(th) * xmat
         phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
         matrix = tf.eye(4, dtype=dtype)
         matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])

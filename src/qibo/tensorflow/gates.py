@@ -32,6 +32,10 @@ class TensorflowGate(base_gates.Gate):
         rank = int(np.log2(int(matrix.shape[0])))
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
+    def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
+        from qibo.tensorflow import cgates
+        return cgates.TensorflowGate.__matmul__(self, other)
+
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
         """Sets the number of qubit that this gate acts on.
