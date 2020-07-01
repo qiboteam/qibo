@@ -106,3 +106,20 @@ def test_fuse_queue_variational_layer(nqubits=6):
         assert group.gates0 == [[], []]
         assert group.gates1 == [[], []]
         assert group.two_qubit_gates == [(queue3[i], False)]
+
+
+def test_fused_gate_calculation():
+    group = fusion.FusionGroup()
+    group.add(gates.H(0))
+    group.add(gates.H(1))
+    group.add(gates.CNOT(0, 1))
+
+    assert len(group.fused_gates)
+    gate = group.fused_gates[0]
+
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
+                     [0, 0, 1, 0]])
+    target_matrix = cnot @ np.kron(h, h)
+
+    np.testing.assert_allclose(gate.unitary, target_matrix)

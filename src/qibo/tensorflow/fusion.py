@@ -1,7 +1,9 @@
 import functools
 import operator
+import tensorflow as tf
 from qibo.base import gates
-from typing import List, Set
+from qibo.config import DTYPES
+from typing import List, Optional, Set, Tuple
 
 
 class FusionGroup:
@@ -38,7 +40,7 @@ class FusionGroup:
         self.two_qubit_gates = [] # list of tuples (gate, revert flag)
 
         self.special_gate = None
-        self._fused_gate = None
+        self._fused_gates = None
 
     @property
     def qubits(self) -> Set[int]:
@@ -49,14 +51,26 @@ class FusionGroup:
         return {self.qubit0, self.qubit1}
 
     @property
-    def gate(self) -> gates.Gate:
-        if self._fused_gate is None:
-            self.calculate_fused_gate()
-        return self._fused_gate
+    def fused_gates(self) -> Tuple[gates.Gate]:
+        if self._fused_gates is None:
+            self._fused_gates = self.calculate_fused_gates()
+        return self._fused_gates
+
+    @property
+    def module(self):
+        if self.gates0[0]:
+            return self.gates0[0][0].module
+        if self.gates1[0]:
+            return self.gates1[0][0].module
+        if self.two_qubit_gates:
+            return self.two_qubit_gates[0].module
+        if self.special_gate is not None:
+            return self.special_gate.module
+        raise ValueError("Unable to find gate module.")
 
     def add(self, gate: gates.Gate):
         """Adds a gate in the group."""
-        if self._fused_gate is not None:
+        if self._fused_gates is not None:
             raise RuntimeError("Cannot add gates to ``FusionGroup`` for "
                                "which the fused gate was already calculated.")
 
@@ -114,14 +128,53 @@ class FusionGroup:
         self.gates0.append([])
         self.gates1.append([])
 
-    def calculate_fused_gate(self):
+    def _one_qubit_matrix(self, gate0: gates.Gate, gate1: gates.Gate) -> tf.Tensor:
+        """Calculates 4x4 Kroneker product of one qubit gate unitary matrices."""
+        if gate0 == 1:
+            matrix0 = tf.eye(2, dtype=DTYPES.get('DTYPECPX'))
+        else:
+            matrix0 = gate0.construct_unitary(*gate0.unitary_params)
+
+        if gate1 == 1:
+            matrix1 = tf.eye(2, dtype=DTYPES.get('DTYPECPX'))
+        else:
+            matrix1 = gate1.construct_unitary(*gate1.unitary_params)
+
+        matrix = tf.tensordot(matrix0, matrix1, axes=0)
+        matrix = tf.reshape(tf.transpose(matrix, [0, 2, 1, 3]), (4, 4))
+        return matrix
+
+    def _two_qubit_matrix(self, gate: Optional[gates.Gate] = None,
+                          revert: bool = False) -> tf.Tensor:
+        matrix = gate.construct_unitary(*gate.unitary_params)
+        if revert:
+            matrix = tf.reshape(matrix, 4 * (2,))
+            matrix = tf.transpose(matrix, [1, 0, 3, 2])
+            matrix = tf.reshape(matrix, (4, 4))
+        return matrix
+
+    def calculate_fused_gates(self) -> Tuple[gates.Gate]:
         if self.special_gate is not None:
             assert not self.gates0[0] and not self.gates1[0]
             assert not self.two_qubit_gates
-            self._fused_gate = self.special_gate
-        else:
-            # Fuse one-qubit gates
-            pass
+            return (self.special_gate,)
+
+        # Fuse one-qubit gates
+        gates0 = (functools.reduce(operator.matmul, reversed(gates), 1)
+                  for gates in self.gates0)
+        gates1 = (functools.reduce(operator.matmul, reversed(gates), 1)
+                  for gates in self.gates1)
+
+        if not self.two_qubit_gates:
+            return (functools.reduce(operator.matmul, reversed(gates0), 1),
+                    functools.reduce(operator.matmul, reversed(gates1), 1))
+
+        fused_matrix = self._one_qubit_matrix(next(gates0), next(gates1))
+        for g0, g1, (g2, flag) in zip(gates0, gates1, self.two_qubit_gates):
+            matrix = self._one_qubit_matrix(g0, g1)
+            matrix2 = self._two_qubit_matrix(g2, flag)
+            fused_matrix = tf.matmul(tf.matmul(matrix, matrix2), fused_matrix)
+        return (self.module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
 
 
 def fuse_queue(queue: List[gates.Gate]) -> List[FusionGroup]:
