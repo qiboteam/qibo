@@ -9,6 +9,7 @@ from qibo.tensorflow import fusion
 
 
 def test_fuse_queue_single_group():
+    """Check fusion that creates a single ``FusionGroup``."""
     queue = [gates.H(0), gates.X(1), gates.CZ(0, 1)]
     fused_groups = fusion.fuse_queue(queue)
     assert len(fused_groups) == 1
@@ -19,6 +20,7 @@ def test_fuse_queue_single_group():
 
 
 def test_fuse_queue_two_groups():
+    """Check fusion that creates two ``FusionGroup``s."""
     queue = [gates.X(0), gates.H(1), gates.CNOT(1, 2), gates.H(2), gates.Y(1),
              gates.H(0)]
     fused_groups = fusion.fuse_queue(queue)
@@ -32,7 +34,9 @@ def test_fuse_queue_two_groups():
     assert group2.two_qubit_gates == [(queue[2], False)]
 
 
+# TODO: Do this test for odd ``nqubits``
 def test_fuse_queue_variational_layer(nqubits=6):
+    """Check fusion for common type variational circuit."""
     theta = np.pi * np.random.random((2, nqubits))
     queue0 = [gates.RY(i, theta[0, i]) for i in range(nqubits)]
     queue1 = [gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)]
