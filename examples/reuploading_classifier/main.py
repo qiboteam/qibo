@@ -6,8 +6,8 @@ import pickle
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--name", default='crown', help="Name of the example", type=str)
-parser.add_argument("--layers", default=2, help="Number of layers.", type=int)
+parser.add_argument("--name", default='tricrown', help="Name of the example", type=str)
+parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
 
 def main(name, layers):
     """Perform classification for a given problem and number of layers
@@ -28,8 +28,8 @@ def main(name, layers):
     except:
         print('Problem never solved, finding optimal parameters...')
         result, parameters = ql.minimize(method='l-bfgs-b', options={'disp': True})
-        with open('saved_parameters.pkl', 'rb') as f:
-            data = pickle.load(f) # Load previous results. Have we ever run these problem?
+        '''with open('saved_parameters.pkl', 'rb') as f:
+            data = pickle.load(f) # Load previous results. Have we ever run these problem?'''
         data[name][layers] = parameters
         with open('saved_parameters.pkl', 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)

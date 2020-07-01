@@ -286,19 +286,35 @@ class single_qubit_classifier:
         ax.scatter(laea_x(angles[:, 1], angles[:, 0]), laea_y(angles[:, 1], angles[:, 0]), c=self.test_set[1],
                           cmap=colors_classes, s=15, norm=norm_class)
 
-        angles_0 = np.zeros(len(self.target))
-        angles_1 = np.zeros(len(self.target))
         if len(self.target) == 2:
+            angles_0 = np.zeros(len(self.target))
+            angles_1 = np.zeros(len(self.target))
             angles_0[0] = np.pi / 2
             angles_0[1] = -np.pi / 2
-            i = 1
+            col = list(range(2))
+
+        elif len(self.target) == 3:
+            angles_0 = np.zeros(len(self.target) + 1)
+            angles_1 = np.zeros(len(self.target) + 1)
+            angles_0[0] = np.pi / 2
+            angles_0[1] = -np.pi / 6
+            angles_0[2] = -np.pi / 6
+            angles_0[3] = -np.pi / 6
+            angles_1[2] = np.pi
+            angles_1[3] = -np.pi
+            col = list(range(3)) + [2]
+            print(col)
+
         else:
+            angles_0 = np.zeros(len(self.target))
+            angles_1 = np.zeros(len(self.target))
             for i, state in enumerate(self.target):
                 angles_0[i] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
                 angles_1[i] = np.angle(state[1] / state[0])
+            col = list(range(len(self.target)))
 
-        ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=list(range(i + 1)),
-                       cmap=colors_classes, s=500, norm=norm_class, marker='P')
+        ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=col,
+                       cmap=colors_classes, s=500, norm=norm_class, marker='P', zorder=11)
 
         ax.axis('off')
 
