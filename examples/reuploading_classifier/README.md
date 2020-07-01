@@ -50,7 +50,7 @@ point (left), together with which ones are right and wrong (right). This result 
 of the classifier. The colors represent the **guessed** labels, while the area corresponding to each class is delimited
 with a black line.
 
-<img src="accuracy.png" width="510px">
+<img src="test_set.png" width="510px">
 
 The second result represents the distribution of the test points on the Bloch sphere. In this case, the colors represent
 the **actual** labels of the points. This plot is useful to see how the points in the same class get close to the target
