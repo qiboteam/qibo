@@ -24,7 +24,7 @@ def main(file_name):
     frequencies = result.frequencies(binary=True, registers=False)
     most_common_bitstring = frequencies.most_common(1)[0][0]
     print('Most common bitstring: {}\n'.format(most_common_bitstring))
-    if ''.join(solution) != '0'*qubits:
+    if solution:
         print('Exact cover solution:  {}\n'.format(''.join(solution)))
 
 

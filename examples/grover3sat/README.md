@@ -5,11 +5,11 @@
 Grover's Algorithm is an example of the advantages a quantum computer has over a classical computer in the task of searching databases. This program applies a Grover search on a Satisfiability problem, more precisely an Exact Cover instance of a 3SAT problem.
 
 
-An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 qubits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfills all the clauses at the same time. 
+An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 bits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfills all the clauses at the same time. 
 
 ## Grover's search algorithm
 
-The algorithm proposed by Grover [arXiv:quant-ph/9605043](https://arxiv.org/abs/quant-ph/9605043) achieves a quadratic speed-up on a brute-force search of this satiability problem.
+The algorithm proposed by Grover [arXiv:quant-ph/9605043](https://arxiv.org/abs/quant-ph/9605043) achieves a quadratic speed-up on a brute-force search of this satisfiability problem.
 
 This program builds the necessary parts of the algorithm in order to simulate this algorithm. Crucially, Grover's algorithm requires an oracle that is problem dependent, which changes the sign of the solution of the problem. 
 
@@ -66,4 +66,4 @@ The second line is the solution of the instance.
 
 The following lines correspond to the three qubits present in each clause.
 
-Should the solution not be known, consider 00000... to be a placeholder solution. 
+Should the solution not be known, leave an empty line in place of the solution as well as remove the number of 1's in the solution.
