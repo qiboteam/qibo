@@ -7,7 +7,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--name", default='tricrown', help="Name of the example", type=str)
-parser.add_argument("--layers", default=2, help="Number of layers.", type=int)
+parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
 
 def main(name, layers):
     """Perform classification for a given problem and number of layers
@@ -24,6 +24,7 @@ def main(name, layers):
     try:
         parameters = data[name][layers]
         print('Problem solved before, obtaining parameters from file...')
+        print('-'*60)
     except:
         print('Problem never solved, finding optimal parameters...')
         result, parameters = ql.minimize(method='l-bfgs-b', options={'disp': True})
@@ -32,6 +33,8 @@ def main(name, layers):
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
     ql.set_parameters(parameters)
+    value_loss = ql.cost_function_fidelity()
+    print('The value of the cost function achieved is %.6f'%value_loss.numpy())
     ql.paint_results()
     ql.paint_world_map()
 
