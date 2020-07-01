@@ -32,6 +32,7 @@ class BaseCircuit(object):
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
+        self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
@@ -44,7 +45,7 @@ class BaseCircuit(object):
         self._final_state = None
         self.using_density_matrix = False
 
-    def __add__(self, circuit):
+    def __add__(self, circuit) -> "BaseCircuit":
         """Add circuits.
 
         Args:
@@ -53,15 +54,17 @@ class BaseCircuit(object):
         Returns:
             The resulting circuit from the addition.
         """
-        return BaseCircuit._circuit_addition(self, circuit)
+        return self.__class__._circuit_addition(self, circuit)
 
     @classmethod
     def _circuit_addition(cls, c1, c2):
-        if c1.nqubits != c2.nqubits:
-            raise ValueError("Cannot add circuits with different number of "
-                             "qubits. The first has {} qubits while the "
-                             "second has {}".format(c1.nqubits, c2.nqubits))
-        newcircuit = cls(c1.nqubits)
+        for k, kwarg1 in c1._init_kwargs.items():
+            kwarg2 = c2._init_kwargs[k]
+            if kwarg1 != kwarg2:
+                raise ValueError("Cannot add circuits with different kwargs. "
+                                 "{} is {} for first circuit and {} for the "
+                                 "second.".format(k, kwarg1, kwarg2))
+        newcircuit = cls(**c1._init_kwargs)
         # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.add(gate)
@@ -87,20 +90,22 @@ class BaseCircuit(object):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
         Args:
-            deep (bool): If True new gate objects will be created that act in the same
-                qubits as in ``circuit``. Otherwise, the same gate objects of
+            deep (bool): If ``True`` copies of the  gate objects will be created
+                for the new circuit. If ``False``, the same gate objects of
                 ``circuit`` will be used.
 
         Returns:
             The copied circuit object.
         """
+        new_circuit = self.__class__(**self._init_kwargs)
         if deep:
-            raise NotImplementedError("Deep copy is not implemented yet.")
-
-        new_circuit = self.__class__(self.nqubits)
-        new_circuit.queue = list(self.queue)
+            import copy
+            new_circuit.queue = [copy.copy(gate) for gate in self.queue]
+            new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        else:
+            new_circuit.queue = list(self.queue)
+            new_circuit.measurement_gate = self.measurement_gate
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        new_circuit.measurement_gate = self.measurement_gate
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
@@ -127,11 +132,33 @@ class BaseCircuit(object):
         """Returns the module of the gates contained in the circuit queue."""
         if self.queue:
             import importlib
-            module_str = self.queue[0].__module__
+            for gate in self.queue:
+                if not isinstance(gate, gates.CallbackGate):
+                    break
+            module_str = gate.__module__
             module = importlib.import_module(module_str)
         else:
             from qibo import gates as module
         return module
+
+    def decompose(self, *free: int) -> "BaseCircuit":
+        """Decomposes circuit's gates to gates supported by OpenQASM.
+
+        Args:
+            free: Ids of free (work) qubits to use for gate decomposition.
+
+        Returns:
+            Circuit that contains only gates that are supported by OpenQASM
+            and has the same effect as the original circuit.
+        """
+        # FIXME: This method is not completed until the ``decompose`` is
+        # implemented for all gates not supported by OpenQASM.
+        decomp_circuit = self.__class__(self.nqubits)
+        for i, gate in enumerate(self.queue):
+            decomp_circuit.add(gate.decompose(*free))
+        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
+        decomp_circuit.measurement_gate = self.measurement_gate
+        return decomp_circuit
 
     def with_noise(self, noise_map: NoiseMapType,
                    measurement_noise: Optional[NoiseMapType] = None
@@ -204,7 +231,6 @@ class BaseCircuit(object):
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
-        noisy_circuit.queue = []
         for i, gate in enumerate(self.queue):
             # Do not use `circuit.add` here because these gates are already
             # added in the original circuit
@@ -241,10 +267,12 @@ class BaseCircuit(object):
         if isinstance(gate, Iterable):
             for g in gate:
                 self.add(g)
-            return
-        elif not isinstance(gate, gates.Gate):
+        elif isinstance(gate, gates.Gate):
+            self._add(gate)
+        else:
             raise TypeError("Unknown gate type {}.".format(type(gate)))
 
+    def _add(self, gate: gates.Gate):
         if self._final_state is not None:
             raise RuntimeError("Cannot add gates to a circuit after it is "
                                "executed.")
@@ -255,22 +283,29 @@ class BaseCircuit(object):
                                  "on a circuit of {} qubits."
                                  "".format(gate.target_qubits, self.nqubits))
 
-        # Set number of qubits in gate
-        if gate._nqubits is None:
-            gate.nqubits = self.nqubits
+        self._set_nqubits(gate)
+        self._check_measured(gate.qubits)
+        if isinstance(gate, gates.M):
+            self._add_measurement(gate)
+        elif isinstance(gate, gates.VariationalLayer):
+            self._add_layer(gate)
+        else:
+            self.queue.append(gate)
+
+    def _set_nqubits(self, gate: gates.Gate):
+        """Sets the number of qubits in ``gate``.
+
+        Helper method for ``circuit.add(gate)``.
+        """
+        if gate._nqubits is None: # pragma: no cover
+            raise NotImplementedError
         elif gate.nqubits != self.nqubits:
             raise ValueError("Attempting to add gate with {} total qubits to "
                              "a circuit with {} qubits."
                              "".format(gate.nqubits, self.nqubits))
 
-        self._check_measured(gate.qubits)
-        if gate.name == "measure":
-            self._add_measurement(gate)
-        else:
-            self.queue.append(gate)
-
-    def _add_measurement(self, gate):
-        """Gets called automatically by `add` when `gate` is measurement.
+    def _add_measurement(self, gate: gates.Gate):
+        """Called automatically by `add` when `gate` is measurement.
 
         This is because measurement gates (`gates.M`) are treated differently
         than all other gates.
@@ -292,6 +327,15 @@ class BaseCircuit(object):
         else:
             self.measurement_gate._add(gate.target_qubits)
             self.measurement_tuples[name] = gate.target_qubits
+
+    def _add_layer(self, gate: gates.Gate):
+        """Called automatically by `add` when `gate` is measurement."""
+        for unitary in gate.unitaries:
+            self._set_nqubits(unitary)
+            self.queue.append(unitary)
+        if gate.additional_unitary is not None:
+            self._set_nqubits(gate.additional_unitary)
+            self.queue.append(gate.additional_unitary)
 
     @property
     def size(self) -> int:
@@ -371,7 +415,7 @@ class BaseCircuit(object):
         return "\n".join(logs)
 
     @property
-    def final_state(self):
+    def final_state(self): # pragma: no cover
         """Returns the final state after full simulation of the circuit.
 
         If the circuit is executed more than once, only the last final state
@@ -380,11 +424,11 @@ class BaseCircuit(object):
         raise NotImplementedError
 
     @abstractmethod
-    def execute(self, *args):
+    def execute(self, *args): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend."""
         raise NotImplementedError
 
-    def __call__(self, *args):
+    def __call__(self, *args): # pragma: no cover
         """Equivalent to ``circuit.execute``."""
         return self.execute(*args)
 
@@ -429,7 +473,7 @@ class BaseCircuit(object):
         return "\n".join(code)
 
     @classmethod
-    def from_qasm(cls, qasm_code: str) -> "BaseCircuit":
+    def from_qasm(cls, qasm_code: str, **kwargs) -> "BaseCircuit":
         """Constructs a circuit from QASM code.
 
         Args:
@@ -458,8 +502,8 @@ class BaseCircuit(object):
                 c2.add(gates.H(1))
                 c2.add(gates.CNOT(0, 1))
         """
-        nqubits, gate_list = cls._parse_qasm(qasm_code)
-        circuit = cls(nqubits)
+        kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
+        circuit = cls(**kwargs)
         for gate_name, qubits, param in gate_list:
             gate = getattr(circuit.gate_module, gate_name)
             if gate_name == "M":
