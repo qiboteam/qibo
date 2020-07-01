@@ -1,3 +1,5 @@
+import functools
+import operator
 from qibo.base import gates
 from typing import List, Set
 
@@ -36,6 +38,7 @@ class FusionGroup:
         self.two_qubit_gates = [] # list of tuples (gate, revert flag)
 
         self.special_gate = None
+        self._fused_gate = None
 
     @property
     def qubits(self) -> Set[int]:
@@ -45,8 +48,18 @@ class FusionGroup:
             return {self.qubit0}
         return {self.qubit0, self.qubit1}
 
+    @property
+    def gate(self) -> gates.Gate:
+        if self._fused_gate is None:
+            self.calculate_fused_gate()
+        return self._fused_gate
+
     def add(self, gate: gates.Gate):
         """Adds a gate in the group."""
+        if self._fused_gate is not None:
+            raise RuntimeError("Cannot add gates to ``FusionGroup`` for "
+                               "which the fused gate was already calculated.")
+
         if self.special_gate is not None:
             raise ValueError("Cannot add gate on special fusion group.")
         if not gate.qubits:
@@ -100,6 +113,15 @@ class FusionGroup:
 
         self.gates0.append([])
         self.gates1.append([])
+
+    def calculate_fused_gate(self):
+        if self.special_gate is not None:
+            assert not self.gates0[0] and not self.gates1[0]
+            assert not self.two_qubit_gates
+            self._fused_gate = self.special_gate
+        else:
+            # Fuse one-qubit gates
+            pass
 
 
 def fuse_queue(queue: List[gates.Gate]) -> List[FusionGroup]:

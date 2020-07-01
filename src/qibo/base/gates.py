@@ -166,6 +166,9 @@ class Gate(object):
         """Gate multiplication."""
         raise NotImplementedError
 
+    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate":
+        return self.__matmul__(other)
+
     def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.
 
