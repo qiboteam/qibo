@@ -62,10 +62,6 @@ def canonize(state, p=0, shots=1000):
         Returns:
             Value cost function, parameters to canonize the given state
         """
-    if p != 0:
-        from qibo import set_backend
-        set_backend("matmuleinsum")
-        # raise RuntimeWarning('Backend changed to MatmulEinsum')
 
     theta = np.zeros(9)
     result = minimize(cost_function, theta, args=(state, p, shots), method='powell')
