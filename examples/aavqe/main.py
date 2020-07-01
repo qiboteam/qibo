@@ -52,8 +52,7 @@ def ising(nqubits, lamb=1.0):
     Returns:
         ``Hamiltonian`` object for the Ising model.
     """
-    ising = Hamiltonian(nqubits)  
-    ising.hamiltonian = 0
+    ising = Hamiltonian(nqubits)
     eye = matrices.I
     sz = matrices.Z
     sx = matrices.X
@@ -61,7 +60,6 @@ def ising(nqubits, lamb=1.0):
                                    for j in range(nqubits))) for i in range(nqubits))
     ising.hamiltonian += lamb * sum(multikron((sx if i == j % nqubits else eye 
                                            for j in range(nqubits))) for i in range(nqubits))
-    print(ising.hamiltonian)
     return ising
 
 
@@ -147,4 +145,4 @@ if __name__ == "__main__":
     parser.add_argument("--maxsteps", default=5000, type=int)
     parser.add_argument("--T_max", default=5, type=int)
     args = parser.parse_args()
-    main(args.nqubits, args.layers, args.maxsteps, args.T_max)
+    main(**vars(args))
