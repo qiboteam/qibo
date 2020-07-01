@@ -693,9 +693,6 @@ def test_construct_unitary(gates):
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow.construct_unitary(theta).numpy(), target_matrix)
 
-    with pytest.raises(NotImplementedError):
-        gates.fSim.construct_unitary()
-
 
 def test_variational_layer_call():
     qibo.set_backend("custom")

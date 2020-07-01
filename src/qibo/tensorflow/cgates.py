@@ -24,18 +24,6 @@ class TensorflowGate(base_gates.Gate):
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
 
-    @staticmethod
-    def construct_unitary(*args) -> tf.Tensor:
-        """Constructs unitary matrix corresponding to the gate.
-
-        This matrix is not necessarily used by ``__call__`` when applying the
-        gate to a state vector.
-
-        Args:
-            *args: Variational parameters for parametrized gates.
-        """
-        raise NotImplementedError
-
     def _prepare(self):
         """Prepares the gate for application to state vectors.
 
@@ -63,8 +51,8 @@ class MatrixGate(TensorflowGate):
         super(MatrixGate, self).__init__()
         self.matrix = None
 
-    def _prepare(self): # pragma: no cover
-        raise NotImplementedError
+    def _prepare(self):
+        self.matrix = self.construct_unitary(*self.unitary_params)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -83,9 +71,6 @@ class H(MatrixGate, base_gates.H):
     def construct_unitary() -> tf.Tensor:
         return tf.cast(np.array([[1, 1], [1, -1]]) / np.sqrt(2),
                        dtype=DTYPES.get('DTYPECPX'))
-
-    def _prepare(self):
-        self.matrix = self.construct_unitary()
 
 
 class X(TensorflowGate, base_gates.X):
@@ -224,9 +209,6 @@ class RX(MatrixGate, base_gates.RX):
         X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
         return tf.cos(t / 2.0) * I - 1j * tf.sin(t / 2.0) * X
 
-    def _prepare(self):
-        self.matrix = self.construct_unitary(self.theta)
-
 
 class RY(MatrixGate, base_gates.RY):
 
@@ -242,9 +224,6 @@ class RY(MatrixGate, base_gates.RY):
         iY = tf.cast([[0, 1], [-1, 0]], dtype=dtype)
         return tf.cos(t / 2.0) * I - tf.sin(t / 2.0) * iY
 
-    def _prepare(self):
-        self.matrix = self.construct_unitary(self.theta)
-
 
 class RZ(MatrixGate, base_gates.RZ):
 
@@ -258,9 +237,6 @@ class RZ(MatrixGate, base_gates.RZ):
         phase = tf.exp(1j * t / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         return tf.linalg.diag(diag)
-
-    def _prepare(self):
-        self.matrix = self.construct_unitary(self.theta)
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -345,6 +321,20 @@ class fSim(MatrixGate, base_gates.fSim):
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
         self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
 
+    @staticmethod
+    def construct_unitary(theta, phi):
+        dtype = DTYPES.get("DTYPECPX")
+        th = tf.cast(theta, dtype=dtype)
+        I = tf.eye(2, dtype=dtype)
+        X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
+        rotation = tf.cos(th) * I - 1j * tf.sin(th) * X
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
+        matrix = tf.eye(4, dtype=dtype)
+        matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        return tf.tensor_scatter_nd_update(matrix, ids, rotation)
+
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
         return op.apply_fsim(state, self.matrix, self.nqubits,
@@ -361,10 +351,22 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
                              "fSim gate".format(shape))
 
     def _prepare(self):
-        rotation = tf.cast(self.unitary, dtype=DTYPES.get('DTYPECPX'))
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=DTYPES.get('DTYPECPX')))
+        dtype = DTYPES.get('DTYPECPX')
+        rotation = tf.cast(self.unitary, dtype=dtype)
+        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
         rotation = tf.reshape(rotation, (4,))
         self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+
+    @staticmethod
+    def construct_unitary(unitary, phi):
+        dtype = DTYPES.get("DTYPECPX")
+        rotation = tf.cast(unitary, dtype=dtype)
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
+        matrix = tf.eye(4, dtype=dtype)
+        matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
+        rotation = tf.reshape(rotation, (4,))
+        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
+        return tf.tensor_scatter_nd_update(matrix, ids, rotation)
 
     def __call__(self, state, is_density_matrix: bool = False):
         return fSim.__call__(self, state, is_density_matrix)
@@ -396,7 +398,6 @@ class Unitary(MatrixGate, base_gates.Unitary):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         MatrixGate.__init__(self)
-
         rank = self.rank
         if rank > 2:
             raise NotImplementedError("Unitary matrix gate supports only one "
@@ -407,6 +408,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
         if shape != (2 ** rank, 2 ** rank):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))
+
+        self.unitary_params = [self.construct_unitary(unitary)]
 
     @property
     def rank(self) -> int:
@@ -419,9 +422,6 @@ class Unitary(MatrixGate, base_gates.Unitary):
         elif isinstance(unitary, np.ndarray):
             return tf.convert_to_tensor(unitary, dtype=DTYPES.get('DTYPECPX'))
         raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
-
-    def _prepare(self):
-        self.matrix = self.construct_unitary(self.unitary)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
