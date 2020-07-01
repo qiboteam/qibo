@@ -20,14 +20,14 @@ although other Ansätze are also useful. Notice that the R<sub>y</sub> gates are
 while R<sub>z</sub> gates are related to x<sub>1</sub>. Rotations around two different axis suffice to generate enough 
 representativity to solve the problem. 
 
-<img src="circuit.png" width="510px">
+<img src="images/circuit.png" width="510px">
 
 The goal is to find a set of parameters such that all points belonging to the same class are driven to be as close as
 possible to a target state that depends on the class. These target states are chosen to be as orthogonal as possible. 
 For binary classification, the states |0> and |1> are enough. Three classes require an equilateral triangle circumscribed
 to an equator. More classes require polyhedra. For 4, 6, 8, 12 and 20 labels, platonic polyhedra may be used.
 
-<img src="bloch_states.png" width="350px">
+<img src="images/bloch_states.png" width="350px">
 
 #### Usage
 In this example there are only three files
@@ -50,13 +50,13 @@ point (left), together with which ones are right and wrong (right). This result 
 of the classifier. The colors represent the **guessed** labels, while the area corresponding to each class is delimited
 with a black line.
 
-<img src="test_set.png" width="510px">
+<img src="images/test_set.png" width="510px">
 
 The second result represents the distribution of the test points on the Bloch sphere. In this case, the colors represent
 the **actual** labels of the points. This plot is useful to see how the points in the same class get close to the target
 state. 
 
-<img src="world_map.png" width="510px">
+<img src="images/world_map.png" width="510px">
 
 Every time the `main.py` file is run, both results are saved in the folder 
 `results/[name of the problem]/[number of layers]_layers`.

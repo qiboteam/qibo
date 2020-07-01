@@ -4,9 +4,7 @@ import numpy as np
 from datasets import create_dataset, create_target, fig_template, world_map_template
 from qibo.hamiltonians import Hamiltonian
 from qibo.config import matrices
-import matplotlib.pyplot as plt
 import tensorflow as tf
-import tensorflow_probability as tfp
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 import os
@@ -179,44 +177,9 @@ class single_qubit_classifier:
             result = self.cost_function(params_optimal).numpy()
             parameters = params_optimal.numpy()
 
-        elif 'tf' in method:
-            from qibo.tensorflow.gates import TensorflowGate
-            circuit = self.circuit(self.domain[0])
-            for gate in circuit.queue:
-                if not isinstance(gate, TensorflowGate):
-                    raise RuntimeError('SGD VQE requires native Tensorflow '
-                                       'gates because gradients are not '
-                                       'supported in the custom kernels.')
-
-            # proceed with the training
-            from qibo.config import K
-            vparams = K.Variable(self.params)
-
-            if 'bfgs' in method:
-                def loss_gradient(x):
-                    return tfp.math.value_and_gradient(lambda x: loss(x), x)
-                if compile:
-                    loss_gradient = K.function(loss_gradient)
-                params_optimal = tfp.optimizer.bfgs_minimize(
-                    loss_gradient, vparams)
-            elif 'lbfgs' in method:
-                def loss_gradient(x):
-                    return tfp.math.value_and_gradient(lambda x: loss(x), x)
-                if compile:
-                    loss_gradient = K.function(loss_gradient)
-                params_optimal = tfp.optimizer.lbfgs_minimize(
-                    loss_gradient, vparams)
-            elif 'nelder_mead' in method:
-                params_optimal = tfp.optimizer.nelder_mead_minimize(
-                    loss, initial_vertex=vparams)
-            result = params_optimal.objective_value.numpy()
-            parameters = params_optimal.position.numpy()
-
         else:
-            # Newtonian approaches
             import numpy as np
             from scipy.optimize import minimize
-            # n = self.hamiltonian.nqubits
             m = minimize(lambda p: loss(p).numpy(), self.params,
                          method=method, options=options)
             result = m.fun
@@ -303,7 +266,6 @@ class single_qubit_classifier:
             angles_1[2] = np.pi
             angles_1[3] = -np.pi
             col = list(range(3)) + [2]
-            print(col)
 
         else:
             angles_0 = np.zeros(len(self.target))
