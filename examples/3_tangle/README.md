@@ -15,15 +15,15 @@ exact gates are obtained following a minimization procedure. The set of gates ch
 of outcomes of the states |001>, |010> and |011>. It is guaranteed that this quantity can be exactly zero for any state
 for noiseless devices. The circuit is just
 
-<img src="circuit.png" width="410px">
+<img src="images/circuit.png" width="410px">
 
 with 
 
-<img src="canonical.png" width="400px">. 
+<img src="images/canonical.png" width="400px">. 
 
 The tangle is computed through 
 
-<img src="tangle.png" width="250px">
+<img src="images/tangle.png" width="250px">
 
 #### Usage
 In this example there are only two files
@@ -45,4 +45,4 @@ represents the optimal performance of the algorithm, that is, the measured tangl
 no errors are considered, at the bottom there is noise in the device. Red plots consider post-selection, while green ones
 do not. As expected, less noise and post-selection lead to more accurate estimates of the tangle.
  
-<img src="results.png" width="500px">
+<img src="images/results.png" width="500px">

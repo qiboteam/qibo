@@ -16,11 +16,13 @@ def main(N, p, shots, post_selection):
     opt_tangles = np.empty(N)
 
     for i in range(N):
+        print('Initialized state with seed %s'%i)
         state = create_random_state(i) # Create a random state from the seed
         tangles[i] = compute_random_tangle(i) # Compute its tangle
         fun, params = canonize(state, p=p, shots=shots) # Perform transformation
         opt_tangles[i] = canonical_tangle(state, params, post_selection=post_selection) # Measuring the tangle with or without post selection
 
+    print('Painting results')
     fig, ax = plt.subplots() # Plotting
     if post_selection:
         color = 'red'
@@ -28,7 +30,7 @@ def main(N, p, shots, post_selection):
         color='green'
     ax.scatter(tangles, opt_tangles, s=20, c=color)
     ax.plot([0., 1.], [0., 1.], color='black')
-    ax.set(xlabel='Exact tangle', ylabel='Measured tangle')
+    ax.set(xlabel='Exact tangle', ylabel='Measured tangle', xlim=[0,1], ylim=[0,1])
     plt.grid('on')
     plt.show()
 
