@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
@@ -18,6 +17,10 @@ class TensorflowGate(base_gates.Gate):
             This is (2, 2) for 1-qubit gates and (4, 4) for 2-qubit gates.
         qubits: List with the qubits that the gate is applied to.
     """
+
+    import sys
+    module = sys.modules[__name__]
+
     def __init__(self):
         self.calculation_cache = None
         # For `controlled_by` gates (see `cache.ControlCache` for more details)
@@ -133,8 +136,6 @@ class H(TensorflowGate, base_gates.H):
 
 class X(TensorflowGate, base_gates.X):
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q):
         base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
@@ -162,8 +163,6 @@ class Y(TensorflowGate, base_gates.Y):
 
 
 class Z(TensorflowGate, base_gates.Z):
-
-    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         base_gates.Z.__init__(self, q)

@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
@@ -10,6 +9,9 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class TensorflowGate(base_gates.Gate):
+
+    import sys
+    module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
         cgate_only = {"M", "Flatten", "CallbackGate"}
@@ -27,7 +29,6 @@ class TensorflowGate(base_gates.Gate):
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         if other == 1:
             return self
-
         if self.qubits != other.qubits:
             raise NotImplementedError("Cannot multiply gates that target "
                                       "different qubits.")
@@ -87,8 +88,6 @@ class H(MatrixGate, base_gates.H):
 
 class X(TensorflowGate, base_gates.X):
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q):
         base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
@@ -120,8 +119,6 @@ class Y(TensorflowGate, base_gates.Y):
 
 
 class Z(TensorflowGate, base_gates.Z):
-
-    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         base_gates.Z.__init__(self, q)

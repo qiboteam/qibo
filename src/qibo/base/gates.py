@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-import sys
 from qibo import config
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -20,6 +19,9 @@ class Gate(object):
         name: Name of the gate.
         target_qubits: Tuple with ids of target qubits.
     """
+
+    import sys
+    module = sys.modules[__name__]
 
     def __init__(self):
         self.name = None
@@ -267,7 +269,6 @@ class X(Gate):
     Args:
         q (int): the qubit id number.
     """
-    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         super(X, self).__init__()
@@ -278,9 +279,9 @@ class X(Gate):
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
         if len(q) == 1:
-            gate = getattr(self._MODULE, "CNOT")(q[0], self.target_qubits[0])
+            gate = getattr(self.module, "CNOT")(q[0], self.target_qubits[0])
         elif len(q) == 2:
-            gate = getattr(self._MODULE, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
+            gate = getattr(self.module, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
         else:
             gate = super(X, self).controlled_by(*q)
         return gate
@@ -315,7 +316,7 @@ class X(Gate):
 
         decomp_gates = []
         n = m + 1 + len(free)
-        TOFFOLI = self._MODULE.TOFFOLI
+        TOFFOLI = self.module.TOFFOLI
         if (n >= 2 * m - 1) and (m >= 3):
             gates1 = [TOFFOLI(controls[m - 2 - i],
                               free[m - 4 - i],
@@ -375,8 +376,6 @@ class Z(Gate):
         q (int): the qubit id number.
     """
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q):
         super(Z, self).__init__()
         self.name = "z"
@@ -386,7 +385,7 @@ class Z(Gate):
     def controlled_by(self, *q):
         """Fall back to CZ if control is one."""
         if len(q) == 1:
-            gate = getattr(self._MODULE, "CZ")(q[0], self.target_qubits[0])
+            gate = getattr(self.module, "CZ")(q[0], self.target_qubits[0])
         else:
             gate = super(Z, self).controlled_by(*q)
         return gate
@@ -762,9 +761,8 @@ class TOFFOLI(Gate):
         import numpy as np
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
-        module = importlib.import_module(self.__module__)
-        RY = module.RY
-        CNOT = module.CNOT
+        RY = self.module.RY
+        CNOT = self.module.CNOT
         return [RY(target, -np.pi / 4), CNOT(control1, target),
                 RY(target, -np.pi / 4), CNOT(control0, target),
                 RY(target, np.pi / 4), CNOT(control1, target),
