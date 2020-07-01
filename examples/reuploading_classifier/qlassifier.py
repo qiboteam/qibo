@@ -30,7 +30,6 @@ class single_qubit_classifier:
         self.training_set = create_dataset(name, grid=grid)
         self.test_set = create_dataset(name, samples=test_samples)
         self.target = create_target(name)
-        self.hamiltonian = self.create_hamiltonian()
         self.params = np.random.randn(layers * 4)
         try:
             os.makedirs('results/'+self.name+'/%s_layers'%self.layers)
@@ -91,42 +90,10 @@ class single_qubit_classifier:
         cf /= len(self.training_set[0])
         return cf
 
-    def create_hamiltonian(self):
-        self.H = [Hamiltonian(1)] * 3
-        measures = [matrices._npX(), matrices._npY(), matrices._npZ()]
-        for n, measur in enumerate(measures):
-            h_ = Hamiltonian(1)
-            h_.hamiltonian = measur
-            self.H[n] = h_
 
-        return self.H
+    def minimize(self, method='BFGS', options=None, compile=True):
+        loss = self.cost_function_fidelity
 
-    def create_target_hamiltonians(self):
-        self.target_values = [[]] * len(self.target)
-        for i, t in enumerate(self.target):
-            self.target_values[i] = [h.expectation(t) for h in self.H]
-
-    def cost_function_one_point_observables(self, x, y):
-        C = self.circuit(x)
-        state = C.execute()
-        values = [h.expectation(state) for h in self.H]
-        cf = tf.constant(np.arccos(np.dot(values, self.target_values[y])) ** 2)
-        return cf
-
-    def cost_function_observables(self, params):
-        self.set_parameters(params)
-        cf = 0
-        for x, y in zip(self.training_set[0], self.training_set[1]):
-            cf += self.cost_function_one_point_observables(x, y)
-        cf /= len(self.training_set[0])
-        return cf
-
-    def minimize(self, method='BFGS', options=None, compile=True, fidelity=True):
-        if fidelity:
-            loss = self.cost_function_fidelity
-        else:
-            self.create_target_hamiltonians()
-            loss = self.cost_function_observables
         if method == 'cma':
             # Genetic optimizer
             import cma
