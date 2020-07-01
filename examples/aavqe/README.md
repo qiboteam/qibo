@@ -3,19 +3,19 @@
 Strongly-correlated many-body systems can give rise to exceptional quantum phenomena. In particular, the Ising model or the XXZ model have fundamental significance in condensed matter physics, and thus the realization of these systems may attract tremendous interest. Indeed, it is then an ambitious goal to prepare the ground state of those systems, and gain some insight into the physics of the problem.
 
 ## Implement the solution
-The code herein aims to reproduce the results of the manuscript ["Scaling of variational quantum circuit depth for condensed matter systems"](https://quantum-journal.org/papers/q-2020-05-28-272/). The idea is to benchmark the accuracy of the [Variational Quantum Eigensolver (VQE)](https://www.nature.com/articles/ncomms5213) based on a finite-depth variational quantum circuit encoding ground states of local Hamiltonian, namely, the Ising and XXZ models. 
+The code herein aims to reproduce the results of the manuscript ["Scaling of variational quantum circuit depth for condensed matter systems"](https://quantum-journal.org/papers/q-2020-05-28-272/). The idea is to benchmark the accuracy of the [Variational Quantum Eigensolver (VQE)](https://www.nature.com/articles/ncomms5213) based on a finite-depth variational quantum circuit encoding ground states of local Hamiltonians, namely, the Ising and XXZ models. 
 
 Notice that any potential advantage of the VQE could be lost without practical approaches to perform the parameter optimization due to the optimization in the high-dimensional parameter landscape. A particular proposal to try to solve this optimization problem is the [Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)](https://arxiv.org/abs/1806.02287). The AAVQE is a strategy circumventing the convergence issue, inspired by the adiabatic theorem. The AAVQE method consists of parametrizing a Hamiltonian as H = (1-s)H<sub>0</sub> + sH<sub>P</sub> where H<sub>0</sub> is a Hamiltonian for which ground state can be easily prepared, H<sub>P</sub> is the problem Hamiltonian, and s = [0,1] is the interpolation parameter. The interpolation parameter is used to adjust the Hamiltonian from one VQE run to the next, and the state preparation parameters at each step are initialized by the optimized parameters of the previous step.
 
 ## How to run an example
 To run a particular instance of the problem we have to set up the initial arguments:
 - nqubits (int): number of quantum bits.
-- layers (float): number of ansatz layers.
+- layers (int): number of ansatz layers.
 - maxsteps (int): number of maximum steps on each adiabatic path.
 - T_max (int): number of maximum adiabatic paths.
 - initial_parameters (array): values of the initial parameters.
-- easy_hamiltonian (qibo.hamiltonians): initial hamiltonian object, defined as sz_hamiltonian.
-- problem_hamiltonian (qibo.hamiltonians): problem hamiltonian object, namely, the Ising or XXZ hamiltonians.
+- easy_hamiltonian (qibo.hamiltonians.Hamiltonian): initial Hamiltonian object, defined as sz_hamiltonian.
+- problem_hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
 ## Results
 A legitimate question is how accurate a variational circuit can be, and how close can the state we extract by running a AAVQE on our set of quantum circuits get to exact ground state of the system. Since we are dealing with finite systems, the Hamiltonians we are considering always have a gap (at least proportional to 1/n). We can bound the distance from our trial wave-function to the exact ground state with the difference on the energies ε = (E<sub>AAVQE</sub> - E<sub>0</sub>).   We will use this error in the ground state energy as a measure of the quality of the circuit. 
