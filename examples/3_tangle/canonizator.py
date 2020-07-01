@@ -12,10 +12,6 @@ def ansatz(theta, p=0):
         Returns:
             Qibo circuit
     """
-    if p != 0:
-        from qibo import set_backend
-        set_backend("matmuleinsum")
-        # raise RuntimeWarning('Backend changed to MatmulEinsum')
     C = Circuit(3)
     index = 0
     if p == 0:
@@ -66,6 +62,11 @@ def canonize(state, p=0, shots=1000):
         Returns:
             Value cost function, parameters to canonize the given state
         """
+    if p != 0:
+        from qibo import set_backend
+        set_backend("matmuleinsum")
+        # raise RuntimeWarning('Backend changed to MatmulEinsum')
+
     theta = np.zeros(9)
     result = minimize(cost_function, theta, args=(state, p, shots), method='powell')
     return result.fun, result.x

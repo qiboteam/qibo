@@ -6,7 +6,7 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--N", default=100, help="Number of random states.", type=int)
-parser.add_argument("--p", default=0, help="Probability of occurring an error.", type=float)
+parser.add_argument("--p", default=0.001, help="Probability of occurring an error.", type=float)
 parser.add_argument("--shots", default=1000, help="Shots used for measuring every circuit.", type=float)
 parser.add_argument("--post_selection", default=True, help="Post selection technique", type=bool)
 
@@ -14,7 +14,9 @@ def main(N, p, shots, post_selection):
     #Initialize exact and measured tangles
     tangles = np.empty(N)
     opt_tangles = np.empty(N)
-
+    if p != 0:
+        from qibo import set_backend
+        set_backend("matmuleinsum")
     for i in range(N):
         print('Initialized state with seed %s'%i)
         state = create_random_state(i) # Create a random state from the seed
