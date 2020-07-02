@@ -22,16 +22,16 @@ A legitimate question is how accurate a variational circuit can be, and how clos
 
 We may begin by considering the results for λ=10 in the Ising model. Notice that we can obtain the ground state in this regime in perturbation theory. Using the perturbation theory in the form of a continuous unitary transformation, we expect that the precision of our ansatz will scale exponentially with the number of layers. Our expectations are confirmed in the numerical results:
 
-<img src="Lambda10_Ising.png" width="510px">
+<img src="images/Lambda10_Ising.png" width="510px">
 
 If you do not get those results, do not despair. Sometimes, fine-tuning of the arguments, i.e., maxsteps, T_max or the optimizer itself, is required, especially for a large number of qubits. Now we can repeat the same analysis for 12 qubits as we decrease λ towards the phase transition, i.e. at λ=1. 
 
-<img src="Lambdas_Ising.png" width="510px">
+<img src="images/Lambdas_Ising.png" width="510px">
 
 For λ=2, we still appreciate an exponential scaling of the accuracy, but as expected, the slope of the semi-logarithmic plot is lower.  For λ=1, we appreciate that the behavior of the AAVQE ground state energy accuracy as a function of the number of layers changes drastically from the behavior observed at larger λ. Recall that λ=1 in the thermodynamic limit is the location of the phase transition between the two gapped phases. 
 
 We can now perform numerical simulations of quantum circuits of several layers that are optimized to encode the ground state of systems with different sizes from 6 to 16 qubits with periodic boundary conditions. We can use the two Hamiltonians (Ising and XXZ Hamiltonians). In both cases, the Hamiltonians are tuned to a critical point, choosing λ=1 for the Ising model (left) and Δ=1/2 for the XXZ model (right).
 
-<img src="ising.png" width="510px"> <img src="XXZ.png" width="485px">
+<img src="images/ising.png" width="510px"> <img src="images/XXZ.png" width="485px">
 
 The accuracy clearly shows two different regimes. Initially, the accuracy varies very little as we increase the number of layers, and hence the number of variational parameters and the entangling power of the circuit. The error indeed stays constant from one to several layers for the Ising and XXZ model. This behavior seems to be completely independent of the system size since curves obtained by optimizing the energy almost coincide. We thus seem to observe a finite-depth regime, where the precision of the variational scheme depends very little on the number of layers and improves very slowly. This regime changes drastically at a critical number of layers that strongly depends on the size of the system. At that critical number of layers, the precision improves several orders of magnitude abruptly. This improvement is particularly abrupt in the case of the Ising model, whereby just adding one layer, the accuracy can improve several orders of magnitude.  For the XXZ model, we see similar features though the overall accuracy is lower as a consequence of the higher amount of entanglement in the ground state.
