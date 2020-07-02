@@ -63,7 +63,9 @@ def test_from_queue_single_group():
 
 def test_from_queue_two_groups():
     """Check fusion that creates two ``FusionGroup``s."""
-    queue = [gates.X(0), gates.H(1), gates.CNOT(1, 2), gates.H(2), gates.Y(1),
+    queue = [gates.X(0), gates.H(1),
+             gates.RX(2, theta=0.1234).controlled_by(1), 
+             gates.H(2), gates.Y(1),
              gates.H(0)]
     fused_groups = fusion.FusionGroup.from_queue(queue)
     assert len(fused_groups) == 2

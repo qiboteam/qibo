@@ -27,6 +27,10 @@ class FusionGroup:
         applied before the ``CNOT`` and the ``X`` gates after.
     """
 
+    # ``FusionGroup`` cannot start with these gates because it is more
+    # efficient to apply them on their own
+    _skip_gates = {"CNOT", "CZ", "SWAP", "CZPow"}
+
     def __init__(self):
         self.qubit0 = None
         self.qubit1 = None
@@ -73,27 +77,31 @@ class FusionGroup:
         group_queue = []
         remaining_queue = list(queue)
         while remaining_queue:
-            new_remaining_queue = []
             gates = iter(remaining_queue)
+            gate = next(gates)
             new_group = cls()
-            new_group.add(next(gates))
-            for gate in gates:
-                commutes = True
-                for blocking_gate in new_remaining_queue:
-                    commutes = commutes and gate.commutes(blocking_gate)
-                    if not commutes:
-                        break
+            new_group.add(gate)
+            if gate.qubits and gate.__class__.__name__ not in cls._skip_gates:
+                new_remaining_queue = []
+                for gate in gates:
+                    commutes = True
+                    for blocking_gate in new_remaining_queue:
+                        commutes = commutes and gate.commutes(blocking_gate)
+                        if not commutes:
+                            break
 
-                if commutes:
-                    try:
-                        new_group.add(gate)
-                    except ValueError:
+                    if commutes:
+                        try:
+                            new_group.add(gate)
+                        except ValueError:
+                            new_remaining_queue.append(gate)
+                    else:
                         new_remaining_queue.append(gate)
-                else:
-                    new_remaining_queue.append(gate)
+                remaining_queue = list(new_remaining_queue)
+            else:
+                remaining_queue.pop(0)
 
             group_queue.append(new_group)
-            remaining_queue = list(new_remaining_queue)
 
         return group_queue
 

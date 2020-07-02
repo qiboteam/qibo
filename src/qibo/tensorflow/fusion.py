@@ -57,8 +57,8 @@ class FusionGroup(fusion.FusionGroup):
 
         # Case 3a: One-qubit gates only (no two-qubit gates)
         if not self.two_qubit_gates:
-            gates0 = reversed(list(gates0))
-            gates1 = reversed(list(gates1))
+            gates0 = list(gates0)[::-1]
+            gates1 = list(gates1)[::-1]
             fused_gate0 = (functools.reduce(operator.matmul, gates0, ident0)
                            if len(gates0) != 1 else gates0[0])
             fused_gate1 = (functools.reduce(operator.matmul, gates1, ident1)
