@@ -391,6 +391,21 @@ class Z(Gate):
         return gate
 
 
+class I(Gate):
+    """The identity gate.
+
+    Args:
+        *q (int): the qubit id numbers.
+    """
+
+    def __init__(self, *q):
+        super(I, self).__init__()
+        self.name = "identity"
+        self.target_qubits = tuple(q)
+        self.init_args = q
+        self.unitary_params = [len(self.target_qubits)]
+
+
 class M(Gate):
     """The Measure Z gate.
 

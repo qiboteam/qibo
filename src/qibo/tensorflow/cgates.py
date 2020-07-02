@@ -14,7 +14,7 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"M", "Flatten", "CallbackGate"}
+        cgate_only = {"I", "M", "Flatten", "CallbackGate"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -132,6 +132,21 @@ class Z(TensorflowGate, base_gates.Z):
         TensorflowGate.__call__(self, state, is_density_matrix)
         return op.apply_z(state, self.nqubits, self.target_qubits[0],
                           self.control_qubits)
+
+
+class I(TensorflowGate, base_gates.I):
+
+    def __init__(self, *q):
+        base_gates.I.__init__(self, *q)
+        TensorflowGate.__init__(self)
+
+    @staticmethod
+    def construct_unitary(nqubits: int) -> tf.Tensor:
+        n = tf.cast(2 ** nqubits, dtype=DTYPES.get('DTYPEINT'))
+        return tf.eye(n, dtype=DTYPES.get('DTYPECPX'))
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
+        return state
 
 
 class M(TensorflowGate, base_gates.M):

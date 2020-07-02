@@ -95,6 +95,25 @@ def test_zgate(backend, accelerators):
     np.testing.assert_allclose(final_state, target_state)
 
 
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_identity_gate(backend, accelerators):
+    """Check identity gate is working properly."""
+    qibo.set_backend(backend)
+    c = Circuit(2, accelerators)
+    c.add((gates.H(i) for i in range(2)))
+    c.add(gates.I(0))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 2.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4, accelerators)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.I(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 4.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_multicontrol_xgate(backend):
     """Check that fallback method for X works for one or two controls."""
