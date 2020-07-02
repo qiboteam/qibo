@@ -15,7 +15,7 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 
     from qsvd import QSVD
 
-    # We choose a number of qubits, and the size of the bipartion with qubits 0,1,...,subzize-1
+    # We choose a number of qubits, and the size of the bipartition with qubits 0,1,...,subsize-1
      
     nqubits = 6
     subsize = 3 
@@ -45,7 +45,7 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
     cost_function, optimal_angles = Qsvd.minimize(initial_parameters, nlayers, init_state=initial_state,
                                               nshots=10000, RY=False, method='Powell')
 
-    # We use the optimal angles to compute the Schmidt coefficients of the bipartion
+    # We use the optimal angles to compute the Schmidt coefficients of the bipartition
 
     Schmidt_coefficients = Qsvd.Schmidt_coeff(optimal_angles, nlayers, initial_state)
     print('Schmidt coefficients: ', Schmidt_coefficients)
