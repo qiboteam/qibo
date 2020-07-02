@@ -17,6 +17,8 @@ To run a particular instance of the problem we have to set up the initial argume
 - easy_hamiltonian (qibo.hamiltonians.Hamiltonian): initial Hamiltonian object, defined as sz_hamiltonian.
 - problem_hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
+  python main.py --nqubits 4 --layers 2 --maxsteps 5000 --T_max 4
+
 ## Results
 A legitimate question is how accurate a variational circuit can be, and how close can the state we extract by running a AAVQE on our set of quantum circuits get to exact ground state of the system. Since we are dealing with finite systems, the Hamiltonians we are considering always have a gap (at least proportional to 1/n). We can bound the distance from our trial wave-function to the exact ground state with the difference on the energies ε = (E<sub>AAVQE</sub> - E<sub>0</sub>).   We will use this error in the ground state energy as a measure of the quality of the circuit. 
 
