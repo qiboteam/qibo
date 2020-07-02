@@ -27,17 +27,6 @@ def test_one_qubit_gate_multiplication(backend):
 
 
 @pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
-def test_gate_multiplication_with_identity(backend):
-    """Check gate multiplication with 1."""
-    qibo.set_backend(backend)
-    gate = gates.RX(0, theta=0.1234)
-    final_gate = gate @ 1
-    assert final_gate is gate
-    final_gate = 1 @ gate
-    assert final_gate is gate
-
-
-@pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
 def test_two_qubit_gate_multiplication(backend):
     """Check gate multiplication for two-qubit gates."""
     qibo.set_backend(backend)

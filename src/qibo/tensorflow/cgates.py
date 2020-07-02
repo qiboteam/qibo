@@ -27,8 +27,6 @@ class TensorflowGate(base_gates.Gate):
                                       "used in compiled mode.")
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
-        if other == 1:
-            return self
         if self.qubits != other.qubits:
             raise NotImplementedError("Cannot multiply gates that target "
                                       "different qubits.")
