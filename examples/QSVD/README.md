@@ -11,6 +11,10 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 
 ## How to run an example
 
+    # We import the QSVD class
+
+    from qsvd import QSVD
+
     # We choose a number of qubits, and the size of the bipartion with qubits 0,1,...,subzize-1
      
     nqubits = 6
@@ -21,6 +25,8 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
     Qsvd = QSVD(nqubits, subsize)
 
     # We choose an intial random state
+
+    import numpy as np
 
     initial_state = np.random.rand(2**nqubits)
     initial_state = initial_state / np.linalg.norm(initial_state)
