@@ -46,6 +46,10 @@ class FusionGroup(fusion.FusionGroup):
             return (module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
 
         # Case 3: One-qubit gates exist
+        if not self.gates0[-1] and not self.gates1[-1]:
+            self.gates0.pop()
+            self.gates1.pop()
+
         module = self.module
         ident0 = module.I(self.qubit0)
         ident1 = module.I(self.qubit1)
@@ -71,4 +75,15 @@ class FusionGroup(fusion.FusionGroup):
             matrix = self._one_qubit_matrix(g0, g1)
             matrix2 = self._two_qubit_matrix(g2, flag)
             fused_matrix = tf.matmul(tf.matmul(matrix, matrix2), fused_matrix)
-        return (module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
+
+        if len(self.two_qubit_gates) == len(self.gates0):
+            g2, flag = self.two_qubit_gates[-1]
+            if self.is_efficient(g2):
+                fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+                return (fused_gate, g2)
+
+            matrix2 = self._two_qubit_matrix(g2, flag)
+            fused_matrix = tf.matmul(matrix2, fused_matrix)
+
+        fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+        return (fused_gate,)

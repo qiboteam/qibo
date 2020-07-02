@@ -64,7 +64,7 @@ def test_from_queue_single_group():
 def test_from_queue_two_groups():
     """Check fusion that creates two ``FusionGroup``s."""
     queue = [gates.X(0), gates.H(1),
-             gates.RX(2, theta=0.1234).controlled_by(1), 
+             gates.RX(2, theta=0.1234).controlled_by(1),
              gates.H(2), gates.Y(1),
              gates.H(0)]
     fused_groups = fusion.FusionGroup.from_queue(queue)
@@ -111,14 +111,17 @@ def test_fused_gate_calculation():
     group.add(gates.H(0))
     group.add(gates.H(1))
     group.add(gates.CNOT(0, 1))
+    group.add(gates.X(0))
+    group.add(gates.X(1))
 
     assert len(group.gates) == 1
     gate = group.gates[0]
 
+    x = np.array([[0, 1], [1, 0]])
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
-    target_matrix = cnot @ np.kron(h, h)
+    target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
 
     np.testing.assert_allclose(gate.unitary, target_matrix)
 

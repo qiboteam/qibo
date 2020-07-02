@@ -29,7 +29,7 @@ class FusionGroup:
 
     # ``FusionGroup`` cannot start with these gates because it is more
     # efficient to apply them on their own
-    _skip_gates = {"CNOT", "CZ", "SWAP", "CZPow"}
+    _efficient_gates = {"CNOT", "CZ", "SWAP", "CZPow"}
 
     def __init__(self):
         self.qubit0 = None
@@ -64,6 +64,13 @@ class FusionGroup:
                 return group[0]
         return None
 
+    def is_efficient(self, gate: "Gate") -> bool:
+        """Checks if given two-qubit ``gate`` is efficient.
+
+        Efficient gates are not fused if they are in the start or in the end.
+        """
+        return gate.__class__.__name__ in self._efficient_gates
+
     @classmethod
     def from_queue(cls, queue: List["Gate"]) -> List["FusionGroup"]:
         """Fuses a queue of gates by combining up to two-qubit gates.
@@ -81,7 +88,7 @@ class FusionGroup:
             gate = next(gates)
             new_group = cls()
             new_group.add(gate)
-            if gate.qubits and gate.__class__.__name__ not in cls._skip_gates:
+            if gate.qubits and not new_group.is_efficient(gate):
                 new_remaining_queue = []
                 for gate in gates:
                     commutes = True
