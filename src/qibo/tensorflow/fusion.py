@@ -24,6 +24,7 @@ class FusionGroup(fusion.FusionGroup):
         return matrix
 
     def calculate(self) -> Tuple["Gate"]:
+        super(FusionGroup, self).calculate()
         # Case 1: Special gate
         if self.special_gate is not None:
             assert not self.gates0[0] and not self.gates1[0]
@@ -51,20 +52,24 @@ class FusionGroup(fusion.FusionGroup):
             self.gates1.pop()
 
         module = self.module
-        ident0 = module.I(self.qubit0)
-        ident1 = module.I(self.qubit1)
         # Fuse one-qubit gates
+        ident0 = module.I(self.qubit0)
         gates0 = (functools.reduce(operator.matmul, reversed(gates), ident0)
                   if len(gates) != 1 else gates[0] for gates in self.gates0)
-        gates1 = (functools.reduce(operator.matmul, reversed(gates), ident1)
-                  if len(gates) != 1 else gates[0] for gates in self.gates1)
+        if self.qubit1 is not None:
+            ident1 = module.I(self.qubit1)
+            gates1 = (functools.reduce(operator.matmul, reversed(gates), ident1)
+                      if len(gates) != 1 else gates[0] for gates in self.gates1)
 
         # Case 3a: One-qubit gates only (no two-qubit gates)
         if not self.two_qubit_gates:
             gates0 = list(gates0)[::-1]
-            gates1 = list(gates1)[::-1]
             fused_gate0 = (functools.reduce(operator.matmul, gates0, ident0)
                            if len(gates0) != 1 else gates0[0])
+            if self.qubit1 is None:
+                return (fused_gate0,)
+
+            gates1 = list(gates1)[::-1]
             fused_gate1 = (functools.reduce(operator.matmul, gates1, ident1)
                            if len(gates1) != 1 else gates1[0])
             return (fused_gate0, fused_gate1)
@@ -78,9 +83,9 @@ class FusionGroup(fusion.FusionGroup):
 
         if len(self.two_qubit_gates) == len(self.gates0):
             g2, flag = self.two_qubit_gates[-1]
-            #if self.is_efficient(g2):
-            #    fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
-            #    return (fused_gate, g2)
+            if self.is_efficient(g2):
+                fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+                return (fused_gate, g2)
 
             matrix2 = self._two_qubit_matrix(g2, flag)
             fused_matrix = tf.matmul(matrix2, fused_matrix)

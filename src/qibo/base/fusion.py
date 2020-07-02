@@ -38,6 +38,7 @@ class FusionGroup:
         self.gates1 = [[]]
         self.two_qubit_gates = [] # list of tuples (gate, revert flag)
 
+        self.completed = False
         self.special_gate = None
         self._fused_gates = None
 
@@ -88,26 +89,28 @@ class FusionGroup:
             gate = next(gates)
             new_group = cls()
             new_group.add(gate)
-            if gate.qubits:# and not new_group.is_efficient(gate):
-                new_remaining_queue = []
-                for gate in gates:
-                    commutes = True
-                    for blocking_gate in new_remaining_queue:
-                        commutes = commutes and gate.commutes(blocking_gate)
-                        if not commutes:
-                            break
+            new_remaining_queue = []
+            for gate in gates:
+                if new_group.completed:
+                    new_remaining_queue.append(gate)
+                    break
 
-                    if commutes:
-                        try:
-                            new_group.add(gate)
-                        except ValueError:
-                            new_remaining_queue.append(gate)
-                    else:
+                commutes = True
+                for blocking_gate in new_remaining_queue:
+                    commutes = commutes and gate.commutes(blocking_gate)
+                    if not commutes:
+                        break
+
+                if commutes:
+                    try:
+                        new_group.add(gate)
+                    except ValueError:
                         new_remaining_queue.append(gate)
-                remaining_queue = list(new_remaining_queue)
-            else:
-                remaining_queue.pop(0)
+                else:
+                    new_remaining_queue.append(gate)
 
+            new_group.completed = True
+            remaining_queue = list(new_remaining_queue) + list(gates)
             group_queue.append(new_group)
 
         return group_queue
@@ -126,17 +129,11 @@ class FusionGroup:
 
     def add(self, gate: "Gate"):
         """Adds a gate in the group."""
-        if self._fused_gates is not None:
-            raise RuntimeError("Cannot add gates to ``FusionGroup`` for "
-                               "which the fused gate was already calculated.")
+        if self.completed:
+            raise RuntimeError("Cannot add gates to completed ``FusionGroup``.")
 
-        if self.special_gate is not None:
-            raise ValueError("Cannot add gate on special fusion group.")
         if not gate.qubits:
-            if self.qubits:
-                raise ValueError("Cannot add special gate on fusion group with "
-                                 "qubits already set.")
-            self.special_gate = gate
+            self._add_special_gate(gate)
         elif len(gate.qubits) == 1:
             self._add_one_qubit_gate(gate)
         elif len(gate.qubits) == 2:
@@ -147,7 +144,19 @@ class FusionGroup:
 
     def calculate(self):
         """Calculates fused gate."""
-        raise NotImplementedError
+        if not self.completed:
+            raise RuntimeError("Cannot calculate fused gates for incomplete "
+                               "FusionGroup.")
+        if self.special_gate is None and self.qubit0 is None:
+            raise RuntimeError("Cannot calculate fused gates for empty "
+                               "FusionGroup.")
+
+    def _add_special_gate(self, gate: "Gate"):
+        if self.qubits:
+            raise ValueError("Cannot add special gate on fusion group with "
+                             "qubits already set.")
+        self.special_gate = gate
+        self.completed = True
 
     def _add_one_qubit_gate(self, gate: "Gate"):
         qubit = gate.qubits[0]
@@ -167,7 +176,14 @@ class FusionGroup:
         if self.qubit0 is None:
             self.qubit0, self.qubit1 = qubit0, qubit1
             self.two_qubit_gates.append((gate, False))
+            if self.is_efficient(gate):
+                self.completed = True
+
         elif self.qubit1 is None:
+            if self.is_efficient(gate):
+                raise ValueError("It is not efficient to add {} in FusionGroup "
+                                 "with only one qubit set.".format(gate))
+
             if self.qubit0 == qubit0:
                 self.qubit1 = qubit1
                 self.two_qubit_gates.append((gate, False))
@@ -178,6 +194,7 @@ class FusionGroup:
                 raise ValueError("Cannot add gate on qubits {} and {} in "
                                  "fusion group of qubit {}."
                                  "".format(qubit0, qubit1, self.qubit0))
+
         else:
             if self.qubits != {qubit0, qubit1}: # pragma: no cover
                 raise ValueError("Cannot add gate on qubits {} and {} in "

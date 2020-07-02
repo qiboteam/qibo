@@ -78,6 +78,7 @@ def test_from_queue_two_groups():
     assert group2.two_qubit_gates == [(queue[2], False)]
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [5, 6, 9, 12])
 def test_from_queue_variational_layer(nqubits):
     """Check fusion for common type variational circuit."""
@@ -107,12 +108,11 @@ def test_from_queue_variational_layer(nqubits):
 
 
 def test_fused_gate_calculation():
-    group = fusion.FusionGroup()
-    group.add(gates.H(0))
-    group.add(gates.H(1))
-    group.add(gates.CNOT(0, 1))
-    group.add(gates.X(0))
-    group.add(gates.X(1))
+    queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
+             gates.X(0), gates.X(1)]
+    group = fusion.FusionGroup.from_queue(queue)
+    assert len(group) == 1
+    group = group[0]
 
     assert len(group.gates) == 1
     gate = group.gates[0]
@@ -126,6 +126,10 @@ def test_fused_gate_calculation():
     np.testing.assert_allclose(gate.unitary, target_matrix)
 
 
+#@pytest.mark.skip
+#@pytest.mark.parametrize("nqubits", [4, 5])
+#@pytest.mark.parametrize("nlayers", [1, 4])
+#@pytest.mark.parametrize("accelerators", [None])
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 4])
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
