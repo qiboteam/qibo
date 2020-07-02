@@ -17,6 +17,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
+    from qibo.tensorflow import fusion
 
     def __init__(self, nqubits):
         super(TensorflowCircuit, self).__init__(nqubits)
@@ -162,7 +163,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                "is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, initial_state=None) -> tf.Tensor:
+    def _cast_initial_state(self, initial_state: Optional[InitStateType] = None
+                            ) -> tf.Tensor:
         if initial_state is None:
             return self._default_initial_state()
 

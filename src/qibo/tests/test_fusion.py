@@ -49,7 +49,7 @@ def test_two_qubit_gate_multiplication(backend):
     qibo.set_backend("custom")
 
 
-def test_fuse_queue_single_group():
+def test_from_queue_single_group():
     """Check fusion that creates a single ``FusionGroup``."""
     queue = [gates.H(0), gates.X(1), gates.CZ(0, 1)]
     fused_groups = fusion.FusionGroup.from_queue(queue)
@@ -60,7 +60,7 @@ def test_fuse_queue_single_group():
     assert group.two_qubit_gates == [(queue[2], False)]
 
 
-def test_fuse_queue_two_groups():
+def test_from_queue_two_groups():
     """Check fusion that creates two ``FusionGroup``s."""
     queue = [gates.X(0), gates.H(1), gates.CNOT(1, 2), gates.H(2), gates.Y(1),
              gates.H(0)]
@@ -76,7 +76,7 @@ def test_fuse_queue_two_groups():
 
 
 # TODO: Do this test for odd ``nqubits``
-def test_fuse_queue_variational_layer(nqubits=6):
+def test_from_queue_variational_layer(nqubits=6):
     """Check fusion for common type variational circuit."""
     theta = np.pi * np.random.random((2, nqubits))
     queue0 = [gates.RY(i, theta[0, i]) for i in range(nqubits)]
@@ -113,3 +113,20 @@ def test_fused_gate_calculation():
     target_matrix = cnot @ np.kron(h, h)
 
     np.testing.assert_allclose(gate.unitary, target_matrix)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
+def test_variational_layer_fusion(nqubits, accelerators):
+    theta = np.pi * np.random.random((2, nqubits))
+    c = Circuit(nqubits, accelerators=accelerators)
+    c.add((gates.RY(i, theta[0, i]) for i in range(nqubits)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    c.add((gates.RY(i, theta[1, i]) for i in range(nqubits)))
+    c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+    c.add(gates.CZ(0, nqubits - 1))
+    target_state = c()
+
+    fused_c = c.fuse()
+    final_state = fused_c()
+    np.testing.assert_allclose(final_state, target_state)

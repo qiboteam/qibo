@@ -29,6 +29,7 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
+    from qibo.base import fusion
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -105,6 +106,16 @@ class BaseCircuit(object):
         else:
             new_circuit.queue = list(self.queue)
             new_circuit.measurement_gate = self.measurement_gate
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def fuse(self) -> "BaseCircuit":
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        fusion_groups = self.fusion.FusionGroup.from_queue(self.queue)
+        new_circuit.queue = list(gate for group in fusion_groups
+                                 for gate in group.gates)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 

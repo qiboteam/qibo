@@ -24,11 +24,28 @@ class FusionGroup(fusion.FusionGroup):
         return matrix
 
     def calculate(self) -> Tuple["Gate"]:
+        # Case 1: Special gate
         if self.special_gate is not None:
             assert not self.gates0[0] and not self.gates1[0]
             assert not self.two_qubit_gates
             return (self.special_gate,)
 
+        # Case 2: Two-qubit gates only (no one-qubit gates)
+        if self.first_gate(0) is None and self.first_gate(1) is None:
+            assert self.two_qubit_gates
+            # Case 2a: One two-qubit gate only
+            if len(self.two_qubit_gates) == 1:
+                return (self.two_qubit_gates[0][0],)
+
+            # Case 2b: Two or more two-qubit gates
+            module = self.module
+            fused_matrix = self._two_qubit_matrix(*self.two_qubit_gates[0])
+            for gate, flag in self.two_qubit_gates[1:]:
+                matrix = self._two_qubit_matrix(gate, flag)
+                fused_matrix = tf.matmul(matrix, fused_matrix)
+            return (module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
+
+        # Case 3: One-qubit gates exist
         module = self.module
         ident0 = module.I(self.qubit0)
         ident1 = module.I(self.qubit1)
@@ -38,6 +55,7 @@ class FusionGroup(fusion.FusionGroup):
         gates1 = (functools.reduce(operator.matmul, reversed(gates), ident1)
                   if len(gates) != 1 else gates[0] for gates in self.gates1)
 
+        # Case 3a: One-qubit gates only (no two-qubit gates)
         if not self.two_qubit_gates:
             gates0 = reversed(list(gates0))
             gates1 = reversed(list(gates1))
@@ -47,6 +65,7 @@ class FusionGroup(fusion.FusionGroup):
                            if len(gates1) != 1 else gates1[0])
             return (fused_gate0, fused_gate1)
 
+        # Case 3b: One-qubit and two-qubit gates exist
         fused_matrix = self._one_qubit_matrix(next(gates0), next(gates1))
         for g0, g1, (g2, flag) in zip(gates0, gates1, self.two_qubit_gates):
             matrix = self._one_qubit_matrix(g0, g1)

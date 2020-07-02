@@ -1,4 +1,4 @@
-from typing import List, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 
 class FusionGroup:
@@ -51,6 +51,15 @@ class FusionGroup:
             self._fused_gates = self.calculate()
         return self._fused_gates
 
+    def first_gate(self, i: int) -> Optional["Gate"]:
+        if i < 0 or i > 1:
+            raise ValueError(f"Invalid integer {i} given in FusionGroup.first_gate.")
+        gates = self.gates0 if i == 0 else self.gates1
+        for group in gates:
+            if group:
+                return group[0]
+        return None
+
     @classmethod
     def from_queue(cls, queue: List["Gate"]) -> List["FusionGroup"]:
         """Fuses a queue of gates by combining up to two-qubit gates.
@@ -90,14 +99,14 @@ class FusionGroup:
 
     @property
     def module(self):
-        if self.gates0[0]:
-            return self.gates0[0][0].module
-        if self.gates1[0]:
-            return self.gates1[0][0].module
         if self.two_qubit_gates:
-            return self.two_qubit_gates[0].module
+            return self.two_qubit_gates[0][0].module
         if self.special_gate is not None:
             return self.special_gate.module
+        for i in range(2):
+            gate = self.first_gate(i)
+            if gate is not None:
+                return gate.module
         raise ValueError("Unable to find gate module.")
 
     def add(self, gate: "Gate"):
