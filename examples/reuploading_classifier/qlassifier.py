@@ -191,6 +191,7 @@ class single_qubit_classifier:
 
         checks = [int(g == l) for g, l in zip(guess_labels, self.test_set[1])]
         axs[1].scatter(x_0, x_1, c=checks, s=2, cmap=colors_rightwrong, norm=norm_rightwrong)
+        print('The accuracy for this classification is %.2f'%(100 * np.sum(checks) / len(checks)), '%')
 
         fig.savefig('results/'+self.name+'/%s_layers/test_set.pdf'%self.layers)
 
