@@ -10,7 +10,8 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 <img src="QSVD.png" width="510px">
 
 ## How to run an example
-"   # We choose a number of qubits, and the size of the bipartion with qubits 0,1,...,subzize-1
+
+    # We choose a number of qubits, and the size of the bipartion with qubits 0,1,...,subzize-1
      
     nqubits = 6
     subsize = 3 
@@ -47,7 +48,7 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 
     VonNeumann_entropy = Qsvd.VonNeumann_entropy(optimal_angles, nlayers, initial_state)
     print('Von Neumann entropy: ', VonNeumann_entropy)
-"
+
 
 ## Results
 The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The following figure shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
