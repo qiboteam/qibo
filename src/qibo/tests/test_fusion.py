@@ -3,7 +3,6 @@ Test functions for gate fusion.
 """
 import numpy as np
 import pytest
-import qibo
 from qibo.models import Circuit
 from qibo import gates
 from qibo.tensorflow import fusion
@@ -12,6 +11,7 @@ from qibo.tensorflow import fusion
 @pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
 def test_one_qubit_gate_multiplication(backend):
     """Check gate multiplication for one-qubit gates."""
+    import qibo
     qibo.set_backend(backend)
     gate1 = gates.X(0)
     gate2 = gates.H(0)
@@ -29,6 +29,7 @@ def test_one_qubit_gate_multiplication(backend):
 @pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
 def test_two_qubit_gate_multiplication(backend):
     """Check gate multiplication for two-qubit gates."""
+    import qibo
     qibo.set_backend(backend)
     theta, phi = 0.1234, 0.5432
     gate1 = gates.fSim(0, 1, theta=theta, phi=phi)
