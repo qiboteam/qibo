@@ -125,8 +125,8 @@ def test_variational_layer_fusion(nqubits, accelerators):
     c.add((gates.RY(i, theta[1, i]) for i in range(nqubits)))
     c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
     c.add(gates.CZ(0, nqubits - 1))
-    target_state = c()
 
     fused_c = c.fuse()
+    target_state = c()
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)

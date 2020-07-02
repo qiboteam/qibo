@@ -397,6 +397,17 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "circuits because they modify gate objects.")
         return super(TensorflowDistributedCircuit, self).copy(deep)
 
+    def fuse(self) -> "TensorflowDistributedCircuit":
+        if self.queues is not None and self.queues.queues:
+            raise RuntimeError("Cannot fuse distributed circuit after gates "
+                               "are set.")
+        # use deep copy because distributed circuit gates may change
+        new_circuit = self.copy(deep=True)
+        fusion_groups = self.fusion.FusionGroup.from_queue(new_circuit.queue)
+        new_circuit.queue = list(gate for group in fusion_groups
+                                 for gate in group.gates)
+        return new_circuit
+
     def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "
                                   "density matrices yet.")
@@ -436,12 +447,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if not self.queue:
             raise RuntimeError("No gates available to set for distributed run.")
 
-        # Count how many gates target each qubit to identify global qubits
         counter = DeviceQueues.count(self.queue, self.nqubits)
         if self.queues is None:
             self.global_qubits = counter.argsort()[:self.nglobal]
-
         transformed_queue = self.queues.transform(self.queue, counter)
+
         self.queues.create(transformed_queue)
 
     def compile(self):
