@@ -88,7 +88,7 @@ class FusionGroup:
             gate = next(gates)
             new_group = cls()
             new_group.add(gate)
-            if gate.qubits and not new_group.is_efficient(gate):
+            if gate.qubits:# and not new_group.is_efficient(gate):
                 new_remaining_queue = []
                 for gate in gates:
                     commutes = True

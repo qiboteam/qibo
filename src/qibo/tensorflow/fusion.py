@@ -78,9 +78,9 @@ class FusionGroup(fusion.FusionGroup):
 
         if len(self.two_qubit_gates) == len(self.gates0):
             g2, flag = self.two_qubit_gates[-1]
-            if self.is_efficient(g2):
-                fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
-                return (fused_gate, g2)
+            #if self.is_efficient(g2):
+            #    fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+            #    return (fused_gate, g2)
 
             matrix2 = self._two_qubit_matrix(g2, flag)
             fused_matrix = tf.matmul(matrix2, fused_matrix)
