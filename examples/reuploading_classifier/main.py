@@ -21,6 +21,7 @@ def main(name, layers):
     ql = single_qubit_classifier(name, layers) # Define classifier
     with open('saved_parameters.pkl', 'rb') as f:
         data = pickle.load(f) # Load previous results. Have we ever run these problem?
+        print(data)
     try:
         parameters = data[name][layers]
         print('Problem solved before, obtaining parameters from file...')
@@ -41,3 +42,4 @@ def main(name, layers):
 if __name__ == "__main__":
     args = vars(parser.parse_args())
     main(**args)
+

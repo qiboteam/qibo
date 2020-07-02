@@ -59,4 +59,5 @@ state.
 <img src="images/world_map.png" width="510px">
 
 Every time the `main.py` file is run, both results are saved in the folder 
-`results/[name of the problem]/[number of layers]_layers`.
+`results/[name of the problem]/[number of layers]_layers`. The repository includes the solution 
+for all problems with 10 layers.
