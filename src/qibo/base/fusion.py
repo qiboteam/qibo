@@ -150,6 +150,7 @@ class FusionGroup:
         if self.special_gate is None and self.qubit0 is None:
             raise RuntimeError("Cannot calculate fused gates for empty "
                                "FusionGroup.")
+        return
 
     def _add_special_gate(self, gate: "Gate"):
         if self.qubits:
