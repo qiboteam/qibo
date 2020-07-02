@@ -21,15 +21,15 @@ A multi-Toffoli gate on all "clause" ancilla targeting the Grover ancilla (qubit
 
 Then, all ancillas must be uncomputed for the oracle to be complete. This is a crucial step as these ancillas have to be decoupled from the system to be used in the next iteration of the Grover algorithm.
 
-### Diffusion operator
+### Diffusion transform
 
-After the sign change of the solution states, an inversion over the average amplifies their amplitude. This is at the core of Grover's search algorithm. This operator, also known as Diffusion operator, can be constructed by a set of Hadamard gates on all qubits, a multi-qubit gate that changes the sign of the |0000...00> state, and another set of H gates. 
+After the sign change of the solution states, an inversion about average amplifies their amplitude. This is at the core of Grover's search algorithm. This operator, also known as Diffusion transform, can be constructed by a set of Hadamard gates on all qubits, a multi-qubit gate that changes the sign of the |0000...00> state, and another set of H gates. 
 
 ### Building the algorithm
 
 The quantum register is started with Hadamard gates on all qubits encoding the problem, and an X gate followed by a Hadamard gate on the Grover ancilla, used to change the sign of the solution. 
 
-Then the oracle and diffusion operator are applied (π/4)sqrt(N) times, where N is the total number of possible outcomes.
+Then the oracle and diffusion transform are applied (π/4)sqrt(N) times, where N is the total number of possible outcomes.
 
 After this has been applied, measuring the quantum registers outputs the solution of the problem. 
 
@@ -41,7 +41,7 @@ Adding the argument --nqubits (int) allows for instances with different number o
 
 Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
 
-The functions used in this example, including gate by gate decompositions of both the oracle and diffusion operator are included in `functions.py`.
+The functions used in this example, including gate by gate decompositions of both the oracle and diffusion transform are included in `functions.py`.
 
 ## Create your own instances
 

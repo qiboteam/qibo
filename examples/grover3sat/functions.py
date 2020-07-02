@@ -86,7 +86,7 @@ def oracle(q, c, ancilla, clauses):
         k += 1
 
         
-def diffuser(q):
+def diffusion(q):
     """Generator that performs the inversion over the average step in Grover's search algorithm.
     Args:
         q (list): quantum register that encodes the problem.
@@ -122,7 +122,7 @@ def grover(circuit, q, c, ancilla, clauses, steps):
     circuit.add(start_grover(q, ancilla))
     for i in range(steps):
         circuit.add(oracle(q, c, ancilla, clauses))
-        circuit.add(diffuser(q))
+        circuit.add(diffusion(q))
     circuit.add(gates.M(*(q), register_name='result'))
     return circuit
 
