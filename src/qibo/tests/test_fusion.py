@@ -104,8 +104,8 @@ def test_fused_gate_calculation():
     group.add(gates.H(1))
     group.add(gates.CNOT(0, 1))
 
-    assert len(group.fused_gates)
-    gate = group.fused_gates[0]
+    assert len(group.gates) == 1
+    gate = group.gates[0]
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],

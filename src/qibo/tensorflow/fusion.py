@@ -30,17 +30,22 @@ class FusionGroup(fusion.FusionGroup):
             return (self.special_gate,)
 
         module = self.module
-        ident1 = module.I(self.qubit0)
-        ident2 = module.I(self.qubit1)
+        ident0 = module.I(self.qubit0)
+        ident1 = module.I(self.qubit1)
         # Fuse one-qubit gates
-        gates0 = (functools.reduce(operator.matmul, reversed(gates), ident1)
-                  for gates in self.gates0)
-        gates1 = (functools.reduce(operator.matmul, reversed(gates), ident2)
-                  for gates in self.gates1)
+        gates0 = (functools.reduce(operator.matmul, reversed(gates), ident0)
+                  if len(gates) != 1 else gates[0] for gates in self.gates0)
+        gates1 = (functools.reduce(operator.matmul, reversed(gates), ident1)
+                  if len(gates) != 1 else gates[0] for gates in self.gates1)
 
         if not self.two_qubit_gates:
-            return (functools.reduce(operator.matmul, reversed(gates0), ident1),
-                    functools.reduce(operator.matmul, reversed(gates1), ident2))
+            gates0 = reversed(list(gates0))
+            gates1 = reversed(list(gates1))
+            fused_gate0 = (functools.reduce(operator.matmul, gates0, ident0)
+                           if len(gates0) != 1 else gates0[0])
+            fused_gate1 = (functools.reduce(operator.matmul, gates1, ident1)
+                           if len(gates1) != 1 else gates1[0])
+            return (fused_gate0, fused_gate1)
 
         fused_matrix = self._one_qubit_matrix(next(gates0), next(gates1))
         for g0, g1, (g2, flag) in zip(gates0, gates1, self.two_qubit_gates):

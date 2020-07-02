@@ -1,4 +1,3 @@
-from qibo.base import gates
 from typing import List, Set, Tuple
 
 
@@ -47,13 +46,13 @@ class FusionGroup:
         return {self.qubit0, self.qubit1}
 
     @property
-    def fused_gates(self) -> Tuple[gates.Gate]:
+    def gates(self) -> Tuple["Gate"]:
         if self._fused_gates is None:
             self._fused_gates = self.calculate()
         return self._fused_gates
 
     @classmethod
-    def from_queue(cls, queue: List[gates.Gate]) -> List["FusionGroup"]:
+    def from_queue(cls, queue: List["Gate"]) -> List["FusionGroup"]:
         """Fuses a queue of gates by combining up to two-qubit gates.
 
         Args:
@@ -101,7 +100,7 @@ class FusionGroup:
             return self.special_gate.module
         raise ValueError("Unable to find gate module.")
 
-    def add(self, gate: gates.Gate):
+    def add(self, gate: "Gate"):
         """Adds a gate in the group."""
         if self._fused_gates is not None:
             raise RuntimeError("Cannot add gates to ``FusionGroup`` for "
@@ -126,7 +125,7 @@ class FusionGroup:
         """Calculates fused gate."""
         raise NotImplementedError
 
-    def _add_one_qubit_gate(self, gate: gates.Gate):
+    def _add_one_qubit_gate(self, gate: "Gate"):
         qubit = gate.qubits[0]
         if self.qubit0 is None or self.qubit0 == qubit:
             self.qubit0 = qubit
@@ -139,7 +138,7 @@ class FusionGroup:
                              "qubits {} and {}."
                              "".format(qubit, self.qubit0, self.qubit1))
 
-    def _add_two_qubit_gate(self, gate: gates.Gate):
+    def _add_two_qubit_gate(self, gate: "Gate"):
         qubit0, qubit1 = gate.qubits
         if self.qubit0 is None:
             self.qubit0, self.qubit1 = qubit0, qubit1
