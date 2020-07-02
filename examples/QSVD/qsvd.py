@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import numpy as np
+from qibo.models import Circuit
+from qibo import gates
+
 
 class QSVD():
     """
@@ -23,14 +27,13 @@ class QSVD():
 ##########################
 
     def ansatz_RY(self, theta, nlayers):
-        """    
+        """
         Args: theta: list or numpy.array with the angles to be used in the circuit
+        
+              nlayers: number of layers of the varitional ansatz
         
         Returns: qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
         """             
-        
-        from qibo.models import Circuit
-        from qibo import gates
         
         c = Circuit(self.nqubits)    
     
@@ -66,18 +69,20 @@ class QSVD():
             for q in range(self.subsize+1, self.nqubits-1, 2): # V
             
                 c.add(gates.CZ(q, q+1))
-                    
-            # Final Ry rotations    
-            for q in range(self.nqubits):
-        
-                c.add(gates.RY(q, theta[index]))
-                index+=1    
-        
-        # Measurements    
+                
+        # Final Ry rotations    
         for q in range(self.nqubits): 
+            
+            c.add(gates.RY(q, theta[index]))
+            index+=1    
+                
+        # Measurements
         
+        small = min(self.subsize, self.subsize2)            
+        for q in range(small):
+            
             c.add(gates.M(q))        
-        
+            c.add(gates.M(q+self.subsize))
         
         return c
 
@@ -86,11 +91,10 @@ class QSVD():
         """        
         Args: theta: list or numpy.array with the angles to be used in the circuit
         
+              nlayers: number of layers of the varitional ansatz
+        
         Returns: qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
         """
-        
-        from qibo.models import Circuit
-        from qibo import gates
  
         c = Circuit(self.nqubits)
     
@@ -123,7 +127,6 @@ class QSVD():
             
                 c.add(gates.RX(q, theta[index]))
                 index+=1
-            
                 c.add(gates.RZ(q, theta[index]))
                 index+=1
             
@@ -138,24 +141,26 @@ class QSVD():
             for q in range(self.subsize+1, self.nqubits-1, 2): # V
             
                 c.add(gates.CZ(q, q+1))
-                    
-            # Final Rx,Rz,Rx rotations    
-            for q in range(self.nqubits):
         
-                c.add(gates.RX(q, theta[index]))
-                index+=1
-            
-                c.add(gates.RZ(q, theta[index]))
-                index+=1
-            
-                c.add(gates.RX(q, theta[index]))
-                index+=1
-        
-        # Measurements    
+        # Final Rx,Rz,Rx rotations    
         for q in range(self.nqubits): 
         
-            c.add(gates.M(q))
-
+            c.add(gates.RX(q, theta[index]))
+            index+=1
+            
+            c.add(gates.RZ(q, theta[index]))
+            index+=1
+            
+            c.add(gates.RX(q, theta[index]))
+            index+=1
+          
+        # Measurements    
+            
+        small = min(self.subsize, self.subsize2)            
+        for q in range(small):
+            
+            c.add(gates.M(q))        
+            c.add(gates.M(q+self.subsize))
 
         return c
 
@@ -167,6 +172,8 @@ class QSVD():
     def QSVD_circuit(self, theta, nlayers, RY=False):
         """
         Args: theta: list or numpy.array with the angles to be used in the circuit
+        
+              nlayers: number of layers of the varitional ansatz
               
               RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
                   if False, parameterized Ry gates are used in the circuit (default=False)
@@ -193,6 +200,8 @@ class QSVD():
     def QSVD_cost(self, theta, nlayers, init_state=None, nshots=10000, RY=False):
         """
         Args: theta: list or numpy.array with the angles to be used in the circuit
+        
+              nlayers: number of layers of the varitional ansatz
               
               init_state: numpy.array with the quantum state to be Schmidt-decomposed
               
@@ -236,12 +245,28 @@ class QSVD():
     
     def minimize(self, init_theta, nlayers, init_state=None, nshots=10000,
                   RY=False, method='Powell'):
+        """
+        Args: theta: list or numpy.array with the angles to be used in the circuit
+        
+              nlayers: number of layers of the varitional ansatz
+              
+              init_state: numpy.array with the quantum state to be Schmidt-decomposed
+          
+              nshots: int number of runs of the circuit during the sampling process (default=10000)
+          
+              RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
+                  if False, parameterized Ry gates are used in the circuit (default=False)
+                  
+             method: 'classical optimizer for the minimization. All methods from scipy.optimize.minmize are suported (default='Powell')
+        
+        Returns: numpy.float64 with value of the minimum found, numpy.ndarray with the optimal angles        
+        """
         
         from scipy.optimize import minimize
         
         result = minimize(self.QSVD_cost, init_theta, args=(nlayers,init_state,nshots,RY), method=method)
         loss = result.fun
-        optimal_angles =result.x
+        optimal_angles = result.x
         
         
         return loss, optimal_angles
@@ -251,6 +276,8 @@ class QSVD():
     def Schmidt_coeff(self, theta, nlayers, init_state, nshots=10000, RY=False):
         """
         Args: theta: list or numpy.array with the angles to be used in the circuit
+        
+              nlayers: number of layers of the varitional ansatz
               
               init_state: numpy.array with the quantum state to be Schmidt-decomposed
           
@@ -261,8 +288,6 @@ class QSVD():
         
         Returns: numpy.array with the Schmidt coefficients given by the QSVD, in decreasing order        
         """
-        
-        import numpy as np
 
         Qsvd = self.QSVD_circuit(theta, nlayers, RY=RY)
         Qsvd = Qsvd(init_state, nshots)
@@ -275,42 +300,32 @@ class QSVD():
         
             bit_string = bin(i)[2:].zfill(small)
             Schmidt.append(result[2*bit_string])
-      
+        
         Schmidt = np.array(sorted(Schmidt, reverse=True))
-    
+        Schmidt = np.sqrt(Schmidt / nshots)
     
         return Schmidt / np.linalg.norm(Schmidt)
 
 
-
-
-def QSVD_SWAP(self, theta, nlayers, initial_state, RY=False):
-    """
-    Args:
+    def VonNeumann_entropy(self, theta, nlayers, init_state, tol=1e-14, nshots=10000, RY=False):
+        """
+        Args: theta: list or numpy.array with the angles to be used in the circuit
         
-    Returns:
-    """
-    
-    if nqubits/2 != self.subsize:
+              nlayers: number of layers of the varitional ansatz
+              
+              init_state: numpy.array with the quantum state to be Schmidt-decomposed
+          
+              nshots: int number of runs of the circuit during the sampling process (default=10000)
+          
+              RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
+                  if False, parameterized Ry gates are used in the circuit (default=False)
         
-        raise Exception('The number of qubits must be equal in both subsystems')
-    
-    
-    
-    qsvd = QSVD_circuit(theta, nlayers, RY=RY)
-
-    
-    
-    pass
-
-
-def QSVD_Encoder(self, theta, nlayers, initial_state, RY=False):
-    """
-    Args:
+        Returns: numpy.float64 with the value of the Von Neumann entropy for the given bipartition     
+        """
         
-    Returns:
-    """
-
-    pass
-
-
+        Schmidt = self.Schmidt_coeff(theta, nlayers, init_state, nshots=10000, RY=False)       
+        Schmidt = Schmidt**2
+        
+        non_zero_coeff = np.array([coeff for coeff in Schmidt if coeff>tol])
+    
+        return  -np.sum(non_zero_coeff * np.log2(non_zero_coeff))
