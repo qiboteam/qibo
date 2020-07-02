@@ -48,10 +48,11 @@ def test_two_qubit_gate_multiplication(backend):
     # Reset backend for other tests
     qibo.set_backend("custom")
 
+
 def test_fuse_queue_single_group():
     """Check fusion that creates a single ``FusionGroup``."""
     queue = [gates.H(0), gates.X(1), gates.CZ(0, 1)]
-    fused_groups = fusion.fuse_queue(queue)
+    fused_groups = fusion.FusionGroup.from_queue(queue)
     assert len(fused_groups) == 1
     group = fused_groups[0]
     assert group.gates0 == [[queue[0]], []]
@@ -63,7 +64,7 @@ def test_fuse_queue_two_groups():
     """Check fusion that creates two ``FusionGroup``s."""
     queue = [gates.X(0), gates.H(1), gates.CNOT(1, 2), gates.H(2), gates.Y(1),
              gates.H(0)]
-    fused_groups = fusion.fuse_queue(queue)
+    fused_groups = fusion.FusionGroup.from_queue(queue)
     assert len(fused_groups) == 2
     group1, group2 = fused_groups
     assert group1.gates0 == [[queue[0], queue[5]]]
@@ -84,7 +85,7 @@ def test_fuse_queue_variational_layer(nqubits=6):
     queue3 = [gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)]
     queue3.append(gates.CZ(0, nqubits - 1))
 
-    fused_groups = fusion.fuse_queue(queue0 + queue1 + queue2 + queue3)
+    fused_groups = fusion.FusionGroup.from_queue(queue0 + queue1 + queue2 + queue3)
     assert len(fused_groups) == 2 * (nqubits // 2)
     for i, group in enumerate(fused_groups[:nqubits // 2]):
         assert group.gates0 == [[queue0[2 * i]], [queue2[2 * i]]]
