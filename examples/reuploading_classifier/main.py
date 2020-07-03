@@ -6,7 +6,7 @@ import pickle
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--name", default='3_circles', help="Name of the example", type=str)
+parser.add_argument("--name", default='tricrown', help="Name of the example", type=str)
 parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
 
 def main(name, layers):
