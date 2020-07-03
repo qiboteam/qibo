@@ -165,10 +165,10 @@ def test_fuse_random_circuits(nqubits, ngates, accelerators):
         thetas = np.pi * np.random.random((ngates,))
         c = Circuit(nqubits, accelerators)
         for i in range(ngates):
-            gate = one_qubit_gates[np.random.randint(0, 3)]
+            gate = one_qubit_gates[int(np.random.randint(0, 3))]
             q0 = np.random.randint(0, nqubits)
             c.add(gate(q0, thetas[i]))
-            gate = two_qubit_gates[np.random.randint(0, 3)]
+            gate = two_qubit_gates[int(np.random.randint(0, 3))]
             q0, q1 = np.random.randint(0, nqubits, (2,))
             while q0 == q1:
                 q0, q1 = np.random.randint(0, nqubits, (2,))
