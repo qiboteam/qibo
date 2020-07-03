@@ -89,14 +89,14 @@ class FusionGroup:
             gate = next(gates)
             new_group = cls()
             new_group.add(gate)
-            new_remaining_queue = []
+            remaining_queue = []
             for gate in gates:
                 if new_group.completed:
-                    new_remaining_queue.append(gate)
+                    remaining_queue.append(gate)
                     break
 
                 commutes = True
-                for blocking_gate in new_remaining_queue:
+                for blocking_gate in remaining_queue:
                     commutes = commutes and gate.commutes(blocking_gate)
                     if not commutes:
                         break
@@ -105,12 +105,12 @@ class FusionGroup:
                     try:
                         new_group.add(gate)
                     except ValueError:
-                        new_remaining_queue.append(gate)
+                        remaining_queue.append(gate)
                 else:
-                    new_remaining_queue.append(gate)
+                    remaining_queue.append(gate)
 
             new_group.completed = True
-            remaining_queue = list(new_remaining_queue) + list(gates)
+            remaining_queue.extend(gates)
             group_queue.append(new_group)
 
         return group_queue

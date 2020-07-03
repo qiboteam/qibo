@@ -78,35 +78,6 @@ def test_from_queue_two_groups():
     assert group2.two_qubit_gates == [(queue[2], False)]
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("nqubits", [5, 6, 9, 12])
-def test_from_queue_variational_layer(nqubits):
-    """Check fusion for common type variational circuit."""
-    theta = np.pi * np.random.random((2, nqubits))
-    queue0 = [gates.RY(i, theta[0, i]) for i in range(nqubits)]
-    queue1 = [gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    queue2 = [gates.RY(i, theta[1, i]) for i in range(nqubits)]
-    queue3 = [gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)]
-    queue3.append(gates.CZ(0, nqubits - 1))
-
-    fused_groups = fusion.FusionGroup.from_queue(queue0 + queue1 + queue2 + queue3)
-    assert len(fused_groups) == 2 * (nqubits // 2)
-    for i, group in enumerate(fused_groups[:nqubits // 2]):
-        assert group.gates0 == [[queue0[2 * i]], [queue2[2 * i]]]
-        assert group.gates1 == [[queue0[2 * i + 1]], [queue2[2 * i + 1]]]
-        assert group.two_qubit_gates == [(queue1[i], False)]
-    if nqubits % 2:
-        group = fused_groups[nqubits // 2]
-        assert group.gates0 == [[queue0[-1], queue2[-1]], []]
-        assert group.gates1 == [[], []]
-        assert group.two_qubit_gates == [(queue3[-1], True)]
-
-    for i, group in enumerate(fused_groups[nqubits // 2 + nqubits % 2:]):
-        assert group.gates0 == [[], []]
-        assert group.gates1 == [[], []]
-        assert group.two_qubit_gates == [(queue3[i], False)]
-
-
 def test_fused_gate_calculation():
     queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
              gates.X(0), gates.X(1)]
@@ -126,10 +97,6 @@ def test_fused_gate_calculation():
     np.testing.assert_allclose(gate.unitary, target_matrix)
 
 
-#@pytest.mark.skip
-#@pytest.mark.parametrize("nqubits", [4, 5])
-#@pytest.mark.parametrize("nlayers", [1, 4])
-#@pytest.mark.parametrize("accelerators", [None])
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 4])
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
