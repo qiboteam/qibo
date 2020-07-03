@@ -8,7 +8,16 @@ from typing import Tuple
 class FusionGroup(fusion.FusionGroup):
 
     def _one_qubit_matrix(self, gate0: "Gate", gate1: "Gate") -> tf.Tensor:
-        """Calculates 4x4 Kroneker product of one qubit gate unitary matrices."""
+        """Calculates Kroneker product of two one-qubit gates.
+
+        Args:
+            gate0: Gate that acts on ``self.qubit0``.
+            gate1: Gate that acts on ``self.qubit1``.
+
+        Returns:
+            4x4 matrix that corresponds to the Kronecker product of the 2x2
+            gate matrices.
+        """
         matrix0 = gate0.construct_unitary(*gate0.unitary_params)
         matrix1 = gate1.construct_unitary(*gate1.unitary_params)
         matrix = tf.tensordot(matrix0, matrix1, axes=0)
@@ -16,6 +25,16 @@ class FusionGroup(fusion.FusionGroup):
         return matrix
 
     def _two_qubit_matrix(self, gate: "Gate", revert: bool = False) -> tf.Tensor:
+        """Calculates the 4x4 unitary matrix of a two-qubit gate.
+
+        Args:
+            gate: Two-qubit gate acting on ``(self.qubit0, self.qubit1)``.
+            revert: If ``True`` it means that the gate acts on
+                ``(self.qubit1, self.qubit0)``.
+
+        Returns:
+            4x4 unitary matrix corresponding to the gate.
+        """
         matrix = gate.construct_unitary(*gate.unitary_params)
         if revert:
             matrix = tf.reshape(matrix, 4 * (2,))
@@ -23,8 +42,8 @@ class FusionGroup(fusion.FusionGroup):
             matrix = tf.reshape(matrix, (4, 4))
         return matrix
 
-    def calculate(self) -> Tuple["Gate"]:
-        super(FusionGroup, self).calculate()
+    def _calculate(self) -> Tuple["Gate"]:
+        """Calculates the fused gate."""
         # Case 1: Special gate
         if self.special_gate is not None:
             assert not self.gates0[0] and not self.gates1[0]

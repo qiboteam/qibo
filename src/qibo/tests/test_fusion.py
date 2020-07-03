@@ -101,6 +101,7 @@ def test_fused_gate_calculation():
 @pytest.mark.parametrize("nlayers", [1, 4])
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
 def test_circuit_fuse_variational_layer(nqubits, nlayers, accelerators):
+    """Check fused variational layer execution."""
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
 
@@ -116,3 +117,50 @@ def test_circuit_fuse_variational_layer(nqubits, nlayers, accelerators):
     target_state = c()
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_fuse_with_callback(accelerators):
+    """Check entropy calculation in fused circuit."""
+    from qibo import callbacks
+    entropy = callbacks.EntanglementEntropy([0])
+    c = Circuit(2, accelerators)
+    c.add(gates.H(0))
+    c.add(gates.X(1))
+    c.add(gates.CallbackGate(entropy))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CallbackGate(entropy))
+
+    fused_c = c.fuse()
+    target_state = c()
+    final_state = fused_c()
+    np.testing.assert_allclose(final_state, target_state)
+    target_entropy = [0.0, 1.0, 0.0, 1.0]
+    np.testing.assert_allclose(entropy[:].numpy(), target_entropy, atol=1e-7)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("ngates", [10, 20, 40])
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
+def test_fuse_random_circuits(nqubits, ngates, accelerators):
+    """Check gate fusion in randomly generated circuits."""
+    one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
+    two_qubit_gates = [gates.CNOT, gates.CZ, gates.SWAP]
+
+    for _ in range(10):
+        thetas = np.pi * np.random.random((ngates,))
+        c = Circuit(nqubits, accelerators)
+        for i in range(ngates):
+            gate = one_qubit_gates[np.random.randint(0, 3)]
+            q0 = np.random.randint(0, nqubits)
+            c.add(gate(q0, thetas[i]))
+            gate = two_qubit_gates[np.random.randint(0, 3)]
+            q0, q1 = np.random.randint(0, nqubits, (2,))
+            while q0 == q1:
+                q0, q1 = np.random.randint(0, nqubits, (2,))
+            c.add(gate(q0, q1))
+
+        fused_c = c.fuse()
+        target_state = c()
+        final_state = fused_c()
+        np.testing.assert_allclose(final_state, target_state)

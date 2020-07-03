@@ -8,8 +8,8 @@ class FusionGroup:
     general 4x4 matrix.
 
     Attrs:
-        qubit0 (int): Id of the first qubit that the gates act.
-        qubit1 (int): Id of the first qubit that the gates act.
+        qubit0 (int): Id of the first qubit that the ``FusionGroup`` act.
+        qubit1 (int): Id of the first qubit that the ``FusionGroup`` act.
         two_qubit_gates: List of tuples (two-qubit gate, revert flag).
             If the revert flag is ``False`` the two-qubit gate is applied to
             (qubit0, qubit1) while if it is ``True`` it is applied to
@@ -44,6 +44,7 @@ class FusionGroup:
 
     @property
     def qubits(self) -> Set[int]:
+        """Set of ids of the two qubits that the ``FusionGroup`` acts on."""
         if self.qubit0 is None:
             return {}
         if self.qubit1 is None:
@@ -52,11 +53,17 @@ class FusionGroup:
 
     @property
     def gates(self) -> Tuple["Gate"]:
+        """Tuple with fused gates.
+
+        These gates have equivalent action with all the original gates that
+        were added in the ``FusionGroup``.
+        """
         if self._fused_gates is None:
             self._fused_gates = self.calculate()
         return self._fused_gates
 
     def first_gate(self, i: int) -> Optional["Gate"]:
+        """First one-qubit gate of the group."""
         if i < 0 or i > 1:
             raise ValueError(f"Invalid integer {i} given in FusionGroup.first_gate.")
         gates = self.gates0 if i == 0 else self.gates1
@@ -117,6 +124,7 @@ class FusionGroup:
 
     @property
     def module(self):
+        """Module of the gates that the ``FusionGroup`` contains."""
         if self.two_qubit_gates:
             return self.two_qubit_gates[0][0].module
         if self.special_gate is not None:
@@ -128,9 +136,15 @@ class FusionGroup:
         raise ValueError("Unable to find gate module.")
 
     def add(self, gate: "Gate"):
-        """Adds a gate in the group."""
+        """Adds a gate in the group.
+
+        Raises:
+            ValueError: If the gate cannot be added in the group (eg. because
+                it acts on different qubits).
+            RuntimeError: If the group is completed.
+        """
         if self.completed:
-            raise RuntimeError("Cannot add gates to completed ``FusionGroup``.")
+            raise RuntimeError("Cannot add gates to completed FusionGroup.")
 
         if not gate.qubits:
             self._add_special_gate(gate)
@@ -150,9 +164,13 @@ class FusionGroup:
         if self.special_gate is None and self.qubit0 is None:
             raise RuntimeError("Cannot calculate fused gates for empty "
                                "FusionGroup.")
-        return
+        return self._calculate()
+
+    def _calculate(self): # pragma: no cover
+        raise NotImplementedError
 
     def _add_special_gate(self, gate: "Gate"):
+        """Adds ``CallbackGate`` or ``Flatten`` on ``FusionGroup``."""
         if self.qubits:
             raise ValueError("Cannot add special gate on fusion group with "
                              "qubits already set.")
@@ -160,6 +178,7 @@ class FusionGroup:
         self.completed = True
 
     def _add_one_qubit_gate(self, gate: "Gate"):
+        """Adds one-qubit gate to ``FusionGroup``."""
         qubit = gate.qubits[0]
         if self.qubit0 is None or self.qubit0 == qubit:
             self.qubit0 = qubit
@@ -173,6 +192,7 @@ class FusionGroup:
                              "".format(qubit, self.qubit0, self.qubit1))
 
     def _add_two_qubit_gate(self, gate: "Gate"):
+        """Adds two-qubit gate to ``FusionGroup``."""
         qubit0, qubit1 = gate.qubits
         if self.qubit0 is None:
             self.qubit0, self.qubit1 = qubit0, qubit1
@@ -197,7 +217,7 @@ class FusionGroup:
                                  "".format(qubit0, qubit1, self.qubit0))
 
         else:
-            if self.qubits != {qubit0, qubit1}: # pragma: no cover
+            if self.qubits != {qubit0, qubit1}:
                 raise ValueError("Cannot add gate on qubits {} and {} in "
                                  "fusion group of qubits {} and {}."
                                  "".format(qubit0, qubit1, self.qubit0, self.qubit1))
