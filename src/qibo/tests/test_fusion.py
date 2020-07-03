@@ -58,7 +58,7 @@ def test_from_queue_single_group():
     group = fused_groups[0]
     assert group.gates0 == [[queue[0]], []]
     assert group.gates1 == [[queue[1]], []]
-    assert group.two_qubit_gates == [(queue[2], False)]
+    assert group.two_qubit_gates == [queue[2]]
 
 
 def test_from_queue_two_groups():
@@ -75,7 +75,7 @@ def test_from_queue_two_groups():
     assert group1.two_qubit_gates == []
     assert group2.gates0 == [[], [queue[4]]]
     assert group2.gates1 == [[], [queue[3]]]
-    assert group2.two_qubit_gates == [(queue[2], False)]
+    assert group2.two_qubit_gates == [queue[2]]
 
 
 def test_fused_gate_calculation():

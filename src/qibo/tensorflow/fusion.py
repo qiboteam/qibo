@@ -24,22 +24,22 @@ class FusionGroup(fusion.FusionGroup):
         matrix = tf.reshape(tf.transpose(matrix, [0, 2, 1, 3]), (4, 4))
         return matrix
 
-    def _two_qubit_matrix(self, gate: "Gate", revert: bool = False) -> tf.Tensor:
+    def _two_qubit_matrix(self, gate: "Gate") -> tf.Tensor:
         """Calculates the 4x4 unitary matrix of a two-qubit gate.
 
         Args:
             gate: Two-qubit gate acting on ``(self.qubit0, self.qubit1)``.
-            revert: If ``True`` it means that the gate acts on
-                ``(self.qubit1, self.qubit0)``.
 
         Returns:
             4x4 unitary matrix corresponding to the gate.
         """
         matrix = gate.construct_unitary(*gate.unitary_params)
-        if revert:
+        if gate.qubits == (self.qubit1, self.qubit0):
             matrix = tf.reshape(matrix, 4 * (2,))
             matrix = tf.transpose(matrix, [1, 0, 3, 2])
             matrix = tf.reshape(matrix, (4, 4))
+        else:
+            assert gate.qubits == (self.qubit0, self.qubit1)
         return matrix
 
     def _calculate(self) -> Tuple["Gate"]:
@@ -55,13 +55,13 @@ class FusionGroup(fusion.FusionGroup):
             assert self.two_qubit_gates
             # Case 2a: One two-qubit gate only
             if len(self.two_qubit_gates) == 1:
-                return (self.two_qubit_gates[0][0],)
+                return (self.two_qubit_gates[0],)
 
             # Case 2b: Two or more two-qubit gates
             module = self.module
-            fused_matrix = self._two_qubit_matrix(*self.two_qubit_gates[0])
-            for gate, flag in self.two_qubit_gates[1:]:
-                matrix = self._two_qubit_matrix(gate, flag)
+            fused_matrix = self._two_qubit_matrix(self.two_qubit_gates[0])
+            for gate in self.two_qubit_gates[1:]:
+                matrix = self._two_qubit_matrix(gate)
                 fused_matrix = tf.matmul(matrix, fused_matrix)
             return (module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
 
@@ -95,18 +95,18 @@ class FusionGroup(fusion.FusionGroup):
 
         # Case 3b: One-qubit and two-qubit gates exist
         fused_matrix = self._one_qubit_matrix(next(gates0), next(gates1))
-        for g0, g1, (g2, flag) in zip(gates0, gates1, self.two_qubit_gates):
+        for g0, g1, g2 in zip(gates0, gates1, self.two_qubit_gates):
             matrix = self._one_qubit_matrix(g0, g1)
-            matrix2 = self._two_qubit_matrix(g2, flag)
+            matrix2 = self._two_qubit_matrix(g2)
             fused_matrix = tf.matmul(tf.matmul(matrix, matrix2), fused_matrix)
 
         if len(self.two_qubit_gates) == len(self.gates0):
-            g2, flag = self.two_qubit_gates[-1]
+            g2 = self.two_qubit_gates[-1]
             if self.is_efficient(g2):
                 fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
                 return (fused_gate, g2)
 
-            matrix2 = self._two_qubit_matrix(g2, flag)
+            matrix2 = self._two_qubit_matrix(g2)
             fused_matrix = tf.matmul(matrix2, fused_matrix)
 
         fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)

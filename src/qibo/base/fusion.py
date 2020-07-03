@@ -36,7 +36,7 @@ class FusionGroup:
         self.qubit1 = None
         self.gates0 = [[]]
         self.gates1 = [[]]
-        self.two_qubit_gates = [] # list of tuples (gate, revert flag)
+        self.two_qubit_gates = []
 
         self.completed = False
         self.special_gate = None
@@ -126,7 +126,7 @@ class FusionGroup:
     def module(self):
         """Module of the gates that the ``FusionGroup`` contains."""
         if self.two_qubit_gates:
-            return self.two_qubit_gates[0][0].module
+            return self.two_qubit_gates[0].module
         if self.special_gate is not None:
             return self.special_gate.module
         for i in range(2):
@@ -196,7 +196,7 @@ class FusionGroup:
         qubit0, qubit1 = gate.qubits
         if self.qubit0 is None:
             self.qubit0, self.qubit1 = qubit0, qubit1
-            self.two_qubit_gates.append((gate, False))
+            self.two_qubit_gates.append(gate)
             if self.is_efficient(gate):
                 self.completed = True
 
@@ -207,10 +207,10 @@ class FusionGroup:
 
             if self.qubit0 == qubit0:
                 self.qubit1 = qubit1
-                self.two_qubit_gates.append((gate, False))
+                self.two_qubit_gates.append(gate)
             elif self.qubit0 == qubit1:
                 self.qubit1 = qubit0
-                self.two_qubit_gates.append((gate, True))
+                self.two_qubit_gates.append(gate)
             else:
                 raise ValueError("Cannot add gate on qubits {} and {} in "
                                  "fusion group of qubit {}."
@@ -221,7 +221,7 @@ class FusionGroup:
                 raise ValueError("Cannot add gate on qubits {} and {} in "
                                  "fusion group of qubits {} and {}."
                                  "".format(qubit0, qubit1, self.qubit0, self.qubit1))
-            self.two_qubit_gates.append((gate, self.qubit1 == qubit0))
+            self.two_qubit_gates.append(gate)
 
         self.gates0.append([])
         self.gates1.append([])
