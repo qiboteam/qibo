@@ -10,15 +10,13 @@ class FusionGroup:
     Attrs:
         qubit0 (int): Id of the first qubit that the ``FusionGroup`` act.
         qubit1 (int): Id of the first qubit that the ``FusionGroup`` act.
-        two_qubit_gates: List of tuples (two-qubit gate, revert flag).
-            If the revert flag is ``False`` the two-qubit gate is applied to
-            (qubit0, qubit1) while if it is ``True`` it is applied to
-            (qubit1, qubit0).
         gates0: List of lists of one-qubit gates to be applied to ``qubit0``.
             One qubit gates are split in groups according to when the two
             qubit gates are applied (see example).
             Has ``len(gates0) = len(two_qubit_gates) + 1``.
         gates1: Same as ``gates0`` but for ``qubit1``.
+        two_qubit_gates: List of two qubit gates acting on ``qubit0`` and
+            ``qubit1``.
 
     Example:
         If ``gates0 = [[gates.H(0)], [gates.X(0)]]``,
@@ -102,16 +100,16 @@ class FusionGroup:
                     remaining_queue.append(gate)
                     break
 
-                commutes = True
-                for blocking_gate in remaining_queue:
-                    commutes = commutes and gate.commutes(blocking_gate)
-                    if not commutes:
-                        break
+                if new_group.can_add(gate):
+                    commutes = True
+                    for blocking_gate in remaining_queue:
+                        commutes = commutes and gate.commutes(blocking_gate)
+                        if not commutes:
+                            break
 
-                if commutes:
-                    try:
+                    if commutes:
                         new_group.add(gate)
-                    except ValueError:
+                    else:
                         remaining_queue.append(gate)
                 else:
                     remaining_queue.append(gate)
@@ -134,6 +132,25 @@ class FusionGroup:
             if gate is not None:
                 return gate.module
         raise ValueError("Unable to find gate module.")
+
+    def can_add(self, gate: "Gate") -> bool:
+        """Checks if ``gate`` can be added in the ``FusionGroup``."""
+        if self.completed:
+            return False
+        qubits = self.qubits
+        if not qubits:
+            return True
+
+        if len(gate.qubits) == 1:
+            return (len(qubits) == 1 or gate.qubits[0] in qubits)
+        if len(gate.qubits) == 2:
+            targets = set(gate.qubits)
+            if targets == qubits:
+                return True
+            if (self.qubit1 is None and self.qubit0 in targets and
+                not self.is_efficient(gate)):
+                return True
+        return False
 
     def add(self, gate: "Gate"):
         """Adds a gate in the group.
@@ -171,9 +188,8 @@ class FusionGroup:
 
     def _add_special_gate(self, gate: "Gate"):
         """Adds ``CallbackGate`` or ``Flatten`` on ``FusionGroup``."""
-        if self.qubits:
-            raise ValueError("Cannot add special gate on fusion group with "
-                             "qubits already set.")
+        if self.qubits or self.special_gate is not None:
+            raise ValueError("Cannot add special gate on fusion group.")
         self.special_gate = gate
         self.completed = True
 
