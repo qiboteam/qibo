@@ -1,4 +1,4 @@
-# Quantum unary approach to option pricing
+# Data reuploading for a universal quantum classifier
 
 Based in the paper [Quantum 4, 226 (2020).](https://quantum-journal.org/papers/q-2020-02-06-226/). In this `README.md` file you can see a short
 set of instructions for the usage of the example. 
