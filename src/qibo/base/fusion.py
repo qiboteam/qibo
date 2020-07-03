@@ -120,19 +120,6 @@ class FusionGroup:
 
         return group_queue
 
-    @property
-    def module(self):
-        """Module of the gates that the ``FusionGroup`` contains."""
-        if self.two_qubit_gates:
-            return self.two_qubit_gates[0].module
-        if self.special_gate is not None:
-            return self.special_gate.module
-        for i in range(2):
-            gate = self.first_gate(i)
-            if gate is not None:
-                return gate.module
-        raise ValueError("Unable to find gate module.")
-
     def can_add(self, gate: "Gate") -> bool:
         """Checks if ``gate`` can be added in the ``FusionGroup``."""
         if self.completed:

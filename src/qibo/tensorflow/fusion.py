@@ -2,6 +2,7 @@ import functools
 import operator
 import tensorflow as tf
 from qibo.base import fusion
+from qibo import gates
 from typing import Tuple
 
 
@@ -58,25 +59,23 @@ class FusionGroup(fusion.FusionGroup):
                 return (self.two_qubit_gates[0],)
 
             # Case 2b: Two or more two-qubit gates
-            module = self.module
             fused_matrix = self._two_qubit_matrix(self.two_qubit_gates[0])
             for gate in self.two_qubit_gates[1:]:
                 matrix = self._two_qubit_matrix(gate)
                 fused_matrix = tf.matmul(matrix, fused_matrix)
-            return (module.Unitary(fused_matrix, self.qubit0, self.qubit1),)
+            return (gates.Unitary(fused_matrix, self.qubit0, self.qubit1),)
 
         # Case 3: One-qubit gates exist
         if not self.gates0[-1] and not self.gates1[-1]:
             self.gates0.pop()
             self.gates1.pop()
 
-        module = self.module
         # Fuse one-qubit gates
-        ident0 = module.I(self.qubit0)
+        ident0 = gates.I(self.qubit0)
         gates0 = (functools.reduce(operator.matmul, reversed(gates), ident0)
                   if len(gates) != 1 else gates[0] for gates in self.gates0)
         if self.qubit1 is not None:
-            ident1 = module.I(self.qubit1)
+            ident1 = gates.I(self.qubit1)
             gates1 = (functools.reduce(operator.matmul, reversed(gates), ident1)
                       if len(gates) != 1 else gates[0] for gates in self.gates1)
 
@@ -103,11 +102,11 @@ class FusionGroup(fusion.FusionGroup):
         if len(self.two_qubit_gates) == len(self.gates0):
             g2 = self.two_qubit_gates[-1]
             if self.is_efficient(g2):
-                fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+                fused_gate = gates.Unitary(fused_matrix, self.qubit0, self.qubit1)
                 return (fused_gate, g2)
 
             matrix2 = self._two_qubit_matrix(g2)
             fused_matrix = tf.matmul(matrix2, fused_matrix)
 
-        fused_gate = module.Unitary(fused_matrix, self.qubit0, self.qubit1)
+        fused_gate = gates.Unitary(fused_matrix, self.qubit0, self.qubit1)
         return (fused_gate,)
