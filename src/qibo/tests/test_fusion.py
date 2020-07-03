@@ -16,14 +16,21 @@ def test_one_qubit_gate_multiplication(backend):
     gate1 = gates.X(0)
     gate2 = gates.H(0)
     final_gate = gate1 @ gate2
+    assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[0, 1], [1, 0]]) @
                      np.array([[1, 1], [1, -1]]) / np.sqrt(2))
     np.testing.assert_allclose(final_gate.unitary, target_matrix)
 
     final_gate = gate2 @ gate1
+    assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[1, 1], [1, -1]]) / np.sqrt(2) @
                      np.array([[0, 1], [1, 0]]))
     np.testing.assert_allclose(final_gate.unitary, target_matrix)
+
+    gate1 = gates.X(1)
+    gate2 = gates.X(1)
+    assert (gate1 @ gate2).__class__.__name__ == "I"
+    assert (gate2 @ gate1).__class__.__name__ == "I"
 
 
 @pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
@@ -99,9 +106,13 @@ def test_fused_gate_calculation():
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 4])
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
-def test_circuit_fuse_variational_layer(nqubits, nlayers, accelerators):
+@pytest.mark.parametrize(("backend", "accelerators"),
+                         [("custom", None), ("matmuleinsum", None),
+                          ("custom", {"/GPU:0": 1, "/GPU:1": 1})])
+def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators):
     """Check fused variational layer execution."""
+    import qibo
+    qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
 
@@ -117,6 +128,9 @@ def test_circuit_fuse_variational_layer(nqubits, nlayers, accelerators):
     target_state = c()
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)
+
+    # Reset backend for next tests
+    qibo.set_backend("custom")
 
 
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])

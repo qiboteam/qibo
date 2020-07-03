@@ -166,7 +166,15 @@ class Gate(object):
 
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
-        raise NotImplementedError
+        if self.qubits != other.qubits:
+            raise NotImplementedError("Cannot multiply gates that target "
+                                      "different qubits.")
+        if self.__class__.__name__ == other.__class__.__name__:
+            square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
+            if self.__class__.__name__ in square_identity:
+                from qibo import gates
+                return gates.I(*self.qubits)
+        return None
 
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         return self.__matmul__(other)

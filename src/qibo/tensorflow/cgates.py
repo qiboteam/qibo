@@ -27,12 +27,11 @@ class TensorflowGate(base_gates.Gate):
                                       "used in compiled mode.")
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
-        if self.qubits != other.qubits:
-            raise NotImplementedError("Cannot multiply gates that target "
-                                      "different qubits.")
-        matrix1 = self.construct_unitary(*self.unitary_params)
-        matrix2 = other.construct_unitary(*other.unitary_params)
-        gate = Unitary(tf.matmul(matrix1, matrix2), *self.qubits)
+        gate = base_gates.Gate.__matmul__(self, other)
+        if gate is None:
+            matrix1 = self.construct_unitary(*self.unitary_params)
+            matrix2 = other.construct_unitary(*other.unitary_params)
+            gate = Unitary(tf.matmul(matrix1, matrix2), *self.qubits)
         return gate
 
     def _prepare(self):
