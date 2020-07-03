@@ -110,6 +110,26 @@ class BaseCircuit(object):
         return new_circuit
 
     def fuse(self) -> "BaseCircuit":
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
         import copy
         new_circuit = self.__class__(**self._init_kwargs)
         fusion_groups = self.fusion.FusionGroup.from_queue(self.queue)
