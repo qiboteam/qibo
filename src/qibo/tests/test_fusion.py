@@ -85,6 +85,39 @@ def test_from_queue_two_groups():
     assert group2.two_qubit_gates == [queue[2]]
 
 
+def test_fusion_errors():
+    group = fusion.FusionGroup()
+    with pytest.raises(ValueError):
+        group.first_gate(2)
+
+    group = fusion.FusionGroup()
+    group.add(gates.Flatten(np.ones(4)))
+    group.can_add(gates.H(0))
+    with pytest.raises(RuntimeError):
+        group.add(gates.H(0))
+
+    group = fusion.FusionGroup()
+    group.can_add(gates.H(0))
+    group.add(gates.H(0))
+    group.can_add(gates.RX(0, theta=0.1234).controlled_by(1))
+    with pytest.raises(ValueError):
+        group.add(gates.Flatten(np.ones(4)))
+
+    group = fusion.FusionGroup()
+    group.add(gates.RX(0, theta=0.1234).controlled_by(1))
+    with pytest.raises(ValueError):
+        group.add(gates.H(2))
+
+    group = fusion.FusionGroup()
+    group.add(gates.RX(0, theta=0.1234).controlled_by(1))
+    with pytest.raises(ValueError):
+        group.add(gates.CZ(1, 2))
+
+    group = fusion.FusionGroup()
+    with pytest.raises(RuntimeError):
+        group.calculate()
+
+
 def test_fused_gate_calculation():
     queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
              gates.X(0), gates.X(1)]

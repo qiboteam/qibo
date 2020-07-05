@@ -500,7 +500,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.qubit_pairs)]
-        if self.additional_target is not None:
+        if self.additional_target is not None: # pragma: no cover
             self.additional_unitary = self.unitary_constructor(
                 additional_matrix, self.additional_target)
 

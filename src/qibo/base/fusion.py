@@ -156,7 +156,7 @@ class FusionGroup:
             self._add_one_qubit_gate(gate)
         elif len(gate.qubits) == 2:
             self._add_two_qubit_gate(gate)
-        else:
+        else: # pragma: no cover
             raise ValueError("Cannot add gate acting on {} qubits in fusion "
                              "group.".format(len(gate.qubits)))
 
@@ -164,9 +164,6 @@ class FusionGroup:
         """Calculates fused gate."""
         if not self.completed:
             raise RuntimeError("Cannot calculate fused gates for incomplete "
-                               "FusionGroup.")
-        if self.special_gate is None and self.qubit0 is None:
-            raise RuntimeError("Cannot calculate fused gates for empty "
                                "FusionGroup.")
         return self._calculate()
 
@@ -203,7 +200,8 @@ class FusionGroup:
             if self.is_efficient(gate):
                 self.completed = True
 
-        elif self.qubit1 is None:
+        # this case is not used by the current scheme
+        elif self.qubit1 is None: # pragma: no cover
             if self.is_efficient(gate):
                 raise ValueError("It is not efficient to add {} in FusionGroup "
                                  "with only one qubit set.".format(gate))
