@@ -729,6 +729,23 @@ def test_construct_unitary_controlled_by(gates):
     gate = gates.RY(0, theta).controlled_by(1)
     np.testing.assert_allclose(gate.unitary.numpy(), target_matrix)
 
+    gate = gates.RY(0, theta).controlled_by(1, 2)
+    with pytest.raises(NotImplementedError):
+        unitary = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_by_unitary_action(backend):
+    import qibo
+    qibo.set_backend(backend)
+    init_state = np.random.random(4) + 1j * np.random.random(4)
+    gate = gates.RX(1, theta=0.1234).controlled_by(0)
+    c = Circuit(2)
+    c.add(gate)
+    target_state = c(np.copy(init_state)).numpy()
+    final_state = gate.unitary.numpy().dot(init_state)
+    np.testing.assert_allclose(final_state, target_state)
+
 
 def test_variational_layer_call():
     qibo.set_backend("custom")
