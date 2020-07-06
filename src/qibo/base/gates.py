@@ -157,8 +157,13 @@ class Gate(object):
         This matrix is not necessarily used by ``__call__`` when applying the
         gate to a state vector.
         """
+        if len(self.qubits) > 2:
+            raise NotImplementedError("Cannot calculate unitary matrix for "
+                                      "gates that target more than two qubits.")
         if self._unitary is None:
             self._unitary = self.construct_unitary(*self.unitary_params)
+            if self.is_controlled_by:
+                self._unitary = self.control_unitary(self._unitary)
         return self._unitary
 
     @staticmethod
@@ -170,6 +175,15 @@ class Gate(object):
 
         Returns:
             Unitary matrix as an array or tensor supported by the backend.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def control_unitary(unitary): # pragma: no cover
+        """Controls unitary matrix on one qubit.
+
+        Helper method for ``construct_unitary`` for gates where ``controlled_by``
+        has been used.
         """
         raise NotImplementedError
 
@@ -503,6 +517,11 @@ class M(Gate):
         """"""
         raise NotImplementedError("Measurement gates cannot be controlled.")
 
+    @property
+    def unitary(self):
+        raise ValueError("Measurements cannot be represented as unitary "
+                         "matrices.")
+
 
 class RX(Gate):
     """Rotation around the X-axis of the Bloch sphere.
@@ -764,6 +783,12 @@ class TOFFOLI(Gate):
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
 
+    @property
+    def unitary(self):
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+        return self._unitary
+
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
         t = self.target_qubits[0]
@@ -821,6 +846,12 @@ class Unitary(Gate):
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
         self.unitary_params = [unitary]
+
+    @property
+    def unitary(self):
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+        return self._unitary
 
 
 class VariationalLayer(Gate):

@@ -39,6 +39,11 @@ class TensorflowGate(base_gates.Gate):
         from qibo.tensorflow import cgates
         return cgates.TensorflowGate.__matmul__(self, other)
 
+    @staticmethod
+    def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
+        from qibo.tensorflow import cgates
+        return cgates.TensorflowGate.control_unitary(unitary)
+
     @base_gates.Gate.nqubits.setter
     def nqubits(self, n: int):
         """Sets the number of qubit that this gate acts on.

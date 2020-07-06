@@ -29,10 +29,19 @@ class TensorflowGate(base_gates.Gate):
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
-            #matrix1 = self.construct_unitary(*self.unitary_params)
-            #matrix2 = other.construct_unitary(*other.unitary_params)
             gate = Unitary(tf.matmul(self.unitary, other.unitary), *self.qubits)
         return gate
+
+    @staticmethod
+    def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
+        shape = tuple(unitary.shape)
+        if shape != (2, 2): # pragma: no cover
+            raise ValueError("Cannot use ``control_unitary`` method for input "
+                             "matrix of shape {}.".format(shape))
+        matrix = tf.eye(4, dtype=DTYPES.get('DTYPECPX'))
+        ids = [[2, 2], [2, 3], [3, 2], [3, 3]]
+        values = tf.reshape(unitary, (4,))
+        return tf.tensor_scatter_nd_update(matrix, ids, values)
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.

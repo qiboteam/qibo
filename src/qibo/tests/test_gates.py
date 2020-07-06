@@ -675,21 +675,22 @@ def test_construct_unitary(gates):
     else:
         from qibo.tensorflow import gates
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(gates.H.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.H(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, 1], [1, 0]])
-    np.testing.assert_allclose(gates.X.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.X(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, -1j], [1j, 0]])
-    np.testing.assert_allclose(gates.Y.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Y(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0], [0, -1]])
-    np.testing.assert_allclose(gates.Z.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Z(1).unitary.numpy(), target_matrix)
+
     target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.CNOT.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CNOT(0, 1).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, -1])
-    np.testing.assert_allclose(gates.CZ.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZ(1, 3).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                               [0, 1, 0, 0], [0, 0, 0, 1]])
-    np.testing.assert_allclose(gates.SWAP.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.SWAP(2, 4).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                               [0, 1, 0, 0, 0, 0, 0, 0],
                               [0, 0, 1, 0, 0, 0, 0, 0],
@@ -698,19 +699,35 @@ def test_construct_unitary(gates):
                               [0, 0, 0, 0, 0, 1, 0, 0],
                               [0, 0, 0, 0, 0, 0, 0, 1],
                               [0, 0, 0, 0, 0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.TOFFOLI.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary.numpy(), target_matrix)
 
     theta = 0.1234
     target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
                               [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RX.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RX(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                               [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RY.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
-    np.testing.assert_allclose(gates.RZ.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CZPow.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
+
+
+@pytest.mark.parametrize("gates", ["custom", "native"])
+def test_construct_unitary_controlled_by(gates):
+    if gates == "custom":
+        from qibo.tensorflow import cgates as gates
+    else:
+        from qibo.tensorflow import gates
+
+    theta = 0.1234
+    rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+                         [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    target_matrix = np.eye(4, dtype=rotation.dtype)
+    target_matrix[2:, 2:] = rotation
+    gate = gates.RY(0, theta).controlled_by(1)
+    np.testing.assert_allclose(gate.unitary.numpy(), target_matrix)
 
 
 def test_variational_layer_call():
