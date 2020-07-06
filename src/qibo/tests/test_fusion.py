@@ -211,3 +211,17 @@ def test_fuse_random_circuits(nqubits, ngates, accelerators):
         target_state = c()
         final_state = fused_c()
         np.testing.assert_allclose(final_state, target_state)
+
+
+def test_fuse_circuit_with_controlled_by_gates():
+    """Check gate fusion in circuit that contains ``controlled_by`` gates."""
+    c = Circuit(4)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.RX(1, theta=0.1234).controlled_by(0))
+    c.add(gates.RX(3, theta=0.4321).controlled_by(2))
+    c.add((gates.RY(i, theta=0.5678) for i in range(4)))
+
+    fused_c = c.fuse()
+    target_state = c()
+    final_state = fused_c()
+    np.testing.assert_allclose(final_state, target_state)
