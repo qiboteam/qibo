@@ -935,7 +935,7 @@ class VariationalLayer(Gate):
         self.additional_unitary = None
 
     @property
-    def unitary(*args):
+    def unitary(self):
         raise ValueError("``construct_unitary`` method is not useful "
                          "for ``VariationalLayer``.")
 
@@ -970,7 +970,7 @@ class NoiseChannel(Gate):
         self.unitary_params = [px, py, pz]
 
     @property
-    def unitary(*args): # pragma: no cover
+    def unitary(self): # pragma: no cover
         raise NotImplementedError("Unitary property is not implemented for "
                                   "channels yet.")
 
@@ -1032,7 +1032,7 @@ class GeneralChannel(Gate):
                                  "on {} qubits.".format(shape, len(qubits)))
 
     @property
-    def unitary(*args): # pragma: no cover
+    def unitary(self): # pragma: no cover
         raise NotImplementedError("Unitary property is not implemented for "
                                   "channels yet.")
 
