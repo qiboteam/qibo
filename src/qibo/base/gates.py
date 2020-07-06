@@ -934,10 +934,10 @@ class VariationalLayer(Gate):
         self.unitaries = []
         self.additional_unitary = None
 
-    @staticmethod
-    def construct_unitary(*args):
-        raise NotImplementedError("``construct_unitary`` method is not useful "
-                                  "for ``VariationalLayer``.")
+    @property
+    def unitary(*args):
+        raise ValueError("``construct_unitary`` method is not useful "
+                         "for ``VariationalLayer``.")
 
 
 class NoiseChannel(Gate):
@@ -968,6 +968,11 @@ class NoiseChannel(Gate):
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
         self.unitary_params = [px, py, pz]
+
+    @property
+    def unitary(*args): # pragma: no cover
+        raise NotImplementedError("Unitary property is not implemented for "
+                                  "channels yet.")
 
     def controlled_by(self, *q):
         """"""
@@ -1025,6 +1030,11 @@ class GeneralChannel(Gate):
             if shape != (rank, rank):
                 raise ValueError("Invalid Krauss operator shape {} for acting "
                                  "on {} qubits.".format(shape, len(qubits)))
+
+    @property
+    def unitary(*args): # pragma: no cover
+        raise NotImplementedError("Unitary property is not implemented for "
+                                  "channels yet.")
 
     def controlled_by(self, *q):
         """"""

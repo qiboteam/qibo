@@ -487,24 +487,28 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 
     def _prepare(self):
         matrices = tf.stack([self._tfkron(
-            self.one_qubit_gate.construct_unitary(self.params_map[q1]),
-            self.one_qubit_gate.construct_unitary(self.params_map[q2]))
+            self.one_qubit_gate(q1, theta=self.params_map[q1]).unitary,
+            self.one_qubit_gate(q2, theta=self.params_map[q2]).unitary)
                              for q1, q2 in self.qubit_pairs], axis=0)
-        entangling_matrix = self.two_qubit_gate.construct_unitary()
+        entangling_matrix = self.two_qubit_gate(0, 1).unitary
         matrices = tf.matmul(entangling_matrix, matrices)
-        if self.additional_target is not None:
-            additional_matrix = self.one_qubit_gate.construct_unitary(
-                self.params_map[self.additional_target])
+
+        q = self.additional_target
+        if q is not None:
+            additional_matrix = self.one_qubit_gate(
+                q, theta=self.params_map[q]).unitary
+
         if self.params_map2 is not None:
             matrices2 = tf.stack([self._tfkron(
-                self.one_qubit_gate.construct_unitary(self.params_map2[q1]),
-                self.one_qubit_gate.construct_unitary(self.params_map2[q2]))
+                self.one_qubit_gate(q1, theta=self.params_map2[q1]).unitary,
+                self.one_qubit_gate(q2, theta=self.params_map2[q2]).unitary)
                                 for q1, q2 in self.qubit_pairs], axis=0)
             matrices = tf.matmul(matrices2, matrices)
-            if self.additional_target is not None:
+
+            q = self.additional_target
+            if q is not None:
                 additional_matrix = tf.matmul(
-                    self.one_qubit_gate.construct_unitary(
-                        self.params_map2[self.additional_target]),
+                    self.one_qubit_gate(q, theta=self.params_map2[q]).unitary,
                     additional_matrix)
 
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
