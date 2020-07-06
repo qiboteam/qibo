@@ -355,7 +355,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         self.cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor:
+                 ) -> tf.Tensor: # pragma: no cover
         return self.cgates.VariationalLayer.__call__(self, state, is_density_matrix)
 
 

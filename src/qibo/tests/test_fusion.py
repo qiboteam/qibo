@@ -114,8 +114,19 @@ def test_fusion_errors():
         group.add(gates.CZ(1, 2))
 
     group = fusion.FusionGroup()
+    with pytest.raises(ValueError):
+        group.add(gates.TOFFOLI(0, 1, 2))
+
+    group = fusion.FusionGroup()
     with pytest.raises(RuntimeError):
         group.calculate()
+
+    # Fuse distributed circuit after gates are set
+    c = Circuit(4, accelerators={"/GPU:0": 2})
+    c.add((gates.H(i) for i in range(4)))
+    final_state = c()
+    with pytest.raises(RuntimeError):
+        fused_c = c.fuse()
 
 
 def test_fused_gate_calculation():
@@ -220,6 +231,23 @@ def test_fuse_circuit_with_controlled_by_gates():
     c.add(gates.RX(1, theta=0.1234).controlled_by(0))
     c.add(gates.RX(3, theta=0.4321).controlled_by(2))
     c.add((gates.RY(i, theta=0.5678) for i in range(4)))
+    c.add(gates.RX(1, theta=0.1234).controlled_by(0))
+    c.add(gates.RX(3, theta=0.4321).controlled_by(2))
+
+    fused_c = c.fuse()
+    target_state = c()
+    final_state = fused_c()
+    np.testing.assert_allclose(final_state, target_state)
+
+
+def test_fuse_circuit_two_qubit_only():
+    """Check gate fusion in circuit with two-qubit gates only."""
+    c = Circuit(2)
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.RX(0, theta=0.1234).controlled_by(1))
+    c.add(gates.SWAP(0, 1))
+    c.add(gates.fSim(1, 0, theta=0.1234, phi=0.324))
+    c.add(gates.RY(1, theta=0.1234).controlled_by(0))
 
     fused_c = c.fuse()
     target_state = c()

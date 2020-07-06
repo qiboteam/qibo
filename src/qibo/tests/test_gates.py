@@ -668,12 +668,9 @@ def test_unitary_bad_shape(backend):
             gate = gates.Unitary(matrix, 0, 1, 2)
 
 
-@pytest.mark.parametrize("gates", ["custom", "native"])
-def test_construct_unitary(gates):
-    if gates == "custom":
-        from qibo.tensorflow import cgates as gates
-    else:
-        from qibo.tensorflow import gates
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary(backend):
+    qibo.set_backend(backend)
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     np.testing.assert_allclose(gates.H(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, 1], [1, 0]])
@@ -714,13 +711,9 @@ def test_construct_unitary(gates):
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
 
 
-@pytest.mark.parametrize("gates", ["custom", "native"])
-def test_construct_unitary_controlled_by(gates):
-    if gates == "custom":
-        from qibo.tensorflow import cgates as gates
-    else:
-        from qibo.tensorflow import gates
-
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_controlled_by(backend):
+    qibo.set_backend(backend)
     theta = 0.1234
     rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                          [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
@@ -735,8 +728,22 @@ def test_construct_unitary_controlled_by(gates):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_errors(backend):
+    qibo.set_backend(backend)
+    gate = gates.M(0)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+    pairs = list((i, i + 1) for i in range(0, 5, 2))
+    theta = 2 * np.pi * np.random.random(6)
+    thetas = {i: theta[i] for i in range(6)}
+    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_unitary_action(backend):
-    import qibo
     qibo.set_backend(backend)
     init_state = np.random.random(4) + 1j * np.random.random(4)
     gate = gates.RX(1, theta=0.1234).controlled_by(0)

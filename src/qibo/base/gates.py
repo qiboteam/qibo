@@ -199,7 +199,7 @@ class Gate(object):
                 return gates.I(*self.qubits)
         return None
 
-    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate":
+    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
         return self.__matmul__(other)
 
     def _prepare(self): # pragma: no cover
