@@ -35,6 +35,7 @@ class Gate(object):
         self.init_kwargs = {}
         # parameters for creating unitary matrix
         self.unitary_params = []
+        self._unitary = None
 
         self._target_qubits = tuple()
         self._control_qubits = set()
@@ -149,12 +150,20 @@ class Gate(object):
         self._nstates = 2**n
         self._prepare()
 
-    @staticmethod
-    def construct_unitary(*args): # pragma: no cover
-        """Constructs unitary matrix corresponding to the gate.
+    @property
+    def unitary(self):
+        """Unitary matrix corresponding to the gate's action on a state vector.
 
         This matrix is not necessarily used by ``__call__`` when applying the
         gate to a state vector.
+        """
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+        return self._unitary
+
+    @staticmethod
+    def construct_unitary(*args): # pragma: no cover
+        """Constructs the gate's unitary matrix.
 
         Args:
             *args: Variational parameters for parametrized gates.
@@ -731,7 +740,7 @@ class GeneralizedfSim(Gate):
         super(GeneralizedfSim, self).__init__()
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
-        self.unitary = unitary
+        self.given_unitary = unitary
         self.phi = phi
 
         self.init_args = [q0, q1]
@@ -806,7 +815,7 @@ class Unitary(Gate):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
-        self.unitary = unitary
+        self.given_unitary = unitary
         self.target_qubits = tuple(q)
 
         self.init_args = [unitary] + list(q)

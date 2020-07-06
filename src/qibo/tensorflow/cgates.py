@@ -29,9 +29,9 @@ class TensorflowGate(base_gates.Gate):
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
-            matrix1 = self.construct_unitary(*self.unitary_params)
-            matrix2 = other.construct_unitary(*other.unitary_params)
-            gate = Unitary(tf.matmul(matrix1, matrix2), *self.qubits)
+            #matrix1 = self.construct_unitary(*self.unitary_params)
+            #matrix2 = other.construct_unitary(*other.unitary_params)
+            gate = Unitary(tf.matmul(self.unitary, other.unitary), *self.qubits)
         return gate
 
     def _prepare(self):
@@ -366,14 +366,14 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
-        shape = tuple(self.unitary.shape)
+        shape = tuple(self.given_unitary.shape)
         if shape != (2, 2):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
 
     def _prepare(self):
         dtype = DTYPES.get('DTYPECPX')
-        rotation = tf.cast(self.unitary, dtype=dtype)
+        rotation = tf.cast(self.given_unitary, dtype=dtype)
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
         rotation = tf.reshape(rotation, (4,))
         self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
@@ -425,7 +425,7 @@ class Unitary(MatrixGate, base_gates.Unitary):
                                       "qubit gates but {} target qubits were "
                                       "given.".format(len(self.target_qubits)))
 
-        shape = tuple(self.unitary.shape)
+        shape = tuple(self.given_unitary.shape)
         if shape != (2 ** rank, 2 ** rank):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))

@@ -277,7 +277,7 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         TensorflowGate.__init__(self)
-        shape = tuple(self.unitary.shape)
+        shape = tuple(self.given_unitary.shape)
         if shape != (2, 2):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
@@ -306,7 +306,7 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         TensorflowGate.__init__(self)
 
         rank = len(self.target_qubits)
-        shape = tuple(self.unitary.shape)
+        shape = tuple(self.given_unitary.shape)
         if shape != (2 ** rank, 2 ** rank):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))

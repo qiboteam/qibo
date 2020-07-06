@@ -19,9 +19,7 @@ class FusionGroup(fusion.FusionGroup):
             4x4 matrix that corresponds to the Kronecker product of the 2x2
             gate matrices.
         """
-        matrix0 = gate0.construct_unitary(*gate0.unitary_params)
-        matrix1 = gate1.construct_unitary(*gate1.unitary_params)
-        matrix = tf.tensordot(matrix0, matrix1, axes=0)
+        matrix = tf.tensordot(gate0.unitary, gate1.unitary, axes=0)
         matrix = tf.reshape(tf.transpose(matrix, [0, 2, 1, 3]), (4, 4))
         return matrix
 
@@ -34,7 +32,7 @@ class FusionGroup(fusion.FusionGroup):
         Returns:
             4x4 unitary matrix corresponding to the gate.
         """
-        matrix = gate.construct_unitary(*gate.unitary_params)
+        matrix = gate.unitary
         if gate.qubits == (self.qubit1, self.qubit0):
             matrix = tf.reshape(matrix, 4 * (2,))
             matrix = tf.transpose(matrix, [1, 0, 3, 2])
