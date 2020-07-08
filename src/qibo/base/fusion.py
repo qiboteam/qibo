@@ -7,22 +7,26 @@ class FusionGroup:
     These gates can be fused into a single two-qubit gate represented by a
     general 4x4 matrix.
 
-    Attrs:
+    Args:
         qubit0 (int): Id of the first qubit that the ``FusionGroup`` act.
         qubit1 (int): Id of the first qubit that the ``FusionGroup`` act.
-        gates0: List of lists of one-qubit gates to be applied to ``qubit0``.
-            One qubit gates are split in groups according to when the two
-            qubit gates are applied (see example).
+        gates0 (list): List of lists of one-qubit gates to be applied to ``qubit0``.
+            One qubit gates are split in groups according to when the two qubit gates are applied (see example).
             Has ``len(gates0) = len(two_qubit_gates) + 1``.
-        gates1: Same as ``gates0`` but for ``qubit1``.
-        two_qubit_gates: List of two qubit gates acting on ``qubit0`` and
-            ``qubit1``.
+        gates1 (list): Same as ``gates0`` but for ``qubit1``.
+        two_qubit_gates (list): List of two qubit gates acting on ``qubit0`` and ``qubit1``.
 
     Example:
-        If ``gates0 = [[gates.H(0)], [gates.X(0)]]``,
-        ``gates1 = [[gates.H(1)], [gates.X(1)]]`` and
-        ``two_qubit_gates = [gates.CNOT(0, 1)]`` then the ``H`` gates are
-        applied before the ``CNOT`` and the ``X`` gates after.
+        ::
+
+            queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1), gates.X(0), gates.X(1)]
+            group = fusion.FusionGroup.from_queue(queue)
+            # results to the following values for the attributes:
+            group.qubit0 = 0
+            group.qubit1 = 1
+            group.gates0 = [[gates.H(0)], [gates.X(0)]]
+            group.gates1 = [[gates.H(1)], [gates.X(1)]]
+            group.two_qubit_gates = [gates.CNOT(0, 1)]
     """
 
     # ``FusionGroup`` cannot start with these gates because it is more

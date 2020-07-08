@@ -84,6 +84,57 @@ will create a circuit that performs the Quantum Fourier Transform on four qubits
 followed by Rotation-Z gates.
 
 
+.. _circuitfusion:
+
+Circuit fusion
+^^^^^^^^^^^^^^
+
+The gates contained in a circuit can be fused up to two-qubits using the
+:meth:`qibo.base.circuit.BaseCircuit.fuse` method. This returns a new circuit
+that contains :class:`qibo.base.gates.Unitary` gates that are less in number
+than the gates in the original circuit but have equivalent action.
+For some circuits (such as variational), if the number of qubits is large it is
+more efficient to execute the fused instead of the original circuit.
+
+The fusion algorithm starts by creating a :class:`qibo.base.fusion.FusionGroup`.
+The first available gates in the circuit's gate queue are added in the group
+until the two qubits of the group are identified. Any subsequent one-qubit gate
+applied in one of these qubits or two-qubit gates applied to these two qubits
+are added in the group. Gates that affect more than two qubits or target
+different qubits are left for the next round of fusion. Once all compatible gates
+are added in the group the fusion round finishes and a new ``FusionGroup`` is
+created for the next round. The algorithm terminates once all gates are assigned
+to a group.
+
+A ``FusionGroup`` can either start with any one- or two-qubit gate
+except ``CNOT``, ``CZ``, ``SWAP`` and ``CZPow`` because it is more efficient
+to apply such gates on their own rather than fusing them with others. These gates
+are fused only when "sandwiched" between one-qubit gates. For example
+
+.. code-block::  python
+
+    c.add([gates.H(0), gates.H(1)])
+    c.add(gates.CZ(0, 1))
+    c.add([gates.X(0), gates.Y(1)])
+
+will be fused to a single ``Unitary(0, 1)`` gate, while
+
+.. code-block::  python
+
+    c.add([gates.H(0), gates.H(1)])
+    c.add(gates.CZ(0, 1))
+
+will remain as it is.
+
+Once groups are identified, all gates belonging to a ``FusionGroup`` are fused
+by multiplying their respective unitary matrices. This way each group results
+to a new :class:`qibo.base.gates.Unitary` gate that is equivalent to applying
+all the gates in the group.
+
+.. autoclass:: qibo.base.fusion.FusionGroup
+    :members:
+    :member-order: bysource
+
 _______________________
 
 .. _Gates:
