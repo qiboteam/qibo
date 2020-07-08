@@ -60,7 +60,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     initial_state = random_initial_state(nqubits)
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
-    
+
     if isinstance(qibo_gate, native_gates.TensorflowGate) and accelerators:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
@@ -98,6 +98,19 @@ def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets, theta)
     cirq_gate = [(getattr(cirq, gate_name.lower())(theta), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize(("nqubits", "ndevices"),
+                         [(2, None), (3, 4), (2, 2)])
+def test_zpow_gate(backend, nqubits, ndevices):
+    """Check ZPow gate."""
+    qibo.set_backend(backend)
+    theta = 0.1234
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = gates.ZPow(*targets, theta)
+    cirq_gate = [(cirq.ZPowGate(exponent=theta / np.pi), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
 
 
