@@ -723,6 +723,8 @@ def test_construct_unitary(backend):
     np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
     np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
+    target_matrix = np.diag([1, np.exp(1j * theta)])
+    np.testing.assert_allclose(gates.ZPow(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
 
