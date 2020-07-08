@@ -107,6 +107,25 @@ def test_zgate(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_identity_gate(backend, accelerators):
+    """Check identity gate is working properly."""
+    qibo.set_backend(backend)
+    c = Circuit(2, accelerators)
+    c.add((gates.H(i) for i in range(2)))
+    c.add(gates.I(0))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 2.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4, accelerators)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.I(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 4.0
+    np.testing.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_multicontrol_xgate(backend):
     """Check that fallback method for X works for one or two controls."""
@@ -716,28 +735,26 @@ def test_unitary_bad_shape(backend):
             gate = gates.Unitary(matrix, 0, 1, 2)
     qibo.set_backend(original_backend)
 
-@pytest.mark.parametrize("gates", ["custom", "native"])
-def test_construct_unitary(gates):
-    if gates == "custom":
-        from qibo.tensorflow import cgates as gates
-    else:
-        from qibo.tensorflow import gates
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary(backend):
+    qibo.set_backend(backend)
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(gates.H.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.H(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, 1], [1, 0]])
-    np.testing.assert_allclose(gates.X.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.X(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, -1j], [1j, 0]])
-    np.testing.assert_allclose(gates.Y.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Y(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0], [0, -1]])
-    np.testing.assert_allclose(gates.Z.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Z(1).unitary.numpy(), target_matrix)
+
     target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.CNOT.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CNOT(0, 1).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, -1])
-    np.testing.assert_allclose(gates.CZ.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZ(1, 3).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                               [0, 1, 0, 0], [0, 0, 0, 1]])
-    np.testing.assert_allclose(gates.SWAP.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.SWAP(2, 4).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                               [0, 1, 0, 0, 0, 0, 0, 0],
                               [0, 0, 1, 0, 0, 0, 0, 0],
@@ -746,22 +763,62 @@ def test_construct_unitary(gates):
                               [0, 0, 0, 0, 0, 1, 0, 0],
                               [0, 0, 0, 0, 0, 0, 0, 1],
                               [0, 0, 0, 0, 0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.TOFFOLI.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary.numpy(), target_matrix)
 
     theta = 0.1234
     target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
                               [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RX.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RX(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                               [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RY.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
-    np.testing.assert_allclose(gates.RZ.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CZPow.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
 
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_controlled_by(backend):
+    qibo.set_backend(backend)
+    theta = 0.1234
+    rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+                         [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    target_matrix = np.eye(4, dtype=rotation.dtype)
+    target_matrix[2:, 2:] = rotation
+    gate = gates.RY(0, theta).controlled_by(1)
+    np.testing.assert_allclose(gate.unitary.numpy(), target_matrix)
+
+    gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
-        gates.fSim.construct_unitary()
+        unitary = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_errors(backend):
+    qibo.set_backend(backend)
+    gate = gates.M(0)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+    pairs = list((i, i + 1) for i in range(0, 5, 2))
+    theta = 2 * np.pi * np.random.random(6)
+    thetas = {i: theta[i] for i in range(6)}
+    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_by_unitary_action(backend):
+    qibo.set_backend(backend)
+    init_state = np.random.random(4) + 1j * np.random.random(4)
+    gate = gates.RX(1, theta=0.1234).controlled_by(0)
+    c = Circuit(2)
+    c.add(gate)
+    target_state = c(np.copy(init_state)).numpy()
+    final_state = gate.unitary.numpy().dot(init_state)
+    np.testing.assert_allclose(final_state, target_state)
 
 
 def test_variational_layer_call():

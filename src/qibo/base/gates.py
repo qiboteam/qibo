@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
-import sys
 from qibo import config
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -21,6 +20,9 @@ class Gate(object):
         target_qubits: Tuple with ids of target qubits.
     """
 
+    import sys
+    module = sys.modules[__name__]
+
     def __init__(self):
         self.name = None
         self.is_channel = False
@@ -28,8 +30,12 @@ class Gate(object):
         self.is_special_gate = False
         # special gates are ``CallbackGate`` and ``Flatten``
 
-        self._init_args = []
-        self._init_kwargs = {}
+        # args for creating gate
+        self.init_args = []
+        self.init_kwargs = {}
+        # parameters for creating unitary matrix
+        self.unitary_params = []
+        self._unitary = None
 
         self._target_qubits = tuple()
         self._control_qubits = set()
@@ -144,6 +150,58 @@ class Gate(object):
         self._nstates = 2**n
         self._prepare()
 
+    @property
+    def unitary(self):
+        """Unitary matrix corresponding to the gate's action on a state vector.
+
+        This matrix is not necessarily used by ``__call__`` when applying the
+        gate to a state vector.
+        """
+        if len(self.qubits) > 2:
+            raise NotImplementedError("Cannot calculate unitary matrix for "
+                                      "gates that target more than two qubits.")
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+            if self.is_controlled_by:
+                self._unitary = self.control_unitary(self._unitary)
+        return self._unitary
+
+    @staticmethod
+    def construct_unitary(*args): # pragma: no cover
+        """Constructs the gate's unitary matrix.
+
+        Args:
+            *args: Variational parameters for parametrized gates.
+
+        Returns:
+            Unitary matrix as an array or tensor supported by the backend.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def control_unitary(unitary): # pragma: no cover
+        """Controls unitary matrix on one qubit.
+
+        Helper method for ``construct_unitary`` for gates where ``controlled_by``
+        has been used.
+        """
+        raise NotImplementedError
+
+    def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
+        """Gate multiplication."""
+        if self.qubits != other.qubits:
+            raise NotImplementedError("Cannot multiply gates that target "
+                                      "different qubits.")
+        if self.__class__.__name__ == other.__class__.__name__:
+            square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
+            if self.__class__.__name__ in square_identity:
+                from qibo import gates
+                return gates.I(*self.qubits)
+        return None
+
+    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
+        return self.__matmul__(other)
+
     def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.
 
@@ -207,7 +265,7 @@ class Gate(object):
         # FIXME: Implement this method for all gates not supported by OpenQASM.
         # If the method is not implemented this returns a deep copy of the
         # original gate
-        return [self.__class__(*self._init_args, **self._init_kwargs)]
+        return [self.__class__(*self.init_args, **self.init_kwargs)]
 
     def __call__(self, state, is_density_matrix): # pragma: no cover
         """Acts with the gate on a given state vector:
@@ -233,7 +291,7 @@ class H(Gate):
         super(H, self).__init__()
         self.name = "h"
         self.target_qubits = (q,)
-        self._init_args = [q]
+        self.init_args = [q]
 
 
 class X(Gate):
@@ -242,20 +300,19 @@ class X(Gate):
     Args:
         q (int): the qubit id number.
     """
-    _MODULE = sys.modules[__name__]
 
     def __init__(self, q):
         super(X, self).__init__()
         self.name = "x"
         self.target_qubits = (q,)
-        self._init_args = [q]
+        self.init_args = [q]
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
         if len(q) == 1:
-            gate = getattr(self._MODULE, "CNOT")(q[0], self.target_qubits[0])
+            gate = getattr(self.module, "CNOT")(q[0], self.target_qubits[0])
         elif len(q) == 2:
-            gate = getattr(self._MODULE, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
+            gate = getattr(self.module, "TOFFOLI")(q[0], q[1], self.target_qubits[0])
         else:
             gate = super(X, self).controlled_by(*q)
         return gate
@@ -290,7 +347,7 @@ class X(Gate):
 
         decomp_gates = []
         n = m + 1 + len(free)
-        TOFFOLI = self._MODULE.TOFFOLI
+        TOFFOLI = self.module.TOFFOLI
         if (n >= 2 * m - 1) and (m >= 3):
             gates1 = [TOFFOLI(controls[m - 2 - i],
                               free[m - 4 - i],
@@ -340,7 +397,7 @@ class Y(Gate):
         super(Y, self).__init__()
         self.name = "y"
         self.target_qubits = (q,)
-        self._init_args = [q]
+        self.init_args = [q]
 
 
 class Z(Gate):
@@ -350,21 +407,34 @@ class Z(Gate):
         q (int): the qubit id number.
     """
 
-    _MODULE = sys.modules[__name__]
-
     def __init__(self, q):
         super(Z, self).__init__()
         self.name = "z"
         self.target_qubits = (q,)
-        self._init_args = [q]
+        self.init_args = [q]
 
     def controlled_by(self, *q):
         """Fall back to CZ if control is one."""
         if len(q) == 1:
-            gate = getattr(self._MODULE, "CZ")(q[0], self.target_qubits[0])
+            gate = getattr(self.module, "CZ")(q[0], self.target_qubits[0])
         else:
             gate = super(Z, self).controlled_by(*q)
         return gate
+
+
+class I(Gate):
+    """The identity gate.
+
+    Args:
+        *q (int): the qubit id numbers.
+    """
+
+    def __init__(self, *q):
+        super(I, self).__init__()
+        self.name = "identity"
+        self.target_qubits = tuple(q)
+        self.init_args = q
+        self.unitary_params = [len(self.target_qubits)]
 
 
 class M(Gate):
@@ -385,8 +455,8 @@ class M(Gate):
         self.target_qubits = q
         self.register_name = register_name
 
-        self._init_args = q
-        self._init_kwargs = {"register_name": register_name}
+        self.init_args = q
+        self.init_kwargs = {"register_name": register_name}
 
         self._unmeasured_qubits = None # Tuple
         self._reduced_target_qubits = None # List
@@ -447,6 +517,11 @@ class M(Gate):
         """"""
         raise NotImplementedError("Measurement gates cannot be controlled.")
 
+    @property
+    def unitary(self):
+        raise ValueError("Measurements cannot be represented as unitary "
+                         "matrices.")
+
 
 class RX(Gate):
     """Rotation around the X-axis of the Bloch sphere.
@@ -472,8 +547,9 @@ class RX(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
-        self._init_args = [q]
-        self._init_kwargs = {"theta": theta}
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
 
 
 class RY(Gate):
@@ -500,8 +576,9 @@ class RY(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
-        self._init_args = [q]
-        self._init_kwargs = {"theta": theta}
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
 
 
 class RZ(Gate):
@@ -526,8 +603,9 @@ class RZ(Gate):
         self.target_qubits = (q,)
         self.theta = theta
 
-        self._init_args = [q]
-        self._init_kwargs = {"theta": theta}
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
 
 
 class CNOT(Gate):
@@ -543,7 +621,7 @@ class CNOT(Gate):
         self.name = "cx"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self._init_args = [q0, q1]
+        self.init_args = [q0, q1]
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         q0, q1 = self.control_qubits[0], self.target_qubits[0]
@@ -573,7 +651,7 @@ class CZ(Gate):
         self.name = "cz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self._init_args = [q0, q1]
+        self.init_args = [q0, q1]
 
 
 class CZPow(Gate):
@@ -604,8 +682,9 @@ class CZPow(Gate):
         self.target_qubits = (q1,)
         self.theta = theta
 
-        self._init_args = [q0, q1]
-        self._init_kwargs = {"theta": theta}
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
 
 
 class SWAP(Gate):
@@ -620,7 +699,7 @@ class SWAP(Gate):
         super(SWAP, self).__init__()
         self.name = "swap"
         self.target_qubits = (q0, q1)
-        self._init_args = [q0, q1]
+        self.init_args = [q0, q1]
 
 
 class fSim(Gate):
@@ -651,8 +730,9 @@ class fSim(Gate):
         self.theta = theta
         self.phi = phi
 
-        self._init_args = [q0, q1]
-        self._init_kwargs = {"theta": theta, "phi": phi}
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta, "phi": phi}
+        self.unitary_params = [theta, phi]
 
 
 class GeneralizedfSim(Gate):
@@ -679,11 +759,12 @@ class GeneralizedfSim(Gate):
         super(GeneralizedfSim, self).__init__()
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
-        self.unitary = unitary
+        self.given_unitary = unitary
         self.phi = phi
 
-        self._init_args = [q0, q1]
-        self._init_kwargs = {"unitary": unitary, "phi": phi}
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"unitary": unitary, "phi": phi}
+        self.unitary_params = [unitary, phi]
 
 
 class TOFFOLI(Gate):
@@ -700,7 +781,13 @@ class TOFFOLI(Gate):
         self.name = "ccx"
         self.control_qubits = (q0, q1)
         self.target_qubits = (q2,)
-        self._init_args = [q0, q1, q2]
+        self.init_args = [q0, q1, q2]
+
+    @property
+    def unitary(self):
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+        return self._unitary
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
@@ -731,9 +818,8 @@ class TOFFOLI(Gate):
         import numpy as np
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
-        module = importlib.import_module(self.__module__)
-        RY = module.RY
-        CNOT = module.CNOT
+        RY = self.module.RY
+        CNOT = self.module.CNOT
         return [RY(target, -np.pi / 4), CNOT(control1, target),
                 RY(target, -np.pi / 4), CNOT(control0, target),
                 RY(target, np.pi / 4), CNOT(control1, target),
@@ -754,11 +840,18 @@ class Unitary(Gate):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
-        self.unitary = unitary
+        self.given_unitary = unitary
         self.target_qubits = tuple(q)
 
-        self._init_args = [unitary] + list(q)
-        self._init_kwargs = {"name": name}
+        self.init_args = [unitary] + list(q)
+        self.init_kwargs = {"name": name}
+        self.unitary_params = [unitary]
+
+    @property
+    def unitary(self):
+        if self._unitary is None:
+            self._unitary = self.construct_unitary(*self.unitary_params)
+        return self._unitary
 
 
 class VariationalLayer(Gate):
@@ -807,10 +900,10 @@ class VariationalLayer(Gate):
                  params_map2: Optional[Dict[int, float]] = None,
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
-        self._init_args = [qubit_pairs, one_qubit_gate, two_qubit_gate]
-        self._init_kwargs = {"params_map": params_map,
-                             "params_map2": params_map2,
-                             "name": name}
+        self.init_args = [qubit_pairs, one_qubit_gate, two_qubit_gate]
+        self.init_kwargs = {"params_map": params_map,
+                            "params_map2": params_map2,
+                            "name": name}
 
         self.name = "VariationalLayer" if name is None else name
         self.params_map = dict(params_map)
@@ -841,6 +934,11 @@ class VariationalLayer(Gate):
         self.unitaries = []
         self.additional_unitary = None
 
+    @property
+    def unitary(self):
+        raise ValueError("``construct_unitary`` method is not useful "
+                         "for ``VariationalLayer``.")
+
 
 class NoiseChannel(Gate):
     """Probabilistic noise channel.
@@ -867,8 +965,14 @@ class NoiseChannel(Gate):
         self.p = (px, py, pz)
         self.total_p = sum(self.p)
 
-        self._init_args = [q]
-        self._init_kwargs = {"px": px, "py": py, "pz": pz}
+        self.init_args = [q]
+        self.init_kwargs = {"px": px, "py": py, "pz": pz}
+        self.unitary_params = [px, py, pz]
+
+    @property
+    def unitary(self): # pragma: no cover
+        raise NotImplementedError("Unitary property is not implemented for "
+                                  "channels yet.")
 
     def controlled_by(self, *q):
         """"""
@@ -917,7 +1021,7 @@ class GeneralChannel(Gate):
         self.is_channel = True
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
-        self._init_args = [A]
+        self.init_args = [A]
 
         # Check that given operators have the proper shape
         for qubits, matrix in A:
@@ -926,6 +1030,11 @@ class GeneralChannel(Gate):
             if shape != (rank, rank):
                 raise ValueError("Invalid Krauss operator shape {} for acting "
                                  "on {} qubits.".format(shape, len(qubits)))
+
+    @property
+    def unitary(self): # pragma: no cover
+        raise NotImplementedError("Unitary property is not implemented for "
+                                  "channels yet.")
 
     def controlled_by(self, *q):
         """"""
@@ -944,7 +1053,7 @@ class Flatten(Gate):
         super(Flatten, self).__init__()
         self.name = "Flatten"
         self.coefficients = coefficients
-        self._init_args = [coefficients]
+        self.init_args = [coefficients]
         self.is_special_gate = True
 
 
@@ -961,7 +1070,7 @@ class CallbackGate(Gate):
         super(CallbackGate, self).__init__()
         self.name = callback.__class__.__name__
         self.callback = callback
-        self._init_args = [callback]
+        self.init_args = [callback]
         self.is_special_gate = True
 
     @Gate.nqubits.setter
