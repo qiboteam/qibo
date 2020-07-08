@@ -269,6 +269,28 @@ class RZ(MatrixGate, base_gates.RZ):
         return tf.linalg.diag(diag)
 
 
+class ZPow(MatrixGate, base_gates.ZPow):
+
+    def __init__(self, q, theta):
+        base_gates.ZPow.__init__(self, q, theta)
+        MatrixGate.__init__(self)
+
+    def _prepare(self):
+        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
+
+    @staticmethod
+    def construct_unitary(theta) -> tf.Tensor:
+        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+        phase = tf.exp(1j * t)
+        diag = tf.concat([1, phase], axis=0)
+        return tf.linalg.diag(diag)
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        return op.apply_zpow(state, self.matrix, self.nqubits,
+                             self.target_qubits[0], self.control_qubits)
+
+
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
@@ -306,7 +328,7 @@ class CZPow(MatrixGate, base_gates.CZPow):
         MatrixGate.__init__(self)
 
     def _prepare(self):
-        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
+        ZPow._prepare(self)
 
     @staticmethod
     def construct_unitary(theta) -> tf.Tensor:
@@ -315,9 +337,7 @@ class CZPow(MatrixGate, base_gates.CZPow):
         return tf.linalg.diag(diag)
 
     def __call__(self, state, is_density_matrix: bool = False):
-        TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_zpow(state, self.matrix, self.nqubits,
-                             self.target_qubits[0], self.control_qubits)
+        return ZPow.__call__(self, state, is_density_matrix)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):

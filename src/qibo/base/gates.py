@@ -608,6 +608,43 @@ class RZ(Gate):
         self.unitary_params = [theta]
 
 
+class ZPow(Gate):
+    """Equivalent to :class:`qibo.base.gates.RZ` with a different global phase.
+
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\theta} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+
+    def __init__(self, q, theta):
+        super(ZPow, self).__init__()
+        self.name = "rz"
+        self.target_qubits = (q,)
+        self.theta = theta
+
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
+
+    def controlled_by(self, *q):
+        """Fall back to CZPow if control is one."""
+        if len(q) == 1:
+            gate = getattr(self.module, "CZPow")(q[0], self.target_qubits[0],
+                                                 theta=self.theta)
+        else:
+            gate = super(ZPow, self).controlled_by(*q)
+        return gate
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 

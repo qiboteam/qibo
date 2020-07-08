@@ -194,6 +194,22 @@ def test_rz_phase1(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_zpow(backend):
+    """Check ZPow gate is working properly when qubit is on |1>."""
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(1)
+    c.add(gates.X(0))
+    c.add(gates.ZPow(0, theta))
+    final_state = c.execute().numpy()
+
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta )
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_rx(backend):
     """Check RX gate is working properly."""
     qibo.set_backend(backend)
