@@ -216,6 +216,7 @@ def test_rz_phase1(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_zpow(backend):
     """Check ZPow gate is working properly when qubit is on |1>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -227,11 +228,13 @@ def test_zpow(backend):
     target_state = np.zeros_like(final_state)
     target_state[1] = np.exp(1j * theta )
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_zpow(backend):
     """Check controlled ZPow and fallback to CZPow."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -249,6 +252,7 @@ def test_controlled_zpow(backend):
 
     gate = gates.ZPow(0, theta).controlled_by(1)
     assert gate.__class__.__name__ == "CZPow"
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
