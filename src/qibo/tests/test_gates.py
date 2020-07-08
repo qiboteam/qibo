@@ -210,6 +210,28 @@ def test_zpow(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_zpow(backend):
+    """Check controlled ZPow and fallback to CZPow."""
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.ZPow(2, theta).controlled_by(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+
+    gate = gates.ZPow(0, theta).controlled_by(1)
+    assert gate.__class__.__name__ == "CZPow"
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_rx(backend):
     """Check RX gate is working properly."""
     qibo.set_backend(backend)
