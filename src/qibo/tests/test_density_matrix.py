@@ -58,7 +58,7 @@ def test_hgate_application_twoqubit(backend):
     target_rho = matrix.dot(initial_rho).dot(matrix)
 
     np.testing.assert_allclose(final_rho, target_rho)
-    qibo.get_backend(original_backend)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)

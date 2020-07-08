@@ -148,10 +148,10 @@ if BACKEND_NAME == "tensorflow":
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
         parts = device_name[1:].split(":")
-        if device_name[0] != "/" or len(parts) != 2:
+        if device_name[0] != "/" or len(parts) > 3 or len(parts) < 2:
             raise ValueError("Device name should follow the pattern: "
                              "/{device type}:{device number}.")
-        device_type, device_number = parts[0], int(parts[1])
+        device_type, device_number = parts[len(parts)-2], int(parts[len(parts)-1])
         if device_type not in {"CPU", "GPU"}:
             raise ValueError(f"Unknown device type {device_type}.")
         if device_number >= len(DEVICES[device_type]):

@@ -935,11 +935,14 @@ def test_compiled_circuit(backend):
 def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
     from qibo.tensorflow import gates
+    original_backend = qibo.get_backend()
+    qibo.set_backend("matmuleinsum")
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.compile()
     with pytest.raises(RuntimeError):
         c.compile()
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

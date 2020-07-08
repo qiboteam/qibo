@@ -85,7 +85,7 @@ def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
     qibo_gate = getattr(gates, gate_name)(*targets)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
-    qibo.get_backend(original_backend)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
