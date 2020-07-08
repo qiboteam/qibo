@@ -16,8 +16,8 @@ def multikron(matrices):
 
 
 def sz_hamiltonian(nqubits):
-    """Implements a easy sz Hamiltonian for which groundstate is the
-    |0> state. The mode uses the Identity and the Z-Pauli matrix, and 
+    """Implements an easy sz Hamiltonian whose groundstate is the
+    |0...0> state. The function uses the Identity and the Z-Pauli matrices, and 
     builds the Hamiltonian:
 
     .. math::
@@ -38,7 +38,7 @@ def sz_hamiltonian(nqubits):
 
 
 def ising(nqubits, lamb=1.0):
-    """Implements the Ising model. The mode uses the Identity and the
+    """Implements the Ising model. The function uses the Identity and the
     Z-Pauli and X-Pauli matrices, and builds the final Hamiltonian:
 
     .. math::
@@ -69,9 +69,9 @@ def AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian
     Args:
         nqubits (int): number of quantum bits.
         layers (int): number of ansatz layers.
-        maxsteps (int): number of maximum steps on each adiabatic path.
-        T_max (int): number of maximum adiabatic paths.
-        initial_parameters (array): values of the initial parameters.
+        maxsteps (int): number of maximum iterations on each adiabatic step.
+        T_max (int): number of maximum adiabatic steps.
+        initial_parameters (array or list): values of the initial parameters.
         easy_hamiltonian (qibo.hamiltonians.Hamiltonian): initial Hamiltonian object.
         problem_hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian object.
         
@@ -82,15 +82,13 @@ def AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian
         """Implements the variational quantum circuit.
     
         Args:
-            theta (array): values of the initial parameters.
+            theta (array or list): values of the initial parameters.
             
         Returns:
             Circuit that implements the variational ansatz.
         """
         theta_iter = iter(theta)
         pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-        pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
-        pairs2.append((0, nqubits - 1))
         c = models.Circuit(nqubits)
         for l in range(layers):
             # parameters for one-qubit gates before CZ layer
@@ -133,7 +131,7 @@ def main(nqubits, layers, maxsteps, T_max):
     #We compute the difference from the exact value to check performance
     eigenvalue = problem_hamiltonian.eigenvalues()
     print('Difference from exact value: ',best - eigenvalue[0].numpy().real)
-    print('Log difference: ',-1*np.log10(best - eigenvalue[0].numpy().real))
+    print('Log difference: ',-np.log10(best - eigenvalue[0].numpy().real))
  
 
 if __name__ == "__main__":    

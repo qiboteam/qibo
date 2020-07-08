@@ -7,15 +7,15 @@ The code herein aims to reproduce the results of the manuscript ["Scaling of var
 
 <img src="images/ansatz-1.png" width="480px">
 
-Notice that any potential advantage of the VQE could be lost without practical approaches to perform the parameter optimization due to the optimization in the high-dimensional parameter landscape. A particular proposal to try to solve this optimization problem is the [Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)](https://arxiv.org/abs/1806.02287). The AAVQE is a strategy circumventing the convergence issue, inspired by the adiabatic theorem. The AAVQE method consists of parametrizing a Hamiltonian as H = (1-s)H<sub>0</sub> + sH<sub>P</sub> where H<sub>0</sub> is a Hamiltonian for which ground state can be easily prepared, H<sub>P</sub> is the problem Hamiltonian, and s = [0,1] is the interpolation parameter. The interpolation parameter is used to adjust the Hamiltonian from one VQE run to the next, and the state preparation parameters at each step are initialized by the optimized parameters of the previous step.
+Notice that any potential advantage of the VQE could be lost without practical approaches to perform the parameter optimization due to the high-dimensional parameter landscape and the problem of [barren plateaus](https://www.nature.com/articles/s41467-018-07090-4). A particular proposal to try to solve this optimization problem is the [Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)](https://arxiv.org/abs/1806.02287). The AAVQE is a strategy to circumvent the convergence issue, inspired by the adiabatic theorem. The AAVQE method consists of parametrizing a Hamiltonian as H = (1-s)H<sub>0</sub> + sH<sub>P</sub> where H<sub>0</sub> is a Hamiltonian for which ground state can be easily prepared, H<sub>P</sub> is the problem Hamiltonian, and s = [0,1] is the interpolation parameter. The interpolation parameter is used to adjust the Hamiltonian from one VQE run to the next, and the state preparation parameters at each step are initialized by the optimized parameters of the previous step.
 
 ## How to run an example
 To run a particular instance of the problem we have to set up the initial arguments:
 - nqubits (int): number of quantum bits.
 - layers (int): number of ansatz layers.
-- maxsteps (int): number of maximum steps on each adiabatic path.
-- T_max (int): number of maximum adiabatic paths.
-- initial_parameters (array): values of the initial parameters.
+- maxsteps (int): number of maximum iterations on each adiabatic step.
+- T_max (int): number of maximum adiabatic steps.
+- initial_parameters (array or list): values of the initial parameters.
 - easy_hamiltonian (qibo.hamiltonians.Hamiltonian): initial Hamiltonian object, defined as sz_hamiltonian.
 - problem_hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian object, namely, the Ising or XXZ hamiltonians.
 
