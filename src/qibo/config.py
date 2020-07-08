@@ -42,7 +42,7 @@ if BACKEND_NAME == "tensorflow":
     ALLOW_SWITCHERS = True
 
     # Gate backends
-    BACKEND = {'GATES': 'custom', 'EINSUM': None}
+    BACKEND = {'GATES': 'custom', 'EINSUM': None, 'NAME': 'custom'}
 
     # Set devices recognized by tensorflow
     DEVICES = {
@@ -78,18 +78,30 @@ if BACKEND_NAME == "tensorflow":
             warnings.warn("Backend should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if backend == 'custom':
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'custom'
             BACKEND['EINSUM'] = None
         elif backend == 'defaulteinsum':
             from qibo.tensorflow import einsum
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.DefaultEinsum()
         elif backend == 'matmuleinsum':
             from qibo.tensorflow import einsum
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.MatmulEinsum()
         else:
             raise RuntimeError(f"Gate backend '{backend}' not supported.")
+
+
+    def get_backend():
+        """Get backend used to implement gates.
+
+        Returns:
+            A string with the backend name.
+        """
+        return BACKEND['NAME']
 
 
     def set_precision(dtype='double'):
@@ -113,6 +125,15 @@ if BACKEND_NAME == "tensorflow":
         DTYPES['STRING'] = dtype
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
+
+
+    def get_precision():
+        """Get precision for states and gates simulation.
+
+        Returns:
+            A string with the precision name ('single', 'double').
+        """
+        return DTYPES['STRING']
 
 
     def set_device(device_name: str):
@@ -139,6 +160,15 @@ if BACKEND_NAME == "tensorflow":
         DEVICES['DEFAULT'] = device_name
         with tf.device(device_name):
             tfmatrices.allocate_matrices()
+
+
+    def get_device():
+        """Get execution device.
+
+        Returns:
+            A string with the device name.
+        """
+        return DEVICES['DEFAULT']
 
 
 else: # pragma: no cover

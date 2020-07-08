@@ -12,22 +12,26 @@ def assert_results(result,
                    binary_samples: Optional[np.ndarray] = None,
                    decimal_frequencies: Optional[collections.Counter] = None,
                    binary_frequencies: Optional[collections.Counter] = None):
-  if decimal_samples is not None:
-      np.testing.assert_allclose(result.samples(False).numpy(), decimal_samples)
-  if binary_samples is not None:
-      np.testing.assert_allclose(result.samples(True).numpy(), binary_samples)
-  if decimal_frequencies is not None:
-      assert result.frequencies(False) == collections.Counter(decimal_frequencies)
-  if binary_frequencies is not None:
-      assert result.frequencies(True) == collections.Counter(binary_frequencies)
+    if decimal_samples is not None:
+        np.testing.assert_allclose(
+            result.samples(False).numpy(), decimal_samples)
+    if binary_samples is not None:
+        np.testing.assert_allclose(
+            result.samples(True).numpy(), binary_samples)
+    if decimal_frequencies is not None:
+        assert result.frequencies(
+            False) == collections.Counter(decimal_frequencies)
+    if binary_frequencies is not None:
+        assert result.frequencies(
+            True) == collections.Counter(binary_frequencies)
 
 
 def assert_register_results(
-            result,
-            decimal_samples: Optional[np.ndarray] = None,
-            binary_samples: Optional[np.ndarray] = None,
-            decimal_frequencies: Optional[collections.Counter] = None,
-            binary_frequencies: Optional[collections.Counter] = None):
+        result,
+        decimal_samples: Optional[np.ndarray] = None,
+        binary_samples: Optional[np.ndarray] = None,
+        decimal_frequencies: Optional[collections.Counter] = None,
+        binary_frequencies: Optional[collections.Counter] = None):
     if decimal_samples is not None:
         register_result = result.samples(binary=False, registers=True)
         assert register_result.keys() == decimal_samples.keys()
@@ -322,6 +326,7 @@ def test_measurement_compiled_circuit():
     """Check that measurements and final state work for compiled circuits."""
     # use native gates because custom gates do not support compilation
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add(gates.X(0))
@@ -343,7 +348,7 @@ def test_measurement_compiled_circuit():
     target_state[2] = 1
 
     # reset backend for next tests
-    qibo.set_backend("custom")
+    qibo.set_backend(original_backend)
 
     np.testing.assert_allclose(final_state, target_state)
 
@@ -407,11 +412,11 @@ def test_probabilistic_measurement(accelerators):
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU") and not accelerators:
-      decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
-      binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
+        decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
+        binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
     else:
-      decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
-      binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
+        decimal_freqs = {0: 271, 1: 239, 2: 242, 3: 248}
+        binary_freqs = {"00": 271, "01": 239, "10": 242, "11": 248}
     assert sum(binary_freqs.values()) == 1000
     assert_results(result,
                    decimal_frequencies=decimal_freqs,
@@ -430,11 +435,11 @@ def test_unbalanced_probabilistic_measurement():
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"):
-      decimal_freqs = {0: 196, 1: 153, 2: 156, 3: 495}
-      binary_freqs = {"00": 196, "01": 153, "10": 156, "11": 495}
+        decimal_freqs = {0: 196, 1: 153, 2: 156, 3: 495}
+        binary_freqs = {"00": 196, "01": 153, "10": 156, "11": 495}
     else:
-      decimal_freqs = {0: 168, 1: 188, 2: 154, 3: 490}
-      binary_freqs = {"00": 168, "01": 188, "10": 154, "11": 490}
+        decimal_freqs = {0: 168, 1: 188, 2: 154, 3: 490}
+        binary_freqs = {"00": 168, "01": 188, "10": 154, "11": 490}
     assert sum(binary_freqs.values()) == 1000
     assert_results(result,
                    decimal_frequencies=decimal_freqs,
