@@ -157,6 +157,7 @@ def test_entropy_in_distributed_circuit():
 def test_entropy_in_compiled_circuit():
     """Check that entropy calculation works when circuit is compiled."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
@@ -171,6 +172,7 @@ def test_entropy_in_compiled_circuit():
 
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
