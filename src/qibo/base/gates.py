@@ -308,7 +308,7 @@ class X(Gate):
         self.init_args = [q]
 
     def controlled_by(self, *q):
-        """Fall back to CNOT and Toffoli if controls are one or two."""
+        """Fall back to CNOT and Toffoli if there is one or two controls."""
         if len(q) == 1:
             gate = getattr(self.module, "CNOT")(q[0], self.target_qubits[0])
         elif len(q) == 2:
@@ -414,7 +414,7 @@ class Z(Gate):
         self.init_args = [q]
 
     def controlled_by(self, *q):
-        """Fall back to CZ if control is one."""
+        """Fall back to CZ if there is only one control."""
         if len(q) == 1:
             gate = getattr(self.module, "CZ")(q[0], self.target_qubits[0])
         else:
@@ -582,7 +582,7 @@ class RY(Gate):
 
 
 class RZ(Gate):
-    """Rotation around the X-axis of the Bloch sphere.
+    """Rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
 
@@ -606,6 +606,43 @@ class RZ(Gate):
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
         self.unitary_params = [theta]
+
+
+class ZPow(Gate):
+    """Equivalent to :class:`qibo.base.gates.RZ` with a different global phase.
+
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\theta} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+
+    def __init__(self, q, theta):
+        super(ZPow, self).__init__()
+        self.name = "rz"
+        self.target_qubits = (q,)
+        self.theta = theta
+
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+        self.unitary_params = [theta]
+
+    def controlled_by(self, *q):
+        """Fall back to CZPow if there is only one control."""
+        if len(q) == 1:
+            gate = getattr(self.module, "CZPow")(q[0], self.target_qubits[0],
+                                                 theta=self.theta)
+        else:
+            gate = super(ZPow, self).controlled_by(*q)
+        return gate
 
 
 class CNOT(Gate):

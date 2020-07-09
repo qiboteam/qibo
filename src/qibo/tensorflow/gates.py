@@ -216,6 +216,20 @@ class RZ(TensorflowGate, base_gates.RZ):
         return tf.linalg.diag(diag)
 
 
+class ZPow(TensorflowGate, base_gates.ZPow):
+
+    def __init__(self, q, theta):
+        base_gates.ZPow.__init__(self, q, theta)
+        TensorflowGate.__init__(self)
+
+    @staticmethod
+    def construct_unitary(theta) -> tf.Tensor:
+        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+        phase = tf.exp(1j * t)
+        diag = tf.concat([1, phase], axis=0)
+        return tf.linalg.diag(diag)
+
+
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):

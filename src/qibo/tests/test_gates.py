@@ -214,6 +214,48 @@ def test_rz_phase1(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_zpow(backend):
+    """Check ZPow gate is working properly when qubit is on |1>."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(1)
+    c.add(gates.X(0))
+    c.add(gates.ZPow(0, theta))
+    final_state = c.execute().numpy()
+
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta )
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_zpow(backend):
+    """Check controlled ZPow and fallback to CZPow."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.ZPow(2, theta).controlled_by(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+
+    gate = gates.ZPow(0, theta).controlled_by(1)
+    assert gate.__class__.__name__ == "CZPow"
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_rx(backend):
     """Check RX gate is working properly."""
     original_backend = qibo.get_backend()
@@ -774,6 +816,8 @@ def test_construct_unitary(backend):
     np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
     np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
+    target_matrix = np.diag([1, np.exp(1j * theta)])
+    np.testing.assert_allclose(gates.ZPow(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
 
