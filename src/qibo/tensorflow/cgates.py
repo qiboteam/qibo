@@ -200,25 +200,26 @@ class M(TensorflowGate, base_gates.M):
                  samples_only: bool = False,
                  is_density_matrix: bool = False) -> tf.Tensor:
         TensorflowGate.__call__(self, state, is_density_matrix)
-        probs_dim = 2 ** len(self.target_qubits)
-
-        shape = (1 + is_density_matrix) * self.nqubits * (2,)
-        probs = self._calculate_probabilities(
-            tf.reshape(state, shape), is_density_matrix)
-        logits = tf.math.log(tf.reshape(probs, (probs_dim,)))
-
+        probs_dim = tf.cast((2 ** len(self.target_qubits),),
+                            dtype=DTYPES.get('DTYPEINT'))
+        def sample():
+            shape = (1 + is_density_matrix) * self.nqubits * (2,)
+            probs = self._calculate_probabilities(
+                tf.reshape(state, shape), is_density_matrix)
+            logits = tf.math.log(tf.reshape(probs, probs_dim))
+            return tf.random.categorical(logits[tf.newaxis], nshots,
+                                         dtype=DTYPES.get('DTYPEINT'))[0]
 
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
-            samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                                dtype=DTYPES.get('DTYPEINT'))[0]
+            samples_dec = sample()
         except oom_error: # pragma: no cover
             # Force using CPU to perform sampling
             if not DEVICES['CPU']:
                 raise RuntimeError("Cannot find CPU device to use for sampling.")
             with tf.device(DEVICES['CPU'][0]):
-                samples_dec = tf.random.categorical(logits[tf.newaxis], nshots,
-                                                    dtype=DTYPES.get('DTYPEINT'))[0]
+                samples_dec = sample()
+
         if samples_only:
             return samples_dec
         return self.measurements.GateResult(
