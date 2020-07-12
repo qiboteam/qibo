@@ -29,13 +29,13 @@ After the sign change of the solution states, an inversion about average amplifi
 
 The quantum register is started with Hadamard gates on all qubits encoding the problem, and an X gate followed by a Hadamard gate on the Grover ancilla, used to change the sign of the solution. 
 
-Then the oracle and diffusion transform are applied (π/4)sqrt(N) times, where N is the total number of possible outcomes.
+Then the oracle and diffusion transform are applied (π/4)sqrt(N/M) times, where N is the total number of possible outcomes and M is the number of solutions.
 
 After this has been applied, measuring the quantum registers outputs the solution of the problem.
 
 The quantum circuit for the Grover search algorithm with any oracle takes the form:
 
-<img src="grover-circuit-image.png" width="510px">
+<img src="grover-circuit-image.png" width="720px">
 
 ## How to run the example
 
