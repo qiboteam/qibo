@@ -31,13 +31,24 @@ The quantum register is started with Hadamard gates on all qubits encoding the p
 
 Then the oracle and diffusion transform are applied (π/4)sqrt(N) times, where N is the total number of possible outcomes.
 
-After this has been applied, measuring the quantum registers outputs the solution of the problem. 
+After this has been applied, measuring the quantum registers outputs the solution of the problem.
+
+The quantum circuit for the Grover search algorithm with any oracle takes the form:
+
+<img src="grover-circuit-image.png" width="510px">
 
 ## How to run the example
 
 Run the file `main.py` from the console to find the solution of an instance of 10 qubits.
 
 Adding the argument --nqubits (int) allows for instances with different number of qubits.
+
+The program returns:
+
+- Number of qubits encoding the solution.
+- Total number of qubits to define the problem. Including ancillary qubits used in the oracle.
+- Most common bitstring measured after all iterations. 
+- Target solution of the problem (if included).
 
 Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
 
