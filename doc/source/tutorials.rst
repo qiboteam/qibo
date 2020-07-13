@@ -8,3 +8,4 @@ physics problems.
     :maxdepth: 1
 
     tutorials/aavqe/README.md
+    tutorials/grover3sat/README.md
