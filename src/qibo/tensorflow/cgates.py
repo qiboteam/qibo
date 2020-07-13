@@ -60,7 +60,7 @@ class TensorflowGate(base_gates.Gate):
         Calculates the ``matrix`` required to apply the gate to state vectors.
         This is not necessarily the same as the unitary matrix of the gate.
         """
-        pass
+        _ = self.qubits_tensor
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -81,6 +81,7 @@ class MatrixGate(TensorflowGate):
         self.matrix = None
 
     def _prepare(self):
+        _ = self.qubits_tensor
         self.matrix = self.construct_unitary(*self.unitary_params)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -171,6 +172,9 @@ class M(TensorflowGate, base_gates.M):
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
         self._traceout = None
+
+    def _prepare(self):
+        pass
 
     @property
     def _traceout_str(self):
@@ -287,6 +291,7 @@ class ZPow(MatrixGate, base_gates.ZPow):
         MatrixGate.__init__(self)
 
     def _prepare(self):
+        _ = self.qubits_tensor
         self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
 
     @staticmethod
@@ -375,6 +380,7 @@ class fSim(MatrixGate, base_gates.fSim):
         TensorflowGate.__init__(self)
 
     def _prepare(self):
+        _ = self.qubits_tensor
         dtype = DTYPES.get('DTYPECPX')
         th = tf.cast(self.theta, dtype=dtype)
         I = tf.eye(2, dtype=dtype)
@@ -414,6 +420,7 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
                              "fSim gate".format(shape))
 
     def _prepare(self):
+        _ = self.qubits_tensor
         dtype = DTYPES.get('DTYPECPX')
         rotation = tf.cast(self.given_unitary, dtype=dtype)
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
@@ -565,6 +572,9 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         TensorflowGate.__init__(self)
         self.swap_reset = []
 
+    def _prepare(self):
+        pass
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         shape = tuple(state.shape)
@@ -583,6 +593,9 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         base_gates.CallbackGate.__init__(self, callback)
         TensorflowGate.__init__(self)
         self.swap_reset = []
+
+    def _prepare(self):
+        pass
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
