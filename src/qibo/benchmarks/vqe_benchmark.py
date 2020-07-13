@@ -48,7 +48,8 @@ def main(nqubits, layers):
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                            2*nqubits*layers + nqubits)
     v = VQE(ansatz, hamiltonian)
-    best, params = v.minimize(initial_parameters, method='BFGS')
+    best, params = v.minimize(initial_parameters, method='Powell',
+                              options={'disp': True}, compile=False)
     epsilon = np.log10(1/np.abs(best-target))
     print('Found state =', best)
     print('Final eps =', epsilon)

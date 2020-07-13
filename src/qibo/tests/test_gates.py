@@ -15,6 +15,7 @@ _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_addition_result(backend, accelerators):
     """Check if circuit addition works properly on Tensorflow circuit."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c1 = Circuit(2, accelerators)
     c1.add(gates.H(0))
@@ -31,11 +32,13 @@ def test_circuit_addition_result(backend, accelerators):
     c.add(gates.CNOT(0, 1))
 
     np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_hadamard(backend):
     """Check Hadamard gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.H(0))
@@ -43,22 +46,26 @@ def test_hadamard(backend):
     final_state = c.execute().numpy()
     target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_flatten(backend):
     """Check ``Flatten`` gate works in circuits ."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     target_state = np.ones(4) / 2.0
     c = Circuit(2)
     c.add(gates.Flatten(target_state))
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_xgate(backend, accelerators):
     """Check X gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
     c.add(gates.X(0))
@@ -66,11 +73,13 @@ def test_xgate(backend, accelerators):
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_ygate(backend):
     """Check Y gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.Y(1))
@@ -78,11 +87,13 @@ def test_ygate(backend):
     target_state = np.zeros_like(final_state)
     target_state[1] = 1j
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_zgate(backend, accelerators):
     """Check Z gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
     c.add(gates.H(0))
@@ -93,11 +104,32 @@ def test_zgate(backend, accelerators):
     target_state[2] *= -1.0
     target_state[3] *= -1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_identity_gate(backend, accelerators):
+    """Check identity gate is working properly."""
+    qibo.set_backend(backend)
+    c = Circuit(2, accelerators)
+    c.add((gates.H(i) for i in range(2)))
+    c.add(gates.I(0))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 2.0
+    np.testing.assert_allclose(final_state, target_state)
+
+    c = Circuit(4, accelerators)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.I(0, 1))
+    final_state = c.execute().numpy()
+    target_state = np.ones_like(final_state) / 4.0
+    np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_multicontrol_xgate(backend):
     """Check that fallback method for X works for one or two controls."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c1 = Circuit(3)
     c1.add(gates.X(0))
@@ -120,11 +152,13 @@ def test_multicontrol_xgate(backend):
     c2.add(gates.TOFFOLI(0, 2, 1))
     target_state = c2.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_multicontrol_xgate_more_controls(backend, accelerators):
     """Check that fallback method for X works for more than two controls."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4, accelerators)
     c.add(gates.X(0))
@@ -141,11 +175,13 @@ def test_multicontrol_xgate_more_controls(backend, accelerators):
     target_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_rz_phase0(backend):
     """Check RZ gate is working properly when qubit is on |0>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -156,11 +192,13 @@ def test_rz_phase0(backend):
     target_state = np.zeros_like(final_state)
     target_state[0] = np.exp(-1j * theta / 2.0)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_rz_phase1(backend):
     """Check RZ gate is working properly when qubit is on |1>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -172,11 +210,55 @@ def test_rz_phase1(backend):
     target_state = np.zeros_like(final_state)
     target_state[2] = np.exp(1j * theta / 2.0)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_zpow(backend):
+    """Check ZPow gate is working properly when qubit is on |1>."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(1)
+    c.add(gates.X(0))
+    c.add(gates.ZPow(0, theta))
+    final_state = c.execute().numpy()
+
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta )
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_zpow(backend):
+    """Check controlled ZPow and fallback to CZPow."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(3)
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    c.add(gates.X(2))
+    c.add(gates.ZPow(2, theta).controlled_by(0, 1))
+    c.add(gates.X(0))
+    c.add(gates.X(1))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+
+    gate = gates.ZPow(0, theta).controlled_by(1)
+    assert gate.__class__.__name__ == "CZPow"
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_rx(backend):
     """Check RX gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -190,11 +272,13 @@ def test_rx(backend):
                     [-1j * phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_ry(backend):
     """Check RY gate is working properly."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -208,11 +292,13 @@ def test_ry(backend):
                      [phase.imag, phase.real]])
     target_state = gate.dot(np.ones(2)) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_cnot_no_effect(backend):
     """Check CNOT gate is working properly on |00>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.CNOT(0, 1))
@@ -220,11 +306,13 @@ def test_cnot_no_effect(backend):
     target_state = np.zeros_like(final_state)
     target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_cnot(backend):
     """Check CNOT gate is working properly on |10>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.X(0))
@@ -233,11 +321,13 @@ def test_cnot(backend):
     target_state = np.zeros_like(final_state)
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_cz(backend):
     """Check CZ gate is working properly on random state."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     init_state = np.random.random(4) + 1j * np.random.random(4)
     matrix = np.eye(4)
@@ -253,11 +343,13 @@ def test_cz(backend):
     final_state = c.execute(np.copy(init_state)).numpy()
     assert c.queue[0].name == "cz"
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_czpow(backend, accelerators):
     """Check CZPow gate is working properly on |11>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -271,11 +363,13 @@ def test_czpow(backend, accelerators):
     target_state = np.zeros_like(final_state)
     target_state[3] = phase
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_fsim(backend):
     """Check fSim gate is working properly on |++>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     phi = 0.4321
@@ -294,11 +388,13 @@ def test_fsim(backend):
     matrix[3, 3] = np.exp(-1j * phi)
     target_state = matrix.dot(target_state)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_controlled_by_fsim(backend, accelerators):
     """Check ``controlled_by`` for fSim gate."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     phi = 0.4321
@@ -319,11 +415,13 @@ def test_controlled_by_fsim(backend, accelerators):
     ids = [58, 59, 62, 63]
     target_state[ids] = matrix.dot(target_state[ids])
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_generalized_fsim(backend, accelerators):
     """Check GeneralizedfSim gate is working properly on |++>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
     rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
@@ -340,21 +438,25 @@ def test_generalized_fsim(backend, accelerators):
     target_state[:4] = matrix.dot(target_state[:4])
     target_state[4:] = matrix.dot(target_state[4:])
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_generalized_fsim_error(backend):
     """Check GenerelizedfSim gate raises error for wrong unitary shape."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
     rotation = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
     c = Circuit(2)
     with pytest.raises(ValueError):
         c.add(gates.GeneralizedfSim(0, 1, rotation, phi))
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_doubly_controlled_by_rx_no_effect(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -368,10 +470,12 @@ def test_doubly_controlled_by_rx_no_effect(backend):
     target_state[0] = 1.0
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_doubly_controlled_by_rx(backend, accelerators):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -388,11 +492,13 @@ def test_doubly_controlled_by_rx(backend, accelerators):
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_swap(backend):
     """Check SWAP gate is working properly on |01>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.X(1))
@@ -401,11 +507,13 @@ def test_swap(backend):
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_multiple_swap(backend):
     """Check SWAP gate is working properly when called multiple times."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4)
     c.add(gates.X(0))
@@ -420,11 +528,13 @@ def test_multiple_swap(backend):
     target_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_swap_small(backend):
     """Check controlled SWAP using controlled by for ``nqubits=3``."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(3)
     c.add(gates.RX(1, theta=0.1234))
@@ -450,11 +560,13 @@ def test_controlled_by_swap_small(backend):
     c.add(gates.SWAP(1, 2))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_swap(backend):
     """Check controlled SWAP using controlled by for ``nqubits=4``."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4)
     c.add(gates.RX(2, theta=0.1234))
@@ -480,11 +592,13 @@ def test_controlled_by_swap(backend):
     c.add(gates.SWAP(2, 3))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_doubly_controlled_by_swap(backend, accelerators):
     """Check controlled SWAP using controlled by two qubits."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4, accelerators)
     c.add(gates.X(0))
@@ -514,11 +628,13 @@ def test_doubly_controlled_by_swap(backend, accelerators):
     c.add(gates.SWAP(1, 2))
     target_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_toffoli_no_effect(backend):
     """Check Toffoli gate is working properly on |010>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(3)
     c.add(gates.X(1))
@@ -527,11 +643,13 @@ def test_toffoli_no_effect(backend):
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_toffoli(backend):
     """Check Toffoli gate is working properly on |110>."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(3)
     c.add(gates.X(0))
@@ -541,11 +659,13 @@ def test_toffoli(backend):
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_common_gates(backend):
     """Check that `Unitary` gate can create common gates."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.X(0))
@@ -575,11 +695,13 @@ def test_unitary_common_gates(backend):
     c.add(gates.Unitary(cnot, 0, 1))
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_random_onequbit_gate(backend):
     """Check that ``Unitary`` gate can apply random 2x2 matrices."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     init_state = np.ones(4) / 2.0
     matrix = np.random.random([2, 2])
@@ -592,11 +714,13 @@ def test_unitary_random_onequbit_gate(backend):
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_random_twoqubit_gate(backend):
     """Check that ``Unitary`` gate can apply random 4x4 matrices."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     init_state = np.ones(8) / np.sqrt(8)
     matrix = np.random.random([4, 4])
@@ -610,11 +734,13 @@ def test_unitary_random_twoqubit_gate(backend):
     final_state = c.execute().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_unitary_controlled_by(backend, accelerators):
     """Check that `controlled_by` works as expected with `Unitary`."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     matrix = np.random.random([2, 2])
     c = Circuit(2, accelerators)
@@ -635,10 +761,12 @@ def test_unitary_controlled_by(backend, accelerators):
     ids = [10, 11, 14, 15]
     target_state[ids] = matrix.dot(target_state[ids])
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_bad_shape(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     matrix = np.random.random((8, 8))
     with pytest.raises(ValueError):
@@ -647,30 +775,28 @@ def test_unitary_bad_shape(backend):
     if backend == "custom":
         with pytest.raises(NotImplementedError):
             gate = gates.Unitary(matrix, 0, 1, 2)
+    qibo.set_backend(original_backend)
 
-
-@pytest.mark.parametrize("gates", ["custom", "native"])
-def test_construct_unitary(gates):
-    if gates == "custom":
-        from qibo.tensorflow import cgates as gates
-    else:
-        from qibo.tensorflow import gates
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary(backend):
+    qibo.set_backend(backend)
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(gates.H.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.H(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, 1], [1, 0]])
-    np.testing.assert_allclose(gates.X.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.X(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[0, -1j], [1j, 0]])
-    np.testing.assert_allclose(gates.Y.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Y(0).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0], [0, -1]])
-    np.testing.assert_allclose(gates.Z.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Z(1).unitary.numpy(), target_matrix)
+
     target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.CNOT.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CNOT(0, 1).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, -1])
-    np.testing.assert_allclose(gates.CZ.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZ(1, 3).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                               [0, 1, 0, 0], [0, 0, 0, 1]])
-    np.testing.assert_allclose(gates.SWAP.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.SWAP(2, 4).unitary.numpy(), target_matrix)
     target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                               [0, 1, 0, 0, 0, 0, 0, 0],
                               [0, 0, 1, 0, 0, 0, 0, 0],
@@ -679,25 +805,68 @@ def test_construct_unitary(gates):
                               [0, 0, 0, 0, 0, 1, 0, 0],
                               [0, 0, 0, 0, 0, 0, 0, 1],
                               [0, 0, 0, 0, 0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.TOFFOLI.construct_unitary().numpy(), target_matrix)
+    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary.numpy(), target_matrix)
 
     theta = 0.1234
     target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
                               [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RX.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RX(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                               [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RY.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
-    np.testing.assert_allclose(gates.RZ.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
+    target_matrix = np.diag([1, np.exp(1j * theta)])
+    np.testing.assert_allclose(gates.ZPow(0, theta).unitary.numpy(), target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CZPow.construct_unitary(theta).numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
 
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_controlled_by(backend):
+    qibo.set_backend(backend)
+    theta = 0.1234
+    rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
+                         [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
+    target_matrix = np.eye(4, dtype=rotation.dtype)
+    target_matrix[2:, 2:] = rotation
+    gate = gates.RY(0, theta).controlled_by(1)
+    np.testing.assert_allclose(gate.unitary.numpy(), target_matrix)
+
+    gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
-        gates.fSim.construct_unitary()
+        unitary = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_construct_unitary_errors(backend):
+    qibo.set_backend(backend)
+    gate = gates.M(0)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+    pairs = list((i, i + 1) for i in range(0, 5, 2))
+    theta = 2 * np.pi * np.random.random(6)
+    thetas = {i: theta[i] for i in range(6)}
+    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_by_unitary_action(backend):
+    qibo.set_backend(backend)
+    init_state = np.random.random(4) + 1j * np.random.random(4)
+    gate = gates.RX(1, theta=0.1234).controlled_by(0)
+    c = Circuit(2)
+    c.add(gate)
+    target_state = c(np.copy(init_state)).numpy()
+    final_state = gate.unitary.numpy().dot(init_state)
+    np.testing.assert_allclose(final_state, target_state)
 
 
 def test_variational_layer_call():
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     nqubits = 6
     theta = 2 * np.pi * np.random.random(nqubits)
@@ -711,11 +880,13 @@ def test_variational_layer_call():
     gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
     final_state = gate(c._default_initial_state()).numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
 def test_variational_one_layer(backend, accelerators, nqubits):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
@@ -729,11 +900,13 @@ def test_variational_one_layer(backend, accelerators, nqubits):
     c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5, 6, 7, 10])
 def test_variational_two_layers(backend, accelerators, nqubits):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random(2 * nqubits)
     theta_iter = iter(theta)
@@ -767,10 +940,12 @@ def test_variational_two_layers(backend, accelerators, nqubits):
     c.add(gates.CZ(0, nqubits - 1))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_variational_layer_errors(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(6)
     pairs = list((i, i + 1) for i in range(0, 5, 2))
@@ -783,12 +958,14 @@ def test_variational_layer_errors(backend):
     thetas1 = {i: 0 for i in range(8)}
     with pytest.raises(ValueError):
         c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas0, thetas1))
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_custom_circuit(backend):
     """Check consistency between Circuit and custom circuits"""
     import tensorflow as tf
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -821,11 +998,13 @@ def test_custom_circuit(backend):
     else:
         r3 = tf_custom_circuit(init3, theta).numpy().ravel()
         np.testing.assert_allclose(r2, r3)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_compiled_circuit(backend):
     """Check that compiling with `Circuit.compile` does not break results."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     def create_circuit(theta = 0.1234):
         c = Circuit(2)
@@ -851,20 +1030,25 @@ def test_compiled_circuit(backend):
         r3 = r3.numpy().ravel()
         np.testing.assert_allclose(r1, r2)
         np.testing.assert_allclose(r1, r3)
+    qibo.set_backend(original_backend)
 
 
 def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
     from qibo.tensorflow import gates
+    original_backend = qibo.get_backend()
+    qibo.set_backend("matmuleinsum")
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.compile()
     with pytest.raises(RuntimeError):
         c.compile()
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_custom_compilation(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     init_state = np.ones(4) / 2.0
@@ -885,11 +1069,13 @@ def test_circuit_custom_compilation(backend):
     else:
         r2 = compiled_circuit(init_state)
         np.testing.assert_allclose(r1, r2)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_bad_initial_state(backend, accelerators):
     """Check that errors are raised when bad initial state is passed."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
     c = Circuit(2, accelerators)
@@ -902,11 +1088,13 @@ def test_bad_initial_state(backend, accelerators):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
     with pytest.raises(TypeError):
         final_state = c(initial_state=0)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_final_state_property(backend, accelerators):
     """Check accessing final state using the circuit's property."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
     c = Circuit(2, accelerators)
@@ -919,11 +1107,13 @@ def test_final_state_property(backend, accelerators):
     final_state = c.final_state.numpy()
     target_state = np.ones(4) / 2
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_variable_theta(backend, accelerators):
     """Check that parametrized gates accept `tf.Variable` parameters."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
     from qibo.config import DTYPES
@@ -941,12 +1131,14 @@ def test_variable_theta(backend, accelerators):
     target_state = c().numpy()
 
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("deep", [False, True])
 def test_circuit_copy(backend, accelerators, deep):
     """Check that circuit copy execution is equivalent to original circuit."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
@@ -960,6 +1152,7 @@ def test_circuit_copy(backend, accelerators, deep):
         target_state = c1.execute().numpy()
         final_state = c2.execute().numpy()
         np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.linux

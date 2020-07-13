@@ -10,6 +10,7 @@ _BACKENDS = ["defaulteinsum", "matmuleinsum"]
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_variable_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
     from qibo.config import DTYPES
@@ -29,11 +30,13 @@ def test_variable_backpropagation(backend):
 
     target_grad = - np.sin(theta.numpy() / 2.0) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_two_variables_backpropagation(backend):
     """Check that backpropagation works when using `tf.Variable` parameters."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
     from qibo.config import DTYPES
@@ -56,3 +59,4 @@ def test_two_variables_backpropagation(backend):
     target_grad2 = - np.cos(t[0]) * np.sin(t[1])
     target_grad = np.array([target_grad1, target_grad2]) / 2.0
     np.testing.assert_allclose(grad.numpy(), target_grad)
+    qibo.set_backend(original_backend)

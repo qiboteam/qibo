@@ -61,6 +61,7 @@ def test_circuit_add_bad_gate():
 
 def test_circuit_add_iterable():
     """Check if `circuit.add` works with iterables."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     c = Circuit(2)
     # Try adding list
@@ -71,10 +72,12 @@ def test_circuit_add_iterable():
     c.add((H(0), H(1), CNOT(0, 1)))
     assert c.depth == 6
     assert isinstance(c.queue[-1], CNOT)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_add_generator():
     """Check if `circuit.add` works with generators."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     def gen():
         yield H(0)
@@ -84,10 +87,12 @@ def test_circuit_add_generator():
     c.add(gen())
     assert c.depth == 3
     assert isinstance(c.queue[-1], CNOT)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_add_nested_generator():
     """Check if `circuit.add` works with nested generators."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     def gen():
         yield H(0)
@@ -99,10 +104,12 @@ def test_circuit_add_nested_generator():
     assert isinstance(c.queue[2], CNOT)
     assert isinstance(c.queue[5], CNOT)
     assert isinstance(c.queue[7], H)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_addition():
     """Check if circuit addition increases depth."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     c1 = Circuit(2)
     c1.add(H(0))
@@ -115,6 +122,7 @@ def test_circuit_addition():
 
     c3 = c1 + c2
     assert c3.depth == 3
+    qibo.set_backend(original_backend)
 
 
 def test_bad_circuit_addition():
@@ -252,6 +260,7 @@ def test_state_precision(precision):
     """Check ``set_precision`` in state dtype."""
     import qibo
     import tensorflow as tf
+    original_precision = qibo.get_precision()
     qibo.set_precision(precision)
     c1 = Circuit(2)
     c1.add([H(0), H(1)])
@@ -261,6 +270,7 @@ def test_state_precision(precision):
     else:
         expected_dtype = tf.complex128
     assert final_state.dtype == expected_dtype
+    qibo.set_precision(original_precision)
 
 
 @pytest.mark.parametrize("precision", ["single", "double"])
@@ -269,16 +279,19 @@ def test_precision_dictionary(precision):
     import qibo
     import tensorflow as tf
     from qibo.config import DTYPES
+    original_precision = qibo.get_precision()
     qibo.set_precision(precision)
     if precision == "single":
         assert DTYPES.get("DTYPECPX") == tf.complex64
     else:
         assert DTYPES.get("DTYPECPX") == tf.complex128
+    qibo.set_precision(original_precision)
 
 
 def test_matrices_dtype():
     """Check if ``set_precision`` changes matrices types."""
     import qibo
+    original_precision = qibo.get_precision()
     # Check that matrices can be imported
     from qibo import matrices
     assert matrices.I.dtype == np.complex128
@@ -294,6 +307,7 @@ def test_matrices_dtype():
     CNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                      [0, 0, 0, 1], [0, 0, 1, 0]])
     np.testing.assert_allclose(qibo.matrices.CNOT, CNOT)
+    qibo.set_precision(original_precision)
 
 
 def test_modifying_matrices_error():
@@ -307,6 +321,7 @@ def test_modifying_matrices_error():
 def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     from qibo import gates
     if backend == "custom":
@@ -320,6 +335,7 @@ def test_set_backend(backend):
         h = gates.H(0)
         assert isinstance(h, native_gates.TensorflowGate)
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
+    qibo.set_backend(original_backend)
 
 
 def test_switcher_errors():
@@ -329,7 +345,6 @@ def test_switcher_errors():
         qibo.set_precision('test')
     with pytest.raises(RuntimeError):
         qibo.set_backend('test')
-    qibo.set_backend("custom")
 
 
 def test_switcher_warnings():
@@ -349,6 +364,7 @@ def test_switcher_warnings():
 def test_set_device():
     """Check device switcher and errors in device name."""
     import qibo
+    original_device = qibo.get_device()
     qibo.set_device("/CPU:0")
     with pytest.raises(ValueError):
         qibo.set_device("test")
@@ -358,3 +374,4 @@ def test_set_device():
         qibo.set_device("/gpu:10")
     with pytest.raises(ValueError):
         qibo.set_device("/GPU:10")
+    qibo.set_device(original_device)

@@ -65,13 +65,24 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
   }
 };
 
+template <typename T>
+T cmult(T a, T b) {
+  return T(a.real() * b.real() - a.imag() * b.imag(),
+           a.real() * b.imag() + a.imag() * b.real());
+}
+
+template <typename T>
+T cadd(T a, T b) {
+  return T(a.real() + b.real(), a.imag() + b.imag());
+}
+
 // Apply general one-qubit gate via gate matrix
 template <typename T>
 struct ApplyGateFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
     const auto buffer = state1;
-    state1 = gate[0] * state1 + gate[1] * state2;
-    state2 = gate[2] * buffer + gate[3] * state2;
+    state1 = cadd(cmult(gate[0], state1), cmult(gate[1], state2));
+    state2 = cadd(cmult(gate[2], buffer), cmult(gate[3], state2));
   }
 };
 
@@ -87,8 +98,8 @@ struct ApplyXFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
 template <typename T>
 struct ApplyYFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
-    state1 *= T(0, 1);
-    state2 *= -T(0, 1);
+    state1 = cmult(state1, T(0, 1));
+    state2 = cmult(state2, T(0, -1));
     std::swap(state1, state2);
   }
 };
@@ -97,7 +108,7 @@ struct ApplyYFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
 template <typename T>
 struct ApplyZFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
-    state2 *= -1;
+    state2 = cmult(state2, T(-1));
   }
 };
 
@@ -105,7 +116,7 @@ struct ApplyZFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
 template <typename T>
 struct ApplyZPowFunctor<CPUDevice, T> : BaseOneQubitGateFunctor<CPUDevice, T> {
   inline void apply(T& state1, T& state2, const T* gate = NULL) const override {
-    state2 *= gate[0];
+    state2 = cmult(state2, gate[0]);
   }
 };
 
@@ -180,16 +191,17 @@ struct ApplyTwoQubitGateFunctor<CPUDevice, T>
     const int64 i2 = i + tk2;
     const int64 i3 = i1 + tk2;
     const auto buffer = state[i];
-    state[i] = (gate[0] * state[i] + gate[1] * state[i1] + gate[2] * state[i2] +
-                gate[3] * state[i3]);
+    state[i] = cadd(cadd(cmult(gate[0], state[i]), cmult(gate[1], state[i1])),
+                    cadd(cmult(gate[2], state[i2]), cmult(gate[3], state[i3])));
     const auto buffer1 = state[i1];
-    state[i1] = (gate[4] * buffer + gate[5] * state[i1] + gate[6] * state[i2] +
-                 gate[7] * state[i3]);
+    state[i1] = cadd(cadd(cmult(gate[4], buffer), cmult(gate[5], state[i1])),
+                    cadd(cmult(gate[6], state[i2]), cmult(gate[7], state[i3])));
     const auto buffer2 = state[i2];
-    state[i2] = (gate[8] * buffer + gate[9] * buffer1 + gate[10] * state[i2] +
-                 gate[11] * state[i3]);
-    state[i3] = (gate[12] * buffer + gate[13] * buffer1 + gate[14] * buffer2 +
-                 gate[15] * state[i3]);
+    state[i2] =
+        cadd(cadd(cmult(gate[8], buffer), cmult(gate[9], buffer1)),
+            cadd(cmult(gate[10], state[i2]), cmult(gate[11], state[i3])));
+    state[i3] = cadd(cadd(cmult(gate[12], buffer), cmult(gate[13], buffer1)),
+                    cadd(cmult(gate[14], buffer2), cmult(gate[15], state[i3])));
   }
 };
 
@@ -202,9 +214,9 @@ struct ApplyFsimFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
     const int64 i2 = i + tk2;
     const int64 i3 = i1 + tk2;
     const auto buffer = state[i1];
-    state[i1] = gate[0] * state[i1] + gate[1] * state[i2];
-    state[i2] = gate[2] * buffer + gate[3] * state[i2];
-    state[i3] = gate[4] * state[i3];
+    state[i1] = cadd(cmult(gate[0], state[i1]), cmult(gate[1], state[i2]));
+    state[i2] = cadd(cmult(gate[2], buffer), cmult(gate[3], state[i2]));
+    state[i3] = cmult(gate[4], state[i3]);
   }
 };
 
