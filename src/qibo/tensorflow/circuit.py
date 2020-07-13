@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES
+from qibo.config import DTYPES, DEVICES, BACKEND
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -73,8 +73,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     @property
     def using_tfgates(self) -> bool:
         """Determines if we are using Tensorflow native or custom gates."""
-        from qibo.tensorflow import gates
-        return gates.TensorflowGate == self.gate_module.TensorflowGate
+        return BACKEND['GATES'] != 'custom'
 
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
