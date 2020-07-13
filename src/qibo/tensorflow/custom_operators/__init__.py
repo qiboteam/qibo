@@ -13,3 +13,5 @@ from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import
 from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_swap
 # Import gradients
 from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
+
+from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import custom_module

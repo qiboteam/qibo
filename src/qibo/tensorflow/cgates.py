@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import BACKEND, DTYPES, DEVICES
-from qibo.tensorflow import custom_operators as op
+from qibo.tensorflow.custom_operators import custom_module as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -25,6 +25,7 @@ class TensorflowGate(base_gates.Gate):
         if not tf.executing_eagerly():
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
+        self._qubits_tensor = None
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
@@ -42,6 +43,15 @@ class TensorflowGate(base_gates.Gate):
         ids = [[2, 2], [2, 3], [3, 2], [3, 3]]
         values = tf.reshape(unitary, (4,))
         return tf.tensor_scatter_nd_update(matrix, ids, values)
+
+    @property
+    def qubits_tensor(self) -> tf.Tensor:
+        if self._qubits_tensor is None:
+            qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
+            qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
+            qubits = sorted(qubits)
+            self._qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+        return self._qubits_tensor
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.
@@ -76,8 +86,8 @@ class MatrixGate(TensorflowGate):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         super(MatrixGate, self).__call__(state, is_density_matrix)
-        return op.apply_gate(state, self.matrix, self.nqubits,
-                             self.target_qubits[0], self.control_qubits)
+        return op.apply_gate(state, self.matrix, self.qubits_tensor,
+                             self.nqubits, self.target_qubits[0])
 
 
 class H(MatrixGate, base_gates.H):
@@ -104,8 +114,8 @@ class X(TensorflowGate, base_gates.X):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_x(state, self.nqubits, self.target_qubits[0],
-                          self.control_qubits)
+        return op.apply_x(state, self.qubits_tensor, self.nqubits,
+                          self.target_qubits[0])
 
 
 class Y(TensorflowGate, base_gates.Y):
@@ -120,8 +130,8 @@ class Y(TensorflowGate, base_gates.Y):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_y(state, self.nqubits, self.target_qubits[0],
-                          self.control_qubits)
+        return op.apply_y(state, self.qubits_tensor, self.nqubits,
+                          self.target_qubits[0])
 
 
 class Z(TensorflowGate, base_gates.Z):
@@ -136,8 +146,8 @@ class Z(TensorflowGate, base_gates.Z):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_z(state, self.nqubits, self.target_qubits[0],
-                          self.control_qubits)
+        return op.apply_z(state, self.qubits_tensor, self.nqubits,
+                          self.target_qubits[0])
 
 
 class I(TensorflowGate, base_gates.I):
@@ -288,8 +298,8 @@ class ZPow(MatrixGate, base_gates.ZPow):
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_zpow(state, self.matrix, self.nqubits,
-                             self.target_qubits[0], self.control_qubits)
+        return op.apply_z_pow(state, self.matrix, self.qubits_tensor,
+                              self.nqubits, self.target_qubits[0])
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -354,14 +364,15 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_swap(state, self.nqubits, self.target_qubits,
-                             self.control_qubits)
+        return op.apply_swap(state, self.qubits_tensor, self.nqubits,
+                             *self.target_qubits)
 
 
 class fSim(MatrixGate, base_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
+        TensorflowGate.__init__(self)
 
     def _prepare(self):
         dtype = DTYPES.get('DTYPECPX')
@@ -388,14 +399,15 @@ class fSim(MatrixGate, base_gates.fSim):
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
-        return op.apply_fsim(state, self.matrix, self.nqubits,
-                             self.target_qubits, self.control_qubits)
+        return op.apply_fsim(state, self.matrix, self.qubits_tensor,
+                             self.nqubits, *self.target_qubits)
 
 
 class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        TensorflowGate.__init__(self)
         shape = tuple(self.given_unitary.shape)
         if shape != (2, 2):
             raise ValueError("Invalid shape {} of rotation for generalized "
@@ -478,13 +490,11 @@ class Unitary(MatrixGate, base_gates.Unitary):
                  ) -> tf.Tensor:
         TensorflowGate.__call__(self, state, is_density_matrix)
         if self.rank == 1:
-            return op.apply_gate(state, self.matrix, self.nqubits,
-                                 self.target_qubits[0],
-                                 self.control_qubits)
+            return op.apply_gate(state, self.matrix, self.qubits_tensor,
+                                 self.nqubits, self.target_qubits[0])
         if self.rank == 2:
-            return op.apply_twoqubit_gate(state, self.matrix, self.nqubits,
-                                          self.target_qubits,
-                                          self.control_qubits)
+            return op.apply_two_qubit_gate(state, self.matrix, self.qubits_tensor,
+                                           self.nqubits, *self.target_qubits)
 
 
 class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
