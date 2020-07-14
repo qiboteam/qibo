@@ -3,6 +3,7 @@
 import collections
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
+from qibo import gates as gate_module
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
@@ -158,20 +159,6 @@ class BaseCircuit(object):
         raise TypeError("Type {} of noise map is not recognized."
                         "".format(type(noise_map)))
 
-    @property
-    def gate_module(self):
-        """Returns the module of the gates contained in the circuit queue."""
-        if self.queue:
-            import importlib
-            for gate in self.queue:
-                if not isinstance(gate, gates.CallbackGate):
-                    break
-            module_str = gate.__module__
-            module = importlib.import_module(module_str)
-        else:
-            from qibo import gates as module
-        return module
-
     def decompose(self, *free: int) -> "BaseCircuit":
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
@@ -249,14 +236,14 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, self.gate_module.NoiseChannel):
+            if isinstance(gate, gates.NoiseChannel):
                 raise ValueError("`.with_noise` method is not available for "
                                  "circuits that already contain noise channels.")
-            noise_gates.append([self.gate_module.NoiseChannel(q, *list(p))
+            noise_gates.append([gate_module.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
         if measurement_noise is not None:
-            noise_gates[-1] = [self.gate_module.NoiseChannel(q, *list(p))
+            noise_gates[-1] = [gate_module.NoiseChannel(q, *list(p))
                                for q, p in measurement_noise.items()
                                if sum(p) > 0]
 
@@ -536,7 +523,7 @@ class BaseCircuit(object):
         kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(**kwargs)
         for gate_name, qubits, param in gate_list:
-            gate = getattr(circuit.gate_module, gate_name)
+            gate = getattr(gate_module, gate_name)
             if gate_name == "M":
                 circuit.add(gate(*qubits, register_name=param))
             elif param is None:
