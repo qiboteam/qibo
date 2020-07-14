@@ -30,7 +30,8 @@ def main(N, p, shots, post_selection):
         
         Results are stored into variables to paint the results
         """
-        print('Initialized state with seed %s'%i)
+        if i % 10 == 0:
+            print('Initialized state with seed %s'%i + '/ %s'%N)
         state = create_random_state(i)
         tangles[i] = compute_random_tangle(i)
         fun, params = canonize(state, p=p, shots=shots)
