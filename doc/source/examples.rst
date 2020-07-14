@@ -55,6 +55,25 @@ This happens when the calculation backend is switched to ``"matmuleinsum"``
 or ``"defaulteinsum"``. This backend is much slower than the default ``"custom"``
 backend which uses custom tensorflow operators to apply gates.
 
+How to code a Quantum Fourier Transform?
+----------------------------------------
+
+A simple Quantum Fourier Transform (QFT) example to test your installation:
+
+
+.. code-block:: python
+
+    from qibo.models import QFT
+
+    # Create a QFT circuit with 15 qubits
+    circuit = QFT(15)
+
+    # Simulate final state wavefunction default initial state is |00>
+    final_state = c()
+
+.. note::
+    Please note that the ``QFT()`` function is simply a shorthand for the
+    circuit construction.
 
 How to print a circuit summary?
 -------------------------------
