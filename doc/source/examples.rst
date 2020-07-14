@@ -1,5 +1,5 @@
-Examples
-========
+Basic examples
+==============
 
 Here are a few short `how to` examples.
 
@@ -642,8 +642,6 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
-<<<<<<< HEAD
-=======
 
 
 How to modify the simulation precision?
@@ -661,4 +659,3 @@ Note that `qibo.set_precision` must be called before allocating circuits:
         qibo.set_precision("double") # re-enables complex128
 
         # ... continue with circuit creation and execution
->>>>>>> master
