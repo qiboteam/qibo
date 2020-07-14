@@ -38,8 +38,6 @@ def apply_gate(state, gate, qubits, nqubits, target):
         nqubits (int): Total number of qubits in the state vector.
         target (int): Qubit ID that the gate will act on.
             Must be smaller than ``nqubits``.
-        controls (list): List with qubit IDs that the gate will be controlled on.
-            All qubit IDs must be smaller than ``nqubits``.
 
     Return:
         state (tf.Tensor): State vector of shape ``(2 ** nqubits,)`` after
