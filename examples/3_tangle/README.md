@@ -46,3 +46,6 @@ no errors are considered, at the bottom there is noise in the device. Red plots 
 do not. As expected, less noise and post-selection lead to more accurate estimates of the tangle.
  
 <img src="images/results.png" width="500px">
+
+_Note_: The number of random state for this example is 100. This may lead to a long run in terms of execution time. 
+Consider decreasing the number of points. 
