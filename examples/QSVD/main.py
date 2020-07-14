@@ -25,12 +25,10 @@ def main(nqubits, subsize, nlayers, nshots, RY, method):
     print('Initial random state: ', initial_state)
     
     # We choose initial random parameters
-    if RY==False: # if Rx,Rz,Rx rotations are employed in the anstaz
-                 
+    if RY==False: # if Rx,Rz,Rx rotations are employed in the anstaz                
         initial_parameters = 2*np.pi * np.random.rand(6*nqubits*nlayers+3*nqubits) 
         
-    elif RY==True: # if Ry rotations are employed in the anstaz
-                             
+    elif RY==True: # if Ry rotations are employed in the anstaz                           
         initial_parameters = 2*np.pi * np.random.rand(2*nqubits*nlayers+nqubits) 
         
     # We train the QSVD
