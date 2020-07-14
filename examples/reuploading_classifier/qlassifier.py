@@ -13,16 +13,19 @@ import os
 class single_qubit_classifier:
     def __init__(self, name, layers, grid=11, test_samples=1000, seed=0):
         """Class with all computations needed for classification.
-            Args:
-                name (str): Name of the problem to create the dataset, to choose between ['circle', '3 circles', 'square',
-                                                                    '4 squares', 'crown', 'tricrown', 'wavy lines']
-                layers (int): Number of layers to use in the classifier
-                grid (int): Number of points in one direction defining the grid of points. If not specified, the dataset
-                            does not follow a regular grid.
-                samples (int): Number of points in the set, randomly located. This argument is ignored if grid is specified.
-                seed (0): Random seed
-            Returns:
-                Dataset for the given problem (x, y)
+
+        Args:
+            name (str): Name of the problem to create the dataset, to choose between
+                ['circle', '3 circles', 'square', '4 squares', 'crown', 'tricrown', 'wavy lines'].
+            layers (int): Number of layers to use in the classifier.
+            grid (int): Number of points in one direction defining the grid of points.
+                If not specified, the dataset does not follow a regular grid.
+            samples (int): Number of points in the set, randomly located.
+                This argument is ignored if grid is specified.
+            seed (int): Random seed.
+
+        Returns:
+            Dataset for the given problem (x, y).
         """
         np.random.seed(seed)
         self.name = name
@@ -32,41 +35,48 @@ class single_qubit_classifier:
         self.target = create_target(name)
         self.params = np.random.randn(layers * 4)
         try:
-            os.makedirs('results/'+self.name+'/%s_layers'%self.layers)
+            os.makedirs('results/'+self.name+'/%s_layers' % self.layers)
         except:
             pass
 
     def set_parameters(self, new_params):
         """Method for updating parameters of the class.
-            Args:
-                new_params (array): New parameters to update
-        """
 
+        Args:
+            new_params (array): New parameters to update
+        """
         self.params = new_params
 
     def circuit(self, x):
-        """Method creating the circuit for a point (in the datasets)
-            Args:
-                x (array): Point to create the circuit
-            return:
-                Qibo circuit
+        """Method creating the circuit for a point (in the datasets).
+
+        Args:
+            x (array): Point to create the circuit.
+
+        Returns:
+            Qibo circuit.
         """
         C = Circuit(1)
         index = 0
         for l in range(self.layers):
-            C.add(gates.RY(0, self.params[index] * x[0] + self.params[index + 1]))
+            C.add(gates.RY(0, self.params[index]
+                           * x[0] + self.params[index + 1]))
             index += 2
-            C.add(gates.RZ(0, self.params[index] * x[1] + self.params[index + 1]))
+            C.add(gates.RZ(0, self.params[index]
+                           * x[1] + self.params[index + 1]))
             index += 2
         return C
 
     def cost_function_one_point_fidelity(self, x, y):
-        """Method for computing the cost function for a given sample (in the datasets), using fidelity
-            Args:
-                x (array): Point to create the circuit
-                y (int): label of x
-            return:
-                float with the cost function
+        """Method for computing the cost function for
+        a given sample (in the datasets), using fidelity.
+
+        Args:
+            x (array): Point to create the circuit.
+            y (int): label of x.
+
+        Returns:
+            float with the cost function.
         """
         C = self.circuit(x)
         state = C.execute()
@@ -74,11 +84,13 @@ class single_qubit_classifier:
         return cf
 
     def cost_function_fidelity(self, params=None):
-        """Method for computing the cost function for the training set, using fidelity
-            Args:
-                params(array): new parameters to update before computing
-            return:
-                float with the cost function
+        """Method for computing the cost function for the training set, using fidelity.
+
+        Args:
+            params(array): new parameters to update before computing
+
+        Returns:
+            float with the cost function.
         """
         if params is None:
             params = self.params
@@ -89,7 +101,6 @@ class single_qubit_classifier:
             cf += self.cost_function_one_point_fidelity(x, y)
         cf /= len(self.training_set[0])
         return cf
-
 
     def minimize(self, method='BFGS', options=None, compile=True):
         loss = self.cost_function_fidelity
@@ -155,10 +166,10 @@ class single_qubit_classifier:
         return result, parameters
 
     def eval_test_set_fidelity(self):
-        """Method for evaluating points in the training set, using fidelity
-            Args:
-            return:
-                list of guesses
+        """Method for evaluating points in the training set, using fidelity.
+
+        Returns:
+            list of guesses.
         """
         labels = [[0]] * len(self.test_set[0])
         for j, x in enumerate(self.test_set[0]):
@@ -171,13 +182,11 @@ class single_qubit_classifier:
 
         return labels
 
-
     def paint_results(self):
-        """Method for plotting the guessed labels and the right guesses
-            Args:
+        """Method for plotting the guessed labels and the right guesses.
 
-            return:
-                plot with results
+        Returns:
+            plot with results.
         """
         fig, axs = fig_template(self.name)
         guess_labels = self.eval_test_set_fidelity()
@@ -185,23 +194,25 @@ class single_qubit_classifier:
         norm_class = Normalize(vmin=0, vmax=10)
         x = self.test_set[0]
         x_0, x_1 = x[:, 0], x[:, 1]
-        axs[0].scatter(x_0, x_1, c=guess_labels, s=2, cmap=colors_classes, norm=norm_class)
+        axs[0].scatter(x_0, x_1, c=guess_labels, s=2,
+                       cmap=colors_classes, norm=norm_class)
         colors_rightwrong = get_cmap('RdYlGn')
         norm_rightwrong = Normalize(vmin=-.1, vmax=1.1)
 
         checks = [int(g == l) for g, l in zip(guess_labels, self.test_set[1])]
-        axs[1].scatter(x_0, x_1, c=checks, s=2, cmap=colors_rightwrong, norm=norm_rightwrong)
-        print('The accuracy for this classification is %.2f'%(100 * np.sum(checks) / len(checks)), '%')
+        axs[1].scatter(x_0, x_1, c=checks, s=2,
+                       cmap=colors_rightwrong, norm=norm_rightwrong)
+        print('The accuracy for this classification is %.2f' %
+              (100 * np.sum(checks) / len(checks)), '%')
 
-        fig.savefig('results/'+self.name+'/%s_layers/test_set.pdf'%self.layers)
-
+        fig.savefig('results/'+self.name +
+                    '/%s_layers/test_set.pdf' % self.layers)
 
     def paint_world_map(self):
-        """Method for plotting the proper labels on the Bloch sphere
-            Args:
+        """Method for plotting the proper labels on the Bloch sphere.
 
-            return:
-                plot with 2D representation of Bloch sphere
+        Returns:
+            plot with 2D representation of Bloch sphere.
         """
         angles = np.zeros((len(self.test_set[0]), 2))
         from datasets import laea_x, laea_y
@@ -211,11 +222,12 @@ class single_qubit_classifier:
         for i, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
             state = C.execute().numpy()
-            angles[i, 0] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
+            angles[i, 0] = np.pi / 2 - \
+                np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
             angles[i, 1] = np.angle(state[1] / state[0])
 
         ax.scatter(laea_x(angles[:, 1], angles[:, 0]), laea_y(angles[:, 1], angles[:, 0]), c=self.test_set[1],
-                          cmap=colors_classes, s=15, norm=norm_class)
+                   cmap=colors_classes, s=15, norm=norm_class)
 
         if len(self.target) == 2:
             angles_0 = np.zeros(len(self.target))
@@ -239,16 +251,19 @@ class single_qubit_classifier:
             angles_0 = np.zeros(len(self.target))
             angles_1 = np.zeros(len(self.target))
             for i, state in enumerate(self.target):
-                angles_0[i] = np.pi / 2 - np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
+                angles_0[i] = np.pi / 2 - \
+                    np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
                 angles_1[i] = np.angle(state[1] / state[0])
             col = list(range(len(self.target)))
 
         ax.scatter(laea_x(angles_1, angles_0), laea_y(angles_1, angles_0), c=col,
-                       cmap=colors_classes, s=500, norm=norm_class, marker='P', zorder=11)
+                   cmap=colors_classes, s=500, norm=norm_class, marker='P', zorder=11)
 
         ax.axis('off')
 
-        fig.savefig('results/'+self.name+'/%s_layers/world_map.pdf'%self.layers)
+        fig.savefig('results/'+self.name +
+                    '/%s_layers/world_map.pdf' % self.layers)
+
 
 def fidelity(state1, state2):
     return tf.constant(tf.abs(tf.reduce_sum(tf.math.conj(state2) * state1))**2)
