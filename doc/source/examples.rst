@@ -170,10 +170,10 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-QIBO will utilize all available CPU threads by default. For small circuits the
-parallelization overhead may decrease performance making single thread execution
-preferrable. Tensorflow allows restricting the number of used threads with the
-following code:
+QIBO inherits Tensorflow's defaults for CPU thread configuration and in most cases
+will utilize all available CPU threads. For small circuits the parallelization
+overhead may decrease performance making single thread execution preferrable.
+Tensorflow allows restricting the number of threads as follows:
 
 .. code-block::  python
 
