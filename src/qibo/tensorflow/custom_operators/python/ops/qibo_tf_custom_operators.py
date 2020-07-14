@@ -5,7 +5,7 @@ import numpy as np
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
 
-if tf.config.list_physical_devices("GPU"):
+if tf.config.list_physical_devices("GPU"): # pragma: no cover
     library_path = '_qibo_tf_custom_operators_cuda.so'
 else:
     library_path = '_qibo_tf_custom_operators.so'
