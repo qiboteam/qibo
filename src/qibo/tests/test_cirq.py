@@ -60,7 +60,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     initial_state = random_initial_state(nqubits)
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
-    
+
     if isinstance(qibo_gate, native_gates.TensorflowGate) and accelerators:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
@@ -79,11 +79,13 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
                           ("Y", 1, None), ("Z", 1, None)])
 def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
     """Check simple one-qubit gates."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -93,12 +95,29 @@ def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
                           ("RZ", 1, None)])
 def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
     """Check parametrized one-qubit rotations."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     targets = random_active_qubits(nqubits, nactive=1)
     qibo_gate = getattr(gates, gate_name)(*targets, theta)
     cirq_gate = [(getattr(cirq, gate_name.lower())(theta), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize(("nqubits", "ndevices"),
+                         [(2, None), (3, 4), (2, 2)])
+def test_zpow_gate(backend, nqubits, ndevices):
+    """Check ZPow gate."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+    targets = random_active_qubits(nqubits, nactive=1)
+    qibo_gate = gates.ZPow(*targets, theta)
+    cirq_gate = [(cirq.ZPowGate(exponent=theta / np.pi), targets)]
+    assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -107,11 +126,13 @@ def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [None, 2])
 def test_two_qubit_gates(backend, gate_name, nqubits, ndevices):
     """Check two-qubit gates."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     targets = random_active_qubits(nqubits, nactive=2)
     qibo_gate = getattr(gates, gate_name)(*targets)
     cirq_gate = [(getattr(cirq, gate_name), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -120,6 +141,7 @@ def test_two_qubit_gates(backend, gate_name, nqubits, ndevices):
                           (7, None), (7, 4)])
 def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
     """Check ``CZPow`` and ``fSim`` gate."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     phi = 0.4321
@@ -133,6 +155,7 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
     qibo_gate = gates.fSim(*targets, theta, phi)
     cirq_gate = [(cirq.FSimGate(theta=theta, phi=phi), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -141,6 +164,7 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
                           (5, 2), (6, 4), (9, 8)])
 def test_unitary_matrix_gate(backend, nqubits, ndevices):
     """Check arbitrary unitary gate."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     matrix = random_unitary_matrix(1)
     targets = random_active_qubits(nqubits, nactive=1)
@@ -154,6 +178,7 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
         qibo_gate = gates.Unitary(matrix, *targets)
         cirq_gate = [(cirq.MatrixGate(matrix), targets)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -163,6 +188,7 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
                           ("Y", 12, 16)])
 def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     """Check one-qubit gates controlled on arbitrary number of qubits."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     all_qubits = np.arange(nqubits)
     for _ in range(5):
@@ -170,7 +196,7 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
         qibo_gate = getattr(gates, gate_name)(activeq[-1]).controlled_by(*activeq[:-1])
         cirq_gate = [(getattr(cirq, gate_name).controlled(len(activeq) - 1), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
-
+    qibo.set_backend(original_backend)
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
@@ -179,6 +205,7 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
                           (6, 2), (9, 2), (11, 4), (13, 8), (14, 16)])
 def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
     """Check ``SWAP`` and ``fSim`` gates controlled on arbitrary number of qubits."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     all_qubits = np.arange(nqubits)
     for _ in range(5):
@@ -192,7 +219,7 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
         qibo_gate = gates.fSim(*activeq[-2:], theta, phi).controlled_by(*activeq[:-2])
         cirq_gate = [(cirq.FSimGate(theta, phi).controlled(len(activeq) - 2), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
-
+    qibo.set_backend(original_backend)
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
@@ -200,6 +227,7 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
 @pytest.mark.parametrize("ndevices", [None, 2, 8])
 def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices):
     """Check arbitrary unitary gate controlled on arbitrary number of qubits."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     all_qubits = np.arange(nqubits)
     for _ in range(10):
@@ -208,13 +236,14 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
         qibo_gate = gates.Unitary(matrix, *activeq[-ntargets:]).controlled_by(*activeq[:-ntargets])
         cirq_gate = [(cirq.MatrixGate(matrix).controlled(len(activeq) - ntargets), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
-
+    qibo.set_backend(original_backend)
 
 @pytest.mark.parametrize(("backend", "accelerators"),
                          [("custom", None), ("custom", {"/GPU:0": 4}),
                           ("defaulteinsum", None), ("matmuleinsum", None)])
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
 def test_qft(backend, nqubits, accelerators):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_initial_state(nqubits)
     c = models.QFT(nqubits, accelerators=accelerators)
@@ -222,3 +251,4 @@ def test_qft(backend, nqubits, accelerators):
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=1e-6)
+    qibo.set_backend(original_backend)

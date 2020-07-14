@@ -30,6 +30,7 @@ def random_density_matrix(nqubits: int) -> np.ndarray:
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_xgate_application_onequbit(backend):
     """Check applying one qubit gate to one qubit density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(1)
     gate = gates.X(0)
@@ -39,11 +40,13 @@ def test_xgate_application_onequbit(backend):
     target_rho = pauliX.dot(initial_rho).dot(pauliX)
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_hgate_application_twoqubit(backend):
     """Check applying one qubit gate to two qubit density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(2)
     gate = gates.H(1)
@@ -55,11 +58,13 @@ def test_hgate_application_twoqubit(backend):
     target_rho = matrix.dot(initial_rho).dot(matrix)
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_rygate_application_twoqubit(backend):
     """Check applying non-hermitian one qubit gate to one qubit density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     initial_rho = random_density_matrix(1)
@@ -73,11 +78,13 @@ def test_rygate_application_twoqubit(backend):
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", ["matmuleinsum"])
 def test_czpowgate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     nqubits = 3
@@ -93,21 +100,25 @@ def test_czpowgate_application_twoqubit(backend):
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 def test_flatten_density_matrix():
     """Check ``Flatten`` gate works with density matrices."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     target_rho = random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
     final_rho = gate(initial_rho, is_density_matrix=True).numpy().reshape((8, 8))
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_circuit_compiled(backend):
     """Check passing density matrix as initial state to a compiled circuit."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     initial_rho = random_density_matrix(3)
@@ -130,11 +141,13 @@ def test_circuit_compiled(backend):
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_circuit(backend):
     """Check passing density matrix as initial state to circuit."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     initial_rho = random_density_matrix(3)
@@ -152,11 +165,13 @@ def test_circuit(backend):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_controlled_by_simple(backend):
     """Check controlled_by method on gate."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     psi = np.zeros(4)
     psi[0] = 1
@@ -173,11 +188,13 @@ def test_controlled_by_simple(backend):
     target_rho = c(np.copy(initial_rho)).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     psi = np.zeros(2 ** 4)
     psi[0] = 1
@@ -193,11 +210,13 @@ def test_controlled_by_no_effect(backend):
     target_rho = c(np.copy(initial_rho)).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_controlled_with_effect(backend):
     """Check controlled_by SWAP that should be applied."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     psi = np.zeros(2 ** 4)
     psi[0] = 1
@@ -216,11 +235,13 @@ def test_controlled_with_effect(backend):
     target_rho = c(np.copy(initial_rho)).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_bitflip_noise(backend):
     """Test `gates.NoiseChannel` on random initial density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(2)
 
@@ -234,11 +255,13 @@ def test_bitflip_noise(backend):
     target_rho += 0.7 * initial_rho.reshape(target_rho.shape)
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_circuit_switch_to_density_matrix(backend):
     """Test that using `gates.NoiseChnanel` switches vector to density matrix."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = models.Circuit(2)
     c.add(gates.H(0))
@@ -255,11 +278,13 @@ def test_circuit_switch_to_density_matrix(backend):
     target_rho = c(initial_rho).numpy()
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_general_channel(backend):
     """Test `gates.GeneralChannel`."""
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     psi = np.random.random(4) + 1j * np.random.random(4)
     psi = psi / np.sqrt((np.abs(psi) ** 2).sum())
@@ -279,10 +304,12 @@ def test_general_channel(backend):
                   m2.dot(initial_rho).dot(m2.conj().T))
 
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     with pytest.raises(ValueError):
@@ -294,10 +321,11 @@ def test_controlled_by_channel():
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
         gate = gates.GeneralChannel(config).controlled_by(1)
-
+    qibo.set_backend(original_backend)
 
 def test_circuit_with_noise_gates():
     """Check that ``circuit.with_noise()`` adds the proper noise channels."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
@@ -307,10 +335,12 @@ def test_circuit_with_noise_gates():
     from qibo.tensorflow import gates as native_gates
     for i in [1, 2, 4, 5, 7, 8]:
         assert isinstance(noisy_c.queue[i], native_gates.NoiseChannel)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_execution():
     """Check ``circuit.with_noise()`` execution."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1)])
@@ -327,10 +357,12 @@ def test_circuit_with_noise_execution():
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_with_measurements():
     """Check ``circuit.with_noise() when using measurement noise."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1)])
@@ -348,10 +380,12 @@ def test_circuit_with_noise_with_measurements():
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_noise_map():
     """Check ``circuit.with_noise() when giving noise map."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
                  2: (0.0, 0.0, 0.0)}
@@ -376,10 +410,12 @@ def test_circuit_with_noise_noise_map():
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_noise_map_exceptions():
     """Check that proper exceptions are raised when noise map is invalid."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1)])
@@ -394,20 +430,24 @@ def test_circuit_with_noise_noise_map_exceptions():
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.1),
                                measurement_noise=(0.5, 0.0, 0.0))
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_exception():
     """Check that calling ``with_noise`` in a noisy circuit raises error."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
+    qibo.set_backend(original_backend)
 
 
 def test_density_matrix_measurement():
-    from qibo.tests.test_measurements import assert_results
     """Check measurement gate on density matrices."""
+    from qibo.tests.test_measurements import assert_results
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     state = np.zeros(4)
     state[2] = 1
@@ -421,6 +461,7 @@ def test_density_matrix_measurement():
                    binary_samples=target_binary_samples,
                    decimal_frequencies={2: 100},
                    binary_frequencies={"10": 100})
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
@@ -428,6 +469,7 @@ def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
     from qibo.tests.test_measurements import assert_results
     from qibo.tests.test_measurements import assert_register_results
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(16)
     state[0] = 1
@@ -459,10 +501,12 @@ def test_density_matrix_circuit_measurement(backend):
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
     assert_register_results(result, **target)
+    qibo.set_backend(original_backend)
 
 
 def test_entanglement_entropy():
     """Check that entanglement entropy calculation works for density matrices."""
+    original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     rho = random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
@@ -482,3 +526,4 @@ def test_entanglement_entropy():
     target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
 
     np.testing.assert_allclose(final_ent, target_ent)
+    qibo.set_backend(original_backend)

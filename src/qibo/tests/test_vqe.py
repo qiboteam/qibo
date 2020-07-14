@@ -33,14 +33,17 @@ def assert_regression_fixture(array, filename):
 
 
 test_names = "method,options,compile,filename"
-test_values = [("BFGS", {'maxiter': 1}, True, 'vqe.out'),
-               ("BFGS", {'maxiter': 1}, False, 'vqe.out'),
+test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
+               ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
+               ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
+               ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     import qibo
+    original_backend = qibo.get_backend()
     if method == "sgd" or compile:
         qibo.set_backend("matmuleinsum")
     else:
@@ -77,11 +80,13 @@ def test_vqe(method, options, compile, filename):
                               options=options, compile=compile)
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
+    qibo.set_backend(original_backend)
 
 
 def test_vqe_compile_error():
     """Check that ``RuntimeError`` is raised when compiling custom gates."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend("custom")
 
     nqubits = 6
@@ -101,3 +106,4 @@ def test_vqe_compile_error():
     with pytest.raises(RuntimeError):
         best, params = v.minimize(initial_parameters, method="BFGS",
                                   options={'maxiter': 1}, compile=True)
+    qibo.set_backend(original_backend)
