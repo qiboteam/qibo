@@ -25,7 +25,7 @@ class TensorflowGate(base_gates.Gate):
         if not tf.executing_eagerly():
             raise NotImplementedError("Custom operator gates should not be "
                                       "used in compiled mode.")
-        self._qubits_tensor = None
+        self.qubits_tensor = None
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
@@ -44,14 +44,12 @@ class TensorflowGate(base_gates.Gate):
         values = tf.reshape(unitary, (4,))
         return tf.tensor_scatter_nd_update(matrix, ids, values)
 
-    @property
-    def qubits_tensor(self) -> tf.Tensor:
-        if self._qubits_tensor is None:
-            qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
-            qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
-            qubits = sorted(qubits)
-            self._qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
-        return self._qubits_tensor
+    def _calculate_qubits_tensor(self) -> tf.Tensor:
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
+        qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
+        qubits = sorted(qubits)
+        return tf.convert_to_tensor(qubits, dtype=tf.int32)
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.
@@ -60,7 +58,7 @@ class TensorflowGate(base_gates.Gate):
         Calculates the ``matrix`` required to apply the gate to state vectors.
         This is not necessarily the same as the unitary matrix of the gate.
         """
-        _ = self.qubits_tensor
+        self.qubits_tensor = self._calculate_qubits_tensor()
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -81,7 +79,7 @@ class MatrixGate(TensorflowGate):
         self.matrix = None
 
     def _prepare(self):
-        _ = self.qubits_tensor
+        self.qubits_tensor = self._calculate_qubits_tensor()
         self.matrix = self.construct_unitary(*self.unitary_params)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -291,7 +289,7 @@ class ZPow(MatrixGate, base_gates.ZPow):
         MatrixGate.__init__(self)
 
     def _prepare(self):
-        _ = self.qubits_tensor
+        self.qubits_tensor = self._calculate_qubits_tensor()
         self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
 
     @staticmethod
@@ -380,7 +378,7 @@ class fSim(MatrixGate, base_gates.fSim):
         TensorflowGate.__init__(self)
 
     def _prepare(self):
-        _ = self.qubits_tensor
+        self.qubits_tensor = self._calculate_qubits_tensor()
         dtype = DTYPES.get('DTYPECPX')
         th = tf.cast(self.theta, dtype=dtype)
         I = tf.eye(2, dtype=dtype)
@@ -420,7 +418,7 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
                              "fSim gate".format(shape))
 
     def _prepare(self):
-        _ = self.qubits_tensor
+        self.qubits_tensor = self._calculate_qubits_tensor()
         dtype = DTYPES.get('DTYPECPX')
         rotation = tf.cast(self.given_unitary, dtype=dtype)
         phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
