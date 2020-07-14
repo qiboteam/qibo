@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.config import BACKEND, DTYPES, DEVICES
-from qibo.tensorflow.custom_operators import custom_module as op
+from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
