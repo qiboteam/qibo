@@ -6,6 +6,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import DTYPES
 from qibo.base import gates
+from qibo import gates as gate_module
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, Iterable, List, Optional, Sequence, Set, Tuple, Union
@@ -63,7 +64,6 @@ class DeviceQueues:
         self.ndevices = circuit.ndevices
         self.nglobal = circuit.nglobal
         self.nlocal = circuit.nlocal
-        self.gate_module = circuit.gate_module
 
         self.queues = []
         self.special_queue = []
@@ -190,7 +190,7 @@ class DeviceQueues:
             # Keep SWAPs in memory to reset them in the end
             self.swaps_list.append((min(q, qs), max(q, qs)))
             # Add ``SWAP`` gate in ``queue``.
-            queue.append(self.gate_module.SWAP(q, qs))
+            queue.append(gate_module.SWAP(q, qs))
             #  Modify ``counter`` to take into account the swaps
             counter[q], counter[qs] = counter[qs], counter[q]
 
@@ -224,7 +224,7 @@ class DeviceQueues:
         if counter is None:
             counter = self.count(queue, self.nqubits)
         new_queue = self._transform([], queue, counter)
-        new_queue.extend((self.gate_module.SWAP(*p)
+        new_queue.extend((gate_module.SWAP(*p)
                           for p in reversed(self.swaps_list)))
         return new_queue
 
@@ -417,8 +417,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        from qibo.tensorflow import gates as native_gates
-        if isinstance(gate, native_gates.TensorflowGate):
+        if not isinstance(gate, gate_module.TensorflowGate):
             raise NotImplementedError("Distributed circuit does not support "
                                       "native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):

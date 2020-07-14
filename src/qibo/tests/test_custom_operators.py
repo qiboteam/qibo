@@ -9,6 +9,13 @@ from qibo.tensorflow import custom_operators as op
 _atol = 1e-6
 
 
+def qubits_tensor(nqubits, targets, controls=[]):
+    qubits = list(nqubits - np.array(controls) - 1)
+    qubits.extend(nqubits - np.array(targets) - 1)
+    qubits = sorted(qubits)
+    return qubits
+
+
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("compile", [False, True])
 def test_initial_state(dtype, compile):
@@ -41,7 +48,8 @@ def tensorflow_random_complex(shape, dtype):
 def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     """Check that ``op.apply_gate`` agrees with ``tf.einsum``."""
     def apply_operator(state, gate):
-      return op.apply_gate(state, gate, nqubits, target)
+      qubits = qubits_tensor(nqubits, [target])
+      return op.apply_gate(state, gate, qubits, nqubits, target)
 
     state = tensorflow_random_complex((2 ** nqubits,), dtype)
     gate = tensorflow_random_complex((2, 2), dtype)
@@ -71,7 +79,8 @@ def test_apply_gate_cx(nqubits, compile):
     xgate = tf.cast([[0, 1], [1, 0]], dtype=state.dtype)
     controls = list(range(nqubits - 1))
     def apply_operator(state):
-      return op.apply_gate(state, xgate, nqubits, nqubits - 1, controls)
+      qubits = qubits_tensor(nqubits, [nqubits - 1], controls)
+      return op.apply_gate(state, xgate, qubits, nqubits, nqubits - 1)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -100,26 +109,13 @@ def test_apply_gate_controlled(nqubits, target, controls, compile, einsum_str):
     target_state = target_state.ravel()
 
     def apply_operator(state):
-      return op.apply_gate(state, gate, nqubits, target, controls)
+      qubits = qubits_tensor(nqubits, [target], controls)
+      return op.apply_gate(state, gate, qubits, nqubits, target)
     if compile:
         apply_operator = tf.function(apply_operator)
 
     state = apply_operator(state)
     np.testing.assert_allclose(target_state, state.numpy())
-
-
-@pytest.mark.parametrize("compile", [False, True])
-def test_apply_gate_error(compile):
-    """Check that ``TypeError`` is raised for invalid ``controls``."""
-    state = tensorflow_random_complex((2 ** 2,), dtype=tf.float64)
-    gate = tensorflow_random_complex((2, 2), dtype=tf.float64)
-
-    def apply_operator(state):
-      return op.apply_gate(state, gate, 2, 0, "a")
-    if compile:
-        apply_operator = tf.function(apply_operator)
-    with pytest.raises(TypeError):
-        state = apply_operator(state)
 
 
 @pytest.mark.parametrize(("nqubits", "target", "gate"),
@@ -133,10 +129,12 @@ def test_apply_pauli_gate(nqubits, target, gate, compile):
                 "z": np.array([[1, 0], [0, -1]], dtype=np.complex128)}
     state = tensorflow_random_complex((2 ** nqubits,), dtype=tf.float64)
     target_state = tf.cast(state.numpy(), dtype=state.dtype)
-    target_state = op.apply_gate(state, matrices[gate], nqubits, target)
+    qubits = qubits_tensor(nqubits, [target])
+    target_state = op.apply_gate(state, matrices[gate], qubits, nqubits, target)
 
     def apply_operator(state):
-      return getattr(op, "apply_{}".format(gate))(state, nqubits, target)
+      qubits = qubits_tensor(nqubits, [target])
+      return getattr(op, "apply_{}".format(gate))(state, qubits, nqubits, target)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -165,7 +163,8 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
     target_state = np.diag(matrix).dot(state.numpy())
 
     def apply_operator(state):
-      return op.apply_zpow(state, phase, nqubits, target, controls)
+      qubits = qubits_tensor(nqubits, [target], controls)
+      return op.apply_z_pow(state, phase, qubits, nqubits, target)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -199,7 +198,8 @@ def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
     target_state = target_state.ravel()
 
     def apply_operator(state):
-      return op.apply_twoqubit_gate(state, gate, nqubits, targets, controls)
+      qubits = qubits_tensor(nqubits, targets, controls)
+      return op.apply_two_qubit_gate(state, gate, qubits, nqubits, *targets)
     if compile:
         apply_operator = tf.function(apply_operator)
 
@@ -241,7 +241,8 @@ def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
 
     gate = tf.concat([tf.reshape(rotation, (4,)), phase], axis=0)
     def apply_operator(state):
-      return op.apply_fsim(state, gate, nqubits, targets, controls)
+      qubits = qubits_tensor(nqubits, targets, controls)
+      return op.apply_fsim(state, gate, qubits, nqubits, *targets)
     if compile:
         apply_operator = tf.function(apply_operator)
 
@@ -260,7 +261,8 @@ def test_apply_swap_with_matrix(compile):
     target_state = matrix.dot(state.numpy())
 
     def apply_operator(state):
-      return op.apply_swap(state, 2, targets=[0, 1])
+      qubits = qubits_tensor(2, [0, 1])
+      return op.apply_swap(state, qubits, 2, 0, 1)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -292,7 +294,8 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     target_state[slicer] = reduced_state
 
     def apply_operator(state):
-      return op.apply_swap(state, nqubits, targets, controls)
+      qubits = qubits_tensor(nqubits, targets, controls)
+      return op.apply_swap(state, qubits, nqubits, *targets)
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -324,11 +327,16 @@ def test_custom_op_toy_callback(gate, compile):
     target_callback = [target_c1, target_c2]
 
     htf = tf.cast(np.array([[1, 1], [1, -1]]) / np.sqrt(2), dtype=state.dtype)
-    apply_gate = {"h": functools.partial(op.apply_gate, gate=htf, nqubits=2, target=0),
-                  "x": functools.partial(op.apply_x, nqubits=2, target=0),
-                  "z": functools.partial(op.apply_z, nqubits=2, target=0),
-                  "swap": functools.partial(op.apply_swap, nqubits=2,
-                                            targets=[0, 1])}
+    qubits_t1 = qubits_tensor(2, [0])
+    qubits_t2 = qubits_tensor(2, [0, 1])
+    apply_gate = {"h": functools.partial(op.apply_gate, gate=htf, qubits=qubits_t1,
+                                         nqubits=2, target=0),
+                  "x": functools.partial(op.apply_x, qubits=qubits_t1,
+                                         nqubits=2, target=0),
+                  "z": functools.partial(op.apply_z, qubits=qubits_t1,
+                                         nqubits=2, target=0),
+                  "swap": functools.partial(op.apply_swap, qubits=qubits_t2,
+                                            nqubits=2, target1=0, target2=1)}
 
     def apply_operator(state):
         c1 = tf.reduce_sum(mask * state)
@@ -384,7 +392,8 @@ def test_swap_pieces_zero_global(nqubits):
     for _ in range(10):
         local = np.random.randint(1, nqubits)
 
-        target_state = op.apply_swap(target_state, nqubits, [0, local])
+        qubits_t = qubits_tensor(nqubits, [0, local])
+        target_state = op.apply_swap(target_state, qubits_t, nqubits, 0, local)
         target_state = tf.reshape(target_state, shape)
 
         piece0, piece1 = state[0], state[1]
@@ -412,7 +421,8 @@ def test_swap_pieces(nqubits):
         transpose_order = ([global_qubit] + list(range(global_qubit)) +
                            list(range(global_qubit + 1, nqubits)))
 
-        target_state = op.apply_swap(target_state, nqubits, [global_qubit, local_qubit])
+        qubits_t = qubits_tensor(nqubits, [global_qubit, local_qubit])
+        target_state = op.apply_swap(target_state, qubits_t, nqubits, global_qubit, local_qubit)
         target_state = tf.reshape(target_state, nqubits * (2,))
         target_state = tf.transpose(target_state, transpose_order)
         target_state = tf.reshape(target_state, shape)
