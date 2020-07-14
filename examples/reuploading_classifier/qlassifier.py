@@ -251,4 +251,4 @@ class single_qubit_classifier:
         fig.savefig('results/'+self.name+'/%s_layers/world_map.pdf'%self.layers)
 
 def fidelity(state1, state2):
-    return tf.constant(np.abs(tf.reduce_sum(np.conj(state2) * state1))**2)
+    return tf.constant(tf.abs(tf.reduce_sum(tf.math.conj(state2) * state1))**2)
