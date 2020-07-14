@@ -29,6 +29,7 @@ class BaseCircuit(object):
     """
 
     __metaclass__ = ABCMeta
+    from qibo.base import fusion
 
     def __init__(self, nqubits):
         self.nqubits = nqubits
@@ -105,6 +106,36 @@ class BaseCircuit(object):
         else:
             new_circuit.queue = list(self.queue)
             new_circuit.measurement_gate = self.measurement_gate
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def fuse(self) -> "BaseCircuit":
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        fusion_groups = self.fusion.FusionGroup.from_queue(self.queue)
+        new_circuit.queue = list(gate for group in fusion_groups
+                                 for gate in group.gates)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 

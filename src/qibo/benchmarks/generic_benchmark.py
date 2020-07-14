@@ -12,13 +12,14 @@ _PARAM_NAMES = {"theta", "phi"}
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="20", type=str)
 parser.add_argument("--backend", default="custom", type=str)
+parser.add_argument("--type", default="qft", type=str)
+parser.add_argument("--fuse", action="store_true")
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--device", default="/CPU:0", type=str)
 parser.add_argument("--accelerators", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
-parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--directory", default=None, type=str)
 parser.add_argument("--name", default=None, type=str)
 parser.add_argument("--compile", action="store_true")
@@ -61,6 +62,7 @@ def main(nqubits_list: List[int],
          type: str,
          device: Optional[str] = "/CPU:0",
          accelerators: Optional[Dict[str, int]] = None,
+         fuse: bool = False,
          nlayers: Optional[int] = None,
          gate_type: Optional[str] = None,
          params: Dict[str, float] = {},
@@ -142,6 +144,8 @@ def main(nqubits_list: List[int],
 
         start_time = time.time()
         circuit = benchmark_models.CircuitFactory(**kwargs)
+        if fuse:
+            circuit = circuit.fuse()
         logs["creation_time"].append(time.time() - start_time)
 
         try:
@@ -149,9 +153,7 @@ def main(nqubits_list: List[int],
         except AttributeError:
             actual_backend = "Custom"
 
-        #print("\nBenchmark:", type)
-        #print(kwargs)
-        print("\nBenchmark parameters:", kwargs)          
+        print("\nBenchmark parameters:", kwargs)
         print("Actual backend:", actual_backend)
         with tf.device(device):
             if compile:

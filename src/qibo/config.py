@@ -42,7 +42,7 @@ if BACKEND_NAME == "tensorflow":
     ALLOW_SWITCHERS = True
 
     # Gate backends
-    BACKEND = {'GATES': 'custom', 'EINSUM': None}
+    BACKEND = {'GATES': 'custom', 'EINSUM': None, 'STRING': 'custom'}
 
     # Set devices recognized by tensorflow
     DEVICES = {
@@ -78,18 +78,30 @@ if BACKEND_NAME == "tensorflow":
             warnings.warn("Backend should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if backend == 'custom':
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'custom'
             BACKEND['EINSUM'] = None
         elif backend == 'defaulteinsum':
             from qibo.tensorflow import einsum
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.DefaultEinsum()
         elif backend == 'matmuleinsum':
             from qibo.tensorflow import einsum
+            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.MatmulEinsum()
         else:
             raise RuntimeError(f"Gate backend '{backend}' not supported.")
+
+
+    def get_backend():
+        """Get backend used to implement gates.
+
+        Returns:
+            A string with the backend name.
+        """
+        return BACKEND['STRING']
 
 
     def set_precision(dtype='double'):
@@ -115,6 +127,15 @@ if BACKEND_NAME == "tensorflow":
         tfmatrices.allocate_matrices()
 
 
+    def get_precision():
+        """Get precision for states and gates simulation.
+
+        Returns:
+            A string with the precision name ('single', 'double').
+        """
+        return DTYPES['STRING']
+
+
     def set_device(device_name: str):
         """Set default execution device.
 
@@ -127,10 +148,10 @@ if BACKEND_NAME == "tensorflow":
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
         parts = device_name[1:].split(":")
-        if device_name[0] != "/" or len(parts) != 2:
+        if device_name[0] != "/" or len(parts) < 2 or len(parts) > 3:
             raise ValueError("Device name should follow the pattern: "
                              "/{device type}:{device number}.")
-        device_type, device_number = parts[0], int(parts[1])
+        device_type, device_number = parts[-2], int(parts[-1])
         if device_type not in {"CPU", "GPU"}:
             raise ValueError(f"Unknown device type {device_type}.")
         if device_number >= len(DEVICES[device_type]):
@@ -139,6 +160,15 @@ if BACKEND_NAME == "tensorflow":
         DEVICES['DEFAULT'] = device_name
         with tf.device(device_name):
             tfmatrices.allocate_matrices()
+
+
+    def get_device():
+        """Get execution device.
+
+        Returns:
+            A string with the device name.
+        """
+        return DEVICES['DEFAULT']
 
 
 else: # pragma: no cover
