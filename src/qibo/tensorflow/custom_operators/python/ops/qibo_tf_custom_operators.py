@@ -22,14 +22,6 @@ transpose_state = custom_module.transpose_state
 # swap state pieces operator (for multi-GPU)
 swap_pieces = custom_module.swap_pieces
 
-
-def check_controls(controls):
-    """Checks if ``controls`` variable has valid type."""
-    if not (isinstance(controls, list) or isinstance(controls, tuple)):
-        raise TypeError("Control qubits must be a list or tuple but {} "
-                        "was given.".format(type(controls)))
-
-
 # apply_gate operator
 def apply_gate(state, gate, qubits, nqubits, target):
     """Applies arbitrary one-qubit gate to a state vector.
