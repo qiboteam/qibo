@@ -449,20 +449,10 @@ class Unitary(MatrixGate, base_gates.Unitary):
             raise NotImplementedError("Unitary matrix gate supports only one "
                                       "qubit gates but {} target qubits were "
                                       "given.".format(len(self.target_qubits)))
-
-        shape = tuple(self.given_unitary.shape)
-        if shape != (2 ** rank, 2 ** rank):
-            raise ValueError("Invalid shape {} of unitary matrix acting on "
-                             "{} target qubits.".format(shape, rank))
-
         self._unitary = self.construct_unitary()
 
-    @property
-    def rank(self) -> int:
-        return len(self.target_qubits)
-
     def construct_unitary(self) -> tf.Tensor:
-        unitary = self.given_unitary
+        unitary = self.parameter
         if isinstance(unitary, tf.Tensor):
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
         elif isinstance(unitary, np.ndarray):

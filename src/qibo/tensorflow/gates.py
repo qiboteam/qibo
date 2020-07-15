@@ -307,17 +307,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         TensorflowGate.__init__(self)
-
-        rank = len(self.target_qubits)
-        shape = tuple(self.given_unitary.shape)
-        if shape != (2 ** rank, 2 ** rank):
-            raise ValueError("Invalid shape {} of unitary matrix acting on "
-                             "{} target qubits.".format(shape, rank))
-
         self._unitary = self.construct_unitary()
 
     def construct_unitary(self):
-        unitary = self.given_unitary
+        unitary = self.parameter
         rank = int(np.log2(int(unitary.shape[0])))
         dtype = DTYPES.get('DTYPECPX')
         if isinstance(unitary, tf.Tensor):

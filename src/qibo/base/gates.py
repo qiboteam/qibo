@@ -817,6 +817,7 @@ class GeneralizedfSim(ParametrizedGate):
         super(GeneralizedfSim, self).__init__()
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
+
         self._phi = None
         self.__unitary = None
         self.parameter = unitary, phi
@@ -898,7 +899,7 @@ class TOFFOLI(Gate):
                 RY(target, np.pi / 4)]
 
 
-class Unitary(Gate):
+class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.
 
     Args:
@@ -912,11 +913,30 @@ class Unitary(Gate):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
-        self.given_unitary = unitary
         self.target_qubits = tuple(q)
+        
+        self.__unitary = None
+        self.parameter = unitary
 
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
+
+    @property
+    def rank(self) -> int:
+        return len(self.target_qubits)
+
+    @property
+    def parameter(self):
+        return self.__unitary
+
+    @parameter.setter
+    def parameter(self, x):
+        shape = tuple(x.shape)
+        if shape != (2 ** self.rank, 2 ** self.rank):
+            raise ValueError("Invalid shape {} of unitary matrix acting on "
+                             "{} target qubits.".format(shape, self.rank))
+        self.__unitary = x
+        self._prepare()
 
     @property
     def unitary(self):
