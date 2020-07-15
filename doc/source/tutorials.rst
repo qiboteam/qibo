@@ -9,4 +9,5 @@ physics problems.
 
     tutorials/aavqe/README.md
     tutorials/grover3sat/README.md
+    tutorials/reuploading_classifier/README.md    
     tutorials/3_tangle/README.md

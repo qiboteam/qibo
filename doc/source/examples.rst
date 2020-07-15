@@ -55,7 +55,6 @@ This happens when the calculation backend is switched to ``"matmuleinsum"``
 or ``"defaulteinsum"``. This backend is much slower than the default ``"custom"``
 backend which uses custom tensorflow operators to apply gates.
 
-
 How to print a circuit summary?
 -------------------------------
 
@@ -111,8 +110,17 @@ decomposition of multi-controlled ``X`` gates is implemented.
 
 
 .. _gpu-examples:
-How to execute circuits on GPU?
+
+How to select hardware devices?
 -------------------------------
+
+QIBO supports execution on different hardware configurations including CPU with
+multi-threading, single GPU and multiple GPUs. Here we provide some useful
+information on how to control the devices that QIBO uses for circuit execution
+in order to maximize performance for the available hardware configuration.
+
+Switching between CPU and GPU
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If a GPU with CUDA support is available in the system and Tensorflow is installed
 for CUDA then circuits will be executed on the GPU automatically unless the user
@@ -142,11 +150,43 @@ Alternatively, running the command ``CUDA_VISIBLE_DEVICES=""`` in a terminal
 hides GPUs from tensorflow. As a result, any program executed from the same
 terminal will run on CPU even if ``tf.device`` is not used.
 
-GPUs provide much faster execution compared to CPU but have limited memory.
-A standard 12-16GB GPU can simulate up to 30 qubits with single-precision
-or 29 qubits with double-precision when QIBO's default gates are used. If the
-used device runs out of memory during a circuit execution an error will be
+In most cases the GPU accelerates execution compared to CPU, however the
+following limitations should be noted:
+  * For small circuits (less than 10 qubits) the overhead from casting tensors
+    on GPU may be larger than executing the circuit on CPU, making CPU execution
+    preferrable. In such cases disabling CPU multi-threading may also increase
+    performance (see next subsection).
+  * A standard GPU has 12-16GB of memory and thus can simulate up to 30 qubits on
+    single-precision or 29 qubits with double-precision when QIBO's default gates
+    are used. For larger circuits one should either use the CPU (assuming it has
+    more memory) or a distributed circuit configuration. The latter allows splitting
+    the state vector on multiple devices and is useful both when multiple GPUs
+    are available in the system or even for re-using a single GPU
+    (see relevant subsection bellow).
+
+Note that if the used device runs out of memory during a circuit execution an error will be
 raised prompting the user to switch the default device using ``qibo.set_device``.
+
+Setting the number of CPU threads
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+QIBO inherits Tensorflow's defaults for CPU thread configuration and in most cases
+will utilize all available CPU threads. For small circuits the parallelization
+overhead may decrease performance making single thread execution preferrable.
+Tensorflow allows restricting the number of threads as follows:
+
+.. code-block::  python
+
+    import tensorflow as tf
+    tf.config.threading.set_inter_op_parallelism_threads(1)
+    tf.config.threading.set_intra_op_parallelism_threads(1)
+    import qibo
+
+Note that this should be run during Tensorflow initialization in the beginning
+of the script and before any circuit or gate allocation.
+
+Using multiple GPUs
+^^^^^^^^^^^^^^^^^^^
 
 QIBO supports distributed circuit execution on multiple GPUs. This feature can
 be used as follows:
@@ -172,7 +212,7 @@ distributed simulation is limited by the amount of CPU memory.
 Also, note that it is possible to reuse a single GPU multiple times increasing the number of
 "logical" devices in the distributed calculation. This allows users to execute
 circuits with more than 30 qubits on a single GPU by reusing several times using
-``accelerators = {"/GPU:0": ndevices}``. Such a simulation will still be limited
+``accelerators = {"/GPU:0": ndevices}``. Such a simulation will be limited
 by CPU memory only.
 
 For systems without GPUs, the distributed implementation can be used with any
@@ -338,6 +378,26 @@ For example
 
 will print ``tf.Tensor(1.0)``.
 
+How to code a Quantum Fourier Transform?
+----------------------------------------
+
+A simple Quantum Fourier Transform (QFT) example to test your installation:
+
+.. code-block:: python
+
+    from qibo.models import QFT
+
+    # Create a QFT circuit with 15 qubits
+    circuit = QFT(15)
+
+    # Simulate final state wavefunction default initial state is |00>
+    final_state = c()
+
+
+Please note that the ``QFT()`` function is simply a shorthand for the circuit
+construction. For number of qubits higher than 30, the QFT can be distributed to
+multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
+the section :ref:`How to select hardware devices? <gpu-examples>`.
 
 How to write a VQE?
 -------------------
