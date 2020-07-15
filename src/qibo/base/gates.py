@@ -147,7 +147,7 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
-        self.qubits_tensor = self._calculate_qubits_tensor()
+        self._calculate_qubits_tensor()
         self._prepare()
 
     @property
@@ -203,7 +203,7 @@ class Gate(object):
 
     def _calculate_qubits_tensor(self):
         """Calculates ``qubits`` tensor required for applying gates using custom operators."""
-        return None
+        pass
 
     def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.

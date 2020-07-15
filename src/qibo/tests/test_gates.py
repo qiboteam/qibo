@@ -296,6 +296,33 @@ def test_ry(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_rx_parameter_setter(backend):
+    """Check that the parameter setter of RX gate is working properly."""
+    def exact_state(theta):
+        phase = np.exp(1j * theta / 2.0)
+        gate = np.array([[phase.real, -1j * phase.imag],
+                        [-1j * phase.imag, phase.real]])
+        return gate.dot(np.ones(2)) / np.sqrt(2)
+
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+    c = Circuit(1)
+    c.add(gates.H(0))
+    c.add(gates.RX(0, theta=theta))
+    final_state = c().numpy()
+    target_state = exact_state(theta)
+    np.testing.assert_allclose(final_state, target_state)
+
+    theta = 0.4321
+    c.queue[-1].parameter = theta
+    final_state = c().numpy()
+    target_state = exact_state(theta)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_cnot_no_effect(backend):
     """Check CNOT gate is working properly on |00>."""
     original_backend = qibo.get_backend()
