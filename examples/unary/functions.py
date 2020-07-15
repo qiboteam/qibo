@@ -525,16 +525,16 @@ def amplitude_estimation(bins, M, data, shots=10000):
     circuit, S = load_payoff_quantum_sim(bins, S0, sig, r, T, K)
     qu_payoff_sim = run_payoff_quantum_sim(bins, circuit, shots, S, K)
     m_s = np.arange(0, M + 1, 1)
-    circuits = [[]]*len(m_s)
+    circuits = []
     for j, m in enumerate(m_s):
         qc = load_Q_operator(bins, m, S0, sig, r, T, K)
-        circuits[j] = qc
-    ones_s = [[]]*len(m_s)
-    zeroes_s = [[]] * len(m_s)
+        circuits.append(qc)
+    ones_s = []
+    zeroes_s = []
     for j, m in enumerate(m_s):
         ones, zeroes = run_Q_operator(bins, circuits[j], shots)
-        ones_s[j] = int(ones)
-        zeroes_s[j] = int(zeroes)
+        ones_s.append(ones)
+        zeroes_s.append(zeroes)
     theta_max_s, error_theta_s = aux.get_theta(m_s, ones_s, zeroes_s)
     a_s, error_s = np.sin(theta_max_s) ** 2, np.abs(np.sin(2 * theta_max_s) * error_theta_s)
     return a_s, error_s
