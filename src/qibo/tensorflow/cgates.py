@@ -360,11 +360,6 @@ class fSim(MatrixGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         MatrixGate.__init__(self)
 
-    @base_gates.fSim.parameter.setter
-    def parameter(self, x):
-        self._theta, self._phi = x
-        self._prepare()
-
     def _prepare(self):
         dtype = DTYPES.get('DTYPECPX')
         theta, phi = self.parameter
@@ -400,22 +395,20 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         TensorflowGate.__init__(self)
-        shape = tuple(self.given_unitary.shape)
-        if shape != (2, 2):
-            raise ValueError("Invalid shape {} of rotation for generalized "
-                             "fSim gate".format(shape))
 
     def _prepare(self):
         dtype = DTYPES.get('DTYPECPX')
-        rotation = tf.cast(self.given_unitary, dtype=dtype)
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
+        unitary, phi = self.parameter
+        rotation = tf.cast(unitary, dtype=dtype)
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
         rotation = tf.reshape(rotation, (4,))
         self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
 
     def construct_unitary(self):
         dtype = DTYPES.get("DTYPECPX")
-        rotation = tf.cast(self.given_unitary, dtype=dtype)
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
+        unitary, phi = self.parameter
+        rotation = tf.cast(unitary, dtype=dtype)
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
         matrix = tf.eye(4, dtype=dtype)
         matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
         rotation = tf.reshape(rotation, (4,))

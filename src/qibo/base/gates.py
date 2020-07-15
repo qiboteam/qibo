@@ -790,9 +790,10 @@ class fSim(ParametrizedGate):
     @parameter.setter
     def parameter(self, x):
         self._theta, self._phi = x
+        self._prepare()
 
 
-class GeneralizedfSim(Gate):
+class GeneralizedfSim(ParametrizedGate):
     """The fSim gate with a general rotation.
 
     Corresponds to the following unitary matrix
@@ -816,11 +817,26 @@ class GeneralizedfSim(Gate):
         super(GeneralizedfSim, self).__init__()
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
-        self.given_unitary = unitary
-        self.phi = phi
+        self._phi = None
+        self.__unitary = None
+        self.parameter = unitary, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
+
+    @property
+    def parameter(self):
+        return self.__unitary, self._phi
+
+    @parameter.setter
+    def parameter(self, x):
+        shape = tuple(x[0].shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+
+        self.__unitary, self._phi = x
+        self._prepare()
 
 
 class TOFFOLI(Gate):

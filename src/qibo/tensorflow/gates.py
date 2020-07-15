@@ -276,11 +276,6 @@ class fSim(TensorflowGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         TensorflowGate.__init__(self)
 
-    @base_gates.fSim.parameter.setter
-    def parameter(self, x):
-        self._theta, self._phi = x
-        self._prepare()
-
     def construct_unitary(self):
         from qibo.tensorflow import cgates
         return cgates.fSim.construct_unitary(self)
@@ -291,10 +286,6 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
     def __init__(self, q0, q1, unitary, phi):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         TensorflowGate.__init__(self)
-        shape = tuple(self.given_unitary.shape)
-        if shape != (2, 2):
-            raise ValueError("Invalid shape {} of rotation for generalized "
-                             "fSim gate".format(shape))
 
     def construct_unitary(self):
         from qibo.tensorflow import cgates
