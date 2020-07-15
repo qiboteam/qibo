@@ -27,6 +27,10 @@ use ``pip`` to install ``qibo`` with:
 The ``pip`` program will download and install all the required
 dependencies for QIBO.
 
+.. note::
+    The ``pip`` packages for linux are compiled with CUDA support, so if your
+    system has a NVIDIA GPU, QIBO will perform calculations on GPU.
+
 .. _installing-from-source:
 
 Installing from source
@@ -50,6 +54,27 @@ then proceed with the installation of requirements with:
 .. code-block::
 
       pip install -r requirements.txt
+
+.. note::
+      If your system has a NVIDIA GPU, make sure TensorFlow is installed
+      properly and runs on GPU, please refer to the `official
+      documentation <https://www.tensorflow.org/install/gpu>`_.
+
+      In that case, you can activate GPU support for QIBO by:
+
+      1. installing the NVCC compiler matching the TensorFlow CUDA version, see the `CUDA documentation <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_.
+
+      2. exporting the ``CUDA_PATH`` variable with the CUDA installation path containing the cuda compiler.
+
+      For example, TensorFlow 2.2 supports CUDA 10.1. After installing
+      TensorFlow proceed with the NVCC 10.1 installation. On linux the
+      installation path is ``/usr/local/cuda-10.1/``.
+
+      Before installing QIBO do ``export CUDA_PATH=/usr/local/cuda-10.1``.
+
+      Note that QIBO will not enable GPU support if points 1 and 2 are not
+      performed.
+
 
 Then proceed with the QIBO installation using ``pip``
 
