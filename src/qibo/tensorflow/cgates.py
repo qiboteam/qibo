@@ -237,6 +237,7 @@ class ParametrizedMatrixGate(MatrixGate, base_gates.ParametrizedGate):
     @parameter.setter
     def parameter(self, x):
         self._theta = x
+        self._prepare()
 
 
 class RX(ParametrizedMatrixGate, base_gates.RX):
@@ -253,44 +254,44 @@ class RX(ParametrizedMatrixGate, base_gates.RX):
         return tf.cos(t / 2.0) * I - 1j * tf.sin(t / 2.0) * X
 
 
-class RY(MatrixGate, base_gates.RY):
+class RY(ParametrizedMatrixGate, base_gates.RY):
 
     def __init__(self, q, theta):
         base_gates.RY.__init__(self, q, theta)
-        MatrixGate.__init__(self)
+        ParametrizedMatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         dtype = DTYPES.get('DTYPECPX')
-        t = tf.cast(self.theta, dtype=dtype)
+        t = tf.cast(self.parameter, dtype=dtype)
         I = tf.eye(2, dtype=dtype)
         iY = tf.cast([[0, 1], [-1, 0]], dtype=dtype)
         return tf.cos(t / 2.0) * I - tf.sin(t / 2.0) * iY
 
 
-class RZ(MatrixGate, base_gates.RZ):
+class RZ(ParametrizedMatrixGate, base_gates.RZ):
 
     def __init__(self, q, theta):
         base_gates.RZ.__init__(self, q, theta)
-        MatrixGate.__init__(self)
+        ParametrizedMatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
+        t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         return tf.linalg.diag(diag)
 
 
-class ZPow(MatrixGate, base_gates.ZPow):
+class ZPow(ParametrizedMatrixGate, base_gates.ZPow):
 
     def __init__(self, q, theta):
         base_gates.ZPow.__init__(self, q, theta)
-        MatrixGate.__init__(self)
+        ParametrizedMatrixGate.__init__(self)
 
     def _prepare(self):
-        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
+        self.matrix = tf.exp(1j * tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX')))
 
     def construct_unitary(self) -> tf.Tensor:
-        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
+        t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t)
         diag = tf.concat([1, phase], axis=0)
         return tf.linalg.diag(diag)
@@ -329,18 +330,18 @@ class CZ(TensorflowGate, base_gates.CZ):
         return Z.__call__(self, state, is_density_matrix)
 
 
-class CZPow(MatrixGate, base_gates.CZPow):
+class CZPow(ParametrizedMatrixGate, base_gates.CZPow):
 
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)
-        MatrixGate.__init__(self)
+        ParametrizedMatrixGate.__init__(self)
 
     def _prepare(self):
         ZPow._prepare(self)
 
     def construct_unitary(self) -> tf.Tensor:
         dtype = DTYPES.get('DTYPECPX')
-        phase = tf.exp(1j * tf.cast(self.theta, dtype=dtype))
+        phase = tf.exp(1j * tf.cast(self.parameter, dtype=dtype))
         diag = tf.concat([tf.ones(3, dtype=dtype), [phase]], axis=0)
         return tf.linalg.diag(diag)
 

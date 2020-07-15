@@ -568,7 +568,7 @@ class RX(ParametrizedGate):
         self.init_kwargs = {"theta": theta}
 
 
-class RY(Gate):
+class RY(ParametrizedGate):
     """Rotation around the Y-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -590,13 +590,13 @@ class RY(Gate):
         super(RY, self).__init__()
         self.name = "ry"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
 
-class RZ(Gate):
+class RZ(ParametrizedGate):
     """Rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -616,13 +616,13 @@ class RZ(Gate):
         super(RZ, self).__init__()
         self.name = "rz"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
 
-class ZPow(Gate):
+class ZPow(ParametrizedGate):
     """Equivalent to :class:`qibo.base.gates.RZ` with a different global phase.
 
 
@@ -643,7 +643,7 @@ class ZPow(Gate):
         super(ZPow, self).__init__()
         self.name = "rz"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
@@ -652,7 +652,7 @@ class ZPow(Gate):
         """Fall back to CZPow if there is only one control."""
         if len(q) == 1:
             gate = getattr(self.module, "CZPow")(q[0], self.target_qubits[0],
-                                                 theta=self.theta)
+                                                 theta=self.parameter)
         else:
             gate = super(ZPow, self).controlled_by(*q)
         return gate
@@ -730,7 +730,7 @@ class CZPow(Gate):
         self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
