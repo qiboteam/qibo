@@ -212,7 +212,7 @@ class Gate(object):
         Calculates the ``matrix`` required to apply the gate to state vectors.
         This is not necessarily the same as the unitary matrix of the gate.
         """
-        raise NotImplementedError
+        pass
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -538,6 +538,7 @@ class ParametrizedGate(Gate):
     @parameter.setter
     def parameter(self, x):
         self._theta = x
+        self._prepare()
 
 
 class RX(ParametrizedGate):
@@ -751,7 +752,7 @@ class SWAP(Gate):
         self.init_args = [q0, q1]
 
 
-class fSim(Gate):
+class fSim(ParametrizedGate):
     """The fSim gate defined in `arXiv:2001.08343 <https://arxiv.org/abs/2001.08343>`_.
 
     Corresponds to the following unitary matrix
@@ -776,11 +777,19 @@ class fSim(Gate):
         super(fSim, self).__init__()
         self.name = "fsim"
         self.target_qubits = (q0, q1)
-        self.theta = theta
-        self.phi = phi
+        self._phi = None
+        self.parameter = theta, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
+
+    @property
+    def parameter(self):
+        return self._theta, self._phi
+
+    @parameter.setter
+    def parameter(self, x):
+        self._theta, self._phi = x
 
 
 class GeneralizedfSim(Gate):

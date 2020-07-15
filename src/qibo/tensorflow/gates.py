@@ -282,11 +282,16 @@ class SWAP(TensorflowGate, base_gates.SWAP):
                        dtype=DTYPES.get('DTYPECPX'))
 
 
-class fSim(TensorflowGate, base_gates.fSim):
+class fSim(ParametrizedTensorflowGate, base_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         TensorflowGate.__init__(self)
+
+    @base_gates.fSim.parameter.setter
+    def parameter(self, x):
+        self._theta, self._phi = x
+        self._prepare()
 
     def construct_unitary(self):
         from qibo.tensorflow import cgates

@@ -366,28 +366,35 @@ class SWAP(TensorflowGate, base_gates.SWAP):
                              *self.target_qubits)
 
 
-class fSim(MatrixGate, base_gates.fSim):
+class fSim(ParametrizedMatrixGate, base_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
-        TensorflowGate.__init__(self)
+        ParametrizedMatrixGate.__init__(self)
+
+    @base_gates.fSim.parameter.setter
+    def parameter(self, x):
+        self._theta, self._phi = x
+        self._prepare()
 
     def _prepare(self):
         dtype = DTYPES.get('DTYPECPX')
-        th = tf.cast(self.theta, dtype=dtype)
+        theta, phi = self.parameter
+        th = tf.cast(theta, dtype=dtype)
         I = tf.eye(2, dtype=dtype)
         X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
         rotation = tf.cos(th) * I - 1j * tf.sin(th) * X
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
         self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
 
     def construct_unitary(self):
         dtype = DTYPES.get("DTYPECPX")
-        th = tf.cast(self.theta, dtype=dtype)
+        theta, phi = self.parameter
+        th = tf.cast(theta, dtype=dtype)
         eyemat = tf.eye(2, dtype=dtype)
         xmat = tf.cast([[0, 1], [1, 0]], dtype=dtype)
         rotation = tf.cos(th) * eyemat - 1j * tf.sin(th) * xmat
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
+        phase = tf.exp(-1j * tf.cast(phi, dtype=dtype))
         matrix = tf.eye(4, dtype=dtype)
         matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
         rotation = tf.reshape(rotation, (4,))
