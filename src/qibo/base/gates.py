@@ -537,6 +537,7 @@ class ParametrizedGate(Gate):
 
     @parameter.setter
     def parameter(self, x):
+        self._unitary = None
         self._theta = x
         self._prepare()
 
@@ -789,6 +790,7 @@ class fSim(ParametrizedGate):
 
     @parameter.setter
     def parameter(self, x):
+        self._unitary = None
         self._theta, self._phi = x
         self._prepare()
 
@@ -835,7 +837,7 @@ class GeneralizedfSim(ParametrizedGate):
         if shape != (2, 2):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
-
+        self._unitary = None
         self.__unitary, self._phi = x
         self._prepare()
 
@@ -914,7 +916,7 @@ class Unitary(ParametrizedGate):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
         self.target_qubits = tuple(q)
-        
+
         self.__unitary = None
         self.parameter = unitary
 
@@ -935,6 +937,7 @@ class Unitary(ParametrizedGate):
         if shape != (2 ** self.rank, 2 ** self.rank):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, self.rank))
+        self._unitary = None
         self.__unitary = x
         self._prepare()
 
@@ -1024,6 +1027,19 @@ class VariationalLayer(Gate):
 
         self.unitaries = []
         self.additional_unitary = None
+
+    @property
+    def parameter(self):
+        return self.params_map, self.params_map2
+
+    @parameter.setter
+    def parameter(self, x):
+        if self.params_map2 is None:
+            self.params_map = x
+        else:
+            self.params_map, self.params_map2 = x
+        self._unitary = None
+        self._prepare()
 
     @property
     def unitary(self):
