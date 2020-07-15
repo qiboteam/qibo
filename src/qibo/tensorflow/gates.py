@@ -31,7 +31,7 @@ class TensorflowGate(base_gates.Gate):
         self.einsum = BACKEND.get('EINSUM')
 
     def _prepare(self):
-        matrix = self.construct_unitary(*self.unitary_params)
+        matrix = self.construct_unitary()
         rank = int(np.log2(int(matrix.shape[0])))
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
@@ -134,8 +134,7 @@ class H(TensorflowGate, base_gates.H):
         base_gates.H.__init__(self, q)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return matrices.H
 
 
@@ -145,8 +144,7 @@ class X(TensorflowGate, base_gates.X):
         base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return matrices.X
 
     def controlled_by(self, *q):
@@ -162,8 +160,7 @@ class Y(TensorflowGate, base_gates.Y):
         base_gates.Y.__init__(self, q)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return matrices.Y
 
 
@@ -173,8 +170,7 @@ class Z(TensorflowGate, base_gates.Z):
         base_gates.Z.__init__(self, q)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return matrices.Z
 
 
@@ -184,9 +180,8 @@ class RX(TensorflowGate, base_gates.RX):
         base_gates.RX.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
-        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
         return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.X
 
 
@@ -196,9 +191,8 @@ class RY(TensorflowGate, base_gates.RY):
         base_gates.RY.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
-        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
         return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.Y
 
 
@@ -208,9 +202,8 @@ class RZ(TensorflowGate, base_gates.RZ):
         base_gates.RZ.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
-        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t / 2.0)[tf.newaxis]
         diag = tf.concat([tf.math.conj(phase), phase], axis=0)
         return tf.linalg.diag(diag)
@@ -222,9 +215,8 @@ class ZPow(TensorflowGate, base_gates.ZPow):
         base_gates.ZPow.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
-        t = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t)
         diag = tf.concat([1, phase], axis=0)
         return tf.linalg.diag(diag)
@@ -236,8 +228,7 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         base_gates.CNOT.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return tf.reshape(matrices.CNOT, (4, 4))
 
 
@@ -247,9 +238,9 @@ class CZ(TensorflowGate, base_gates.CZ):
         base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
-        diag = tf.cast(tf.concat([tf.ones(3), [-1]], axis=0), dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        diag = tf.cast(tf.concat([tf.ones(3), [-1]], axis=0),
+                       dtype=DTYPES.get('DTYPECPX'))
         return tf.linalg.diag(diag)
 
 
@@ -259,11 +250,11 @@ class CZPow(TensorflowGate, base_gates.CZPow):
         base_gates.CZPow.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta) -> tf.Tensor:
-        th = tf.cast(theta, dtype=DTYPES.get('DTYPECPX'))
+    def construct_unitary(self) -> tf.Tensor:
+        dtype = DTYPES.get('DTYPECPX')
+        th = tf.cast(self.theta, dtype=dtype)
         phase = tf.exp(1j * th)[tf.newaxis]
-        diag = tf.concat([tf.ones(3, dtype=DTYPES.get('DTYPECPX')), phase], axis=0)
+        diag = tf.concat([tf.ones(3, dtype=dtype), phase], axis=0)
         return tf.linalg.diag(diag)
 
 
@@ -273,10 +264,10 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         base_gates.SWAP.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return tf.cast([[1, 0, 0, 0], [0, 0, 1, 0],
-                        [0, 1, 0, 0], [0, 0, 0, 1]], dtype=DTYPES.get('DTYPECPX'))
+                        [0, 1, 0, 0], [0, 0, 0, 1]],
+                       dtype=DTYPES.get('DTYPECPX'))
 
 
 class fSim(TensorflowGate, base_gates.fSim):
@@ -285,10 +276,9 @@ class fSim(TensorflowGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary(theta, phi):
+    def construct_unitary(self):
         from qibo.tensorflow import cgates
-        return cgates.fSim.construct_unitary(theta, phi)
+        return cgates.fSim.construct_unitary(self)
 
 
 class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
@@ -301,10 +291,9 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
             raise ValueError("Invalid shape {} of rotation for generalized "
                              "fSim gate".format(shape))
 
-    @staticmethod
-    def construct_unitary(unitary, phi):
+    def construct_unitary(self):
         from qibo.tensorflow import cgates
-        return cgates.GeneralizedfSim.construct_unitary(unitary, phi)
+        return cgates.GeneralizedfSim.construct_unitary(self)
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
@@ -313,8 +302,7 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         TensorflowGate.__init__(self)
 
-    @staticmethod
-    def construct_unitary() -> tf.Tensor:
+    def construct_unitary(self) -> tf.Tensor:
         return tf.reshape(matrices.TOFFOLI, (8, 8))
 
 
@@ -330,10 +318,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, rank))
 
-        self.unitary_params = [self.construct_unitary(unitary)]
+        self._unitary = self.construct_unitary()
 
-    @staticmethod
-    def construct_unitary(unitary):
+    def construct_unitary(self):
+        unitary = self.given_unitary
         rank = int(np.log2(int(unitary.shape[0])))
         dtype = DTYPES.get('DTYPECPX')
         if isinstance(unitary, tf.Tensor):
