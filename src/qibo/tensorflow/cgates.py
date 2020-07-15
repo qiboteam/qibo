@@ -152,7 +152,7 @@ class I(TensorflowGate, base_gates.I):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        n = tf.cast(2 ** self.nqubits, dtype=DTYPES.get('DTYPEINT'))
+        n = tf.cast(2 ** len(self.target_qubits), dtype=DTYPES.get('DTYPEINT'))
         return tf.eye(n, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
