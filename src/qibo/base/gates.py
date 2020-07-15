@@ -40,6 +40,7 @@ class Gate(object):
         self._unitary = None
         self._nqubits = None
         self._nstates = None
+        self.qubits_tensor = None
 
         config.ALLOW_SWITCHERS = False
 
@@ -146,6 +147,7 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
+        self.qubits_tensor = self._calculate_qubits_tensor()
         self._prepare()
 
     @property
@@ -198,6 +200,10 @@ class Gate(object):
 
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
         return self.__matmul__(other)
+
+    def _calculate_qubits_tensor(self):
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        return None
 
     def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.
@@ -519,7 +525,22 @@ class M(Gate):
                          "matrices.")
 
 
-class RX(Gate):
+class ParametrizedGate(Gate):
+
+    def __init__(self):
+        super(ParametrizedGate, self).__init__()
+        self._theta = None
+
+    @property
+    def parameter(self):
+        return self._theta
+
+    @parameter.setter
+    def parameter(self, x):
+        self._theta = x
+
+
+class RX(ParametrizedGate):
     """Rotation around the X-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -541,7 +562,7 @@ class RX(Gate):
         super(RX, self).__init__()
         self.name = "rx"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}

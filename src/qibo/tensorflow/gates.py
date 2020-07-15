@@ -174,14 +174,25 @@ class Z(TensorflowGate, base_gates.Z):
         return matrices.Z
 
 
-class RX(TensorflowGate, base_gates.RX):
+class ParametrizedTensorflowGate(TensorflowGate, base_gates.ParametrizedGate):
+
+    @property
+    def parameter(self):
+        return self._theta
+
+    @parameter.setter
+    def parameter(self, x):
+        self._theta = x
+
+
+class RX(ParametrizedTensorflowGate, base_gates.RX):
 
     def __init__(self, q, theta):
         base_gates.RX.__init__(self, q, theta)
-        TensorflowGate.__init__(self)
+        ParametrizedTensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
+        t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.X
 
 

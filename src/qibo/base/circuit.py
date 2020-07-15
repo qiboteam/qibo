@@ -480,7 +480,7 @@ class BaseCircuit(object):
             name = gate.name
             if gate.name in gates.PARAMETRIZED_GATES:
                 # TODO: Make sure that our parameter convention agrees with OpenQASM
-                name += f"({gate.theta})"
+                name += f"({gate.parameter})"
             code.append(f"{name} {qubits};")
 
         # Add measurements
