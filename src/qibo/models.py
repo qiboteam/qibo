@@ -144,7 +144,7 @@ class VQE(object):
         self.ansatz = ansatz
         self.hamiltonian = hamiltonian
 
-    def minimize(self, initial_state, method='BFGS', options=None, compile=True):
+    def minimize(self, initial_state, method='Powell', options=None, compile=True):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
