@@ -1,4 +1,7 @@
 # Quantum Singular Value Decomposer
+
+Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd](https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd)
+
 ## The problem
 Much progress has been made towards a better understanding of bipartite and multipartite entanglement of quantum systems in the last decades. Among the many figures of merit that have been put forward to quantify entanglement, the von Neumann entropy stands out as it finely reveals the quantum correlations between subparts of the system. Yet, the explicit computation of this entropy, as well as many other bipartite measures of entanglement, relies on a clever decomposition of the tensor that describes a two-party system, and in general, it demands a large investment of computational resources.
 
@@ -7,7 +10,7 @@ The code herein aims at reproducing the results of the manuscript ["Quantum Sing
 
 The key ingredient of the algorithm is to train the circuit on exact coincidence of outputs for both subsystems. This is a subtle way to force a diagonal form onto the state. It also provides an example of a quantum circuit which is not trained to minimize some energy, but rather to achieve a precise relation between the superposition terms in the state.
 
-<img src="QSVD.png" width="510px">
+![qsvd](images/QSVD.png)
 
 ## How to run an example
 
@@ -59,10 +62,10 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 ## Results
 The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The following figure shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
 
-<img src="Entropy_6qubits.png" width="510px">
+![entropy](images/Entropy_6qubits.png)
 
 We have analyzed 500 random states for the 1 and 2 layers case, and 200 random states for the 3, 4 and 5 layers case. The mean number of optimization steps is of the order of a few hundred. We can also plot the mean error and standard deviation for the different number of layers:
 
-<img src="error.png" width="510px">
+![error](images/error.png)
 
 As suggested by the [Solovay-Kitaev theorem](https://arxiv.org/abs/quant-ph/0505030), we observe fast convergence of results for every instance we analyze. The variational circuit approaches the exact result as we increase the number of layers, whatever the entanglement is. In this respect, it is worth mentioning that we can also analyze [Absolute Maximally Entangled states](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.100.022342), for which the convergence of the variational QSVD is fast and faithful.
