@@ -5,3 +5,4 @@ tensorflow==2.2
 scipy
 cma
 joblib
+matplotlib
