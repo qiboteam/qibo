@@ -174,45 +174,33 @@ class Z(TensorflowGate, base_gates.Z):
         return matrices.Z
 
 
-class ParametrizedTensorflowGate(TensorflowGate, base_gates.ParametrizedGate):
-
-    @property
-    def parameter(self):
-        return self._theta
-
-    @parameter.setter
-    def parameter(self, x):
-        self._theta = x
-        self._prepare()
-
-
-class RX(ParametrizedTensorflowGate, base_gates.RX):
+class RX(TensorflowGate, base_gates.RX):
 
     def __init__(self, q, theta):
         base_gates.RX.__init__(self, q, theta)
-        ParametrizedTensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.X
 
 
-class RY(ParametrizedTensorflowGate, base_gates.RY):
+class RY(TensorflowGate, base_gates.RY):
 
     def __init__(self, q, theta):
         base_gates.RY.__init__(self, q, theta)
-        ParametrizedTensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         return tf.cos(t / 2.0) * matrices.I - 1j * tf.sin(t / 2.0) * matrices.Y
 
 
-class RZ(ParametrizedTensorflowGate, base_gates.RZ):
+class RZ(TensorflowGate, base_gates.RZ):
 
     def __init__(self, q, theta):
         base_gates.RZ.__init__(self, q, theta)
-        ParametrizedTensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
@@ -221,11 +209,11 @@ class RZ(ParametrizedTensorflowGate, base_gates.RZ):
         return tf.linalg.diag(diag)
 
 
-class ZPow(ParametrizedTensorflowGate, base_gates.ZPow):
+class ZPow(TensorflowGate, base_gates.ZPow):
 
     def __init__(self, q, theta):
         base_gates.ZPow.__init__(self, q, theta)
-        ParametrizedTensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
@@ -256,11 +244,11 @@ class CZ(TensorflowGate, base_gates.CZ):
         return tf.linalg.diag(diag)
 
 
-class CZPow(ParametrizedTensorflowGate, base_gates.CZPow):
+class CZPow(TensorflowGate, base_gates.CZPow):
 
     def __init__(self, q0, q1, theta):
         base_gates.CZPow.__init__(self, q0, q1, theta)
-        ParametrizedTensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         dtype = DTYPES.get('DTYPECPX')
@@ -282,7 +270,7 @@ class SWAP(TensorflowGate, base_gates.SWAP):
                        dtype=DTYPES.get('DTYPECPX'))
 
 
-class fSim(ParametrizedTensorflowGate, base_gates.fSim):
+class fSim(TensorflowGate, base_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
