@@ -9,3 +9,4 @@ physics problems.
 
     tutorials/aavqe/README.md
     tutorials/grover3sat/README.md
+    tutorials/unary/README.md
