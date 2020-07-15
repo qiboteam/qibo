@@ -161,13 +161,12 @@ class Gate(object):
             raise NotImplementedError("Cannot calculate unitary matrix for "
                                       "gates that target more than two qubits.")
         if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
+            self._unitary = self.construct_unitary()
             if self.is_controlled_by:
                 self._unitary = self.control_unitary(self._unitary)
         return self._unitary
 
-    @staticmethod
-    def construct_unitary(*args): # pragma: no cover
+    def construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix.
 
         Args:
@@ -823,7 +822,7 @@ class TOFFOLI(Gate):
     @property
     def unitary(self):
         if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
+            self._unitary = self.construct_unitary()
         return self._unitary
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
@@ -887,7 +886,7 @@ class Unitary(Gate):
     @property
     def unitary(self):
         if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
+            self._unitary = self.construct_unitary()
         return self._unitary
 
 
