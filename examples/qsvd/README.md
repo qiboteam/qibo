@@ -30,6 +30,12 @@ To run an example with default values, you should execute the following command:
 python main.py
 ```
 
+To run an example with different values, type e.g.:
+
+```python
+python main.py --nqubits 5 --subsize 2 --nlayers 4 --nshots 10000
+```
+
 ## Results
 The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The structure of the quantum circuit is the following:
 
