@@ -405,7 +405,7 @@ class BaseCircuit(object):
                                  "agree with the circuit gates.")
             for gate in self.parametrized_gates:
                 gate.parameter = parameters[gate]
-        elif isinstance(parameters, list):
+        elif isinstance(parameters, (list, tuple)):
             if len(parameters) != len(self.parametrized_gates):
                 n = len(self.parametrized_gates)
                 raise ValueError("Given list of parameters has length {} while "

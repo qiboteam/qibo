@@ -84,3 +84,22 @@ def test_circuit_update_parameters_with_dictionary(backend):
     c.update_parameters(param_dict)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
+
+
+def test_circuit_update_parameters_errors():
+    """Check updating parameters errors."""
+    c = Circuit(2)
+    c.add(gates.RX(0, theta=0.789))
+    c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
+
+    with pytest.raises(ValueError):
+        c.update_parameters({gates.RX(0, theta=1.0): 0.568})
+    with pytest.raises(ValueError):
+        c.update_parameters([0.12586])
+    with pytest.raises(ValueError):
+        c.update_parameters(np.random.random(3))
+    with pytest.raises(ValueError):
+        import tensorflow as tf
+        c.update_parameters(tf.random.uniform((4,), dtype=tf.float64))
+    with pytest.raises(TypeError):
+        c.update_parameters({0.3568})
