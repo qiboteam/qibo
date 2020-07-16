@@ -2,7 +2,7 @@
 
 Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd](https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd)
 
-## The problem
+## Problem overview
 Much progress has been made towards a better understanding of bipartite and multipartite entanglement of quantum systems in the last decades. Among the many figures of merit that have been put forward to quantify entanglement, the von Neumann entropy stands out as it finely reveals the quantum correlations between subparts of the system. Yet, the explicit computation of this entropy, as well as many other bipartite measures of entanglement, relies on a clever decomposition of the tensor that describes a two-party system, and in general, it demands a large investment of computational resources.
 
 ## Implementing the solution
@@ -14,53 +14,27 @@ The key ingredient of the algorithm is to train the circuit on exact coincidence
 
 ## How to run an example
 
-    # We import the QSVD class
+To run a particular instance of the problem we have to set up the initial
+arguments:
+- `nqubits` (int): number of quantum bits. (default=6)
+- `subsize` (int): size of the bipartition with qubits 0,1,...,subsize-1. (default=3)
+- `nlayers` (int): number of ansatz layers. (default=5)
+- `nshots` (int): number of shots used when samopling the circuit. (default= 100000)
+- `RY` (bool): if True, Ry rotations are used in the ansatz. If False, RxRzRx are employed instead. (dafault=False)
+- `method` (string): classical optimization method, supported by scipy.optimize.minimize. (default='Powell')
 
-    from qsvd import QSVD
 
-    # We choose a number of qubits, and the size of the bipartition with qubits 0,1,...,subsize-1
-     
-    nqubits = 6
-    subsize = 3 
+To run an example with the default values, you should execute the following command:
 
-    # We initialize the QSVD
-
-    Qsvd = QSVD(nqubits, subsize)
-
-    # We choose an intial random state
-
-    import numpy as np
-
-    initial_state = np.random.rand(2**nqubits)
-    initial_state = initial_state / np.linalg.norm(initial_state)
-
-    # We choose the number of layers and initial random parameters
-
-    nlayers = 4
-                        # if Rx,Rz,Rx rotations are employed in the anstaz
-    initial_parameters = 2*np.pi * np.random.rand(6*nqubits*nlayers+3*nqubits) 
-
-                             # if Ry rotations are employed in the anstaz
-    #initial_parameters = 2*np.pi * np.random.rand(2*Nqubits*Nlayers+Nqubits) 
-
-    # We train the QSVD
-
-    cost_function, optimal_angles = Qsvd.minimize(initial_parameters, nlayers, init_state=initial_state,
-                                              nshots=10000, RY=False, method='Powell')
-
-    # We use the optimal angles to compute the Schmidt coefficients of the bipartition
-
-    Schmidt_coefficients = Qsvd.Schmidt_coeff(optimal_angles, nlayers, initial_state)
-    print('Schmidt coefficients: ', Schmidt_coefficients)
-
-    # We compute the von Neumann entropy using the Schmidt coefficients
-
-    VonNeumann_entropy = Qsvd.VonNeumann_entropy(optimal_angles, nlayers, initial_state)
-    print('Von Neumann entropy: ', VonNeumann_entropy)
-
+```python main.py
+```
 
 ## Results
-The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The following figure shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
+The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The structure of the quantum circuit is the following:
+
+![ansatz](images/ansatz.png)
+
+where R stants for RxRzRz rotations (if RY==False) or Ry rotations. The figure below shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
 
 ![entropy](images/Entropy_6qubits.png)
 
