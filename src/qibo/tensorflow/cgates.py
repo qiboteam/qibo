@@ -96,8 +96,8 @@ class H(MatrixGate, base_gates.H):
         MatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast(np.array([[1, 1], [1, -1]]) / np.sqrt(2),
-                       dtype=DTYPES.get('DTYPECPX'))
+        return tf.constant(np.array([[1, 1], [1, -1]]) / np.sqrt(2),
+                           dtype=DTYPES.get('DTYPECPX'))
 
 
 class X(TensorflowGate, base_gates.X):
@@ -107,7 +107,7 @@ class X(TensorflowGate, base_gates.X):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast([[0, 1], [1, 0]], dtype=DTYPES.get('DTYPECPX'))
+        return tf.constant([[0, 1], [1, 0]], dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -122,7 +122,7 @@ class Y(TensorflowGate, base_gates.Y):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return 1j * tf.cast([[0, -1], [1, 0]], dtype=DTYPES.get('DTYPECPX'))
+        return 1j * tf.constant([[0, -1], [1, 0]], dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -137,7 +137,7 @@ class Z(TensorflowGate, base_gates.Z):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast([[1, 0], [0, -1]], dtype=DTYPES.get('DTYPECPX'))
+        return tf.constant([[1, 0], [0, -1]], dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -152,7 +152,8 @@ class I(TensorflowGate, base_gates.I):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        n = tf.cast(2 ** len(self.target_qubits), dtype=DTYPES.get('DTYPEINT'))
+        n = tf.constant(2 ** len(self.target_qubits),
+                        dtype=DTYPES.get('DTYPEINT'))
         return tf.eye(n, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
@@ -250,11 +251,9 @@ class RX(MatrixGate, base_gates.RX):
         MatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        dtype = DTYPES.get('DTYPECPX')
-        t = tf.cast(self.theta, dtype=dtype)
-        I = tf.eye(2, dtype=dtype)
-        X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
-        return tf.cos(t / 2.0) * I - 1j * tf.sin(t / 2.0) * X
+        cos, sin = np.cos(self.theta / 2.0), np.sin(self.theta / 2.0)
+        matrix = np.array([[cos, -1j * sin], [-1j * sin, cos]])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
 
 class RY(MatrixGate, base_gates.RY):
@@ -265,10 +264,9 @@ class RY(MatrixGate, base_gates.RY):
 
     def construct_unitary(self) -> tf.Tensor:
         dtype = DTYPES.get('DTYPECPX')
-        t = tf.cast(self.theta, dtype=dtype)
-        I = tf.eye(2, dtype=dtype)
-        iY = tf.cast([[0, 1], [-1, 0]], dtype=dtype)
-        return tf.cos(t / 2.0) * I - tf.sin(t / 2.0) * iY
+        cos, sin = np.cos(self.theta / 2.0), np.sin(self.theta / 2.0)
+        matrix = np.array([[cos, -sin], [sin, cos]])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
 
 class RZ(MatrixGate, base_gates.RZ):
@@ -278,10 +276,9 @@ class RZ(MatrixGate, base_gates.RZ):
         MatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
-        phase = tf.exp(1j * t / 2.0)[tf.newaxis]
-        diag = tf.concat([tf.math.conj(phase), phase], axis=0)
-        return tf.linalg.diag(diag)
+        phase = np.exp(1j * self.theta / 2.0)
+        matrix = np.diag([phase.conj(), phase])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
 
 class ZPow(MatrixGate, base_gates.ZPow):
@@ -292,13 +289,12 @@ class ZPow(MatrixGate, base_gates.ZPow):
 
     def _prepare(self):
         self.qubits_tensor = self._calculate_qubits_tensor()
-        self.matrix = tf.exp(1j * tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX')))
+        self.matrix = tf.constant(np.exp(1j * self.theta),
+                                  dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> tf.Tensor:
-        t = tf.cast(self.theta, dtype=DTYPES.get('DTYPECPX'))
-        phase = tf.exp(1j * t)
-        diag = tf.concat([1, phase], axis=0)
-        return tf.linalg.diag(diag)
+        matrix = np.diag([1, np.exp(1j * self.theta)])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
