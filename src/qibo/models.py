@@ -224,8 +224,8 @@ class VQE(object):
             n = self.hamiltonian.nqubits
             m = minimize(lambda p: loss(p).numpy(), initial_state,
                          method=method, options=options)
-            self.circuit.update_parameters(initial_state)
             result = m.fun
             parameters = m.x
 
+        self.circuit.update_parameters(parameters)
         return result, parameters
