@@ -211,7 +211,7 @@ class M(TensorflowGate, base_gates.M):
     def _get_cpu(self): # pragma: no cover
         if not DEVICES['CPU']:
             raise RuntimeError("Cannot find CPU device to use for sampling.")
-        return DEVICES['CPU']
+        return DEVICES['CPU'][0]
 
     def __call__(self, state: tf.Tensor, nshots: int,
                  samples_only: bool = False,
