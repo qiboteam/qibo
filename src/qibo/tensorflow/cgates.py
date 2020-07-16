@@ -208,6 +208,11 @@ class M(TensorflowGate, base_gates.M):
         # Bring probs in the order specified by the user
         return tf.transpose(probs, perm=self.reduced_target_qubits)
 
+    def _get_cpu(self): # pragma: no cover
+        if not DEVICES['CPU']:
+            raise RuntimeError("Cannot find CPU device to use for sampling.")
+        return DEVICES['CPU']
+
     def __call__(self, state: tf.Tensor, nshots: int,
                  samples_only: bool = False,
                  is_density_matrix: bool = False) -> tf.Tensor:
@@ -222,14 +227,19 @@ class M(TensorflowGate, base_gates.M):
             return tf.random.categorical(logits[tf.newaxis], nshots,
                                          dtype=DTYPES.get('DTYPEINT'))[0]
 
+        device = DEVICES['DEFAULT']
+        if np.log2(nshots) + self.nqubits > 31: # pragma: no cover
+            # Use CPU to avoid "aborted" error
+            device = self._get_cpu()
+
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
-            samples_dec = sample()
+            with tf.device(device):
+                samples_dec = sample()
         except oom_error: # pragma: no cover
             # Force using CPU to perform sampling
-            if not DEVICES['CPU']:
-                raise RuntimeError("Cannot find CPU device to use for sampling.")
-            with tf.device(DEVICES['CPU'][0]):
+            device = self._get_cpu()
+            with tf.device(device):
                 samples_dec = sample()
 
         if samples_only:
