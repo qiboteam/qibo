@@ -33,7 +33,7 @@ python main.py
 ## Results
 The variational approach to the QSVD can be verified on simulations. We can consider random states such that the amplitudes are *c* = *a* + i*b* where *a* and *b* are random real numbers between -0.5 and 0.5, further restricted by a global normalization. We can start, for instance, with 6 qubit states and natural bipartition, i.e. 3 qubits in each subsystem, disregarding the presence of experimental noise. We consider results for a diferent number of layers in our variational circuit. The structure of the quantum circuit is the following:
 
-<img src="images/ansatz.png" width="200">
+<img src="images/ansatz.png" width="500" height="700">
 
 where R stants for RxRzRz rotations (if `RY==False`) or Ry rotations. The figure below shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
 
