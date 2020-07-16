@@ -706,7 +706,7 @@ class CZ(Gate):
         self.init_args = [q0, q1]
 
 
-class CZPow(Gate):
+class CZPow(ParametrizedGate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix

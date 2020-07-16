@@ -36,6 +36,7 @@ class BaseCircuit(object):
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
+        self.parametrized_gates = []
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
@@ -309,6 +310,8 @@ class BaseCircuit(object):
             self._add_layer(gate)
         else:
             self.queue.append(gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                self.parametrized_gates.append(gate)
 
     def _set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits in ``gate``.
@@ -394,6 +397,22 @@ class BaseCircuit(object):
             return [(i, g) for i, g in enumerate(self.queue)
                     if isinstance(g, gate)]
         raise TypeError("Gate identifier {} not recognized.".format(gate))
+
+    def update_parameters(self, parameters: Union[Dict, List]):
+        if isinstance(parameters, dict):
+            if set(parameters.keys()) != set(self.parametrized_gates):
+                raise ValueError("Dictionary with gate parameters does not "
+                                 "agree with the circuit gates.")
+            for gate in self.parametrized_gates:
+                gate.parameter = parameters[gate]
+        elif isinstance(parameters, list):
+            if len(parameters) != len(self.parametrized_gates):
+                n = len(self.parametrized_gates)
+                raise ValueError("Given list of parameters has length {} while "
+                                 "the circuit contains {} parametrized gates."
+                                 "".format(len(parameters), n))
+            for gate, parameter in zip(self.parametrized_gates, parameters):
+                gate.parameter = parameter
 
     @property
     def summary(self) -> str:
