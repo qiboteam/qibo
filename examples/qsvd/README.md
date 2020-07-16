@@ -30,7 +30,7 @@ To run an example with default values, you should execute the following command:
 python main.py
 ```
 
-To run an example with different values, type e.g.:
+To run an example with different values, type for example:
 
 ```python
 python main.py --nqubits 5 --subsize 2 --nlayers 4 --nshots 10000
