@@ -207,7 +207,7 @@ class QSVD():
             loss += Hamming(a,b) * result[bit_string]
     
         loss = loss/nshots
-
+        
              
         return loss
     
