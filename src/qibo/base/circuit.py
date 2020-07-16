@@ -413,6 +413,9 @@ class BaseCircuit(object):
                                  "".format(len(parameters), n))
             for gate, parameter in zip(self.parametrized_gates, parameters):
                 gate.parameter = parameter
+        else:
+            raise TypeError("Invalid type of parameters {}."
+                            "".format(type(parameters)))
 
     @property
     def summary(self) -> str:

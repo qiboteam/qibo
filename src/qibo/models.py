@@ -139,9 +139,9 @@ class VQE(object):
             initial_state = np.random.uniform(0, 2, 1)
             v.minimize(initial_state)
     """
-    def __init__(self, ansatz, hamiltonian):
-        """Initialize ansatz and hamiltonian."""
-        self.ansatz = ansatz
+    def __init__(self, circuit, hamiltonian):
+        """Initialize circuit ansatz and hamiltonian."""
+        self.circuit = circuit
         self.hamiltonian = hamiltonian
 
     def minimize(self, initial_state, method='Powell', options=None, compile=True):
@@ -159,12 +159,12 @@ class VQE(object):
             The corresponding best parameters.
         """
         def loss(params):
-            s = self.ansatz(params)()
-            return self.hamiltonian.expectation(s)
+            self.circuit.update_parameters(params)
+            final_state = self.circuit()
+            return self.hamiltonian.expectation(final_state)
 
         if compile:
-            circuit = self.ansatz(initial_state)
-            if not circuit.using_tfgates:
+            if not self.circuit.using_tfgates:
                 raise RuntimeError("Cannot compile VQE that uses custom operators. "
                                    "Set the compile flag to False.")
             from qibo import K
@@ -180,8 +180,7 @@ class VQE(object):
         elif method == 'sgd':
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
-            circuit = self.ansatz(initial_state)
-            for gate in circuit.queue:
+            for gate in self.circuit.queue:
                 if not isinstance(gate, TensorflowGate):
                     raise RuntimeError('SGD VQE requires native Tensorflow '
                                        'gates because gradients are not '
@@ -225,6 +224,7 @@ class VQE(object):
             n = self.hamiltonian.nqubits
             m = minimize(lambda p: loss(p).numpy(), initial_state,
                          method=method, options=options)
+            self.circuit.update_parameters(initial_state)
             result = m.fun
             parameters = m.x
 

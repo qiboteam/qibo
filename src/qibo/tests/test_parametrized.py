@@ -53,8 +53,8 @@ def test_circuit_update_parameters_with_list(backend):
     c = create_circuit(params0)
     target_c = create_circuit(params1)
     c.update_parameters(params1)
-
     np.testing.assert_allclose(c(), target_c())
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -82,5 +82,5 @@ def test_circuit_update_parameters_with_dictionary(backend):
     print(c.parametrized_gates)
     print(param_dict)
     c.update_parameters(param_dict)
-
     np.testing.assert_allclose(c(), target_c())
+    qibo.set_backend(original_backend)

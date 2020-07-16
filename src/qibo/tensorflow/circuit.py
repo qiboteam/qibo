@@ -30,6 +30,18 @@ class TensorflowCircuit(circuit.BaseCircuit):
         elif gate.nqubits != self.nqubits:
             super(TensorflowCircuit, self)._set_nqubits(gate)
 
+    def update_parameters(self, parameters):
+        if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
+            n = int(parameters.shape[0])
+            if n != len(self.parametrized_gates):
+                raise ValueError("Given list of parameters has length {} while "
+                                 "the circuit contains {} parametrized gates."
+                                 "".format(n, len(self.parametrized_gates)))
+            for i, gate in enumerate(self.parametrized_gates):
+                gate.parameter = parameters[i]
+        else:
+            super(TensorflowCircuit, self).update_parameters(parameters)
+
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
