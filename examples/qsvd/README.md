@@ -20,13 +20,14 @@ arguments:
 - `subsize` (int): size of the bipartition with qubits 0,1,...,subsize-1. (default=3)
 - `nlayers` (int): number of ansatz layers. (default=5)
 - `nshots` (int): number of shots used when samopling the circuit. (default= 100000)
-- `RY` (bool): if True, Ry rotations are used in the ansatz. If False, RxRzRx are employed instead. (dafault=False)
+- `RY` (bool): if True, Ry rotations are used in the ansatz. If False, RxRzRx are employed instead. (default=False)
 - `method` (string): classical optimization method, supported by scipy.optimize.minimize. (default='Powell')
 
 
 To run an example with the default values, you should execute the following command:
 
-```python main.py
+```python
+python main.py
 ```
 
 ## Results
