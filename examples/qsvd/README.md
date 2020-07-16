@@ -10,7 +10,7 @@ The code herein aims at reproducing the results of the manuscript ["Quantum Sing
 
 The key ingredient of the algorithm is to train the circuit on exact coincidence of outputs for both subsystems. This is a subtle way to force a diagonal form onto the state. It also provides an example of a quantum circuit which is not trained to minimize some energy, but rather to achieve a precise relation between the superposition terms in the state.
 
-<img src="images/QSVD.png" width="600" height="420">
+<img src="images/QSVD.png" width="500" height="350">
 
 ## How to run an example
 
@@ -37,10 +37,10 @@ The variational approach to the QSVD can be verified on simulations. We can cons
 
 where R stants for RxRzRz rotations (if `RY==False`) or Ry rotations. The figure below shows the entanglement entropy computed from the trained QSVD circuit vs. the exact entropy:
 
-<img src="images/Entropy_6qubits.png" width="600" height="420">
+<img src="images/Entropy_6qubits.png" width="500" height="350">
 
 We have analyzed 500 random states for the 1 and 2 layers case, and 200 random states for the 3, 4 and 5 layers case. The mean number of optimization steps is of the order of a few hundred. We can also plot the mean error and standard deviation for the different number of layers:
 
-<img src="images/error.png" width="600" height="420">
+<img src="images/error.png" width="500" height="350">
 
 As suggested by the [Solovay-Kitaev theorem](https://arxiv.org/abs/quant-ph/0505030), we observe fast convergence of results for every instance we analyze. The variational circuit approaches the exact result as we increase the number of layers, whatever the entanglement is. In this respect, it is worth mentioning that we can also analyze [Absolute Maximally Entangled states](https://journals.aps.org/pra/abstract/10.1103/PhysRevA.100.022342), for which the convergence of the variational QSVD is fast and faithful.
