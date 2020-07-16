@@ -228,7 +228,7 @@ class M(TensorflowGate, base_gates.M):
                                          dtype=DTYPES.get('DTYPEINT'))[0]
 
         device = DEVICES['DEFAULT']
-        if np.log2(nshots) + self.nqubits > 31: # pragma: no cover
+        if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # Use CPU to avoid "aborted" error
             device = self._get_cpu()
 
