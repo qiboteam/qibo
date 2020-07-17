@@ -880,8 +880,6 @@ class Unitary(Gate):
 
     @property
     def unitary(self):
-        if self._unitary is None:
-            self._unitary = self.construct_unitary()
         return self._unitary
 
 

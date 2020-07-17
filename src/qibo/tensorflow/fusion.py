@@ -10,10 +10,11 @@ from typing import Tuple
 
 class FusionGroup(fusion.FusionGroup):
 
-    if BACKEND.get('GATES') == "custom":
-        bk = np
-    else:
-        bk = tf
+    def __init__(self):
+        super(FusionGroup, self).__init__()
+        self.bk = np
+        if BACKEND.get('GATES') != "custom":
+            self.bk = tf
 
     def _one_qubit_matrix(self, gate0: "Gate", gate1: "Gate"):
         """Calculates Kroneker product of two one-qubit gates.
