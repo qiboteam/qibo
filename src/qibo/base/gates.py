@@ -36,6 +36,7 @@ class Gate(object):
 
         self._target_qubits = tuple()
         self._control_qubits = set()
+        self.qubits_tensor = None
 
         self._unitary = None
         self._nqubits = None
@@ -146,6 +147,7 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
+        self._calculate_qubits_tensor()
         self._prepare()
 
     @property
@@ -183,6 +185,10 @@ class Gate(object):
         has been used.
         """
         raise NotImplementedError
+
+    def _calculate_qubits_tensor(self):
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        pass
 
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
