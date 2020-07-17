@@ -29,7 +29,7 @@ class TensorflowGate(base_gates.Gate):
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
-            gate = Unitary(tf.matmul(self.unitary, other.unitary), *self.qubits)
+            gate = Unitary(self.unitary @ other.unitary, *self.qubits)
         return gate
 
     @staticmethod

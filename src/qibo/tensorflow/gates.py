@@ -36,8 +36,10 @@ class TensorflowGate(base_gates.Gate):
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
-        from qibo.tensorflow import cgates
-        return cgates.TensorflowGate.__matmul__(self, other)
+        gate = base_gates.Gate.__matmul__(self, other)
+        if gate is None:
+            gate = Unitary(tf.matmul(self.unitary, other.unitary), *self.qubits)
+        return gate
 
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
