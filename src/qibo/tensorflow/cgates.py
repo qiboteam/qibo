@@ -251,8 +251,8 @@ class RX(MatrixGate, base_gates.RX):
         MatrixGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        cos, sin = np.cos(self.theta / 2.0), np.sin(self.theta / 2.0)
-        matrix = np.array([[cos, -1j * sin], [-1j * sin, cos]])
+        cos, isin = np.cos(self.theta / 2.0), -1j * np.sin(self.theta / 2.0)
+        matrix = np.array([[cos, isin], [isin, cos]])
         return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
 
@@ -373,26 +373,19 @@ class fSim(MatrixGate, base_gates.fSim):
 
     def _prepare(self):
         self.qubits_tensor = self._calculate_qubits_tensor()
-        dtype = DTYPES.get('DTYPECPX')
-        th = tf.cast(self.theta, dtype=dtype)
-        I = tf.eye(2, dtype=dtype)
-        X = tf.cast([[0, 1], [1, 0]], dtype=dtype)
-        rotation = tf.cos(th) * I - 1j * tf.sin(th) * X
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
-        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+        cos, isin = np.cos(self.theta), -1j * np.sin(self.theta)
+        phase = np.exp(-1j * self.phi)
+        matrix = np.array([cos, isin, isin, cos, phase],
+                          dtype=DTYPES.get('NPTYPECPX'))
+        self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self):
-        dtype = DTYPES.get("DTYPECPX")
-        th = tf.cast(self.theta, dtype=dtype)
-        eyemat = tf.eye(2, dtype=dtype)
-        xmat = tf.cast([[0, 1], [1, 0]], dtype=dtype)
-        rotation = tf.cos(th) * eyemat - 1j * tf.sin(th) * xmat
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
-        matrix = tf.eye(4, dtype=dtype)
-        matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
-        rotation = tf.reshape(rotation, (4,))
-        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
-        return tf.tensor_scatter_nd_update(matrix, ids, rotation)
+        cos, isin = np.cos(self.theta), -1j * np.sin(self.theta)
+        matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
+        matrix[1, 1], matrix[2, 2] = cos, cos
+        matrix[1, 2], matrix[2, 1] = isin, isin
+        matrix[3, 3] = np.exp(-1j * self.phi)
+        return tf.constant(matrix, dtype=DTYPES.get("DTYPECPX"))
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -412,21 +405,17 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 
     def _prepare(self):
         self.qubits_tensor = self._calculate_qubits_tensor()
-        dtype = DTYPES.get('DTYPECPX')
-        rotation = tf.cast(self.given_unitary, dtype=dtype)
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
-        rotation = tf.reshape(rotation, (4,))
-        self.matrix = tf.concat([tf.reshape(rotation, (4,)), [phase]], axis=0)
+        matrix = np.zeros(5, dtype=DTYPES.get("NPTYPECPX"))
+        matrix[:4] = np.reshape(self.given_unitary, (4,))
+        matrix[4] = np.exp(-1j * self.phi)
+        self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self):
         dtype = DTYPES.get("DTYPECPX")
-        rotation = tf.cast(self.given_unitary, dtype=dtype)
-        phase = tf.exp(-1j * tf.cast(self.phi, dtype=dtype))
-        matrix = tf.eye(4, dtype=dtype)
-        matrix = tf.tensor_scatter_nd_update(matrix, [[3, 3]], [phase])
-        rotation = tf.reshape(rotation, (4,))
-        ids = [[1, 1], [1, 2], [2, 1], [2, 2]]
-        return tf.tensor_scatter_nd_update(matrix, ids, rotation)
+        matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
+        matrix[1:3, 1:3] = np.reshape(self.given_unitary, (2, 2))
+        matrix[3, 3] = np.exp(-1j * self.phi)
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         return fSim.__call__(self, state, is_density_matrix)
@@ -439,14 +428,10 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast([[1, 0, 0, 0, 0, 0, 0, 0],
-                        [0, 1, 0, 0, 0, 0, 0, 0],
-                        [0, 0, 1, 0, 0, 0, 0, 0],
-                        [0, 0, 0, 1, 0, 0, 0, 0],
-                        [0, 0, 0, 0, 1, 0, 0, 0],
-                        [0, 0, 0, 0, 0, 1, 0, 0],
-                        [0, 0, 0, 0, 0, 0, 0, 1],
-                        [0, 0, 0, 0, 0, 0, 1, 0]], dtype=DTYPES.get('DTYPECPX'))
+        matrix = np.eye(8, dtype=DTYPES.get('NPTYPECPX'))
+        matrix[-2, -2], matrix[-2, -1] = 0, 1
+        matrix[-1, -2], matrix[-1, -1] = 1, 0
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         return X.__call__(self, state, is_density_matrix)

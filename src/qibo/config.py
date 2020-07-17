@@ -19,6 +19,7 @@ if BACKEND_NAME == "tensorflow":
     import warnings
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
+    import numpy as np
     import tensorflow as tf
     # Backend access
     K = tf
@@ -35,7 +36,8 @@ if BACKEND_NAME == "tensorflow":
         'STRING': 'double',
         'DTYPEINT': tf.int64,
         'DTYPE': tf.float64,
-        'DTYPECPX': tf.complex128
+        'DTYPECPX': tf.complex128,
+        'NPTYPECPX': np.complex128
     }
 
     # Flag for raising warning in ``set_precision`` and ``set_backend``
@@ -117,9 +119,11 @@ if BACKEND_NAME == "tensorflow":
         if dtype == 'single':
             DTYPES['DTYPE'] = tf.float32
             DTYPES['DTYPECPX'] = tf.complex64
+            DTYPES['NPTYPECPX'] = np.complex64
         elif dtype == 'double':
             DTYPES['DTYPE'] = tf.float64
             DTYPES['DTYPECPX'] = tf.complex128
+            DTYPES['NPTYPECPX'] = np.complex128
         else:
             raise RuntimeError(f'dtype {dtype} not supported.')
         DTYPES['STRING'] = dtype
