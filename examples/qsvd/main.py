@@ -44,7 +44,7 @@ def main(nqubits, subsize, nlayers, nshots, RY, method):
 
     schmidt = np.linalg.eigvalsh(reduced_dens)
     vneumann = -np.sum(schmidt[schmidt > 0]*np.log2(schmidt[schmidt > 0]))
-    schmidt = -np.sort(-np.sqrt(schmidt))
+    schmidt = -np.sort(-np.sqrt(np.abs(schmidt)))
     print('Exact Schmidt coefficients: ', schmidt)    
     print('Exact von Neumann entropy: ', vneumann)
 
