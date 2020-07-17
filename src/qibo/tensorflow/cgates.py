@@ -485,18 +485,13 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         MatrixGate.__init__(self)
         self.unitary_constructor = Unitary
 
-    @staticmethod
-    def _tfkron(m1, m2):
-        m = tf.transpose(tf.tensordot(m1, m2, axes=0), [0, 2, 1, 3])
-        return tf.reshape(m, (4, 4))
-
     def _prepare(self):
-        matrices = tf.stack([self._tfkron(
+        matrices = np.stack([np.kron(
             self.one_qubit_gate(q1, theta=self.params_map[q1]).unitary,
             self.one_qubit_gate(q2, theta=self.params_map[q2]).unitary)
                              for q1, q2 in self.qubit_pairs], axis=0)
         entangling_matrix = self.two_qubit_gate(0, 1).unitary
-        matrices = tf.matmul(entangling_matrix, matrices)
+        matrices = entangling_matrix @ matrices
 
         q = self.additional_target
         if q is not None:
@@ -504,17 +499,16 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                 q, theta=self.params_map[q]).unitary
 
         if self.params_map2 is not None:
-            matrices2 = tf.stack([self._tfkron(
+            matrices2 = np.stack([np.kron(
                 self.one_qubit_gate(q1, theta=self.params_map2[q1]).unitary,
                 self.one_qubit_gate(q2, theta=self.params_map2[q2]).unitary)
                                 for q1, q2 in self.qubit_pairs], axis=0)
-            matrices = tf.matmul(matrices2, matrices)
+            matrices = matrices2 @ matrices
 
             q = self.additional_target
             if q is not None:
-                additional_matrix = tf.matmul(
-                    self.one_qubit_gate(q, theta=self.params_map2[q]).unitary,
-                    additional_matrix)
+                _new = self.one_qubit_gate(q, theta=self.params_map2[q]).unitary
+                additional_matrix = _new @ additional_matrix
 
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.qubit_pairs)]

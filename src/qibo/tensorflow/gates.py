@@ -350,11 +350,42 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         TensorflowGate.__init__(self)
         self.unitary_constructor = Unitary
 
-    def _tfkron(self, m1, m2):
-        return self.cgates.VariationalLayer._tfkron(m1, m2)
+    @staticmethod
+    def _tfkron(m1, m2):
+        m = tf.transpose(tf.tensordot(m1, m2, axes=0), [0, 2, 1, 3])
+        return tf.reshape(m, (4, 4))
 
     def _prepare(self):
-        self.cgates.VariationalLayer._prepare(self)
+        matrices = tf.stack([self._tfkron(
+            self.one_qubit_gate(q1, theta=self.params_map[q1]).unitary,
+            self.one_qubit_gate(q2, theta=self.params_map[q2]).unitary)
+                             for q1, q2 in self.qubit_pairs], axis=0)
+        entangling_matrix = self.two_qubit_gate(0, 1).unitary
+        matrices = tf.matmul(entangling_matrix, matrices)
+
+        q = self.additional_target
+        if q is not None:
+            additional_matrix = self.one_qubit_gate(
+                q, theta=self.params_map[q]).unitary
+
+        if self.params_map2 is not None:
+            matrices2 = tf.stack([self._tfkron(
+                self.one_qubit_gate(q1, theta=self.params_map2[q1]).unitary,
+                self.one_qubit_gate(q2, theta=self.params_map2[q2]).unitary)
+                                for q1, q2 in self.qubit_pairs], axis=0)
+            matrices = tf.matmul(matrices2, matrices)
+
+            q = self.additional_target
+            if q is not None:
+                additional_matrix = tf.matmul(
+                    self.one_qubit_gate(q, theta=self.params_map2[q]).unitary,
+                    additional_matrix)
+
+        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
+                          for i, targets in enumerate(self.qubit_pairs)]
+        if self.additional_target is not None: # pragma: no cover
+            self.additional_unitary = self.unitary_constructor(
+                additional_matrix, self.additional_target)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor: # pragma: no cover
