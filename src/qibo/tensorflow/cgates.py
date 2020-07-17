@@ -309,8 +309,9 @@ class CNOT(TensorflowGate, base_gates.CNOT):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast([[1, 0, 0, 0], [0, 1, 0, 0],
-                        [0, 0, 0, 1], [0, 0, 1, 0]], dtype=DTYPES.get('DTYPECPX'))
+        return tf.constant([[1, 0, 0, 0], [0, 1, 0, 0],
+                            [0, 0, 0, 1], [0, 0, 1, 0]],
+                           dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return X.__call__(self, state, is_density_matrix)
@@ -323,8 +324,8 @@ class CZ(TensorflowGate, base_gates.CZ):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        diag = tf.cast(tf.concat([tf.ones(3), [-1]], axis=0), dtype=DTYPES.get('DTYPECPX'))
-        return tf.linalg.diag(diag)
+        matrix = np.diag([1, 1, 1, -1])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return Z.__call__(self, state, is_density_matrix)
@@ -340,10 +341,8 @@ class CZPow(MatrixGate, base_gates.CZPow):
         ZPow._prepare(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        dtype = DTYPES.get('DTYPECPX')
-        phase = tf.exp(1j * tf.cast(self.theta, dtype=dtype))
-        diag = tf.concat([tf.ones(3, dtype=dtype), [phase]], axis=0)
-        return tf.linalg.diag(diag)
+        matrix = np.diag([1, 1, 1, np.exp(1j * self.theta)])
+        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         return ZPow.__call__(self, state, is_density_matrix)
@@ -356,9 +355,9 @@ class SWAP(TensorflowGate, base_gates.SWAP):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        return tf.cast([[1, 0, 0, 0], [0, 0, 1, 0],
-                        [0, 1, 0, 0], [0, 0, 0, 1]],
-                       dtype=DTYPES.get('DTYPECPX'))
+        return tf.constant([[1, 0, 0, 0], [0, 0, 1, 0],
+                            [0, 1, 0, 0], [0, 0, 0, 1]],
+                           dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
