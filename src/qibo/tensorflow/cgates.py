@@ -96,7 +96,7 @@ class H(MatrixGate, base_gates.H):
         base_gates.H.__init__(self, q)
         MatrixGate.__init__(self)
 
-    def construct_unitary(self) -> tf.Tensor:
+    def construct_unitary(self) -> np.ndarray:
         return (np.array([[1, 1], [1, -1]], dtype=DTYPES.get('NPTYPECPX'))
                 / np.sqrt(2))
 
@@ -372,13 +372,13 @@ class fSim(MatrixGate, base_gates.fSim):
                           dtype=DTYPES.get('NPTYPECPX'))
         self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
-    def construct_unitary(self):
+    def construct_unitary(self) -> np.ndarray:
         cos, isin = np.cos(self.theta), -1j * np.sin(self.theta)
         matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
         matrix[1, 1], matrix[2, 2] = cos, cos
         matrix[1, 2], matrix[2, 1] = isin, isin
         matrix[3, 3] = np.exp(-1j * self.phi)
-        return tf.constant(matrix, dtype=DTYPES.get("DTYPECPX"))
+        return matrix
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -403,12 +403,12 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         matrix[4] = np.exp(-1j * self.phi)
         self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
-    def construct_unitary(self):
+    def construct_unitary(self) -> np.ndarray:
         dtype = DTYPES.get("DTYPECPX")
         matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
         matrix[1:3, 1:3] = np.reshape(self.given_unitary, (2, 2))
         matrix[3, 3] = np.exp(-1j * self.phi)
-        return tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
+        return matrix
 
     def __call__(self, state, is_density_matrix: bool = False):
         return fSim.__call__(self, state, is_density_matrix)
