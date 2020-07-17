@@ -330,7 +330,7 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             matrix = tf.identity(tf.cast(unitary, dtype=dtype))
         elif isinstance(unitary, np.ndarray):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
-        else:
+        else: # pragma: no cover
             raise TypeError("Unknown type {} of unitary matrix"
                             "".format(type(unitary)))
         return matrix
@@ -423,7 +423,7 @@ class TensorflowChannel(TensorflowGate):
 
         return self._krauss_sum(state)
 
-    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
+    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         """Loops over `self.gates` to calculate sum of Krauss operators."""
         raise NotImplementedError
 

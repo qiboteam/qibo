@@ -449,10 +449,10 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     def construct_unitary(self) -> np.ndarray:
         unitary = self.given_unitary
-        if isinstance(unitary, tf.Tensor):
+        if isinstance(unitary, tf.Tensor): # pragma: no cover
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
         elif isinstance(unitary, np.ndarray):
-            return unitary.astype(DTYPES.get('NPTYPECPX'))
+            return unitary.astype(DTYPES.get('NPTYPECPX')) # pragma: no cover
         raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
