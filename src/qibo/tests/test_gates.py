@@ -781,22 +781,22 @@ def test_unitary_bad_shape(backend):
 def test_construct_unitary(backend):
     qibo.set_backend(backend)
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(gates.H(0).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.H(0).unitary, target_matrix)
     target_matrix = np.array([[0, 1], [1, 0]])
-    np.testing.assert_allclose(gates.X(0).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.X(0).unitary, target_matrix)
     target_matrix = np.array([[0, -1j], [1j, 0]])
-    np.testing.assert_allclose(gates.Y(0).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Y(0).unitary, target_matrix)
     target_matrix = np.array([[1, 0], [0, -1]])
-    np.testing.assert_allclose(gates.Z(1).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.Z(1).unitary, target_matrix)
 
     target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.CNOT(0, 1).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CNOT(0, 1).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, -1])
-    np.testing.assert_allclose(gates.CZ(1, 3).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZ(1, 3).unitary, target_matrix)
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                               [0, 1, 0, 0], [0, 0, 0, 1]])
-    np.testing.assert_allclose(gates.SWAP(2, 4).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.SWAP(2, 4).unitary, target_matrix)
     target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
                               [0, 1, 0, 0, 0, 0, 0, 0],
                               [0, 0, 1, 0, 0, 0, 0, 0],
@@ -805,21 +805,21 @@ def test_construct_unitary(backend):
                               [0, 0, 0, 0, 0, 1, 0, 0],
                               [0, 0, 0, 0, 0, 0, 0, 1],
                               [0, 0, 0, 0, 0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary, target_matrix)
 
     theta = 0.1234
     target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
                               [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RX(0, theta).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RX(0, theta).unitary, target_matrix)
     target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                               [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RY(0, theta).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RY(0, theta).unitary, target_matrix)
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
-    np.testing.assert_allclose(gates.RZ(0, theta).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.RZ(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.ZPow(0, theta).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.ZPow(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary, target_matrix)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

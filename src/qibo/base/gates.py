@@ -33,13 +33,12 @@ class Gate(object):
         # args for creating gate
         self.init_args = []
         self.init_kwargs = {}
-        # parameters for creating unitary matrix
-        self.unitary_params = []
-        self._unitary = None
 
         self._target_qubits = tuple()
         self._control_qubits = set()
+        self.qubits_tensor = None
 
+        self._unitary = None
         self._nqubits = None
         self._nstates = None
 
@@ -148,6 +147,7 @@ class Gate(object):
                                "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
+        self._calculate_qubits_tensor()
         self._prepare()
 
     @property
@@ -161,13 +161,12 @@ class Gate(object):
             raise NotImplementedError("Cannot calculate unitary matrix for "
                                       "gates that target more than two qubits.")
         if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
+            self._unitary = self.construct_unitary()
             if self.is_controlled_by:
                 self._unitary = self.control_unitary(self._unitary)
         return self._unitary
 
-    @staticmethod
-    def construct_unitary(*args): # pragma: no cover
+    def construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix.
 
         Args:
@@ -186,6 +185,10 @@ class Gate(object):
         has been used.
         """
         raise NotImplementedError
+
+    def _calculate_qubits_tensor(self):
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        pass
 
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
@@ -434,7 +437,6 @@ class I(Gate):
         self.name = "identity"
         self.target_qubits = tuple(q)
         self.init_args = q
-        self.unitary_params = [len(self.target_qubits)]
 
 
 class M(Gate):
@@ -549,7 +551,6 @@ class RX(Gate):
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
-        self.unitary_params = [theta]
 
 
 class RY(Gate):
@@ -578,7 +579,6 @@ class RY(Gate):
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
-        self.unitary_params = [theta]
 
 
 class RZ(Gate):
@@ -605,7 +605,6 @@ class RZ(Gate):
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
-        self.unitary_params = [theta]
 
 
 class ZPow(Gate):
@@ -633,7 +632,6 @@ class ZPow(Gate):
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
-        self.unitary_params = [theta]
 
     def controlled_by(self, *q):
         """Fall back to CZPow if there is only one control."""
@@ -721,7 +719,6 @@ class CZPow(Gate):
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
-        self.unitary_params = [theta]
 
 
 class SWAP(Gate):
@@ -769,7 +766,6 @@ class fSim(Gate):
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
-        self.unitary_params = [theta, phi]
 
 
 class GeneralizedfSim(Gate):
@@ -801,7 +797,6 @@ class GeneralizedfSim(Gate):
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
-        self.unitary_params = [unitary, phi]
 
 
 class TOFFOLI(Gate):
@@ -823,7 +818,7 @@ class TOFFOLI(Gate):
     @property
     def unitary(self):
         if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
+            self._unitary = self.construct_unitary()
         return self._unitary
 
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
@@ -882,12 +877,9 @@ class Unitary(Gate):
 
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
-        self.unitary_params = [unitary]
 
     @property
     def unitary(self):
-        if self._unitary is None:
-            self._unitary = self.construct_unitary(*self.unitary_params)
         return self._unitary
 
 
@@ -1004,7 +996,6 @@ class NoiseChannel(Gate):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
-        self.unitary_params = [px, py, pz]
 
     @property
     def unitary(self): # pragma: no cover
