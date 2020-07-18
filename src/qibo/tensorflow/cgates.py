@@ -287,7 +287,8 @@ class ZPow(MatrixGate, base_gates.ZPow):
                                   dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
-        return np.diag([1, np.exp(1j * self.theta)])
+        return np.diag([1, np.exp(1j * self.theta)]).astype(
+            DTYPES.get('NPTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -303,7 +304,8 @@ class CNOT(TensorflowGate, base_gates.CNOT):
 
     def construct_unitary(self) -> np.ndarray:
         return np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                         [0, 0, 0, 1], [0, 0, 1, 0]])
+                         [0, 0, 0, 1], [0, 0, 1, 0]],
+                        dtype=DTYPES.get('NPTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return X.__call__(self, state, is_density_matrix)
@@ -316,7 +318,7 @@ class CZ(TensorflowGate, base_gates.CZ):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> np.ndarray:
-        return np.diag([1, 1, 1, -1])
+        return np.diag([1, 1, 1, -1]).astype(DTYPES.get('NPTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         return Z.__call__(self, state, is_density_matrix)
@@ -347,7 +349,8 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 
     def construct_unitary(self) -> np.ndarray:
         return np.array([[1, 0, 0, 0], [0, 0, 1, 0],
-                         [0, 1, 0, 0], [0, 0, 0, 1]])
+                         [0, 1, 0, 0], [0, 0, 0, 1]],
+                        dtype=DTYPES.get('NPTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
@@ -399,7 +402,6 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
-        dtype = DTYPES.get("DTYPECPX")
         matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
         matrix[1:3, 1:3] = np.reshape(self.given_unitary, (2, 2))
         matrix[3, 3] = np.exp(-1j * self.phi)
