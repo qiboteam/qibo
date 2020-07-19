@@ -3,9 +3,9 @@
 ![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
 
-QIBO is a Python library for classical simulation of quantum algorithms.
+Qibo is a Python library for classical simulation of quantum algorithms.
 
-Some of the key features of QIBO are:
+Some of the key features of Qibo are:
 - A standard interface for the implementation and extension of quantum algorithms.
 - Modular implementation on GPU and CPU with multi-threading support.
 - Availability of multi-GPU distributed approach for circuit simulation.
@@ -13,7 +13,7 @@ Some of the key features of QIBO are:
 
 ## Documentation
 
-QIBO documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
+Qibo documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
 
 - [Installation](http://34.240.99.72/installation.html)
 - [Documentation](http://34.240.99.72)

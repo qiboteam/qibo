@@ -14,7 +14,7 @@ quantum algorithms. Qibo provides a standard interface for the implementation an
 
     installation
     examples
-    tutorials.md
+    tutorials
 
 .. toctree::
     :maxdepth: 3

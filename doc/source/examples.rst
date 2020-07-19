@@ -404,7 +404,7 @@ How to write a VQE?
 
 The VQE requires an ansatz function and a ``Hamiltonian`` object. There are examples of VQE optimization in ``examples/benchmarks``:
 
-    - ``vqe_benchmark.py``: a simple example with the XXZ model.
+    - ``vqe.py``: a simple example with the XXZ model.
 
 Here a simple example using the Heisenberg XXZ model:
 
