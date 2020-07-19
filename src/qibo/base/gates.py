@@ -1041,6 +1041,9 @@ class VariationalLayer(Gate):
                              "".format(len(self.target_qubits), len(params)))
         return {q: p for q, p in zip(self.target_qubits, params)}
 
+    def _calculate_unitaries(self): # pragma: no cover
+        raise NotImplementedError
+
     @property
     def parameter(self):
         return self.params, self.params2
