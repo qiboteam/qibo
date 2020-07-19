@@ -3,26 +3,26 @@ Testing Variational Quantum Eigensolver.
 """
 import argparse
 import numpy as np
-from qibo.models import Circuit, VQE
-from qibo import gates
-from qibo.hamiltonians import XXZ
+from qibo import gates, models, hamiltonians
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
-parser.add_argument("--layers", default=4, help="Number of layers.", type=int)
+parser.add_argument("--nlayers", default=4, help="Number of layers.", type=int)
+parser.add_argument("--method", default="Powell", help="Optimization method.", type=str)
+parser.add_argument("--maxiter", default=None, help="Maximum optimization iterations.", type=int)
 
 
-def main(nqubits, layers):
+def main(nqubits, nlayers, method="Powell", maxiter=None):
     """Performs a VQE circuit minimization test."""
 
     print("Number of qubits:", nqubits)
-    print("Number of layers:", layers)
+    print("Number of layers:", nlayers)
 
     def ansatz(theta):
-        c = Circuit(nqubits)
+        c = models.Circuit(nqubits)
         index = 0
-        for l in range(layers):
+        for l in range(nlayers):
             for q in range(nqubits):
                 c.add(gates.RY(q, theta[index]))
                 index+=1
@@ -39,17 +39,18 @@ def main(nqubits, layers):
             index+=1
         return c
 
-    hamiltonian = XXZ(nqubits=nqubits)
+    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
 
     print('Target state =', target)
 
     np.random.seed(0)
-    initial_parameters = np.random.uniform(0, 2*np.pi,
-                                           2*nqubits*layers + nqubits)
-    v = VQE(ansatz, hamiltonian)
-    best, params = v.minimize(initial_parameters, method='Powell',
-                              options={'disp': True}, compile=False)
+    nparams = 2 * nqubits * nlayers + nqubits
+    initial_parameters = np.random.uniform(0, 2 * np.pi, nparams)
+    vqe = models.VQE(ansatz, hamiltonian)
+    options = {'disp': True, 'maxiter': maxiter}
+    best, params = vqe.minimize(initial_parameters, method=method,
+                                options=options, compile=False)
     epsilon = np.log10(1/np.abs(best-target))
     print('Found state =', best)
     print('Final eps =', epsilon)
