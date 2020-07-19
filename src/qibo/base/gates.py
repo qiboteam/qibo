@@ -43,6 +43,9 @@ class Gate(object):
         self._nstates = None
         self.qubits_tensor = None
 
+        # Remember the device of calculation gates for distributed circuits
+        self.device = None
+
         config.ALLOW_SWITCHERS = False
 
     @property

@@ -5,6 +5,8 @@ from qibo.models import Circuit
 from qibo import gates
 
 _BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
+_DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
+                    ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -34,13 +36,13 @@ def test_rx_parameter_setter(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_set_parameters_with_list(backend):
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_set_parameters_with_list(backend, accelerators):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    def create_circuit(params):
-        c = Circuit(3)
+    def create_circuit(params, accelerators=None):
+        c = Circuit(3, accelerators)
         c.add(gates.RX(0, theta=params[0]))
         c.add(gates.RY(1, theta=params[1]))
         c.add(gates.CZ(1, 2))
@@ -50,20 +52,20 @@ def test_circuit_set_parameters_with_list(backend):
 
     params0 = [0.123, 0.456, (0.789, 0.321)]
     params1 = [0.987, 0.654, (0.321, 0.123)]
-    c = create_circuit(params0)
+    c = create_circuit(params0, accelerators)
     target_c = create_circuit(params1)
     c.set_parameters(params1)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_set_parameters_with_dictionary(backend):
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_set_parameters_with_dictionary(backend, accelerators):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    def create_circuit(params):
-        c = Circuit(3)
+    def create_circuit(params, accelerators=None):
+        c = Circuit(3, accelerators)
         c.add(gates.X(0))
         c.add(gates.X(2))
         c.add(gates.ZPow(0, theta=params[0]))
@@ -76,11 +78,10 @@ def test_circuit_set_parameters_with_dictionary(backend):
 
     params0 = [0.123, 0.456, 0.789, np.random.random((2, 2))]
     params1 = [0.987, 0.654, 0.321, np.random.random((2, 2))]
-    c = create_circuit(params0)
+    c = create_circuit(params0, accelerators)
     target_c = create_circuit(params1)
     param_dict = {c.queue[i]: p for i, p in zip([2, 3, 5, 7], params1)}
-    print(c.parametrized_gates)
-    print(param_dict)
+
     c.set_parameters(param_dict)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
@@ -105,15 +106,15 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({0.3568})
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, nqubits):
+def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
     """Check updating parameters of variational layer."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     theta = np.random.random(nqubits)
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ, theta))

@@ -67,6 +67,7 @@ class DeviceQueues:
 
         self.queues = []
         self.special_queue = []
+        self.device_parametrized_gates = {}
 
         self.global_qubits_set = global_qubits
         self.global_qubits_list = sorted(global_qubits)
@@ -262,10 +263,14 @@ class DeviceQueues:
                 if not self.queues or not self.queues[-1]:
                     self.queues.append([[] for _ in range(self.ndevices)])
 
+                if isinstance(gate, gates.ParametrizedGate):
+                    self.device_parametrized_gates[gate] = []
+
                 for device, ids in self.device_to_ids.items():
                     calc_gate = self._create_reduced_gate(gate)
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
+                    calc_gate.device = device
                     with tf.device(device):
                         calc_gate.nqubits = self.nlocal
                     for i in ids:
@@ -281,6 +286,8 @@ class DeviceQueues:
                                 break
                         if flag:
                             self.queues[-1][i].append(calc_gate)
+                            if isinstance(gate, gates.ParametrizedGate):
+                                self.device_parametrized_gates[gate].append(calc_gate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -427,6 +434,20 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
+
+    def set_parameters_list(self, parameters: List, n: int):
+        if self.queues is None:
+            return super(TensorflowDistributedCircuit,
+                         self).set_parameters_list(parameters, n)
+
+        if n != len(self.parametrized_gates):
+            raise ValueError("Given list of parameters has length {} while "
+                             "the circuit contains {} parametrized gates."
+                             "".format(n, len(self.parametrized_gates)))
+        for i, gate in enumerate(self.parametrized_gates):
+            for devgate in self.queues.device_parametrized_gates[gate]:
+                with tf.device(devgate.device):
+                    devgate.parameter = parameters[i]
 
     def set_gates(self):
         """Prepares gates for device-specific gate execution.
