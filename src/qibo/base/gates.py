@@ -1043,13 +1043,17 @@ class VariationalLayer(Gate):
             self.params_map = x
         else:
             self.params_map, self.params_map2 = x
-        self._unitary = None
-        self._prepare()
+
+        matrices, additional_matrix = self._calculate_unitaries()
+        for unitary, matrix in zip(self.unitaries, matrices):
+            unitary.parameter = matrix
+        if additional_matrix is not None:
+            self.additional_unitary.parameter = additional_matrix
 
     @property
     def unitary(self):
-        raise ValueError("``construct_unitary`` method is not useful "
-                         "for ``VariationalLayer``.")
+        raise ValueError("Unitary property does not exist for the "
+                         "``VariationalLayer``.")
 
 
 class NoiseChannel(Gate):

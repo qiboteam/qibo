@@ -346,7 +346,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         m = tf.transpose(tf.tensordot(m1, m2, axes=0), [0, 2, 1, 3])
         return tf.reshape(m, (4, 4))
 
-    def _prepare(self):
+    def _calculate_unitaries(self):
         matrices = tf.stack([self._tfkron(
             self.one_qubit_gate(q1, theta=self.params_map[q1]).unitary,
             self.one_qubit_gate(q2, theta=self.params_map[q2]).unitary)
@@ -354,6 +354,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         entangling_matrix = self.two_qubit_gate(0, 1).unitary
         matrices = tf.matmul(entangling_matrix, matrices)
 
+        additional_matrix = None
         q = self.additional_target
         if q is not None:
             additional_matrix = self.one_qubit_gate(
@@ -372,6 +373,10 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                     self.one_qubit_gate(q, theta=self.params_map2[q]).unitary,
                     additional_matrix)
 
+        return matrices, additional_matrix
+
+    def _prepare(self):
+        matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.qubit_pairs)]
         if self.additional_target is not None: # pragma: no cover

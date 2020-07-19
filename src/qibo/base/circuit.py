@@ -308,6 +308,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
+            self.parametrized_gates.append(gate)
         else:
             self.queue.append(gate)
             if isinstance(gate, gates.ParametrizedGate):

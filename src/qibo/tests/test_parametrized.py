@@ -103,3 +103,29 @@ def test_circuit_set_parameters_errors():
         c.set_parameters(tf.random.uniform((4,), dtype=tf.float64))
     with pytest.raises(TypeError):
         c.set_parameters({0.3568})
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [4])
+def test_set_parameters_with_varlayer(backend, nqubits):
+    """Check updating parameters of circuit with list."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    theta = np.random.random(nqubits)
+    c = Circuit(nqubits)
+    params_map = {i: theta[i] for i in range(nqubits)}
+    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
+    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, params_map))
+
+    target_c = Circuit(nqubits)
+    target_c.add((gates.RY(i, theta[i]) for i in range(nqubits)))
+    target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    np.testing.assert_allclose(c(), target_c())
+
+    new_theta = np.random.random(nqubits)
+    c.set_parameters([{i: new_theta[i] for i in range(nqubits)}])
+    target_c.set_parameters(new_theta)
+    np.testing.assert_allclose(c(), target_c())
+
+    qibo.set_backend(original_backend)

@@ -444,10 +444,10 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     def construct_unitary(self) -> np.ndarray:
         unitary = self.parameter
+        if isinstance(unitary, np.ndarray):
+            return unitary.astype(DTYPES.get('NPTYPECPX'))
         if isinstance(unitary, tf.Tensor): # pragma: no cover
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
-        elif isinstance(unitary, np.ndarray):
-            return unitary.astype(DTYPES.get('NPTYPECPX')) # pragma: no cover
         raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
@@ -475,7 +475,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         MatrixGate.__init__(self)
         self.unitary_constructor = Unitary
 
-    def _prepare(self):
+    def _calculate_unitaries(self):
         matrices = np.stack([np.kron(
             self.one_qubit_gate(q1, theta=self.params_map[q1]).unitary,
             self.one_qubit_gate(q2, theta=self.params_map[q2]).unitary)
@@ -483,6 +483,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         entangling_matrix = self.two_qubit_gate(0, 1).unitary
         matrices = entangling_matrix @ matrices
 
+        additional_matrix = None
         q = self.additional_target
         if q is not None:
             additional_matrix = self.one_qubit_gate(
@@ -500,9 +501,13 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                 _new = self.one_qubit_gate(q, theta=self.params_map2[q]).unitary
                 additional_matrix = _new @ additional_matrix
 
+        return matrices, additional_matrix
+
+    def _prepare(self):
+        matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.qubit_pairs)]
-        if self.additional_target is not None: # pragma: no cover
+        if additional_matrix is not None: # pragma: no cover
             self.additional_unitary = self.unitary_constructor(
                 additional_matrix, self.additional_target)
 
