@@ -7,7 +7,7 @@ from qibo.models import Circuit
 from qibo import gates, callbacks
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
-_atol = 1e-12
+_atol = 1e-8
 
 
 def test_entropy_product_state():
@@ -210,7 +210,7 @@ def test_entropy_multiple_executions(accelerators):
         return - cos * np.log2(cos) - sin * np.log2(sin)
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
-    np.testing.assert_allclose(entropy[:].numpy(), target)
+    np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
 
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2},

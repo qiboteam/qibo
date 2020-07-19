@@ -12,3 +12,4 @@ physics problems.
     tutorials/reuploading_classifier/README.md    
     tutorials/unary/README.md
     tutorials/3_tangle/README.md
+    tutorials/qsvd/README.md

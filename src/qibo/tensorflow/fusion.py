@@ -1,14 +1,22 @@
 import functools
 import operator
+import numpy as np
 import tensorflow as tf
 from qibo.base import fusion
+from qibo.config import BACKEND
 from qibo import gates
 from typing import Tuple
 
 
 class FusionGroup(fusion.FusionGroup):
 
-    def _one_qubit_matrix(self, gate0: "Gate", gate1: "Gate") -> tf.Tensor:
+    def __init__(self):
+        super(FusionGroup, self).__init__()
+        self.bk = np
+        if BACKEND.get('GATES') != "custom":
+            self.bk = tf
+
+    def _one_qubit_matrix(self, gate0: "Gate", gate1: "Gate"):
         """Calculates Kroneker product of two one-qubit gates.
 
         Args:
@@ -19,11 +27,14 @@ class FusionGroup(fusion.FusionGroup):
             4x4 matrix that corresponds to the Kronecker product of the 2x2
             gate matrices.
         """
-        matrix = tf.tensordot(gate0.unitary, gate1.unitary, axes=0)
-        matrix = tf.reshape(tf.transpose(matrix, [0, 2, 1, 3]), (4, 4))
-        return matrix
+        if BACKEND.get('GATES') == "custom":
+            return np.kron(gate0.unitary, gate1.unitary)
+        else:
+            matrix = tf.tensordot(gate0.unitary, gate1.unitary, axes=0)
+            matrix = tf.transpose(matrix, [0, 2, 1, 3])
+            return tf.reshape(matrix, (4, 4))
 
-    def _two_qubit_matrix(self, gate: "Gate") -> tf.Tensor:
+    def _two_qubit_matrix(self, gate: "Gate"):
         """Calculates the 4x4 unitary matrix of a two-qubit gate.
 
         Args:
@@ -34,9 +45,9 @@ class FusionGroup(fusion.FusionGroup):
         """
         matrix = gate.unitary
         if gate.qubits == (self.qubit1, self.qubit0):
-            matrix = tf.reshape(matrix, 4 * (2,))
-            matrix = tf.transpose(matrix, [1, 0, 3, 2])
-            matrix = tf.reshape(matrix, (4, 4))
+            matrix = self.bk.reshape(matrix, 4 * (2,))
+            matrix = self.bk.transpose(matrix, [1, 0, 3, 2])
+            matrix = self.bk.reshape(matrix, (4, 4))
         else:
             assert gate.qubits == (self.qubit0, self.qubit1)
         return matrix
@@ -60,7 +71,7 @@ class FusionGroup(fusion.FusionGroup):
             fused_matrix = self._two_qubit_matrix(self.two_qubit_gates[0])
             for gate in self.two_qubit_gates[1:]:
                 matrix = self._two_qubit_matrix(gate)
-                fused_matrix = tf.matmul(matrix, fused_matrix)
+                fused_matrix = self.bk.matmul(matrix, fused_matrix)
             return (gates.Unitary(fused_matrix, self.qubit0, self.qubit1),)
 
         # Case 3: One-qubit gates exist
@@ -95,7 +106,8 @@ class FusionGroup(fusion.FusionGroup):
         for g0, g1, g2 in zip(gates0, gates1, self.two_qubit_gates):
             matrix = self._one_qubit_matrix(g0, g1)
             matrix2 = self._two_qubit_matrix(g2)
-            fused_matrix = tf.matmul(tf.matmul(matrix, matrix2), fused_matrix)
+            fused_matrix = self.bk.matmul(self.bk.matmul(matrix, matrix2),
+                                       fused_matrix)
 
         if len(self.two_qubit_gates) == len(self.gates0):
             g2 = self.two_qubit_gates[-1]
@@ -104,7 +116,7 @@ class FusionGroup(fusion.FusionGroup):
                 return (fused_gate, g2)
 
             matrix2 = self._two_qubit_matrix(g2)
-            fused_matrix = tf.matmul(matrix2, fused_matrix)
+            fused_matrix = self.bk.matmul(matrix2, fused_matrix)
 
         fused_gate = gates.Unitary(fused_matrix, self.qubit0, self.qubit1)
         return (fused_gate,)
