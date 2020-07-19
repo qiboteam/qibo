@@ -398,7 +398,7 @@ class BaseCircuit(object):
                     if isinstance(g, gate)]
         raise TypeError("Gate identifier {} not recognized.".format(gate))
 
-    def update_parameters(self, parameters: Union[Dict, List]):
+    def set_parameters(self, parameters: Union[Dict, List]):
         if isinstance(parameters, dict):
             if set(parameters.keys()) != set(self.parametrized_gates):
                 raise ValueError("Dictionary with gate parameters does not "

@@ -35,7 +35,7 @@ def test_rx_parameter_setter(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_update_parameters_with_list(backend):
+def test_circuit_set_parameters_with_list(backend):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -52,13 +52,13 @@ def test_circuit_update_parameters_with_list(backend):
     params1 = [0.987, 0.654, (0.321, 0.123)]
     c = create_circuit(params0)
     target_c = create_circuit(params1)
-    c.update_parameters(params1)
+    c.set_parameters(params1)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_update_parameters_with_dictionary(backend):
+def test_circuit_set_parameters_with_dictionary(backend):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -81,25 +81,25 @@ def test_circuit_update_parameters_with_dictionary(backend):
     param_dict = {c.queue[i]: p for i, p in zip([2, 3, 5, 7], params1)}
     print(c.parametrized_gates)
     print(param_dict)
-    c.update_parameters(param_dict)
+    c.set_parameters(param_dict)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 
-def test_circuit_update_parameters_errors():
+def test_circuit_set_parameters_errors():
     """Check updating parameters errors."""
     c = Circuit(2)
     c.add(gates.RX(0, theta=0.789))
     c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
 
     with pytest.raises(ValueError):
-        c.update_parameters({gates.RX(0, theta=1.0): 0.568})
+        c.set_parameters({gates.RX(0, theta=1.0): 0.568})
     with pytest.raises(ValueError):
-        c.update_parameters([0.12586])
+        c.set_parameters([0.12586])
     with pytest.raises(ValueError):
-        c.update_parameters(np.random.random(3))
+        c.set_parameters(np.random.random(3))
     with pytest.raises(ValueError):
         import tensorflow as tf
-        c.update_parameters(tf.random.uniform((4,), dtype=tf.float64))
+        c.set_parameters(tf.random.uniform((4,), dtype=tf.float64))
     with pytest.raises(TypeError):
-        c.update_parameters({0.3568})
+        c.set_parameters({0.3568})

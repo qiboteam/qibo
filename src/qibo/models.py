@@ -159,7 +159,7 @@ class VQE(object):
             The corresponding best parameters.
         """
         def loss(params):
-            self.circuit.update_parameters(params)
+            self.circuit.set_parameters(params)
             final_state = self.circuit()
             return self.hamiltonian.expectation(final_state)
 
@@ -227,5 +227,5 @@ class VQE(object):
             result = m.fun
             parameters = m.x
 
-        self.circuit.update_parameters(parameters)
+        self.circuit.set_parameters(parameters)
         return result, parameters
