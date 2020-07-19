@@ -445,9 +445,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "the circuit contains {} parametrized gates."
                              "".format(n, len(self.parametrized_gates)))
         for i, gate in enumerate(self.parametrized_gates):
-            for devgate in self.queues.device_parametrized_gates[gate]:
-                with tf.device(devgate.device):
-                    devgate.parameter = parameters[i]
+            if isinstance(gate, gates.VariationalLayer):
+                raise NotImplementedError
+            else:
+                for devgate in self.queues.device_parametrized_gates[gate]:
+                    with tf.device(devgate.device):
+                        devgate.parameter = parameters[i]
 
     def set_gates(self):
         """Prepares gates for device-specific gate execution.

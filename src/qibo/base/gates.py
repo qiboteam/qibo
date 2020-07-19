@@ -1048,9 +1048,10 @@ class VariationalLayer(Gate):
     @parameter.setter
     def parameter(self, x):
         if self.params2 is None:
-            self.params = x
+            self.params = self._create_params_dict(x)
         else:
-            self.params, self.params2 = x
+            self.params = self._create_params_dict(x[0])
+            self.params2 = self._create_params_dict(x[1])
 
         matrices, additional_matrix = self._calculate_unitaries()
         for unitary, matrix in zip(self.unitaries, matrices):

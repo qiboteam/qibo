@@ -114,7 +114,7 @@ def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
     qibo.set_backend(backend)
 
     theta = np.random.random(nqubits)
-    c = Circuit(nqubits, accelerators)
+    c = Circuit(nqubits, accelerators=None)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ, theta))
@@ -125,7 +125,7 @@ def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
     np.testing.assert_allclose(c(), target_c())
 
     new_theta = np.random.random(nqubits)
-    c.set_parameters([{i: new_theta[i] for i in range(nqubits)}])
+    c.set_parameters([np.copy(new_theta)])
     target_c.set_parameters(np.copy(new_theta))
     np.testing.assert_allclose(c(), target_c())
 
