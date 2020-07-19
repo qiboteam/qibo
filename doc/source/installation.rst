@@ -1,7 +1,7 @@
-Installing QIBO
+Installing Qibo
 ===============
 
-The QIBO package comes with the following modules:
+The Qibo package comes with the following modules:
 
 * :ref:`installing-with-pip`
 * :ref:`installing-from-source`
@@ -13,7 +13,7 @@ _______________________
 Installing with pip
 -------------------
 
-The installation using ``pip`` is the recommended approach to install QIBO.
+The installation using ``pip`` is the recommended approach to install Qibo.
 We provide precompiled packages for linux x86/64 and macosx 10.11 or greater
 for multiple Python versions.
 
@@ -25,11 +25,11 @@ use ``pip`` to install ``qibo`` with:
       pip install qibo
 
 The ``pip`` program will download and install all the required
-dependencies for QIBO.
+dependencies for Qibo.
 
 .. note::
     The ``pip`` packages for linux are compiled with CUDA support, so if your
-    system has a NVIDIA GPU, QIBO will perform calculations on GPU.
+    system has a NVIDIA GPU, Qibo will perform calculations on GPU.
 
 .. _installing-from-source:
 
@@ -38,11 +38,11 @@ Installing from source
 
 The installation procedure presented in this section is useful in two situations:
 
-- you need to install QIBO in an operating system and environment not supported by the ``pip`` packages (see :ref:`installing-with-pip`).
+- you need to install Qibo in an operating system and environment not supported by the ``pip`` packages (see :ref:`installing-with-pip`).
 
 - you have to develop the code from source.
 
-In order to install QIBO from source, you can simply clone the GitHub repository with
+In order to install Qibo from source, you can simply clone the GitHub repository with
 
 .. code-block::
 
@@ -60,7 +60,7 @@ then proceed with the installation of requirements with:
       properly and runs on GPU, please refer to the `official
       documentation <https://www.tensorflow.org/install/gpu>`_.
 
-      In that case, you can activate GPU support for QIBO by:
+      In that case, you can activate GPU support for Qibo by:
 
       1. installing the NVCC compiler matching the TensorFlow CUDA version, see the `CUDA documentation <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_.
 
@@ -70,13 +70,13 @@ then proceed with the installation of requirements with:
       TensorFlow proceed with the NVCC 10.1 installation. On linux the
       installation path is ``/usr/local/cuda-10.1/``.
 
-      Before installing QIBO do ``export CUDA_PATH=/usr/local/cuda-10.1``.
+      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-10.1``.
 
-      Note that QIBO will not enable GPU support if points 1 and 2 are not
+      Note that Qibo will not enable GPU support if points 1 and 2 are not
       performed.
 
 
-Then proceed with the QIBO installation using ``pip``
+Then proceed with the Qibo installation using ``pip``
 
 .. code-block::
 
@@ -89,7 +89,7 @@ or if you prefer to manually execute all installation steps:
       # builds binaries
       python setup.py build
 
-      # installs the QIBO packages
+      # installs the Qibo packages
       python setup.py install # or python setup.py develop
 
 If you prefer to keep changes always synchronized with the code then install using the develop option:

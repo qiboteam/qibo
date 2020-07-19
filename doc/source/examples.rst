@@ -114,9 +114,9 @@ decomposition of multi-controlled ``X`` gates is implemented.
 How to select hardware devices?
 -------------------------------
 
-QIBO supports execution on different hardware configurations including CPU with
+Qibo supports execution on different hardware configurations including CPU with
 multi-threading, single GPU and multiple GPUs. Here we provide some useful
-information on how to control the devices that QIBO uses for circuit execution
+information on how to control the devices that Qibo uses for circuit execution
 in order to maximize performance for the available hardware configuration.
 
 Switching between CPU and GPU
@@ -133,7 +133,7 @@ one can use:
         # execute circuit on CPU with default initial state |000...0>.
         final_state = c()
 
-or switch the default QIBO device using ``qibo.set_device`` as:
+or switch the default Qibo device using ``qibo.set_device`` as:
 
 .. code-block::  python
 
@@ -157,7 +157,7 @@ following limitations should be noted:
     preferrable. In such cases disabling CPU multi-threading may also increase
     performance (see next subsection).
   * A standard GPU has 12-16GB of memory and thus can simulate up to 30 qubits on
-    single-precision or 29 qubits with double-precision when QIBO's default gates
+    single-precision or 29 qubits with double-precision when Qibo's default gates
     are used. For larger circuits one should either use the CPU (assuming it has
     more memory) or a distributed circuit configuration. The latter allows splitting
     the state vector on multiple devices and is useful both when multiple GPUs
@@ -170,7 +170,7 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-QIBO inherits Tensorflow's defaults for CPU thread configuration and in most cases
+Qibo inherits Tensorflow's defaults for CPU thread configuration and in most cases
 will utilize all available CPU threads. For small circuits the parallelization
 overhead may decrease performance making single thread execution preferrable.
 Tensorflow allows restricting the number of threads as follows:
@@ -188,7 +188,7 @@ of the script and before any circuit or gate allocation.
 Using multiple GPUs
 ^^^^^^^^^^^^^^^^^^^
 
-QIBO supports distributed circuit execution on multiple GPUs. This feature can
+Qibo supports distributed circuit execution on multiple GPUs. This feature can
 be used as follows:
 
 .. code-block::  python
@@ -402,10 +402,9 @@ the section :ref:`How to select hardware devices? <gpu-examples>`.
 How to write a VQE?
 -------------------
 
-The VQE requires an ansatz function and a ``Hamiltonian`` object. There are examples of VQE optimization in ``src/qibo/benchmarks``:
+The VQE requires an ansatz function and a ``Hamiltonian`` object. There are examples of VQE optimization in ``examples/benchmarks``:
 
     - ``vqe_benchmark.py``: a simple example with the XXZ model.
-    - ``adaptive_vqe_benchmark.py``: an adaptive example with the XXZ model.
 
 Here a simple example using the Heisenberg XXZ model:
 
@@ -559,7 +558,7 @@ to train them.
 How to perform noisy simulation?
 --------------------------------
 
-QIBO can perform noisy simulation using density matrices. ``Circuit`` objects can
+Qibo can perform noisy simulation using density matrices. ``Circuit`` objects can
 evolve density matrices in a similar manner to state vectors. In order to use
 density matrices the user should execute the circuit passing a density matrix as
 the initial state. For example

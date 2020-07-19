@@ -1,4 +1,4 @@
-QIBO package
+Qibo package
 ============
 
 Submodules
