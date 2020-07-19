@@ -1,3 +1,4 @@
+from qibo.base import gates as base_gates
 from typing import List, Optional, Set, Tuple
 
 
@@ -62,6 +63,23 @@ class FusionGroup:
         """
         if self._fused_gates is None:
             self._fused_gates = self.calculate()
+        return self._fused_gates
+
+    def update(self) -> Tuple["Gate"]:
+        """Recalculates fused gates.
+
+        This is used automatically by circuit objects in order to repeat the
+        calculation of fused gates after the parameters of original gates have
+        been changed using ``circuit.set_parameters``.
+        It assumes that the parameters of the gate objects contained in the
+        current ``FusionGroup`` have already been updated.
+        """
+        if self._fused_gates is None:
+            return self.gates
+        updated_gates = self.calculate()
+        for gate, new_gate in zip(self._fused_gates, updated_gates):
+            if isinstance(gate, base_gates.ParametrizedGate):
+                gate.parameter = new_gate.parameter
         return self._fused_gates
 
     def first_gate(self, i: int) -> Optional["Gate"]:

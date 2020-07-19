@@ -32,13 +32,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def set_parameters(self, parameters):
         if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
-            n = int(parameters.shape[0])
-            if n != len(self.parametrized_gates):
-                raise ValueError("Given list of parameters has length {} while "
-                                 "the circuit contains {} parametrized gates."
-                                 "".format(n, len(self.parametrized_gates)))
-            for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i]
+            super(TensorflowCircuit, self).set_parameters_list(
+                parameters, int(parameters.shape[0]))
         else:
             super(TensorflowCircuit, self).set_parameters(parameters)
 

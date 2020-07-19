@@ -45,6 +45,8 @@ class BaseCircuit(object):
         self.measurement_gate = None
         self.measurement_gate_result = None
 
+        self.fusion_groups = []
+
         self._final_state = None
         self.using_density_matrix = False
 
@@ -134,8 +136,17 @@ class BaseCircuit(object):
         """
         import copy
         new_circuit = self.__class__(**self._init_kwargs)
-        fusion_groups = self.fusion.FusionGroup.from_queue(self.queue)
-        new_circuit.queue = list(gate for group in fusion_groups
+        for gate in self.queue:
+            if isinstance(gate, gates.ParametrizedGate):
+                new_gate = copy.copy(gate)
+                new_circuit.queue.append(new_gate)
+                new_circuit.parametrized_gates.append(new_gate)
+            else:
+                new_circuit.queue.append(gate)
+
+        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
+            new_circuit.queue)
+        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
                                  for gate in group.gates)
         new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
@@ -399,21 +410,28 @@ class BaseCircuit(object):
                     if isinstance(g, gate)]
         raise TypeError("Gate identifier {} not recognized.".format(gate))
 
+    def set_parameters_list(self, parameters: List, n: int):
+        if n != len(self.parametrized_gates):
+            raise ValueError("Given list of parameters has length {} while "
+                             "the circuit contains {} parametrized gates."
+                             "".format(n, len(self.parametrized_gates)))
+        for i, gate in enumerate(self.parametrized_gates):
+            gate.parameter = parameters[i]
+        for fusion_group in self.fusion_groups:
+            fusion_group.update()
+
     def set_parameters(self, parameters: Union[Dict, List]):
-        if isinstance(parameters, dict):
+        if isinstance(parameters, (list, tuple)):
+            self.set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, dict):
+            if self.fusion_groups:
+                raise TypeError("Cannot accept new parameters as dictionary "
+                                "for fused circuits. Use list, tuple or array.")
             if set(parameters.keys()) != set(self.parametrized_gates):
                 raise ValueError("Dictionary with gate parameters does not "
                                  "agree with the circuit gates.")
             for gate in self.parametrized_gates:
                 gate.parameter = parameters[gate]
-        elif isinstance(parameters, (list, tuple)):
-            if len(parameters) != len(self.parametrized_gates):
-                n = len(self.parametrized_gates)
-                raise ValueError("Given list of parameters has length {} while "
-                                 "the circuit contains {} parametrized gates."
-                                 "".format(len(parameters), n))
-            for gate, parameter in zip(self.parametrized_gates, parameters):
-                gate.parameter = parameter
         else:
             raise TypeError("Invalid type of parameters {}."
                             "".format(type(parameters)))
