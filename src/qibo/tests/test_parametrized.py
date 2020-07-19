@@ -114,9 +114,9 @@ def test_set_parameters_with_variationallayer(backend, nqubits):
 
     theta = np.random.random(nqubits)
     c = Circuit(nqubits)
-    params_map = {i: theta[i] for i in range(nqubits)}
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
-    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, params_map))
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ, theta))
 
     target_c = Circuit(nqubits)
     target_c.add((gates.RY(i, theta[i]) for i in range(nqubits)))

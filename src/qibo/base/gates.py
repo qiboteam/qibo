@@ -961,13 +961,16 @@ class VariationalLayer(Gate):
     two-qubit gates as 4x4 matrices.
 
     Args:
-        qubit_pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
+        qubits (list): List of one-qubit gate target qubit IDs.
+        pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
         one_qubit_gate: Type of one qubit gate to use as the variational gate.
         two_qubit_gate: Type of two qubit gate to use as entangling gate.
-        params_map (dict): Variational parameters of one qubit gates as a dictionary
-            that maps qubit IDs to the corresponding parameter value.
-        params_map2 (dict): Same as ``params_map`` but for the layer of one-qubit
-            gates after the two-qubit gate ones.
+        params (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act before the layer
+            of entangling gates.
+        params2 (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act after the layer
+            of entangling gates.
         name (str): Optional name for the gate.
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
@@ -993,30 +996,25 @@ class VariationalLayer(Gate):
             c.add((gates.CZ(i, i + 1) for i in range(7)))
     """
 
-    def __init__(self, qubit_pairs: List[Tuple[int, int]],
+    def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
-                 params_map: Dict[int, float],
-                 params_map2: Optional[Dict[int, float]] = None,
+                 params: List[float], params2: Optional[List[float]] = None,
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
-        self.init_args = [qubit_pairs, one_qubit_gate, two_qubit_gate]
-        self.init_kwargs = {"params_map": params_map,
-                            "params_map2": params_map2,
-                            "name": name}
-
+        self.init_args = [qubits, pairs, one_qubit_gate, two_qubit_gate]
+        self.init_kwargs = {"params": params, "params2": params2, "name": name}
         self.name = "VariationalLayer" if name is None else name
-        self.params_map = dict(params_map)
-        targets = set(self.params_map.keys())
-        self.target_qubits = tuple(targets)
-        if params_map2 is not None:
-            self.params_map2 = dict(params_map2)
-            if targets != set(self.params_map2.keys()):
-                raise ValueError("Invalid parameter maps given in variational layer.")
-        else:
-            self.params_map2 = None
 
-        self.qubit_pairs = qubit_pairs
-        two_qubit_targets = set(q for p in qubit_pairs for q in p)
+        self.target_qubits = tuple(qubits)
+        self.params = self._create_params_dict(params)
+        if params2 is None:
+            self.params2 = None
+        else:
+            self.params2 = self._create_params_dict(params2)
+
+        self.pairs = pairs
+        targets = set(self.target_qubits)
+        two_qubit_targets = set(q for p in pairs for q in p)
         additional_targets = targets - two_qubit_targets
         if not additional_targets:
             self.additional_target = None
@@ -1033,16 +1031,23 @@ class VariationalLayer(Gate):
         self.unitaries = []
         self.additional_unitary = None
 
+    def _create_params_dict(self, params: List[float]) -> Dict[int, float]:
+        if len(self.target_qubits) != len(params):
+            raise ValueError("VariationalLayer has {} target qubits but {} "
+                             "parameters were given."
+                             "".format(len(self.target_qubits), len(params)))
+        return {q: p for q, p in zip(self.target_qubits, params)}
+
     @property
     def parameter(self):
-        return self.params_map, self.params_map2
+        return self.params, self.params2
 
     @parameter.setter
     def parameter(self, x):
-        if self.params_map2 is None:
-            self.params_map = x
+        if self.params2 is None:
+            self.params = x
         else:
-            self.params_map, self.params_map2 = x
+            self.params, self.params2 = x
 
         matrices, additional_matrix = self._calculate_unitaries()
         for unitary, matrix in zip(self.unitaries, matrices):
