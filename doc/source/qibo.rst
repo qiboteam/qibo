@@ -1,14 +1,12 @@
 Components
 ==========
 
-The QIBO package comes with the following modules:
+The Qibo package comes with the following modules:
 
 * Models_
 * Gates_
 * Hamiltonians_
 * Callbacks_
-
-These modules provide all the required components to ...
 
 _______________________
 
@@ -17,7 +15,7 @@ _______________________
 Models
 ------
 
-QIBO provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
+Qibo provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
 
 The general purpose model is called ``Circuit`` and holds the list of gates
 that are applied to the state vector or density matrix. All ``Circuit`` models
@@ -177,7 +175,7 @@ _______________________
 Measurements
 ------------
 
-QIBO is a wave function simulator in the sense that propagates the state vector
+Qibo is a wave function simulator in the sense that propagates the state vector
 through the circuit applying the corresponding gates. In the default usage the
 result of executing a circuit is the full final state vector. However for
 specific applications it is useful to have measurement samples from the final
@@ -220,7 +218,7 @@ This can be added similarly to a standard gate and does not affect the state vec
 Backends
 --------
 
-QIBO currently uses two different backends for applying gates to vectors.
+Qibo currently uses two different backends for applying gates to vectors.
 The default backend uses custom Tensorflow operators defined under
 ``tensorflow/custom_operators`` to apply gates to state vectors. These
 operators are much faster than implementations based on Tensorflow.
@@ -229,7 +227,7 @@ Currently custom operators do not support the following:
 * Density matrices, channels and noise.
 * Automatic differentiation for backpropagation of variational circuits.
 
-It is possible to use these features in QIBO by using a backend that uses
+It is possible to use these features in Qibo by using a backend that uses
 Tensorflow primitives. There are two such backends available: the ``"defaulteinsum"``
 backend based on ``tf.einsum`` and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
 The user can switch backends using
