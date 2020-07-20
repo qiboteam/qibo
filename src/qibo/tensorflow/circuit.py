@@ -32,7 +32,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def set_parameters(self, parameters):
         if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
-            super(TensorflowCircuit, self).set_parameters_list(
+            super(TensorflowCircuit, self)._set_parameters_list(
                 parameters, int(parameters.shape[0]))
         else:
             super(TensorflowCircuit, self).set_parameters(parameters)

@@ -127,7 +127,9 @@ class BaseCircuit(object):
     def _fuse_copy(self) -> "BaseCircuit":
         """Helper method for ``circuit.fuse``.
 
-        Allows easier inheritance by
+        For standard (non-distributed) circuits this creates a copy of the
+        circuit with deep-copying the parametrized gates only.
+        For distributed circuits a fully deep copy should be created.
         """
         import copy
         new_circuit = self.__class__(**self._init_kwargs)
@@ -429,7 +431,11 @@ class BaseCircuit(object):
                     if isinstance(g, gate)]
         raise TypeError("Gate identifier {} not recognized.".format(gate))
 
-    def set_parameters_list(self, parameters: List, n: int):
+    def _set_parameters_list(self, parameters: List, n: int):
+        """Helper method for ``set_parameters`` when a list is given.
+
+        Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
+        """
         if n == len(self.parametrized_gates):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i]
@@ -451,13 +457,33 @@ class BaseCircuit(object):
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 
-    def _set_parameters_dict(self, parameters: Dict):
-        for gate in self.parametrized_gates:
-            gate.parameter = parameters[gate]
-
     def set_parameters(self, parameters: Union[Dict, List]):
+        """Updates the parameters of the circuit's parametrized gates.
+
+        Args:
+            parameters: List with the new parameter values. The length and
+                elements of this list should agree with the parametrized gates
+                that the circuit contains.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                # create a circuit with all parameters set to 0.
+                c = Circuit(3, accelerators)
+                c.add(gates.RX(0, theta=0))
+                c.add(gates.RY(1, theta=0))
+                c.add(gates.CZ(1, 2))
+                c.add(gates.fSim(0, 2, theta=0, phi=0))
+                c.add(gates.H(2))
+
+                # set new values to the circuit's parameters
+                params = [0.123, 0.456, (0.789, 0.321)]
+                c.set_parameters(params)
+        """
         if isinstance(parameters, (list, tuple)):
-            self.set_parameters_list(parameters, len(parameters))
+            self._set_parameters_list(parameters, len(parameters))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
                 raise TypeError("Cannot accept new parameters as dictionary "
@@ -465,7 +491,8 @@ class BaseCircuit(object):
             if set(parameters.keys()) != set(self.parametrized_gates):
                 raise ValueError("Dictionary with gate parameters does not "
                                  "agree with the circuit gates.")
-            self._set_parameters_dict(parameters)
+            for gate in self.parametrized_gates:
+                gate.parameter = parameters[gate]
         else:
             raise TypeError("Invalid type of parameters {}."
                             "".format(type(parameters)))
