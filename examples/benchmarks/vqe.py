@@ -76,6 +76,7 @@ def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
 
     print("\nCreation time =", creation_time)
     print("Minimization time =", minimization_time)
+    print("Total time =", minimization_time + creation_time)
 
 
 if __name__ == "__main__":
