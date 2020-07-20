@@ -401,16 +401,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "circuits because they modify gate objects.")
         return super(TensorflowDistributedCircuit, self).copy(deep)
 
+    def _fuse_copy(self) -> "TensorflowDistributedCircuit":
+        return self.copy(deep=True)
+
     def fuse(self) -> "TensorflowDistributedCircuit":
-        if self.queues is not None and self.queues.queues:
-            raise RuntimeError("Cannot fuse distributed circuit after gates "
-                               "are set.")
-        # use deep copy because distributed circuit gates may change
-        new_circuit = self.copy(deep=True)
-        fusion_groups = self.fusion.FusionGroup.from_queue(new_circuit.queue)
-        new_circuit.queue = list(gate for group in fusion_groups
-                                 for gate in group.gates)
-        return new_circuit
+        if self.queues is not None:
+            raise RuntimeError("Cannot fuse distributed circuit after "
+                               "its first execution.")
+        return super(TensorflowDistributedCircuit, self).fuse()
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "

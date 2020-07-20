@@ -104,13 +104,41 @@ class BaseCircuit(object):
             The copied circuit object.
         """
         new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit.contains_variationallayer = self.contains_variationallayer
         if deep:
             import copy
-            new_circuit.queue = [copy.copy(gate) for gate in self.queue]
+            for gate in self.queue:
+                new_gate = copy.copy(gate)
+                new_circuit.queue.append(new_gate)
+                if isinstance(gate, gates.ParametrizedGate):
+                    new_circuit.parametrized_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+            if self.fusion_groups: # pragma: no cover
+                raise NotImplementedError("Cannot create deep copy of fused "
+                                          "circuit.")
         else:
             new_circuit.queue = list(self.queue)
+            new_circuit.parametrized_gates = list(self.parametrized_gates)
             new_circuit.measurement_gate = self.measurement_gate
+            new_circuit.fusion_groups = list(self.fusion_groups)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def _fuse_copy(self) -> "BaseCircuit":
+        """Helper method for ``circuit.fuse``.
+
+        Allows easier inheritance by
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        for gate in self.queue:
+            if isinstance(gate, gates.ParametrizedGate):
+                new_gate = copy.copy(gate)
+                new_circuit.queue.append(new_gate)
+                new_circuit.parametrized_gates.append(new_gate)
+            else:
+                new_circuit.queue.append(gate)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
@@ -135,22 +163,11 @@ class BaseCircuit(object):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
-        import copy
-        new_circuit = self.__class__(**self._init_kwargs)
-        for gate in self.queue:
-            if isinstance(gate, gates.ParametrizedGate):
-                new_gate = copy.copy(gate)
-                new_circuit.queue.append(new_gate)
-                new_circuit.parametrized_gates.append(new_gate)
-            else:
-                new_circuit.queue.append(gate)
-
+        new_circuit = self._fuse_copy()
         new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
             new_circuit.queue)
         new_circuit.queue = list(gate for group in new_circuit.fusion_groups
                                  for gate in group.gates)
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
