@@ -440,20 +440,15 @@ class Unitary(MatrixGate, base_gates.Unitary):
                                       "given.".format(len(self.target_qubits)))
         self._unitary = self.construct_unitary()
 
-        shape = tuple(self.parameter.shape)
-        if shape != (2 ** rank, 2 ** rank):
-            raise ValueError("Invalid shape {} of unitary matrix acting on "
-                             "{} target qubits.".format(shape, rank))
-
-        self._unitary = self.construct_unitary()
-
     def construct_unitary(self) -> np.ndarray:
         unitary = self.parameter
         if isinstance(unitary, np.ndarray):
             return unitary.astype(DTYPES.get('NPTYPECPX'))
         if isinstance(unitary, tf.Tensor): # pragma: no cover
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
-        raise TypeError("Unknown type {} of unitary matrix".format(type(unitary)))
+        else: # pragma: no cover
+            raise TypeError("Unknown type {} of unitary matrix."
+                            "".format(type(unitary)))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:

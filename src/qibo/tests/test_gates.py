@@ -1012,6 +1012,11 @@ def test_compiled_circuit(backend):
         c.add(gates.CZPow(0, 1, theta))
         return c
 
+    # Try to compile circuit without gates
+    empty_c = Circuit(2)
+    with pytest.raises(RuntimeError):
+        empty_c.compile()
+
     # Run eager circuit
     c1 = create_circuit()
     r1 = c1.execute().numpy()
