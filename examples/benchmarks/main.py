@@ -55,7 +55,8 @@ limit_gpu_memory(args.pop("memory"))
 import qibo
 qibo.set_backend(args.pop("backend"))
 qibo.set_precision(args.pop("precision"))
-from qibo.benchmarks import utils, benchmark_models
+import circuits
+import utils
 
 
 def main(nqubits_list: List[int],
@@ -143,7 +144,7 @@ def main(nqubits_list: List[int],
             kwargs["memory_device"] = device
 
         start_time = time.time()
-        circuit = benchmark_models.CircuitFactory(**kwargs)
+        circuit = circuits.CircuitFactory(**kwargs)
         if fuse:
             circuit = circuit.fuse()
         logs["creation_time"].append(time.time() - start_time)

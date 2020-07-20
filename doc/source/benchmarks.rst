@@ -5,8 +5,8 @@ Benchmarks
   :width: 800
   :alt: QFT Benchmark
 
-The performance of QIBO simulator can be verified using the scripts under the
-``benchmarks`` folder. In the following plot we compare two different QIBO
+The performance of Qibo simulator can be verified using the scripts under the
+``examples/benchmarks`` folder. In the following plot we compare two different Qibo
 backends (the custom tensorflow operators and the ``MatmulEinsum`` backend)
 with `Cirq <https://github.com/quantumlib/cirq>`_. The benchmarks are performed
 on CPU and task is the Quantum Fourier Transform (QFT) using single
@@ -18,13 +18,13 @@ on CPU and task is the Quantum Fourier Transform (QFT) using single
 How to execute benchmarks?
 --------------------------
 
-The main benchmark script is ``benchmarks/generic_benchmark.py``. This can be
-executed as ``python generic_benchmark.py (FLAGS)`` where ``(FLAGS)`` supports
+The main benchmark script is ``examples/benchmarks/main.py``. This can be
+executed as ``python main.py (FLAGS)`` where ``(FLAGS)`` supports
 the following options:
 
 * ``--nqubits``: Number of qubits in the circuit. Can be a single integer or an interval defined with a dash (``-``) as ``a-b``. For example ``--nqubits 5-10`` will run the benchmark for all ``nqubits`` from 5 to 10 inclusive.
 
-* ``--backend``: QIBO backend to use for the calculation. Available backends are ``"custom"``, ``"matmuleinsum"`` and ``"defaulteinsum"``. ``"custom"`` is the default backend.
+* ``--backend``: Qibo backend to use for the calculation. Available backends are ``"custom"``, ``"matmuleinsum"`` and ``"defaulteinsum"``. ``"custom"`` is the default backend.
 
 * ``--device``: Tensorflow device to use for the benchmarks, for example ``/GPU:0`` or ``/CPU:0``.
 
@@ -173,8 +173,8 @@ the current page:
 
    * - Number of qubits
      - Cirq0.8
-     - QIBO (1 thread)
-     - QIBO (36 threads)
+     - Qibo (1 thread)
+     - Qibo (36 threads)
    * - 27
      - 53.754
      - 45.182
