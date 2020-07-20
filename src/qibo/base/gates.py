@@ -1011,7 +1011,7 @@ class VariationalLayer(Gate):
         self.target_qubits = tuple(qubits)
         self.params = self._create_params_dict(params)
         if params2 is None:
-            self.params2 = None
+            self.params2 = {}
         else:
             self.params2 = self._create_params_dict(params2)
 
@@ -1050,11 +1050,12 @@ class VariationalLayer(Gate):
 
     @parameter.setter
     def parameter(self, x):
-        if self.params2 is None:
-            self.params = self._create_params_dict(x)
+        if self.params2:
+            n = len(x) // 2
+            self.params = self._create_params_dict(x[:n])
+            self.params2 = self._create_params_dict(x[n:])
         else:
-            self.params = self._create_params_dict(x[0])
-            self.params2 = self._create_params_dict(x[1])
+            self.params = self._create_params_dict(x)
 
         matrices, additional_matrix = self._calculate_unitaries()
         for unitary, matrix in zip(self.unitaries, matrices):

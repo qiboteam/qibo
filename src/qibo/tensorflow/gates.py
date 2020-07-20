@@ -360,7 +360,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
             additional_matrix = self.one_qubit_gate(
                 q, theta=self.params[q]).unitary
 
-        if self.params2 is not None:
+        if self.params2:
             matrices2 = tf.stack([self._tfkron(
                 self.one_qubit_gate(q1, theta=self.params2[q1]).unitary,
                 self.one_qubit_gate(q2, theta=self.params2[q2]).unitary)

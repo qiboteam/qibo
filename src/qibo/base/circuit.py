@@ -46,6 +46,7 @@ class BaseCircuit(object):
         self.measurement_gate_result = None
 
         self.fusion_groups = []
+        self.contains_variationallayer = False
 
         self._final_state = None
         self.using_density_matrix = False
@@ -319,6 +320,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
+            self.contains_variationallayer = True
             self.parametrized_gates.append(gate)
         else:
             self.queue.append(gate)
@@ -411,12 +413,24 @@ class BaseCircuit(object):
         raise TypeError("Gate identifier {} not recognized.".format(gate))
 
     def set_parameters_list(self, parameters: List, n: int):
-        if n != len(self.parametrized_gates):
-            raise ValueError("Given list of parameters has length {} while "
-                             "the circuit contains {} parametrized gates."
-                             "".format(n, len(self.parametrized_gates)))
-        for i, gate in enumerate(self.parametrized_gates):
-            gate.parameter = parameters[i]
+        if n == len(self.parametrized_gates):
+            for i, gate in enumerate(self.parametrized_gates):
+                gate.parameter = parameters[i]
+        else:
+            k = 0
+            if self.contains_variationallayer:
+                for i, gate in enumerate(self.parametrized_gates):
+                    if isinstance(gate, gates.VariationalLayer):
+                        p = len(gate.params) + len(gate.params2)
+                        gate.parameter = parameters[i + k: i + k + p]
+                        k += p - 1
+                    else:
+                        gate.parameter = parameters[i + k]
+            else:
+                raise ValueError("Given list of parameters has length {} while "
+                                 "the circuit contains {} parametrized gates."
+                                 "".format(n, len(self.parametrized_gates)))
+
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 

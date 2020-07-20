@@ -106,15 +106,15 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({0.3568})
 
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
+def test_set_parameters_with_variationallayer(backend, nqubits):
     """Check updating parameters of variational layer."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     theta = np.random.random(nqubits)
-    c = Circuit(nqubits, accelerators=None)
+    c = Circuit(nqubits)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ, theta))
@@ -124,8 +124,15 @@ def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
     target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     np.testing.assert_allclose(c(), target_c())
 
+    # Test setting VariationalLayer using a list
     new_theta = np.random.random(nqubits)
     c.set_parameters([np.copy(new_theta)])
+    target_c.set_parameters(np.copy(new_theta))
+    np.testing.assert_allclose(c(), target_c())
+
+    # Test setting VariationalLayer using an array
+    new_theta = np.random.random(nqubits)
+    c.set_parameters(np.copy(new_theta))
     target_c.set_parameters(np.copy(new_theta))
     np.testing.assert_allclose(c(), target_c())
 
