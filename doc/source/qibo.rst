@@ -8,8 +8,6 @@ The Qibo package comes with the following modules:
 * Hamiltonians_
 * Callbacks_
 
-These modules provide all the required components to ...
-
 _______________________
 
 .. _Models:
