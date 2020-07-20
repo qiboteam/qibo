@@ -2,6 +2,7 @@
 Testing Variational Quantum Eigensolver.
 """
 import argparse
+import time
 import numpy as np
 from qibo import gates, models, hamiltonians
 
@@ -48,26 +49,33 @@ def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
     print("Number of qubits:", nqubits)
     print("Number of layers:", nlayers)
 
+    start_time = time.time()
     if varlayer:
         circuit = varlayer_circuit(nqubits, nlayers)
     else:
         circuit = standard_circuit(nqubits, nlayers)
-
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
-    target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
+    vqe = models.VQE(circuit, hamiltonian)
+    creation_time = time.time() - start_time
 
-    print('Target state =', target)
+    target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
+    print("\nTarget state =", target)
 
     np.random.seed(0)
     nparams = 2 * nqubits * nlayers + nqubits
     initial_parameters = np.random.uniform(0, 2 * np.pi, nparams)
-    vqe = models.VQE(circuit, hamiltonian)
+
+    start_time = time.time()
     options = {'disp': True, 'maxiter': maxiter}
     best, params = vqe.minimize(initial_parameters, method=method,
                                 options=options, compile=False)
+    minimization_time = time.time() - start_time
     epsilon = np.log10(1/np.abs(best-target))
-    print('Found state =', best)
-    print('Final eps =', epsilon)
+    print("Found state =", best)
+    print("Final eps =", epsilon)
+
+    print("\nCreation time =", creation_time)
+    print("Minimization time =", minimization_time)
 
 
 if __name__ == "__main__":
