@@ -19,25 +19,19 @@ def main(nqubits, nlayers, method="Powell", maxiter=None):
     print("Number of qubits:", nqubits)
     print("Number of layers:", nlayers)
 
-    def ansatz(theta):
-        c = models.Circuit(nqubits)
-        index = 0
-        for l in range(nlayers):
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(0, nqubits-1, 2):
-                c.add(gates.CZ(q, q+1))
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(1, nqubits-2, 2):
-                c.add(gates.CZ(q, q+1))
-            c.add(gates.CZ(0, nqubits-1))
+    circuit = models.Circuit(nqubits)
+    for l in range(nlayers):
         for q in range(nqubits):
-            c.add(gates.RY(q, theta[index]))
-            index+=1
-        return c
+            circuit.add(gates.RY(q, theta=0))
+        for q in range(0, nqubits-1, 2):
+            circuit.add(gates.CZ(q, q+1))
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=0))
+        for q in range(1, nqubits-2, 2):
+            circuit.add(gates.CZ(q, q+1))
+        circuit.add(gates.CZ(0, nqubits-1))
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=0))
 
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     target = np.real(np.min(hamiltonian.eigenvalues().numpy()))
@@ -47,7 +41,7 @@ def main(nqubits, nlayers, method="Powell", maxiter=None):
     np.random.seed(0)
     nparams = 2 * nqubits * nlayers + nqubits
     initial_parameters = np.random.uniform(0, 2 * np.pi, nparams)
-    vqe = models.VQE(ansatz, hamiltonian)
+    vqe = models.VQE(circuit, hamiltonian)
     options = {'disp': True, 'maxiter': maxiter}
     best, params = vqe.minimize(initial_parameters, method=method,
                                 options=options, compile=False)

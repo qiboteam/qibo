@@ -55,8 +55,6 @@ def OptimizedVariationalCircuit(nqubits: int, nlayers: int = 1,
 
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     for l in range(nlayers):
-        thetas1 = {i: next(theta) for i in range(nqubits)}
-        thetas2 = {i: next(theta) for i in range(nqubits)}
         yield gates.VariationalLayer(range(nqubits), pairs,
                                      gates.RY, gates.CZ,
                                      theta[2 * l], theta[2 * l + 1])
