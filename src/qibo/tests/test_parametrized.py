@@ -117,15 +117,15 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({0.3568})
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, nqubits):
+def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
     """Check updating parameters of variational layer."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     theta = np.random.random(nqubits)
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ, theta))
@@ -150,14 +150,14 @@ def test_set_parameters_with_variationallayer(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_set_parameters_with_gate_fusion(backend):
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_set_parameters_with_gate_fusion(backend, accelerators):
     """Check updating parameters of fused circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     params = np.random.random(9)
-    c = Circuit(5)
+    c = Circuit(5, accelerators)
     c.add(gates.RX(0, theta=params[0]))
     c.add(gates.RY(1, theta=params[1]))
     c.add(gates.CZ(0, 1))

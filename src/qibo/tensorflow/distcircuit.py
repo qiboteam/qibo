@@ -67,7 +67,6 @@ class DeviceQueues:
 
         self.queues = []
         self.special_queue = []
-        self.device_parametrized_gates = {}
 
         self.global_qubits_set = global_qubits
         self.global_qubits_list = sorted(global_qubits)
@@ -104,7 +103,7 @@ class DeviceQueues:
                 return i
         return i + 1
 
-    def _create_reduced_gate(self, gate: gates.Gate) -> gates.Gate:
+    def _create_device_gate(self, gate: gates.Gate) -> gates.Gate:
         """Creates a copy of a gate for specific device application.
 
         Target and control qubits are modified according to the local qubits of
@@ -117,16 +116,17 @@ class DeviceQueues:
             A :class:`qibo.base.gates.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
-        calc_gate = copy.copy(gate)
+        devgate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
         new_target_qubits = tuple(q - self.reduction_number(q)
-                                  for q in calc_gate.target_qubits)
+                                  for q in devgate.target_qubits)
         new_control_qubits = tuple(q - self.reduction_number(q)
-                                   for q in calc_gate.control_qubits
+                                   for q in devgate.control_qubits
                                    if q not in self.global_qubits_set)
-        calc_gate.set_targets_and_controls(new_target_qubits, new_control_qubits)
-        calc_gate.original_gate = gate
-        return calc_gate
+        devgate.set_targets_and_controls(new_target_qubits, new_control_qubits)
+        devgate.original_gate = gate
+        devgate.device_gates = set()
+        return devgate
 
     @staticmethod
     def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
@@ -263,15 +263,13 @@ class DeviceQueues:
                 if not self.queues or not self.queues[-1]:
                     self.queues.append([[] for _ in range(self.ndevices)])
 
-                if isinstance(gate, gates.ParametrizedGate):
-                    self.device_parametrized_gates[gate] = []
-
                 for device, ids in self.device_to_ids.items():
-                    calc_gate = self._create_reduced_gate(gate)
+                    devgate = self._create_device_gate(gate)
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
-                    calc_gate.device = device
-                    calc_gate.nqubits = self.nlocal
+                    devgate.device = device
+                    devgate.nqubits = self.nlocal
+
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then
@@ -284,9 +282,9 @@ class DeviceQueues:
                             if not flag:
                                 break
                         if flag:
-                            self.queues[-1][i].append(calc_gate)
+                            self.queues[-1][i].append(devgate)
                             if isinstance(gate, gates.ParametrizedGate):
-                                self.device_parametrized_gates[gate].append(calc_gate)
+                                gate.device_gates.add(devgate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -433,35 +431,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
-
-    def set_parameters_list(self, parameters: List, n: int):
-        if self.queues is None:
-            return super(TensorflowDistributedCircuit,
-                         self).set_parameters_list(parameters, n)
-        if n == len(self.parametrized_gates):
-            for i, gate in enumerate(self.parametrized_gates):
-                for devgate in self.queues.device_parametrized_gates[gate]:
-                    devgate.parameter = parameters[i]
-        else:
-            k = 0
-            if self.contains_variationallayer:
-                raise NotImplementedError
-                for i, gate in enumerate(self.parametrized_gates):
-                    if isinstance(gate, gates.VariationalLayer):
-                        p = len(gate.params) + len(gate.params2)
-                        gate.parameter = parameters[i + k: i + k + p]
-                        k += p - 1
-                    else:
-                        gate.parameter = parameters[i + k]
-            else:
-                raise ValueError("Given list of parameters has length {} while "
-                                 "the circuit contains {} parametrized gates."
-                                 "".format(n, len(self.parametrized_gates)))
-
-    def _set_parameters_dict(self, parameters: Dict):
-        for gate in self.parametrized_gates:
-            for devgate in self.queues.device_parametrized_gates[gate]:
-                devgate.parameter = parameters[gate]
 
     def set_gates(self):
         """Prepares gates for device-specific gate execution.

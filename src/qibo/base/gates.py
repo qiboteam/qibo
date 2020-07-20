@@ -45,6 +45,9 @@ class Gate(object):
 
         # Cast gate matrices to the proper device
         self.device = config.get_device()
+        # Reference to copies of this gate that are casted in devices when
+        # a distributed circuit is used
+        self.device_gates = set()
 
         config.ALLOW_SWITCHERS = False
 
@@ -543,11 +546,18 @@ class ParametrizedGate(Gate):
     def parameter(self):
         return self._theta
 
+    def _reprepare(self):
+        if self.device_gates:
+            for gate in self.device_gates:
+                gate.parameter = self.parameter
+        else:
+            self._prepare()
+
     @parameter.setter
     def parameter(self, x):
         self._unitary = None
         self._theta = x
-        self._prepare()
+        self._reprepare()
 
 
 class RX(ParametrizedGate):
@@ -800,7 +810,7 @@ class fSim(ParametrizedGate):
     def parameter(self, x):
         self._unitary = None
         self._theta, self._phi = x
-        self._prepare()
+        self._reprepare()
 
 
 class GeneralizedfSim(ParametrizedGate):
@@ -847,7 +857,7 @@ class GeneralizedfSim(ParametrizedGate):
                              "fSim gate".format(shape))
         self._unitary = None
         self.__unitary, self._phi = x
-        self._prepare()
+        self._reprepare()
 
 
 class TOFFOLI(Gate):
@@ -947,7 +957,7 @@ class Unitary(ParametrizedGate):
                              "{} target qubits.".format(shape, self.rank))
         self._unitary = None
         self.__unitary = x
-        self._prepare()
+        self._reprepare()
 
     @property
     def unitary(self):
