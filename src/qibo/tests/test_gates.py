@@ -949,12 +949,14 @@ def test_variational_layer_errors(backend):
     qibo.set_backend(backend)
     c = Circuit(6)
     pairs = list((i, i + 1) for i in range(0, 5, 2))
-    theta0 = np.zeros(6)
-    theta1 = np.zeros(7)
     with pytest.raises(ValueError):
         c.add(gates.VariationalLayer(range(6), pairs,
                                      gates.RY, gates.CZ,
-                                     theta0, theta1))
+                                     np.zeros(6), np.zeros(7)))
+    with pytest.raises(ValueError):
+        c.add(gates.VariationalLayer(range(7), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(7), np.zeros(7)))
     qibo.set_backend(original_backend)
 
 

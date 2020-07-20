@@ -193,10 +193,6 @@ class Gate(object):
         """
         raise NotImplementedError
 
-    def _calculate_qubits_tensor(self):
-        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
-        pass
-
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
         if self.qubits != other.qubits:
@@ -961,7 +957,7 @@ class Unitary(ParametrizedGate):
 
     @property
     def unitary(self):
-        if self._unitary is None:
+        if self._unitary is None: # pragma: no cover
             self._unitary = self.construct_unitary()
         return self._unitary
 
@@ -1165,7 +1161,7 @@ class GeneralChannel(Gate):
         for qubits, matrix in A:
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
-            if shape != (rank, rank):
+            if shape != (rank, rank): # pragma: no cover
                 raise ValueError("Invalid Krauss operator shape {} for acting "
                                  "on {} qubits.".format(shape, len(qubits)))
 

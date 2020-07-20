@@ -74,7 +74,7 @@ class FusionGroup:
         It assumes that the parameters of the gate objects contained in the
         current ``FusionGroup`` have already been updated.
         """
-        if self._fused_gates is None:
+        if self._fused_gates is None: # pragma: no cover
             return self.gates
         updated_gates = self.calculate()
         for gate, new_gate in zip(self._fused_gates, updated_gates):

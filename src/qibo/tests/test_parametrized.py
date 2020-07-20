@@ -102,6 +102,7 @@ def test_circuit_set_parameters_errors():
     """Check updating parameters errors."""
     c = Circuit(2)
     c.add(gates.RX(0, theta=0.789))
+    c.add(gates.RX(1, theta=0.789))
     c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
 
     with pytest.raises(ValueError):
@@ -109,12 +110,15 @@ def test_circuit_set_parameters_errors():
     with pytest.raises(ValueError):
         c.set_parameters([0.12586])
     with pytest.raises(ValueError):
-        c.set_parameters(np.random.random(3))
+        c.set_parameters(np.random.random(5))
     with pytest.raises(ValueError):
         import tensorflow as tf
-        c.set_parameters(tf.random.uniform((4,), dtype=tf.float64))
+        c.set_parameters(tf.random.uniform((6,), dtype=tf.float64))
     with pytest.raises(TypeError):
         c.set_parameters({0.3568})
+    fused_c = c.fuse()
+    with pytest.raises(TypeError):
+        fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
@@ -143,6 +147,36 @@ def test_set_parameters_with_variationallayer(backend, accelerators, nqubits):
 
     # Test setting VariationalLayer using an array
     new_theta = np.random.random(nqubits)
+    c.set_parameters(np.copy(new_theta))
+    target_c.set_parameters(np.copy(new_theta))
+    np.testing.assert_allclose(c(), target_c())
+
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_set_parameters_with_double_variationallayer(backend, accelerators, nqubits):
+    """Check updating parameters of variational layer."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    theta = np.random.random((3, nqubits))
+    c = Circuit(nqubits, accelerators)
+    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ,
+                                 theta[0], theta[1]))
+    c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
+
+    target_c = Circuit(nqubits)
+    target_c.add((gates.RY(i, theta[0, i]) for i in range(nqubits)))
+    target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    target_c.add((gates.RY(i, theta[1, i]) for i in range(nqubits)))
+    target_c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
+    np.testing.assert_allclose(c(), target_c())
+
+    new_theta = np.random.random(3 * nqubits)
     c.set_parameters(np.copy(new_theta))
     target_c.set_parameters(np.copy(new_theta))
     np.testing.assert_allclose(c(), target_c())
