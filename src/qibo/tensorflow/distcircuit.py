@@ -438,18 +438,30 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if self.queues is None:
             return super(TensorflowDistributedCircuit,
                          self).set_parameters_list(parameters, n)
-
-        if n != len(self.parametrized_gates):
-            raise ValueError("Given list of parameters has length {} while "
-                             "the circuit contains {} parametrized gates."
-                             "".format(n, len(self.parametrized_gates)))
-        for i, gate in enumerate(self.parametrized_gates):
-            if isinstance(gate, gates.VariationalLayer):
-                raise NotImplementedError
-            else:
+        if n == len(self.parametrized_gates):
+            for i, gate in enumerate(self.parametrized_gates):
                 for devgate in self.queues.device_parametrized_gates[gate]:
-                    with tf.device(devgate.device):
-                        devgate.parameter = parameters[i]
+                    devgate.parameter = parameters[i]
+        else:
+            k = 0
+            if self.contains_variationallayer:
+                raise NotImplementedError
+                for i, gate in enumerate(self.parametrized_gates):
+                    if isinstance(gate, gates.VariationalLayer):
+                        p = len(gate.params) + len(gate.params2)
+                        gate.parameter = parameters[i + k: i + k + p]
+                        k += p - 1
+                    else:
+                        gate.parameter = parameters[i + k]
+            else:
+                raise ValueError("Given list of parameters has length {} while "
+                                 "the circuit contains {} parametrized gates."
+                                 "".format(n, len(self.parametrized_gates)))
+
+    def _set_parameters_dict(self, parameters: Dict):
+        for gate in self.parametrized_gates:
+            for devgate in self.queues.device_parametrized_gates[gate]:
+                devgate.parameter = parameters[gate]
 
     def set_gates(self):
         """Prepares gates for device-specific gate execution.

@@ -434,6 +434,10 @@ class BaseCircuit(object):
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 
+    def _set_parameters_dict(self, parameters: Dict):
+        for gate in self.parametrized_gates:
+            gate.parameter = parameters[gate]
+
     def set_parameters(self, parameters: Union[Dict, List]):
         if isinstance(parameters, (list, tuple)):
             self.set_parameters_list(parameters, len(parameters))
@@ -444,8 +448,7 @@ class BaseCircuit(object):
             if set(parameters.keys()) != set(self.parametrized_gates):
                 raise ValueError("Dictionary with gate parameters does not "
                                  "agree with the circuit gates.")
-            for gate in self.parametrized_gates:
-                gate.parameter = parameters[gate]
+            self._set_parameters_dict(parameters)
         else:
             raise TypeError("Invalid type of parameters {}."
                             "".format(type(parameters)))

@@ -41,20 +41,25 @@ def test_circuit_set_parameters_with_list(backend, accelerators):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    def create_circuit(params, accelerators=None):
-        c = Circuit(3, accelerators)
-        c.add(gates.RX(0, theta=params[0]))
-        c.add(gates.RY(1, theta=params[1]))
-        c.add(gates.CZ(1, 2))
-        c.add(gates.fSim(0, 2, theta=params[2][0], phi=params[2][1]))
-        c.add(gates.H(2))
-        return c
 
-    params0 = [0.123, 0.456, (0.789, 0.321)]
-    params1 = [0.987, 0.654, (0.321, 0.123)]
-    c = create_circuit(params0, accelerators)
-    target_c = create_circuit(params1)
-    c.set_parameters(params1)
+    c = Circuit(3, accelerators)
+    c.add(gates.RX(0, theta=0))
+    c.add(gates.RY(1, theta=0))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0, phi=0))
+    c.add(gates.H(2))
+    # execute once
+    final_state = c()
+
+    params = [0.123, 0.456, (0.789, 0.321)]
+    target_c = Circuit(3)
+    target_c.add(gates.RX(0, theta=params[0]))
+    target_c.add(gates.RY(1, theta=params[1]))
+    target_c.add(gates.CZ(1, 2))
+    target_c.add(gates.fSim(0, 2, theta=params[2][0], phi=params[2][1]))
+    target_c.add(gates.H(2))
+
+    c.set_parameters(params)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
@@ -64,24 +69,30 @@ def test_circuit_set_parameters_with_dictionary(backend, accelerators):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    def create_circuit(params, accelerators=None):
-        c = Circuit(3, accelerators)
-        c.add(gates.X(0))
-        c.add(gates.X(2))
-        c.add(gates.ZPow(0, theta=params[0]))
-        c.add(gates.RZ(1, theta=params[1]))
-        c.add(gates.CZ(1, 2))
-        c.add(gates.CZPow(0, 2, theta=params[2]))
-        c.add(gates.H(2))
-        c.add(gates.Unitary(params[3], 1))
-        return c
 
-    params0 = [0.123, 0.456, 0.789, np.random.random((2, 2))]
-    params1 = [0.987, 0.654, 0.321, np.random.random((2, 2))]
-    c = create_circuit(params0, accelerators)
-    target_c = create_circuit(params1)
-    param_dict = {c.queue[i]: p for i, p in zip([2, 3, 5, 7], params1)}
+    c = Circuit(3, accelerators)
+    c.add(gates.X(0))
+    c.add(gates.X(2))
+    c.add(gates.ZPow(0, theta=0))
+    c.add(gates.RZ(1, theta=0))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.CZPow(0, 2, theta=0))
+    c.add(gates.H(2))
+    c.add(gates.Unitary(np.eye(2), 1))
+    final_state = c()
 
+    params = [0.123, 0.456, 0.789, np.random.random((2, 2))]
+    target_c = Circuit(3, accelerators)
+    target_c.add(gates.X(0))
+    target_c.add(gates.X(2))
+    target_c.add(gates.ZPow(0, theta=params[0]))
+    target_c.add(gates.RZ(1, theta=params[1]))
+    target_c.add(gates.CZ(1, 2))
+    target_c.add(gates.CZPow(0, 2, theta=params[2]))
+    target_c.add(gates.H(2))
+    target_c.add(gates.Unitary(params[3], 1))
+
+    param_dict = {c.queue[i]: p for i, p in zip([2, 3, 5, 7], params)}
     c.set_parameters(param_dict)
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
