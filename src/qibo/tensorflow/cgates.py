@@ -48,7 +48,8 @@ class TensorflowGate(base_gates.Gate):
         qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
         qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
         qubits = sorted(qubits)
-        self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+        with tf.device(self.device):
+            self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.
@@ -78,8 +79,9 @@ class MatrixGate(TensorflowGate):
         self.matrix = None
 
     def _prepare(self):
-        self.matrix = tf.constant(self.construct_unitary(),
-                                  dtype=DTYPES.get('DTYPECPX'))
+        with tf.device(self.device):
+            self.matrix = tf.constant(self.construct_unitary(),
+                                      dtype=DTYPES.get('DTYPECPX'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -279,8 +281,9 @@ class ZPow(MatrixGate, base_gates.ZPow):
         MatrixGate.__init__(self)
 
     def _prepare(self):
-        self.matrix = tf.constant(np.exp(1j * self.parameter),
-                                  dtype=DTYPES.get('DTYPECPX'))
+        with tf.device(self.device):
+            self.matrix = tf.constant(np.exp(1j * self.parameter),
+                                      dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
         return np.diag([1, np.exp(1j * self.parameter)]).astype(
@@ -366,7 +369,8 @@ class fSim(MatrixGate, base_gates.fSim):
         phase = np.exp(-1j * phi)
         matrix = np.array([cos, isin, isin, cos, phase],
                           dtype=DTYPES.get('NPTYPECPX'))
-        self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
+        with tf.device(self.device):
+            self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
         theta, phi = self.parameter
@@ -394,7 +398,8 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         matrix = np.zeros(5, dtype=DTYPES.get("NPTYPECPX"))
         matrix[:4] = np.reshape(unitary, (4,))
         matrix[4] = np.exp(-1j * phi)
-        self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
+        with tf.device(self.device):
+            self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
         unitary, phi = self.parameter

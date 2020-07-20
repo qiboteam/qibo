@@ -43,8 +43,8 @@ class Gate(object):
         self._nstates = None
         self.qubits_tensor = None
 
-        # Remember the device of calculation gates for distributed circuits
-        self.device = None
+        # Cast gate matrices to the proper device
+        self.device = config.get_device()
 
         config.ALLOW_SWITCHERS = False
 

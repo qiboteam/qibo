@@ -271,8 +271,7 @@ class DeviceQueues:
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
                     calc_gate.device = device
-                    with tf.device(device):
-                        calc_gate.nqubits = self.nlocal
+                    calc_gate.nqubits = self.nlocal
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then
