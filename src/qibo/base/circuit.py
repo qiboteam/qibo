@@ -9,6 +9,25 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
+class ParametrizedGates:
+
+    def __init__(self):
+        self.list = []
+        self.set = set()
+        self.nparams = 0
+
+    def append(self, gate: gates.ParametrizedGate):
+        self.list.append(gate)
+        self.set.add(gate)
+        self.nparams += gate.nparams
+
+    def __len__(self):
+        return len(self.list)
+
+    def __iter__(self):
+        return iter(self.list)
+
+
 class BaseCircuit(object):
     """Circuit object which holds a list of gates.
 
@@ -36,7 +55,8 @@ class BaseCircuit(object):
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
-        self.parametrized_gates = []
+        # Keep track of parametrized gates for the ``set_parameters`` method
+        self.parametrized_gates = ParametrizedGates()
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
@@ -46,7 +66,6 @@ class BaseCircuit(object):
         self.measurement_gate_result = None
 
         self.fusion_groups = []
-        self.contains_variationallayer = False
 
         self._final_state = None
         self.using_density_matrix = False
@@ -104,7 +123,6 @@ class BaseCircuit(object):
             The copied circuit object.
         """
         new_circuit = self.__class__(**self._init_kwargs)
-        new_circuit.contains_variationallayer = self.contains_variationallayer
         if deep:
             import copy
             for gate in self.queue:
@@ -339,12 +357,10 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-            self.contains_variationallayer = True
-            self.parametrized_gates.append(gate)
         else:
             self.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
-                self.parametrized_gates.append(gate)
+        if isinstance(gate, gates.ParametrizedGate):
+            self.parametrized_gates.append(gate)
 
     def _set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits in ``gate``.
@@ -439,20 +455,18 @@ class BaseCircuit(object):
         if n == len(self.parametrized_gates):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i]
-        else:
+        elif n == self.parametrized_gates.nparams:
             k = 0
-            if self.contains_variationallayer:
-                for i, gate in enumerate(self.parametrized_gates):
-                    if isinstance(gate, gates.VariationalLayer):
-                        p = len(gate.params) + len(gate.params2)
-                        gate.parameter = parameters[i + k: i + k + p]
-                        k += p - 1
-                    else:
-                        gate.parameter = parameters[i + k]
-            else:
-                raise ValueError("Given list of parameters has length {} while "
-                                 "the circuit contains {} parametrized gates."
-                                 "".format(n, len(self.parametrized_gates)))
+            for i, gate in enumerate(self.parametrized_gates):
+                if isinstance(gate, gates.VariationalLayer):
+                    gate.parameter = parameters[i + k: i + k + gate.nparams]
+                    k += gate.nparams - 1
+                else:
+                    gate.parameter = parameters[i + k]
+        else:
+            raise ValueError("Given list of parameters has length {} while "
+                             "the circuit contains {} parametrized gates."
+                             "".format(n, len(self.parametrized_gates)))
 
         for fusion_group in self.fusion_groups:
             fusion_group.update()
@@ -469,7 +483,7 @@ class BaseCircuit(object):
                 should be compatible with the circuit's parametrized gates.
                 If a dictionary is given its keys should be references to the
                 parametrized gates.
-                
+
         Example:
             ::
 
@@ -493,7 +507,7 @@ class BaseCircuit(object):
             if self.fusion_groups:
                 raise TypeError("Cannot accept new parameters as dictionary "
                                 "for fused circuits. Use list, tuple or array.")
-            if set(parameters.keys()) != set(self.parametrized_gates):
+            if set(parameters.keys()) != self.parametrized_gates.set:
                 raise ValueError("Dictionary with gate parameters does not "
                                  "agree with the circuit gates.")
             for gate in self.parametrized_gates:

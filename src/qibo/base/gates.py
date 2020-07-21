@@ -541,6 +541,7 @@ class ParametrizedGate(Gate):
     def __init__(self):
         super(ParametrizedGate, self).__init__()
         self._theta = None
+        self.nparams = 1
 
     @property
     def parameter(self):
@@ -797,6 +798,7 @@ class fSim(ParametrizedGate):
         self.name = "fsim"
         self.target_qubits = (q0, q1)
         self._phi = None
+        self.nparams = 2
         self.parameter = theta, phi
 
         self.init_args = [q0, q1]
@@ -840,6 +842,7 @@ class GeneralizedfSim(ParametrizedGate):
 
         self._phi = None
         self.__unitary = None
+        self.nparams = 2
         self.parameter = unitary, phi
 
         self.init_args = [q0, q1]
@@ -937,6 +940,7 @@ class Unitary(ParametrizedGate):
 
         self.__unitary = None
         self.parameter = unitary
+        self.nparams = int(tuple(unitary.shape)[0]) ** 2
 
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
@@ -966,7 +970,7 @@ class Unitary(ParametrizedGate):
         return self._unitary
 
 
-class VariationalLayer(Gate):
+class VariationalLayer(ParametrizedGate):
     """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
 
     Performance is optimized by fusing the variational one-qubit gates with the
@@ -1024,6 +1028,7 @@ class VariationalLayer(Gate):
             self.params2 = {}
         else:
             self.params2 = self._create_params_dict(params2)
+        self.nparams = len(self.params) + len(self.params2)
 
         self.pairs = pairs
         targets = set(self.target_qubits)
