@@ -61,6 +61,42 @@ def test_circuit_set_parameters_with_list(backend, accelerators):
 
     c.set_parameters(params)
     np.testing.assert_allclose(c(), target_c())
+
+    # Attempt using a flat list / np.ndarray
+    new_params = np.random.random(4)
+    params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
+    target_c.set_parameters(params)
+    c.set_parameters(new_params)
+    np.testing.assert_allclose(c(), target_c())
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_set_parameters_with_list(backend, accelerators):
+    """Check updating parameters of circuit that contains ``Unitary`` gate."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(3, accelerators)
+    c.add(gates.RX(0, theta=0))
+    c.add(gates.Unitary(np.zeros((4, 4)), 1, 2))
+    # execute once
+    final_state = c()
+
+    params = [0.1234, np.random.random((4, 4))]
+    target_c = Circuit(3)
+    target_c.add(gates.RX(0, theta=params[0]))
+    target_c.add(gates.Unitary(params[1], 1, 2))
+    c.set_parameters(params)
+    np.testing.assert_allclose(c(), target_c())
+
+    # Attempt using a flat list / np.ndarray
+    params = np.random.random(17)
+    target_c = Circuit(3)
+    target_c.add(gates.RX(0, theta=params[0]))
+    target_c.add(gates.Unitary(params[1:].reshape((4, 4)), 1, 2))
+    c.set_parameters(params)
+    np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 

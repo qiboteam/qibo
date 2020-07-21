@@ -956,11 +956,15 @@ class Unitary(ParametrizedGate):
     @parameter.setter
     def parameter(self, x):
         shape = tuple(x.shape)
-        if shape != (2 ** self.rank, 2 ** self.rank):
+        true_shape = (2 ** self.rank, 2 ** self.rank)
+        if shape == true_shape:
+            self.__unitary = x
+        elif shape == (2 ** (2 * self.rank),):
+            self.__unitary = x.reshape(true_shape)
+        else:
             raise ValueError("Invalid shape {} of unitary matrix acting on "
                              "{} target qubits.".format(shape, self.rank))
         self._unitary = None
-        self.__unitary = x
         self._reprepare()
 
     @property

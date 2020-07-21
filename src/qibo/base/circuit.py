@@ -9,7 +9,13 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
-class ParametrizedGates:
+class _ParametrizedGates:
+    """Simple data structure for keeping track of parametrized gates.
+
+    Useful for the ``circuit.set_parameters()`` method.
+    Holds parametrized gates in a list and a set and also keeps track of the
+    total number of parameters.
+    """
 
     def __init__(self):
         self.list = []
@@ -56,7 +62,7 @@ class BaseCircuit(object):
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
         # Keep track of parametrized gates for the ``set_parameters`` method
-        self.parametrized_gates = ParametrizedGates()
+        self.parametrized_gates = _ParametrizedGates()
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
@@ -458,11 +464,8 @@ class BaseCircuit(object):
         elif n == self.parametrized_gates.nparams:
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
-                if isinstance(gate, gates.VariationalLayer):
-                    gate.parameter = parameters[i + k: i + k + gate.nparams]
-                    k += gate.nparams - 1
-                else:
-                    gate.parameter = parameters[i + k]
+                gate.parameter = parameters[i + k: i + k + gate.nparams]
+                k += gate.nparams - 1
         else:
             raise ValueError("Given list of parameters has length {} while "
                              "the circuit contains {} parametrized gates."
