@@ -519,16 +519,22 @@ class BaseCircuit(object):
             raise TypeError("Invalid type of parameters {}."
                             "".format(type(parameters)))
 
-    def get_parameters(self, type: str = "list") -> List:
+    def get_parameters(self, format: str = "list") -> Union[List, Dict]:
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
+
+        Args:
+            format: How to return the variational parameters.
+                Available formats are 'list', 'dict' and 'flatlist'.
+                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for more
+                details on each format.
         """
-        if type == "list":
+        if format == "list":
             return [gate.parameter for gate in self.parametrized_gates]
-        elif type == "dict":
+        elif format == "dict":
             return {gate: gate.parameter for gate in self.parametrized_gates}
-        elif type == "flatlist":
+        elif format == "flatlist":
             import numpy as np
             from collections.abc import Iterable
             params = []
@@ -541,7 +547,7 @@ class BaseCircuit(object):
                     params.append(gate.parameter)
             return params
         else:
-            raise ValueError(f"Unknown type {type} given in ``get_parameters``.")
+            raise ValueError(f"Unknown format {format} given in ``get_parameters``.")
 
     @property
     def summary(self) -> str:
