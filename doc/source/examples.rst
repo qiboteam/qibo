@@ -437,7 +437,7 @@ The VQE requires an ansatz function and a ``Hamiltonian`` object. There are exam
 
     - ``vqe.py``: a simple example with the XXZ model.
 
-Here a simple example using the Heisenberg XXZ model:
+Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 
 .. code-block:: python
 
@@ -447,6 +447,7 @@ Here a simple example using the Heisenberg XXZ model:
     nqubits = 6
     nlayers  = 4
 
+    # Create variational circuit
     circuit = models.Circuit(nqubits)
     for l in range(nlayers):
         circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
@@ -457,10 +458,14 @@ Here a simple example using the Heisenberg XXZ model:
     circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
     return circuit
 
+    # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
+    # Create VQE model
+    vqe = models.VQE(circuit, hamiltonian)
+
+    # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    vqe = models.VQE(circuit, hamiltonian)
     best, params = vqe.minimize(initial_parameters, method='BFGS')
 
 The user can choose one of the following methods for minimization:

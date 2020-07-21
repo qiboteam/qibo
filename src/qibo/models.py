@@ -121,23 +121,25 @@ class VQE(object):
     """This class implements the variational quantum eigensolver algorithm.
 
     Args:
-        ansatz (function): a python function which takes as input an array of parameters.
-        hamiltonian (qibo.hamiltonians): a hamiltonian object.
+        circuit (:class:`qibo.base.circuit.BaseCircuit`): Circuit that
+            implements the variaional ansatz.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object.
 
     Example:
         ::
 
             import numpy as np
-            from qibo import gates
-            from qibo.hamiltonians import XXZ
-            from qibo.models import VQE, Circuit
-            def ansatz(theta):
-                c = Circuit(2)
-                c.add(gates.RY(q, theta[0]))
-                return c
-            v = VQE(ansats, XXZ(2))
-            initial_state = np.random.uniform(0, 2, 1)
-            v.minimize(initial_state)
+            from qibo import gates, models, hamiltonians
+            # create circuit ansatz for two qubits
+            circuit = models.Circuit(2)
+            circuit.add(gates.RY(q, theta=0))
+            # create XXZ Hamiltonian for two qubits
+            hamiltonian = hamiltonians.XXZ(2)
+            # create VQE model for the circuit and Hamiltonian
+            vqe = models.VQE(circuit, hamiltonian)
+            # optimize using random initial variational parameters
+            initial_parameters = np.random.uniform(0, 2, 1)
+            vqe.minimize(initial_parameters)
     """
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
@@ -148,7 +150,8 @@ class VQE(object):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
-            initial_state (array): a initial guess for the circuit.
+            initial_state (array): a initial guess for the parameters of the
+                variational circuit.
             method (str): the desired minimization method.
                 One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
                 any of the methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
