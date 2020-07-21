@@ -95,3 +95,31 @@ def test_hamiltonian_eigenvalues(dtype):
     H3_eigen = H3._eigenvalues
     hH3_eigen = np.linalg.eigvalsh(H1.hamiltonian * c2)
     np.testing.assert_allclose(H3._eigenvalues, hH3_eigen)
+
+
+@pytest.mark.parametrize("dtype", NUMERIC_TYPES)
+def test_hamiltonian_eigenvectors(dtype):
+    """Testing hamiltonian eigenvectors scaling."""
+    H1 = XXZ(nqubits=2, delta=0.5)
+
+    V1 = H1.eigenvectors().numpy()
+    U1 = H1.eigenvalues().numpy()
+    np.testing.assert_allclose(H1.hamiltonian, V1 @ np.diag(U1) @ V1.T)
+
+    c1 = dtype(2.5)
+    H2 = c1 * H1
+    V2 = H2._eigenvectors.numpy()
+    U2 = H2._eigenvalues.numpy()
+    np.testing.assert_allclose(H2.hamiltonian, V2 @ np.diag(U2) @ V2.T)
+
+    c2 = dtype(-11.1)
+    H3 = H1 * c2
+    V3 = H3.eigenvectors().numpy()
+    U3 = H3._eigenvalues.numpy()
+    np.testing.assert_allclose(H3.hamiltonian, V3 @ np.diag(U3) @ V3.T)
+
+    c3 = dtype(0)
+    H4 = c3 * H1
+    V4 = H4._eigenvectors.numpy()
+    U4 = H4._eigenvalues.numpy()
+    np.testing.assert_allclose(H4.hamiltonian, V4 @ np.diag(U4) @ V4.T)
