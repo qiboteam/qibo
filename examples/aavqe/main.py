@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo.models import Circuit, VQE
-from qibo import gates, models
-from qibo.hamiltonians import XXZ, Hamiltonian
+from qibo import gates, models, hamiltonians
 from qibo import matrices
 import argparse
 
@@ -29,7 +27,7 @@ def sz_hamiltonian(nqubits):
     Returns:
         ``Hamiltonian`` object for the easy sz Hamiltonian.
     """
-    sz_sum = Hamiltonian(nqubits)
+    sz_sum = hamiltonians.Hamiltonian(nqubits)
     eye = matrices.I
     sz = matrices.Z
     sz_sum.hamiltonian = - sum(multikron((sz if i == j % nqubits else eye for j in
@@ -52,7 +50,7 @@ def ising(nqubits, lamb=1.0):
     Returns:
         ``Hamiltonian`` object for the Ising model.
     """
-    ising = Hamiltonian(nqubits)
+    ising = hamiltonians.Hamiltonian(nqubits)
     eye = matrices.I
     sz = matrices.Z
     sx = matrices.X
@@ -78,51 +76,39 @@ def AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian
     Returns:
         Groundstate energy of the problem Hamiltonian and best set of parameters.
     """
-    def ansatz(theta):
-        """Implements the variational quantum circuit.
-
-        Args:
-            theta (array or list): values of the initial parameters.
-
-        Returns:
-            Circuit that implements the variational ansatz.
-        """
-        thetas = theta.reshape((2 * layers + 1, nqubits))
-        pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-        c = models.Circuit(nqubits)
-        for l in range(layers):
-            c.add(gates.VariationalLayer(range(nqubits), pairs,
-                                         gates.RY, gates.CZ,
-                                         thetas[2 * l], thetas[2 * l + 1]))
-            # this ``VariationalLayer`` includes two layers of RY gates with a
-            # layer of CZ in the middle.
-            # We have to add an additional CZ layer manually:
-            c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
-            c.add(gates.CZ(0, nqubits - 1))
-        c.add((gates.RY(i, thetas[-1, i]) for i in range(nqubits)))
-        return c
-
+    # Create variational circuit
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    circuit = models.Circuit(nqubits)
+    for l in range(layers):
+        circuit.add(gates.VariationalLayer(range(nqubits), pairs,
+                                           gates.RY, gates.CZ,
+                                           np.zeros(nqubits), np.zeros(nqubits)))
+        circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add((gates.RY(i, theta=0) for i in range(nqubits)))
 
     for t in range(T_max+1):
         s = t/T_max
         print('s =',s)
         hamiltonian =  (1-s)*easy_hamiltonian + s*problem_hamiltonian
-        v = VQE(ansatz, hamiltonian)
-        energy, params = v.minimize(initial_parameters, method='Nelder-Mead', options={'maxfev': maxsteps}, compile=False)
+        vqe = models.VQE(circuit, hamiltonian)
+        energy, params = vqe.minimize(initial_parameters, method='Nelder-Mead',
+                                      options={'maxfev': maxsteps}, compile=False)
         initial_parameters = params
     return energy, params
 
 
 def main(nqubits, layers, maxsteps, T_max):
-    initial_parameters = np.random.uniform(0, 0.01,
-                                        2*nqubits*layers + nqubits)
+    nparams = 2 * nqubits * layers + nqubits
+    initial_parameters = np.random.uniform(0, 0.01, nparams)
 
     #Define the easy Hamiltonian and the problem Hamiltonian.
     easy_hamiltonian = sz_hamiltonian(nqubits=nqubits)
     problem_hamiltonian = ising(nqubits=nqubits)
 
     #Run the AAVQE
-    best, params = AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian, problem_hamiltonian)
+    best, params = AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters,
+                         easy_hamiltonian, problem_hamiltonian)
     print('Final parameters: ', params)
     print('Final energy: ', best)
 
