@@ -12,8 +12,8 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
 
 def isclassinstance(o, w):
     """Check if objects are from the same base class."""
-    return (isinstance(o, w.__class__) or \
-            issubclass(o.__class__, w.__class__) or \
+    return (isinstance(o, w.__class__) or
+            issubclass(o.__class__, w.__class__) or
             issubclass(w.__class__, o.__class__))
 
 
@@ -31,6 +31,7 @@ class Hamiltonian(object):
         self.hamiltonian = None
         self.nqubits = nqubits
         self._eigenvalues = None
+        self._eigenvectors = None
 
     @abstractmethod
     def _build(self, *args, **kwargs):
@@ -38,10 +39,17 @@ class Hamiltonian(object):
         pass
 
     def eigenvalues(self):
-        """Computes the minimum eigenvalue for the Hamiltonian."""
+        """Computes the eigenvalues for the Hamiltonian."""
         if self._eigenvalues is None:
             self._eigenvalues = K.linalg.eigvalsh(self.hamiltonian)
         return self._eigenvalues
+
+    def eigenvectors(self):
+        """Computes the eigenvectors for the Hamiltonian."""
+        if self._eigenvectors is None:
+            self._eigenvalues, self._eigenvectors = K.linalg.eigh(
+                self.hamiltonian)
+        return self._eigenvectors
 
     def expectation(self, state):
         """Computes the real expectation value for a given state.
@@ -122,6 +130,12 @@ class Hamiltonian(object):
                     r._eigenvalues = o * self._eigenvalues
                 else:
                     r._eigenvalues = o * self._eigenvalues[::-1]
+            if self._eigenvectors is not None:
+                if o.real > 0:
+                    r._eigenvectors = self._eigenvectors
+                elif o.real == 0:
+                    r._eigenvectors = K.eye(
+                        self._eigenvectors.shape, dtype=self.hamiltonian.dtype)
             return r
         else:
             raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
