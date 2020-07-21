@@ -95,7 +95,7 @@ def test_circuit_set_parameters_with_list(backend, accelerators):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_circuit_set_parameters_with_list(backend, accelerators):
+def test_circuit_set_parameters_with_unitary(backend, accelerators):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

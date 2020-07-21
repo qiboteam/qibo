@@ -955,8 +955,6 @@ class Unitary(ParametrizedGate):
 
     @parameter.setter
     def parameter(self, x):
-        if isinstance(x, list):
-            x = np.array(x)
         shape = tuple(x.shape)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
@@ -1030,10 +1028,12 @@ class VariationalLayer(ParametrizedGate):
 
         self.target_qubits = tuple(qubits)
         self.params = self._create_params_dict(params)
+        self._parameters = list(params)
         if params2 is None:
             self.params2 = {}
         else:
             self.params2 = self._create_params_dict(params2)
+            self._parameters.extend(params2)
         self.nparams = len(self.params) + len(self.params2)
 
         self.pairs = pairs
@@ -1066,8 +1066,8 @@ class VariationalLayer(ParametrizedGate):
         raise NotImplementedError
 
     @property
-    def parameter(self):
-        return self.params, self.params2
+    def parameter(self) -> List[float]:
+        return self._parameters
 
     @parameter.setter
     def parameter(self, x):
@@ -1077,6 +1077,7 @@ class VariationalLayer(ParametrizedGate):
             self.params2 = self._create_params_dict(x[n:])
         else:
             self.params = self._create_params_dict(x)
+        self._parameters = x
 
         matrices, additional_matrix = self._calculate_unitaries()
         for unitary, matrix in zip(self.unitaries, matrices):

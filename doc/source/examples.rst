@@ -404,9 +404,9 @@ such gates are added in a circuit their parameters can be updated using the
 
 initializes a circuit with all gate parameters set to 0 and then updates the
 values of these parameters according to the ``params`` list. Alternatively the
-user can use a dictionary with the ``circuit.set_parameters()`` method.
+user can use ``circuit.set_parameters()`` with a dictionary or a flat list.
 The keys of the dictionary should be references to the gate objects of
-the circuit, for example:
+the circuit. For example:
 
 .. code-block::  python
 
@@ -419,11 +419,18 @@ the circuit, for example:
     # set new values to the circuit's parameters using a dictionary
     params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
     c.set_parameters(params)
+    # equivalently the parameter's can be update with a list as
+    params = [0.123, 0.456, (0.789, 0.321)]
+    c.set_parameters(params)
+    # or with a flat list as
+    params = [0.123, 0.456, 0.789, 0.321]
+    c.set_parameters(params)
 
-In case a list is given instead of a dictionary, then its length and elements
-should be compatible with the parametrized gates contained in the circuit.
-For example the :class:`qibo.base.gates.fSim` gate accepts two parameters
-which should be given as a tuple. The following gates support parameter setting:
+If a list is given then its length and elements should be compatible with the
+parametrized gates contained in the circuit. If a dictionary is given then its
+keys should be all the parametrized gates in the circuit.
+
+The following gates support parameter setting:
 
 * ``RX``, ``RY``, ``RZ``, ``ZPow``, ``CZPow``: Accept a single ``theta`` parameter.
 * :class:`qibo.base.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
@@ -434,12 +441,7 @@ which should be given as a tuple. The following gates support parameter setting:
   should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
 * :class:`qibo.base.gates.VariationalLayer`: Accepts a list of ``float``
   parameters with length compatible to the number of one qubit rotations implemented
-  by the layer.
-
-The list given to ``circuit.set_parameters()`` should contain the proper types
-of parameters for the gates that are updated otherwise errors will be raised.
-Specifically for the case of the ``VariationalLayer`` gate the user may give
-the parameters as a flat list, for example:
+  by the layer, for example:
 
 .. code-block:: python
 
@@ -448,13 +450,15 @@ the parameters as a flat list, for example:
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  params=np.zeros(5)))
-    c.add((gates.RY(i, theta=0) for i in range(5)))
+    c.add((gates.RX(i, theta=0) for i in range(5)))
 
-    c.set_parameters(np.zeros(10))
+    # set random parameters to all rotations in the circuit
+    c.set_parameters(np.random.random(10))
+    # note that 10 numbers are used as the VariationalLayer contains five
+    # rotations and five additional RX rotations are added afterwards.
 
-Note that for cases where a flat list can be used the a ``np.ndarray`` or a
-``tf.Tensor`` may also be used instead.
-
+Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
+a flat list.
 
 Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
 recreating a new circuit with new parameter values.
