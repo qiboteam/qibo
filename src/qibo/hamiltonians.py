@@ -135,7 +135,7 @@ class Hamiltonian(object):
                     r._eigenvectors = self._eigenvectors
                 elif o.real == 0:
                     r._eigenvectors = K.eye(
-                        self._eigenvectors.shape, dtype=self.hamiltonian.dtype)
+                        self._eigenvectors.shape[0], dtype=self.hamiltonian.dtype)
             return r
         else:
             raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '

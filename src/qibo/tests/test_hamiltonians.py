@@ -117,3 +117,9 @@ def test_hamiltonian_eigenvectors(dtype):
     V3 = H3.eigenvectors().numpy()
     U3 = H3._eigenvalues.numpy()
     np.testing.assert_allclose(H3.hamiltonian, V3 @ np.diag(U3) @ V3.T)
+
+    c3 = dtype(0)
+    H4 = c3 * H1
+    V4 = H4._eigenvectors.numpy()
+    U4 = H4._eigenvalues.numpy()
+    np.testing.assert_allclose(H4.hamiltonian, V4 @ np.diag(U4) @ V4.T)
