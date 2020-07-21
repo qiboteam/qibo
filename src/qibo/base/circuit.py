@@ -460,11 +460,16 @@ class BaseCircuit(object):
     def set_parameters(self, parameters: Union[Dict, List]):
         """Updates the parameters of the circuit's parametrized gates.
 
-        Args:
-            parameters: List with the new parameter values. The length and
-                elements of this list should agree with the parametrized gates
-                that the circuit contains.
+        For more information on how to use this method we refer to the
+        :ref:`How to use parametrized gates?<params-examples>` example.
 
+        Args:
+            parameters: List or dictionary with the new parameter values.
+                If a list is given its length and elements of this list
+                should be compatible with the circuit's parametrized gates.
+                If a dictionary is given its keys should be references to the
+                parametrized gates.
+                
         Example:
             ::
 

@@ -533,6 +533,10 @@ class M(Gate):
 
 
 class ParametrizedGate(Gate):
+    """Base class for parametrized gates.
+
+    Implements the basic functionality of parameter setters and getters.
+    """
 
     def __init__(self):
         super(ParametrizedGate, self).__init__()

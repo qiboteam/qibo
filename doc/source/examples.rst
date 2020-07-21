@@ -378,7 +378,7 @@ For example
 
 will print ``tf.Tensor(1.0)``.
 
-
+.. _params-examples:
 How to use parametrized gates?
 ------------------------------
 
@@ -403,7 +403,58 @@ such gates are added in a circuit their parameters can be updated using the
     c.set_parameters(params)
 
 initializes a circuit with all gate parameters set to 0 and then updates the
-values of these parameters according to the ``params`` list.
+values of these parameters according to the ``params`` list. Alternatively the
+user can use a dictionary with the ``circuit.set_parameters()`` method.
+The keys of the dictionary should be references to the gate objects of
+the circuit, for example:
+
+.. code-block::  python
+
+    c = Circuit(3, accelerators)
+    g0 = gates.RX(0, theta=0)
+    g1 = gates.RY(1, theta=0)
+    g2 = gates.fSim(0, 2, theta=0, phi=0)
+    c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
+
+    # set new values to the circuit's parameters using a dictionary
+    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
+    c.set_parameters(params)
+
+In case a list is given instead of a dictionary, then its length and elements
+should be compatible with the parametrized gates contained in the circuit.
+For example the :class:`qibo.base.gates.fSim` gate accepts two parameters
+which should be given as a tuple. The following gates support parameter setting:
+
+* ``RX``, ``RY``, ``RZ``, ``ZPow``, ``CZPow``: Accept a single ``theta`` parameter.
+* :class:`qibo.base.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
+* :class:`qibo.base.gates.GeneralizedfSim`: Accepts a tuple of two parameters
+  ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
+  array or ``tf.Tensor`` of shape ``(2, 2)``.
+* :class:`qibo.base.gates.Unitary`: Accepts a single ``unitary`` parameter. This
+  should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
+* :class:`qibo.base.gates.VariationalLayer`: Accepts a list of ``float``
+  parameters with length compatible to the number of one qubit rotations implemented
+  by the layer.
+
+The list given to ``circuit.set_parameters()`` should contain the proper types
+of parameters for the gates that are updated otherwise errors will be raised.
+Specifically for the case of the ``VariationalLayer`` gate the user may give
+the parameters as a flat list, for example:
+
+.. code-block:: python
+
+    c = Circuit(5)
+    pairs = list((i, i + 1) for i in range(0, 4, 2))
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ,
+                                 params=np.zeros(5)))
+    c.add((gates.RY(i, theta=0) for i in range(5)))
+
+    c.set_parameters(np.zeros(10))
+
+Note that for cases where a flat list can be used the a ``np.ndarray`` or a
+``tf.Tensor`` may also be used instead.
+
 
 Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
 recreating a new circuit with new parameter values.
