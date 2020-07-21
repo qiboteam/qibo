@@ -955,6 +955,8 @@ class Unitary(ParametrizedGate):
 
     @parameter.setter
     def parameter(self, x):
+        if isinstance(x, list):
+            x = np.array(x)
         shape = tuple(x.shape)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:

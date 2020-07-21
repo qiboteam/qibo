@@ -36,6 +36,29 @@ def test_rx_parameter_setter(backend):
     qibo.set_backend(original_backend)
 
 
+def test_get_parameters():
+    c = Circuit(3)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(1, theta=0.456))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0.789, phi=0.987))
+    c.add(gates.H(2))
+    unitary = np.array([[0.123, 0.123], [0.123, 0.123]])
+    c.add(gates.Unitary(unitary, 1))
+
+    params = [0.123, 0.456, (0.789, 0.987), unitary]
+    assert params == c.get_parameters()
+    params = [0.123, 0.456, (0.789, 0.987), unitary]
+    assert params == c.get_parameters()
+    params = {c.queue[0]: 0.123, c.queue[1]: 0.456,
+              c.queue[3]: (0.789, 0.987), c.queue[5]: unitary}
+    assert params == c.get_parameters("dict")
+    params = [0.123, 0.456, 0.789, 0.987]
+    params.extend(unitary.ravel())
+    assert params == c.get_parameters("flatlist")
+    with pytest.raises(ValueError):
+        c.get_parameters("test")
+
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_set_parameters_with_list(backend, accelerators):
     """Check updating parameters of circuit with list."""

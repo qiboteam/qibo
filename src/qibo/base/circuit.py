@@ -474,6 +474,30 @@ class BaseCircuit(object):
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 
+    def get_parameters(self, type: str = "list") -> List:
+        """Returns the parameters of all parametrized gates in the circuit.
+
+        Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
+        """
+        if type == "list":
+            return [gate.parameter for gate in self.parametrized_gates]
+        elif type == "dict":
+            return {gate: gate.parameter for gate in self.parametrized_gates}
+        elif type == "flatlist":
+            import numpy as np
+            from collections.abc import Iterable
+            params = []
+            for gate in self.parametrized_gates:
+                if isinstance(gate.parameter, np.ndarray):
+                    params.extend(gate.parameter.ravel())
+                elif isinstance(gate.parameter, Iterable):
+                    params.extend(gate.parameter)
+                else:
+                    params.append(gate.parameter)
+            return params
+        else:
+            raise ValueError(f"Unknown type {type} given in ``get_parameters``.")
+
     def set_parameters(self, parameters: Union[Dict, List]):
         """Updates the parameters of the circuit's parametrized gates.
 
