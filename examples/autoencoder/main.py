@@ -139,7 +139,7 @@ def main(nqubits, layers, compress, lambdas):
         ising_ham = ising(nqubits, lamb=lamb)
         ising_groundstates.append(ising_ham.eigenvectors()[0])        
 
-    result = minimize(cost_function, initial_params, method='L-BFGS-B', options = {'maxiter' : 0.5e3, 'maxfun': 0.5e3})
+    result = minimize(cost_function, initial_params, method='L-BFGS-B', options = {'maxiter' : 2.0e3, 'maxfun': 2.0e3})
     print('Final parameters: ',result.x)
     print('Final cost function: ',result.fun)
 
