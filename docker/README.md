@@ -11,6 +11,7 @@ Once you are running the container you can play with the examples
 
 root@1a57b52b754a:/usr/src/app# cd examples/grover3sat/
 root@1a57b52b754a:/usr/src/app/examples/grover3sat# python main.py
+
 Qubits encoding the solution: 10
 
 Total number of qubits used:  19
