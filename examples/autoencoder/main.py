@@ -1,11 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Jul 20 17:39:11 2020
-
-@author: carlos
-"""
-
 import numpy as np
 from qibo.models import Circuit
 from qibo import gates
