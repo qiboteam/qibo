@@ -847,8 +847,7 @@ def test_construct_unitary_errors(backend):
 
     pairs = list((i, i + 1) for i in range(0, 5, 2))
     theta = 2 * np.pi * np.random.random(6)
-    thetas = {i: theta[i] for i in range(6)}
-    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
         matrix = gate.unitary
 
@@ -865,10 +864,9 @@ def test_controlled_by_unitary_action(backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variational_layer_call():
+def test_variational_layer_call(nqubits=6):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
-    nqubits = 6
     theta = 2 * np.pi * np.random.random(nqubits)
     c = Circuit(nqubits)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
@@ -876,8 +874,9 @@ def test_variational_layer_call():
     target_state = c().numpy()
 
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    thetas = {i: theta[i] for i in range(nqubits)}
-    gate = gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas)
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ,
+                                  theta)
     final_state = gate(c._default_initial_state()).numpy()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
@@ -896,8 +895,9 @@ def test_variational_one_layer(backend, accelerators, nqubits):
 
     c = Circuit(nqubits, accelerators)
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    thetas = {i: theta[i] for i in range(nqubits)}
-    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas))
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ,
+                                 theta))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
@@ -923,19 +923,19 @@ def test_variational_two_layers(backend, accelerators, nqubits):
     pairs1 = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     pairs2 = list((i, i + 1) for i in range(1, nqubits - 2, 2))
     pairs2.append((0, nqubits - 1))
-    thetas0 = {i: theta[0, i] for i in range(nqubits)}
-    thetas1 = {i: theta[1, i] for i in range(nqubits)}
-    c.add(gates.VariationalLayer(pairs1, gates.RY, gates.CZ, thetas0))
-    c.add(gates.VariationalLayer(pairs2, gates.RY, gates.CZ, thetas1))
+    c.add(gates.VariationalLayer(range(nqubits), pairs1,
+                                 gates.RY, gates.CZ, theta[0]))
+    c.add(gates.VariationalLayer(range(nqubits), pairs2,
+                                 gates.RY, gates.CZ, theta[1]))
     final_state = c().numpy()
     np.testing.assert_allclose(target_state, final_state)
 
     c = Circuit(nqubits, accelerators)
     theta = theta.reshape((2, nqubits))
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-    thetas0 = {i: theta[0, i] for i in range(nqubits)}
-    thetas1 = {i: theta[1, i] for i in range(nqubits)}
-    c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas0, thetas1))
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ,
+                                 theta[0], theta[1]))
     c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
     c.add(gates.CZ(0, nqubits - 1))
     final_state = c().numpy()
@@ -949,15 +949,14 @@ def test_variational_layer_errors(backend):
     qibo.set_backend(backend)
     c = Circuit(6)
     pairs = list((i, i + 1) for i in range(0, 5, 2))
-    thetas0 = {i: 0 for i in range(6)}
-    thetas1 = {i: 0 for i in range(6)}
-    thetas1[6] = 1
     with pytest.raises(ValueError):
-        c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas0, thetas1))
-    thetas0 = {i: 0 for i in range(8)}
-    thetas1 = {i: 0 for i in range(8)}
+        c.add(gates.VariationalLayer(range(6), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(6), np.zeros(7)))
     with pytest.raises(ValueError):
-        c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas0, thetas1))
+        c.add(gates.VariationalLayer(range(7), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(7), np.zeros(7)))
     qibo.set_backend(original_backend)
 
 
@@ -1012,6 +1011,11 @@ def test_compiled_circuit(backend):
         c.add(gates.X(1))
         c.add(gates.CZPow(0, 1, theta))
         return c
+
+    # Try to compile circuit without gates
+    empty_c = Circuit(2)
+    with pytest.raises(RuntimeError):
+        empty_c.compile()
 
     # Run eager circuit
     c1 = create_circuit()

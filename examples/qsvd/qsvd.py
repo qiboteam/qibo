@@ -7,161 +7,84 @@ from qibo import gates
 
 class QSVD():
 
-    def __init__(self, nqubits, subsize):
+    def __init__(self, nqubits, subsize, nlayers, RY=False):
         """
         Class for the Quantum Singular Value Decomposer variational algorithm
 
         Args:
             nqubits: number of qubits
             subsize: size of the subsystem with qubits 0,1,...,sub_size-1
+            nlayers: number of layers of the varitional ansatz
+            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
+                if False, parameterized Ry gates are used in the circuit (default=False)
         """
         self.nqubits = nqubits
         self.subsize = subsize
         self.subsize2 = nqubits - subsize
 
-    def ansatz_RY(self, theta, nlayers):
+        if RY:
+            def rotations():
+                for q in range(self.nqubits):
+                    yield gates.RY(q, theta=0)
+        else:
+            def rotations():
+                for q in range(self.nqubits):
+                    yield gates.RX(q, theta=0)
+                    yield gates.RZ(q, theta=0)
+                    yield gates.RX(q, theta=0)
+
+        self._circuit = self.ansatz(nlayers, rotations)
+
+    def _CZ_gates(self):
+        """Yields CZ gates used in the variational circuit."""
+        # U
+        for q in range(0, self.subsize - 1, 2):
+            yield gates.CZ(q, q + 1)
+        # V
+        for q in range(self.subsize, self.nqubits - 1, 2):
+            yield gates.CZ(q, q + 1)
+
+    def ansatz(self, nlayers, rotations):
         """
         Args:
-            theta: list or numpy.array with the angles to be used in the circuit
             nlayers: number of layers of the varitional ansatz
+            rotations: Function that generates rotation gates (defined in __init__)
 
         Returns:
             qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
         """
         c = Circuit(self.nqubits)
-
-        index = 0
         for _ in range(nlayers):
-
-            # Ry rotations
-            for q in range(self.nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index += 1
-
-            # CZ gates
-            for q in range(0, self.subsize-1, 2):  # U
-                c.add(gates.CZ(q, q+1))
-
-            for q in range(self.subsize, self.nqubits-1, 2):  # V
-                c.add(gates.CZ(q, q+1))
-
-            # Ry rotations   `
-            for q in range(self.nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index += 1
-
-            # CZ gates
-            for q in range(1, self.subsize-1, 2):  # U
-                c.add(gates.CZ(q, q+1))
-
-            for q in range(self.subsize+1, self.nqubits-1, 2):  # V
-                c.add(gates.CZ(q, q+1))
-
-        # Final Ry rotations
-        for q in range(self.nqubits):
-            c.add(gates.RY(q, theta[index]))
-            index += 1
-
+            c.add(rotations())
+            c.add(self._CZ_gates())
+            c.add(rotations())
+            c.add(self._CZ_gates())
+        # Final rotations
+        c.add(rotations())
         # Measurements
         small = min(self.subsize, self.subsize2)
         for q in range(small):
             c.add(gates.M(q))
             c.add(gates.M(q+self.subsize))
-
         return c
 
-    def ansatz(self, theta, nlayers):
+    def QSVD_circuit(self, theta):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
-
-        Returns:
-            qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
-        """
-
-        c = Circuit(self.nqubits)
-
-        index = 0
-        for _ in range(nlayers):
-
-            # Rx,Rz,Rx rotations
-            for q in range(self.nqubits):
-                c.add(gates.RX(q, theta[index]))
-                index += 1
-                c.add(gates.RZ(q, theta[index]))
-                index += 1
-                c.add(gates.RX(q, theta[index]))
-                index += 1
-
-            # CZ gates
-            for q in range(0, self.subsize-1, 2):  # U
-                c.add(gates.CZ(q, q+1))
-
-            for q in range(self.subsize, self.nqubits-1, 2):  # V
-                c.add(gates.CZ(q, q+1))
-
-            # Rx,Rz,Rx rotations   `
-            for q in range(self.nqubits):
-                c.add(gates.RX(q, theta[index]))
-                index += 1
-                c.add(gates.RZ(q, theta[index]))
-                index += 1
-                c.add(gates.RX(q, theta[index]))
-                index += 1
-
-            # CZ gates
-            for q in range(1, self.subsize-1, 2):  # U
-                c.add(gates.CZ(q, q+1))
-
-            for q in range(self.subsize+1, self.nqubits-1, 2):  # V
-                c.add(gates.CZ(q, q+1))
-
-        # Final Rx,Rz,Rx rotations
-        for q in range(self.nqubits):
-            c.add(gates.RX(q, theta[index]))
-            index += 1
-            c.add(gates.RZ(q, theta[index]))
-            index += 1
-            c.add(gates.RX(q, theta[index]))
-            index += 1
-
-        # Measurements
-        small = min(self.subsize, self.subsize2)
-        for q in range(small):
-            c.add(gates.M(q))
-            c.add(gates.M(q+self.subsize))
-
-        return c
-
-    def QSVD_circuit(self, theta, nlayers, RY=False):
-        """
-        Args:
-            theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
 
         Returns:
             qibo.tensorflow.circuit.TensorflowCircuit with the variational circuit for the QSVD
         """
-        if not RY:
-            circuit = self.ansatz(theta, nlayers)
-        elif RY:
-            circuit = self.ansatz_RY(theta, nlayers)
-        else:
-            raise ValueError('RY must take a Boolean value')
-        return circuit
+        self._circuit.set_parameters(theta)
+        return self._circuit
 
-    def QSVD_cost(self, theta, nlayers, init_state=None, nshots=100000, RY=False):
+    def QSVD_cost(self, theta, init_state=None, nshots=100000):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
             init_state: numpy.array with the quantum state to be Schmidt-decomposed
             nshots: int number of runs of the circuit during the sampling process (default=100000)
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
 
         Returns:
             numpy.float32 with the value of the cost function for the QSVD with angles theta
@@ -176,7 +99,7 @@ class QSVD():
             """
             return sum(q1 != q2 for q1, q2 in zip(string1, string2))
 
-        Circuit_ansatz = self.QSVD_circuit(theta, nlayers, RY=RY)
+        Circuit_ansatz = self.QSVD_circuit(theta)
         result = Circuit_ansatz(init_state, nshots)
         result = result.frequencies(binary=True)
 
@@ -187,16 +110,13 @@ class QSVD():
             loss += Hamming(a, b) * result[bit_string]
         return loss/nshots
 
-    def minimize(self, init_theta, nlayers, init_state=None, nshots=100000,
-                 RY=False, method='Powell'):
+    def minimize(self, init_theta, init_state=None, nshots=100000,
+                 method='Powell'):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
             init_state: numpy.array with the quantum state to be Schmidt-decomposed
             nshots: int number of runs of the circuit during the sampling process (default=100000)
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
             method: 'classical optimizer for the minimization. All methods from scipy.optimize.minmize are suported (default='Powell')
 
         Returns:
@@ -204,27 +124,24 @@ class QSVD():
         """
         from scipy.optimize import minimize
 
-        result = minimize(self.QSVD_cost, init_theta, args=(
-            nlayers, init_state, nshots, RY), method=method, options={'disp': True})
+        result = minimize(self.QSVD_cost, init_theta, args=(init_state, nshots),
+                          method=method, options={'disp': True})
         loss = result.fun
         optimal_angles = result.x
 
         return loss, optimal_angles
 
-    def Schmidt_coeff(self, theta, nlayers, init_state, nshots=100000, RY=False):
+    def Schmidt_coeff(self, theta, init_state, nshots=100000):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
             init_state: numpy.array with the quantum state to be Schmidt-decomposed
             nshots: int number of runs of the circuit during the sampling process (default=100000)
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
 
         Returns:
             numpy.array with the Schmidt coefficients given by the QSVD, in decreasing order
         """
-        Qsvd = self.QSVD_circuit(theta, nlayers, RY=RY)
+        Qsvd = self.QSVD_circuit(theta)
         result = Qsvd(init_state, nshots)
 
         result = result.frequencies(binary=True)
@@ -241,21 +158,17 @@ class QSVD():
 
         return Schmidt / np.linalg.norm(Schmidt)
 
-    def VonNeumann_entropy(self, theta, nlayers, init_state, tol=1e-14, nshots=100000, RY=False):
+    def VonNeumann_entropy(self, theta, init_state, tol=1e-14, nshots=100000):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: number of layers of the varitional ansatz
             init_state: numpy.array with the quantum state to be Schmidt-decomposed
             nshots: int number of runs of the circuit during the sampling process (default=10000)
-            RY: if True, parameterized Rx,Rz,Rx gates are used in the circuit
-                if False, parameterized Ry gates are used in the circuit (default=False)
 
         Returns:
             numpy.float64 with the value of the Von Neumann entropy for the given bipartition
         """
-        Schmidt = self.Schmidt_coeff(
-            theta, nlayers, init_state, nshots=nshots, RY=RY)
+        Schmidt = self.Schmidt_coeff(theta, init_state, nshots=nshots)
         Schmidt = Schmidt**2
 
         non_zero_coeff = np.array([coeff for coeff in Schmidt if coeff > tol])

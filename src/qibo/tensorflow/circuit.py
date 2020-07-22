@@ -30,6 +30,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         elif gate.nqubits != self.nqubits:
             super(TensorflowCircuit, self)._set_nqubits(gate)
 
+    def set_parameters(self, parameters):
+        if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
+            super(TensorflowCircuit, self)._set_parameters_list(
+                parameters, int(parameters.shape[0]))
+        else:
+            super(TensorflowCircuit, self).set_parameters(parameters)
+
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:

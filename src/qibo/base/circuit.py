@@ -9,6 +9,31 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
+class _ParametrizedGates:
+    """Simple data structure for keeping track of parametrized gates.
+
+    Useful for the ``circuit.set_parameters()`` method.
+    Holds parametrized gates in a list and a set and also keeps track of the
+    total number of parameters.
+    """
+
+    def __init__(self):
+        self.list = []
+        self.set = set()
+        self.nparams = 0
+
+    def append(self, gate: gates.ParametrizedGate):
+        self.list.append(gate)
+        self.set.add(gate)
+        self.nparams += gate.nparams
+
+    def __len__(self):
+        return len(self.list)
+
+    def __iter__(self):
+        return iter(self.list)
+
+
 class BaseCircuit(object):
     """Circuit object which holds a list of gates.
 
@@ -36,6 +61,8 @@ class BaseCircuit(object):
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
+        # Keep track of parametrized gates for the ``set_parameters`` method
+        self.parametrized_gates = _ParametrizedGates()
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
@@ -43,6 +70,8 @@ class BaseCircuit(object):
         self.measurement_tuples = dict()
         self.measurement_gate = None
         self.measurement_gate_result = None
+
+        self.fusion_groups = []
 
         self._final_state = None
         self.using_density_matrix = False
@@ -102,11 +131,40 @@ class BaseCircuit(object):
         new_circuit = self.__class__(**self._init_kwargs)
         if deep:
             import copy
-            new_circuit.queue = [copy.copy(gate) for gate in self.queue]
+            for gate in self.queue:
+                new_gate = copy.copy(gate)
+                new_circuit.queue.append(new_gate)
+                if isinstance(gate, gates.ParametrizedGate):
+                    new_circuit.parametrized_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+            if self.fusion_groups: # pragma: no cover
+                raise NotImplementedError("Cannot create deep copy of fused "
+                                          "circuit.")
         else:
             new_circuit.queue = list(self.queue)
+            new_circuit.parametrized_gates = list(self.parametrized_gates)
             new_circuit.measurement_gate = self.measurement_gate
+            new_circuit.fusion_groups = list(self.fusion_groups)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def _fuse_copy(self) -> "BaseCircuit":
+        """Helper method for ``circuit.fuse``.
+
+        For standard (non-distributed) circuits this creates a copy of the
+        circuit with deep-copying the parametrized gates only.
+        For distributed circuits a fully deep copy should be created.
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        for gate in self.queue:
+            if isinstance(gate, gates.ParametrizedGate):
+                new_gate = copy.copy(gate)
+                new_circuit.queue.append(new_gate)
+                new_circuit.parametrized_gates.append(new_gate)
+            else:
+                new_circuit.queue.append(gate)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
@@ -131,13 +189,11 @@ class BaseCircuit(object):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
-        import copy
-        new_circuit = self.__class__(**self._init_kwargs)
-        fusion_groups = self.fusion.FusionGroup.from_queue(self.queue)
-        new_circuit.queue = list(gate for group in fusion_groups
+        new_circuit = self._fuse_copy()
+        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
+            new_circuit.queue)
+        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
                                  for gate in group.gates)
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
@@ -309,6 +365,8 @@ class BaseCircuit(object):
             self._add_layer(gate)
         else:
             self.queue.append(gate)
+        if isinstance(gate, gates.ParametrizedGate):
+            self.parametrized_gates.append(gate)
 
     def _set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits in ``gate``.
@@ -395,6 +453,102 @@ class BaseCircuit(object):
                     if isinstance(g, gate)]
         raise TypeError("Gate identifier {} not recognized.".format(gate))
 
+    def _set_parameters_list(self, parameters: List, n: int):
+        """Helper method for ``set_parameters`` when a list is given.
+
+        Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
+        """
+        if n == len(self.parametrized_gates):
+            for i, gate in enumerate(self.parametrized_gates):
+                gate.parameter = parameters[i]
+        elif n == self.parametrized_gates.nparams:
+            k = 0
+            for i, gate in enumerate(self.parametrized_gates):
+                gate.parameter = parameters[i + k: i + k + gate.nparams]
+                k += gate.nparams - 1
+        else:
+            raise ValueError("Given list of parameters has length {} while "
+                             "the circuit contains {} parametrized gates."
+                             "".format(n, len(self.parametrized_gates)))
+
+        for fusion_group in self.fusion_groups:
+            fusion_group.update()
+
+    def set_parameters(self, parameters: Union[Dict, List]):
+        """Updates the parameters of the circuit's parametrized gates.
+
+        For more information on how to use this method we refer to the
+        :ref:`How to use parametrized gates?<params-examples>` example.
+
+        Args:
+            parameters: List or dictionary with the new parameter values.
+                If a list is given its length and elements of this list
+                should be compatible with the circuit's parametrized gates.
+                If a dictionary is given its keys should be references to the
+                parametrized gates.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                # create a circuit with all parameters set to 0.
+                c = Circuit(3, accelerators)
+                c.add(gates.RX(0, theta=0))
+                c.add(gates.RY(1, theta=0))
+                c.add(gates.CZ(1, 2))
+                c.add(gates.fSim(0, 2, theta=0, phi=0))
+                c.add(gates.H(2))
+
+                # set new values to the circuit's parameters
+                params = [0.123, 0.456, (0.789, 0.321)]
+                c.set_parameters(params)
+        """
+        if isinstance(parameters, (list, tuple)):
+            self._set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, dict):
+            if self.fusion_groups:
+                raise TypeError("Cannot accept new parameters as dictionary "
+                                "for fused circuits. Use list, tuple or array.")
+            if set(parameters.keys()) != self.parametrized_gates.set:
+                raise ValueError("Dictionary with gate parameters does not "
+                                 "agree with the circuit gates.")
+            for gate in self.parametrized_gates:
+                gate.parameter = parameters[gate]
+        else:
+            raise TypeError("Invalid type of parameters {}."
+                            "".format(type(parameters)))
+
+    def get_parameters(self, format: str = "list") -> Union[List, Dict]:
+        """Returns the parameters of all parametrized gates in the circuit.
+
+        Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
+
+        Args:
+            format: How to return the variational parameters.
+                Available formats are 'list', 'dict' and 'flatlist'.
+                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for more
+                details on each format.
+        """
+        if format == "list":
+            return [gate.parameter for gate in self.parametrized_gates]
+        elif format == "dict":
+            return {gate: gate.parameter for gate in self.parametrized_gates}
+        elif format == "flatlist":
+            import numpy as np
+            from collections.abc import Iterable
+            params = []
+            for gate in self.parametrized_gates:
+                if isinstance(gate.parameter, np.ndarray):
+                    params.extend(gate.parameter.ravel())
+                elif isinstance(gate.parameter, Iterable):
+                    params.extend(gate.parameter)
+                else:
+                    params.append(gate.parameter)
+            return params
+        else:
+            raise ValueError(f"Unknown format {format} given in ``get_parameters``.")
+
     @property
     def summary(self) -> str:
         """Generates a summary of the circuit.
@@ -480,7 +634,7 @@ class BaseCircuit(object):
             name = gate.name
             if gate.name in gates.PARAMETRIZED_GATES:
                 # TODO: Make sure that our parameter convention agrees with OpenQASM
-                name += f"({gate.theta})"
+                name += f"({gate.parameter})"
             code.append(f"{name} {qubits};")
 
         # Add measurements
