@@ -4,94 +4,80 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-def ansatz(theta, p=0):
+def ansatz(p=0):
     """Ansatz for driving a random state into its up-tp-phases canonical form.
-        Args:
-            theta (array): parameters of the unitary rotations
-            p=0 (float): probability of occuring a single-qubit depolarizing error
-        Returns:
-            Qibo circuit
+
+      Args:
+        p (float): probability of occuring a single-qubit depolarizing error
+
+      Returns:
+        Qibo circuit implementing the variational ansatz.
     """
     C = Circuit(3)
-    index = 0
-    if p == 0:
-        for i in range(3):
-            C.add(gates.RZ(i, theta[index]))
-            C.add(gates.RY(i, theta[index + 1]))
-            C.add(gates.RZ(i, theta[index + 2]))
-            index += 3
-        for i in range(3):
-            C.add(gates.M(i))
-
-    else:
-        for i in range(3):
-            C.add(gates.RZ(i, theta[index]))
-            C.add(gates.RY(i, theta[index + 1]))
-            C.add(gates.RZ(i, theta[index + 2]))
+    for i in range(3):
+        C.add(gates.RZ(i, theta=0))
+        C.add(gates.RY(i, theta=0))
+        C.add(gates.RZ(i, theta=0))
+        if p > 0:
             C.add(gates.NoiseChannel(i, px=p/3, py=p/3, pz=p/3))
-            index += 3
-        for i in range(3):
+    for i in range(3):
+        if p > 0:
             C.add(gates.NoiseChannel(i, px=10 * p))
-            C.add(gates.M(i))
-
+        C.add(gates.M(i))
     return C
 
 
-def cost_function(theta, state, p=0, shots=1000):
+def cost_function(theta, state, circuit, shots=1000):
     """Cost function encoding the difference between a state and its up-to-phases canonical form
         Args:
-            theta (array): parameters of the unitary rotations
-            state (cplx array): three-qubit random state
-            p=0 (float): probability of occuring a single-qubit depolarizing error
+            theta (array): parameters of the unitary rotations.
+            state (cplx array): three-qubit random state.
+            circuit (models.Circuit): Qibo variational circuit.
             shots (int): Shots used for measuring every circuit.
         Returns:
             float, cost function
     """
-    C = ansatz(theta, p)
-    measurements = C.execute(state, nshots=shots).frequencies(binary=False)
-
+    circuit.set_parameters(theta)
+    measurements = circuit(state, nshots=shots).frequencies(binary=False)
     return (measurements[1] + measurements[2] + measurements[3]) / shots
 
 
-def canonize(state, p=0, shots=1000):
+def canonize(state, circuit, shots=1000):
     """Function to transform a given state into its up-to-phases canonical form
         Args:
-            state (cplx array): three-qubit random state
-            p=0 (float): probability of occuring a single-qubit depolarizing error
+            state (cplx array): three-qubit random state.
+            circuit (models.Circuit): Qibo variational circuit.
             shots (int): Shots used for measuring every circuit.
         Returns:
             Value cost function, parameters to canonize the given state
         """
-
     theta = np.zeros(9)
-    result = minimize(cost_function, theta, args=(state, p, shots), method='powell')
+    result = minimize(cost_function, theta, args=(state, circuit, shots),
+                      method='powell')
     return result.fun, result.x
 
-def canonical_tangle(state, theta, p=0, shots=1000, post_selection=True):
+
+def canonical_tangle(state, theta, circuit, shots=1000, post_selection=True):
     """Tangle of a canonized quantum state
         Args:
-            state (cplx array): three-qubit random state
-            theta (array): parameters of the unitary rotations
-            p=0 (float): probability of occuring a single-qubit depolarizing error
+            state (cplx array): three-qubit random state.
+            theta (array): parameters of the unitary rotations.
+            circuit (models.Circuit): Qibo variational circuit.
             shots (int): Shots used for measuring every circuit.
             post_selection (bool): whether post selection is applied or not
         Returns:
             tangle
     """
-    C = ansatz(theta, p)
-    result = C.execute(state, nshots=shots).frequencies(binary=False)
+    circuit.set_parameters(theta)
+    result = circuit(state, nshots=shots).frequencies(binary=False)
     measures = np.zeros(8)
-    for i in range(8):
-        try:
-            measures[i] = result[i] / shots
-        except:
-            measures[i] = 0
+    for i, r in result.items():
+        measures[i] = result[i] / shots
     if post_selection:
         measures[1] = 0
         measures[2] = 0
         measures[3] = 0
         measures = measures / np.sum(measures)
-
     return 4*opt_hyperdeterminant(measures)
 
 
@@ -145,6 +131,3 @@ def compute_random_tangle(seed):
     """
     state = create_random_state(seed)
     return 4 * np.abs(hyperdeterminant(state))
-
-
-

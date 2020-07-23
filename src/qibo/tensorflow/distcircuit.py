@@ -103,7 +103,7 @@ class DeviceQueues:
                 return i
         return i + 1
 
-    def _create_reduced_gate(self, gate: gates.Gate) -> gates.Gate:
+    def _create_device_gate(self, gate: gates.Gate) -> gates.Gate:
         """Creates a copy of a gate for specific device application.
 
         Target and control qubits are modified according to the local qubits of
@@ -116,16 +116,17 @@ class DeviceQueues:
             A :class:`qibo.base.gates.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
-        calc_gate = copy.copy(gate)
+        devgate = copy.copy(gate)
         # Recompute the target/control indices considering only local qubits.
         new_target_qubits = tuple(q - self.reduction_number(q)
-                                  for q in calc_gate.target_qubits)
+                                  for q in devgate.target_qubits)
         new_control_qubits = tuple(q - self.reduction_number(q)
-                                   for q in calc_gate.control_qubits
+                                   for q in devgate.control_qubits
                                    if q not in self.global_qubits_set)
-        calc_gate.set_targets_and_controls(new_target_qubits, new_control_qubits)
-        calc_gate.original_gate = gate
-        return calc_gate
+        devgate.set_targets_and_controls(new_target_qubits, new_control_qubits)
+        devgate.original_gate = gate
+        devgate.device_gates = set()
+        return devgate
 
     @staticmethod
     def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
@@ -263,11 +264,12 @@ class DeviceQueues:
                     self.queues.append([[] for _ in range(self.ndevices)])
 
                 for device, ids in self.device_to_ids.items():
-                    calc_gate = self._create_reduced_gate(gate)
+                    devgate = self._create_device_gate(gate)
                     # Gate matrix should be constructed in the calculation
                     # device otherwise device parallelization will break
-                    with tf.device(device):
-                        calc_gate.nqubits = self.nlocal
+                    devgate.device = device
+                    devgate.nqubits = self.nlocal
+
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then
@@ -280,7 +282,9 @@ class DeviceQueues:
                             if not flag:
                                 break
                         if flag:
-                            self.queues[-1][i].append(calc_gate)
+                            self.queues[-1][i].append(devgate)
+                            if isinstance(gate, gates.ParametrizedGate):
+                                gate.device_gates.add(devgate)
 
 
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
@@ -397,16 +401,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "circuits because they modify gate objects.")
         return super(TensorflowDistributedCircuit, self).copy(deep)
 
+    def _fuse_copy(self) -> "TensorflowDistributedCircuit":
+        return self.copy(deep=True)
+
     def fuse(self) -> "TensorflowDistributedCircuit":
-        if self.queues is not None and self.queues.queues:
-            raise RuntimeError("Cannot fuse distributed circuit after gates "
-                               "are set.")
-        # use deep copy because distributed circuit gates may change
-        new_circuit = self.copy(deep=True)
-        fusion_groups = self.fusion.FusionGroup.from_queue(new_circuit.queue)
-        new_circuit.queue = list(gate for group in fusion_groups
-                                 for gate in group.gates)
-        return new_circuit
+        if self.queues is not None:
+            raise RuntimeError("Cannot fuse distributed circuit after "
+                               "its first execution.")
+        return super(TensorflowDistributedCircuit, self).fuse()
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise NotImplementedError("Distributed circuit does not support "

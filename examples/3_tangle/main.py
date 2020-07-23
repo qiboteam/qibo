@@ -18,24 +18,26 @@ def main(N, p, shots, post_selection):
         # backend is adapted to the error implementation
         from qibo import set_backend
         set_backend("matmuleinsum")
+
+    circuit = ansatz(p)
     for i in range(N):
         """
         For every seed from 0 to N, the steps to follow are
         1) A random state with three qubits is created from the seed
         2) The tangle of the recently created random state is computed exactly
-        3) Transformation to the up-to-phases canonical form is performed by applying local operations 
+        3) Transformation to the up-to-phases canonical form is performed by applying local operations
                 that drive some coefficients to zero
         4) The tangle of the up-to-phases canonical form of the created state is measured from the outcomes of the state.
                 Post-selection can be applied at this stage
-        
+
         Results are stored into variables to paint the results
         """
         if i % 10 == 0:
             print('Initialized state with seed %s'%i + '/ %s'%N)
         state = create_random_state(i)
         tangles[i] = compute_random_tangle(i)
-        fun, params = canonize(state, p=p, shots=shots)
-        opt_tangles[i] = canonical_tangle(state, params, post_selection=post_selection)
+        fun, params = canonize(state, circuit, shots=shots)
+        opt_tangles[i] = canonical_tangle(state, params, circuit, post_selection=post_selection)
 
     print('Painting results')
     fig, ax = plt.subplots() # Plotting
