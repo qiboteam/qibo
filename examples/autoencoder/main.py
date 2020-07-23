@@ -63,7 +63,7 @@ def encoder_hamiltonian(nqubits, ncompress):
     sz = matrices.Z
     encoder.hamiltonian -= sum(multikron((sz if i == j else eye 
                                            for j in range(nqubits))) for i in range(ncompress))    
-    encoder.hamiltonian += ncompress*multikron((eye for i in range(nqubits)))
+    encoder.hamiltonian += ncompress * np.eye(2 ** nqubits, dtype=eye.dtype)    
     encoder.hamiltonian /=2
     return encoder
 
