@@ -40,7 +40,3 @@ you should execute the following command:
 ```python
 python main.py --nqubits 6 --layers 3 --compress 2 --lambdas [0.9, 0.95, 1.0, 1.05, 1.10]
 ```
-
-## Interpreting results
-
-TBC
