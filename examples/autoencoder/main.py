@@ -6,7 +6,6 @@ from qibo import gates
 from qibo.hamiltonians import Hamiltonian
 from qibo import matrices
 from scipy.optimize import minimize
-from qibo import K
 import argparse
 
 
