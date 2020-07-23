@@ -4,11 +4,21 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](
 
 ## Problem overview
 
-TBC
+The task of an autoencoder given an input *x*, is to map *x* to a lower dimensional point *y* such that *x* can likely be recovered from *y*. Specifically, once we obtain *y*, we have effectively compressed the input *x*.
+
+Given that quantum mechanics is able to generate different patterns compared to classical physics, a quantum encoder should be able to recognize patterns beyond classical capabilities.
+
+Recall that a limiting factor for near applications is the amount of quantum resources that can be realized in an experiment. Therefore, for experiments in the near future, a quantum autoencoder which can reduce the experimental overhead in terms of these resources is especially valuable.
+
 
 ## Implementing the solution
 
-TBC
+The code herein aims to implement a quantum autoencoder, partly based on the manuscript ["Quantum autoencoders for efficient compression of quantum data"](https://iopscience.iop.org/article/10.1088/2058-9565/aa8072).
+
+The idea is to benchmark the accuracy of the [Variational Quantum Eigensolver
+(VQE)](https://www.nature.com/articles/ncomms5213) based on a finite-depth
+variational quantum circuit encoding ground states of local Hamiltonians,
+namely, the Ising and XXZ models.
 
 ## How to run an example?
 
