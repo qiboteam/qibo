@@ -61,20 +61,10 @@ def encoder_hamiltonian(nqubits, ncompress):
     encoder.hamiltonian = 0
     eye = matrices.I
     sz = matrices.Z
-    for i in range(ncompress):
-        h = 1
-        for j in range(nqubits):
-            if i == j:
-                h = np.kron(sz, h)
-            else:
-                h = np.kron(eye, h)
-        encoder.hamiltonian -= h
-    
-    h = 1
-    for i in range(nqubits):
-        h = np.kron(eye, h)        
-    encoder.hamiltonian += ncompress*h
-    encoder.hamiltonian /= 2
+    encoder.hamiltonian -= sum(multikron((sz if i == j else eye 
+                                           for j in range(nqubits))) for i in range(ncompress))    
+    encoder.hamiltonian += ncompress*multikron((eye for i in range(nqubits)))
+    encoder.hamiltonian /=2
     return encoder
 
 
@@ -89,47 +79,33 @@ def main(nqubits, layers, compress, lambdas):
         Returns:
             Value of the cost function.
         """        
-        def ansatz(theta):
-            """Implements the variational quantum circuit.
-        
-            Args:
-                theta (array or list): values of the initial parameters.
-                
-            Returns:
-                Circuit that implements the variational ansatz.
-            """
-            c = Circuit(nqubits)
-            index = 0
-            for l in range(layers):
-                for q in range(nqubits):
-                    c.add(gates.RY(q, theta[index]))
-                    index+=1
-                for q in range(0, nqubits-1, 2):
-                    c.add(gates.CZ(q, q+1))
-                for q in range(nqubits):
-                    c.add(gates.RY(q, theta[index]))
-                    index+=1
-                for q in range(1, nqubits-2, 2):
-                    c.add(gates.CZ(q, q+1))
-                c.add(gates.CZ(0, nqubits-1))
+        circuit = Circuit(nqubits)
+        for l in range(layers):
             for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            return c
+                circuit.add(gates.RY(q, theta=0))
+            for q in range(0, nqubits-1, 2):
+                circuit.add(gates.CZ(q, q+1))
+            for q in range(nqubits):
+                circuit.add(gates.RY(q, theta=0))
+            for q in range(1, nqubits-2, 2):
+                circuit.add(gates.CZ(q, q+1))
+            circuit.add(gates.CZ(0, nqubits-1))
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=0))
         
-        cost=0
+        cost = 0
+        circuit.set_parameters(params) # this will change all thetas to the appropriate values
         for i in range(len(ising_groundstates)):
-            final_state = ansatz(params).execute(np.copy(ising_groundstates[i]))
+            final_state = circuit(np.copy(ising_groundstates[i]))
             cost += encoder.expectation(final_state).numpy().real
     
-        global ii
-        if ii%50 == 0:
-            print(ii, cost/len(ising_groundstates))
-        ii = ii+1
+        global count
+        if count%50 == 0:
+            print(count, cost/len(ising_groundstates))
+        count += 1
     
         return cost/len(ising_groundstates)
     
-    ii=0
     nparams = 2 * nqubits * layers + nqubits
     initial_params = np.random.uniform(0, 2*np.pi, nparams)
     encoder = encoder_hamiltonian(nqubits,compress)
@@ -145,6 +121,7 @@ def main(nqubits, layers, compress, lambdas):
 
 
 if __name__ == "__main__":
+    count=0
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=4, type=int)
     parser.add_argument("--layers", default=2, type=int)
