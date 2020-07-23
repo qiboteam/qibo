@@ -17,7 +17,7 @@ The code herein aims to implement a quantum autoencoder, partly based on the man
 
 A graphical depiction of a quantum encoder can be seen in the following figure. In a quantum encoder the information contained in some of the input qubits must be discarded after the initial encoding. Then, fresh qubits (here initialized to the |0> state, but one may consider any other easy-to-construct reference state) are prepared and used to implement the final decoding, which is finally compared to the initial state.
 
-![ansatz1](images/ansatz-1.png)
+![autoencoder](images/autoencoder.png)
 
 The learning task for a quantum autoencoder is to find unitaries which preserve the quantum information of the input through the smaller intermediate latent space. Here, we propose a cost function designed from local operators, possibly avoiding [trainability concerns](https://www.nature.com/articles/s41467-018-07090-4). A figure of merit for the wrong answer when training is simply the total amount of non-zero measurement outcomes on the discarded qubits, which shall be minimized. In order to design the cost function to be local, different outcomes may be penalized by their Hamming distance to the |0> state, which is just the number of symbols that are different in the binary representation. Notice that this cost function has a value of zero if and only if the compression is successfully completed. Note as well that it is defined in terms of local observables and therefore, it does not suffer, for circuits of depth O(log n), from the problem of [exponentially vanishing gradients](https://arxiv.org/abs/2001.00550).
 
