@@ -13,3 +13,4 @@ physics problems.
     tutorials/unary/README.md
     tutorials/3_tangle/README.md
     tutorials/qsvd/README.md
+    tutorials/autoencoder/README.md
