@@ -10,6 +10,8 @@ The standard [iris data set](https://archive.ics.uci.edu/ml/datasets/iris) is ch
 
 ![ansatz](images/ansatz.png)
 
+where R stands for Ry rotations (if `RY=True`) or RxRzRx rotations.
+
 # How to run an example
 
 To run a particular instance of the problem, we have to set up the initial
@@ -38,7 +40,4 @@ Note that nclases must be 3 and cannot be changed in this example, because we ar
 
 # Results
 
-The classification accuracy for the training and test sets is found to be around 67% and 62%, respectively:
-
-`Train set | # Clases: 3 | # Qubits: 4 | # Layers: 11 | Accuracy: 0.666...`
-`Test set  | # Clases: 3 | # Qubits: 4 | # Layers: 11 | Accuracy: 0.622...`
+The classification accuracy for the training and test sets is found to be around 67% and 62%, respectively.
