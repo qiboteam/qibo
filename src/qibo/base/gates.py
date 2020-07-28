@@ -41,6 +41,13 @@ class Gate(object):
         self._unitary = None
         self._nqubits = None
         self._nstates = None
+        self.qubits_tensor = None
+
+        # Cast gate matrices to the proper device
+        self.device = config.get_device()
+        # Reference to copies of this gate that are casted in devices when
+        # a distributed circuit is used
+        self.device_gates = set()
 
         config.ALLOW_SWITCHERS = False
 
@@ -186,10 +193,6 @@ class Gate(object):
         """
         raise NotImplementedError
 
-    def _calculate_qubits_tensor(self):
-        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
-        pass
-
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
         if self.qubits != other.qubits:
@@ -205,6 +208,10 @@ class Gate(object):
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
         return self.__matmul__(other)
 
+    def _calculate_qubits_tensor(self):
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        pass
+
     def _prepare(self): # pragma: no cover
         """Prepares the gate for application to state vectors.
 
@@ -212,7 +219,7 @@ class Gate(object):
         Calculates the ``matrix`` required to apply the gate to state vectors.
         This is not necessarily the same as the unitary matrix of the gate.
         """
-        raise NotImplementedError
+        pass
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -525,7 +532,36 @@ class M(Gate):
                          "matrices.")
 
 
-class RX(Gate):
+class ParametrizedGate(Gate):
+    """Base class for parametrized gates.
+
+    Implements the basic functionality of parameter setters and getters.
+    """
+
+    def __init__(self):
+        super(ParametrizedGate, self).__init__()
+        self._theta = None
+        self.nparams = 1
+
+    @property
+    def parameter(self):
+        return self._theta
+
+    def _reprepare(self):
+        if self.device_gates:
+            for gate in self.device_gates:
+                gate.parameter = self.parameter
+        else:
+            self._prepare()
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._theta = x
+        self._reprepare()
+
+
+class RX(ParametrizedGate):
     """Rotation around the X-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -547,13 +583,13 @@ class RX(Gate):
         super(RX, self).__init__()
         self.name = "rx"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
 
-class RY(Gate):
+class RY(ParametrizedGate):
     """Rotation around the Y-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -575,13 +611,13 @@ class RY(Gate):
         super(RY, self).__init__()
         self.name = "ry"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
 
-class RZ(Gate):
+class RZ(ParametrizedGate):
     """Rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -601,13 +637,13 @@ class RZ(Gate):
         super(RZ, self).__init__()
         self.name = "rz"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
 
-class ZPow(Gate):
+class ZPow(ParametrizedGate):
     """Equivalent to :class:`qibo.base.gates.RZ` with a different global phase.
 
 
@@ -628,7 +664,7 @@ class ZPow(Gate):
         super(ZPow, self).__init__()
         self.name = "rz"
         self.target_qubits = (q,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
@@ -637,7 +673,7 @@ class ZPow(Gate):
         """Fall back to CZPow if there is only one control."""
         if len(q) == 1:
             gate = getattr(self.module, "CZPow")(q[0], self.target_qubits[0],
-                                                 theta=self.theta)
+                                                 theta=self.parameter)
         else:
             gate = super(ZPow, self).controlled_by(*q)
         return gate
@@ -689,7 +725,7 @@ class CZ(Gate):
         self.init_args = [q0, q1]
 
 
-class CZPow(Gate):
+class CZPow(ParametrizedGate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -715,7 +751,7 @@ class CZPow(Gate):
         self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.theta = theta
+        self.parameter = theta
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
@@ -736,7 +772,7 @@ class SWAP(Gate):
         self.init_args = [q0, q1]
 
 
-class fSim(Gate):
+class fSim(ParametrizedGate):
     """The fSim gate defined in `arXiv:2001.08343 <https://arxiv.org/abs/2001.08343>`_.
 
     Corresponds to the following unitary matrix
@@ -761,14 +797,25 @@ class fSim(Gate):
         super(fSim, self).__init__()
         self.name = "fsim"
         self.target_qubits = (q0, q1)
-        self.theta = theta
-        self.phi = phi
+        self._phi = None
+        self.nparams = 2
+        self.parameter = theta, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
 
+    @property
+    def parameter(self):
+        return self._theta, self._phi
 
-class GeneralizedfSim(Gate):
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._theta, self._phi = x
+        self._reprepare()
+
+
+class GeneralizedfSim(ParametrizedGate):
     """The fSim gate with a general rotation.
 
     Corresponds to the following unitary matrix
@@ -792,11 +839,28 @@ class GeneralizedfSim(Gate):
         super(GeneralizedfSim, self).__init__()
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
-        self.given_unitary = unitary
-        self.phi = phi
+
+        self._phi = None
+        self.__unitary = None
+        self.nparams = 2
+        self.parameter = unitary, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
+
+    @property
+    def parameter(self):
+        return self.__unitary, self._phi
+
+    @parameter.setter
+    def parameter(self, x):
+        shape = tuple(x[0].shape)
+        if shape != (2, 2):
+            raise ValueError("Invalid shape {} of rotation for generalized "
+                             "fSim gate".format(shape))
+        self._unitary = None
+        self.__unitary, self._phi = x
+        self._reprepare()
 
 
 class TOFFOLI(Gate):
@@ -858,7 +922,7 @@ class TOFFOLI(Gate):
                 RY(target, np.pi / 4)]
 
 
-class Unitary(Gate):
+class Unitary(ParametrizedGate):
     """Arbitrary unitary gate.
 
     Args:
@@ -872,18 +936,45 @@ class Unitary(Gate):
     def __init__(self, unitary, *q, name: Optional[str] = None):
         super(Unitary, self).__init__()
         self.name = "Unitary" if name is None else name
-        self.given_unitary = unitary
         self.target_qubits = tuple(q)
+
+        self.__unitary = None
+        self.parameter = unitary
+        self.nparams = int(tuple(unitary.shape)[0]) ** 2
 
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
 
     @property
+    def rank(self) -> int:
+        return len(self.target_qubits)
+
+    @property
+    def parameter(self):
+        return self.__unitary
+
+    @parameter.setter
+    def parameter(self, x):
+        shape = tuple(x.shape)
+        true_shape = (2 ** self.rank, 2 ** self.rank)
+        if shape == true_shape:
+            self.__unitary = x
+        elif shape == (2 ** (2 * self.rank),):
+            self.__unitary = x.reshape(true_shape)
+        else:
+            raise ValueError("Invalid shape {} of unitary matrix acting on "
+                             "{} target qubits.".format(shape, self.rank))
+        self._unitary = None
+        self._reprepare()
+
+    @property
     def unitary(self):
+        if self._unitary is None: # pragma: no cover
+            self._unitary = self.construct_unitary()
         return self._unitary
 
 
-class VariationalLayer(Gate):
+class VariationalLayer(ParametrizedGate):
     """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
 
     Performance is optimized by fusing the variational one-qubit gates with the
@@ -891,13 +982,16 @@ class VariationalLayer(Gate):
     two-qubit gates as 4x4 matrices.
 
     Args:
-        qubit_pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
+        qubits (list): List of one-qubit gate target qubit IDs.
+        pairs (list): List of pairs of qubit IDs on which the two qubit gate act.
         one_qubit_gate: Type of one qubit gate to use as the variational gate.
         two_qubit_gate: Type of two qubit gate to use as entangling gate.
-        params_map (dict): Variational parameters of one qubit gates as a dictionary
-            that maps qubit IDs to the corresponding parameter value.
-        params_map2 (dict): Same as ``params_map`` but for the layer of one-qubit
-            gates after the two-qubit gate ones.
+        params (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act before the layer
+            of entangling gates.
+        params2 (list): Variational parameters of one-qubit gates as a list that
+            has the same length as ``qubits``. These gates act after the layer
+            of entangling gates.
         name (str): Optional name for the gate.
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
@@ -923,30 +1017,28 @@ class VariationalLayer(Gate):
             c.add((gates.CZ(i, i + 1) for i in range(7)))
     """
 
-    def __init__(self, qubit_pairs: List[Tuple[int, int]],
+    def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
-                 params_map: Dict[int, float],
-                 params_map2: Optional[Dict[int, float]] = None,
+                 params: List[float], params2: Optional[List[float]] = None,
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__()
-        self.init_args = [qubit_pairs, one_qubit_gate, two_qubit_gate]
-        self.init_kwargs = {"params_map": params_map,
-                            "params_map2": params_map2,
-                            "name": name}
-
+        self.init_args = [qubits, pairs, one_qubit_gate, two_qubit_gate]
+        self.init_kwargs = {"params": params, "params2": params2, "name": name}
         self.name = "VariationalLayer" if name is None else name
-        self.params_map = dict(params_map)
-        targets = set(self.params_map.keys())
-        self.target_qubits = tuple(targets)
-        if params_map2 is not None:
-            self.params_map2 = dict(params_map2)
-            if targets != set(self.params_map2.keys()):
-                raise ValueError("Invalid parameter maps given in variational layer.")
-        else:
-            self.params_map2 = None
 
-        self.qubit_pairs = qubit_pairs
-        two_qubit_targets = set(q for p in qubit_pairs for q in p)
+        self.target_qubits = tuple(qubits)
+        self.params = self._create_params_dict(params)
+        self._parameters = list(params)
+        if params2 is None:
+            self.params2 = {}
+        else:
+            self.params2 = self._create_params_dict(params2)
+            self._parameters.extend(params2)
+        self.nparams = len(self.params) + len(self.params2)
+
+        self.pairs = pairs
+        targets = set(self.target_qubits)
+        two_qubit_targets = set(q for p in pairs for q in p)
         additional_targets = targets - two_qubit_targets
         if not additional_targets:
             self.additional_target = None
@@ -963,10 +1055,40 @@ class VariationalLayer(Gate):
         self.unitaries = []
         self.additional_unitary = None
 
+    def _create_params_dict(self, params: List[float]) -> Dict[int, float]:
+        if len(self.target_qubits) != len(params):
+            raise ValueError("VariationalLayer has {} target qubits but {} "
+                             "parameters were given."
+                             "".format(len(self.target_qubits), len(params)))
+        return {q: p for q, p in zip(self.target_qubits, params)}
+
+    def _calculate_unitaries(self): # pragma: no cover
+        raise NotImplementedError
+
+    @property
+    def parameter(self) -> List[float]:
+        return self._parameters
+
+    @parameter.setter
+    def parameter(self, x):
+        if self.params2:
+            n = len(x) // 2
+            self.params = self._create_params_dict(x[:n])
+            self.params2 = self._create_params_dict(x[n:])
+        else:
+            self.params = self._create_params_dict(x)
+        self._parameters = x
+
+        matrices, additional_matrix = self._calculate_unitaries()
+        for unitary, matrix in zip(self.unitaries, matrices):
+            unitary.parameter = matrix
+        if additional_matrix is not None:
+            self.additional_unitary.parameter = additional_matrix
+
     @property
     def unitary(self):
-        raise ValueError("``construct_unitary`` method is not useful "
-                         "for ``VariationalLayer``.")
+        raise ValueError("Unitary property does not exist for the "
+                         "``VariationalLayer``.")
 
 
 class NoiseChannel(Gate):
@@ -1055,7 +1177,7 @@ class GeneralChannel(Gate):
         for qubits, matrix in A:
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
-            if shape != (rank, rank):
+            if shape != (rank, rank): # pragma: no cover
                 raise ValueError("Invalid Krauss operator shape {} for acting "
                                  "on {} qubits.".format(shape, len(qubits)))
 

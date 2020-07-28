@@ -39,7 +39,7 @@ In this example there are only three files
 - `main.py` is the file calling all other functions. The action of every line of code is commented in the source code.
 
 The parameters to be fixed for a run of the experiment are
-- name: problem to solve, to choose between `['circle', '3_circles', 'square', '4_squares', 'crown', 'tricrown', 'wavy_lines']`
+- dataset: problem to solve, to choose between `['circle', '3_circles', 'square', '4_squares', 'crown', 'tricrown', 'wavy_lines']`
 - layers: layers of the classifier
 
 Every time the `main.py` is run, it checks whether there is a solution to that particular problem. If it has been

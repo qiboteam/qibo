@@ -46,7 +46,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
             theta = np.pi * float(theta.replace("π", ""))
         else:
             theta = float(theta)
-        np.testing.assert_allclose(theta, qibo_gate.theta)
+        np.testing.assert_allclose(theta, qibo_gate.parameter)
 
 
 def assert_circuit_same_gates(circuit1, circuit2):
