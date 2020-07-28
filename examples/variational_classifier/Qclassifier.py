@@ -6,7 +6,7 @@ from qibo.models import Circuit
 from qibo import gates
 
 
-class Quantum_Classifer():
+class QuantumClassifer():
     
     def __init__(self, nclasses, nqubits):
         """
@@ -117,7 +117,7 @@ class Quantum_Classifer():
 
         return c
 
-    def Circuit(self, theta, nlayers, RY=True):
+    def Classifier_circuit(self, theta, nlayers, RY=True):
         """    
         Args: 
             theta: list or numpy.array with the biases and the angles to be used in the circuit       
@@ -197,7 +197,7 @@ class Quantum_Classifer():
             numpy.float32 with the value of the square-loss function
         """  
         qibo.set_backend("matmuleinsum")
-        circ = self.Circuit(theta, nlayers, RY)
+        circ = self.Classifier_circuit(theta, nlayers, RY)
         circ.compile()
         
         Bias = np.array(theta[0:self.measured_qubits])

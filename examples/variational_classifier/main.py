@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from Qclassifier import Quantum_Classifer
+from Qclassifier import QuantumClassifer
 import argparse
 import numpy as np
 
@@ -18,7 +18,7 @@ parser.add_argument("--method", default='Powell', help="Classical otimizer emplo
 def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
     
     # We initialize the quantum classifier    
-    qc = Quantum_Classifer(nclasses, nqubits)
+    qc = QuantumClassifer(nclasses, nqubits)
     
     # We load the iris data set
     data = open('data/iris.data')
@@ -45,7 +45,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
     
     # We train the Quantum_Classifer
     if not training:
-        optimal_angles = np.load('data/optimal_angles_4q_11l.npy')
+        optimal_angles = np.load('data/optimal_angles_{}q_{}l.npy'.format(nqubits,nlayers))
     else:
         print('Training classifier...')     
         # We choose initial random parameters (execpt for the biases, that we set to zero)
@@ -66,9 +66,9 @@ def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
     labels_test = [[1,1]]*15 + [[1,-1]]*15 + [[-1,1]]*15
     
     # We run an accuracy check for the training and the test sets
-    predictions_train = [qc.Predictions(qc.Circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots) 
+    predictions_train = [qc.Predictions(qc.Classifier_circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots) 
                             for ket in data_train]   
-    predictions_test = [qc.Predictions(qc.Circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots)
+    predictions_test = [qc.Predictions(qc.Classifier_circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots)
                         for ket in data_test]
     
     print('Train set | # Clases: {} | # Qubits: {} | # Layers: {} | Accuracy: {}'.format(nclasses, nqubits, nlayers, qc.Accuracy(labels_train, predictions_train)))
