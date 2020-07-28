@@ -6,17 +6,33 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/grover3sat](h
 
 Grover's Algorithm is an example of the advantages a quantum computer has over a classical computer in the task of searching databases. This program applies a Grover search on a brute force check of preimages for a Toy Sponge Hash construction.
 
-(work in progess)
+Symmetric cryptographic primitives, such as hash functions, are believed to be quantum resistant. The security of hash functions is measured in terms of resistance against collision finding, preimage and second preimage finding, and their multi-target variants. Therefore the first approach is to gain the quadratic speed-up from Grover's algorithm. In the following we present an explicit construction for a Toy Sponge Hash function based on the Chacha family of permutations in order to study the scaling of Addition-Rotation-eXclusive (ARX) hash functions.
 
 ## Grover's search algorithm
 
 The algorithm proposed by Grover [arXiv:quant-ph/9605043](https://arxiv.org/abs/quant-ph/9605043) achieves a quadratic speed-up on a brute-force search of this preimage finding problem.
 
-This program builds the necessary parts of the algorithm in order to simulate this algorithm. Crucially, Grover's algorithm requires an oracle that is problem dependent, which changes the sign of the solution of the problem.
+This program builds the necessary parts of the algorithm in order to simulate this algorithm. Crucially, Grover's algorithm requires an oracle that is problem dependent, which changes the sign of the solution of the problem. More details can be found on the original paper but the outline goes a follows.
 
 ### Oracle
 
-(work in progress)
+The Grover Oracle needs to apply the Toy Sponge Hash construction in a reversible way. 
+
+The Chacha permutation [chacah-20080120](https://cr.yp.to/chacha/chacha-20080120.pdf) used as the base for the Toy Sponge Hash construction is built on top of a QuarterRound module. As a a quantum circuit this Quarter Round can be constructed as 
+
+![quarter-round](images/quarter-round.png)
+
+with the preferred version of a quantum adder. For this circuit we use a qubit-efficient adder put forward in [arXiv:quant-ph/0410184](https://arxiv.org/abs/quant-ph/0410184) where only ancilla is necessary. For the specific case of an adder modulo `2^n` the quantum circuit used can be seen in the following image.
+
+![addermod2n](images/adder-mod2n.png)
+
+With the Quarter Round constructed we can arrange the Chacha permutation in a reversible way through a quantum circuit by arranging them as needed.
+
+![chacha-perm](images/chacha-perm.png)
+
+The full oracle requires of a classical wire that stores the first, deterministic permutation. Also, once the Chacha permutation is performed and the amplitude for the solution state is flipped, the permutation must be undone as the diffusion transform has to be applied on the message space.
+
+![sponge-oracle](images/sponge-oracle.png)
 
 ### Diffusion transform
 
@@ -30,7 +46,11 @@ Should the total number of preimages be known, the oracle and diffusion transfor
 
 If that is not the case, the code follows the algorithm put forward in [arXiv:quant-ph/9605034](https://arxiv.org/abs/quant-ph/9605034).
 
-(work in progress)
+- The circuit is initialized with `m = 1` and `lambda = 6/5`.
+- Choose `j` randomly as an integer equal or lower than `m`.
+- Apply `j` Grover steps and measure.
+- If the measured state outputs the desired hash: `exit`.
+- If not, set `m = min(lamda*m, sqrt(N))` and repeat from the second step.
 
 The quantum circuit for the Grover search algorithm with any oracle takes the form:
 

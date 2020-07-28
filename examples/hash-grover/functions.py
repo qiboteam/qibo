@@ -420,9 +420,8 @@ def check_hash(q, message, h, constant_1, constant_2, rot):
         rot (list): characterization of the rotation part of the algorithm.
             
     Returns:
-        result (bool): True of False if the message correspongs to a preimage.
+        True of False if the message correspongs to a preimage.
     """
-    result = False
     n = int(len(h))
     m1 = 0
     m2 = 0
@@ -457,9 +456,7 @@ def check_hash(q, message, h, constant_1, constant_2, rot):
         b, c = chacha_qr(q, b, c, rot)
     
     output = (a+b)[:n]
-    if h == output:
-        result = True
-    return result
+    return h == output
 
 
 def grover(q, constant_1, constant_2, rot, h, grover_it, nshots=100):

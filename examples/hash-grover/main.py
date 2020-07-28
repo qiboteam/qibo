@@ -26,11 +26,15 @@ def main(h_value, collisions, b):
     if collisions:
         grover_it = int(np.pi*np.sqrt((2**8)/collisions)/4)
         result = functions.grover(q, constant_1, constant_2, rot, h, grover_it)
-        most_common = result.most_common(1)[0][0]
-        result = functions.check_hash(q, most_common, h, constant_1, constant_2, rot)
+        #most_common = result.most_common(1)[0][0]
+        most_common = result.most_common(collisions)
+        #result = functions.check_hash(q, most_common, h, constant_1, constant_2, rot)
         if result:
             print('Solution found directly.\n')
-            print('Preimage: {}\n'.format(most_common))
+            print('Preimages:')
+            for i in most_common:
+                print('   - {}'.format(i[0]))
+            print()
             print('Total iterations taken: {}\n'.format(grover_it))
         else:
             print('Solution not found.\n')
