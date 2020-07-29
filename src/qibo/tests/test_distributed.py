@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import qibo
 from qibo import models, gates
+from qibo.tensorflow import distcircuit
 
 
 def random_state(nqubits):
@@ -42,7 +43,7 @@ def test_transform_queue_simple():
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = models.DistributedCircuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
-    c.global_qubits = [0]
+    c.queues.global_qubits = [0]
     tqueue = c.queues.transform(c.queue)
     assert len(tqueue) == 6
     for i in range(3):
@@ -68,7 +69,7 @@ def test_transform_queue_more_gates():
     c.add(gates.CZ(0, 1))
     c.add(gates.CNOT(3, 0))
     c.add(gates.CNOT(1, 2))
-    c.global_qubits = [2, 3]
+    c.queues.global_qubits = [2, 3]
     tqueue = c.queues.transform(c.queue)
 
     assert len(tqueue) == 10
@@ -99,7 +100,7 @@ def test_set_gates_simple():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(4)))
-    c.global_qubits = [4, 5]
+    c.queues.global_qubits = [4, 5]
     c.set_gates()
 
     check_device_queues(c.queues)
@@ -115,8 +116,8 @@ def test_set_gates_with_global_swap():
     c.add([gates.H(0), gates.H(2), gates.H(3)])
     c.add(gates.SWAP(3, 4))
     c.add([gates.X(1), gates.X(2)])
-    c.global_qubits = [4, 5]
-    c.set_gates()
+    c.queues.global_qubits = [4, 5]
+    c.queues.create(c.queues.transform(c.queue))
 
     check_device_queues(c.queues)
     assert len(c.queues.special_queue) == 1
@@ -154,7 +155,6 @@ def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     state = c._cast_initial_state()
-    assert c.global_qubits == [0, 1]
 
     final_state = state.numpy()
     target_state = np.zeros_like(final_state)
@@ -182,12 +182,9 @@ def test_user_initialization(nqubits):
 def test_distributed_circuit_errors():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.Circuit(6, devices)
-    # Access global qubits before setting them
-    with pytest.raises(ValueError):
-        global_qubits = c.global_qubits
     # Attempt to set wrong number of global qubits
     with pytest.raises(ValueError):
-        c.global_qubits = [1, 2, 3]
+        c.queues.global_qubits = [1, 2, 3]
     # Attempt to set gates before adding any gate
     with pytest.raises(RuntimeError):
         c.set_gates()
@@ -215,13 +212,13 @@ def test_unsupported_gates_errors():
     c = models.Circuit(4, {"/GPU:0": 2})
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.global_qubits = [0]
+    c.queues.global_qubits = [0]
     with pytest.raises(ValueError):
         c.queues.create(c.queue)
 
     c = models.Circuit(4, {"/GPU:0": 4})
     c.add(gates.SWAP(0, 1))
-    c.global_qubits = [0, 1]
+    c.queues.global_qubits = [0, 1]
     with pytest.raises(ValueError):
         c.queues.create(c.queue)
 
