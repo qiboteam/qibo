@@ -5,12 +5,14 @@ import argparse
 
 
 def main(h_value, collisions, b):
-    """Grover search for the instance defined by the file_name.
+    """Grover search for preimages of a given hash value
     Args:
-        file_name (str): name of the file that contains the information of a 3SAT instance
+        h_value (int): hash value to be converted to binary string.
+        collisions (int): number of collisions or None if unknown.
+        b (int): number of bits to be used for the hash string.
 
     Returns:
-        result of the Grover search and comparison with the expected solution if given.
+        result of the Grover search and checks if it has found a correct preimage.
     """
     q = 4
     m = 8
@@ -18,26 +20,21 @@ def main(h_value, collisions, b):
     constant_1 = 5
     constant_2 = 9
     h = "{0:0{bits}b}".format(h_value, bits=b)
-    #163 - 2 collisions
-    #187 - 1 collision
-    #133 - 3 collisions
-    #113 - 4 collisions
+    if len(h) > 8:
+        raise ValueError("Hash should be at maximum an 8-bit number but given value contains {} bits.".format(len(h)))
     print('Target hash: {}\n'.format(h))
     if collisions:
         grover_it = int(np.pi*np.sqrt((2**8)/collisions)/4)
         result = functions.grover(q, constant_1, constant_2, rot, h, grover_it)
-        #most_common = result.most_common(1)[0][0]
         most_common = result.most_common(collisions)
-        #result = functions.check_hash(q, most_common, h, constant_1, constant_2, rot)
-        if result:
-            print('Solution found directly.\n')
-            print('Preimages:')
-            for i in most_common:
-                print('   - {}'.format(i[0]))
-            print()
-            print('Total iterations taken: {}\n'.format(grover_it))
-        else:
-            print('Solution not found.\n')
+        print('Solutions found:\n')
+        print('Preimages:')
+        for i in most_common:
+            if functions.check_hash(q, i[0], h, constant_1, constant_2, rot):
+                print('   - {}\n'.format(i[0]))
+            else:
+                print('   Incorrect preimage found, number of given collisions might not match.\n')
+        print('Total iterations taken: {}\n'.format(grover_it))
     else:
         measured, total_iterations = functions.grover_unknown_M(q, constant_1, constant_2, rot, h)
         print('Solution found in an iterative process.\n')

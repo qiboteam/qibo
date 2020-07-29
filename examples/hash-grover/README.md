@@ -18,11 +18,11 @@ This program builds the necessary parts of the algorithm in order to simulate th
 
 The Grover Oracle needs to apply the Toy Sponge Hash construction in a reversible way. 
 
-The Chacha permutation [chacah-20080120](https://cr.yp.to/chacha/chacha-20080120.pdf) used as the base for the Toy Sponge Hash construction is built on top of a QuarterRound module. As a a quantum circuit this Quarter Round can be constructed as 
+The Chacha permutation [chacah-20080120](https://cr.yp.to/chacha/chacha-20080120.pdf) used as the base for the Toy Sponge Hash construction is built on top of a QuarterRound module. As a a quantum circuit this Quarter Round can be constructed using a quantum adder modulo `2^n`, CNOT gates between registers and a qubit shuffling, represented as a gate with a circle-arrow. This shuffle is achived as a qubit relabelling and does not incur any quantum cost. This circuit can be represented as
 
 ![quarter-round](images/quarter-round.png)
 
-with the preferred version of a quantum adder. For this circuit we use a qubit-efficient adder put forward in [arXiv:quant-ph/0410184](https://arxiv.org/abs/quant-ph/0410184) where only ancilla is necessary. For the specific case of an adder modulo `2^n` the quantum circuit used can be seen in the following image.
+where any version of a quantum adder can be used. For this circuit we use a qubit-efficient adder put forward in [arXiv:quant-ph/0410184](https://arxiv.org/abs/quant-ph/0410184) where only one ancilla is necessary and is reused throughout the circuit. For the specific case of an adder modulo `2^n` the quantum circuit used can be seen in the following image.
 
 ![addermod2n](images/adder-mod2n.png)
 
@@ -60,7 +60,7 @@ The quantum circuit for the Grover search algorithm with any oracle takes the fo
 
 Run the file `main.py` from the console to find a preimage for hash value '10100011' (163) using 18 qubits.
 
-Changing the argument `--hash` (int) allows find preimages of different hash values.
+Changing the argument `--hash` (int) allows find preimages of different hash values. Keep the hash value equal or below 8 bits.
 
 Changing the argument `--bits` (int) allows to fine tune the maximum number of bits of the hash function. If less than needed, the minimum amount of bits required will be used.
 
