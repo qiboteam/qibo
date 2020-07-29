@@ -49,15 +49,15 @@ def VariationalCircuit(nqubits: int, nlayers: int = 1,
 def OptimizedVariationalCircuit(nqubits: int, nlayers: int = 1,
                                 theta_values: Optional[np.ndarray] = None):
     if theta_values is None:
-        theta = iter(2 * np.pi * np.random.random(nlayers * 2 * nqubits))
+        theta = 2 * np.pi * np.random.random((2 * nlayers, nqubits))
     else:
-        theta = iter(theta_values)
+        theta = theta_values.reshape((2 * nlayers, nqubits))
 
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     for l in range(nlayers):
-        thetas1 = {i: next(theta) for i in range(nqubits)}
-        thetas2 = {i: next(theta) for i in range(nqubits)}
-        yield gates.VariationalLayer(pairs, gates.RY, gates.CZ, thetas1, thetas2)
+        yield gates.VariationalLayer(range(nqubits), pairs,
+                                     gates.RY, gates.CZ,
+                                     theta[2 * l], theta[2 * l + 1])
         for i in range(1, nqubits - 2, 2):
             yield gates.CZ(i, i + 1)
         yield gates.CZ(0, nqubits - 1)

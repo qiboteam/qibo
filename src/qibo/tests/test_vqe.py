@@ -52,30 +52,24 @@ def test_vqe(method, options, compile, filename):
     nqubits = 6
     layers  = 4
 
-    def ansatz(theta):
-        c = Circuit(nqubits)
-        index = 0
-        for l in range(layers):
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(0, nqubits-1, 2):
-                c.add(gates.CZ(q, q+1))
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(1, nqubits-2, 2):
-                c.add(gates.CZ(q, q+1))
-            c.add(gates.CZ(0, nqubits-1))
+    circuit = Circuit(nqubits)
+    for l in range(layers):
         for q in range(nqubits):
-            c.add(gates.RY(q, theta[index]))
-            index+=1
-        return c
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(0, nqubits-1, 2):
+            circuit.add(gates.CZ(q, q+1))
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(1, nqubits-2, 2):
+            circuit.add(gates.CZ(q, q+1))
+        circuit.add(gates.CZ(0, nqubits-1))
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=1.0))
 
     hamiltonian = XXZ(nqubits=nqubits)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
-    v = VQE(ansatz, hamiltonian)
+    v = VQE(circuit, hamiltonian)
     best, params = v.minimize(initial_parameters, method=method,
                               options=options, compile=compile)
     if filename is not None:
@@ -90,19 +84,15 @@ def test_vqe_compile_error():
     qibo.set_backend("custom")
 
     nqubits = 6
-    def ansatz(theta):
-        c = Circuit(nqubits)
-        index = 0
-        for q in range(nqubits):
-            c.add(gates.RY(q, theta[index]))
-            index+=1
-        for q in range(0, nqubits-1, 2):
-            c.add(gates.CZ(q, q+1))
-        return c
+    circuit = Circuit(nqubits)
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=0))
+    for q in range(0, nqubits-1, 2):
+        circuit.add(gates.CZ(q, q+1))
 
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
-    v = VQE(ansatz, hamiltonian)
+    v = VQE(circuit, hamiltonian)
     with pytest.raises(RuntimeError):
         best, params = v.minimize(initial_parameters, method="BFGS",
                                   options={'maxiter': 1}, compile=True)

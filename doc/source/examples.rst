@@ -378,8 +378,94 @@ For example
 
 will print ``tf.Tensor(1.0)``.
 
-How to code a Quantum Fourier Transform?
-----------------------------------------
+.. _params-examples:
+How to use parametrized gates?
+------------------------------
+
+Some Qibo gates such as rotations accept values for their free parameter. Once
+such gates are added in a circuit their parameters can be updated using the
+:meth:`qibo.base.circuit.BaseCircuit.set_parameters` method. For example:
+
+.. code-block::  python
+
+    from qibo.models import Circuit
+    from qibo import gates
+    # create a circuit with all parameters set to 0.
+    c = Circuit(3, accelerators)
+    c.add(gates.RX(0, theta=0))
+    c.add(gates.RY(1, theta=0))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0, phi=0))
+    c.add(gates.H(2))
+
+    # set new values to the circuit's parameters
+    params = [0.123, 0.456, (0.789, 0.321)]
+    c.set_parameters(params)
+
+initializes a circuit with all gate parameters set to 0 and then updates the
+values of these parameters according to the ``params`` list. Alternatively the
+user can use ``circuit.set_parameters()`` with a dictionary or a flat list.
+The keys of the dictionary should be references to the gate objects of
+the circuit. For example:
+
+.. code-block::  python
+
+    c = Circuit(3, accelerators)
+    g0 = gates.RX(0, theta=0)
+    g1 = gates.RY(1, theta=0)
+    g2 = gates.fSim(0, 2, theta=0, phi=0)
+    c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
+
+    # set new values to the circuit's parameters using a dictionary
+    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
+    c.set_parameters(params)
+    # equivalently the parameter's can be update with a list as
+    params = [0.123, 0.456, (0.789, 0.321)]
+    c.set_parameters(params)
+    # or with a flat list as
+    params = [0.123, 0.456, 0.789, 0.321]
+    c.set_parameters(params)
+
+If a list is given then its length and elements should be compatible with the
+parametrized gates contained in the circuit. If a dictionary is given then its
+keys should be all the parametrized gates in the circuit.
+
+The following gates support parameter setting:
+
+* ``RX``, ``RY``, ``RZ``, ``ZPow``, ``CZPow``: Accept a single ``theta`` parameter.
+* :class:`qibo.base.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
+* :class:`qibo.base.gates.GeneralizedfSim`: Accepts a tuple of two parameters
+  ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
+  array or ``tf.Tensor`` of shape ``(2, 2)``.
+* :class:`qibo.base.gates.Unitary`: Accepts a single ``unitary`` parameter. This
+  should be an array or ``tf.Tensor`` of shape ``(2, 2)``.
+* :class:`qibo.base.gates.VariationalLayer`: Accepts a list of ``float``
+  parameters with length compatible to the number of one qubit rotations implemented
+  by the layer, for example:
+
+.. code-block:: python
+
+    c = Circuit(5)
+    pairs = list((i, i + 1) for i in range(0, 4, 2))
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                 gates.RY, gates.CZ,
+                                 params=np.zeros(5)))
+    c.add((gates.RX(i, theta=0) for i in range(5)))
+
+    # set random parameters to all rotations in the circuit
+    c.set_parameters(np.random.random(10))
+    # note that 10 numbers are used as the VariationalLayer contains five
+    # rotations and five additional RX rotations are added afterwards.
+
+Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
+a flat list.
+
+Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
+recreating a new circuit with new parameter values.
+
+
+How to write a Quantum Fourier Transform?
+-----------------------------------------
 
 A simple Quantum Fourier Transform (QFT) example to test your installation:
 
@@ -406,43 +492,36 @@ The VQE requires an ansatz function and a ``Hamiltonian`` object. There are exam
 
     - ``vqe.py``: a simple example with the XXZ model.
 
-Here a simple example using the Heisenberg XXZ model:
+Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 
 .. code-block:: python
 
     import numpy as np
-    from qibo.models import Circuit, VQE
-    from qibo import gates
-    from qibo.hamiltonians import XXZ
+    from qibo import models, gates, hamiltonians
 
     nqubits = 6
-    layers  = 4
+    nlayers  = 4
 
-    def ansatz(theta):
-        c = Circuit(nqubits)
-        index = 0
-        for l in range(layers):
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(0, nqubits-1, 2):
-                c.add(gates.CZ(q, q+1))
-            for q in range(nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            for q in range(1, nqubits-2, 2):
-                c.add(gates.CZ(q, q+1))
-            c.add(gates.CZ(0, nqubits-1))
-        for q in range(nqubits):
-            c.add(gates.RY(q, theta[index]))
-            index+=1
-        return c
+    # Create variational circuit
+    circuit = models.Circuit(nqubits)
+    for l in range(nlayers):
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+        circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        circuit.add(gates.CZ(0, nqubits-1))
+    circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+    return circuit
 
-    hamiltonian = XXZ(nqubits=nqubits)
+    # Create XXZ Hamiltonian
+    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
+    # Create VQE model
+    vqe = models.VQE(circuit, hamiltonian)
+
+    # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
-                                            2*nqubits*layers + nqubits)
-    v = VQE(ansatz, hamiltonian)
-    best, params = v.minimize(initial_parameters, method='BFGS')
+                                            2*nqubits*nlayers + nqubits)
+    best, params = vqe.minimize(initial_parameters, method='BFGS')
 
 The user can choose one of the following methods for minimization:
 
@@ -464,23 +543,17 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
 
 .. code-block:: python
 
-    def ansatz(theta):
-        theta_iter = iter(theta)
-        pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-        c = models.Circuit(nqubits)
-        for l in range(nlayers):
-            # parameters for one-qubit gates before CZ layer
-            theta_map1 = {i: next(theta_iter) for i in range(nqubits)}
-            # parameters for one-qubit gates after CZ layer
-            theta_map2 = {i: next(theta_iter) for i in range(nqubits)}
-            c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, theta_map1, theta_map2))
-            # this ``VariationalLayer`` includes two layers of RY gates with a
-            # layer of CZ in the middle.
-            # We have to add an additional CZ layer manually:
-            c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
-            c.add(gates.CZ(0, nqubits - 1))
-        c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
-        return c
+    circuit = models.Circuit(nqubits)
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    theta = np.zeros(nqubits)
+    for l in range(nlayers):
+        circuit.add(gates.VariationalLayer(range(nqubits), pairs,
+                                           gates.RY, gates.CZ,
+                                           theta, theta))
+        circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+        circuit.add(gates.CZ(0, nqubits - 1))
+    circuit.add((gates.RY(i, theta) for i in range(nqubits)))
+    return circuit
 
 
 How to use automatic differentiation?
