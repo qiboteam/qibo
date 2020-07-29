@@ -372,6 +372,9 @@ class DistributedState:
                                            self.reverse_transpose_order)
         return state
 
+    def __array__(self) -> np.ndarray:
+        return self.vector.numpy()
+
     def numpy(self) -> np.ndarray:
         return self.vector.numpy()
 
@@ -611,10 +614,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             return state
 
         with tf.device(self.memory_device):
-            samples = self.measurement_gate(self.final_state, nshots, samples_only=True,
+            samples = self.measurement_gate(state.vector, nshots, samples_only=True,
                                             is_density_matrix=self.using_density_matrix)
             self.measurement_gate_result = measurements.GateResult(
-                self.measurement_gate.qubits, self.final_state, decimal_samples=samples)
+                self.measurement_gate.qubits, state, decimal_samples=samples)
             result = measurements.CircuitResult(
                 self.measurement_tuples, self.measurement_gate_result)
         return result
@@ -634,7 +637,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """Returns a list with the last qubits to cast them as global."""
         return list(range(self.nglobal))
 
-    def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
+    def _cast_initial_state(self, initial_state: Optional[InitStateType] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
         if self.queues is None:
             self.global_qubits = self._default_global_qubits()

@@ -150,20 +150,18 @@ def test_set_gates_controlled():
         assert len(device_group) == 1
 
 
-@pytest.mark.skip
 def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
-    c._cast_initial_state()
+    state = c._cast_initial_state()
     assert c.global_qubits == [0, 1]
 
-    final_state = c.final_state.numpy()
+    final_state = state.numpy()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1
-    np.testing.assert_allclose(target_state, final_state)
+    np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_user_initialization(nqubits):
     import itertools
@@ -171,14 +169,12 @@ def test_user_initialization(nqubits):
 
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(nqubits, devices)
-    c._cast_initial_state(target_state)
-
-    final_state = c.final_state.numpy()
-    np.testing.assert_allclose(target_state, final_state)
+    state = c._cast_initial_state(target_state)
+    np.testing.assert_allclose(state.numpy(), target_state)
 
     target_state = target_state.reshape(nqubits * (2,))
     for i, s in enumerate(itertools.product([0, 1], repeat=c.nglobal)):
-        piece = c.pieces[i].numpy()
+        piece = state.pieces[i].numpy()
         target_piece = target_state[s]
         np.testing.assert_allclose(target_piece.ravel(), piece)
 
@@ -312,7 +308,6 @@ def test_execution_with_global_swap():
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_execution_special_gate(ndevices):
     original_backend = qibo.get_backend()
@@ -335,7 +330,6 @@ def test_execution_special_gate(ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_controlled_execution(ndevices):
     original_backend = qibo.get_backend()
@@ -356,7 +350,6 @@ def test_controlled_execution(ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_controlled_execution_large(ndevices):
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
@@ -380,7 +373,6 @@ def test_controlled_execution_large(ndevices):
     np.testing.assert_allclose(target_state, final_state)
 
 
-@pytest.mark.skip
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
     original_backend = qibo.get_backend()
@@ -418,7 +410,6 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     check_device_queues(c.queues)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
 @pytest.mark.parametrize("accelerators",
                          [{"/GPU:0": 2},
