@@ -287,6 +287,95 @@ class DeviceQueues:
                                 gate.device_gates.add(devgate)
 
 
+class DistributedState:
+
+    def __init__(self, device: str, queues: DeviceQueues):
+        self.device = device
+        self.dtype = DTYPES.get('DTYPECPX')
+
+        self.nqubits = queues.nqubits
+        self.nglobal = queues.nglobal
+        self.nlocal = queues.nlocal
+        self.ndevices = queues.ndevices
+        # Create pieces
+        n = 2 ** (self.nqubits - self.nglobal)
+        with tf.device(device):
+            self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
+                      for _ in range(self.ndevices)]
+
+        # Set tranpose orders and qubits list
+        self.global_qubits = queues.global_qubits_list
+        self.transpose_order = (queues.global_qubits_list + queues.local_qubits)
+        self.reverse_transpose_order = self.nqubits * [0]
+        for i, v in enumerate(self.transpose_order):
+            self.reverse_transpose_order[v] = i
+
+        dtype = DTYPES.get('DTYPEINT')
+        self.shapes = {
+            "full": tf.cast((2 ** self.nqubits,), dtype=dtype),
+            "device": tf.cast((len(self.pieces), n), dtype=dtype),
+            "tensor": self.nqubits * (2,)
+            }
+
+    @classmethod
+    def default(cls, device: str, queues: DeviceQueues):
+      """Creates the |000...0> state for default initialization."""
+      state = cls(device, queues)
+      with tf.device(state.device):
+          op.initial_state(state.pieces[0])
+      return state
+
+    @classmethod
+    def from_vector(cls, full_state: tf.Tensor, device: str, queues: DeviceQueues):
+        state = cls(device, queues)
+        state.assign_vector(full_state)
+        return state
+
+    def assign_vector(self, full_state: tf.Tensor):
+        """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
+
+        Args:
+            full_state (tf.Tensor): Full state vector as a tensor of shape
+                ``(2 ** nqubits)``.
+        """
+        if self.transpose_order is None:
+            raise RuntimeError("Cannot assign full state before transpose "
+                               "order is set.")
+        with tf.device(self.device):
+            full_state = tf.reshape(full_state, self.shapes["device"])
+            pieces = [full_state[i] for i in range(self.ndevices)]
+            new_state = tf.zeros(self.shapes["device"], dtype=self.dtype)
+            new_state = op.transpose_state(pieces, new_state, self.nqubits,
+                                           self.transpose_order)
+            for i in range(self.ndevices):
+                self.pieces[i].assign(new_state[i])
+
+    @property
+    def vector(self) -> tf.Tensor:
+        """Merges the current ``tf.Variable`` pieces to a full state vector.
+
+        Returns:
+            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
+        """
+        if self.global_qubits == list(range(self.nglobal)):
+            with tf.device(self.device):
+                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
+                state = tf.reshape(state, self.shapes["full"])
+        elif self.global_qubits == list(range(self.nlocal, self.nqubits)):
+            with tf.device(self.device):
+                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
+                state = tf.reshape(state, self.shapes["full"])
+        else: # fall back to the transpose op
+            with tf.device(self.device):
+                state = tf.zeros(self.shapes["full"], dtype=self.dtype)
+                state = op.transpose_state(self.pieces, state, self.nqubits,
+                                           self.reverse_transpose_order)
+        return state
+
+    def numpy(self) -> np.ndarray:
+        return self.vector.numpy()
+
+
 class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     """Distributed implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
 
@@ -338,21 +427,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         self.memory_device = memory_device
         self.calc_devices = accelerators
-
         self.queues = None
-        self.pieces = None
-        self._construct_shapes()
-
-    def _construct_shapes(self):
-        """Useful shapes for the simulation."""
-        dtype = DTYPES.get('DTYPEINT')
-        n = self.nqubits - self.nglobal
-        self.device_shape = tf.cast((self.ndevices, 2 ** n), dtype=dtype)
-        self.full_shape = tf.cast((2 ** self.nqubits,), dtype=dtype)
-        self.tensor_shape = self.nqubits * (2,)
-
-        self.local_full_shape = tf.cast((2 ** n,), dtype=dtype)
-        self.local_tensor_shape = n * (2,)
 
     def _set_nqubits(self, gate):
         # Do not set ``gate.nqubits`` during gate addition because this will
@@ -388,12 +463,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              "calculation devices.".format(len(x), self.ndevices))
 
         self.queues = DeviceQueues(self, global_qubit_set)
-
-        self.transpose_order = (self.queues.global_qubits_list +
-                                self.queues.local_qubits)
-        self.reverse_transpose_order = self.nqubits * [0]
-        for i, v in enumerate(self.transpose_order):
-            self.reverse_transpose_order[v] = i
 
     def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
         if not deep:
@@ -463,16 +532,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             state = gate(state)
         return state
 
-    # Old casting on CPU after runs finish. Not used because it leads to
-    # GPU memory errors
-    #def _cast_results(self, results: List[List[tf.Tensor]]):
-    #    i = 0
-    #    for result in results:
-    #        for s in result:
-    #            self.pieces[i].assign(s)
-    #            i += 1
-
-    def _joblib_execute(self, queues: List[List["TensorflowGate"]]):
+    def _joblib_execute(self, state: DistributedState,
+                        queues: List[List["TensorflowGate"]]):
         """Executes gates in ``accelerators`` in parallel.
 
         Args:
@@ -483,16 +544,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         def _device_job(ids, device):
             for i in ids:
                 with tf.device(device):
-                    state = self._device_execute(self.pieces[i], queues[i])
-                    self.pieces[i].assign(state)
-                    del(state)
+                    piece = self._device_execute(state.pieces[i], queues[i])
+                    state.pieces[i].assign(piece)
+                    del(piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
         pool(joblib.delayed(_device_job)(ids, device)
              for device, ids in self.queues.device_to_ids.items())
 
-    def _swap(self, global_qubit: int, local_qubit: int):
+    def _swap(self, state: DistributedState, global_qubit: int, local_qubit: int):
         m = self.queues.global_qubits_reduced[global_qubit]
         m = self.nglobal - m - 1
         t = 1 << m
@@ -500,62 +561,60 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.local_qubits_reduced[local_qubit]
             with tf.device(self.memory_device):
-                op.swap_pieces(self.pieces[i], self.pieces[i + t],
+                op.swap_pieces(state.pieces[i], state.pieces[i + t],
                                local_eff, self.nlocal)
 
-    def _revert_swaps(self, swap_pairs: List[Tuple[int, int]]):
+    def _revert_swaps(self, state: DistributedState, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
             if q1 not in self.queues.global_qubits_set:
                 q1, q2 = q2, q1
-            self._swap(q1, q2)
+            self._swap(state, q1, q2)
 
-    def _special_gate_execute(self, gate: Union["TensorflowGate", Tuple[int, int]]):
+    def _special_gate_execute(self, state: DistributedState, gate: Union["TensorflowGate", Tuple[int, int]]):
         """Executes special gates (``Flatten`` or ``CallbackGate``) on ``memory_device``.
 
         These gates require the full state vector (cannot be executed in the state pieces).
         """
         if isinstance(gate, tuple): # SWAP global
-            self._swap(*gate)
+            self._swap(state, *gate)
         else: # ``Flatten`` or callback
             with tf.device(self.memory_device):
                 # Reverse all global SWAPs that happened so far
-                self._revert_swaps(reversed(gate.swap_reset))
-                state = self._merge()
+                self._revert_swaps(state, reversed(gate.swap_reset))
+                full_state = state.vector
                 if isinstance(gate, gates.CallbackGate):
-                    gate(state)
+                    gate(full_state)
                 else:
-                    state = gate(state)
-                    self._split(state)
+                    full_state = gate(full_state)
+                    state.assign_vector(full_state)
                 # Redo all global SWAPs that happened so far
-                self._revert_swaps(gate.swap_reset)
+                self._revert_swaps(state, gate.swap_reset)
 
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute``."""
         if self.queues is None or not self.queues.queues:
             self.set_gates()
-        self._cast_initial_state(initial_state)
+        state = self._cast_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
             if queues:  # standard gate
-                self._joblib_execute(queues)
+                self._joblib_execute(state, queues)
             else: # special gate
-                self._special_gate_execute(next(special_gates))
+                self._special_gate_execute(state, next(special_gates))
         for gate in special_gates:
-            self._special_gate_execute(next(special_gates))
+            self._special_gate_execute(state, next(special_gates))
 
-        # NOTE: The final state will use the transpose op if ``global_qubits``
-        # are not [0, 1, ..., nglobal] or [nlocal, nlocal+1, ..., nqubits].
-        state = self.final_state
+        self._final_state = state
         if self.measurement_gate is None or nshots is None:
             return state
 
         with tf.device(self.memory_device):
-            samples = self.measurement_gate(state, nshots, samples_only=True,
+            samples = self.measurement_gate(self.final_state, nshots, samples_only=True,
                                             is_density_matrix=self.using_density_matrix)
             self.measurement_gate_result = measurements.GateResult(
-                self.measurement_gate.qubits, state, decimal_samples=samples)
+                self.measurement_gate.qubits, self.final_state, decimal_samples=samples)
             result = measurements.CircuitResult(
                 self.measurement_tuples, self.measurement_gate_result)
         return result
@@ -571,39 +630,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                "execution. Please create a new circuit with "
                                "different device configuration and try again.")
 
-    @property
-    def final_state(self) -> tf.Tensor:
-        """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
-
-        The circuit has to be executed at least once before accessing this
-        property, otherwise a ``ValueError`` is raised. If the circuit is
-        executed more than once, only the last final state is returned.
-        """
-        if self.pieces is None:
-            raise RuntimeError("Cannot access the state tensor before being set.")
-        return self._merge()
-
     def _default_global_qubits(self) -> List[int]:
         """Returns a list with the last qubits to cast them as global."""
         return list(range(self.nglobal))
-
-    def _default_initial_piece(self) -> tf.Tensor:
-        """Returns the 0th piece for the |000...0> state."""
-        zeros = tf.zeros(2 ** (self.nqubits - self.nglobal), dtype=DTYPES.get('DTYPECPX'))
-        return op.initial_state(zeros)
-
-    def _create_pieces(self):
-        """Creates the state pieces as ``tf.Variable``s stored in the ``memory_device``."""
-        n = 2 ** (self.nqubits - self.nglobal)
-        with tf.device(self.memory_device):
-            self.pieces = [tf.Variable(tf.zeros(n, dtype=DTYPES.get('DTYPECPX')))
-                           for _ in range(self.ndevices)]
-
-    def _default_initial_state(self) -> tf.Tensor:
-        """Assigns the default |000...0> state to the state pieces."""
-        self._create_pieces()
-        with tf.device(self.memory_device):
-            self.pieces[0].assign(self._default_initial_piece())
 
     def _cast_initial_state(self, initial_state: Optional[Union[np.ndarray, tf.Tensor]] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""
@@ -611,44 +640,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self.global_qubits = self._default_global_qubits()
 
         if initial_state is None:
-            return self._default_initial_state()
+            return DistributedState.default(self.memory_device, self.queues)
 
-        state = super(TensorflowDistributedCircuit, self)._cast_initial_state(initial_state)
-        if self.pieces is None:
-            self._create_pieces()
-        self._split(state)
-
-    def _split(self, state: tf.Tensor):
-        """Splits a given state vector and assigns it to the ``tf.Variable`` pieces.
-
-        Args:
-            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
-        """
-        with tf.device(self.memory_device):
-            state = tf.reshape(state, self.device_shape)
-            pieces = [state[i] for i in range(self.ndevices)]
-            new_state = tf.zeros(self.device_shape, dtype=DTYPES.get('DTYPECPX'))
-            new_state = op.transpose_state(pieces, new_state, self.nqubits, self.transpose_order)
-            for i in range(self.ndevices):
-                self.pieces[i].assign(new_state[i])
-
-    def _merge(self) -> tf.Tensor:
-        """Merges the current ``tf.Variable`` pieces to a full state vector.
-
-        Returns:
-            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
-        """
-        if self.global_qubits == list(range(self.nglobal)):
-            with tf.device(self.memory_device):
-                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
-                state = tf.reshape(state, self.full_shape)
-        elif self.global_qubits == list(range(self.nlocal, self.nqubits)):
-            with tf.device(self.memory_device):
-                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
-                state = tf.reshape(state, self.full_shape)
-        else: # fall back to the transpose op
-            with tf.device(self.memory_device):
-                state = tf.zeros(self.full_shape, dtype=DTYPES.get('DTYPECPX'))
-                state = op.transpose_state(self.pieces, state, self.nqubits,
-                                           self.reverse_transpose_order)
-        return state
+        full_state = super(TensorflowDistributedCircuit, self)._cast_initial_state(initial_state)
+        return DistributedState.from_vector(full_state, self.memory_device, self.queues)
