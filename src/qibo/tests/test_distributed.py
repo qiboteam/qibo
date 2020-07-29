@@ -101,7 +101,7 @@ def test_set_gates_simple():
     c = models.DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(4)))
     c.queues.global_qubits = [4, 5]
-    c.set_gates()
+    c.queues.set(c.queue)
 
     check_device_queues(c.queues)
     assert len(c.queues.queues) == 1
@@ -139,7 +139,7 @@ def test_set_gates_controlled():
     c.add(gates.Z(1).controlled_by(0))
     c.add(gates.SWAP(2, 3))
     c.add([gates.X(2), gates.X(3), gates.X(4)])
-    c.set_gates()
+    c.queues.set(c.queue)
 
     check_device_queues(c.queues)
     assert len(c.queues.queues) == 7
@@ -187,7 +187,7 @@ def test_distributed_circuit_errors():
         c.queues.global_qubits = [1, 2, 3]
     # Attempt to set gates before adding any gate
     with pytest.raises(RuntimeError):
-        c.set_gates()
+        c.queues.set(c.queue)
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
         final_state = c.final_state
@@ -403,7 +403,7 @@ def test_distributed_circuit_addition():
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    c.set_gates()
+    c.queues.set(c.queue)
     check_device_queues(c.queues)
 
 

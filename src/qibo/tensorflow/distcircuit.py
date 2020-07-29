@@ -103,6 +103,30 @@ class DeviceQueues:
         self.local_qubits_reduced = {q: q - self.reduction_number(q)
                                      for q in self.local_qubits}
 
+    def set(self, queue: List[gates.Gate]):
+        """Prepares gates for device-specific gate execution.
+
+        Each gate has to be recreated in the device that will be executed to
+        allow parallel execution. The global qubit lists and gate groups are
+        also specified here.
+        A gate group is identified by looping through the circuit's gate queue
+        and adding gates in the group until the number of global becomes ``nglobal``.
+        Once this happens no more gates can be added in the group. In order to
+        apply new gates some global qubits have to be swapped to global and a
+        new gate group will be defined for the new global qubit configuration.
+
+        The final global qubit lists and gate queues that are used for execution
+        are storred in ``self.queues`` which is a ``DeviceQueues`` object.
+        """
+        if not queue:
+            raise RuntimeError("No gates available to set for distributed run.")
+
+        counter = self.count(queue, self.nqubits)
+        if not self.global_qubits:
+            self.global_qubits = counter.argsort()[:self.nglobal]
+        transformed_queue = self.transform(queue, counter)
+        self.create(transformed_queue)
+
     def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""
         start = 0
@@ -449,7 +473,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def _set_nqubits(self, gate):
         # Do not set ``gate.nqubits`` during gate addition because this will
-        # be set by the ``set_gates`` method once all gates are known.
+        # be set by ``self.queues`` when creating the gates on each device.
         if gate._nqubits is not None:
             raise ValueError("Attempting to add gate with preset number of "
                              "qubits in distributed circuit.")
@@ -464,7 +488,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         return self.copy(deep=True)
 
     def fuse(self) -> "TensorflowDistributedCircuit":
-        if self.queues.global_qubits:
+        if self.queues.queues:
             raise RuntimeError("Cannot fuse distributed circuit after "
                                "its first execution.")
         return super(TensorflowDistributedCircuit, self).fuse()
@@ -488,29 +512,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise ValueError("Insufficient qubits to use for global in "
                              "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
-
-    def set_gates(self):
-        """Prepares gates for device-specific gate execution.
-
-        Each gate has to be recreated in the device that will be executed to
-        allow parallel execution. The global qubit lists and gate groups are
-        also specified here.
-        A gate group is identified by looping through the circuit's gate queue
-        and adding gates in the group until the number of global becomes ``nglobal``.
-        Once this happens no more gates can be added in the group. In order to
-        apply new gates some global qubits have to be swapped to global and a
-        new gate group will be defined for the new global qubit configuration.
-
-        The final global qubit lists and gate queues that are used for execution
-        are storred in ``self.queues`` which is a ``DeviceQueues`` object.
-        """
-        if not self.queue:
-            raise RuntimeError("No gates available to set for distributed run.")
-
-        counter = DeviceQueues.count(self.queue, self.nqubits)
-        self.queues.global_qubits = counter.argsort()[:self.nglobal]
-        transformed_queue = self.queues.transform(self.queue, counter)
-        self.queues.create(transformed_queue)
 
     def compile(self):
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
@@ -581,8 +582,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute``."""
-        if not self.queues.global_qubits:
-            self.set_gates()
+        if not self.queues.queues:
+            self.queues.set(self.queue)
         state = self._cast_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
