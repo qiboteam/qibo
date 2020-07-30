@@ -421,3 +421,17 @@ def test_distributed_qft_execution(nqubits, accelerators):
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
+
+
+def test_distributed_state_getitem():
+    theta = np.random.random(4)
+    c = models.DistributedCircuit(4, {"/GPU:0": 2})
+    c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    state = c()
+    state_vector = np.array([state[i] for i in range(2 ** 4)])
+
+    c = models.Circuit(4)
+    c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    target_state = c().numpy()
+
+    np.testing.assert_allclose(state_vector, target_state)

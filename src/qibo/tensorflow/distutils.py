@@ -426,6 +426,17 @@ class DistributedState(DistributedBase):
                                            self.qubits.reverse_transpose_order)
         return state
 
+    def __getitem__(self, i: int):
+      """Implements indexing of the distributed state without the full vector."""
+      binary_index = bin(i)[2:].zfill(self.nqubits)
+      binary_index = np.array([int(x) for x in binary_index])
+
+      global_ids = binary_index[self.qubits.list]
+      global_ids = global_ids.dot(self.bintodec["global"])
+      local_ids = binary_index[self.qubits.local]
+      local_ids = local_ids.dot(self.bintodec["local"])
+      return self.pieces[global_ids][local_ids]
+
     def __array__(self) -> np.ndarray:
         return self.vector.numpy()
 
