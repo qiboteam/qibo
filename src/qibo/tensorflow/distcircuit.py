@@ -209,7 +209,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def execute(self, initial_state: Optional[InitStateType] = None,
                 nshots: Optional[int] = None) -> OutputType:
-        """Same as the ``execute`` method of :class:`qibo.tensorflow.circuit.TensorflowCircuit`."""
+        """Equivalent to :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute`.
+
+        If measurements are not specified this returns a
+        :class:`qibo.tensorflow.distutils.DistributedState` instead of a
+        ``tf.Tensor``. This avoids creating multiple copies of large states in
+        the CPU memory.
+        """
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
             return self._execute(initial_state=initial_state, nshots=nshots)

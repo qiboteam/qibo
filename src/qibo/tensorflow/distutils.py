@@ -339,6 +339,18 @@ class DistributedQueues(DistributedBase):
 class DistributedState(DistributedBase):
     """Data structure that holds the pieces of a state vector.
 
+    This is created automatically by
+    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+    which uses state pieces instead of the full state vector tensor to allow
+    distribution to multiple devices.
+    Using the ``DistributedState`` instead of the full state vector as a
+    ``tf.Tensor`` avoids creating two copies of the state in the CPU memory
+    and allows simulation of one more qubit.
+
+    The full state vector can be accessed using the ``state.vector`` or
+    ``state.numpy()`` methods of the ``DistributedState``.
+    The ``DistributedState`` supports indexing as a standard array.
+
     Holds the following data:
     * self.pieces: List of length ``ndevices`` holding ``tf.Variable``s with
       the state pieces.
