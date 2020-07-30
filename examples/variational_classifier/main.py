@@ -8,9 +8,9 @@ import numpy as np
 parser = argparse.ArgumentParser()
 parser.add_argument("--nclasses", default=3, help="Number of classes to be classified", type=int)
 parser.add_argument("--nqubits", default=4, help="Number of qubits", type=int)
-parser.add_argument("--nlayers", default=11, help="Number of layers of the variational circuit", type=int)
-parser.add_argument("--nshots", default=int(1e6), help="Number of shots used when sampling the circuit", type=int)
-parser.add_argument("--training", action="store_true", help="Train the quantum classifier or ortherwise use precomputed angles for the circuit")
+parser.add_argument("--nlayers", default=5, help="Number of layers of the variational circuit", type=int)
+parser.add_argument("--nshots", default=int(1e5), help="Number of shots used when sampling the circuit", type=int)
+parser.add_argument("--training", action="store_false", help="Train the quantum classifier or ortherwise use precomputed angles for the circuit")
 parser.add_argument("--RY", action="store_false", help="Use Ry rotations or RxRzRx rotations in the ansatz")
 parser.add_argument("--method", default='Powell', help="Classical otimizer employed", type=str)
 
@@ -18,7 +18,7 @@ parser.add_argument("--method", default='Powell', help="Classical otimizer emplo
 def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
     
     # We initialize the quantum classifier    
-    qc = QuantumClassifer(nclasses, nqubits)
+    qc = QuantumClassifer(nclasses, nqubits, nlayers, RY=RY)
     
     # We load the iris data set
     data = open('data/iris.data')
@@ -47,7 +47,6 @@ def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
     if not training:
         optimal_angles = np.load('data/optimal_angles_{}q_{}l.npy'.format(nqubits,nlayers))
     else:
-        print('Training classifier...')     
         # We choose initial random parameters (execpt for the biases, that we set to zero)
         measured_qubits = int(np.ceil(np.log2(nclasses))) 
         if RY:  # if Ry rotations are employed in the anstaz
@@ -56,19 +55,20 @@ def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
             initial_parameters = 2*np.pi * np.random.rand(6*nqubits*nlayers+3*nqubits+measured_qubits)           
         for bias in range(measured_qubits):       
             initial_parameters[bias] = 0.
-            
+        
+        print('Training classifier...') 
         cost_function, optimal_angles = qc.minimize(initial_parameters, nlayers, data_train, labels_train,
                                               nshots=nshots, RY=RY, method=method)
-        np.save('optimal_angles_{}q_{}l.npy'.format(nqubits,nlayers), optimal_angles)
+        np.save('data/optimal_angles_{}q_{}l.npy'.format(nqubits,nlayers), optimal_angles)
         
     # We define our test set (both kets and labels)
     data_test = np.concatenate((data[35:49], data[85:99], data[135:149]))  
     labels_test = [[1,1]]*15 + [[1,-1]]*15 + [[-1,1]]*15
     
     # We run an accuracy check for the training and the test sets
-    predictions_train = [qc.Predictions(qc.Classifier_circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots) 
+    predictions_train = [qc.Predictions(qc.Classifier_circuit(optimal_angles), optimal_angles, init_state=ket, nshots=nshots) 
                             for ket in data_train]   
-    predictions_test = [qc.Predictions(qc.Classifier_circuit(optimal_angles, nlayers, RY=RY), optimal_angles, init_state=ket, nshots=nshots)
+    predictions_test = [qc.Predictions(qc.Classifier_circuit(optimal_angles), optimal_angles, init_state=ket, nshots=nshots)
                         for ket in data_test]
     
     print('Train set | # Clases: {} | # Qubits: {} | # Layers: {} | Accuracy: {}'.format(nclasses, nqubits, nlayers, qc.Accuracy(labels_train, predictions_train)))

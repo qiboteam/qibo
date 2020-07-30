@@ -8,7 +8,7 @@ from qibo import gates
 
 class QuantumClassifer():
     
-    def __init__(self, nclasses, nqubits):
+    def __init__(self, nclasses, nqubits, nlayers, RY=True):
         """
         Class for a multi-task variational quantum classifier
     
@@ -22,8 +22,34 @@ class QuantumClassifer():
         
         if self.nqubits <= 1:
             raise ValueError('nqubits must be larger than 1')
+            
+        if RY:
+            def rotations():
+                for q in range(self.nqubits):
+                    yield gates.RY(q, theta=0)
+        else:
+            def rotations():
+                for q in range(self.nqubits):
+                    yield gates.RX(q, theta=0)
+                    yield gates.RZ(q, theta=0)
+                    yield gates.RX(q, theta=0)
+                    
+        self._circuit = self.ansatz(nlayers, rotations)
         
-    def ansatz(self, theta, nlayers):
+        
+    def _CZ_gates1(self):
+        """Yields CZ gates used in the variational circuit."""
+        for q in range(0, self.nqubits-1, 2):         
+            yield gates.CZ(q, q+1)
+                
+    def _CZ_gates2(self):
+        """Yields CZ gates used in the variational circuit."""
+        for q in range(1, self.nqubits-1, 2):          
+            yield gates.CZ(q, q+1)
+            
+        yield gates.CZ(0, self.nqubits-1)
+        
+    def ansatz(self, nlayers, rotations):
         """    
         Args: 
             theta: list or numpy.array with the angles to be used in the circuit     
@@ -33,91 +59,20 @@ class QuantumClassifer():
             qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
         """
         c = Circuit(self.nqubits)
-    
-        index = 0
-        for l in range(nlayers):
-        
-            # Rx,Rz,Rx rotations
-            for q in range(self.nqubits):          
-                c.add(gates.RX(q, theta[index]))
-                index+=1         
-                c.add(gates.RZ(q, theta[index]))
-                index+=1         
-                c.add(gates.RX(q, theta[index]))
-                index+=1
+        for _ in range(nlayers):        
+            c.add(rotations())
+            c.add(self._CZ_gates1())
+            c.add(rotations())
+            c.add(self._CZ_gates2())          
+        # Final rotations
+        c.add(rotations())
+        # Measurements
+        c.add(gates.M(*range(self.measured_qubits)))
             
-            # CZ gates
-            for q in range(0, self.nqubits-1, 2):         
-                c.add(gates.CZ(q, q+1))
-            
-            # Rx,Rz,Rx rotations   `
-            for q in range(self.nqubits):          
-                c.add(gates.RX(q, theta[index]))
-                index+=1         
-                c.add(gates.RZ(q, theta[index]))
-                index+=1         
-                c.add(gates.RX(q, theta[index]))
-                index+=1
-            
-            # CZ gates
-            for q in range(1, self.nqubits-1, 2):          
-                c.add(gates.CZ(q, q+1))
-            
-            c.add(gates.CZ(0, self.nqubits-1))
-        
-        # Final Rx,Rz,Rx rotations    
-        for q in range(self.nqubits):       
-            c.add(gates.RX(q, theta[index]))
-            index+=1           
-            c.add(gates.RZ(q, theta[index]))
-            index+=1          
-            c.add(gates.RX(q, theta[index]))
-            index+=1
-        
         return c
-
-    def ansatz_RY(self, theta, nlayers):
-        """
-        Args: 
-            theta: list or numpy.array with the angles to be used in the circuit
-            nlayers: int number of layers of the varitional circuit ansatz
-    
-        Returns: 
-            qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
-        """ 
-        c = Circuit(self.nqubits)
-    
-        index = 0
-        for l in range(nlayers):
-        
-            # Ry rotations
-            for q in range(self.nqubits):           
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-        
-            # CZ gates
-            for q in range(0, self.nqubits-1, 2):          
-                c.add(gates.CZ(q, q+1))
             
-            # Ry rotations   `
-            for q in range(self.nqubits):
-                c.add(gates.RY(q, theta[index]))
-                index+=1
-            
-            # CZ gates
-            for q in range(1, self.nqubits-1, 2):         
-                c.add(gates.CZ(q, q+1))
-            
-            c.add(gates.CZ(0, self.nqubits-1))
-        
-        # Final Ry rotations    
-        for q in range(self.nqubits):       
-            c.add(gates.RY(q, theta[index]))
-            index+=1 
 
-        return c
-
-    def Classifier_circuit(self, theta, nlayers, RY=True):
+    def Classifier_circuit(self, theta):
         """    
         Args: 
             theta: list or numpy.array with the biases and the angles to be used in the circuit       
@@ -131,16 +86,9 @@ class QuantumClassifer():
         bias = np.array(theta[0:self.measured_qubits])
         angles = theta[self.measured_qubits:] 
         
-        if RY:         
-            circuit = self.ansatz_RY(angles, nlayers)        
-            circuit.add(gates.M(*range(self.measured_qubits)))            
-        elif not RY:           
-            circuit = self.ansatz(angles, nlayers)        
-            circuit.add(gates.M(*range(self.measured_qubits)))          
-        else:       
-            raise ValueError('RY must take a Boolean value')
-    
-        return circuit
+        self._circuit.set_parameters(angles)
+        
+        return self._circuit
     
     
     def Predictions(self, circuit, theta, init_state, nshots=10000):
@@ -196,9 +144,7 @@ class QuantumClassifer():
         Returns: 
             numpy.float32 with the value of the square-loss function
         """  
-        qibo.set_backend("matmuleinsum")
-        circ = self.Classifier_circuit(theta, nlayers, RY)
-        circ.compile()
+        circ = self.Classifier_circuit(theta)
         
         Bias = np.array(theta[0:self.measured_qubits])
         predictions = np.zeros(shape=(len(data),self.measured_qubits))
