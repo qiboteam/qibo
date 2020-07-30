@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from Qclassifier import QuantumClassifer
+from qclassifier import QuantumClassifer
 import argparse
 import numpy as np
 
