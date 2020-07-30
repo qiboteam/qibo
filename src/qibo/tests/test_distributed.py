@@ -428,10 +428,19 @@ def test_distributed_state_getitem():
     c = models.DistributedCircuit(4, {"/GPU:0": 2})
     c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
     state = c()
-    state_vector = np.array([state[i] for i in range(2 ** 4)])
-
     c = models.Circuit(4)
     c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
     target_state = c().numpy()
 
+    # Check indexing
+    state_vector = np.array([state[i] for i in range(2 ** 4)])
     np.testing.assert_allclose(state_vector, target_state)
+    # Check slicing
+    np.testing.assert_allclose(state[:], target_state)
+    np.testing.assert_allclose(state[2:5], target_state[2:5])
+    # Check list indexing
+    ids = [2, 4, 6]
+    np.testing.assert_allclose(state[ids], target_state[ids])
+    # Check error
+    with pytest.raises(TypeError):
+        state["a"]

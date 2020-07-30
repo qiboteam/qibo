@@ -437,16 +437,29 @@ class DistributedState(DistributedBase):
                                            self.qubits.reverse_transpose_order)
         return state
 
-    def __getitem__(self, i: int):
-      """Implements indexing of the distributed state without the full vector."""
-      binary_index = bin(i)[2:].zfill(self.nqubits)
-      binary_index = np.array([int(x) for x in binary_index])
+    def __len__(self) -> int:
+        return 2 ** self.nqubits
 
-      global_ids = binary_index[self.qubits.list]
-      global_ids = global_ids.dot(self.bintodec["global"])
-      local_ids = binary_index[self.qubits.local]
-      local_ids = local_ids.dot(self.bintodec["local"])
-      return self.pieces[global_ids][local_ids]
+    def __getitem__(self, key):
+      """Implements indexing of the distributed state without the full vector."""
+      if isinstance(key, slice):
+          return [self[i] for i in range(*key.indices(len(self)))]
+
+      elif isinstance(key, list):
+          return [self[i] for i in key]
+
+      elif isinstance(key, int):
+          binary_index = bin(key)[2:].zfill(self.nqubits)
+          binary_index = np.array([int(x) for x in binary_index])
+
+          global_ids = binary_index[self.qubits.list]
+          global_ids = global_ids.dot(self.bintodec["global"])
+          local_ids = binary_index[self.qubits.local]
+          local_ids = local_ids.dot(self.bintodec["local"])
+          return self.pieces[global_ids][local_ids]
+
+      else:
+          raise TypeError("Unknown index type {}.".format(type(key)))
 
     def __array__(self) -> np.ndarray:
         return self.vector.numpy()

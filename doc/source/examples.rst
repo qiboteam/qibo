@@ -253,9 +253,11 @@ however the user may create the full state as follows:
     full_final_state = final_state.vector
     # ``full_final_state`` is a ``tf.Tensor``
 
-    # ``DistributedState`` supports indexing
+    # ``DistributedState`` supports indexing and slicing
     print(final_state[40])
     # will print the 40th component of the final state vector
+    print(final_state[20:25])
+    # will print the components from 20 to 24 (inclusive)
 
 
 How to modify the simulation precision?
