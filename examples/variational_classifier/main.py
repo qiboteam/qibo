@@ -10,7 +10,7 @@ parser.add_argument("--nclasses", default=3, help="Number of classes to be class
 parser.add_argument("--nqubits", default=4, help="Number of qubits", type=int)
 parser.add_argument("--nlayers", default=5, help="Number of layers of the variational circuit", type=int)
 parser.add_argument("--nshots", default=int(1e5), help="Number of shots used when sampling the circuit", type=int)
-parser.add_argument("--training", action="store_false", help="Train the quantum classifier or ortherwise use precomputed angles for the circuit")
+parser.add_argument("--training", action="store_true", help="Train the quantum classifier or ortherwise use precomputed angles for the circuit")
 parser.add_argument("--RY", action="store_false", help="Use Ry rotations or RxRzRx rotations in the ansatz")
 parser.add_argument("--method", default='Powell', help="Classical otimizer employed", type=str)
 
