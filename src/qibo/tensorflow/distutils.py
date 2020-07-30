@@ -417,11 +417,10 @@ class DistributedState(DistributedBase):
 
     @property
     def vector(self) -> tf.Tensor:
-        """Merges the current ``tf.Variable`` pieces to a full state vector.
+        """Returns the full state vector as a ``tf.Tensor`` of shape ``(2 ** nqubits,)``.
 
-        Returns:
-            state (tf.Tensor): Full state vector as a tensor of shape
-                ``(2 ** nqubits,)``.
+        This is done by merging the state pieces to a single tensor.
+        Using this method will double memory usage.
         """
         if self.qubits.list == list(range(self.nglobal)):
             with tf.device(self.device):

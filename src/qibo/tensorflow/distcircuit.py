@@ -109,6 +109,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         super(TensorflowDistributedCircuit, self)._add(gate)
 
     def compile(self):
+        """"""
         raise RuntimeError("Cannot compile circuit that uses custom operators.")
 
     def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
