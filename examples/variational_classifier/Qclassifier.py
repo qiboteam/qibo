@@ -153,7 +153,7 @@ class QuantumClassifer():
             predictions[i] = self.Predictions(circ, Bias, text, nshots)
     
         s = self.square_loss(labels, predictions)
-        print(s)
+        
         return s
     
     
