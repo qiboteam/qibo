@@ -8,6 +8,21 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class DistributedQubits:
+    """Data structure that holds lists related to global qubit IDs.
+
+    Holds the following data:
+    * ``list``: Sorted list with the ids of global qubits.
+    * ``set``: Same as ``list`` but in a set to allow O(1) search.
+    * ``local``: Sorted list with the ids of local qubits.
+    * ``reduced_global``: Map from global qubit ids to their reduced value.
+        The reduced value is the effective id in a hypothetical circuit
+        that does not contain the local qubits.
+    * ``reduced_local``: Map from local qubit ids to their reduced value.
+    * ``transpose_order``: Order of indices used to split a full state vector
+        to state pieces.
+    * ``reverse_tranpose_order``: Order of indices used to merge state pieces
+        to a full state vector.
+    """
 
     def __init__(self, qubits: Sequence[int], nqubits: int):
         self.set = set(qubits)
@@ -31,6 +46,15 @@ class DistributedQubits:
 
 
 class DistributedBase:
+    """Base class for ``DistributedQueues`` and ``DistributedState``.
+
+    Holds a reference to the parent ``DistributedCircuit`` and reads from it
+    the following properties:
+    * ``nqubits``: Total number of qubits in the circuit.
+    * ``ndevices``: Number of logical accelerator devices.
+    * ``nglobal``: Number of global qubits (= log2(ndevices)).
+    * ``nlocal``: Number of local qubits (= nqubits - nglobal).
+    """
 
     def __init__(self, circuit):
         self.circuit = circuit
@@ -60,32 +84,14 @@ class DistributedQueues(DistributedBase):
     state forming a gate group. Once all gates in the group are applied the
     global qubits are swapped and we proceed to the next gate group.
 
-    ``DistributedQueues`` holds the following data that define the gate groups and
-    corresponding global qubits:
-    * ``nqubits``: Total number of qubits in the circuit.
-    * ``ndevices``: Number of logical accelerator devices.
-    * ``nglobal``: Number of global qubits (= log2(ndevices)).
-    * ``nlocal``: Number of local qubits (= nqubits - nglobal).
+    Holds the following data (in addition to ``DistributedBase``):
     * ``gate_module``: Gate module used by the circuit. This is used to create
         new SWAP gates when needed.
-
-    * ``global_qubits_list``: Sorted list with the ids of global qubits.
-    * ``global_qubits_set``: Same as ``global_qubits_list`` but in a set to
-        allow O(1) search.
-    * ``local_qubits``: Sorted list with the ids of local qubits.
-    * ``global_qubits_reduced``: Map from global qubit ids to their reduced
-        value. The reduced value is the effective id in a hypothetical circuit
-        that does not contain the local qubits.
-    * ``local_qubits_reduced``: Map from local qubit ids to their reduced
-        value. The reduced value is the effective id in a hypothetical circuit
-        that does not contain the global qubits.
-
     * ``device_to_ids``: Dictionary that maps device (str) to list of piece indices.
         When a device is used multiple times then it is responsible for updating
         multiple state pieces. The list of indices specifies which pieces the device
         will update.
     * ``ids_to_device``: Inverse dictionary of ``device_to_ids``.
-
     * ``queues``: Nested list of shape ``(ngroups, ndevices, group size)``.
         For example ``queues[2][1]`` gives the gate queue of the second gate
         group to be run in the first device.
@@ -117,16 +123,16 @@ class DistributedQueues(DistributedBase):
         """Prepares gates for device-specific gate execution.
 
         Each gate has to be recreated in the device that will be executed to
-        allow parallel execution. The global qubit lists and gate groups are
-        also specified here.
+        allow parallel execution. This method creates the gate groups that
+        contain these device gates.
         A gate group is identified by looping through the circuit's gate queue
         and adding gates in the group until the number of global becomes ``nglobal``.
         Once this happens no more gates can be added in the group. In order to
         apply new gates some global qubits have to be swapped to global and a
         new gate group will be defined for the new global qubit configuration.
 
-        The final global qubit lists and gate queues that are used for execution
-        are storred in ``self.queues`` which is a ``DistributedQueues`` object.
+        This method also creates the ``DistributedQubits`` object holding the
+        global qubits list.
         """
         if not queue:
             raise RuntimeError("No gates available to set for distributed run.")
@@ -331,8 +337,18 @@ class DistributedQueues(DistributedBase):
 
 
 class DistributedState(DistributedBase):
+    """Data structure that holds the pieces of a state vector.
 
-    def __init__(self, circuit):
+    Holds the following data:
+    * self.pieces: List of length ``ndevices`` holding ``tf.Variable``s with
+      the state pieces.
+    * self.qubits: The ``DistributedQubits`` object created by the
+      ``DistributedQueues`` of the circuit.
+    * self.shapes: Dictionary containing tensors that are useful for reshaping
+      the state when splitting/merging the pieces.
+    """
+
+    def __init__(self, circuit: "DistributedCircuit"):
         super(DistributedState, self).__init__(circuit)
         self.device = circuit.memory_device
         self.qubits = circuit.queues.qubits
@@ -351,8 +367,13 @@ class DistributedState(DistributedBase):
             "tensor": self.nqubits * (2,)
             }
 
+        self.bintodec = {
+            "global": 2 ** np.arange(self.nglobal - 1, -1, -1),
+            "local": 2 ** np.arange(self.nlocal - 1, -1, -1)
+            }
+
     @classmethod
-    def default(cls, circuit):
+    def default(cls, circuit: "DistributedCircuit"):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
       with tf.device(state.device):
@@ -360,7 +381,8 @@ class DistributedState(DistributedBase):
       return state
 
     @classmethod
-    def from_vector(cls, full_state: tf.Tensor, circuit):
+    def from_vector(cls, full_state: tf.Tensor, circuit: "DistributedCircuit"):
+        """Initializes pieces from a given full state vector."""
         state = cls(circuit)
         state.assign_vector(full_state)
         return state
@@ -386,7 +408,8 @@ class DistributedState(DistributedBase):
         """Merges the current ``tf.Variable`` pieces to a full state vector.
 
         Returns:
-            state (tf.Tensor): Full state vector as a tensor of shape ``(2 ** nqubits)``.
+            state (tf.Tensor): Full state vector as a tensor of shape
+                ``(2 ** nqubits,)``.
         """
         if self.qubits.list == list(range(self.nglobal)):
             with tf.device(self.device):
