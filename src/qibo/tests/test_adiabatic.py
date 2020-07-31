@@ -35,7 +35,7 @@ def test_hamiltonian_t(t):
 
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])
-def test_adiabatic_evolution(dt):
+def test_evolution(dt):
     h0 = hamiltonians.OneBodyPauli(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1)
@@ -51,3 +51,24 @@ def test_adiabatic_evolution(dt):
         target_psi = expm(-1j * dt * ham(n * dt)).dot(target_psi)
     final_psi = adev(dt)
     assert_states_equal(final_psi, target_psi)
+
+
+def test_energy_callback_evolution(dt=1e-2):
+    from qibo import callbacks
+    h0 = hamiltonians.OneBodyPauli(2)
+    h1 = hamiltonians.TFIM(2)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1)
+    energy = callbacks.Energy(h1)
+
+    target_psi = np.ones(4) / 2
+    calc_energy = lambda psi: psi.conj().dot(h1.hamiltonian.numpy().dot(psi))
+    target_energies = [calc_energy(target_psi)]
+    nsteps = int(1 / dt)
+    for n in range(nsteps):
+        prop = expm(-1j * dt * adev.hamiltonian(n * dt).hamiltonian.numpy())
+        target_psi = prop.dot(target_psi)
+        target_energies.append(calc_energy(target_psi))
+
+    final_psi = adev(dt, callbacks=[energy])
+    assert_states_equal(final_psi, target_psi)
+    np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
