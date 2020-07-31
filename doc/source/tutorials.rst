@@ -14,3 +14,4 @@ physics problems.
     tutorials/3_tangle/README.md
     tutorials/qsvd/README.md
     tutorials/autoencoder/README.md
+    tutorials/variational_classifier/README.md

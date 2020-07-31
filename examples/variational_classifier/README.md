@@ -1,10 +1,12 @@
 # Variational Quantum Classifier
 
-# Problem overview
+Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/variational_classifier](https://github.com/Quantum-TII/qibo/tree/master/examples/variational_classifier).
+
+## Problem overview
 
 We want to perform a supervised classification task with a [variational quantum classifer](https://arxiv.org/abs/2001.03622). The classifier is trained to minimize a local loss function given by the quadratic deviation of the classifier's predictions from the actual labels of the examples in the training set. A variational quantum circuit is employed to perform the classification.
 
-# Implementing the solution
+## Implementing the solution
 
 The standard [iris data set](https://archive.ics.uci.edu/ml/datasets/iris) is chosen for the classification task. It consists of 150 4-dimensional data vectors containing the length and widht of the sepals and petals of individuals from three different species of plants (*Iris setosa*, *Iris versicolor*, *Iris virginica*). We associate one computational-basis state to each of the classes (|00>, |01>, |10>) in the subspace of measured qubits, and we employ the following architecture for the ansatz:
 
@@ -12,7 +14,7 @@ The standard [iris data set](https://archive.ics.uci.edu/ml/datasets/iris) is ch
 
 where R stands for Ry rotations (if `RY=True`) or RxRzRx rotations.
 
-# How to run an example
+## How to run an example
 
 To run a particular instance of the problem, we have to set up the initial
 arguments:
@@ -38,6 +40,6 @@ python main.py --nqubits 4 --nlayers 5 --nshots 100000 --training True
 
 Note that nclases must be 3 and cannot be changed in this example, because we are classifing the Iris data set.
 
-# Results
+## Results
 
 The classification accuracy for the training and test sets is found to be around 67% and 62%, respectively.
