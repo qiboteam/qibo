@@ -142,7 +142,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def OneBodyPauli(self, nqubits, p=(1.0, 0.0, 0.0)):
+def OneBodyPauli(nqubits, p=(1.0, 0.0, 0.0)):
     condition = lambda i, j: i == j % nqubits
     ms = (matrices.X, matrices.Y, matrices.Z)
     ham = sum(c * _build_spin_model(nqubits, m, condition) if c != 0 else 0
