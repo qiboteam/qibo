@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import matrices
-from qibo import K
+from qibo import matrices, K
+from qibo.config import DTYPES
 from abc import ABCMeta, abstractmethod
 
 
@@ -146,10 +146,47 @@ class Hamiltonian(object):
         return self.__mul__(o)
 
 
-class XXZ(Hamiltonian):
-    """This class implements the Heisenberg XXZ model.
-    The mode uses the Pauli matrices and build the final
-    Hamiltonian:
+class SpinModel(Hamiltonian):
+
+    @staticmethod
+    def multikron(matrices):
+        h = 1
+        for m in matrices:
+            h = np.kron(h, m)
+        return h
+
+    def _build(self, matrix, condition):
+        h = sum(self.multikron((matrix if condition(i, j) else matrices.I
+                                for j in range(self.nqubits)))
+                for i in range(self.nqubits))
+        return h
+
+
+class Ising(SpinModel):
+
+    def __init__(self, nqubits, h=0.0):
+        super(Ising, self).__init__(nqubits)
+        condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+        hzz = self._build(matrices.Z, condition)
+        condition = lambda i, j: i == j % nqubits
+        hx = self._build(matrices.X, condition)
+        self.hamiltonian = K.cast(-(hzz + h * hx), dtype=DTYPES.get('DTYPECPX'))
+
+
+class OneBodyPauli(SpinModel):
+
+    def __init__(self, nqubits, p=(1.0, 0.0, 0.0)):
+        super(OneBodyPauli, self).__init__(nqubits)
+        condition = lambda i, j: i == j % nqubits
+        ms = (matrices.X, matrices.Y, matrices.Z)
+        h = sum(pi * self._build(m, condition) for pi, m in zip(p, ms))
+        self.hamiltonian = K.cast(-h, dtype=DTYPES.get('DTYPECPX'))
+
+
+class XXZ(SpinModel):
+    """Implements the Heisenberg XXZ model.
+
+    Uses Pauli matrices to build the final Hamiltonian matrix as:
 
     .. math::
         H = H_x + H_y + \\delta \cdot H_z.
@@ -165,25 +202,11 @@ class XXZ(Hamiltonian):
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
 
-    def __init__(self, delta=0.5, **kwargs):
+    def __init__(self, nqubits, delta=0.5, **kwargs):
         """Initialize XXZ model."""
-        Hamiltonian.__init__(self, **kwargs)
-        hx = self._build(matrices.X)
-        hy = self._build(matrices.Y)
-        hz = self._build(matrices.Z)
+        super(XXZ, self).__init__(nqubits)
+        condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+        hx = self._build(matrices.X, condition)
+        hy = self._build(matrices.Y, condition)
+        hz = self._build(matrices.Z, condition)
         self.hamiltonian = hx + hy + delta * hz
-
-    def _build(self, *args, **kwargs):
-        """Builds the Heisenber model for a given operator sigma"""
-        hamiltonian = 0
-        eye = matrices.I
-        n = self.nqubits
-        for i in range(n):
-            h = 1
-            for j in range(n):
-                if i == j % n or i == (j+1) % n:
-                    h = np.kron(args[0], h)
-                else:
-                    h = np.kron(eye, h)
-            hamiltonian += h
-        return hamiltonian
