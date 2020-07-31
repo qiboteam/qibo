@@ -4,10 +4,10 @@ from qibo import hamiltonians, models
 from scipy.linalg import expm
 
 
-def assert_states_equal(state, target_state):
+def assert_states_equal(state, target_state, atol=0):
     """Asserts that two state vectors are equal up to a phase."""
     phase = state[0] / target_state[0]
-    np.testing.assert_allclose(state, phase * target_state)
+    np.testing.assert_allclose(state, phase * target_state, atol=atol)
 
 
 def test_initial_state():
@@ -72,3 +72,25 @@ def test_energy_callback_evolution(dt=1e-2):
     final_psi = adev(dt, callbacks=[energy])
     assert_states_equal(final_psi, target_psi)
     np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
+
+
+def test_rk4_evolution(dt=1e-3):
+    from qibo import callbacks
+    h0 = hamiltonians.OneBodyPauli(3)
+    h1 = hamiltonians.TFIM(3)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1)
+
+    class TimeStepCheck(callbacks.Callback):
+        """Compares RK4 with exponential solution at each time step."""
+
+        nsteps = int(1 / dt)
+        target_psi = [np.ones(8) / np.sqrt(8)]
+        for n in range(nsteps):
+            prop = expm(-1j * dt * adev.hamiltonian(n * dt).hamiltonian.numpy())
+            target_psi.append(prop.dot(target_psi[-1]))
+        target_states = iter(target_psi)
+
+        def __call__(self, state):
+            assert_states_equal(state, next(self.target_states), atol=dt)
+
+    final_psi = adev(dt, solver="rk4", callbacks=[TimeStepCheck()])

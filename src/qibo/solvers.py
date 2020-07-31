@@ -33,7 +33,7 @@ class RungeKutta4(BaseSolver):
         k3 = K.matmul(ham2, state + self.dt * k2 / 2.0)
         k4 = K.matmul(ham3, state + self.dt * k3)
         self.t += self.dt
-        return (state - 1j * dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)[:, 0]
+        return (state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)[:, 0]
 
 
 factory = {
