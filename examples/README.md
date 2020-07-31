@@ -10,6 +10,7 @@ physics problems.
 - [Measuring the tangle of three-qubit states](3_tangle/README.md)
 - [Quantum Singular Value Decomposer](qsvd/README.md)
 - [Quantum autoenconder for compression of data](autoencoder/README.md)
+- [Grover's Algorithm for solving a Toy Sponge Hash function](hash-grover/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - Variational Quantum Eigensolver (`benchmarks/vqe.py`)
