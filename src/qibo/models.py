@@ -234,42 +234,56 @@ class VQE(object):
         return result, parameters
 
 
-class AdiabaticEvolution:
+class StateEvolution:
 
     from qibo import solvers
 
-    def __init__(self, h0, h1, s, total_time):
-        if s(0) != 0:
-            raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
-        if s(total_time) != 1:
-            raise ValueError("s(T) should be 1 but is {}."
-                             "".format(s(total_time)))
+    def __init__(self, h):
+        self.hamiltonian = h
 
-        self.total_time = total_time
-        self.s = s
-
-        self.h0 = h0
-        self.h1 = h1
-
-    def hamiltonian(self, t):
-        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
-
-    def execute(self, dt, solver="exp", initial_state=None, callbacks=[]):
+    def execute(self, dt, total_time, initial_state=None, solver="exp",
+                callbacks=[]):
         state = self._cast_initial_state(initial_state)
 
         solver = self.solvers.factory[solver](dt, self.hamiltonian)
-        nsteps = int(self.total_time / solver.dt)
+        nsteps = int(total_time / solver.dt)
         for callback in callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
             state = solver(state)
             for callback in callbacks:
                 callback.append(callback(state))
-
         return state
 
-    def __call__(self, dt, solver="exp", initial_state=None, callbacks=[]):
-        return self.execute(dt, solver, initial_state, callbacks)
+    def __call__(self, dt, total_time, initial_state=None, solver="exp",
+                 callbacks=[]):
+        return self.execute(dt, total_time, initial_state, solver, callbacks)
+
+    def _cast_initial_state(self, initial_state=None):
+        if initial_state is None:
+            raise ValueError("StateEvolution cannot be used without initial "
+                             "state.")
+        return initial_state
+
+
+class AdiabaticEvolution(StateEvolution):
+
+    def __init__(self, h0, h1, s):
+        if s(0) != 0:
+            raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
+        self.s = s
+        self.h0 = h0
+        self.h1 = h1
+
+    def hamiltonian(self, t):
+        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
+
+    def execute(self, dt, total_time, *args, **kwargs):
+        st = self.s(total_time)
+        if st != 1:
+            raise ValueError("s(T) should be 1 but is {}.".format(st))
+        return super(AdiabaticEvolution, self).execute(dt, total_time, *args,
+                                                       **kwargs)
 
     def _cast_initial_state(self, initial_state=None):
         if initial_state is None:

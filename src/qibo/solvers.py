@@ -1,4 +1,4 @@
-from qibo import K
+from qibo import K, hamiltonians
 
 
 class BaseSolver:
@@ -6,13 +6,33 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        self.hamiltonian = hamiltonian
+        if isinstance(hamiltonian, hamiltonians.Hamiltonian):
+            self.hamiltonian = lambda t: hamiltonian
+        else:
+            self.hamiltonian = hamiltonian
 
     def __call__(self, state):
         raise NotImplementedError
 
 
-class ExponentialPropagator(BaseSolver):
+class TimeIndependentExponential(BaseSolver):
+
+    def __init__(self, dt, hamiltonian):
+        super(TimeIndependentExponential, self).__init__(dt, hamiltonian)
+        self.propagator = K.linalg.expm(-1j * dt * hamiltonian.hamiltonian)
+
+    def __call__(self, state):
+        self.t += self.dt
+        return K.matmul(self.propagator, state[:, K.newaxis])[:, 0]
+
+
+class Exponential(BaseSolver):
+
+    def __new__(cls, dt, hamiltonian):
+        if isinstance(hamiltonian, hamiltonians.Hamiltonian):
+            return TimeIndependentExponential(dt, hamiltonian)
+        else:
+            return super(Exponential, cls).__new__(cls)
 
     def __call__(self, state):
         propagator = K.linalg.expm(
@@ -37,6 +57,6 @@ class RungeKutta4(BaseSolver):
 
 
 factory = {
-  "exp": ExponentialPropagator,
-  "rk4": RungeKutta4
+    "exp": Exponential,
+    "rk4": RungeKutta4
 }
