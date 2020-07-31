@@ -1,4 +1,5 @@
 import tensorflow as tf
+from qibo.tensorflow import solvers
 
 
 class AdiabaticEvolution:
@@ -19,18 +20,17 @@ class AdiabaticEvolution:
     def hamiltonian(self, t):
         return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
 
-    def execute(self, dt, initial_state=None):
+    def execute(self, dt, solver="exp", initial_state=None):
         state = self._cast_initial_state(initial_state)
 
-        nsteps = int(self.total_time / dt)
-        for n in range(nsteps):
-            t = n * dt
-            propagator = tf.linalg.expm(-1j * dt * self.hamiltonian(t).hamiltonian)
-            state = tf.matmul(propagator, state[:, tf.newaxis])[:, 0]
+        solver = solvers.factory[solver](dt, self.hamiltonian)
+        nsteps = int(self.total_time / solver.dt)
+        for _ in range(nsteps):
+            state = solver(state)
         return state
 
-    def __call__(self, dt, initial_state=None):
-        return self.execute(dt, initial_state)
+    def __call__(self, dt, solver="exp", initial_state=None):
+        return self.execute(dt, solver, initial_state)
 
     def _cast_initial_state(self, initial_state=None):
         if initial_state is None:

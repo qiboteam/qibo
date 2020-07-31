@@ -2,7 +2,7 @@
 import numpy as np
 from qibo import matrices, K
 from qibo.config import DTYPES
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 
 
 NUMERIC_TYPES = (np.int, np.float, np.complex,
@@ -179,7 +179,6 @@ def XXZ(nqubits, delta=0.5):
             from qibo.hamiltonian import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
-
     condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
     hx = _build_spin_model(nqubits, matrices.X, condition)
     hy = _build_spin_model(nqubits, matrices.Y, condition)
