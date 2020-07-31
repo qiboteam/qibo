@@ -147,12 +147,6 @@ class EntanglementEntropy(PartialTrace):
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
 
-    def __init__(self, partition: Optional[List[int]] = None):
-        super(EntanglementEntropy, self).__init__()
-        self.partition = partition
-        self.rho_dim = None
-        self._traceout = None
-
     @classmethod
     def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
       """Calculates entropy by diagonalizing the density matrix."""
@@ -169,3 +163,40 @@ class EntanglementEntropy(PartialTrace):
         rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
         return self._entropy(rho)
+
+
+class Norm(Callback):
+    """State norm callback."""
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            return tf.linalg.trace(state)
+        return tf.sqrt(tf.reduce_sum(tf.square(tf.abs(state))))
+
+
+class Energy(Callback):
+    """Energy expectation value callback.
+
+    Calculates the expectation value of a given Hamiltonian as:
+    .. math::
+        \\left \\langle H \\right \\rangle =
+        \\left \\langle \\Psi | H | \\ Psi \\right \\rangle
+
+    assuming that the state is normalized.
+
+    Args:
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian
+            object to calculate its expectation value.
+    """
+
+    def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):
+        super(Energy, self).__init__()
+        self.hamiltonian = hamiltonian
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            return tf.linalg.trace(tf.matmul(self.hamiltonian.hamiltonian,
+                                             state))
+        return self.hamiltonian.expectation(state)

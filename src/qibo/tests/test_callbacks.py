@@ -272,3 +272,31 @@ def test_entropy_bad_indexing():
         entropy[1]
     with pytest.raises(IndexError):
         entropy["a"]
+
+
+def test_norm():
+    """Check norm callback for state vectors and density matrices."""
+    norm = callbacks.Norm()
+
+    state = np.random.random(4) + 1j * np.random.random(4)
+    target_norm = np.sqrt((np.abs(state) ** 2).sum())
+    np.testing.assert_allclose(norm(state), target_norm)
+
+    state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    target_norm = np.trace(state)
+    np.testing.assert_allclose(norm(state, True), target_norm)
+
+
+def test_energy():
+    """Check energy callback for state vectors and density matrices."""
+    from qibo import hamiltonians
+    ham = hamiltonians.TFIM(4, h=1.0)
+    energy = callbacks.Energy(ham)
+
+    state = np.random.random(16) + 1j * np.random.random(16)
+    target_energy = state.conj().dot(ham.hamiltonian.numpy().dot(state))
+    np.testing.assert_allclose(energy(state), target_energy)
+
+    state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
+    target_energy = np.trace(ham.hamiltonian.numpy().dot(state))
+    np.testing.assert_allclose(energy(state, True), target_energy)
