@@ -239,6 +239,7 @@ class StateEvolution:
     from qibo import solvers
 
     def __init__(self, h):
+        self.nqubits = h.nqubits
         self.hamiltonian = h
 
     def execute(self, dt, total_time, initial_state=None, solver="exp",
@@ -263,14 +264,18 @@ class StateEvolution:
         if initial_state is None:
             raise ValueError("StateEvolution cannot be used without initial "
                              "state.")
-        return initial_state
+        return SimpleCircuit._cast_initial_state(self, initial_state)
 
 
 class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s):
+        if h0.nqubits != h1.nqubits:
+            raise ValueError("H0 has {} qubits while H1 has {}."
+                             "".format(h0.nqubits, h1.nqubits))
         if s(0) != 0:
             raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
+        self.nqubits = h0.nqubits
         self.s = s
         self.h0 = h0
         self.h1 = h1
@@ -288,4 +293,4 @@ class AdiabaticEvolution(StateEvolution):
     def _cast_initial_state(self, initial_state=None):
         if initial_state is None:
             return self.h0.eigenvectors()[:, 0]
-        return initial_state
+        return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
