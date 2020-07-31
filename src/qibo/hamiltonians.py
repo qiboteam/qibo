@@ -10,13 +10,6 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.float64, np.complex64, np.complex128)
 
 
-def isclassinstance(o, w):
-    """Check if objects are from the same base class."""
-    return (isinstance(o, w.__class__) or
-            issubclass(o.__class__, w.__class__) or
-            issubclass(w.__class__, o.__class__))
-
-
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
@@ -25,18 +18,13 @@ class Hamiltonian(object):
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, nqubits):
+    def __init__(self, nqubits, hamiltonian):
         if not isinstance(nqubits, int):
             raise RuntimeError(f'nqubits must be an integer')
-        self.hamiltonian = None
         self.nqubits = nqubits
+        self.hamiltonian = hamiltonian
         self._eigenvalues = None
         self._eigenvectors = None
-
-    @abstractmethod
-    def _build(self, *args, **kwargs):
-        """Implements the Hamiltonian construction."""
-        pass
 
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
@@ -63,18 +51,16 @@ class Hamiltonian(object):
 
     def __add__(self, o):
         """Add operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o.hamiltonian
-            return r
+            new_hamiltonian = self.hamiltonian + o.hamiltonian
+            return self.__class__(self.nqubits, new_hamiltonian)
         elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o * \
+            new_hamiltonian = self.hamiltonian + o * \
                 K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
+            return self.__class__(self.nqubits, new_hamiltonian)
         else:
             raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
                                       'not implemented.')
@@ -85,37 +71,33 @@ class Hamiltonian(object):
 
     def __sub__(self, o):
         """Subtraction operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o.hamiltonian
-            return r
+            new_hamiltonian = self.hamiltonian - o.hamiltonian
+            return self.__class__(self.nqubits, new_hamiltonian)
         elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o * \
+            new_hamiltonian = self.hamiltonian - o * \
                 K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
+            return self.__class__(self.nqubits, new_hamiltonian)
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
                                       'not implemented.')
 
     def __rsub__(self, o):
         """Right subtraction operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o.hamiltonian - self.hamiltonian
-            return r
+            new_hamiltonian = o.hamiltonian - self.hamiltonian
+            return self.__class__(self.nqubits, new_hamiltonian)
         elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o * \
+            new_hamiltonian = o * \
                 K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype) - \
                 self.hamiltonian
-            return r
+            return self.__class__(self.nqubits, new_hamiltonian)
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
                                       'not implemented.')
@@ -123,8 +105,8 @@ class Hamiltonian(object):
     def __mul__(self, o):
         """Multiplication to scalar operator."""
         if isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian * o
+            new_hamiltonian = self.hamiltonian * o
+            r = self.__class__(self.nqubits, new_hamiltonian)
             if self._eigenvalues is not None:
                 if o.real >= 0:
                     r._eigenvalues = o * self._eigenvalues
@@ -146,44 +128,40 @@ class Hamiltonian(object):
         return self.__mul__(o)
 
 
-class SpinModel(Hamiltonian):
-
-    @staticmethod
-    def multikron(matrices):
-        h = 1
-        for m in matrices:
-            h = np.kron(h, m)
-        return h
-
-    def _build(self, matrix, condition):
-        h = sum(self.multikron((matrix if condition(i, j) else matrices.I
-                                for j in range(self.nqubits)))
-                for i in range(self.nqubits))
-        return h
+def _multikron(matrices):
+    h = 1
+    for m in matrices:
+        h = np.kron(h, m)
+    return h
 
 
-class Ising(SpinModel):
+def _build_spin_model(nqubits, matrix, condition):
+    h = sum(_multikron((matrix if condition(i, j) else matrices.I
+                        for j in range(nqubits)))
+            for i in range(nqubits))
+    return h
 
-    def __init__(self, nqubits, h=0.0):
-        super(Ising, self).__init__(nqubits)
-        condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
-        hzz = self._build(matrices.Z, condition)
+
+def OneBodyPauli(self, nqubits, p=(1.0, 0.0, 0.0)):
+    condition = lambda i, j: i == j % nqubits
+    ms = (matrices.X, matrices.Y, matrices.Z)
+    ham = sum(c * _build_spin_model(nqubits, m, condition) if c != 0 else 0
+              for c, m in zip(p, ms))
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)
+
+
+def TFIM(nqubits, h=0.0):
+    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+    ham = _build_spin_model(nqubits, matrices.Z, condition)
+    if h != 0:
         condition = lambda i, j: i == j % nqubits
-        hx = self._build(matrices.X, condition)
-        self.hamiltonian = K.cast(-(hzz + h * hx), dtype=DTYPES.get('DTYPECPX'))
+        ham += _build_spin_model(nqubits, matrices.X, condition)
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)
 
 
-class OneBodyPauli(SpinModel):
-
-    def __init__(self, nqubits, p=(1.0, 0.0, 0.0)):
-        super(OneBodyPauli, self).__init__(nqubits)
-        condition = lambda i, j: i == j % nqubits
-        ms = (matrices.X, matrices.Y, matrices.Z)
-        h = sum(pi * self._build(m, condition) for pi, m in zip(p, ms))
-        self.hamiltonian = K.cast(-h, dtype=DTYPES.get('DTYPECPX'))
-
-
-class XXZ(SpinModel):
+def XXZ(nqubits, delta=0.5):
     """Implements the Heisenberg XXZ model.
 
     Uses Pauli matrices to build the final Hamiltonian matrix as:
@@ -202,11 +180,9 @@ class XXZ(SpinModel):
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
 
-    def __init__(self, nqubits, delta=0.5, **kwargs):
-        """Initialize XXZ model."""
-        super(XXZ, self).__init__(nqubits)
-        condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
-        hx = self._build(matrices.X, condition)
-        hy = self._build(matrices.Y, condition)
-        hz = self._build(matrices.Z, condition)
-        self.hamiltonian = hx + hy + delta * hz
+    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+    hx = _build_spin_model(nqubits, matrices.X, condition)
+    hy = _build_spin_model(nqubits, matrices.Y, condition)
+    hz = _build_spin_model(nqubits, matrices.Z, condition)
+    hamiltonian = hx + hy + delta * hz
+    return Hamiltonian(nqubits, hamiltonian)

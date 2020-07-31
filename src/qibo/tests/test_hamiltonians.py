@@ -1,14 +1,14 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, NUMERIC_TYPES
+from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, NUMERIC_TYPES
 
 
 def test_hamiltonian_initialization():
     """Testing hamiltonian not implemented errors."""
-    H1 = Hamiltonian(nqubits=2)
+    H1 = Hamiltonian(2, np.eye(4))
 
     with pytest.raises(RuntimeError):
-        H2 = Hamiltonian(np.eye(2))
+        H2 = Hamiltonian(np.eye(2), np.eye(4))
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
@@ -53,6 +53,18 @@ def test_hamiltonian_overloading(dtype):
     np.testing.assert_allclose(hH2, HT2.hamiltonian)
     np.testing.assert_allclose(hH3, HT3.hamiltonian)
     np.testing.assert_allclose(hH4, HT4.hamiltonian)
+
+
+def test_different_hamiltonian_addition():
+    """Test adding Hamiltonians of different models."""
+    H1 = XXZ(nqubits=3, delta=0.5)
+    H2 = TFIM(nqubits=3, h=1.0)
+    H = H1 + H2
+    matrix = H1.hamiltonian + H2.hamiltonian
+    np.testing.assert_allclose(H.hamiltonian, matrix)
+    H = H1 - 0.5 * H2
+    matrix = H1.hamiltonian - 0.5 * H2.hamiltonian
+    np.testing.assert_allclose(H.hamiltonian, matrix)
 
 
 def test_hamiltonian_runtime_errors():
