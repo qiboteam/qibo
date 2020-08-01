@@ -45,7 +45,7 @@ def test_state_evolution(solver, atol):
 
     dt = t[1] - t[0]
     checker = TimeStepChecker(target_psi, atol=atol)
-    final_psi = evolution(dt, 1, initial_state=target_psi[0], solver=solver,
+    final_psi = evolution(1, dt=dt, initial_state=target_psi[0], solver=solver,
                           callbacks=[checker])
 
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
@@ -78,7 +78,7 @@ def test_adiabatic_evolution(dt):
     nsteps = int(1 / dt)
     for n in range(nsteps):
         target_psi = expm(-1j * dt * ham(n * dt)).dot(target_psi)
-    final_psi = adev(dt, 1)
+    final_psi = adev(1, dt=dt)
     assert_states_equal(final_psi, target_psi)
 
 
@@ -97,7 +97,7 @@ def test_energy_callback(dt=1e-2):
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
-    final_psi = adev(dt, 1, callbacks=[energy])
+    final_psi = adev(1, dt=dt, callbacks=[energy])
     assert_states_equal(final_psi, target_psi)
     np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
 
@@ -114,4 +114,4 @@ def test_rk4_evolution(dt=1e-3):
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
-    final_psi = adev(dt, 1, solver="rk4", callbacks=[checker])
+    final_psi = adev(1, dt=dt, solver="rk4", callbacks=[checker])

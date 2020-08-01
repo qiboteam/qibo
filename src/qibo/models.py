@@ -235,18 +235,56 @@ class VQE(object):
 
 
 class StateEvolution:
+    """Unitary time evolution of a state vector under a Hamiltonian.
+
+    Args:
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
+            evolve under.
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import models, hamiltonians
+            # create critical (h=1.0) TFIM Hamiltonian for three qubits
+            hamiltonian = hamiltonians.TFIM(3, h=1.0)
+            # initialize evolution model
+            evolution = models.StateEvolution(hamiltonian)
+            # initialize state to |+++>
+            initial_state = np.ones(8) / np.sqrt(8)
+            # evolve the state for T=1
+            final_state = evolution(1, initial_state)
+    """
 
     from qibo import solvers
 
-    def __init__(self, h):
-        self.nqubits = h.nqubits
-        self.hamiltonian = h
+    def __init__(self, hamiltonian):
+        self.nqubits = hamiltonian.nqubits
+        self.hamiltonian = hamiltonian
 
-    def execute(self, dt, total_time, initial_state=None, solver="exp",
+    def execute(self, total_time, dt=None, initial_state=None, solver="exp",
                 callbacks=[]):
+        """Runs unitary evolution for a given total time.
+
+        Args:
+            total_time (float): Total time to evolve for. Initial time is t=0.
+            dt (float): Time step to use for the numerical integration of
+                Schrondiger's equation.
+                Not required if the Hamiltonian is time-independent and the
+                exponential solver is used.
+            initial_state (np.ndarray): Initial state of the evolution.
+            solver (str): Solver to use for integrating Schrodinger's equation.
+            callbacks (list): List of callbacks to calculate during evolution.
+
+        Returns:
+            Final state vector a ``tf.Tensor``.
+        """
         state = self._cast_initial_state(initial_state)
+        if dt is None:
+            dt = total_time
 
         solver = self.solvers.factory[solver](dt, self.hamiltonian)
+        is_tindep = isinstance(solver, self.solvers.TimeIndependentExponential)
         nsteps = int(total_time / solver.dt)
         for callback in callbacks:
             callback.append(callback(state))
@@ -256,11 +294,13 @@ class StateEvolution:
                 callback.append(callback(state))
         return state
 
-    def __call__(self, dt, total_time, initial_state=None, solver="exp",
+    def __call__(self, total_time, dt=None, initial_state=None, solver="exp",
                  callbacks=[]):
-        return self.execute(dt, total_time, initial_state, solver, callbacks)
+        """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
+        return self.execute(total_time, dt, initial_state, solver, callbacks)
 
     def _cast_initial_state(self, initial_state=None):
+        """Casts initial state as a Tensorflow tensor."""
         if initial_state is None:
             raise ValueError("StateEvolution cannot be used without initial "
                              "state.")
@@ -268,6 +308,17 @@ class StateEvolution:
 
 
 class AdiabaticEvolution(StateEvolution):
+    """Adiabatic evolution of a state vector under the following Hamiltonian:
+
+    .. math::
+        H(t) = (1 - s(t)) H_0 + s(t) H_1
+
+    Args:
+        h0 (:class:`qibo.hamiltonians.Hamiltonian`): Easy Hamiltonian.
+        h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
+        s (callable): Function of time that defines the scheduling of the
+            adiabatic evolution.
+    """
 
     def __init__(self, h0, h1, s):
         if h0.nqubits != h1.nqubits:
@@ -281,16 +332,31 @@ class AdiabaticEvolution(StateEvolution):
         self.h1 = h1
 
     def hamiltonian(self, t):
+        """Calculates the Hamiltonian at a given time.
+
+        Args:
+            t (float): Time value.
+
+        Returns:
+            :class:`qibo.hamiltonians.Hamiltonian` object corresponding to the
+            evolution Hamiltonian at the given time.
+        """
         return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
 
-    def execute(self, dt, total_time, *args, **kwargs):
+    def execute(self, total_time, *args, **kwargs):
+        """"""
         st = self.s(total_time)
         if st != 1:
             raise ValueError("s(T) should be 1 but is {}.".format(st))
-        return super(AdiabaticEvolution, self).execute(dt, total_time, *args,
+        return super(AdiabaticEvolution, self).execute(total_time, *args,
                                                        **kwargs)
 
     def _cast_initial_state(self, initial_state=None):
+        """Casts initial state as a Tensorflow tensor.
+
+        If initial state is not given the ground state of ``h0`` is used, which
+        is the common practice in adiabatic evolution.
+        """
         if initial_state is None:
             return self.h0.eigenvectors()[:, 0]
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
