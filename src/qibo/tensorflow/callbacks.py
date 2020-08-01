@@ -119,6 +119,9 @@ class PartialTrace(Callback):
 class EntanglementEntropy(PartialTrace):
     """Von Neumann entanglement entropy callback.
 
+    .. math::
+        S = \\mathrm{Tr} \\left ( \\rho \\log _2 \\rho \\right )
+
     Args:
         partition (list): List with qubit ids that defines the first subsystem
             for the entropy calculation.
@@ -166,7 +169,12 @@ class EntanglementEntropy(PartialTrace):
 
 
 class Norm(Callback):
-    """State norm callback."""
+    """State norm callback.
+
+    .. math::
+        \\mathrm{Norm} = \\left \\langle \\Psi | \\Psi \\right \\rangle
+        = \\mathrm{Tr} (\\rho )
+    """
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -179,9 +187,11 @@ class Energy(Callback):
     """Energy expectation value callback.
 
     Calculates the expectation value of a given Hamiltonian as:
+
     .. math::
         \\left \\langle H \\right \\rangle =
-        \\left \\langle \\Psi | H | \\ Psi \\right \\rangle
+        \\left \\langle \\Psi | H | \\Psi \\right \\rangle
+        = \\mathrm{Tr} (\\rho H)
 
     assuming that the state is normalized.
 

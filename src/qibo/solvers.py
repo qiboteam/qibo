@@ -2,6 +2,13 @@ from qibo import K, hamiltonians
 
 
 class BaseSolver:
+    """Basic solver that should be inherited by all solvers.
+
+    Args:
+        dt (float): Time step size.
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object
+            that the state evolves under.
+    """
 
     def __init__(self, dt, hamiltonian):
         self.t = 0
@@ -16,6 +23,14 @@ class BaseSolver:
 
 
 class TimeIndependentExponential(BaseSolver):
+    """Exact solver that uses the matrix exponential of the Hamiltonian:
+
+    .. math::
+        U(t) = e^{-i H t}
+
+    Calculates the evolution operator during initialization and thus can be
+    used only for Hamiltonians without explicit time dependence.
+    """
 
     def __init__(self, dt, hamiltonian):
         super(TimeIndependentExponential, self).__init__(dt, hamiltonian)
@@ -27,6 +42,14 @@ class TimeIndependentExponential(BaseSolver):
 
 
 class Exponential(BaseSolver):
+    """Solver that uses the matrix exponential of the Hamiltonian:
+
+    .. math::
+        U(t) = e^{-i H(t) \\delta t}
+
+    Calculates the evolution operator in every step and thus is compatible with
+    time-dependent Hamiltonians.
+    """
 
     def __new__(cls, dt, hamiltonian):
         if isinstance(hamiltonian, hamiltonians.Hamiltonian):
@@ -42,6 +65,7 @@ class Exponential(BaseSolver):
 
 
 class RungeKutta4(BaseSolver):
+    """Solver based on the 4th order Runge-Kutta method."""
 
     def __call__(self, state):
         state = state[:, K.newaxis]
