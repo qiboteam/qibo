@@ -331,7 +331,9 @@ class AdiabaticEvolution(StateEvolution):
         self.h0 = h0
         self.h1 = h1
 
-    def hamiltonian(self, t):
+    # disable pylint warning because ``hamiltonian`` is defined as an
+    # attribute given by user in ``StateEvolution``
+    def hamiltonian(self, t): # pylint: disable=E0202
         """Calculates the Hamiltonian at a given time.
 
         Args:
