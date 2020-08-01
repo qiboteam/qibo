@@ -173,7 +173,7 @@ class VQE(object):
             from qibo import K
             loss = K.function(loss)
 
-        if method == 'cma':
+        if method == 'cma': # pragma: no cover
             # Genetic optimizer
             import cma
             r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)

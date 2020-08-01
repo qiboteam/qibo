@@ -78,3 +78,11 @@ def test_distributed_qft_agreement(nqubits):
     final_state = c(np.copy(initial_state)).numpy()
 
     np.testing.assert_allclose(final_state, exact_state, atol=_atol)
+
+
+def test_distributed_qft_error():
+    """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
+    with pytest.raises(NotImplementedError):
+        c = models._DistributedQFT(2, accelerators={"/GPU:0": 4})
+    with pytest.raises(NotImplementedError):
+        c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})
