@@ -230,6 +230,35 @@ code: :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. When
 if the ``accelerators`` dictionary is passed, otherwise the standard single device
 :class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
 
+Unlike the standard circuit, executing a
+:class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit` without
+measurements will return a
+:class:`qibo.tensorflow.distutils.DistributedState` instead of the final
+state vector as a ``tf.Tensor``. This is done because the distributed circuit
+uses the state partitioned in multiple pieces that are distributed to the
+different devices. Creating the full state as a tensor would require merging
+these pieces and using twice as much memory. This is disabled by default,
+however the user may create the full state as follows:
+
+.. code-block::  python
+
+    # Create distributed circuits for two GPUs
+    c = Circuit(32, {"/GPU:0": 1, "/GPU:1": 1})
+    # Add gates
+    c.add(...)
+    # Execute (``final_state`` will be a ``DistributedState``)
+    final_state = c()
+
+    # Access the full state (will double memory usage)
+    full_final_state = final_state.vector
+    # ``full_final_state`` is a ``tf.Tensor``
+
+    # ``DistributedState`` supports indexing and slicing
+    print(final_state[40])
+    # will print the 40th component of the final state vector
+    print(final_state[20:25])
+    # will print the components from 20 to 24 (inclusive)
+
 
 How to modify the simulation precision?
 ---------------------------------------
