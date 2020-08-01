@@ -77,7 +77,7 @@ class Hamiltonian(object):
                                    'number of qubits can be added.')
             new_hamiltonian = self.hamiltonian - o.hamiltonian
             return self.__class__(self.nqubits, new_hamiltonian)
-        elif isinstance(o, NUMERIC_TYPES):
+        elif isinstance(o, NUMERIC_TYPES): # pragma: no cover
             new_hamiltonian = self.hamiltonian - o * \
                 K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
             return self.__class__(self.nqubits, new_hamiltonian)
@@ -87,7 +87,7 @@ class Hamiltonian(object):
 
     def __rsub__(self, o):
         """Right subtraction operator."""
-        if isinstance(o, self.__class__):
+        if isinstance(o, self.__class__): # pragma: no cover
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
