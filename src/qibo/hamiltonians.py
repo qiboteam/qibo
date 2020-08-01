@@ -129,6 +129,14 @@ class Hamiltonian(object):
 
 
 def _multikron(matrices):
+    """Calculates Kronecker product of a list of matrices.
+
+    Args:
+        matrices (list): List of matrices as ``np.ndarray``s.
+
+    Returns:
+        ``np.ndarray`` of the Kronecker product of all ``matrices``.
+    """
     h = 1
     for m in matrices:
         h = np.kron(h, m)
@@ -136,38 +144,18 @@ def _multikron(matrices):
 
 
 def _build_spin_model(nqubits, matrix, condition):
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
     h = sum(_multikron((matrix if condition(i, j) else matrices.I
                         for j in range(nqubits)))
             for i in range(nqubits))
     return h
 
 
-def OneBodyPauli(nqubits, p=(1.0, 0.0, 0.0)):
-    condition = lambda i, j: i == j % nqubits
-    ms = (matrices.X, matrices.Y, matrices.Z)
-    ham = sum(c * _build_spin_model(nqubits, m, condition) if c != 0 else 0
-              for c, m in zip(p, ms))
-    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
-
-
-def TFIM(nqubits, h=0.0):
-    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
-    ham = _build_spin_model(nqubits, matrices.Z, condition)
-    if h != 0:
-        condition = lambda i, j: i == j % nqubits
-        ham += _build_spin_model(nqubits, matrices.X, condition)
-    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
-
-
 def XXZ(nqubits, delta=0.5):
-    """Implements the Heisenberg XXZ model.
-
-    Uses Pauli matrices to build the final Hamiltonian matrix as:
+    """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
-        H = H_x + H_y + \\delta \cdot H_z.
+        H = \\sum _{i=0}^N \\left ( X_iX_{i + 1} + Y_iY_{i + 1} + \\delta Z_iZ_{i + 1} \\right ).
 
     Args:
         nqubits (int): number of quantum bits.
@@ -176,7 +164,7 @@ def XXZ(nqubits, delta=0.5):
     Example:
         ::
 
-            from qibo.hamiltonian import XXZ
+            from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
     condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
@@ -185,3 +173,66 @@ def XXZ(nqubits, delta=0.5):
     hz = _build_spin_model(nqubits, matrices.Z, condition)
     hamiltonian = hx + hy + delta * hz
     return Hamiltonian(nqubits, hamiltonian)
+
+
+def _OneBodyPauli(nqubits, matrix):
+    """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+    condition = lambda i, j: i == j % nqubits
+    ham = _build_spin_model(nqubits, matrix, condition)
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)
+
+
+def X(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N X_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.X)
+
+
+def Y(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Y_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.Y)
+
+
+def Z(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Z_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.Z)
+
+
+def TFIM(nqubits, h=0.0):
+    """Transverse field Ising model with periodic boundary conditions.
+
+    .. math::
+        H = - \\sum _{i=0}^N \\left ( Z_i Z_{i + 1} + h X_i \\right ).
+
+    Args:
+        nqubits (int): number of quantum bits.
+        h (float): value of the transverse field.
+    """
+    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+    ham = _build_spin_model(nqubits, matrices.Z, condition)
+    if h != 0:
+        condition = lambda i, j: i == j % nqubits
+        ham += _build_spin_model(nqubits, matrices.X, condition)
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)

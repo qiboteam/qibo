@@ -23,7 +23,7 @@ class TimeStepChecker(callbacks.Callback):
 
 
 def test_initial_state():
-    h0 = hamiltonians.OneBodyPauli(3)
+    h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
     target_psi = np.ones(8) / np.sqrt(8)
@@ -35,7 +35,7 @@ def test_initial_state():
                                               ("rk4", 1e-2)])
 def test_state_evolution(solver, atol):
     """Check state evolution under H = Z1 + Z2."""
-    ham = hamiltonians.OneBodyPauli(2, p=(0.0, 0.0, 1.0))
+    ham = hamiltonians.Z(2)
     evolution = models.StateEvolution(ham)
     # Analytical solution
     t = np.linspace(0, 1, 1001)
@@ -50,7 +50,7 @@ def test_state_evolution(solver, atol):
 
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
 def test_hamiltonian_t(t):
-    h0 = hamiltonians.OneBodyPauli(2)
+    h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
 
@@ -65,7 +65,7 @@ def test_hamiltonian_t(t):
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])
 def test_adiabatic_evolution(dt):
-    h0 = hamiltonians.OneBodyPauli(2)
+    h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
 
@@ -83,7 +83,7 @@ def test_adiabatic_evolution(dt):
 
 
 def test_energy_callback(dt=1e-2):
-    h0 = hamiltonians.OneBodyPauli(2)
+    h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
     energy = callbacks.Energy(h1)
@@ -103,7 +103,7 @@ def test_energy_callback(dt=1e-2):
 
 
 def test_rk4_evolution(dt=1e-3):
-    h0 = hamiltonians.OneBodyPauli(3)
+    h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
 
