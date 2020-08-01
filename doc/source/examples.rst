@@ -776,6 +776,110 @@ dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
 
 
+How to simulate time evolution?
+-------------------------------
+
+Simulating the unitary time evolution of quantum states is useful in many
+physics applications including the simulation of adiabatic quantum computation.
+Qibo provides the :class:`qibo.models.StateEvolution` model that simulates
+unitary evolution using the full state vector. For example:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    # Define evolution model under the non-interacting sum(Z) Hamiltonian
+    nqubits = 4
+    evolution = models.StateEvolution(hamiltonians.Z(nqubits))
+    # Define initial state as |++++>
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    # Evolve for time T=3 and get the final state
+    final_state = evolution(3, initial_state=initial_state)
+
+
+When studying dynamics people are usually interested not only in the final state
+vector but also observing how physical quantities change during the time
+evolution. This is possible using callbacks. For example, in the above case we
+can track how <X> changes as follows:
+
+.. code-block::  python
+
+    from qibo import callbacks
+    # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
+    observable = callbacks.Energy(hamiltonians.X(nqubits))
+    # Evolve for time T=1 using the above callback and a time step of dt=1e-3
+    final_state = evolution(1, dt=1e-3, initial_state=initial_state, callbacks=[observable])
+
+    print(observable[:])
+    # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
+
+
+Note that for the above to work we had to pass a time step ``dt=1e-3`` which in
+this case defines how often we calculate <X> during evolution.
+
+In the above cases the exact time evolution operator (exponential of the Hamiltonian)
+was used to evolve the state vector. Because the evolution Hamiltonian is
+time-independent, the matrix exponentiation happens only once. It is possible to
+simulate time-dependent Hamiltonians by passing a function of time instead of
+a :class:`qibo.hamiltonians.Hamiltonian` in the
+:class:`qibo.models.StateEvolution` model. For example:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    # Defina a time dependent Hamiltonian
+    nqubits = 4
+    ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
+    # and pass it to the evolution model
+    evolution = models.StateEvolution(ham)
+    final_state = evolution(1, dt=1e-3, initial_state=initial_state)
+
+
+Note that in this case specifying a time step ``dt`` size is required for
+integration.  The above script will still use the exact time evolution operator
+with the exponentiation repeated for each time step. The integration method can
+be changed using the ``solver`` argument when executing. Currently the default
+exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
+are implemented.
+
+
+How to simulate adiabatic time evolution?
+-----------------------------------------
+
+Qibo provides the :class:`qibo.models.AdiabaticEvolution` model to simulate
+adiabatic time evolution. This is a special case of the
+:class:`qibo.models.StateEvolution` model analyzed in the previous example
+where the evolution Hamiltonian is interpolated between an initial "easy"
+Hamiltonian and a "hard" Hamiltonian that usually solves an optimization problem.
+Here is an example of adiabatic evolution simulation:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    nqubits = 4
+    T = 1 # total evolution time
+    # Define the easy and hard Hamiltonians
+    h0 = hamiltonians.X(nqubits)
+    h1 = hamiltonians.TFIM(nqubits, h=0)
+    # Define the interpolation scheduling
+    s = lambda t: t / T
+    # Define evolution model
+    evolution = models.AdiabaticEvolution(h0, h1, s)
+    # Evolve using the Runge-Kutta solver to get the final state
+    final_state = evolution(T, solver="rk4")
+
+
+If the initial state is not specified the ground state of the easy Hamiltonian
+will be used, as it is common for adiabatic evolution. For proper scheduling
+and total evolution time the ``final_state`` should approximate the ground state
+of the "hard" Hamiltonian. Callbacks may also be used as in the previous example.
+
+
 How to modify the simulation precision?
 ---------------------------------------
 
