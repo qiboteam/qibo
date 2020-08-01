@@ -18,7 +18,7 @@ class BaseSolver:
         else:
             self.hamiltonian = hamiltonian
 
-    def __call__(self, state):
+    def __call__(self, state): # pragma: no cover
         raise NotImplementedError
 
 

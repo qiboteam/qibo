@@ -1,5 +1,5 @@
 from qibo.config import BACKEND_NAME
-if BACKEND_NAME != "tensorflow":
+if BACKEND_NAME != "tensorflow": # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
@@ -184,7 +184,7 @@ class VQE(object):
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
-                if not isinstance(gate, TensorflowGate):
+                if not isinstance(gate, TensorflowGate): # pragma: no cover
                     raise RuntimeError('SGD VQE requires native Tensorflow '
                                        'gates because gradients are not '
                                        'supported in the custom kernels.')
@@ -284,7 +284,6 @@ class StateEvolution:
             dt = total_time
 
         solver = self.solvers.factory[solver](dt, self.hamiltonian)
-        is_tindep = isinstance(solver, self.solvers.TimeIndependentExponential)
         nsteps = int(total_time / solver.dt)
         for callback in callbacks:
             callback.append(callback(state))

@@ -35,8 +35,7 @@ def test_initial_state():
                                               ("rk4", 1e-2)])
 def test_state_evolution(solver, atol):
     """Check state evolution under H = Z1 + Z2."""
-    ham = hamiltonians.Z(2)
-    evolution = models.StateEvolution(ham)
+    evolution = models.StateEvolution(hamiltonians.Z(2))
     # Analytical solution
     t = np.linspace(0, 1, 1001)
     phase = np.exp(2j * t)[:, np.newaxis]
@@ -47,6 +46,18 @@ def test_state_evolution(solver, atol):
     checker = TimeStepChecker(target_psi, atol=atol)
     final_psi = evolution(1, dt=dt, initial_state=target_psi[0], solver=solver,
                           callbacks=[checker])
+
+
+def test_state_evolution_final_state():
+    """Check time-independent Hamiltonian state evolution without giving dt."""
+    evolution = models.StateEvolution(hamiltonians.Z(2))
+    # Analytical solution
+    phase = np.exp(2j)
+    initial_psi = np.ones(4) / 2
+    target_psi = np.array([phase, 1, 1, phase.conj()])
+    final_psi = evolution(1, initial_state=initial_psi)
+    assert_states_equal(final_psi, target_psi)
+
 
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
 def test_hamiltonian_t(t):
@@ -82,6 +93,29 @@ def test_adiabatic_evolution(dt):
     assert_states_equal(final_psi, target_psi)
 
 
+def test_state_evolution_errors():
+    """Check that state evolution without initial condition raises error."""
+    evolution = models.StateEvolution(hamiltonians.Z(2))
+    with pytest.raises(ValueError):
+        final_state = evolution(1)
+
+
+def test_adiabatic_evolution_errors():
+    # Hamiltonians with different number of qubits
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(2)
+    with pytest.raises(ValueError):
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+    # s(0) != 0
+    h0 = hamiltonians.X(2)
+    with pytest.raises(ValueError):
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t + 1)
+    # s(T) != 0
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t / 2)
+    with pytest.raises(ValueError):
+        final_state = adev(1, dt=1e-3)
+
+
 def test_energy_callback(dt=1e-2):
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
@@ -114,4 +148,5 @@ def test_rk4_evolution(dt=1e-3):
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
-    final_psi = adev(1, dt=dt, solver="rk4", callbacks=[checker])
+    final_psi = adev(1, dt=dt, initial_state=target_psi[0], solver="rk4",
+                     callbacks=[checker])

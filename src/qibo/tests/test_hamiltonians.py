@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, NUMERIC_TYPES
+from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y, NUMERIC_TYPES
 
 
 def test_hamiltonian_initialization():
@@ -57,7 +57,7 @@ def test_hamiltonian_overloading(dtype):
 
 def test_different_hamiltonian_addition():
     """Test adding Hamiltonians of different models."""
-    H1 = XXZ(nqubits=3, delta=0.5)
+    H1 = Y(nqubits=3)
     H2 = TFIM(nqubits=3, h=1.0)
     H = H1 + H2
     matrix = H1.hamiltonian + H2.hamiltonian
@@ -85,6 +85,12 @@ def test_hamiltonian_notimplemented_errors():
 
     with pytest.raises(NotImplementedError):
         R = H1 * H2
+    with pytest.raises(NotImplementedError):
+        R = H1 + "a"
+    with pytest.raises(NotImplementedError):
+        R = H2 - (2,)
+    with pytest.raises(NotImplementedError):
+        R = [3] - H1
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)

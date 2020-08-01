@@ -65,7 +65,7 @@ class Hamiltonian(object):
             raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
                                       'not implemented.')
 
-    def __radd__(self, o):
+    def __radd__(self, o): # pragma: no cover
         """Right operator addition."""
         return self.__add__(o)
 
