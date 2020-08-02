@@ -88,6 +88,16 @@ def test_hamiltonian_matmul():
         H1 @ 2
 
 
+def test_hamiltonian_exponentiation():
+    from scipy.linalg import expm
+    H = XXZ(nqubits=2, delta=0.5)
+    target_matrix = expm(-0.5j * H.matrix)
+    np.testing.assert_allclose(H.exp(-0.5j), target_matrix)
+
+    _ = H.eigenvectors()
+    np.testing.assert_allclose(H.exp(-0.5j), target_matrix)
+
+
 def test_hamiltonian_runtime_errors():
     """Testing hamiltonian runtime errors."""
     H1 = XXZ(nqubits=2, delta=0.5)

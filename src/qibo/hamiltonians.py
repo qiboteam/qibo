@@ -33,16 +33,33 @@ class Hamiltonian(object):
         return self._eigenvalues
 
     def eigenvectors(self):
-        """Computes the eigenvectors for the Hamiltonian."""
+        """Computes a tensor with the eigenvectors for the Hamiltonian."""
         if self._eigenvectors is None:
             self._eigenvalues, self._eigenvectors = K.linalg.eigh(
                 self.matrix)
         return self._eigenvectors
 
+    def exp(self, a):
+        """Computes a tensor corresponding to exp(a * H).
+
+        Args:
+            a (complex): Complex number to multiply Hamiltonian before
+                exponentiation.
+        """
+        if self._eigenvectors is None:
+            return K.linalg.expm(a * self.matrix)
+        expd = K.linalg.diag(K.exp(a * self._eigenvalues))
+        ud = K.transpose(K.math.conj(self._eigenvectors))
+        return K.matmul(self._eigenvectors, K.matmul(expd, ud))
+
     def expectation(self, state):
         """Computes the real expectation value for a given state.
+
         Args:
             state (array): the expectation state.
+
+        Returns:
+            Real number corresponding to the expectation value.
         """
         a = K.math.conj(state)
         b = K.tensordot(self.matrix, state, axes=1)
@@ -114,7 +131,7 @@ class Hamiltonian(object):
             if self._eigenvectors is not None:
                 if o.real > 0:
                     r._eigenvectors = self._eigenvectors
-                elif o.real == 0:
+                elif o == 0:
                     r._eigenvectors = K.eye(
                         self._eigenvectors.shape[0], dtype=self.matrix.dtype)
             return r
