@@ -34,8 +34,7 @@ class QuantumClassifer():
                     yield gates.RZ(q, theta=0)
                     yield gates.RX(q, theta=0)
                     
-        self._circuit = self.ansatz(nlayers, rotations)
-        
+        self._circuit = self.ansatz(nlayers, rotations)      
         
     def _CZ_gates1(self):
         """Yields CZ gates used in the variational circuit."""
@@ -71,7 +70,6 @@ class QuantumClassifer():
             
         return c
             
-
     def Classifier_circuit(self, theta):
         """    
         Args: 
@@ -89,8 +87,7 @@ class QuantumClassifer():
         self._circuit.set_parameters(angles)
         
         return self._circuit
-    
-    
+        
     def Predictions(self, circuit, theta, init_state, nshots=10000):
         """    
         Args: 
@@ -113,7 +110,6 @@ class QuantumClassifer():
     
         return prediction/nshots + bias
 
-
     def square_loss(self, labels, predictions):
         """    
         Args: 
@@ -130,9 +126,7 @@ class QuantumClassifer():
     
         return loss / len(labels)
 
-
-
-    def Cost_function(self, theta, nlayers, data=None, labels=None, nshots=10000, RY=True):
+    def Cost_function(self, theta, data=None, labels=None, nshots=10000):
         """    
         Args: 
             theta: list or numpy.array with the biases and the angles to be used in the circuit  
@@ -154,11 +148,9 @@ class QuantumClassifer():
     
         s = self.square_loss(labels, predictions)
         
-        return s
+        return s   
     
-    
-    def minimize(self, init_theta, nlayers, data=None, labels=None, nshots=10000, 
-                 RY=True, method='Powell'):
+    def minimize(self, init_theta, data=None, labels=None, nshots=10000, method='Powell'):
         """
         Args: 
             theta: list or numpy.array with the angles to be used in the circuit        
@@ -174,13 +166,12 @@ class QuantumClassifer():
         """        
         from scipy.optimize import minimize
         
-        result = minimize(self.Cost_function, init_theta, args=(nlayers,data,labels,nshots,RY), method=method)
+        result = minimize(self.Cost_function, init_theta, args=(data,labels,nshots), method=method)
         loss = result.fun
         optimal_angles = result.x     
         
         return loss, optimal_angles
-
-    
+   
     def Accuracy(self, labels, predictions, sign=True, tolerance=1e-2):
         """
         Args: 

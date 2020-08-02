@@ -57,8 +57,8 @@ def main(nclasses, nqubits, nlayers, nshots, training, RY, method):
             initial_parameters[bias] = 0.
         
         print('Training classifier...') 
-        cost_function, optimal_angles = qc.minimize(initial_parameters, nlayers, data_train, labels_train,
-                                              nshots=nshots, RY=RY, method=method)
+        cost_function, optimal_angles = qc.minimize(initial_parameters, data_train, labels_train,
+                                              nshots=nshots, method=method)
         np.save('data/optimal_angles_{}q_{}l.npy'.format(nqubits,nlayers), optimal_angles)
         
     # We define our test set (both kets and labels)
