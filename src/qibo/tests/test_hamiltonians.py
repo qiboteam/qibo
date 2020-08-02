@@ -67,6 +67,27 @@ def test_different_hamiltonian_addition():
     np.testing.assert_allclose(H.matrix, matrix)
 
 
+def test_hamiltonian_matmul():
+    """Test matrix multiplication between Hamiltonians and state vectors."""
+    H1 = TFIM(nqubits=3, h=1.0)
+    m1 = H1.matrix.numpy()
+    H2 = Y(nqubits=3)
+    m2 = H2.matrix.numpy()
+
+    np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
+    np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
+
+    v = (np.random.random(8) + 1j * np.random.random(8)).astype(m1.dtype)
+    m = (np.random.random((8, 8)) + 1j * np.random.random((8, 8))).astype(m1.dtype)
+    np.testing.assert_allclose(H1 @ v, m1.dot(v))
+    np.testing.assert_allclose(H1 @ m, m1 @ m)
+
+    with pytest.raises(ValueError):
+        H1 @ np.zeros((8, 8, 8), dtype=m1.dtype)
+    with pytest.raises(NotImplementedError):
+        H1 @ 2
+
+
 def test_hamiltonian_runtime_errors():
     """Testing hamiltonian runtime errors."""
     H1 = XXZ(nqubits=2, delta=0.5)

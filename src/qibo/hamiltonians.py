@@ -126,6 +126,24 @@ class Hamiltonian(object):
         """Right scalar multiplication."""
         return self.__mul__(o)
 
+    def __matmul__(self, o):
+        """Matrix multiplication with other Hamiltonians or state vectors."""
+        if isinstance(o, self.__class__):
+            new_matrix = K.matmul(self.matrix, o.matrix)
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, (K.Tensor, np.ndarray)):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return K.matmul(self.matrix, o[:, K.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return K.matmul(self.matrix, o)
+            else:
+                raise ValueError(f'Cannot multiply Hamiltonian with '
+                                  'rank-{rank} tensor.')
+        else:
+            raise NotImplementedError(f'Hamiltonian matrix multiplication to '
+                                       '{type(o)} not implemented.')
+
 
 def _multikron(matrices):
     """Calculates Kronecker product of a list of matrices.
