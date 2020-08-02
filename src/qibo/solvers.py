@@ -34,7 +34,7 @@ class TimeIndependentExponential(BaseSolver):
 
     def __init__(self, dt, hamiltonian):
         super(TimeIndependentExponential, self).__init__(dt, hamiltonian)
-        self.propagator = K.linalg.expm(-1j * dt * hamiltonian.hamiltonian)
+        self.propagator = K.linalg.expm(-1j * dt * hamiltonian.matrix)
 
     def __call__(self, state):
         self.t += self.dt
@@ -59,7 +59,7 @@ class Exponential(BaseSolver):
 
     def __call__(self, state):
         propagator = K.linalg.expm(
-            -1j * self.dt * self.hamiltonian(self.t).hamiltonian)
+            -1j * self.dt * self.hamiltonian(self.t).matrix)
         self.t += self.dt
         return K.matmul(propagator, state[:, K.newaxis])[:, 0]
 
@@ -69,9 +69,9 @@ class RungeKutta4(BaseSolver):
 
     def __call__(self, state):
         state = state[:, K.newaxis]
-        ham1 = self.hamiltonian(self.t).hamiltonian
-        ham2 = self.hamiltonian(self.t + self.dt / 2.0).hamiltonian
-        ham3 = self.hamiltonian(self.t + self.dt).hamiltonian
+        ham1 = self.hamiltonian(self.t).matrix
+        ham2 = self.hamiltonian(self.t + self.dt / 2.0).matrix
+        ham3 = self.hamiltonian(self.t + self.dt).matrix
         k1 = K.matmul(ham1, state)
         k2 = K.matmul(ham2, state + self.dt * k1 / 2.0)
         k3 = K.matmul(ham2, state + self.dt * k2 / 2.0)

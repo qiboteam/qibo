@@ -39,20 +39,20 @@ def test_hamiltonian_overloading(dtype):
     H1 = XXZ(nqubits=2, delta=0.5)
     H2 = XXZ(nqubits=2, delta=1)
 
-    hH1 = transformation_a(H1.hamiltonian, H2.hamiltonian)
-    hH2 = transformation_b(H1.hamiltonian, H2.hamiltonian)
-    hH3 = transformation_c(H1.hamiltonian, H2.hamiltonian, use_eye=True)
-    hH4 = transformation_d(H1.hamiltonian, H2.hamiltonian, use_eye=True)
+    hH1 = transformation_a(H1.matrix, H2.matrix)
+    hH2 = transformation_b(H1.matrix, H2.matrix)
+    hH3 = transformation_c(H1.matrix, H2.matrix, use_eye=True)
+    hH4 = transformation_d(H1.matrix, H2.matrix, use_eye=True)
 
     HT1 = transformation_a(H1, H2)
     HT2 = transformation_b(H1, H2)
     HT3 = transformation_c(H1, H2)
     HT4 = transformation_d(H1, H2)
 
-    np.testing.assert_allclose(hH1, HT1.hamiltonian)
-    np.testing.assert_allclose(hH2, HT2.hamiltonian)
-    np.testing.assert_allclose(hH3, HT3.hamiltonian)
-    np.testing.assert_allclose(hH4, HT4.hamiltonian)
+    np.testing.assert_allclose(hH1, HT1.matrix)
+    np.testing.assert_allclose(hH2, HT2.matrix)
+    np.testing.assert_allclose(hH3, HT3.matrix)
+    np.testing.assert_allclose(hH4, HT4.matrix)
 
 
 def test_different_hamiltonian_addition():
@@ -60,11 +60,11 @@ def test_different_hamiltonian_addition():
     H1 = Y(nqubits=3)
     H2 = TFIM(nqubits=3, h=1.0)
     H = H1 + H2
-    matrix = H1.hamiltonian + H2.hamiltonian
-    np.testing.assert_allclose(H.hamiltonian, matrix)
+    matrix = H1.matrix + H2.matrix
+    np.testing.assert_allclose(H.matrix, matrix)
     H = H1 - 0.5 * H2
-    matrix = H1.hamiltonian - 0.5 * H2.hamiltonian
-    np.testing.assert_allclose(H.hamiltonian, matrix)
+    matrix = H1.matrix - 0.5 * H2.matrix
+    np.testing.assert_allclose(H.matrix, matrix)
 
 
 def test_hamiltonian_runtime_errors():
@@ -99,19 +99,19 @@ def test_hamiltonian_eigenvalues(dtype):
     H1 = XXZ(nqubits=2, delta=0.5)
 
     H1_eigen = H1.eigenvalues()
-    hH1_eigen = np.linalg.eigvalsh(H1.hamiltonian)
+    hH1_eigen = np.linalg.eigvalsh(H1.matrix)
     np.testing.assert_allclose(H1_eigen, hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
     H2_eigen = H2._eigenvalues
-    hH2_eigen = np.linalg.eigvalsh(c1 * H1.hamiltonian)
+    hH2_eigen = np.linalg.eigvalsh(c1 * H1.matrix)
     np.testing.assert_allclose(H2._eigenvalues, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     H3_eigen = H3._eigenvalues
-    hH3_eigen = np.linalg.eigvalsh(H1.hamiltonian * c2)
+    hH3_eigen = np.linalg.eigvalsh(H1.matrix * c2)
     np.testing.assert_allclose(H3._eigenvalues, hH3_eigen)
 
 
@@ -122,22 +122,22 @@ def test_hamiltonian_eigenvectors(dtype):
 
     V1 = H1.eigenvectors().numpy()
     U1 = H1.eigenvalues().numpy()
-    np.testing.assert_allclose(H1.hamiltonian, V1 @ np.diag(U1) @ V1.T)
+    np.testing.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
     V2 = H2._eigenvectors.numpy()
     U2 = H2._eigenvalues.numpy()
-    np.testing.assert_allclose(H2.hamiltonian, V2 @ np.diag(U2) @ V2.T)
+    np.testing.assert_allclose(H2.matrix, V2 @ np.diag(U2) @ V2.T)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     V3 = H3.eigenvectors().numpy()
     U3 = H3._eigenvalues.numpy()
-    np.testing.assert_allclose(H3.hamiltonian, V3 @ np.diag(U3) @ V3.T)
+    np.testing.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)
     H4 = c3 * H1
     V4 = H4._eigenvectors.numpy()
     U4 = H4._eigenvalues.numpy()
-    np.testing.assert_allclose(H4.hamiltonian, V4 @ np.diag(U4) @ V4.T)
+    np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)

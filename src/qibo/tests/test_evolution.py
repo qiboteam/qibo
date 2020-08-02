@@ -70,7 +70,7 @@ def test_hamiltonian_t(t):
     m2 = np.diag([2, -2, -2, 2])
     ham = lambda t: - (1 - t) * m1 - t * m2
 
-    matrix = adev.hamiltonian(t).hamiltonian
+    matrix = adev.hamiltonian(t).matrix
     np.testing.assert_allclose(matrix, ham(t))
 
 
@@ -123,11 +123,11 @@ def test_energy_callback(dt=1e-2):
     energy = callbacks.Energy(h1)
 
     target_psi = np.ones(4) / 2
-    calc_energy = lambda psi: psi.conj().dot(h1.hamiltonian.numpy().dot(psi))
+    calc_energy = lambda psi: psi.conj().dot(h1.matrix.numpy().dot(psi))
     target_energies = [calc_energy(target_psi)]
     nsteps = int(1 / dt)
     for n in range(nsteps):
-        prop = expm(-1j * dt * adev.hamiltonian(n * dt).hamiltonian.numpy())
+        prop = expm(-1j * dt * adev.hamiltonian(n * dt).matrix.numpy())
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
@@ -144,7 +144,7 @@ def test_rk4_evolution(dt=1e-3):
     nsteps = int(1 / dt)
     target_psi = [np.ones(8) / np.sqrt(8)]
     for n in range(nsteps):
-        prop = expm(-1j * dt * adev.hamiltonian(n * dt).hamiltonian.numpy())
+        prop = expm(-1j * dt * adev.hamiltonian(n * dt).matrix.numpy())
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)

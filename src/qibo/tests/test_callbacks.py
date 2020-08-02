@@ -294,9 +294,9 @@ def test_energy():
     energy = callbacks.Energy(ham)
 
     state = np.random.random(16) + 1j * np.random.random(16)
-    target_energy = state.conj().dot(ham.hamiltonian.numpy().dot(state))
+    target_energy = state.conj().dot(ham.matrix.numpy().dot(state))
     np.testing.assert_allclose(energy(state), target_energy)
 
     state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
-    target_energy = np.trace(ham.hamiltonian.numpy().dot(state))
+    target_energy = np.trace(ham.matrix.numpy().dot(state))
     np.testing.assert_allclose(energy(state, True), target_energy)

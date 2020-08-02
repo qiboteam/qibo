@@ -207,6 +207,6 @@ class Energy(Callback):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         if is_density_matrix:
-            return tf.linalg.trace(tf.matmul(self.hamiltonian.hamiltonian,
+            return tf.linalg.trace(tf.matmul(self.hamiltonian.matrix,
                                              state))
         return self.hamiltonian.expectation(state)
