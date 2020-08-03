@@ -18,12 +18,12 @@ class Callback:
         self._nqubits = None
 
     @property
-    def nqubits(self) -> int:
+    def nqubits(self) -> int: # pragma: no cover
         """Total number of qubits in the circuit that the callback was added in."""
         return self._nqubits
 
     @nqubits.setter
-    def nqubits(self, n: int):
+    def nqubits(self, n: int): # pragma: no cover
         self._nqubits = n
 
     def __getitem__(self, k) -> tf.Tensor:
@@ -37,7 +37,7 @@ class Callback:
             return tf.stack(self._results[k])
         raise IndexError("Unrecognized type for index {}.".format(k))
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         raise NotImplementedError
 
     def append(self, result: tf.Tensor):
@@ -73,7 +73,7 @@ class PartialTrace(Callback):
     @nqubits.setter
     def nqubits(self, n: int):
         self._nqubits = n
-        if self.partition is None:
+        if self.partition is None: # pragma: no cover
             self.partition = list(range(n // 2 + n % 2))
 
         if len(self.partition) < n // 2:
