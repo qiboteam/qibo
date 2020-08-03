@@ -15,6 +15,9 @@ class Hamiltonian(object):
 
     Args:
         nqubits (int): number of quantum bits.
+        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
+            computational basis as an array of shape
+            ``(2 ** nqubits, 2 ** nqubits)``.
     """
     __metaclass__ = ABCMeta
 
@@ -61,10 +64,9 @@ class Hamiltonian(object):
         Returns:
             Real number corresponding to the expectation value.
         """
-        a = K.math.conj(state)
-        b = K.tensordot(self.matrix, state, axes=1)
-        n = K.math.real(K.reduce_sum(a*b))
-        return n
+        statec = K.math.conj(state)
+        hstate = self @ state
+        return K.math.real(K.reduce_sum(statec * hstate))
 
     def __add__(self, o):
         """Add operator."""
@@ -162,7 +164,7 @@ class Hamiltonian(object):
                                        '{type(o)} not implemented.')
 
 
-def _multikron(matrices):
+def _multikron(matrix_list):
     """Calculates Kronecker product of a list of matrices.
 
     Args:
@@ -172,7 +174,7 @@ def _multikron(matrices):
         ``np.ndarray`` of the Kronecker product of all ``matrices``.
     """
     h = 1
-    for m in matrices:
+    for m in matrix_list:
         h = np.kron(h, m)
     return h
 
@@ -201,7 +203,7 @@ def XXZ(nqubits, delta=0.5):
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
-    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
     hy = _build_spin_model(nqubits, matrices.Y, condition)
     hz = _build_spin_model(nqubits, matrices.Z, condition)
@@ -263,7 +265,7 @@ def TFIM(nqubits, h=0.0):
         nqubits (int): number of quantum bits.
         h (float): value of the transverse field.
     """
-    condition = lambda i, j: i == j % nqubits or i == (j+1) % nqubits
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = _build_spin_model(nqubits, matrices.Z, condition)
     if h != 0:
         condition = lambda i, j: i == j % nqubits
