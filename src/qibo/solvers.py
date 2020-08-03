@@ -13,6 +13,8 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
+        if dt <= 0:
+            raise ValueError(f"Time step dt should be positive but is {dt}.")
         if isinstance(hamiltonian, hamiltonians.Hamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:

@@ -98,6 +98,8 @@ def test_state_evolution_errors():
     evolution = models.StateEvolution(hamiltonians.Z(2))
     with pytest.raises(ValueError):
         final_state = evolution(1)
+    with pytest.raises(ValueError):
+        final_state = evolution(1, dt=-2, initial_state=np.ones(4) / 2)
 
 
 def test_adiabatic_evolution_errors():

@@ -4,11 +4,12 @@ from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y, NUMERIC_TYPES
 
 
 def test_hamiltonian_initialization():
-    """Testing hamiltonian not implemented errors."""
+    """Testing hamiltonian initialization errors."""
     H1 = Hamiltonian(2, np.eye(4))
-
     with pytest.raises(RuntimeError):
         H2 = Hamiltonian(np.eye(2), np.eye(4))
+    with pytest.raises(ValueError):
+        H3 = Hamiltonian(4, np.eye(10))
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)

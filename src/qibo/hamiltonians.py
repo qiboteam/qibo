@@ -24,6 +24,11 @@ class Hamiltonian(object):
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
             raise RuntimeError(f'nqubits must be an integer')
+        shape = tuple(matrix.shape)
+        if shape != 2 * (2 ** nqubits,):
+            raise ValueError(f"The Hamiltonian is defined for {nqubits} qubits "
+                              "while the given matrix has shape {shape}.")
+
         self.nqubits = nqubits
         self.matrix = matrix
         self._eigenvalues = None
