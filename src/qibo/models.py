@@ -141,6 +141,8 @@ class VQE(object):
             initial_parameters = np.random.uniform(0, 2, 1)
             vqe.minimize(initial_parameters)
     """
+    from qibo import optimizers
+
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
         self.circuit = circuit
@@ -173,14 +175,7 @@ class VQE(object):
             from qibo import K
             loss = K.function(loss)
 
-        if method == 'cma': # pragma: no cover
-            # Genetic optimizer
-            import cma
-            r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
-            result = r[1].result.fbest
-            parameters = r[1].result.xbest
-
-        elif method == 'sgd':
+        if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
@@ -189,45 +184,12 @@ class VQE(object):
                                        'gates because gradients are not '
                                        'supported in the custom kernels.')
 
-            sgd_options = {"nepochs": 1000000,
-                           "nmessage": 1000,
-                           "optimizer": "Adagrad",
-                           "learning_rate": 0.001}
-            if options is not None:
-                sgd_options.update(options)
-
-            # proceed with the training
-            from qibo import K
-            vparams = K.Variable(initial_state)
-            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
-              learning_rate=sgd_options["learning_rate"])
-
-            def opt_step():
-                with K.GradientTape() as tape:
-                    l = loss(vparams)
-                grads = tape.gradient(l, [vparams])
-                optimizer.apply_gradients(zip(grads, [vparams]))
-                return l
-
-            if compile:
-                opt_step = K.function(opt_step)
-
-            for e in range(sgd_options["nepochs"]):
-                l = opt_step()
-                if e % sgd_options["nmessage"] == 1:
-                    print('ite %d : loss %f' % (e, l.numpy()))
-
-            result = loss(vparams).numpy()
-            parameters = vparams.numpy()
-
+            result, parameters = self.optimizers.optimize(loss, initial_state,
+                                                          "sgd", options,
+                                                          compile)
         else:
-            # Newtonian approaches
-            from scipy.optimize import minimize
-            n = self.hamiltonian.nqubits
-            m = minimize(lambda p: loss(p).numpy(), initial_state,
-                         method=method, options=options)
-            result = m.fun
-            parameters = m.x
+            result, parameters = self.optimizers.optimize(
+                lambda p: loss(p).numpy(), initial_state, method, options)
 
         self.circuit.set_parameters(parameters)
         return result, parameters
@@ -324,6 +286,7 @@ class AdiabaticEvolution(StateEvolution):
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution.
     """
+    from qibo import optimizers
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, total_time, dt=None,
@@ -375,7 +338,7 @@ class AdiabaticEvolution(StateEvolution):
         """
         # disable warning that ``s`` is not callable because it is a property
         # pylint: disable=E1102
-        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
+        return self.h0 * (1 - self.s(t)) + self.h1 * self.s(t)
 
     def execute(self, initial_state=None):
         """"""
@@ -392,7 +355,7 @@ class AdiabaticEvolution(StateEvolution):
         if isinstance(params[0], (int, float, complex)):
             self.s = lambda t: self.param_s(t, *params)
         else:
-            self.s = lambda t: self.param_s(t, *params)[0]
+            self.s = lambda t: self.param_s(t, *params)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
@@ -414,11 +377,16 @@ class AdiabaticEvolution(StateEvolution):
 
     def minimize(self, initial_parameters, initial_state=None,
                  method="BFGS", options=None):
-        from scipy.optimize import minimize
         self._initial_state = self._cast_initial_state(initial_state)
-        m = minimize(self._nploss, initial_parameters,
-                     method=method, options=options)
-        result = m.fun
-        parameters = m.x
-        self.set_parameters(*parameters)
+        if method == "sgd":
+            loss = self._loss
+        else:
+            loss = self._nploss
+
+        result, parameters = self.optimizers.optimize(loss, initial_parameters,
+                                                      method, options)
+        if method == "sgd":
+            self.set_parameters(parameters)
+        else:
+            self.set_parameters(*parameters)
         return result, parameters

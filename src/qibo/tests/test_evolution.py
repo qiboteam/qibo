@@ -216,7 +216,8 @@ def test_scheduling_parameters_errors():
 
 
 test_names = "method,options,filename"
-test_values = [("BFGS", {'maxiter': 1}, "adiabatic_bfgs.out")]
+test_values = [("BFGS", {'maxiter': 1}, "adiabatic_bfgs.out"),
+               ("sgd", {"nepochs": 5}, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_scheduling_optimization(method, options, filename):
     h0 = hamiltonians.X(3)

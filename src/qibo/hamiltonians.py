@@ -148,6 +148,9 @@ class Hamiltonian(object):
                     r._eigenvectors = K.eye(
                         self._eigenvectors.shape[0], dtype=self.matrix.dtype)
             return r
+        elif isinstance(o, (np.ndarray, K.Tensor)):
+            new_matrix = self.matrix * K.cast(o, dtype=self.matrix.dtype)
+            return self.__class__(self.nqubits, new_matrix)
         else:
             raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
                                       'not implemented.')
