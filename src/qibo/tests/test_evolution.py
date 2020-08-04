@@ -23,6 +23,7 @@ class TimeStepChecker(callbacks.Callback):
 
 
 def test_initial_state():
+    """Test that adiabatic evolution initial state is the ground state of H0."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
@@ -61,6 +62,7 @@ def test_state_evolution_final_state():
 
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
 def test_hamiltonian_t(t):
+    """Test adiabatic evolution hamiltonian as a function of time."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
@@ -76,6 +78,7 @@ def test_hamiltonian_t(t):
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])
 def test_adiabatic_evolution(dt):
+    """Test adiabatic evolution with exponential solver."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
@@ -94,7 +97,7 @@ def test_adiabatic_evolution(dt):
 
 
 def test_state_evolution_errors():
-    """Check that state evolution without initial condition raises error."""
+    """Test that state evolution without initial condition raises error."""
     evolution = models.StateEvolution(hamiltonians.Z(2))
     with pytest.raises(ValueError):
         final_state = evolution(1)
@@ -103,6 +106,7 @@ def test_state_evolution_errors():
 
 
 def test_adiabatic_evolution_errors():
+    """Test ``ValueError`` when creating adiabatic evolution model."""
     # Hamiltonians with different number of qubits
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(2)
@@ -119,6 +123,7 @@ def test_adiabatic_evolution_errors():
 
 
 def test_energy_callback(dt=1e-2):
+    """Test using energy callback in adiabatic evolution."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
@@ -139,6 +144,7 @@ def test_energy_callback(dt=1e-2):
 
 
 def test_rk4_evolution(dt=1e-3):
+    """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
