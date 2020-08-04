@@ -1,18 +1,19 @@
 def cma(loss, initial_parameters): # pragma: no cover
-    # Genetic optimizer
+    """Genetic optimizer."""
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7)
     return r[1].result.fbest, r[1].result.xbest
 
 
 def newtonian(loss, initial_parameters, method='Powell', options=None):
-    # Newtonian approaches
+    """Newtonian approaches based on ``scipy.optimize.minimize``."""
     from scipy.optimize import minimize
     m = minimize(loss, initial_parameters, method=method, options=options)
     return m.fun, m.x
 
 
 def sgd(loss, initial_parameters, options=None, compile=False):
+    """Stochastic Gradient Descent optimizer using Tensorflow backpropagation."""
     from qibo import K
     sgd_options = {"nepochs": 1000000,
                     "nmessage": 1000,
@@ -46,6 +47,22 @@ def sgd(loss, initial_parameters, options=None, compile=False):
 
 def optimize(loss, initial_parameters, method='Powell',
              options=None, compile=False):
+    """Main optimization method.
+
+    Used by :class:`qibo.models.VQE` and :class:`qibo.models.AdiabaticEvolution`.
+
+    Args:
+        loss (callable): Loss as a function of ``parameters``.
+        initial_parameters (np.ndarray): Initial guess for the variational
+            parameters that are optimized.
+        method (str): The desired minimization method.
+            One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
+            any of the methods supported by
+            `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+        options (dict): a dictionary with options for the different optimizers.
+        compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
+            Relevant only for the ``"sgd"`` optimizer.
+    """
     if method == "cma": # pragma: no cover
         return cma(loss, initial_parameters)
     elif method == "sgd":

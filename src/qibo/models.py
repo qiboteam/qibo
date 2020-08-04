@@ -368,15 +368,36 @@ class AdiabaticEvolution(StateEvolution):
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
 
     def _loss(self, *params):
+        """Expectation value of H1 for a choice of scheduling parameters.
+
+        Returns a ``tf.Tensor``.
+        """
         self.set_parameters(*params)
         final_state = self(self._initial_state)
         return self.h1.expectation(final_state, normalize=True)
 
     def _nploss(self, *params):
+        """Expectation value of H1 for a choice of scheduling parameters.
+
+        Returns a ``np.ndarray``.
+        """
         return self._loss(*params).numpy()
 
     def minimize(self, initial_parameters, initial_state=None,
                  method="BFGS", options=None):
+        """Optimize the free parameters of the scheduling function.
+
+        Args:
+            initial_parameters (np.ndarray): Initial guess for the variational
+                parameters that are optimized.
+            initial_state (np.ndarray): Initial state vector for the adiabatic
+                evolution. If ``None`` the ground state of ``h0`` is used.
+            method (str): The desired minimization method.
+                One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
+                any of the methods supported by
+                `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+            options (dict): a dictionary with options for the different optimizers.
+        """
         self._initial_state = self._cast_initial_state(initial_state)
         if method == "sgd":
             loss = self._loss
