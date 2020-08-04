@@ -46,7 +46,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
 
 def optimize(loss, initial_parameters, method='Powell',
              options=None, compile=False):
-    if method == "cma":
+    if method == "cma": # pragma: no cover
         return cma(loss, initial_parameters)
     elif method == "sgd":
         return sgd(loss, initial_parameters, options, compile)
