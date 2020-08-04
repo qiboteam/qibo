@@ -60,18 +60,24 @@ class Hamiltonian(object):
         ud = K.transpose(K.math.conj(self._eigenvectors))
         return K.matmul(self._eigenvectors, K.matmul(expd, ud))
 
-    def expectation(self, state):
+    def expectation(self, state, normalize=False):
         """Computes the real expectation value for a given state.
 
         Args:
             state (array): the expectation state.
+            normalize (bool): If ``True`` the expectation value is divided
+                with the state's norm squared.
 
         Returns:
             Real number corresponding to the expectation value.
         """
         statec = K.math.conj(state)
         hstate = self @ state
-        return K.math.real(K.reduce_sum(statec * hstate))
+        ev = K.math.real(K.reduce_sum(statec * hstate))
+        if normalize:
+            norm = K.reduce_sum(K.square(K.abs(state)))
+            return ev / norm
+        return ev
 
     def __add__(self, o):
         """Add operator."""

@@ -222,7 +222,6 @@ class VQE(object):
 
         else:
             # Newtonian approaches
-            import numpy as np
             from scipy.optimize import minimize
             n = self.hamiltonian.nqubits
             m = minimize(lambda p: loss(p).numpy(), initial_state,
@@ -325,26 +324,46 @@ class AdiabaticEvolution(StateEvolution):
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution.
     """
+    ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, total_time, dt=None,
                  solver="exp", callbacks=[]):
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
                              "".format(h0.nqubits, h1.nqubits))
-        if s(0) != 0:
-            raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
-        if s(total_time) != 1:
-            raise ValueError("s(T) should be 1 but is {}.".format(s(total_time)))
 
         self.nqubits = h0.nqubits
-        self.s = s
         self.h0 = h0
         self.h1 = h1
         self.set(total_time, dt, solver, callbacks)
 
+        self._s = None
+        self.param_s = None
+        if s.__code__.co_argcount > 1: # given ``s`` has undefined parameters
+            self.param_s = s
+        else: # given ``s`` is a function of time only
+            self.s = s
+        self._initial_state = None
+
+    @property
+    def s(self):
+        """Returns scheduling as a function of time."""
+        return self._s
+
+    @s.setter
+    def s(self, f):
+        """Sets scheduling s(t) function."""
+        s0 = f(0)
+        if s0 < -self.ATOL or s0 > self.ATOL:
+            raise ValueError(f"s(0) should be 0 but is {s0}.")
+        st = f(self.total_time)
+        if st < 1 - self.ATOL or st > 1 + self.ATOL:
+            raise ValueError(f"s(T) should be 1 but is {st}.")
+        self._s = f
+
     # disable pylint warning because ``hamiltonian`` is defined as an
     # attribute given by user in ``StateEvolution``
-    def hamiltonian(self, t, *params): # pylint: disable=E0202
+    def hamiltonian(self, t): # pylint: disable=E0202
         """Calculates the Hamiltonian at a given time.
 
         Args:
@@ -354,7 +373,26 @@ class AdiabaticEvolution(StateEvolution):
             :class:`qibo.hamiltonians.Hamiltonian` object corresponding to the
             evolution Hamiltonian at the given time.
         """
-        return (1 - self.s(t, *params)) * self.h0 + self.s(t, *params) * self.h1
+        # disable warning that ``s`` is not callable because it is a property
+        # pylint: disable=E1102
+        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
+
+    def execute(self, initial_state=None):
+        """"""
+        if self.s is None:
+            raise ValueError("Cannot calculate adiabatic evolution before "
+                             "scheduling parameters are specified.")
+        return super(AdiabaticEvolution, self).execute(initial_state)
+
+    def set_parameters(self, *params):
+        """Sets the variational parameters of the scheduling function."""
+        if self.param_s is None:
+            raise ValueError("``set_parameters`` is not available if the "
+                             "scheduling function is not parametrized.")
+        if isinstance(params[0], (int, float, complex)):
+            self.s = lambda t: self.param_s(t, *params)
+        else:
+            self.s = lambda t: self.param_s(t, *params)[0]
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
@@ -366,14 +404,21 @@ class AdiabaticEvolution(StateEvolution):
             return self.h0.eigenvectors()[:, 0]
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
 
-    def loss(self):
-        final_state = self(*args, **kwargs)
-        norm = tf.sqrt(tf.reduce_sum(tf.square(tf.abs(final_state))))
-        return self.h1.expectation(final_state) / norm
+    def _loss(self, *params):
+        self.set_parameters(*params)
+        final_state = self(self._initial_state)
+        return self.h1.expectation(final_state, normalize=True)
 
-    def minimize(self):
-        import numpy as np
+    def _nploss(self, *params):
+        return self._loss(*params).numpy()
+
+    def minimize(self, initial_parameters, initial_state=None,
+                 method="BFGS", options=None):
         from scipy.optimize import minimize
-        n = self.hamiltonian.nqubits
-        m = minimize(lambda p: loss(p).numpy(), initial_parameters,
+        self._initial_state = self._cast_initial_state(initial_state)
+        m = minimize(self._nploss, initial_parameters,
                      method=method, options=options)
+        result = m.fun
+        parameters = m.x
+        self.set_parameters(*parameters)
+        return result, parameters
