@@ -26,7 +26,7 @@ def test_initial_state():
     """Test that adiabatic evolution initial state is the ground state of H0."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1)
     target_psi = np.ones(8) / np.sqrt(8)
     init_psi = adev._cast_initial_state()
     assert_states_equal(init_psi, target_psi)
@@ -36,7 +36,6 @@ def test_initial_state():
                                               ("rk4", 1e-2)])
 def test_state_evolution(solver, atol):
     """Check state evolution under H = Z1 + Z2."""
-    evolution = models.StateEvolution(hamiltonians.Z(2))
     # Analytical solution
     t = np.linspace(0, 1, 1001)
     phase = np.exp(2j * t)[:, np.newaxis]
@@ -45,18 +44,19 @@ def test_state_evolution(solver, atol):
 
     dt = t[1] - t[0]
     checker = TimeStepChecker(target_psi, atol=atol)
-    final_psi = evolution(1, dt=dt, initial_state=target_psi[0], solver=solver,
-                          callbacks=[checker])
+    evolution = models.StateEvolution(hamiltonians.Z(2), 1, dt, solver=solver,
+                                      callbacks=[checker])
+    final_psi = evolution(initial_state=target_psi[0])
 
 
 def test_state_evolution_final_state():
     """Check time-independent Hamiltonian state evolution without giving dt."""
-    evolution = models.StateEvolution(hamiltonians.Z(2))
+    evolution = models.StateEvolution(hamiltonians.Z(2), 1)
     # Analytical solution
     phase = np.exp(2j)
     initial_psi = np.ones(4) / 2
     target_psi = np.array([phase, 1, 1, phase.conj()])
-    final_psi = evolution(1, initial_state=initial_psi)
+    final_psi = evolution(initial_state=initial_psi)
     assert_states_equal(final_psi, target_psi)
 
 
@@ -65,7 +65,7 @@ def test_hamiltonian_t(t):
     """Test adiabatic evolution hamiltonian as a function of time."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, 1e-2)
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
@@ -81,7 +81,7 @@ def test_adiabatic_evolution(dt):
     """Test adiabatic evolution with exponential solver."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, dt=dt)
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
@@ -92,17 +92,15 @@ def test_adiabatic_evolution(dt):
     nsteps = int(1 / dt)
     for n in range(nsteps):
         target_psi = expm(-1j * dt * ham(n * dt)).dot(target_psi)
-    final_psi = adev(1, dt=dt)
+    final_psi = adev()
     assert_states_equal(final_psi, target_psi)
 
 
 def test_state_evolution_errors():
     """Test that state evolution without initial condition raises error."""
-    evolution = models.StateEvolution(hamiltonians.Z(2))
+    evolution = models.StateEvolution(hamiltonians.Z(2), 1)
     with pytest.raises(ValueError):
-        final_state = evolution(1)
-    with pytest.raises(ValueError):
-        final_state = evolution(1, dt=-2, initial_state=np.ones(4) / 2)
+        final_state = evolution()
 
 
 def test_adiabatic_evolution_errors():
@@ -111,23 +109,26 @@ def test_adiabatic_evolution_errors():
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(2)
     with pytest.raises(ValueError):
-        adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, 1e-2)
     # s(0) != 0
     h0 = hamiltonians.X(2)
     with pytest.raises(ValueError):
-        adev = models.AdiabaticEvolution(h0, h1, lambda t: t + 1)
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t + 1, 1, 1e-2)
     # s(T) != 0
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t / 2)
     with pytest.raises(ValueError):
-        final_state = adev(1, dt=1e-3)
-
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t / 2, 1, 1e-2)
+    # dt < 0
+    with pytest.raises(ValueError):
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, -1e-2)
 
 def test_energy_callback(dt=1e-2):
     """Test using energy callback in adiabatic evolution."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
     energy = callbacks.Energy(h1)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, dt=dt,
+                                     callbacks=[energy])
+    final_psi = adev()
 
     target_psi = np.ones(4) / 2
     calc_energy = lambda psi: psi.conj().dot(h1.matrix.numpy().dot(psi))
@@ -138,7 +139,6 @@ def test_energy_callback(dt=1e-2):
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
-    final_psi = adev(1, dt=dt, callbacks=[energy])
     assert_states_equal(final_psi, target_psi)
     np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
 
@@ -147,7 +147,7 @@ def test_rk4_evolution(dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, dt, solver="rk4")
 
     nsteps = int(1 / dt)
     target_psi = [np.ones(8) / np.sqrt(8)]
@@ -156,5 +156,5 @@ def test_rk4_evolution(dt=1e-3):
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
-    final_psi = adev(1, dt=dt, initial_state=target_psi[0], solver="rk4",
-                     callbacks=[checker])
+    adev.callbacks = [checker]
+    final_psi = adev(target_psi[0])

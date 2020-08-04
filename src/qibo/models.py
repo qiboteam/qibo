@@ -258,12 +258,24 @@ class StateEvolution:
 
     from qibo import solvers
 
-    def __init__(self, hamiltonian):
+    def __init__(self, hamiltonian, total_time, dt=None,
+                 solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
         self.hamiltonian = hamiltonian
+        self.set(total_time, dt, solver, callbacks)
 
-    def execute(self, total_time, dt=None, initial_state=None, solver="exp",
-                callbacks=[]):
+    def set(self, total_time, dt=None, solver="exp", callbacks=[]):
+        self.total_time = total_time
+        if dt is None:
+            self.dt = total_time
+        else:
+            if dt <= 0:
+                raise ValueError(f"Time step dt should be positive but is {dt}.")
+            self.dt = dt
+        self.solver = self.solvers.factory[solver](self.dt, self.hamiltonian)
+        self.callbacks = callbacks
+
+    def execute(self, initial_state=None):
         """Runs unitary evolution for a given total time.
 
         Args:
@@ -280,23 +292,18 @@ class StateEvolution:
             Final state vector a ``tf.Tensor``.
         """
         state = self._cast_initial_state(initial_state)
-        if dt is None:
-            dt = total_time
-
-        solver = self.solvers.factory[solver](dt, self.hamiltonian)
-        nsteps = int(total_time / solver.dt)
-        for callback in callbacks:
+        nsteps = int(self.total_time / self.solver.dt)
+        for callback in self.callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
-            state = solver(state)
-            for callback in callbacks:
+            state = self.solver(state)
+            for callback in self.callbacks:
                 callback.append(callback(state))
         return state
 
-    def __call__(self, total_time, dt=None, initial_state=None, solver="exp",
-                 callbacks=[]):
+    def __call__(self, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
-        return self.execute(total_time, dt, initial_state, solver, callbacks)
+        return self.execute(initial_state)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
@@ -319,20 +326,25 @@ class AdiabaticEvolution(StateEvolution):
             adiabatic evolution.
     """
 
-    def __init__(self, h0, h1, s):
+    def __init__(self, h0, h1, s, total_time, dt=None,
+                 solver="exp", callbacks=[]):
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
                              "".format(h0.nqubits, h1.nqubits))
         if s(0) != 0:
             raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
+        if s(total_time) != 1:
+            raise ValueError("s(T) should be 1 but is {}.".format(s(total_time)))
+
         self.nqubits = h0.nqubits
         self.s = s
         self.h0 = h0
         self.h1 = h1
+        self.set(total_time, dt, solver, callbacks)
 
     # disable pylint warning because ``hamiltonian`` is defined as an
     # attribute given by user in ``StateEvolution``
-    def hamiltonian(self, t): # pylint: disable=E0202
+    def hamiltonian(self, t, *params): # pylint: disable=E0202
         """Calculates the Hamiltonian at a given time.
 
         Args:
@@ -342,15 +354,7 @@ class AdiabaticEvolution(StateEvolution):
             :class:`qibo.hamiltonians.Hamiltonian` object corresponding to the
             evolution Hamiltonian at the given time.
         """
-        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
-
-    def execute(self, total_time, *args, **kwargs):
-        """"""
-        st = self.s(total_time)
-        if st != 1:
-            raise ValueError("s(T) should be 1 but is {}.".format(st))
-        return super(AdiabaticEvolution, self).execute(total_time, *args,
-                                                       **kwargs)
+        return (1 - self.s(t, *params)) * self.h0 + self.s(t, *params) * self.h1
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
@@ -361,3 +365,15 @@ class AdiabaticEvolution(StateEvolution):
         if initial_state is None:
             return self.h0.eigenvectors()[:, 0]
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
+
+    def loss(self):
+        final_state = self(*args, **kwargs)
+        norm = tf.sqrt(tf.reduce_sum(tf.square(tf.abs(final_state))))
+        return self.h1.expectation(final_state) / norm
+
+    def minimize(self):
+        import numpy as np
+        from scipy.optimize import minimize
+        n = self.hamiltonian.nqubits
+        m = minimize(lambda p: loss(p).numpy(), initial_parameters,
+                     method=method, options=options)
