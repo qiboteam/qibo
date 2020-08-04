@@ -514,6 +514,9 @@ construction. For number of qubits higher than 30, the QFT can be distributed to
 multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
 the section :ref:`How to select hardware devices? <gpu-examples>`.
 
+
+.. vqe-example:
+
 How to write a VQE?
 -------------------
 
@@ -819,12 +822,13 @@ unitary evolution using the full state vector. For example:
     from qibo import hamiltonians, models
 
     # Define evolution model under the non-interacting sum(Z) Hamiltonian
+    # for total time T=3
     nqubits = 4
-    evolution = models.StateEvolution(hamiltonians.Z(nqubits))
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), 3)
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    # Evolve for time T=3 and get the final state
-    final_state = evolution(3, initial_state=initial_state)
+    # Get the final state
+    final_state = evolve(initial_state)
 
 
 When studying dynamics people are usually interested not only in the final state
@@ -838,7 +842,9 @@ can track how <X> changes as follows:
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
     observable = callbacks.Energy(hamiltonians.X(nqubits))
     # Evolve for time T=1 using the above callback and a time step of dt=1e-3
-    final_state = evolution(1, dt=1e-3, initial_state=initial_state, callbacks=[observable])
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), 1, dt=1e-3,
+                                   callbacks=[observable])
+    final_state = evolve(initial_state)
 
     print(observable[:])
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
@@ -863,8 +869,8 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     nqubits = 4
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
-    evolution = models.StateEvolution(ham)
-    final_state = evolution(1, dt=1e-3, initial_state=initial_state)
+    evolve = models.StateEvolution(ham, 1, dt=1e-3,)
+    final_state = evolve(initial_state)
 
 
 Note that in this case specifying a time step ``dt`` size is required for
@@ -898,15 +904,38 @@ Here is an example of adiabatic evolution simulation:
     # Define the interpolation scheduling
     s = lambda t: t / T
     # Define evolution model
-    evolution = models.AdiabaticEvolution(h0, h1, s)
+    evolve = models.AdiabaticEvolution(h0, h1, s, T, solver="rk4")
     # Evolve using the Runge-Kutta solver to get the final state
-    final_state = evolution(T, solver="rk4")
+    final_state = evolve()
 
 
 If the initial state is not specified the ground state of the easy Hamiltonian
 will be used, as it is common for adiabatic evolution. For proper scheduling
 and total evolution time the ``final_state`` should approximate the ground state
 of the "hard" Hamiltonian. Callbacks may also be used as in the previous example.
+
+The adiabatic evolution model accepts parametrized scheduling functions and
+provides the functionality required to optimize the free parameters so that
+the final state approximates the ground state of the "hard" Hamiltonian.
+Optimization is similar to what is described in the
+:ref:`How to write a VQE? <vqe-example>` example and can be done as follows:
+
+.. code-block::  python
+
+    # Define Hamiltonians
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(3)
+    # Define scheduling function with a free variational parameter ``p``
+    sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
+    # Define an evolution model with T=1 and dt=1e-2
+    evolution = models.AdiabaticEvolution(h0, h1, sp, 1, 1e-2)
+    # Find the optimal value for ``p`` starting from ``p = 0.5``
+    best, params = evolution.minimize(0.5, method="BFGS", options={'disp': True})
+    print(best) # prints the best energy <H1> found from the final state
+    print(params) # prints the optimal value of ``p``
+
+Note that the parametrized scheduling function should satisfy the properties
+s(0) = 0 and s(T) = 1 by definition, otherwise errors will be raised.
 
 
 How to modify the simulation precision?

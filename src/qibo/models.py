@@ -201,6 +201,13 @@ class StateEvolution:
     Args:
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
             evolve under.
+        total_time (float): Total time to evolve for. Initial time is t=0.
+        dt (float): Time step to use for the numerical integration of
+            Schrondiger's equation.
+            Not required if the Hamiltonian is time-independent and the
+            exponential solver is used.
+        solver (str): Solver to use for integrating Schrodinger's equation.
+        callbacks (list): List of callbacks to calculate during evolution.
 
     Example:
         ::
@@ -209,12 +216,12 @@ class StateEvolution:
             from qibo import models, hamiltonians
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
             hamiltonian = hamiltonians.TFIM(3, h=1.0)
-            # initialize evolution model
-            evolution = models.StateEvolution(hamiltonian)
+            # initialize evolution model for total time T=1
+            evolve = models.StateEvolution(hamiltonian, 1)
             # initialize state to |+++>
             initial_state = np.ones(8) / np.sqrt(8)
-            # evolve the state for T=1
-            final_state = evolution(1, initial_state)
+            # execute evolution
+            final_state = evolve(initial_state)
     """
 
     from qibo import solvers
@@ -240,14 +247,7 @@ class StateEvolution:
         """Runs unitary evolution for a given total time.
 
         Args:
-            total_time (float): Total time to evolve for. Initial time is t=0.
-            dt (float): Time step to use for the numerical integration of
-                Schrondiger's equation.
-                Not required if the Hamiltonian is time-independent and the
-                exponential solver is used.
             initial_state (np.ndarray): Initial state of the evolution.
-            solver (str): Solver to use for integrating Schrodinger's equation.
-            callbacks (list): List of callbacks to calculate during evolution.
 
         Returns:
             Final state vector a ``tf.Tensor``.
@@ -285,6 +285,13 @@ class AdiabaticEvolution(StateEvolution):
         h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution.
+        total_time (float): Total time to evolve for. Initial time is t=0.
+        dt (float): Time step to use for the numerical integration of
+            Schrondiger's equation.
+            Not required if the Hamiltonian is time-independent and the
+            exponential solver is used.
+        solver (str): Solver to use for integrating Schrodinger's equation.
+        callbacks (list): List of callbacks to calculate during evolution.
     """
     from qibo import optimizers
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
