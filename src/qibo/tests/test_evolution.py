@@ -224,6 +224,7 @@ def test_scheduling_optimization(method, options, filename):
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, 1, 1e-1)
-    best, params = adevp.minimize(0.5, method=method, options=options)
+    best, params = adevp.minimize(0.5, max_increments=1, method=method,
+                                  options=options)
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
