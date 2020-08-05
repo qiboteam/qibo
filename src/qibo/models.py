@@ -226,20 +226,26 @@ class StateEvolution:
 
     from qibo import solvers
 
-    def __init__(self, hamiltonian, T, dt=None,
+    def __init__(self, hamiltonian, T=None, dt=None,
                  solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
         self.hamiltonian = hamiltonian
         self.set(T, dt, solver, callbacks)
 
-    def set(self, total_time, dt=None, solver="exp", callbacks=[]):
-        self.total_time = total_time
+    def set(self, T=None, dt=None, solver="exp", callbacks=[]):
+        if T is None and dt is None:
+            raise ValueError("Either T or dt should be specified when "
+                             "initializing evolution models.")
         if dt is None:
-            self.dt = total_time
-        else:
-            if dt <= 0:
-                raise ValueError(f"Time step dt should be positive but is {dt}.")
-            self.dt = dt
+            dt = T
+        elif T is None:
+            T = dt
+
+        self.T = T
+        self.dt = dt
+        if dt <= 0:
+            raise ValueError(f"Time step dt should be positive but is {dt}.")
+
         self.solver = self.solvers.factory[solver](self.dt, self.hamiltonian)
         self.callbacks = callbacks
 
@@ -253,7 +259,7 @@ class StateEvolution:
             Final state vector a ``tf.Tensor``.
         """
         state = self._cast_initial_state(initial_state)
-        nsteps = int(self.total_time / self.solver.dt)
+        nsteps = int(self.T / self.solver.dt)
         for callback in self.callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
@@ -326,9 +332,9 @@ class AdiabaticEvolution(StateEvolution):
         s0 = f(0)
         if s0 < -self.ATOL or s0 > self.ATOL:
             raise ValueError(f"s(0) should be 0 but is {s0}.")
-        st = f(self.total_time)
-        if st < 1 - self.ATOL or st > 1 + self.ATOL:
-            raise ValueError(f"s(T) should be 1 but is {st}.")
+        s1 = f(1)
+        if s1 < 1 - self.ATOL or s1 > 1 + self.ATOL:
+            raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._s = f
 
     # disable pylint warning because ``hamiltonian`` is defined as an
@@ -345,7 +351,8 @@ class AdiabaticEvolution(StateEvolution):
         """
         # disable warning that ``s`` is not callable because it is a property
         # pylint: disable=E1102
-        return self.h0 * (1 - self.s(t)) + self.h1 * self.s(t)
+        st = self.s(t / self.T)
+        return self.h0 * (1 - st) + self.h1 * st
 
     def execute(self, initial_state=None):
         """"""
