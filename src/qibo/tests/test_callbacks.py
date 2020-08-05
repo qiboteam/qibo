@@ -287,6 +287,24 @@ def test_norm():
     np.testing.assert_allclose(norm(state, True), target_norm)
 
 
+def test_overlap():
+    state0 = np.random.random(4) + 1j * np.random.random(4)
+    overlap = callbacks.Overlap(state0)
+    overlapn = callbacks.Overlap(state0, normalize=True)
+
+    state1 = np.random.random(4) + 1j * np.random.random(4)
+    target_overlap = np.abs((state0.conj() * state1).sum())
+    np.testing.assert_allclose(overlap(state1), target_overlap)
+
+    norm0 = np.sqrt((np.abs(state0) ** 2).sum())
+    norm1 = np.sqrt((np.abs(state1) ** 2).sum())
+    target_overlap /= norm0 * norm1
+    np.testing.assert_allclose(overlapn(state1), target_overlap)
+
+    with pytest.raises(NotImplementedError):
+        overlap(state1, is_density_matrix=True)
+
+
 def test_energy():
     """Check energy callback for state vectors and density matrices."""
     from qibo import hamiltonians
