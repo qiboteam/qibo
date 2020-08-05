@@ -37,11 +37,12 @@ def main(nqubits, T, dt, solver):
                     (h1 @ target_state).numpy()).sum()
     np.testing.assert_allclose(state_energy.real, target_energy)
 
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t / T)
     energy = callbacks.Energy(h1)
     overlap = callbacks.Overlap(target_state)
-
-    final_psi = evolution(T, dt=dt, solver=solver, callbacks=[energy, overlap])
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, T=T, dt=dt,
+                                          solver=solver,
+                                          callbacks=[energy, overlap])
+    final_psi = evolution()
 
     tt = np.linspace(0, T, int(T / dt) + 1)
 

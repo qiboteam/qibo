@@ -144,6 +144,11 @@ def test_adiabatic_evolution_errors():
     # dt < 0
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, lambda t: t, 1, -1e-2)
+    # initialize without T
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
+    # initialize without T and dt
+    with pytest.raises(ValueError):
+        adev = models.AdiabaticEvolution(h0, h1, lambda t: t)
 
 
 def test_energy_callback(dt=1e-2):

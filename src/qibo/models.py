@@ -300,7 +300,7 @@ class AdiabaticEvolution(StateEvolution):
     from qibo import optimizers
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, T, dt=None,
+    def __init__(self, h0, h1, s, T=None, dt=None,
                  solver="exp", callbacks=[]):
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
@@ -418,13 +418,14 @@ class AdiabaticEvolution(StateEvolution):
         result = self._nploss(parameters)
         old_result = result + 1
         i = 0
-        while result < old_result and i < max_increments:
+        while i < max_increments:
             old_result = result
             result, parameters = self.optimizers.optimize(loss, parameters,
                                                           method, options)
-            self.T += self.dt
             i += 1
-            print(f"Iteration {i}: {result}")
+            print(f"Iteration {i} - Time: {self.T} - Energy: {result}")
+            self.T += self.dt
 
+        self.T -= self.dt
         self.set_parameters(parameters)
         return result, parameters
