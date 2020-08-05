@@ -824,7 +824,7 @@ unitary evolution using the full state vector. For example:
     # Define evolution model under the non-interacting sum(Z) Hamiltonian
     # for total time T=3
     nqubits = 4
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), 3)
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), T=3)
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     # Get the final state
@@ -842,7 +842,7 @@ can track how <X> changes as follows:
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
     observable = callbacks.Energy(hamiltonians.X(nqubits))
     # Evolve for time T=1 using the above callback and a time step of dt=1e-3
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), 1, dt=1e-3,
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), T=1, dt=1e-3,
                                    callbacks=[observable])
     final_state = evolve(initial_state)
 
@@ -869,7 +869,7 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     nqubits = 4
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
-    evolve = models.StateEvolution(ham, 1, dt=1e-3,)
+    evolve = models.StateEvolution(ham, T=1, dt=1e-3)
     final_state = evolve(initial_state)
 
 
@@ -928,7 +928,7 @@ Optimization is similar to what is described in the
     # Define scheduling function with a free variational parameter ``p``
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     # Define an evolution model with T=1 and dt=1e-2
-    evolution = models.AdiabaticEvolution(h0, h1, sp, 1, 1e-2)
+    evolution = models.AdiabaticEvolution(h0, h1, sp, T=1, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5``
     best, params = evolution.minimize(0.5, method="BFGS", options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state

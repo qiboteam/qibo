@@ -201,7 +201,7 @@ class StateEvolution:
     Args:
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
             evolve under.
-        total_time (float): Total time to evolve for. Initial time is t=0.
+        T (float): Total time to evolve for. Initial time is t=0.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
             Not required if the Hamiltonian is time-independent and the
@@ -217,7 +217,7 @@ class StateEvolution:
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
             hamiltonian = hamiltonians.TFIM(3, h=1.0)
             # initialize evolution model for total time T=1
-            evolve = models.StateEvolution(hamiltonian, 1)
+            evolve = models.StateEvolution(hamiltonian, T=1)
             # initialize state to |+++>
             initial_state = np.ones(8) / np.sqrt(8)
             # execute evolution
@@ -226,11 +226,11 @@ class StateEvolution:
 
     from qibo import solvers
 
-    def __init__(self, hamiltonian, total_time, dt=None,
+    def __init__(self, hamiltonian, T, dt=None,
                  solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
         self.hamiltonian = hamiltonian
-        self.set(total_time, dt, solver, callbacks)
+        self.set(T, dt, solver, callbacks)
 
     def set(self, total_time, dt=None, solver="exp", callbacks=[]):
         self.total_time = total_time
@@ -285,7 +285,7 @@ class AdiabaticEvolution(StateEvolution):
         h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution.
-        total_time (float): Total time to evolve for. Initial time is t=0.
+        T (float): Total time to evolve for. Initial time is t=0.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
             Not required if the Hamiltonian is time-independent and the
@@ -296,7 +296,7 @@ class AdiabaticEvolution(StateEvolution):
     from qibo import optimizers
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, total_time, dt=None,
+    def __init__(self, h0, h1, s, T, dt=None,
                  solver="exp", callbacks=[]):
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
@@ -305,7 +305,7 @@ class AdiabaticEvolution(StateEvolution):
         self.nqubits = h0.nqubits
         self.h0 = h0
         self.h1 = h1
-        self.set(total_time, dt, solver, callbacks)
+        self.set(T, dt, solver, callbacks)
 
         self._s = None
         self.param_s = None
