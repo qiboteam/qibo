@@ -294,8 +294,6 @@ class AdiabaticEvolution(StateEvolution):
         T (float): Total time to evolve for. Initial time is t=0.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
-            Not required if the Hamiltonian is time-independent and the
-            exponential solver is used.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
     """
@@ -361,15 +359,12 @@ class AdiabaticEvolution(StateEvolution):
                              "scheduling parameters are specified.")
         return super(AdiabaticEvolution, self).execute(initial_state)
 
-    def set_parameters(self, *params):
+    def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
         if self.param_s is None:
             raise ValueError("``set_parameters`` is not available if the "
                              "scheduling function is not parametrized.")
-        if isinstance(params[0], (int, float, complex)):
-            self.s = lambda t: self.param_s(t, *params)
-        else:
-            self.s = lambda t: self.param_s(t, *params)
+        self.s = lambda t: self.param_s(t, params)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
@@ -381,21 +376,21 @@ class AdiabaticEvolution(StateEvolution):
             return self.h0.eigenvectors()[:, 0]
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
 
-    def _loss(self, *params):
+    def _loss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``tf.Tensor``.
         """
-        self.set_parameters(*params)
+        self.set_parameters(params)
         final_state = self(self._initial_state)
         return self.h1.expectation(final_state, normalize=True)
 
-    def _nploss(self, *params):
+    def _nploss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``np.ndarray``.
         """
-        return self._loss(*params).numpy()
+        return self._loss(params).numpy()
 
     def minimize(self, initial_parameters, initial_state=None,
                  max_increments=100, method="BFGS", options=None):
@@ -420,7 +415,8 @@ class AdiabaticEvolution(StateEvolution):
             loss = self._nploss
 
         parameters = np.copy(initial_parameters)
-        old_result, result = 1, 0
+        result = self._nploss(parameters)
+        old_result = result + 1
         i = 0
         while result < old_result and i < max_increments:
             old_result = result
@@ -428,9 +424,7 @@ class AdiabaticEvolution(StateEvolution):
                                                           method, options)
             self.T += self.dt
             i += 1
+            print(f"Iteration {i}: {result}")
 
-        if method == "sgd":
-            self.set_parameters(parameters)
-        else:
-            self.set_parameters(*parameters)
+        self.set_parameters(parameters)
         return result, parameters
