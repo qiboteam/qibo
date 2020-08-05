@@ -176,11 +176,51 @@ class Norm(Callback):
         = \\mathrm{Tr} (\\rho )
     """
 
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor:
+    @staticmethod
+    def norm(state: tf.Tensor, is_density_matrix: bool = False) -> tf.Tensor:
+        """"""
         if is_density_matrix:
             return tf.linalg.trace(state)
         return tf.sqrt(tf.reduce_sum(tf.square(tf.abs(state))))
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        return self.norm(state, is_density_matrix)
+
+
+class Overlap(Callback):
+    """State overlap callback.
+
+    Calculates the overlap between the circuit state and a given target state:
+
+    .. math::
+        \\mathrm{Overlap} = |\\left \\langle \\Phi | \\Psi \\right \\rangle |
+
+    Args:
+        state (np.ndarray): Target state to calculate overlap with.
+        normalize (bool): If ``True`` the states are normalized for the overlap
+            calculation.
+    """
+
+    def __init__(self, state: Union[np.ndarray, tf.Tensor],
+                 normalize: bool = False):
+        super(Overlap, self).__init__()
+        self.statec = tf.math.conj(tf.cast(state, dtype=DTYPES.get('DTYPECPX')))
+        self.norm = None
+        if normalize:
+            self.norm = Norm.norm(self.statec)
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            raise NotImplementedError("Overlap callback is not implemented "
+                                      "for density matrices.")
+
+        overlap = tf.abs(tf.reduce_sum(self.statec * state))
+        if self.norm is not None:
+            norm = Norm.norm(state, is_density_matrix)
+            overlap = overlap / (norm * self.norm)
+        return overlap
 
 
 class Energy(Callback):
