@@ -317,7 +317,6 @@ class AdiabaticEvolution(StateEvolution):
             self.param_s = s
         else: # given ``s`` is a function of time only
             self.s = s
-        self._initial_state = None
 
     @property
     def s(self):
@@ -382,8 +381,7 @@ class AdiabaticEvolution(StateEvolution):
         Returns a ``tf.Tensor``.
         """
         self.set_parameters(params)
-        final_state = self(self._initial_state)
-        return self.h1.expectation(final_state, normalize=True)
+        return self.h1.expectation(self(), normalize=True)
 
     def _nploss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.
@@ -392,15 +390,12 @@ class AdiabaticEvolution(StateEvolution):
         """
         return self._loss(params).numpy()
 
-    def minimize(self, initial_parameters, initial_state=None,
-                 max_increments=100, method="BFGS", options=None):
+    def minimize(self, initial_parameters, method="BFGS", options=None):
         """Optimize the free parameters of the scheduling function.
 
         Args:
             initial_parameters (np.ndarray): Initial guess for the variational
                 parameters that are optimized.
-            initial_state (np.ndarray): Initial state vector for the adiabatic
-                evolution. If ``None`` the ground state of ``h0`` is used.
             method (str): The desired minimization method.
                 One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
                 any of the methods supported by
@@ -408,24 +403,13 @@ class AdiabaticEvolution(StateEvolution):
             options (dict): a dictionary with options for the different optimizers.
         """
         import numpy as np
-        self._initial_state = self._cast_initial_state(initial_state)
         if method == "sgd":
             loss = self._loss
         else:
             loss = self._nploss
 
-        parameters = np.copy(initial_parameters)
-        result = self._nploss(parameters)
-        old_result = result + 1
-        i = 0
-        while i < max_increments:
-            old_result = result
-            result, parameters = self.optimizers.optimize(loss, parameters,
-                                                          method, options)
-            i += 1
-            print(f"Iteration {i} - Time: {self.T} - Energy: {result}")
-            self.T += self.dt
+        result, parameters = self.optimizers.optimize(loss, initial_parameters,
+                                                      method, options)
 
-        self.T -= self.dt
         self.set_parameters(parameters)
         return result, parameters
