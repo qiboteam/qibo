@@ -39,10 +39,10 @@ def main(nqubits, T, dt, solver):
 
     energy = callbacks.Energy(h1)
     overlap = callbacks.Overlap(target_state)
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, T=T, dt=dt,
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
                                           solver=solver,
                                           callbacks=[energy, overlap])
-    final_psi = evolution()
+    final_psi = evolution(T=T)
 
     tt = np.linspace(0, T, int(T / dt) + 1)
 

@@ -201,7 +201,6 @@ class StateEvolution:
     Args:
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
             evolve under.
-        T (float): Total time to evolve for. Initial time is t=0.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
             Not required if the Hamiltonian is time-independent and the
@@ -226,40 +225,32 @@ class StateEvolution:
 
     from qibo import solvers
 
-    def __init__(self, hamiltonian, T=None, dt=None,
-                 solver="exp", callbacks=[]):
+    def __init__(self, hamiltonian, dt=None, solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
-        self.hamiltonian = hamiltonian
-        self.set(T, dt, solver, callbacks)
-
-    def set(self, T=None, dt=None, solver="exp", callbacks=[]):
-        if T is None and dt is None:
-            raise ValueError("Either T or dt should be specified when "
-                             "initializing evolution models.")
-        if dt is None:
-            dt = T
-        elif T is None:
-            T = dt
-
-        self.T = T
-        self.dt = dt
-        if dt <= 0:
+        if dt is not None and dt <= 0:
             raise ValueError(f"Time step dt should be positive but is {dt}.")
-
-        self.solver = self.solvers.factory[solver](self.dt, self.hamiltonian)
+        self.dt = dt
+        self.solver = self.solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
 
-    def execute(self, initial_state=None):
+    def execute(self, T=None, initial_state=None):
         """Runs unitary evolution for a given total time.
 
         Args:
+            T (float): Total time to evolve for. Initial time is t=0.
+                If ``None`` one ``dt`` time step is used.
             initial_state (np.ndarray): Initial state of the evolution.
 
         Returns:
             Final state vector a ``tf.Tensor``.
         """
+        if T is None:
+            if self.dt is None:
+                raise ValueError("Total time T should be specified if dt is None.")
+            T = self.dt
+
         state = self._cast_initial_state(initial_state)
-        nsteps = int(self.T / self.solver.dt)
+        nsteps = int(T / self.solver.dt)
         for callback in self.callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
@@ -268,9 +259,9 @@ class StateEvolution:
                 callback.append(callback(state))
         return state
 
-    def __call__(self, initial_state=None):
+    def __call__(self, T=None, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
-        return self.execute(initial_state)
+        return self.execute(T, initial_state)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
@@ -300,31 +291,30 @@ class AdiabaticEvolution(StateEvolution):
     from qibo import optimizers
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, T=None, dt=None,
-                 solver="exp", callbacks=[]):
+    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
                              "".format(h0.nqubits, h1.nqubits))
-
-        self.nqubits = h0.nqubits
+        ham = lambda t: h0
+        ham.nqubits = h0.nqubits
+        super(AdiabaticEvolution, self).__init__(ham, dt, solver, callbacks)
         self.h0 = h0
         self.h1 = h1
-        self.set(T, dt, solver, callbacks)
 
-        self._s = None
-        self.param_s = None
+        self._schedule = None
+        self._param_schedule = None
         if s.__code__.co_argcount > 1: # given ``s`` has undefined parameters
-            self.param_s = s
+            self._param_schedule = s
         else: # given ``s`` is a function of time only
-            self.s = s
+            self.schedule = s
 
     @property
-    def s(self):
+    def schedule(self):
         """Returns scheduling as a function of time."""
-        return self._s
+        return self._schedule
 
-    @s.setter
-    def s(self, f):
+    @schedule.setter
+    def schedule(self, f):
         """Sets scheduling s(t) function."""
         s0 = f(0)
         if s0 < -self.ATOL or s0 > self.ATOL:
@@ -332,38 +322,26 @@ class AdiabaticEvolution(StateEvolution):
         s1 = f(1)
         if s1 < 1 - self.ATOL or s1 > 1 + self.ATOL:
             raise ValueError(f"s(1) should be 1 but is {s1}.")
-        self._s = f
+        self._schedule = f
 
-    # disable pylint warning because ``hamiltonian`` is defined as an
-    # attribute given by user in ``StateEvolution``
-    def hamiltonian(self, t): # pylint: disable=E0202
-        """Calculates the Hamiltonian at a given time.
-
-        Args:
-            t (float): Time value.
-
-        Returns:
-            :class:`qibo.hamiltonians.Hamiltonian` object corresponding to the
-            evolution Hamiltonian at the given time.
-        """
-        # disable warning that ``s`` is not callable because it is a property
-        # pylint: disable=E1102
-        st = self.s(t / self.T)
-        return self.h0 * (1 - st) + self.h1 * st
-
-    def execute(self, initial_state=None):
+    def execute(self, T=None, initial_state=None):
         """"""
-        if self.s is None:
-            raise ValueError("Cannot calculate adiabatic evolution before "
-                             "scheduling parameters are specified.")
-        return super(AdiabaticEvolution, self).execute(initial_state)
+        if T is None:
+            T = self.dt
+        self.set_hamiltonian(T)
+        return super(AdiabaticEvolution, self).execute(T, initial_state)
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
-        if self.param_s is None:
-            raise ValueError("``set_parameters`` is not available if the "
-                             "scheduling function is not parametrized.")
-        self.s = lambda t: self.param_s(t, params)
+        if self._param_schedule is not None:
+            self.schedule = lambda t: self._param_schedule(t, params[:-1])
+        self.set_hamiltonian(params[-1])
+
+    def set_hamiltonian(self, T):
+        def hamiltonian(t):
+            st = self.schedule(t / T)
+            return self.h0 * (1 - st) + self.h1 * st
+        self.solver.hamiltonian = hamiltonian
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
