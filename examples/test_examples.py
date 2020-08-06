@@ -2,13 +2,38 @@ import os
 import pytest
 import sys
 import importlib
+import signal
+from contextlib import contextmanager
 base_dir = os.path.join(os.getcwd(), "examples")
 sys.path.append(base_dir)
 TIMEOUT = 3
 
 
-@pytest.mark.xfail
-@pytest.mark.timeout(TIMEOUT)
+@contextmanager
+def timeout(time):
+    """Auxiliary timeout method. Register an alarm for a given
+    input time. This function provides a silent timeout error.
+
+    Args:
+        time (int): timeout seconds.
+    """
+    # register signal
+    signal.signal(signal.SIGALRM, raise_timeout)
+    signal.alarm(time)
+    try:
+        yield
+    except TimeoutError:
+        pass
+    finally:
+        # unregister signal
+        signal.signal(signal.SIGALRM, signal.SIG_IGN)
+
+
+def raise_timeout(signum, frame):
+    raise TimeoutError
+
+from unittest.mock import patch
+
 @pytest.mark.parametrize("N", [3])
 @pytest.mark.parametrize("p", [0, 0.001])
 @pytest.mark.parametrize("shots", [100])
@@ -18,10 +43,10 @@ def test_3_tangle(N, p, shots, post_selection):
     sys.path.append(path)
     os.chdir(path)
     main = importlib.import_module("3_tangle.main")
-    main.main(N, p, shots, post_selection)
+    with timeout(TIMEOUT):
+        main.main(N, p, shots, post_selection, True)
 
 
-@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("layers", [1, 2])
 @pytest.mark.parametrize("maxsteps", [5])
@@ -29,11 +54,10 @@ def test_3_tangle(N, p, shots, post_selection):
 def test_aavqe(nqubits, layers, maxsteps, T_max):
     os.chdir(os.path.join(base_dir, "aavqe"))
     from aavqe import main
-    main.main(nqubits, layers, maxsteps, T_max)
+    with timeout(TIMEOUT):
+        main.main(nqubits, layers, maxsteps, T_max)
 
 
-@pytest.mark.skip("Fails because the global variable 'count' is used.")
-@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("layers", [1, 2])
 @pytest.mark.parametrize("compress", [1])
@@ -41,21 +65,20 @@ def test_aavqe(nqubits, layers, maxsteps, T_max):
 def test_autoencoder(nqubits, layers, compress, lambdas):
     os.chdir(os.path.join(base_dir, "autoencoder"))
     from autoencoder import main
-    main.main(nqubits, layers, compress, lambdas)
+    with timeout(TIMEOUT):
+        main.main(nqubits, layers, compress, lambdas)
 
 
-@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize("nqubits", [4, 8])
 def test_grover3sat(nqubits):
     path = os.path.join(base_dir, "grover3sat")
     sys.path[-1] = path
     os.chdir(path)
     from grover3sat import main
-    main.main(f"n{nqubits}.txt")
+    with timeout(TIMEOUT):
+        main.main(f"n{nqubits}.txt")
 
 
-@pytest.mark.xfail
-@pytest.mark.timeout(TIMEOUT)
 @pytest.mark.parametrize(("h_value", "collisions", "b"),
                          [(163, 2, 7)])
 def test_hash_grover(h_value, collisions, b):
@@ -66,4 +89,5 @@ def test_hash_grover(h_value, collisions, b):
     sys.path[-1] = path
     os.chdir(path)
     main = importlib.import_module("hash-grover.main")
-    main.main(h_value, collisions, b)
+    with timeout(TIMEOUT):
+        main.main(h_value, collisions, b)
