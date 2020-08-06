@@ -10,9 +10,10 @@ parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--T", default=1, type=float)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
+parser.add_argument("--method", default="BFGS", type=str)
 
 
-def main(nqubits, T, dt, solver):
+def main(nqubits, T, dt, solver, method):
     """Performs adiabatic evolution with Ising as the "hard" Hamiltonian.
 
     Plots how the <H1> energy and the overlap with the actual ground state
@@ -39,11 +40,12 @@ def main(nqubits, T, dt, solver):
 
     #energy = callbacks.Energy(h1)
     #overlap = callbacks.Overlap(target_state)
-    s = lambda t, p: p[0] * t ** 3 + p[1] * t ** 2 + p[2] * t + (1 - p.sum()) * np.sqrt(t)
-    evolution = models.AdiabaticEvolution(h0, h1, s, T=T, dt=dt, solver=solver)
+    #s = lambda t, p: p[0] * t ** 3 + p[1] * t ** 2 + p[2] * t + (1 - p.sum()) * np.sqrt(t)
+    s = lambda t: t
+    evolution = models.AdiabaticEvolution(h0, h1, s, dt=dt, solver=solver)
 
     print("Target energy:", target_energy)
-    energy, parameters = evolution.minimize([0.5, 0.5, 0.5])
+    energy, parameters = evolution.minimize([T], method=method)
 
     print("Best energy:", energy)
     print("p =", parameters)

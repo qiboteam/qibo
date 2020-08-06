@@ -250,6 +250,7 @@ class StateEvolution:
             T = self.dt
 
         state = self._cast_initial_state(initial_state)
+        self.solver.t = 0 # initialize solver to t=0
         nsteps = int(T / self.solver.dt)
         for callback in self.callbacks:
             callback.append(callback(state))
@@ -359,14 +360,18 @@ class AdiabaticEvolution(StateEvolution):
         Returns a ``tf.Tensor``.
         """
         self.set_parameters(params)
-        return self.h1.expectation(self(), normalize=True)
+        final_state = super(AdiabaticEvolution, self).execute(params[-1])
+        loss = self.h1.expectation(final_state, normalize=True)
+        print(f"Params: {params}  -  Loss: {loss}")
+        return loss
 
     def _nploss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``np.ndarray``.
         """
-        return self._loss(params).numpy()
+        loss = self._loss(params).numpy()
+        return loss
 
     def minimize(self, initial_parameters, method="BFGS", options=None):
         """Optimize the free parameters of the scheduling function.
@@ -388,6 +393,5 @@ class AdiabaticEvolution(StateEvolution):
 
         result, parameters = self.optimizers.optimize(loss, initial_parameters,
                                                       method, options)
-
         self.set_parameters(parameters)
         return result, parameters
