@@ -23,7 +23,6 @@ jobs:
         pip install pytest-cov
         pip install -r requirements.txt
         pip install .[docs,tests]
-        pip install pytest-timeout
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
