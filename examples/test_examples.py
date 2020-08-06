@@ -32,7 +32,6 @@ def timeout(time):
 def raise_timeout(signum, frame):
     raise TimeoutError
 
-from unittest.mock import patch
 
 @pytest.mark.parametrize("N", [3])
 @pytest.mark.parametrize("p", [0, 0.001])
