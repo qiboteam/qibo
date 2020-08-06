@@ -2,7 +2,7 @@ import os
 import pytest
 import sys
 import importlib
-base_dir = "/".join(os.getcwd().split("/")[:-3] + ["examples"])
+base_dir = os.path.join(os.getcwd(), "examples")
 sys.path.append(base_dir)
 TIMEOUT = 3
 
