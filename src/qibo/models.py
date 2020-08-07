@@ -213,14 +213,12 @@ class StateEvolution:
             from qibo import models, hamiltonians
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
             hamiltonian = hamiltonians.TFIM(3, h=1.0)
-            # initialize evolution model with step dt=1
-            evolve = models.StateEvolution(hamiltonian, dt=1)
+            # initialize evolution model with step dt=1e-2
+            evolve = models.StateEvolution(hamiltonian, dt=1e-2)
             # initialize state to |+++>
             initial_state = np.ones(8) / np.sqrt(8)
-            # execute evolution for total time T=dt=1
-            final_state = evolve(initial_state)
-            # execute evolution for total time T=4
-            final_state2 = evolve(T=4, initial_state)
+            # execute evolution for total time T=2
+            final_state2 = evolve(T=2, initial_state)
     """
 
     from qibo import solvers
@@ -233,7 +231,7 @@ class StateEvolution:
         self.solver = self.solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
 
-    def execute(self, T=None, initial_state=None):
+    def execute(self, T, initial_state=None):
         """Runs unitary evolution for a given total time.
 
         Args:
@@ -244,8 +242,6 @@ class StateEvolution:
         Returns:
             Final state vector a ``tf.Tensor``.
         """
-        if T is None:
-            T = self.dt
         state = self._cast_initial_state(initial_state)
         self.solver.t = 0 # initialize solver to t=0
         nsteps = int(T / self.solver.dt)
@@ -342,10 +338,8 @@ class AdiabaticEvolution(StateEvolution):
             raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
-    def execute(self, T=None, initial_state=None):
+    def execute(self, T, initial_state=None):
         """"""
-        if T is None:
-            T = self.dt
         self.set_hamiltonian(T)
         return super(AdiabaticEvolution, self).execute(T, initial_state)
 

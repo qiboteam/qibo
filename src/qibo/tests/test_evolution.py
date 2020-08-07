@@ -80,7 +80,7 @@ def test_state_evolution_final_state():
     phase = np.exp(2j)
     initial_psi = np.ones(4) / 2
     target_psi = np.array([phase, 1, 1, phase.conj()])
-    final_psi = evolution(initial_state=initial_psi)
+    final_psi = evolution(T=1, initial_state=initial_psi)
     assert_states_equal(final_psi, target_psi)
 
 
@@ -191,8 +191,6 @@ def test_rk4_evolution(dt=1e-3):
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4")
-    # Perform a first run without giving T
-    final_psi = adev()
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t

@@ -822,15 +822,13 @@ unitary evolution using the full state vector. For example:
     from qibo import hamiltonians, models
 
     # Define evolution model under the non-interacting sum(Z) Hamiltonian
-    # with time step dt=3
+    # with time step dt=1e-1
     nqubits = 4
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=3)
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-1)
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    # Get the final state for a single time step
-    final_state = evolve(initial_state)
-    # Get the final state after T=9 (three time steps)
-    final_state = evolve(T=9, initial_state)
+    # Get the final state after time T=2
+    final_state = evolve(T=2, initial_state)
 
 
 When studying dynamics people are usually interested not only in the final state
@@ -853,8 +851,8 @@ can track how <X> changes as follows:
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
 
 
-Note that for the above to work we had to pass a time step ``dt=1e-3`` which in
-this case defines how often we calculate <X> during evolution.
+Note that the time step ``dt=1e-3`` defines how often we calculate <X> during
+the evolution.
 
 In the above cases the exact time evolution operator (exponential of the Hamiltonian)
 was used to evolve the state vector. Because the evolution Hamiltonian is
@@ -876,9 +874,8 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     final_state = evolve(T=1, initial_state)
 
 
-Note that in this case specifying a time step ``dt`` size is required for
-integration.  The above script will still use the exact time evolution operator
-with the exponentiation repeated for each time step. The integration method can
+The above script will still use the exact time evolution operator with the
+exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. Currently the default
 exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
 are implemented.
