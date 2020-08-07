@@ -231,7 +231,7 @@ class StateEvolution:
         self.solver = self.solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
 
-    def execute(self, T, initial_state=None):
+    def execute(self, final_time, initial_state=None):
         """Runs unitary evolution for a given total time.
 
         Args:
@@ -244,7 +244,7 @@ class StateEvolution:
         """
         state = self._cast_initial_state(initial_state)
         self.solver.t = 0 # initialize solver to t=0
-        nsteps = int(T / self.solver.dt)
+        nsteps = int(final_time / self.solver.dt)
         for callback in self.callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
@@ -253,9 +253,9 @@ class StateEvolution:
                 callback.append(callback(state))
         return state
 
-    def __call__(self, T=None, initial_state=None):
+    def __call__(self, final_time, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
-        return self.execute(T, initial_state)
+        return self.execute(final_time, initial_state)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
@@ -338,10 +338,10 @@ class AdiabaticEvolution(StateEvolution):
             raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
-    def execute(self, T, initial_state=None):
+    def execute(self, final_time, initial_state=None):
         """"""
-        self.set_hamiltonian(T)
-        return super(AdiabaticEvolution, self).execute(T, initial_state)
+        self.set_hamiltonian(final_time)
+        return super(AdiabaticEvolution, self).execute(final_time, initial_state)
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
@@ -349,10 +349,10 @@ class AdiabaticEvolution(StateEvolution):
             self.schedule = lambda t: self._param_schedule(t, params[:-1])
         self.set_hamiltonian(params[-1])
 
-    def set_hamiltonian(self, T):
+    def set_hamiltonian(self, final_time):
         def hamiltonian(t):
             # Disable warning that ``schedule`` is not Callable
-            st = self.schedule(t / T) # pylint: disable=E1102
+            st = self.schedule(t / final_time) # pylint: disable=E1102
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 

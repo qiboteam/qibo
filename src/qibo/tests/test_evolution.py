@@ -70,7 +70,7 @@ def test_state_evolution(solver, atol):
     checker = TimeStepChecker(target_psi, atol=atol)
     evolution = models.StateEvolution(hamiltonians.Z(2), dt=dt, solver=solver,
                                       callbacks=[checker])
-    final_psi = evolution(T=1, initial_state=target_psi[0])
+    final_psi = evolution(final_time=1, initial_state=target_psi[0])
 
 
 def test_state_evolution_final_state():
@@ -80,7 +80,7 @@ def test_state_evolution_final_state():
     phase = np.exp(2j)
     initial_psi = np.ones(4) / 2
     target_psi = np.array([phase, 1, 1, phase.conj()])
-    final_psi = evolution(T=1, initial_state=initial_psi)
+    final_psi = evolution(final_time=1, initial_state=initial_psi)
     assert_states_equal(final_psi, target_psi)
 
 
@@ -96,7 +96,7 @@ def test_hamiltonian_t(t):
     m2 = np.diag([2, -2, -2, 2])
     ham = lambda t: - (1 - t) * m1 - t * m2
 
-    adev.set_hamiltonian(T=1)
+    adev.set_hamiltonian(final_time=1)
     matrix = adev.solver.hamiltonian(t).matrix
     np.testing.assert_allclose(matrix, ham(t))
 
@@ -117,7 +117,7 @@ def test_adiabatic_evolution(dt):
     nsteps = int(1 / dt)
     for n in range(nsteps):
         target_psi = expm(-1j * dt * ham(n * dt)).dot(target_psi)
-    final_psi = adev(T=1)
+    final_psi = adev(final_time=1)
     assert_states_equal(final_psi, target_psi)
 
 
@@ -127,7 +127,7 @@ def test_state_evolution_errors():
     evolution = models.StateEvolution(ham, dt=1)
     # execute without initial state
     with pytest.raises(ValueError):
-        final_state = evolution()
+        final_state = evolution(final_time=1)
     # dt < 0
     with pytest.raises(ValueError):
         adev = models.StateEvolution(ham, dt=-1e-2)
@@ -161,7 +161,7 @@ def test_adiabatic_evolution_errors():
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
     with pytest.raises(ValueError):
-        final_state = adevp(T=1)
+        final_state = adevp(final_time=1)
 
 
 def test_energy_callback(dt=1e-2):
@@ -171,7 +171,7 @@ def test_energy_callback(dt=1e-2):
     energy = callbacks.Energy(h1)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
                                      callbacks=[energy])
-    final_psi = adev(T=1)
+    final_psi = adev(final_time=1)
 
     target_psi = np.ones(4) / 2
     calc_energy = lambda psi: psi.conj().dot(h1.matrix.numpy().dot(psi))
@@ -200,7 +200,7 @@ def test_rk4_evolution(dt=1e-3):
 
     checker = TimeStepChecker(target_psi, atol=dt)
     adev.callbacks = [checker]
-    final_psi = adev(T=1, initial_state=target_psi[0])
+    final_psi = adev(final_time=1, initial_state=target_psi[0])
 
 
 def test_set_scheduling_parameters():
@@ -209,11 +209,11 @@ def test_set_scheduling_parameters():
     sp = lambda t, p: (1 - p[0]) * np.sqrt(t) + p[0] * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, 1e-2)
     adevp.set_parameters([0.5, 1])
-    final_psi = adevp(T=1)
+    final_psi = adevp(final_time=1)
 
     s = lambda t: 0.5 * np.sqrt(t) + 0.5 * t
     adev = models.AdiabaticEvolution(h0, h1, s, 1e-2)
-    target_psi = adev(T=1)
+    target_psi = adev(final_time=1)
     np.testing.assert_allclose(final_psi, target_psi)
 
 

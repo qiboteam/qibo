@@ -827,8 +827,8 @@ unitary evolution using the full state vector. For example:
     evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-1)
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    # Get the final state after time T=2
-    final_state = evolve(T=2, initial_state)
+    # Get the final state after time t=2
+    final_state = evolve(final_time=2, initial_state)
 
 
 When studying dynamics people are usually interested not only in the final state
@@ -844,8 +844,8 @@ can track how <X> changes as follows:
     # Create evolution object using the above callback and a time step of dt=1e-3
     evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
                                    callbacks=[observable])
-    # Evolve for total time T=1
-    final_state = evolve(T=1, initial_state=initial_state)
+    # Evolve for total time t=1
+    final_state = evolve(final_time=1, initial_state=initial_state)
 
     print(observable[:])
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
@@ -871,7 +871,7 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
     evolve = models.StateEvolution(ham, dt=1e-3)
-    final_state = evolve(T=1, initial_state)
+    final_state = evolve(final_time=1, initial_state)
 
 
 The above script will still use the exact time evolution operator with the
@@ -906,7 +906,7 @@ Here is an example of adiabatic evolution simulation:
     # Define evolution model
     evolve = models.AdiabaticEvolution(h0, h1, s, solver="rk4")
     # Evolve using the Runge-Kutta solver to get the final state
-    final_state = evolve(T=T)
+    final_state = evolve(final_time=T)
 
 
 If the initial state is not specified the ground state of the easy Hamiltonian
