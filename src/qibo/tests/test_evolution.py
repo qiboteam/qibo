@@ -181,6 +181,8 @@ def test_rk4_evolution(dt=1e-3):
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4")
+    # Perform a first run without giving T
+    final_psi = adev()
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
@@ -207,15 +209,16 @@ def test_set_scheduling_parameters():
     np.testing.assert_allclose(final_psi, target_psi)
 
 
-test_names = "method,options,filename"
-test_values = [("BFGS", {'maxiter': 1}, "adiabatic_bfgs.out"),
-               ("sgd", {"nepochs": 5}, None)]
+test_names = "method,options,messages,filename"
+test_values = [("BFGS", {'maxiter': 1}, True, "adiabatic_bfgs.out"),
+               ("sgd", {"nepochs": 5}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_scheduling_optimization(method, options, filename):
+def test_scheduling_optimization(method, options, messages, filename):
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
-    best, params = adevp.minimize([0.5, 1], method=method, options=options)
+    best, params = adevp.minimize([0.5, 1], method=method, options=options,
+                                  messages=messages)
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
