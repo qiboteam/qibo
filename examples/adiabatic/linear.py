@@ -7,13 +7,14 @@ from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
+parser.add_argument("--hfield", default=4, type=float)
 parser.add_argument("--T", default=1, type=float)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 
 
-def main(nqubits, T, dt, solver):
-    """Performs adiabatic evolution with Ising as the "hard" Hamiltonian.
+def main(nqubits, hfield, T, dt, solver):
+    """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian.
 
     Plots how the <H1> energy and the overlap with the actual ground state
     changes during the evolution.
@@ -26,7 +27,7 @@ def main(nqubits, T, dt, solver):
         solver: Solver used for integration.
     """
     h0 = hamiltonians.X(nqubits)
-    h1 = hamiltonians.TFIM(nqubits)
+    h1 = hamiltonians.TFIM(nqubits, h=hfield)
 
     # Calculate target values (H1 ground state)
     target_state = h1.eigenvectors()[:, 0]
