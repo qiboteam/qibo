@@ -27,7 +27,7 @@ def main(nqubits, hfield, T, dt, solver, save):
 
     Args:
         nqubits (int): Number of qubits in the system.
-        hfield (float): TFIM transverse field h value.
+        hfield (float): Transverse field Ising model h-field h value.
         T (float): Total time of the adiabatic evolution.
         dt (float): Time step used for integration.
         solver (str): Solver used for integration.
@@ -41,8 +41,7 @@ def main(nqubits, hfield, T, dt, solver, save):
     target_energy = h1.eigenvalues()[0].numpy().real
 
     # Check ground state
-    state_energy = (target_state.numpy().conj() *
-                    (h1 @ target_state).numpy()).sum()
+    state_energy = callbacks.Energy(h1)(target_state).numpy()
     np.testing.assert_allclose(state_energy.real, target_energy)
 
     energy = callbacks.Energy(h1)
