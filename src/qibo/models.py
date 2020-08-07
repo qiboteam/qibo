@@ -300,6 +300,7 @@ class AdiabaticEvolution(StateEvolution):
 
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
+        self.opt_history = {"params": [], "loss": []}
 
         self._schedule = None
         self._param_schedule = None
@@ -366,6 +367,8 @@ class AdiabaticEvolution(StateEvolution):
         final_state = super(AdiabaticEvolution, self).execute(params[-1])
         loss = self.h1.expectation(final_state, normalize=True)
         if self.opt_messages:
+            self.opt_history["params"].append(params)
+            self.opt_history["loss"].append(loss)
             print(f"Params: {params}  -  <H1> = {loss}")
         return loss
 

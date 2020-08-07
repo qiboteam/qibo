@@ -1,7 +1,6 @@
 """Adiabatic evolution scheduling optimization for the Ising Hamiltonian."""
 import argparse
 import numpy as np
-import matplotlib.pyplot as plt
 from qibo import callbacks, hamiltonians, models
 
 
@@ -13,19 +12,21 @@ parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--method", default="BFGS", type=str)
 parser.add_argument("--maxiter", default=None, type=int)
+parser.add_argument("--save", action="store_true")
 
 
-def main(nqubits, hfield, T, dt, solver, method, maxiter):
+def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
     """Optimizes the scheduling of the adiabatic evolution.
 
     Args:
-        nqubits: Number of qubits in the system.
-        hfield: TFIM transverse field h value.
-        T: Total time of the adiabatic evolution.
-        dt: Time step used for integration.
-        solver: Solver used for integration.
-        method: Optimization method.
-        maxiter: Maximum iterations for scipy solvers.
+        nqubits (int): Number of qubits in the system.
+        hfield (float): TFIM transverse field h value.
+        T (float): Total time of the adiabatic evolution.
+        dt (float): Time step used for integration.
+        solver (str): Solver used for integration.
+        method (str): Optimization method.
+        maxiter (int): Maximum iterations for scipy solvers.
+        save (bool): Whether to save optimization history.
     """
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
@@ -53,6 +54,13 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter):
     overlap = np.abs((target_state.numpy().conj() * final_state.numpy()).sum())
     print("Target energy:", target_energy)
     print("Overlap:", overlap)
+
+    if save:
+        evolution.opt_history["loss"].append(target_energy)
+        np.save(f"optparams/linears_opt_n{nqubits}_loss.npy",
+                evolution.opt_history["loss"])
+        np.save(f"optparams/linears_opt_n{nqubits}_params.npy",
+                evolution.opt_history["params"])
 
 
 if __name__ == "__main__":

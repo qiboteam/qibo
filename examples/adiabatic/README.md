@@ -38,3 +38,26 @@ plot the overlap between the evolved state and the ground state of H<sub>1</sub>
 We see that at the end of evolution the evolved state reaches the ground state.
 
 ![dynamics](images/dynamics_n4T4.0.png)
+
+
+## Optimizing scheduling
+
+An example of scheduling function optimization can be run using the `optimize.py`
+script. This assumes a linear scheduling s(t)=t/T and optimizes the total time T
+using the H<sub>1</sub> energy as the loss function. The following options are
+supported:
+
+- `nqubits` (int): Number of qubits in the system.
+- `hfield` (float): TFIM transverse field h value.
+- `T` (float): Total time of the adiabatic evolution.
+- `dt` (float): Time step used for integration.
+- `solver` (str): Solver used for integration.
+- `method` (str): Optimization method.
+- `maxiter` (int): Maximum iterations for scipy solvers.
+- `save` (bool): Whether to save optimization history.
+
+The following plots show how the T parameter (left) and the loss function
+change during optimization. We see that when T is increase sufficiently the
+energy approximates the target energy of H<sub>1</sub> ground state.
+
+![dynamics](images/optlinears_n4.png)
