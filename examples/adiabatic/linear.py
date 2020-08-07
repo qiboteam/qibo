@@ -1,8 +1,12 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from qibo import callbacks, hamiltonians, models
+matplotlib.rcParams['mathtext.fontset'] = 'cm'
+matplotlib.rcParams['font.family'] = 'STIXGeneral'
+matplotlib.rcParams["font.size"] = 18
 
 
 parser = argparse.ArgumentParser()
@@ -11,9 +15,10 @@ parser.add_argument("--hfield", default=4, type=float)
 parser.add_argument("--T", default=1, type=float)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
+parser.add_argument("--save", action="store_true")
 
 
-def main(nqubits, hfield, T, dt, solver):
+def main(nqubits, hfield, T, dt, solver, save):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian.
 
     Plots how the <H1> energy and the overlap with the actual ground state
@@ -21,11 +26,12 @@ def main(nqubits, hfield, T, dt, solver):
     Linear scheduling is used.
 
     Args:
-        nqubits: Number of qubits in the system.
-        hfield: TFIM transverse field h value.
-        T: Total time of the adiabatic evolution.
-        dt: Time step used for integration.
-        solver: Solver used for integration.
+        nqubits (int): Number of qubits in the system.
+        hfield (float): TFIM transverse field h value.
+        T (float): Total time of the adiabatic evolution.
+        dt (float): Time step used for integration.
+        solver (str): Solver used for integration.
+        save (bool): Whether to save the plots.
     """
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
@@ -46,19 +52,25 @@ def main(nqubits, hfield, T, dt, solver):
                                           callbacks=[energy, overlap])
     final_psi = evolution(T=T)
 
+    # Plots
     tt = np.linspace(0, T, int(T / dt) + 1)
-
+    plt.figure(figsize=(12, 4))
     plt.subplot(121)
-    plt.plot(tt, energy[:], linewidth=2.0)
-    plt.axhline(y=target_energy, color="red", linewidth=2.0)
+    plt.plot(tt, energy[:], linewidth=2.0, label="Evolved state")
+    plt.axhline(y=target_energy, color="red", linewidth=2.0, label="Ground state")
     plt.xlabel("$t$")
     plt.ylabel("$H_1$")
+    plt.legend()
 
     plt.subplot(122)
     plt.plot(tt, overlap[:], linewidth=2.0)
     plt.xlabel("$t$")
     plt.ylabel("Overlap")
-    plt.show()
+
+    if save:
+        plt.savefig(f"images/dynamics_n{nqubits}T{T}.png", bbox_inches="tight")
+    else:
+        plt.show()
 
 
 if __name__ == "__main__":
