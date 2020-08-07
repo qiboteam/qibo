@@ -822,13 +822,15 @@ unitary evolution using the full state vector. For example:
     from qibo import hamiltonians, models
 
     # Define evolution model under the non-interacting sum(Z) Hamiltonian
-    # for total time T=3
+    # with time step dt=3
     nqubits = 4
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), T=3)
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=3)
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    # Get the final state
+    # Get the final state for a single time step
     final_state = evolve(initial_state)
+    # Get the final state after T=9 (three time steps)
+    final_state = evolve(T=9, initial_state)
 
 
 When studying dynamics people are usually interested not only in the final state
@@ -841,10 +843,11 @@ can track how <X> changes as follows:
     from qibo import callbacks
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
     observable = callbacks.Energy(hamiltonians.X(nqubits))
-    # Evolve for time T=1 using the above callback and a time step of dt=1e-3
-    evolve = models.StateEvolution(hamiltonians.Z(nqubits), T=1, dt=1e-3,
+    # Create evolution object using the above callback and a time step of dt=1e-3
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
                                    callbacks=[observable])
-    final_state = evolve(initial_state)
+    # Evolve for total time T=1
+    final_state = evolve(T=1, initial_state=initial_state)
 
     print(observable[:])
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
@@ -869,8 +872,8 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     nqubits = 4
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
-    evolve = models.StateEvolution(ham, T=1, dt=1e-3)
-    final_state = evolve(initial_state)
+    evolve = models.StateEvolution(ham, dt=1e-3)
+    final_state = evolve(T=1, initial_state)
 
 
 Note that in this case specifying a time step ``dt`` size is required for
@@ -902,11 +905,11 @@ Here is an example of adiabatic evolution simulation:
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=0)
     # Define the interpolation scheduling
-    s = lambda t: t / T
+    s = lambda t: t
     # Define evolution model
-    evolve = models.AdiabaticEvolution(h0, h1, s, T, solver="rk4")
+    evolve = models.AdiabaticEvolution(h0, h1, s, solver="rk4")
     # Evolve using the Runge-Kutta solver to get the final state
-    final_state = evolve()
+    final_state = evolve(T=T)
 
 
 If the initial state is not specified the ground state of the easy Hamiltonian
@@ -927,15 +930,19 @@ Optimization is similar to what is described in the
     h1 = hamiltonians.TFIM(3)
     # Define scheduling function with a free variational parameter ``p``
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
-    # Define an evolution model with T=1 and dt=1e-2
-    evolution = models.AdiabaticEvolution(h0, h1, sp, T=1, dt=1e-2)
-    # Find the optimal value for ``p`` starting from ``p = 0.5``
-    best, params = evolution.minimize(0.5, method="BFGS", options={'disp': True})
+    # Define an evolution model with dt=1e-2
+    evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
+    # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
+    initial_guess = [0.5, 1]
+    best, params = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
-    print(params) # prints the optimal value of ``p``
+    print(params) # prints the optimal values for the parameters.
 
-Note that the parametrized scheduling function should satisfy the properties
-s(0) = 0 and s(T) = 1 by definition, otherwise errors will be raised.
+Note that the ``minimize`` method optimizes both the free parameters in the
+definition of ``s`` as well as the total evolution time ``T``. The initial guess
+for ``T`` should be the last value of the given ``initial_guess`` array.
+The parametrized scheduling function should satisfy the properties s(0) = 0
+and s(1) = 1 by definition, otherwise errors will be raised.
 
 
 How to modify the simulation precision?

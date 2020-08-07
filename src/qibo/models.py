@@ -342,7 +342,8 @@ class AdiabaticEvolution(StateEvolution):
 
     def set_hamiltonian(self, T):
         def hamiltonian(t):
-            st = self.schedule(t / T)
+            # Disable warning that ``schedule`` is not Callable
+            st = self.schedule(t / T) # pylint: disable=E1102
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 
