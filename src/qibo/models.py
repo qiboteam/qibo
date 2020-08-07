@@ -203,8 +203,6 @@ class StateEvolution:
             evolve under.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
-            Not required if the Hamiltonian is time-independent and the
-            exponential solver is used.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
 
@@ -215,19 +213,21 @@ class StateEvolution:
             from qibo import models, hamiltonians
             # create critical (h=1.0) TFIM Hamiltonian for three qubits
             hamiltonian = hamiltonians.TFIM(3, h=1.0)
-            # initialize evolution model for total time T=1
-            evolve = models.StateEvolution(hamiltonian, T=1)
+            # initialize evolution model with step dt=1
+            evolve = models.StateEvolution(hamiltonian, dt=1)
             # initialize state to |+++>
             initial_state = np.ones(8) / np.sqrt(8)
-            # execute evolution
+            # execute evolution for total time T=dt=1
             final_state = evolve(initial_state)
+            # execute evolution for total time T=4
+            final_state2 = evolve(T=4, initial_state)
     """
 
     from qibo import solvers
 
-    def __init__(self, hamiltonian, dt=None, solver="exp", callbacks=[]):
+    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
-        if dt is not None and dt <= 0:
+        if dt <= 0:
             raise ValueError(f"Time step dt should be positive but is {dt}.")
         self.dt = dt
         self.solver = self.solvers.factory[solver](self.dt, hamiltonian)
@@ -245,10 +245,7 @@ class StateEvolution:
             Final state vector a ``tf.Tensor``.
         """
         if T is None:
-            if self.dt is None:
-                raise ValueError("Total time T should be specified if dt is None.")
             T = self.dt
-
         state = self._cast_initial_state(initial_state)
         self.solver.t = 0 # initialize solver to t=0
         nsteps = int(T / self.solver.dt)
@@ -283,7 +280,6 @@ class AdiabaticEvolution(StateEvolution):
         h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution.
-        T (float): Total time to evolve for. Initial time is t=0.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
@@ -315,6 +311,9 @@ class AdiabaticEvolution(StateEvolution):
     @property
     def schedule(self):
         """Returns scheduling as a function of time."""
+        if self._schedule is None:
+            raise ValueError("Cannot access scheduling function before setting "
+                             "its free parameters.")
         return self._schedule
 
     @schedule.setter
@@ -384,6 +383,8 @@ class AdiabaticEvolution(StateEvolution):
         Args:
             initial_parameters (np.ndarray): Initial guess for the variational
                 parameters that are optimized.
+                The last element of the given array should correspond to the
+                guess for the total evolution time T.
             method (str): The desired minimization method.
                 One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
                 any of the methods supported by
