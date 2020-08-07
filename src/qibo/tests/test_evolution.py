@@ -134,14 +134,24 @@ def test_state_evolution_errors():
 
 
 def test_adiabatic_evolution_errors():
-    """Test ``ValueError``s  for ``AdiabaticEvolution`` model."""
-    # Hamiltonians with different number of qubits
+    """Test errors of ``AdiabaticEvolution`` model."""
+    # Hamiltonians of bad type
     h0 = hamiltonians.X(3)
+    s = lambda t: t
+    with pytest.raises(TypeError):
+        adev = models.AdiabaticEvolution(h0, lambda t: h0, s, dt=1e-2)
     h1 = hamiltonians.TFIM(2)
+    with pytest.raises(TypeError):
+        adev = models.AdiabaticEvolution(lambda t: h1, h1, s, dt=1e-2)
+    # Hamiltonians with different number of qubits
     with pytest.raises(ValueError):
-        adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    # s(0) != 0
+        adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # s with three arguments
     h0 = hamiltonians.X(2)
+    s = lambda t, a, b: t + a + b
+    with pytest.raises(ValueError):
+        adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # s(0) != 0
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, lambda t: t + 1, dt=1e-2)
     # s(T) != 0

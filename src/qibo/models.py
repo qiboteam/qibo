@@ -278,17 +278,27 @@ class AdiabaticEvolution(StateEvolution):
     Args:
         h0 (:class:`qibo.hamiltonians.Hamiltonian`): Easy Hamiltonian.
         h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
+            These Hamiltonians should be time-independent.
         s (callable): Function of time that defines the scheduling of the
-            adiabatic evolution.
+            adiabatic evolution. Can be either a function of time s(t) or a
+            function with two arguments s(t, p) where p corresponds to a vector
+            of parameters to be optimized.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
     """
     from qibo import optimizers
+    from qibo import hamiltonians
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
+        if not isinstance(h0, self.hamiltonians.Hamiltonian):
+            raise TypeError(f"h0 should be a hamiltonians.Hamiltonian object "
+                             "but is {type(h0)}.")
+        if not isinstance(h1, self.hamiltonians.Hamiltonian):
+            raise TypeError(f"h1 should be a hamiltonians.Hamiltonian object "
+                             "but is {type(h1)}.")
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
                              "".format(h0.nqubits, h1.nqubits))
@@ -304,10 +314,14 @@ class AdiabaticEvolution(StateEvolution):
 
         self._schedule = None
         self._param_schedule = None
-        if s.__code__.co_argcount > 1: # given ``s`` has undefined parameters
-            self._param_schedule = s
-        else: # given ``s`` is a function of time only
+        nparams = s.__code__.co_argcount
+        if nparams == 1: # given ``s`` is a function of time only
             self.schedule = s
+        elif nparams == 2: # given ``s`` has undefined parameters
+            self._param_schedule = s
+        else:
+            raise ValueError(f"Scheduling function shoud take one or two "
+                              "arguments but it takes {nparams}.")
 
     @property
     def schedule(self):
