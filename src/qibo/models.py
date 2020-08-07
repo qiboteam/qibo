@@ -302,6 +302,9 @@ class AdiabaticEvolution(StateEvolution):
         self.h0 = h0
         self.h1 = h1
 
+        # Flag to control if loss messages are shown during optimization
+        self.opt_messages = False
+
         self._schedule = None
         self._param_schedule = None
         if s.__code__.co_argcount > 1: # given ``s`` has undefined parameters
@@ -362,7 +365,8 @@ class AdiabaticEvolution(StateEvolution):
         self.set_parameters(params)
         final_state = super(AdiabaticEvolution, self).execute(params[-1])
         loss = self.h1.expectation(final_state, normalize=True)
-        print(f"Params: {params}  -  Loss: {loss}")
+        if self.opt_messages:
+            print(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
     def _nploss(self, params):
@@ -373,7 +377,8 @@ class AdiabaticEvolution(StateEvolution):
         loss = self._loss(params).numpy()
         return loss
 
-    def minimize(self, initial_parameters, method="BFGS", options=None):
+    def minimize(self, initial_parameters, method="BFGS", options=None,
+                 messages=False):
         """Optimize the free parameters of the scheduling function.
 
         Args:
@@ -384,8 +389,11 @@ class AdiabaticEvolution(StateEvolution):
                 any of the methods supported by
                 `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
             options (dict): a dictionary with options for the different optimizers.
+            messages (bool): If ``True`` the loss evolution is shown during
+                optimization.
         """
         import numpy as np
+        self.opt_messages = messages
         if method == "sgd":
             loss = self._loss
         else:

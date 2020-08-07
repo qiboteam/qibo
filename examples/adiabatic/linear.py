@@ -22,6 +22,7 @@ def main(nqubits, hfield, T, dt, solver):
 
     Args:
         nqubits: Number of qubits in the system.
+        hfield: TFIM transverse field h value.
         T: Total time of the adiabatic evolution.
         dt: Time step used for integration.
         solver: Solver used for integration.
