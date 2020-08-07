@@ -15,3 +15,4 @@ physics problems.
     tutorials/qsvd/README.md
     tutorials/autoencoder/README.md    
     tutorials/hash-grover/README.md
+    tutorials/adiabatic/README.md
