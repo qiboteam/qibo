@@ -61,3 +61,13 @@ change during optimization. We see that when T is increase sufficiently the
 energy approximates the target energy of H<sub>1</sub> ground state.
 
 ![dynamics](images/optlinears_n4.png)
+
+The scheduling function s(t) may contain other free parameters that are
+optimized together with the total time T. For example the following plots shows
+the optimization for a scheduling ansatz of the form
+s(t) = p sqrt(t) + (1 - p) t, where p is a free parameter to be optimized.
+The left column shows how the free parameters change during optimization while
+the right column shows the final form of s(t) (top) and how the loss changes
+during optimization (bottom).
+
+![dynamics](images/optparams_n4.png)
