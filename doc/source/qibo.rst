@@ -145,10 +145,10 @@ all the gates in the group.
 Time evolution
 ^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.models.StateEvolution
+.. autoclass:: qibo.evolution.StateEvolution
     :members:
     :member-order: bysource
-.. autoclass:: qibo.models.AdiabaticEvolution
+.. autoclass:: qibo.evolution.AdiabaticEvolution
     :members:
     :member-order: bysource
 

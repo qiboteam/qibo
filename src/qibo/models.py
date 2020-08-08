@@ -3,6 +3,7 @@ if BACKEND_NAME != "tensorflow": # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
+from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
 
@@ -141,6 +142,8 @@ class VQE(object):
             initial_parameters = np.random.uniform(0, 2, 1)
             vqe.minimize(initial_parameters)
     """
+    from qibo import optimizers
+
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
         self.circuit = circuit
@@ -173,14 +176,7 @@ class VQE(object):
             from qibo import K
             loss = K.function(loss)
 
-        if method == 'cma': # pragma: no cover
-            # Genetic optimizer
-            import cma
-            r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
-            result = r[1].result.fbest
-            parameters = r[1].result.xbest
-
-        elif method == 'sgd':
+        if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
@@ -189,175 +185,12 @@ class VQE(object):
                                        'gates because gradients are not '
                                        'supported in the custom kernels.')
 
-            sgd_options = {"nepochs": 1000000,
-                           "nmessage": 1000,
-                           "optimizer": "Adagrad",
-                           "learning_rate": 0.001}
-            if options is not None:
-                sgd_options.update(options)
-
-            # proceed with the training
-            from qibo import K
-            vparams = K.Variable(initial_state)
-            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
-              learning_rate=sgd_options["learning_rate"])
-
-            def opt_step():
-                with K.GradientTape() as tape:
-                    l = loss(vparams)
-                grads = tape.gradient(l, [vparams])
-                optimizer.apply_gradients(zip(grads, [vparams]))
-                return l
-
-            if compile:
-                opt_step = K.function(opt_step)
-
-            for e in range(sgd_options["nepochs"]):
-                l = opt_step()
-                if e % sgd_options["nmessage"] == 1:
-                    print('ite %d : loss %f' % (e, l.numpy()))
-
-            result = loss(vparams).numpy()
-            parameters = vparams.numpy()
-
+            result, parameters = self.optimizers.optimize(loss, initial_state,
+                                                          "sgd", options,
+                                                          compile)
         else:
-            # Newtonian approaches
-            import numpy as np
-            from scipy.optimize import minimize
-            n = self.hamiltonian.nqubits
-            m = minimize(lambda p: loss(p).numpy(), initial_state,
-                         method=method, options=options)
-            result = m.fun
-            parameters = m.x
+            result, parameters = self.optimizers.optimize(
+                lambda p: loss(p).numpy(), initial_state, method, options)
 
         self.circuit.set_parameters(parameters)
         return result, parameters
-
-
-class StateEvolution:
-    """Unitary time evolution of a state vector under a Hamiltonian.
-
-    Args:
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
-            evolve under.
-
-    Example:
-        ::
-
-            import numpy as np
-            from qibo import models, hamiltonians
-            # create critical (h=1.0) TFIM Hamiltonian for three qubits
-            hamiltonian = hamiltonians.TFIM(3, h=1.0)
-            # initialize evolution model
-            evolution = models.StateEvolution(hamiltonian)
-            # initialize state to |+++>
-            initial_state = np.ones(8) / np.sqrt(8)
-            # evolve the state for T=1
-            final_state = evolution(1, initial_state)
-    """
-
-    from qibo import solvers
-
-    def __init__(self, hamiltonian):
-        self.nqubits = hamiltonian.nqubits
-        self.hamiltonian = hamiltonian
-
-    def execute(self, total_time, dt=None, initial_state=None, solver="exp",
-                callbacks=[]):
-        """Runs unitary evolution for a given total time.
-
-        Args:
-            total_time (float): Total time to evolve for. Initial time is t=0.
-            dt (float): Time step to use for the numerical integration of
-                Schrondiger's equation.
-                Not required if the Hamiltonian is time-independent and the
-                exponential solver is used.
-            initial_state (np.ndarray): Initial state of the evolution.
-            solver (str): Solver to use for integrating Schrodinger's equation.
-            callbacks (list): List of callbacks to calculate during evolution.
-
-        Returns:
-            Final state vector a ``tf.Tensor``.
-        """
-        state = self._cast_initial_state(initial_state)
-        if dt is None:
-            dt = total_time
-
-        solver = self.solvers.factory[solver](dt, self.hamiltonian)
-        nsteps = int(total_time / solver.dt)
-        for callback in callbacks:
-            callback.append(callback(state))
-        for _ in range(nsteps):
-            state = solver(state)
-            for callback in callbacks:
-                callback.append(callback(state))
-        return state
-
-    def __call__(self, total_time, dt=None, initial_state=None, solver="exp",
-                 callbacks=[]):
-        """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
-        return self.execute(total_time, dt, initial_state, solver, callbacks)
-
-    def _cast_initial_state(self, initial_state=None):
-        """Casts initial state as a Tensorflow tensor."""
-        if initial_state is None:
-            raise ValueError("StateEvolution cannot be used without initial "
-                             "state.")
-        return SimpleCircuit._cast_initial_state(self, initial_state)
-
-
-class AdiabaticEvolution(StateEvolution):
-    """Adiabatic evolution of a state vector under the following Hamiltonian:
-
-    .. math::
-        H(t) = (1 - s(t)) H_0 + s(t) H_1
-
-    Args:
-        h0 (:class:`qibo.hamiltonians.Hamiltonian`): Easy Hamiltonian.
-        h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
-        s (callable): Function of time that defines the scheduling of the
-            adiabatic evolution.
-    """
-
-    def __init__(self, h0, h1, s):
-        if h0.nqubits != h1.nqubits:
-            raise ValueError("H0 has {} qubits while H1 has {}."
-                             "".format(h0.nqubits, h1.nqubits))
-        if s(0) != 0:
-            raise ValueError("s(0) should be 0 but is {}.".format(s(0)))
-        self.nqubits = h0.nqubits
-        self.s = s
-        self.h0 = h0
-        self.h1 = h1
-
-    # disable pylint warning because ``hamiltonian`` is defined as an
-    # attribute given by user in ``StateEvolution``
-    def hamiltonian(self, t): # pylint: disable=E0202
-        """Calculates the Hamiltonian at a given time.
-
-        Args:
-            t (float): Time value.
-
-        Returns:
-            :class:`qibo.hamiltonians.Hamiltonian` object corresponding to the
-            evolution Hamiltonian at the given time.
-        """
-        return (1 - self.s(t)) * self.h0 + self.s(t) * self.h1
-
-    def execute(self, total_time, *args, **kwargs):
-        """"""
-        st = self.s(total_time)
-        if st != 1:
-            raise ValueError("s(T) should be 1 but is {}.".format(st))
-        return super(AdiabaticEvolution, self).execute(total_time, *args,
-                                                       **kwargs)
-
-    def _cast_initial_state(self, initial_state=None):
-        """Casts initial state as a Tensorflow tensor.
-
-        If initial state is not given the ground state of ``h0`` is used, which
-        is the common practice in adiabatic evolution.
-        """
-        if initial_state is None:
-            return self.h0.eigenvectors()[:, 0]
-        return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
