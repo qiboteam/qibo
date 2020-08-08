@@ -12,7 +12,7 @@ parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--method", default="Powell", type=str)
 parser.add_argument("--maxiter", default=None, type=int)
-parser.add_argument("--save", action="store_true")
+parser.add_argument("--save", default=None, type=str)
 
 
 def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
@@ -24,9 +24,10 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
         T (float): Total time of the adiabatic evolution.
         dt (float): Time step used for integration.
         solver (str): Solver used for integration.
-        method (str): Optimization method.
-        maxiter (int): Maximum iterations for scipy solvers.
-        save (bool): Whether to save optimization history.
+        method (str): Which scipy optimizer to use.
+        maxiter (int): Maximum iterations for scipy optimizer.
+        save (str): Name to use for saving optimization history.
+            If ``None`` history will not be saved.
     """
     h0 = hamiltonians.X(nqubits)
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
@@ -41,7 +42,7 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
 
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
                                           solver=solver)
-    options = {"maxiter": maxiter}
+    options = {"maxiter": maxiter, "disp": True}
     energy, parameters = evolution.minimize([T], method=method, options=options,
                                             messages=True)
 
@@ -55,9 +56,9 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
 
     if save:
         evolution.opt_history["loss"].append(target_energy)
-        np.save(f"optparams/linears_opt_n{nqubits}_loss.npy",
+        np.save(f"optparams/{save}_n{nqubits}_loss.npy",
                 evolution.opt_history["loss"])
-        np.save(f"optparams/linears_opt_n{nqubits}_params.npy",
+        np.save(f"optparams/{save}_n{nqubits}_params.npy",
                 evolution.opt_history["params"])
 
 

@@ -26,7 +26,7 @@ A simple adiabatic evolution example can be run using the `linear.py` script.
 This supports the following options:
 
 - `nqubits` (int): Number of qubits in the system.
-- `hfield` (float): Transverse field Ising model h-field h value.
+- `hfield` (float): Transverse field Ising model (`qibo.hamiltonians.TFIM`) h-field h value.
 - `T` (int): Total time of the adiabatic evolution.
 - `dt` (float): Time step used for integration.
 - `solver` (str): Solver used for integration.
@@ -48,19 +48,20 @@ using the H<sub>1</sub> energy as the loss function. The following options are
 supported:
 
 - `nqubits` (int): Number of qubits in the system.
-- `hfield` (float): Transverse field Ising model h-field h value.
+- `hfield` (float): Transverse field Ising model (`qibo.hamiltonians.TFIM`) h-field h value.
 - `T` (float): Total time of the adiabatic evolution.
 - `dt` (float): Time step used for integration.
 - `solver` (str): Solver used for integration.
-- `method` (str): Optimization method.
-- `maxiter` (int): Maximum iterations for scipy solvers.
-- `save` (bool): Whether to save optimization history.
+- `method` (str): Which scipy optimizer to use.
+- `maxiter` (int): Maximum iterations for scipy optimizer.
+- `save` (str): Name to use for saving optimization history.
+    If ``None`` history will not be saved.
 
 The following plots show how the T parameter (left) and the loss function
 change during optimization. We see that when T is increase sufficiently the
 energy approximates the target energy of H<sub>1</sub> ground state.
 
-![dynamics](images/optlinears_n4.png)
+![dynamics](images/linears_powell_n4.png)
 
 The scheduling function s(t) may contain other free parameters that are
 optimized together with the total time T. For example the following plots shows

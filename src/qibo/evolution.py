@@ -224,5 +224,9 @@ class AdiabaticEvolution(StateEvolution):
 
         result, parameters = optimizers.optimize(loss, initial_parameters,
                                                  method, options)
+        num_types = (int, float, complex, np.ndarray)
+        if isinstance(parameters, num_types): # pragma: no cover
+            # some optimizers like ``Powell`` return number instead of list
+            parameters = [parameters]
         self.set_parameters(parameters)
         return result, parameters
