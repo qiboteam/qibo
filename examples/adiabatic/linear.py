@@ -49,7 +49,7 @@ def main(nqubits, hfield, T, dt, solver, save):
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
                                           solver=solver,
                                           callbacks=[energy, overlap])
-    final_psi = evolution(T=T)
+    final_psi = evolution(final_time=T)
 
     # Plots
     tt = np.linspace(0, T, int(T / dt) + 1)

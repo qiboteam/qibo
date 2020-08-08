@@ -38,20 +38,20 @@ class StateEvolution:
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
 
-    def execute(self, final_time, initial_state=None):
+    def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
 
         Args:
-            T (float): Total time to evolve for. Initial time is t=0.
-                If ``None`` one ``dt`` time step is used.
+            final_time (float): Final time of evolution.
+            start_time (float): Initial time of evolution. Defaults to t=0.
             initial_state (np.ndarray): Initial state of the evolution.
 
         Returns:
             Final state vector a ``tf.Tensor``.
         """
         state = self._cast_initial_state(initial_state)
-        self.solver.t = 0 # initialize solver to t=0
-        nsteps = int(final_time / self.solver.dt)
+        self.solver.t = start_time
+        nsteps = int((final_time - start_time) / self.solver.dt)
         for callback in self.callbacks:
             callback.append(callback(state))
         for _ in range(nsteps):
@@ -60,9 +60,9 @@ class StateEvolution:
                 callback.append(callback(state))
         return state
 
-    def __call__(self, final_time, initial_state=None):
+    def __call__(self, final_time, start_time=0.0, initial_state=None):
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
-        return self.execute(final_time, initial_state)
+        return self.execute(final_time, start_time, initial_state)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
@@ -144,10 +144,11 @@ class AdiabaticEvolution(StateEvolution):
             raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
-    def execute(self, final_time, initial_state=None):
+    def execute(self, final_time, start_time=0, initial_state=None):
         """"""
-        self.set_hamiltonian(final_time)
-        return super(AdiabaticEvolution, self).execute(final_time, initial_state)
+        self.set_hamiltonian(final_time - start_time)
+        return super(AdiabaticEvolution, self).execute(
+            final_time, start_time, initial_state)
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
