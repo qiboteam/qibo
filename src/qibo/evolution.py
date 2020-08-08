@@ -144,8 +144,11 @@ class AdiabaticEvolution(StateEvolution):
             raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
-    def execute(self, final_time, start_time=0, initial_state=None):
+    def execute(self, final_time, start_time=0.0, initial_state=None):
         """"""
+        if start_time != 0:
+            raise NotImplementedError("Adiabatic evolution supports only t=0 "
+                                      "as initial time.")
         self.set_hamiltonian(final_time - start_time)
         return super(AdiabaticEvolution, self).execute(
             final_time, start_time, initial_state)

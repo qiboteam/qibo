@@ -157,6 +157,10 @@ def test_adiabatic_evolution_errors():
     # s(T) != 0
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, lambda t: t / 2, dt=1e-2)
+    # Non-zero ``start_time``
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
+    with pytest.raises(NotImplementedError):
+        final_state = adev(final_time=2, start_time=1)
     # execute without specifying variational parameters
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)

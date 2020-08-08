@@ -828,7 +828,7 @@ unitary evolution using the full state vector. For example:
     # Define initial state as |++++>
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     # Get the final state after time t=2
-    final_state = evolve(final_time=2, initial_state)
+    final_state = evolve(final_time=2, initial_state=initial_state)
 
 
 When studying dynamics people are usually interested not only in the final state
@@ -871,7 +871,7 @@ a :class:`qibo.hamiltonians.Hamiltonian` in the
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
     evolve = models.StateEvolution(ham, dt=1e-3)
-    final_state = evolve(final_time=1, initial_state)
+    final_state = evolve(final_time=1, initial_state=initial_state)
 
 
 The above script will still use the exact time evolution operator with the
@@ -914,11 +914,19 @@ will be used, as it is common for adiabatic evolution. For proper scheduling
 and total evolution time the ``final_state`` should approximate the ground state
 of the "hard" Hamiltonian. Callbacks may also be used as in the previous example.
 
-The adiabatic evolution model accepts parametrized scheduling functions and
-provides the functionality required to optimize the free parameters so that
-the final state approximates the ground state of the "hard" Hamiltonian.
-Optimization is similar to what is described in the
-:ref:`How to write a VQE? <vqe-example>` example and can be done as follows:
+The scheduling function ``s`` should be a callable that accepts one (s(t)) or
+two (s(t, p)) arguments. The first argument accepts values in [0, 1] and
+corresponds to the ratio ``t / final_time`` during evolution. The second
+optional argument is a vector of free parameters that can be optimized. The
+function should, by definition, satisfy the properties s(0, p) = 0 and
+s(1, p) = 1 for any p, otherwise errors will be raised.
+
+The free parameters ``p`` of the scheduling function can be optimized using
+the :meth:`qibo.evolution.AdiabaticEvolution.minimize` method. The parameters
+are optimized so that the final state of the adiabatic evolution approximates
+the ground state of the "hard" Hamiltonian. Optimization is similar to what is
+described in the :ref:`How to write a VQE? <vqe-example>` example and can be
+done as follows:
 
 .. code-block::  python
 
@@ -935,11 +943,10 @@ Optimization is similar to what is described in the
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
 
-Note that the ``minimize`` method optimizes both the free parameters in the
-definition of ``s`` as well as the total evolution time ``T``. The initial guess
-for ``T`` should be the last value of the given ``initial_guess`` array.
-The parametrized scheduling function should satisfy the properties s(0) = 0
-and s(1) = 1 by definition, otherwise errors will be raised.
+Note that the ``minimize`` method optimizes both the free parameters ``p`` of
+the scheduling function as well as the total evolution time. The initial guess
+for the total evolution time should be the last value of the given
+``initial_guess`` array.
 
 
 How to modify the simulation precision?
