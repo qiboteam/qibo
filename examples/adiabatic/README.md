@@ -71,4 +71,4 @@ The left column shows how the free parameters change during optimization while
 the right column shows the final form of s(t) (top) and how the loss changes
 during optimization (bottom).
 
-![dynamics](images/optparams_n4.png)
+![dynamics](images/sqrts_powell_n4.png)
