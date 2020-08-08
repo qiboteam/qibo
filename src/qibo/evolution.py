@@ -1,4 +1,5 @@
 """Models for time evolution of state vectors."""
+import numpy as np
 from qibo import solvers, optimizers, hamiltonians
 from qibo.tensorflow import circuit
 
@@ -136,10 +137,10 @@ class AdiabaticEvolution(StateEvolution):
     def schedule(self, f):
         """Sets scheduling s(t) function."""
         s0 = f(0)
-        if s0 < -self.ATOL or s0 > self.ATOL:
+        if np.abs(s0) > self.ATOL:
             raise ValueError(f"s(0) should be 0 but is {s0}.")
         s1 = f(1)
-        if s1 < 1 - self.ATOL or s1 > 1 + self.ATOL:
+        if np.abs(s1 - 1) > self.ATOL:
             raise ValueError(f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
