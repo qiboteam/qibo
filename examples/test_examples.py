@@ -33,6 +33,12 @@ def raise_timeout(signum, frame):
     raise TimeoutError
 
 
+def get_code(script_name="main.py"):
+    code = open(script_name, "r").read()
+    end = code.find('\nif __name__ ==')
+    return code[:end] + '\n\nmain(**args)'
+
+
 @pytest.mark.parametrize("N", [3])
 @pytest.mark.parametrize("p", [0, 0.001])
 @pytest.mark.parametrize("shots", [100])
@@ -90,3 +96,52 @@ def test_hash_grover(h_value, collisions, b):
     main = importlib.import_module("hash-grover.main")
     with timeout(TIMEOUT):
         main.main(h_value, collisions, b)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize(("nqubits", "subsize"), [(3, 1), (4, 2)])
+@pytest.mark.parametrize("nlayers", [1, 2])
+@pytest.mark.parametrize("nshots", [1000])
+@pytest.mark.parametrize("RY", [False, True])
+def test_qsvd(nqubits, subsize, nlayers, nshots, RY, method="Powell"):
+    path = os.path.join(base_dir, "qsvd")
+    os.chdir(path)
+    main = importlib.import_module("qsvd.main")
+    with timeout(TIMEOUT):
+        main.main(nqubits, subsize, nlayers, nshots, RY, method)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize("dataset", ["tricrown", "circle", "square"])
+@pytest.mark.parametrize("layers", [2, 3])
+def test_reuploading_classifier(dataset, layers):
+    path = os.path.join(base_dir, "reuploading_classifier")
+    sys.path[-1] = path
+    os.chdir(path)
+    from reuploading_classifier import main
+    with timeout(TIMEOUT):
+        main.main(dataset, layers)
+
+
+@pytest.mark.parametrize("data", [(2, 0.4, 0.05, 0.1, 1.9)])
+@pytest.mark.parametrize("bins", [8, 16])
+def test_unary(data, bins, M=10, shots=1000):
+    del sys.modules["functions"]
+    path = os.path.join(base_dir, "unary")
+    sys.path[-1] = path
+    os.chdir(path)
+    from unary import main
+    with timeout(TIMEOUT):
+        main.main(data, bins, M, shots)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("circuit_type", ["qft", "variational"])
+def test_benchmarks(nqubits, circuit_type):
+    path = os.path.join(base_dir, "benchmarks")
+    sys.path[-1] = path
+    os.chdir(path)
+    from benchmarks import main
+    with timeout(TIMEOUT):
+        main.main(nqubits, circuit_type)
