@@ -148,7 +148,7 @@ def test_benchmarks(nqubits_list, type):
     header = ("import argparse\nimport os\nimport time"
               "\nfrom typing import Dict, List, Optional"
               "\nimport tensorflow as tf"
-              "\nimport qibo\nimport circuits\nimport utils")
+              "\nimport qibo\nimport circuits\nimport utils\n\n")
     import qibo
     qibo.set_backend("custom")
     code = header + code[start: end] + "\n\nmain(**args)"
