@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from qibo import callbacks, hamiltonians, models
 matplotlib.rcParams['mathtext.fontset'] = 'cm'
 matplotlib.rcParams['font.family'] = 'STIXGeneral'
-matplotlib.rcParams["font.size"] = 18
+matplotlib.rcParams["font.size"] = 14
 
 
 parser = argparse.ArgumentParser()
