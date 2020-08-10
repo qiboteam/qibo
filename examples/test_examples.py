@@ -100,7 +100,8 @@ def test_grover3sat(nqubits):
 def test_hash_grover(h_value, collisions, b):
     # remove ``functions`` module from 3SAT because the same name is used
     # for a different module in the Hash
-    del sys.modules["functions"]
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
     args = locals()
     path = os.path.join(base_dir, "hash-grover")
     sys.path[-1] = path
@@ -134,7 +135,8 @@ def test_reuploading_classifier(dataset, layers):
 @pytest.mark.parametrize("bins", [8, 16])
 def test_unary(data, bins, M=10, shots=1000):
     args = locals()
-    del sys.modules["functions"]
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
     path = os.path.join(base_dir, "unary")
     sys.path[-1] = path
     os.chdir(path)
