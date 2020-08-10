@@ -8,6 +8,12 @@ base_dir = os.path.join(os.getcwd(), "examples")
 sys.path.append(base_dir)
 
 
+@pytest.fixture(autouse=True)
+def max_time_setter(request):
+    request.function.__globals__['max_time'] = request.config.getoption(
+        "--timeout")
+
+
 @contextmanager
 def timeout(time):
     """Auxiliary timeout method. Register an alarm for a given
@@ -32,7 +38,7 @@ def raise_timeout(signum, frame):
     raise TimeoutError
 
 
-def run_script(args, script_name="main.py", max_time=2):
+def run_script(args, script_name="main.py"):
     """Executes external Python script with given arguments.
 
     Args:
@@ -152,7 +158,7 @@ def test_benchmarks(nqubits_list, type):
     import qibo
     qibo.set_backend("custom")
     code = header + code[start: end] + "\n\nmain(**args)"
-    with timeout(2):
+    with timeout(max_time):
         exec(code, {"args": args})
 
 
