@@ -282,6 +282,22 @@ def test_circuit_switch_to_density_matrix(backend):
 
 
 @pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+def test_circuit_reexecution(backend):
+    """Test re-executing a circuit with `gates.NoiseChnanel`."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = models.Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.NoiseChannel(0, px=0.5))
+    c.add(gates.NoiseChannel(1, pz=0.3))
+    final_rho = c().numpy()
+    final_rho2 = c().numpy()
+    np.testing.assert_allclose(final_rho, final_rho2)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
 def test_general_channel(backend):
     """Test `gates.GeneralChannel`."""
     original_backend = qibo.get_backend()
