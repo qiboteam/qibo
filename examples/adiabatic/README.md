@@ -67,12 +67,12 @@ additional free parameter. The following options are supported:
 - `save` (str): Name to use for saving optimization history.
     If ``None`` history will not be saved.
 
-The following plots show correspond to the optimization of a 3rd order
-polynomial for s(t). The first plot shows the final form of s(t) after
-optimization. The second plot shows how the loss function changed during
-optimization. The second line of plots shows the dynamics of the H<sub>1</sub>
-energy and the overlap with the actual ground state when using the optimized
-schedule s(t) and total time T.
+The following plots correspond to the optimization of a 3rd order polynomial
+for s(t). The first plot shows the final form of s(t) after optimization.
+The second plot shows how the loss function changes during optimization.
+The second line of plots shows the dynamics of the H<sub>1</sub> energy and
+the overlap with the actual ground state when using the optimized schedule s(t)
+and total time T.
 
 ![optdynamics](images/poly3_powell_n4.png)
 
