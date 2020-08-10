@@ -7,7 +7,7 @@ from qibo import callbacks, hamiltonians, models
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--hfield", default=1, type=float)
-parser.add_argument("--T", default=1, type=float)
+parser.add_argument("--params", default="1", type=str)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--method", default="Powell", type=str)
@@ -15,13 +15,23 @@ parser.add_argument("--maxiter", default=None, type=int)
 parser.add_argument("--save", default=None, type=str)
 
 
-def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
+def spolynomial(t, params):
+    """General polynomial scheduling satisfying s(0)=0 and s(1)=1"""
+    f = sum(p * t ** (i + 2) for i, p in enumerate(params))
+    f += (1 - np.sum(params)) * t
+    return f
+
+
+def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     """Optimizes the scheduling of the adiabatic evolution.
+
+    The ansatz for s(t) is a polynomial whose order is defined by the length of
+    ``params`` given.
 
     Args:
         nqubits (int): Number of qubits in the system.
         hfield (float): Transverse field Ising model h-field h value.
-        T (float): Total time of the adiabatic evolution.
+        params (str): Initial guess for the free parameters.
         dt (float): Time step used for integration.
         solver (str): Solver used for integration.
         method (str): Which scipy optimizer to use.
@@ -40,10 +50,11 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
     state_energy = callbacks.Energy(h1)(target_state).numpy()
     np.testing.assert_allclose(state_energy.real, target_energy)
 
-    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
+    evolution = models.AdiabaticEvolution(h0, h1, spolynomial, dt=dt,
                                           solver=solver)
     options = {"maxiter": maxiter, "disp": True}
-    energy, parameters = evolution.minimize([T], method=method, options=options,
+    energy, parameters = evolution.minimize(params, method=method,
+                                            options=options,
                                             messages=True)
 
     print("\nBest energy found:", energy)
@@ -64,4 +75,5 @@ def main(nqubits, hfield, T, dt, solver, method, maxiter, save):
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
+    args["params"] = [float(x) for x in args["params"].split(",")]
     main(**args)

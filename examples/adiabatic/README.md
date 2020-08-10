@@ -39,17 +39,27 @@ We see that at the end of evolution the evolved state reaches the ground state.
 
 ![dynamics](images/dynamics_n4T4.0.png)
 
+To gain more insight on the importance of the total evolution time T, we repeat
+the evolution for various choices of T and check how it affects the final
+energy and overlap. This is shown in the following plot
+
+![Tplots](images/linears_T15plots_n4.png)
+
+We see that the best overlap for this example is obtained for T=4.
+
 
 ## Optimizing scheduling
 
 An example of scheduling function optimization can be run using the `optimize.py`
-script. This assumes a linear scheduling s(t)=t/T and optimizes the total time T
-using the H<sub>1</sub> energy as the loss function. The following options are
-supported:
+script. This optimizes a polynomial ansatz for s(t) using the H<sub>1</sub>
+energy as the loss function. The total evolution time T is also optimized as an
+additional free parameter. The following options are supported:
 
 - `nqubits` (int): Number of qubits in the system.
 - `hfield` (float): Transverse field Ising model (`qibo.hamiltonians.TFIM`) h-field h value.
-- `T` (float): Total time of the adiabatic evolution.
+- `params` (str): Initial guess for free parameters. The numbers should be
+    seperated using `,`. The last parameter is the initial guess for the total
+    time T. The rest parameters are used to define the polynomial for s(t).
 - `dt` (float): Time step used for integration.
 - `solver` (str): Solver used for integration.
 - `method` (str): Which scipy optimizer to use.
@@ -57,18 +67,15 @@ supported:
 - `save` (str): Name to use for saving optimization history.
     If ``None`` history will not be saved.
 
-The following plots show how the T parameter (left) and the loss function
-change during optimization. We see that when T is increase sufficiently the
-energy approximates the target energy of H<sub>1</sub> ground state.
+The following plots show correspond to the optimization of a 3rd order
+polynomial for s(t). The first plot shows the final form of s(t) after
+optimization. The second plot shows how the loss function changed during
+optimization. The second line of plots shows the dynamics of the H<sub>1</sub>
+energy and the overlap with the actual ground state when using the optimized
+schedule s(t) and total time T.
 
-![dynamics](images/linears_powell_n4.png)
+![optdynamics](images/poly3_powell_n4.png)
 
-The scheduling function s(t) may contain other free parameters that are
-optimized together with the total time T. For example the following plots shows
-the optimization for a scheduling ansatz of the form
-s(t) = p sqrt(t) + (1 - p) t, where p is a free parameter to be optimized.
-The left column shows how the free parameters change during optimization while
-the right column shows the final form of s(t) (top) and how the loss changes
-during optimization (bottom).
-
-![dynamics](images/sqrts_powell_n4.png)
+Note that the optimized 3rd order polynomial s(t) is capable of reaching a
+good approximation of the ground state energy after total time T=2 which is
+less than the T=4 required for the linear s(t) analyzed in the previous section.
