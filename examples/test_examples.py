@@ -11,7 +11,7 @@ sys.path.append(base_dir)
 @pytest.fixture(autouse=True)
 def max_time_setter(request):
     request.function.__globals__['max_time'] = request.config.getoption(
-        "--timeout")
+        "--examples-timeout")
 
 
 @contextmanager
