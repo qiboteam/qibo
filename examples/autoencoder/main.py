@@ -3,64 +3,8 @@
 import numpy as np
 from qibo.models import Circuit
 from qibo import hamiltonians, gates, models
-from qibo import matrices
 from scipy.optimize import minimize
 import argparse
-
-
-def multikron(matrices):
-    h = 1
-    for m in matrices:
-        h = np.kron(h, m)
-    return h
-
-
-def ising(nqubits, lamb=1.0):
-    """Implements the Ising model. The function uses the Identity and the
-    Z-Pauli and X-Pauli matrices, and builds the final Hamiltonian:
-
-    .. math::
-        H = \sum_{i=0}^{nqubits} sz_i sz_{i+1} +
-                                    \\lamb \cdot \sum_{i=0}^{nqubits} sx_i.
-
-    Args:
-        nqubits (int): number of quantum bits.
-        lamb (float): coefficient for the X component (default 1.0).
-
-    Returns:
-        ``Hamiltonian`` object for the Ising model.
-    """
-    eye = matrices.I
-    sz = matrices.Z
-    sx = matrices.X
-    ising = sum(multikron((sz if i in {j % nqubits, (j+1) % nqubits} else eye
-                           for j in range(nqubits))) for i in range(nqubits))
-    ising += lamb * sum(multikron((sx if i == j % nqubits else eye
-                                   for j in range(nqubits))) for i in range(nqubits))
-    return hamiltonians.Hamiltonian(nqubits, ising)
-
-
-def encoder_hamiltonian(nqubits, ncompress):
-    """Implements the Encoding hamiltonian. The function uses the Identity and
-    Z-Pauli matrices:
-
-    .. math::
-        H = 1/2 * \sum_{i=0}^{ncompress} 1 - sz_i
-
-    Args:
-        nqubits (int): number of quantum bits.
-        ncompress (int): number of compressed/discarded qubits.
-
-    Returns:
-        ``Hamiltonian`` object for the Encoding hamiltonian.
-    """
-    eye = matrices.I
-    sz = matrices.Z
-    encoder = sum(multikron((sz if i == j else eye
-                             for j in range(nqubits))) for i in range(ncompress))
-    encoder += ncompress * np.eye(2 ** nqubits, dtype=eye.dtype)
-    encoder /= 2
-    return hamiltonians.Hamiltonian(nqubits, encoder)
 
 
 def main(nqubits, layers, compress, lambdas):
@@ -74,8 +18,7 @@ def main(nqubits, layers, compress, lambdas):
         Returns:
             Value of the cost function.
         """
-        circuit = Circuit(nqubits)
-
+        circuit = models.Circuit(nqubits)
         for l in range(layers):
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta=0))
@@ -90,8 +33,7 @@ def main(nqubits, layers, compress, lambdas):
             circuit.add(gates.RY(q, theta=0))
 
         cost = 0
-        # this will change all thetas to the appropriate values
-        circuit.set_parameters(params)
+        circuit.set_parameters(params) # this will change all thetas to the appropriate values
         for i in range(len(ising_groundstates)):
             final_state = circuit(np.copy(ising_groundstates[i]))
             cost += encoder.expectation(final_state).numpy().real
@@ -104,11 +46,11 @@ def main(nqubits, layers, compress, lambdas):
 
     nparams = 2 * nqubits * layers + nqubits
     initial_params = np.random.uniform(0, 2*np.pi, nparams)
-    encoder = encoder_hamiltonian(nqubits, compress)
+    encoder = 0.5 * (compress + hamiltonians.Z(nqubits))
 
     ising_groundstates = []
     for lamb in lambdas:
-        ising_ham = ising(nqubits, lamb=lamb)
+        ising_ham = -1 * hamiltonians.TFIM(nqubits, h=lamb)
         ising_groundstates.append(ising_ham.eigenvectors()[0])
 
     count = [0]
@@ -124,7 +66,6 @@ if __name__ == "__main__":
     parser.add_argument("--nqubits", default=4, type=int)
     parser.add_argument("--layers", default=2, type=int)
     parser.add_argument("--compress", default=2, type=int)
-    parser.add_argument(
-        "--lambdas", default=[0.9, 0.95, 1.0, 1.05, 1.10], type=list)
+    parser.add_argument("--lambdas", default=[0.9, 0.95, 1.0, 1.05, 1.10], type=list)
     args = parser.parse_args()
     main(**vars(args))
