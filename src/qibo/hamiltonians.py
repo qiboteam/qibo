@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import matrices
-from qibo import K
-from abc import ABCMeta, abstractmethod
+from qibo import matrices, K
+from qibo.config import DTYPES
+from abc import ABCMeta
 
 
 NUMERIC_TYPES = (np.int, np.float, np.complex,
@@ -10,112 +10,123 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.float64, np.complex64, np.complex128)
 
 
-def isclassinstance(o, w):
-    """Check if objects are from the same base class."""
-    return (isinstance(o, w.__class__) or
-            issubclass(o.__class__, w.__class__) or
-            issubclass(w.__class__, o.__class__))
-
-
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
     Args:
         nqubits (int): number of quantum bits.
+        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
+            computational basis as an array of shape
+            ``(2 ** nqubits, 2 ** nqubits)``.
     """
     __metaclass__ = ABCMeta
 
-    def __init__(self, nqubits):
+    def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
             raise RuntimeError(f'nqubits must be an integer')
-        self.hamiltonian = None
+        shape = tuple(matrix.shape)
+        if shape != 2 * (2 ** nqubits,):
+            raise ValueError(f"The Hamiltonian is defined for {nqubits} qubits "
+                              "while the given matrix has shape {shape}.")
+
         self.nqubits = nqubits
+        self.matrix = matrix
         self._eigenvalues = None
         self._eigenvectors = None
-
-    @abstractmethod
-    def _build(self, *args, **kwargs):
-        """Implements the Hamiltonian construction."""
-        pass
 
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
         if self._eigenvalues is None:
-            self._eigenvalues = K.linalg.eigvalsh(self.hamiltonian)
+            self._eigenvalues = K.linalg.eigvalsh(self.matrix)
         return self._eigenvalues
 
     def eigenvectors(self):
-        """Computes the eigenvectors for the Hamiltonian."""
+        """Computes a tensor with the eigenvectors for the Hamiltonian."""
         if self._eigenvectors is None:
             self._eigenvalues, self._eigenvectors = K.linalg.eigh(
-                self.hamiltonian)
+                self.matrix)
         return self._eigenvectors
 
-    def expectation(self, state):
+    def exp(self, a):
+        """Computes a tensor corresponding to exp(a * H).
+
+        Args:
+            a (complex): Complex number to multiply Hamiltonian before
+                exponentiation.
+        """
+        if self._eigenvectors is None:
+            return K.linalg.expm(a * self.matrix)
+        expd = K.linalg.diag(K.exp(a * self._eigenvalues))
+        ud = K.transpose(K.math.conj(self._eigenvectors))
+        return K.matmul(self._eigenvectors, K.matmul(expd, ud))
+
+    def expectation(self, state, normalize=False):
         """Computes the real expectation value for a given state.
+
         Args:
             state (array): the expectation state.
+            normalize (bool): If ``True`` the expectation value is divided
+                with the state's norm squared.
+
+        Returns:
+            Real number corresponding to the expectation value.
         """
-        a = K.math.conj(state)
-        b = K.tensordot(self.hamiltonian, state, axes=1)
-        n = K.math.real(K.reduce_sum(a*b))
-        return n
+        statec = K.math.conj(state)
+        hstate = self @ state
+        ev = K.math.real(K.reduce_sum(statec * hstate))
+        if normalize:
+            norm = K.reduce_sum(K.square(K.abs(state)))
+            return ev / norm
+        return ev
 
     def __add__(self, o):
         """Add operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o.hamiltonian
-            return r
+            new_matrix = self.matrix + o.matrix
+            return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
+            new_matrix = (self.matrix +
+                          o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype))
+            return self.__class__(self.nqubits, new_matrix)
         else:
             raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
                                       'not implemented.')
 
-    def __radd__(self, o):
+    def __radd__(self, o): # pragma: no cover
         """Right operator addition."""
         return self.__add__(o)
 
     def __sub__(self, o):
         """Subtraction operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o.hamiltonian
-            return r
-        elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
+            new_matrix = self.matrix - o.matrix
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, NUMERIC_TYPES): # pragma: no cover
+            new_matrix = (self.matrix -
+                          o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype))
+            return self.__class__(self.nqubits, new_matrix)
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
                                       'not implemented.')
 
     def __rsub__(self, o):
         """Right subtraction operator."""
-        if isclassinstance(o, self):
+        if isinstance(o, self.__class__): # pragma: no cover
             if self.nqubits != o.nqubits:
                 raise RuntimeError('Only hamiltonians with the same '
                                    'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o.hamiltonian - self.hamiltonian
-            return r
+            new_matrix = o.matrix - self.matrix
+            return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype) - \
-                self.hamiltonian
-            return r
+            new_matrix = (o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype)
+                          - self.matrix)
+            return self.__class__(self.nqubits, new_matrix)
         else:
             raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
                                       'not implemented.')
@@ -123,8 +134,8 @@ class Hamiltonian(object):
     def __mul__(self, o):
         """Multiplication to scalar operator."""
         if isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian * o
+            new_matrix = self.matrix * o
+            r = self.__class__(self.nqubits, new_matrix)
             if self._eigenvalues is not None:
                 if o.real >= 0:
                     r._eigenvalues = o * self._eigenvalues
@@ -133,10 +144,13 @@ class Hamiltonian(object):
             if self._eigenvectors is not None:
                 if o.real > 0:
                     r._eigenvectors = self._eigenvectors
-                elif o.real == 0:
+                elif o == 0:
                     r._eigenvectors = K.eye(
-                        self._eigenvectors.shape[0], dtype=self.hamiltonian.dtype)
+                        self._eigenvectors.shape[0], dtype=self.matrix.dtype)
             return r
+        elif isinstance(o, (np.ndarray, K.Tensor)):
+            new_matrix = self.matrix * K.cast(o, dtype=self.matrix.dtype)
+            return self.__class__(self.nqubits, new_matrix)
         else:
             raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
                                       'not implemented.')
@@ -145,14 +159,53 @@ class Hamiltonian(object):
         """Right scalar multiplication."""
         return self.__mul__(o)
 
+    def __matmul__(self, o):
+        """Matrix multiplication with other Hamiltonians or state vectors."""
+        if isinstance(o, self.__class__):
+            new_matrix = K.matmul(self.matrix, o.matrix)
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, (K.Tensor, np.ndarray)):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return K.matmul(self.matrix, o[:, K.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return K.matmul(self.matrix, o)
+            else:
+                raise ValueError(f'Cannot multiply Hamiltonian with '
+                                  'rank-{rank} tensor.')
+        else:
+            raise NotImplementedError(f'Hamiltonian matrix multiplication to '
+                                       '{type(o)} not implemented.')
 
-class XXZ(Hamiltonian):
-    """This class implements the Heisenberg XXZ model.
-    The mode uses the Pauli matrices and build the final
-    Hamiltonian:
+
+def _multikron(matrix_list):
+    """Calculates Kronecker product of a list of matrices.
+
+    Args:
+        matrices (list): List of matrices as ``np.ndarray``s.
+
+    Returns:
+        ``np.ndarray`` of the Kronecker product of all ``matrices``.
+    """
+    h = 1
+    for m in matrix_list:
+        h = np.kron(h, m)
+    return h
+
+
+def _build_spin_model(nqubits, matrix, condition):
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(_multikron((matrix if condition(i, j) else matrices.I
+                        for j in range(nqubits)))
+            for i in range(nqubits))
+    return h
+
+
+def XXZ(nqubits, delta=0.5):
+    """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
-        H = H_x + H_y + \\delta \cdot H_z.
+        H = \\sum _{i=0}^N \\left ( X_iX_{i + 1} + Y_iY_{i + 1} + \\delta Z_iZ_{i + 1} \\right ).
 
     Args:
         nqubits (int): number of quantum bits.
@@ -161,29 +214,75 @@ class XXZ(Hamiltonian):
     Example:
         ::
 
-            from qibo.hamiltonian import XXZ
+            from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+    hx = _build_spin_model(nqubits, matrices.X, condition)
+    hy = _build_spin_model(nqubits, matrices.Y, condition)
+    hz = _build_spin_model(nqubits, matrices.Z, condition)
+    matrix = hx + hy + delta * hz
+    return Hamiltonian(nqubits, matrix)
 
-    def __init__(self, delta=0.5, **kwargs):
-        """Initialize XXZ model."""
-        Hamiltonian.__init__(self, **kwargs)
-        hx = self._build(matrices.X)
-        hy = self._build(matrices.Y)
-        hz = self._build(matrices.Z)
-        self.hamiltonian = hx + hy + delta * hz
 
-    def _build(self, *args, **kwargs):
-        """Builds the Heisenber model for a given operator sigma"""
-        hamiltonian = 0
-        eye = matrices.I
-        n = self.nqubits
-        for i in range(n):
-            h = 1
-            for j in range(n):
-                if i == j % n or i == (j+1) % n:
-                    h = np.kron(args[0], h)
-                else:
-                    h = np.kron(eye, h)
-            hamiltonian += h
-        return hamiltonian
+def _OneBodyPauli(nqubits, matrix):
+    """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+    condition = lambda i, j: i == j % nqubits
+    ham = _build_spin_model(nqubits, matrix, condition)
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)
+
+
+def X(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N X_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.X)
+
+
+def Y(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Y_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.Y)
+
+
+def Z(nqubits):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Z_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+    """
+    return _OneBodyPauli(nqubits, matrices.Z)
+
+
+def TFIM(nqubits, h=0.0):
+    """Transverse field Ising model with periodic boundary conditions.
+
+    .. math::
+        H = - \\sum _{i=0}^N \\left ( Z_i Z_{i + 1} + h X_i \\right ).
+
+    Args:
+        nqubits (int): number of quantum bits.
+        h (float): value of the transverse field.
+    """
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+    ham = _build_spin_model(nqubits, matrices.Z, condition)
+    if h != 0:
+        condition = lambda i, j: i == j % nqubits
+        ham += _build_spin_model(nqubits, matrices.X, condition)
+    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    return Hamiltonian(nqubits, ham)

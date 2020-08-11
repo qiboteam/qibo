@@ -514,6 +514,9 @@ construction. For number of qubits higher than 30, the QFT can be distributed to
 multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
 the section :ref:`How to select hardware devices? <gpu-examples>`.
 
+
+.. vqe-example:
+
 How to write a VQE?
 -------------------
 
@@ -803,6 +806,147 @@ and the default ``noise_map`` will be used for those.
 Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
+
+
+How to simulate time evolution?
+-------------------------------
+
+Simulating the unitary time evolution of quantum states is useful in many
+physics applications including the simulation of adiabatic quantum computation.
+Qibo provides the :class:`qibo.models.StateEvolution` model that simulates
+unitary evolution using the full state vector. For example:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    # Define evolution model under the non-interacting sum(Z) Hamiltonian
+    # with time step dt=1e-1
+    nqubits = 4
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-1)
+    # Define initial state as |++++>
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    # Get the final state after time t=2
+    final_state = evolve(final_time=2, initial_state=initial_state)
+
+
+When studying dynamics people are usually interested not only in the final state
+vector but also observing how physical quantities change during the time
+evolution. This is possible using callbacks. For example, in the above case we
+can track how <X> changes as follows:
+
+.. code-block::  python
+
+    from qibo import callbacks
+    # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
+    observable = callbacks.Energy(hamiltonians.X(nqubits))
+    # Create evolution object using the above callback and a time step of dt=1e-3
+    evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
+                                   callbacks=[observable])
+    # Evolve for total time t=1
+    final_state = evolve(final_time=1, initial_state=initial_state)
+
+    print(observable[:])
+    # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
+
+
+Note that the time step ``dt=1e-3`` defines how often we calculate <X> during
+the evolution.
+
+In the above cases the exact time evolution operator (exponential of the Hamiltonian)
+was used to evolve the state vector. Because the evolution Hamiltonian is
+time-independent, the matrix exponentiation happens only once. It is possible to
+simulate time-dependent Hamiltonians by passing a function of time instead of
+a :class:`qibo.hamiltonians.Hamiltonian` in the
+:class:`qibo.models.StateEvolution` model. For example:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    # Defina a time dependent Hamiltonian
+    nqubits = 4
+    ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
+    # and pass it to the evolution model
+    evolve = models.StateEvolution(ham, dt=1e-3)
+    final_state = evolve(final_time=1, initial_state=initial_state)
+
+
+The above script will still use the exact time evolution operator with the
+exponentiation repeated for each time step. The integration method can
+be changed using the ``solver`` argument when executing. Currently the default
+exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
+are implemented.
+
+
+How to simulate adiabatic time evolution?
+-----------------------------------------
+
+Qibo provides the :class:`qibo.models.AdiabaticEvolution` model to simulate
+adiabatic time evolution. This is a special case of the
+:class:`qibo.models.StateEvolution` model analyzed in the previous example
+where the evolution Hamiltonian is interpolated between an initial "easy"
+Hamiltonian and a "hard" Hamiltonian that usually solves an optimization problem.
+Here is an example of adiabatic evolution simulation:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
+
+    nqubits = 4
+    T = 1 # total evolution time
+    # Define the easy and hard Hamiltonians
+    h0 = hamiltonians.X(nqubits)
+    h1 = hamiltonians.TFIM(nqubits, h=0)
+    # Define the interpolation scheduling
+    s = lambda t: t
+    # Define evolution model
+    evolve = models.AdiabaticEvolution(h0, h1, s, solver="rk4")
+    # Evolve using the Runge-Kutta solver to get the final state
+    final_state = evolve(final_time=T)
+
+
+If the initial state is not specified the ground state of the easy Hamiltonian
+will be used, as it is common for adiabatic evolution. For proper scheduling
+and total evolution time the ``final_state`` should approximate the ground state
+of the "hard" Hamiltonian. Callbacks may also be used as in the previous example.
+
+The scheduling function ``s`` should be a callable that accepts one (s(t)) or
+two (s(t, p)) arguments. The first argument accepts values in [0, 1] and
+corresponds to the ratio ``t / final_time`` during evolution. The second
+optional argument is a vector of free parameters that can be optimized. The
+function should, by definition, satisfy the properties s(0, p) = 0 and
+s(1, p) = 1 for any p, otherwise errors will be raised.
+
+The free parameters ``p`` of the scheduling function can be optimized using
+the :meth:`qibo.evolution.AdiabaticEvolution.minimize` method. The parameters
+are optimized so that the final state of the adiabatic evolution approximates
+the ground state of the "hard" Hamiltonian. Optimization is similar to what is
+described in the :ref:`How to write a VQE? <vqe-example>` example and can be
+done as follows:
+
+.. code-block::  python
+
+    # Define Hamiltonians
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(3)
+    # Define scheduling function with a free variational parameter ``p``
+    sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
+    # Define an evolution model with dt=1e-2
+    evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
+    # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
+    initial_guess = [0.5, 1]
+    best, params = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
+    print(best) # prints the best energy <H1> found from the final state
+    print(params) # prints the optimal values for the parameters.
+
+Note that the ``minimize`` method optimizes both the free parameters ``p`` of
+the scheduling function as well as the total evolution time. The initial guess
+for the total evolution time should be the last value of the given
+``initial_guess`` array.
 
 
 How to modify the simulation precision?

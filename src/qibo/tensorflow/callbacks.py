@@ -18,12 +18,12 @@ class Callback:
         self._nqubits = None
 
     @property
-    def nqubits(self) -> int:
+    def nqubits(self) -> int: # pragma: no cover
         """Total number of qubits in the circuit that the callback was added in."""
         return self._nqubits
 
     @nqubits.setter
-    def nqubits(self, n: int):
+    def nqubits(self, n: int): # pragma: no cover
         self._nqubits = n
 
     def __getitem__(self, k) -> tf.Tensor:
@@ -37,7 +37,7 @@ class Callback:
             return tf.stack(self._results[k])
         raise IndexError("Unrecognized type for index {}.".format(k))
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         raise NotImplementedError
 
     def append(self, result: tf.Tensor):
@@ -73,7 +73,7 @@ class PartialTrace(Callback):
     @nqubits.setter
     def nqubits(self, n: int):
         self._nqubits = n
-        if self.partition is None:
+        if self.partition is None: # pragma: no cover
             self.partition = list(range(n // 2 + n % 2))
 
         if len(self.partition) < n // 2:
@@ -119,6 +119,9 @@ class PartialTrace(Callback):
 class EntanglementEntropy(PartialTrace):
     """Von Neumann entanglement entropy callback.
 
+    .. math::
+        S = \\mathrm{Tr} \\left ( \\rho \\log _2 \\rho \\right )
+
     Args:
         partition (list): List with qubit ids that defines the first subsystem
             for the entropy calculation.
@@ -147,12 +150,6 @@ class EntanglementEntropy(PartialTrace):
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
 
-    def __init__(self, partition: Optional[List[int]] = None):
-        super(EntanglementEntropy, self).__init__()
-        self.partition = partition
-        self.rho_dim = None
-        self._traceout = None
-
     @classmethod
     def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
       """Calculates entropy by diagonalizing the density matrix."""
@@ -169,3 +166,87 @@ class EntanglementEntropy(PartialTrace):
         rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
         return self._entropy(rho)
+
+
+class Norm(Callback):
+    """State norm callback.
+
+    .. math::
+        \\mathrm{Norm} = \\left \\langle \\Psi | \\Psi \\right \\rangle
+        = \\mathrm{Tr} (\\rho )
+    """
+
+    @staticmethod
+    def norm(state: tf.Tensor, is_density_matrix: bool = False) -> tf.Tensor:
+        """"""
+        if is_density_matrix:
+            return tf.linalg.trace(state)
+        return tf.sqrt(tf.reduce_sum(tf.square(tf.abs(state))))
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        return self.norm(state, is_density_matrix)
+
+
+class Overlap(Callback):
+    """State overlap callback.
+
+    Calculates the overlap between the circuit state and a given target state:
+
+    .. math::
+        \\mathrm{Overlap} = |\\left \\langle \\Phi | \\Psi \\right \\rangle |
+
+    Args:
+        state (np.ndarray): Target state to calculate overlap with.
+        normalize (bool): If ``True`` the states are normalized for the overlap
+            calculation.
+    """
+
+    def __init__(self, state: Union[np.ndarray, tf.Tensor],
+                 normalize: bool = False):
+        super(Overlap, self).__init__()
+        self.statec = tf.math.conj(tf.cast(state, dtype=DTYPES.get('DTYPECPX')))
+        self.norm = None
+        if normalize:
+            self.norm = Norm.norm(self.statec)
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            raise NotImplementedError("Overlap callback is not implemented "
+                                      "for density matrices.")
+
+        overlap = tf.abs(tf.reduce_sum(self.statec * state))
+        if self.norm is not None:
+            norm = Norm.norm(state, is_density_matrix)
+            overlap = overlap / (norm * self.norm)
+        return overlap
+
+
+class Energy(Callback):
+    """Energy expectation value callback.
+
+    Calculates the expectation value of a given Hamiltonian as:
+
+    .. math::
+        \\left \\langle H \\right \\rangle =
+        \\left \\langle \\Psi | H | \\Psi \\right \\rangle
+        = \\mathrm{Tr} (\\rho H)
+
+    assuming that the state is normalized.
+
+    Args:
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian
+            object to calculate its expectation value.
+    """
+
+    def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):
+        super(Energy, self).__init__()
+        self.hamiltonian = hamiltonian
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            return tf.linalg.trace(tf.matmul(self.hamiltonian.matrix,
+                                             state))
+        return self.hamiltonian.expectation(state)

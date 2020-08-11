@@ -2,7 +2,6 @@ from qibo.models import Circuit
 from qibo import gates
 import numpy as np
 from datasets import create_dataset, create_target, fig_template, world_map_template
-from qibo.hamiltonians import Hamiltonian
 from qibo.config import matrices
 import tensorflow as tf
 from matplotlib.cm import get_cmap

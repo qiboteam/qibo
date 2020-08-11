@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo.models import Circuit
-from qibo import gates
-from qibo.hamiltonians import Hamiltonian
-from qibo import matrices
+from qibo import hamiltonians, gates, models
 from scipy.optimize import minimize
 import argparse
 
@@ -79,6 +77,7 @@ def main(nqubits, layers, compress, lambdas):
             Value of the cost function.
         """
         circuit = Circuit(nqubits)
+
         for l in range(layers):
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta=0))
@@ -115,6 +114,7 @@ def main(nqubits, layers, compress, lambdas):
 
     count = [0]
     result = minimize(lambda p: cost_function(p, count), initial_params, method='L-BFGS-B', options = {'maxiter' : 2.0e3, 'maxfun': 2.0e3})
+
     print('Final parameters: ',result.x)
     print('Final cost function: ',result.fun)
 

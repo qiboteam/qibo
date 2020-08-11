@@ -15,7 +15,13 @@ _______________________
 Models
 ------
 
-Qibo provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
+Qibo provides models for both the circuit based and the adiabatic quantum
+computation paradigms. Circuit based models include :ref:`generalpurpose` which
+allow defining arbitrary circuits and :ref:`applicationspecific` such as the
+Quantum Fourier Transform (:class:`qibo.models.QFT`) and the
+Variational Quantum Eigensolver (:class:`qibo.models.VQE`).
+Adiabatic quantum computation is simulated using the :ref:`timeevolution`
+of state vectors.
 
 The general purpose model is called ``Circuit`` and holds the list of gates
 that are applied to the state vector or density matrix. All ``Circuit`` models
@@ -26,13 +32,9 @@ In order to perform calculations and apply gates to a state vector a backend
 has to be used. Our current backend of choice is `Tensorflow <http://tensorflow.org/>`_
 and the corresponding ``Circuit`` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
 
-Currently there are two application specific models implemented,
-the Quantum Fourier Transform (:class:`qibo.models.QFT`) and
-the Variational Quantum Eigensolver (:class:`qibo.models.VQE`).
-
 .. _generalpurpose:
 
-General purpose models
+General circuit models
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.base.circuit.BaseCircuit
@@ -136,6 +138,20 @@ all the gates in the group.
     :members:
     :member-order: bysource
 
+
+
+.. _timeevolution:
+
+Time evolution
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.evolution.StateEvolution
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.evolution.AdiabaticEvolution
+    :members:
+    :member-order: bysource
+
 _______________________
 
 .. _Gates:
@@ -212,6 +228,20 @@ calculated inside the circuit is defined by adding a :class:`qibo.base.gates.Cal
 This can be added similarly to a standard gate and does not affect the state vector.
 
 .. automodule:: qibo.tensorflow.callbacks
+   :members:
+   :member-order: bysource
+
+
+.. _Solvers:
+
+Solvers
+-------
+
+Solvers are used to numerically calculate the time evolution of state vectors.
+They perform steps in time by integrating the time-dependent Schrodinger
+equation.
+
+.. automodule:: qibo.solvers
    :members:
    :member-order: bysource
 
