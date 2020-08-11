@@ -1,8 +1,9 @@
 from qibo.config import BACKEND_NAME
-if BACKEND_NAME != "tensorflow":
+if BACKEND_NAME != "tensorflow": # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
+from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
 
@@ -141,6 +142,8 @@ class VQE(object):
             initial_parameters = np.random.uniform(0, 2, 1)
             vqe.minimize(initial_parameters)
     """
+    from qibo import optimizers
+
     def __init__(self, circuit, hamiltonian):
         """Initialize circuit ansatz and hamiltonian."""
         self.circuit = circuit
@@ -173,62 +176,21 @@ class VQE(object):
             from qibo import K
             loss = K.function(loss)
 
-        if method == 'cma':
-            # Genetic optimizer
-            import cma
-            r = cma.fmin2(lambda p: loss(p).numpy(), initial_state, 1.7)
-            result = r[1].result.fbest
-            parameters = r[1].result.xbest
-
-        elif method == 'sgd':
+        if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
-                if not isinstance(gate, TensorflowGate):
+                if not isinstance(gate, TensorflowGate): # pragma: no cover
                     raise RuntimeError('SGD VQE requires native Tensorflow '
                                        'gates because gradients are not '
                                        'supported in the custom kernels.')
 
-            sgd_options = {"nepochs": 1000000,
-                           "nmessage": 1000,
-                           "optimizer": "Adagrad",
-                           "learning_rate": 0.001}
-            if options is not None:
-                sgd_options.update(options)
-
-            # proceed with the training
-            from qibo import K
-            vparams = K.Variable(initial_state)
-            optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
-              learning_rate=sgd_options["learning_rate"])
-
-            def opt_step():
-                with K.GradientTape() as tape:
-                    l = loss(vparams)
-                grads = tape.gradient(l, [vparams])
-                optimizer.apply_gradients(zip(grads, [vparams]))
-                return l
-
-            if compile:
-                opt_step = K.function(opt_step)
-
-            for e in range(sgd_options["nepochs"]):
-                l = opt_step()
-                if e % sgd_options["nmessage"] == 1:
-                    print('ite %d : loss %f' % (e, l.numpy()))
-
-            result = loss(vparams).numpy()
-            parameters = vparams.numpy()
-
+            result, parameters = self.optimizers.optimize(loss, initial_state,
+                                                          "sgd", options,
+                                                          compile)
         else:
-            # Newtonian approaches
-            import numpy as np
-            from scipy.optimize import minimize
-            n = self.hamiltonian.nqubits
-            m = minimize(lambda p: loss(p).numpy(), initial_state,
-                         method=method, options=options)
-            result = m.fun
-            parameters = m.x
+            result, parameters = self.optimizers.optimize(
+                lambda p: loss(p).numpy(), initial_state, method, options)
 
         self.circuit.set_parameters(parameters)
         return result, parameters
