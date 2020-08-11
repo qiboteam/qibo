@@ -1,6 +1,9 @@
 """
 Define the default circuit, constants and types.
 """
+import logging
+import blessings
+
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
 
@@ -66,7 +69,6 @@ if BACKEND_NAME == "tensorflow":
     matrices = _matrices.NumpyMatrices()
     tfmatrices = _matrices.TensorflowMatrices()
 
-
     def set_backend(backend='custom'):
         """Sets backend used to implement gates.
 
@@ -96,7 +98,6 @@ if BACKEND_NAME == "tensorflow":
         else:
             raise RuntimeError(f"Gate backend '{backend}' not supported.")
 
-
     def get_backend():
         """Get backend used to implement gates.
 
@@ -104,7 +105,6 @@ if BACKEND_NAME == "tensorflow":
             A string with the backend name.
         """
         return BACKEND['STRING']
-
 
     def set_precision(dtype='double'):
         """Set precision for states and gates simulation.
@@ -130,7 +130,6 @@ if BACKEND_NAME == "tensorflow":
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
 
-
     def get_precision():
         """Get precision for states and gates simulation.
 
@@ -138,7 +137,6 @@ if BACKEND_NAME == "tensorflow":
             A string with the precision name ('single', 'double').
         """
         return DTYPES['STRING']
-
 
     def set_device(device_name: str):
         """Set default execution device.
@@ -148,7 +146,7 @@ if BACKEND_NAME == "tensorflow":
                 '/{device type}:{device number}' where device type is one of
                 CPU or GPU.
         """
-        if not ALLOW_SWITCHERS and device_name != DEVICES['DEFAULT']: # pragma: no cover
+        if not ALLOW_SWITCHERS and device_name != DEVICES['DEFAULT']:  # pragma: no cover
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
         parts = device_name[1:].split(":")
@@ -165,7 +163,6 @@ if BACKEND_NAME == "tensorflow":
         with tf.device(device_name):
             tfmatrices.allocate_matrices()
 
-
     def get_device():
         """Get execution device.
 
@@ -177,3 +174,39 @@ if BACKEND_NAME == "tensorflow":
 
 else: # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
+
+
+# Configuration for logging mechanism
+t = blessings.Terminal()
+
+
+class CustomColorHandler(logging.StreamHandler):
+    """Custom color handler for logging algorithm."""
+
+    colors = {
+        logging.DEBUG: {'[Qibo|%(levelname)s]:': t.bold},
+        logging.INFO: {'[Qibo|%(levelname)s]:': t.bold_green},
+        logging.WARNING: {'[Qibo|%(levelname)s]:': t.bold_yellow},
+        logging.ERROR: {'[Qibo|%(levelname)s]:': t.bold_red, '%(message)s': t.bold},
+        logging.CRITICAL: {'[Qibo|%(levelname)s]:': t.bold_white_on_red, '%(message)s': t.bold},
+    }
+
+    def format(self, record):
+        """Format the record with specific color."""
+        levelcolors = self.colors[record.levelno]
+        fmt = '[Qibo|%(levelname)s]: %(message)s'
+        for s, subs in levelcolors.items():
+            fmt = fmt.replace(s, subs(s))
+        if self.formatter:
+            cls = type(self.formatter)
+            new_formatter = cls(fmt, self.formatter.datefmt,
+                                self.formatter._style)
+        else:
+            new_formatter = logging.Formatter(fmt)
+        return new_formatter.format(record)
+
+
+# allocate logger object
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(CustomColorHandler())
