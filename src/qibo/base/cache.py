@@ -4,6 +4,7 @@ Elements cached are the indices strings required for ``tf.einsum`` or the
 shapes and transposition orders required for ``tf.matmul``.
 """
 from qibo.base import gates as base_gates
+from qibo.config import logger
 from typing import List, Optional, Sequence
 
 
@@ -31,8 +32,12 @@ class BaseCache:
 
     @property
     def vector(self):
-        if self._vector is None:
-            raise NotImplementedError("Vector cache should be defined in __init__.")
+        try:
+            if self._vector is None:
+                raise NotImplementedError("Vector cache should be defined in __init__.")
+        except Exception as error:
+            logger.error(str(error))
+            raise
         return self._vector
 
     @property
@@ -64,11 +69,19 @@ class BaseCache:
 
     def _calculate_density_matrix(self):
         """Calculates `left` and `right` elements."""
-        raise NotImplementedError
+        try:
+            raise NotImplementedError
+        except Exception as error:
+            logger.error(str(error))
+            raise
 
     def _calculate_density_matrix_controlled(self):
         """Calculates `left0` and `right0` elements."""
-        raise NotImplementedError
+        try:
+            raise NotImplementedError
+        except Exception as error:
+            logger.error(str(error))
+            raise
 
 
 class DefaultEinsumCache(BaseCache):
@@ -107,16 +120,24 @@ class DefaultEinsumCache(BaseCache):
       self._vector = f"{self.input},{self.gate}->{self.output}"
 
     def _calculate_density_matrix(self):
-        if self.nqubits > len(self.rest):
-            raise NotImplementedError("Not enough einsum characters.")
+        try:
+            if self.nqubits > len(self.rest):
+                raise NotImplementedError("Not enough einsum characters.")
+        except Exception as error:
+            logger.error(str(error))
+            raise
 
         rest = self.rest[:self.nqubits]
         self._left = f"{self.input}{rest},{self.gate}->{self.output}{rest}"
         self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
     def _calculate_density_matrix_controlled(self):
-        if self.nqubits + 1 > len(self.rest):
-            raise NotImplementedError("Not enough einsum characters.")
+        try:
+            if self.nqubits + 1 > len(self.rest):
+                raise NotImplementedError("Not enough einsum characters.")
+        except Exception as error:
+            logger.error(str(error))
+            raise
         rest, c = self.rest[:self.nqubits], self.rest[self.nqubits]
         self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
         self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"

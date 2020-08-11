@@ -2,6 +2,7 @@
 import numpy as np
 from qibo import solvers, optimizers, hamiltonians
 from qibo.tensorflow import circuit
+from qibo.config import logger
 
 
 class StateEvolution:
@@ -187,7 +188,7 @@ class AdiabaticEvolution(StateEvolution):
         if self.opt_messages:
             self.opt_history["params"].append(params)
             self.opt_history["loss"].append(loss)
-            print(f"Params: {params}  -  <H1> = {loss}")
+            logger.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
     def _nploss(self, params):
