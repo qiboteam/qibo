@@ -6,5 +6,4 @@ scipy
 cma
 joblib
 matplotlib
-logging
 blessings
