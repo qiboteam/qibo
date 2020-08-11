@@ -9,7 +9,7 @@ import argparse
 
 def main(nqubits, layers, compress, lambdas):
 
-    def cost_function(params):
+    def cost_function(params, count):
         """Evaluates the cost function to be minimized.
 
         Args:
@@ -38,10 +38,9 @@ def main(nqubits, layers, compress, lambdas):
             final_state = circuit(np.copy(ising_groundstates[i]))
             cost += encoder.expectation(final_state).numpy().real
 
-        global count
-        if count%50 == 0:
-            print(count, cost/len(ising_groundstates))
-        count += 1
+        if count[0] % 50 == 0:
+            print(count[0], cost/len(ising_groundstates))
+        count[0] += 1
 
         return cost/len(ising_groundstates)
 
@@ -54,14 +53,15 @@ def main(nqubits, layers, compress, lambdas):
         ising_ham = -1 * hamiltonians.TFIM(nqubits, h=lamb)
         ising_groundstates.append(ising_ham.eigenvectors()[0])
 
-    result = minimize(cost_function, initial_params, method='L-BFGS-B',
-                      options = {'maxiter' : 2.0e3, 'maxfun': 2.0e3})
-    print('Final parameters: ',result.x)
-    print('Final cost function: ',result.fun)
+    count = [0]
+    result = minimize(lambda p: cost_function(p, count), initial_params,
+                      method='L-BFGS-B', options={'maxiter': 2.0e3, 'maxfun': 2.0e3})
+
+    print('Final parameters: ', result.x)
+    print('Final cost function: ', result.fun)
 
 
 if __name__ == "__main__":
-    count=0
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=4, type=int)
     parser.add_argument("--layers", default=2, type=int)
