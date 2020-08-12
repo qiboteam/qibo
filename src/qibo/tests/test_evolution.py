@@ -86,6 +86,7 @@ def test_state_evolution_final_state():
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
+    """Test state evolution using trotterization of ``LocalHamiltonian``."""
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
     prop = expm(-1j * dt * ham_matrix)

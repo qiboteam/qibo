@@ -2,7 +2,7 @@ from qibo import gates
 
 
 class Hamiltonian(object):
-    """This class implements the abstract Hamiltonian operator.
+    """Abstract Hamiltonian operator using full matrix representation.
 
     Args:
         nqubits (int): number of quantum bits.
@@ -152,6 +152,24 @@ class Hamiltonian(object):
 
 
 class LocalHamiltonian(object):
+    """Local Hamiltonian operator used for Trotterized time evolution.
+
+    Args:
+        terms (list): List of :class:`qibo.base.hamiltonians.Hamiltonian`
+            objects that correspond to the local operators. The total
+            Hamiltonian is the sum of all the terms in the list.
+
+    Example:
+        ::
+
+            from qibo import matrices, hamiltonians
+            # Create local term for critical TFIM Hamiltonian
+            matrix = np.kron(matrices.Z, matrices.Z) + np.kron(matrices.X, matrices.I)
+            term = hamiltonians.Hamiltonian(2, -matrix)
+            # Create a ``LocalHamiltonian`` object corresponding to a critical
+            # TFIM for 5 qubits
+            h = hamiltonians.LocalHamiltonian(5 * [term])
+    """
 
     def __init__(self, terms):
         for term in terms:
