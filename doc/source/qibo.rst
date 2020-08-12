@@ -181,7 +181,18 @@ _______________________
 Hamiltonians
 ------------
 
-We provide the following hamiltonians:
+The abstract Hamiltonian object of Qibo is:
+
+.. autoclass:: qibo.base.hamiltonians.Hamiltonian
+    :members:
+    :member-order: bysource
+
+If ``matrix`` is given as ``np.array`` then numpy is used for all the above
+calculations, while if ``matrix`` is given as a ``tf.Tensor`` then TensorFlow
+is used.
+
+In addition to the abstract model, we provide the following pre-coded
+Hamiltonians:
 
 .. automodule:: qibo.hamiltonians
    :members:
