@@ -77,7 +77,7 @@ def test_different_hamiltonian_addition(numpy):
 def test_hamiltonian_mul(numpy):
     """Test multiplication with ``np.array`` scalar."""
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
-    h2 = np.array(2) * h
+    h2 = h * np.array(2)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
 
 
