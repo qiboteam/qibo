@@ -60,7 +60,7 @@ class Hamiltonian(object):
             self._exp["result"] = self._calculate_exp(a)
         return self._exp["result"]
 
-    def expectation(self, state, normalize=False):
+    def expectation(self, state, normalize=False): # pragma: no cover
         """Computes the real expectation value for a given state.
 
         Args:
