@@ -189,10 +189,18 @@ class LocalHamiltonian(object):
         self._circuit = None
 
     def _terms(self, dt, odd=False):
+        """Generates exponentials of the Trotter decomposition.
+
+        Args:
+            dt (float): Time step to use for the decomposition.
+            odd (bool): If ``True`` it generates the exponentials for Hodd,
+                otherwise for Heven (see paper for details).
+        """
         for term in self.terms[int(odd)::2]:
             yield term.exp(dt / (2.0 - float(odd)))
 
     def _allterms(self, dt):
+        """Generates all terms for the 2nd order Trotter decomposition."""
         for term in self._terms(dt):
             yield term
         for term in self._terms(dt, odd=True):
@@ -216,11 +224,14 @@ class LocalHamiltonian(object):
         self._circuit.add(even())
 
     def circuit(self, dt):
-        """Returns a :class:`qibo.base.circuit.BaseCircuit` that implements a
-        single time step of the Trotterized evolution.
+        """2nd order Trotter decomposition time step circuit.
 
         Args:
             dt (float): Time step to use for Trotterization.
+
+        Returns:
+            :class:`qibo.base.circuit.BaseCircuit` that implements a single
+            time step of the Trotterized evolution.
         """
         if self._circuit is None:
             self._dt = dt
