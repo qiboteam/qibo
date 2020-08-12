@@ -164,21 +164,33 @@ class LocalHamiltonian(object):
         self.nqubits = len(terms)
         self.terms = terms
         self._dt = None
-        self._gates = []
+        self._circuit = None
+        self._create_circuit()
 
-    def trotter(self, dt):
-        if self._dt != dt:
-            # TODO: Use a Circuit instead of a gate list
-            self._dt = dt
-            self._gates = []
-            n = len(self.terms) - len(self.terms) % 2
-            terms = iter(self.terms[:n])
-            for i, term in enumerate(terms):
-                i1, i2, i3 = 2 * i, 2 * i + 1, (2 * i + 2) % self.nqubits
-                self._gates.append(gates.Unitary(term.exp(dt / 2.0), i1, i2))
-                self._gates.append(gates.Unitary(next(terms).exp(dt), i2, i3))
-                self._gates.append(gates.Unitary(term.exp(dt / 2.0), i1, i2))
-            if len(self.terms) % 2:
-                e = self.terms[-1].exp(dt)
-                self._gates.append(gates.Unitary(e, self.nqubits - 1, 0))
-        return self._gates
+    def _create_circuit(self):
+        import numpy as np
+        from qibo.models import Circuit
+        self._circuit = Circuit(self.nqubits)
+        m = np.eye(4)
+        for i in range(self.nqubits // 2):
+            i1, i2, i3 = 2 * i, 2 * i + 1, (2 * i + 2) % self.nqubits
+            self._circuit.add(gates.Unitary(m, i1, i2))
+            self._circuit.add(gates.Unitary(m, i2, i3))
+            self._circuit.add(gates.Unitary(m, i1, i2))
+        if self.nqubits % 2:
+            self._circuit.add(gates.Unitary(m, self.nqubits - 1, 0))
+
+    def _unitaries(self, dt):
+        n = len(self.terms) - len(self.terms) % 2
+        terms = iter(self.terms[:n])
+        for i, term in enumerate(terms):
+            yield term.exp(dt / 2.0)
+            yield next(terms).exp(dt)
+            yield term.exp(dt / 2.0)
+        if len(self.terms) % 2:
+            yield self.terms[-1].exp(dt)
+
+    def circuit(self, dt):
+        if dt != self._dt:
+            self._circuit.set_parameters(list(self._unitaries(dt)))
+        return self._circuit

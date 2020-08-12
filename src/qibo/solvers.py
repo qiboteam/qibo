@@ -28,11 +28,9 @@ class BaseSolver:
 class TrotterizedExponential(BaseSolver):
 
     def __call__(self, state):
-        gates = self.hamiltonian(self.t).trotter(self.dt)
+        circuit = self.hamiltonian(self.t).circuit(self.dt)
         self.t += self.dt
-        for gate in gates:
-            state = gate(state)
-        return state
+        return circuit(state)
 
 
 class Exponential(BaseSolver):
