@@ -881,8 +881,9 @@ exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
 are implemented.
 
 Qibo also provides functionality to use Trotter steps for local Hamiltonians
-with up to two-qubit interactions. This is possible by creating the Hamiltonian
-as a :class:`qibo.base.hamiltonians.LocalHamiltonian` object. For example:
+with up to two-qubit interactions. The implementation is based in Section 4.1
+of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_ and is implemented
+via the :class:`qibo.base.hamiltonians.LocalHamiltonian` object. For example:
 
 .. code-block::  python
 

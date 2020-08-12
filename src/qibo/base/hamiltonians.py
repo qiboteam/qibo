@@ -154,6 +154,11 @@ class Hamiltonian(object):
 class LocalHamiltonian(object):
     """Local Hamiltonian operator used for Trotterized time evolution.
 
+    The Hamiltonian represented is a sum of two-qubit interaction terms as the
+    example analyzed in Section 4.1 of
+    `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+    Periodic boundary conditions are assumed.
+
     Args:
         terms (list): List of :class:`qibo.base.hamiltonians.Hamiltonian`
             objects that correspond to the local operators. The total
@@ -174,7 +179,7 @@ class LocalHamiltonian(object):
         for term in terms:
             if not issubclass(type(term), Hamiltonian):
                 raise TypeError("Invalid term type {}.".format(type(term)))
-            if term.nqubits not in {1, 2}:
+            if term.nqubits != 2:
                 raise ValueError("LocalHamiltonian terms should target one or "
                                  "two qubits but {} was given."
                                  "".format(term.nqubits))
@@ -195,6 +200,7 @@ class LocalHamiltonian(object):
             self._circuit.add(gates.Unitary(next(unitaries), i1, i2))
         if self.nqubits % 2:
             self._circuit.add(gates.Unitary(next(unitaries), self.nqubits - 1, 0))
+
 
     def _unitaries(self, dt):
         """Yields unitary matrices of the Trotterized evolution."""
