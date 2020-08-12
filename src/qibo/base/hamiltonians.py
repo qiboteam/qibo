@@ -165,20 +165,18 @@ class LocalHamiltonian(object):
         self.terms = terms
         self._dt = None
         self._circuit = None
-        self._create_circuit()
 
-    def _create_circuit(self):
-        import numpy as np
+    def _create_circuit(self, dt):
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits)
-        m = np.eye(4)
+        unitaries = iter(self._unitaries(dt))
         for i in range(self.nqubits // 2):
             i1, i2, i3 = 2 * i, 2 * i + 1, (2 * i + 2) % self.nqubits
-            self._circuit.add(gates.Unitary(m, i1, i2))
-            self._circuit.add(gates.Unitary(m, i2, i3))
-            self._circuit.add(gates.Unitary(m, i1, i2))
+            self._circuit.add(gates.Unitary(next(unitaries), i1, i2))
+            self._circuit.add(gates.Unitary(next(unitaries), i2, i3))
+            self._circuit.add(gates.Unitary(next(unitaries), i1, i2))
         if self.nqubits % 2:
-            self._circuit.add(gates.Unitary(m, self.nqubits - 1, 0))
+            self._circuit.add(gates.Unitary(next(unitaries), self.nqubits - 1, 0))
 
     def _unitaries(self, dt):
         n = len(self.terms) - len(self.terms) % 2
@@ -191,6 +189,10 @@ class LocalHamiltonian(object):
             yield self.terms[-1].exp(dt)
 
     def circuit(self, dt):
-        if dt != self._dt:
+        if self._circuit is None:
+            self._dt = dt
+            self._create_circuit(dt)
+        elif dt != self._dt:
+            self._dt = dt
             self._circuit.set_parameters(list(self._unitaries(dt)))
         return self._circuit
