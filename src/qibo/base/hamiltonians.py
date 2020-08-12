@@ -185,6 +185,7 @@ class LocalHamiltonian(object):
         self._circuit = None
 
     def _create_circuit(self, dt):
+        """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits)
         unitaries = iter(self._unitaries(dt))
@@ -197,6 +198,7 @@ class LocalHamiltonian(object):
             self._circuit.add(gates.Unitary(next(unitaries), self.nqubits - 1, 0))
 
     def _unitaries(self, dt):
+        """Yields unitary matrices of the Trotterized evolution."""
         n = len(self.terms) - len(self.terms) % 2
         terms = iter(self.terms[:n])
         for i, term in enumerate(terms):
@@ -207,6 +209,12 @@ class LocalHamiltonian(object):
             yield self.terms[-1].exp(dt)
 
     def circuit(self, dt):
+        """Returns a :class:`qibo.base.circuit.BaseCircuit` that implements the
+        Trotterized evolution.
+
+        Args:
+            dt (float): Time step to use for Trotterization.
+        """
         if self._circuit is None:
             self._dt = dt
             self._create_circuit(dt)

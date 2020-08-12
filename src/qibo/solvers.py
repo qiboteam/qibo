@@ -9,7 +9,7 @@ class BaseSolver:
 
     Args:
         dt (float): Time step size.
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object
+        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian object
             that the state evolves under.
     """
 
@@ -26,6 +26,12 @@ class BaseSolver:
 
 
 class TrotterizedExponential(BaseSolver):
+    """Solver that uses Trotterized exponentials.
+
+    Created automatically from the :class:`qibo.solvers.Exponential` if the
+    given Hamiltonian object is a
+    :class:`qibo.base.hamiltonians.LocalHamiltonian`.
+    """
 
     def __call__(self, state):
         circuit = self.hamiltonian(self.t).circuit(self.dt)
