@@ -164,10 +164,9 @@ class LocalHamiltonian(object):
 
             from qibo import matrices, hamiltonians
             # Create local term for critical TFIM Hamiltonian
-            matrix = np.kron(matrices.Z, matrices.Z) + np.kron(matrices.X, matrices.I)
-            term = hamiltonians.Hamiltonian(2, -matrix)
-            # Create a ``LocalHamiltonian`` object corresponding to a critical
-            # TFIM for 5 qubits
+            matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
+            term = hamiltonians.Hamiltonian(2, matrix)
+            # Create a ``LocalHamiltonian`` object corresponding to a critical TFIM for 5 qubits
             h = hamiltonians.LocalHamiltonian(5 * [term])
     """
 

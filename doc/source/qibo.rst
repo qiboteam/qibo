@@ -198,6 +198,13 @@ Hamiltonians:
    :members:
    :member-order: bysource
 
+For simulating time evolution using Trotterization, Qibo provides an abstract
+object for representing local Hamiltonians with up to two-qubit interactions:
+
+.. autoclass:: qibo.base.hamiltonians.LocalHamiltonian
+    :members:
+    :member-order: bysource
+
 _______________________
 
 .. _Measurements:

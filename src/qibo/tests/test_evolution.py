@@ -102,6 +102,11 @@ def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
     evolution = models.StateEvolution(ham, dt, callbacks=[checker])
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
+    # Change dt
+    evolution = models.StateEvolution(ham, 1e-4)
+    final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
+    assert_states_equal(final_psi, target_psi[-1], atol=1e-4)
+
 
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
 def test_hamiltonian_t(t):
