@@ -208,8 +208,8 @@ class LocalHamiltonian(object):
             yield self.terms[-1].exp(dt)
 
     def circuit(self, dt):
-        """Returns a :class:`qibo.base.circuit.BaseCircuit` that implements the
-        Trotterized evolution.
+        """Returns a :class:`qibo.base.circuit.BaseCircuit` that implements a
+        single time step of the Trotterized evolution.
 
         Args:
             dt (float): Time step to use for Trotterization.

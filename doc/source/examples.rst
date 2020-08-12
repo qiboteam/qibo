@@ -858,7 +858,7 @@ In the above cases the exact time evolution operator (exponential of the Hamilto
 was used to evolve the state vector. Because the evolution Hamiltonian is
 time-independent, the matrix exponentiation happens only once. It is possible to
 simulate time-dependent Hamiltonians by passing a function of time instead of
-a :class:`qibo.hamiltonians.Hamiltonian` in the
+a :class:`qibo.base.hamiltonians.Hamiltonian` in the
 :class:`qibo.models.StateEvolution` model. For example:
 
 .. code-block::  python
@@ -879,6 +879,44 @@ exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. Currently the default
 exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
 are implemented.
+
+Qibo also provides functionality to use Trotter steps for local Hamiltonians
+with up to two-qubit interactions. This is possible by creating the Hamiltonian
+as a :class:`qibo.base.hamiltonians.LocalHamiltonian` object. For example:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, matrices
+
+    # Create a critical TFIM for 5 qubits as a ``LocalHamiltonian``
+    nqubits = 5
+    matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
+    term = hamiltonians.Hamiltonian(2, matrix)
+    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
+    # Get the circuit that implements the Trotterized evolution for given ``dt``
+    circuit = ham.circuit(dt=1e-2)
+
+
+creates a local Hamiltonian for the critical transverse field Ising model and
+gets the Qibo circuit that implements a single step of the Trotterized time
+evolution for a given time step ``dt``. This circuit contains
+:class:`qibo.base.gates.Unitary` gates that correspond to the exponentials of
+the Trotter decomposition of the unitary time evolution operator.
+
+If the :class:`qibo.base.hamiltonians.LocalHamiltonian` is passed to a
+:class:`qibo.evolution.StateEvolution` model with the exponential solver,
+then the evolution will be simulated by applying the Trotter circuit repeatedly:
+
+.. code-block::  python
+
+    from qibo import models
+
+    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    evolve = models.StateEvolution(ham, dt=1e-3)
+    # Evolve by applying the Trotter circuit repeatedly in the state
+    final_state = evolve(final_time=1, initial_state=initial_state)
 
 
 How to simulate adiabatic time evolution?
