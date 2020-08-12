@@ -44,7 +44,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def XXZ(nqubits, delta=0.5, numpy=True):
+def XXZ(nqubits, delta=0.5, numpy=False):
     """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
@@ -72,7 +72,7 @@ def XXZ(nqubits, delta=0.5, numpy=True):
     return Hamiltonian(nqubits, matrix)
 
 
-def _OneBodyPauli(nqubits, matrix, numpy=True):
+def _OneBodyPauli(nqubits, matrix, numpy=False):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
@@ -81,7 +81,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=True):
     return Hamiltonian(nqubits, ham)
 
 
-def X(nqubits, numpy=True):
+def X(nqubits, numpy=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -95,7 +95,7 @@ def X(nqubits, numpy=True):
     return _OneBodyPauli(nqubits, matrices.X, numpy)
 
 
-def Y(nqubits, numpy=True):
+def Y(nqubits, numpy=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -109,7 +109,7 @@ def Y(nqubits, numpy=True):
     return _OneBodyPauli(nqubits, matrices.Y, numpy)
 
 
-def Z(nqubits, numpy=True):
+def Z(nqubits, numpy=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -123,7 +123,7 @@ def Z(nqubits, numpy=True):
     return _OneBodyPauli(nqubits, matrices.Z, numpy)
 
 
-def TFIM(nqubits, h=0.0, numpy=True):
+def TFIM(nqubits, h=0.0, numpy=False):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::

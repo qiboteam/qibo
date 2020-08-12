@@ -164,24 +164,24 @@ def test_hamiltonian_eigenvectors(dtype):
     """Testing hamiltonian eigenvectors scaling."""
     H1 = XXZ(nqubits=2, delta=0.5)
 
-    V1 = H1.eigenvectors()
-    U1 = H1.eigenvalues()
+    V1 = np.array(H1.eigenvectors())
+    U1 = np.array(H1.eigenvalues())
     np.testing.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    V2 = H2._eigenvectors
-    U2 = H2._eigenvalues
+    V2 = np.array(H2._eigenvectors)
+    U2 = np.array(H2._eigenvalues)
     np.testing.assert_allclose(H2.matrix, V2 @ np.diag(U2) @ V2.T)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    V3 = H3.eigenvectors()
-    U3 = H3._eigenvalues
+    V3 = np.array(H3.eigenvectors())
+    U3 = np.array(H3._eigenvalues)
     np.testing.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)
     H4 = c3 * H1
-    V4 = H4._eigenvectors
-    U4 = H4._eigenvalues
+    V4 = np.array(H4._eigenvectors)
+    U4 = np.array(H4._eigenvalues)
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
