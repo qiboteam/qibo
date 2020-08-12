@@ -98,14 +98,14 @@ class NumpyHamiltonian(TensorflowHamiltonian):
         if isinstance(o, np.ndarray):
             new_matrix = self.matrix * o.astype(self.matrix.dtype)
             return self.__class__(self.nqubits, new_matrix)
-        elif isinstance(o, tf.Tensor):
+        elif isinstance(o, tf.Tensor): # pragma: no cover
             new_matrix = self.matrix * o.numpy().astype(self.matrix.dtype)
             return self.__class__(self.nqubits, new_matrix)
         else:
             return hamiltonians.Hamiltonian.__mul__(self, o)
 
     def __matmul__(self, o):
-        if isinstance(o, tf.Tensor):
+        if isinstance(o, tf.Tensor): # pragma: no cover
             return TensorflowHamiltonian.__matmul__(self, o.numpy())
         else:
             return TensorflowHamiltonian.__matmul__(self, o)

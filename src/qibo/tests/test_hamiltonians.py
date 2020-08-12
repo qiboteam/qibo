@@ -6,6 +6,8 @@ from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 def test_hamiltonian_initialization():
     """Testing hamiltonian initialization errors."""
+    with pytest.raises(TypeError):
+        H = Hamiltonian(2, "test")
     H1 = Hamiltonian(2, np.eye(4))
     with pytest.raises(RuntimeError):
         H2 = Hamiltonian(np.eye(2), np.eye(4))
@@ -72,6 +74,14 @@ def test_different_hamiltonian_addition(numpy):
 
 
 @pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_mul(numpy):
+    """Test multiplication with ``np.array`` scalar."""
+    h = TFIM(nqubits=3, h=1.0, numpy=numpy)
+    h2 = h * np.array(2)
+    np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
+
+
+@pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_matmul(numpy):
     """Test matrix multiplication between Hamiltonians and state vectors."""
     H1 = TFIM(nqubits=3, h=1.0, numpy=numpy)
@@ -101,14 +111,25 @@ def test_hamiltonian_matmul(numpy):
 def test_hamiltonian_exponentiation(numpy):
     from scipy.linalg import expm
     H = XXZ(nqubits=2, delta=0.5, numpy=numpy)
-    if numpy:
-        target_matrix = expm(-0.5j * H.matrix)
-    else:
-        target_matrix = expm(-0.5j * H.matrix.numpy())
+    target_matrix = expm(-0.5j * np.array(H.matrix))
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
+    H = XXZ(nqubits=2, delta=0.5, numpy=numpy)
     _ = H.eigenvectors()
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
+
+
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_expectation(numpy):
+    h = XXZ(nqubits=3, delta=0.5, numpy=numpy)
+    matrix = np.array(h.matrix)
+
+    state = np.random.random(8) + 1j * np.random.random(8)
+    norm = (np.abs(state) ** 2).sum()
+    target_ev = (state.conj() * matrix.dot(state)).sum().real
+
+    np.testing.assert_allclose(h.expectation(state), target_ev)
+    np.testing.assert_allclose(h.expectation(state, True), target_ev / norm)
 
 
 def test_hamiltonian_runtime_errors():
