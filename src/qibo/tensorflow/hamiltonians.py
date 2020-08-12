@@ -1,7 +1,5 @@
 import numpy as np
 import tensorflow as tf
-from qibo import matrices
-from qibo.config import DTYPES
 from qibo.base import hamiltonians
 
 
@@ -13,16 +11,13 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):
 
     NUMERIC_TYPES = NUMERIC_TYPES
-
-    def __init__(self, nqubits, matrix):
-        super(TensorflowHamiltonian, self).__init__(nqubits, matrix)
-        self.matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+    K = tf
 
     def _calculate_eigenvalues(self):
-        return tf.linalg.eigvalsh(self.matrix)
+        return self.K.linalg.eigvalsh(self.matrix)
 
     def _calculate_eigenvectors(self):
-        return tf.linalg.eigh(self.matrix)
+        return self.K.linalg.eigh(self.matrix)
 
     def _calculate_exp(self, a):
         if self._eigenvectors is None:
@@ -35,7 +30,7 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
     def _eye(self, n=None):
         if n is None:
             n = int(self.matrix.shape[0])
-        return tf.eye(n, dtype=self.matrix.dtype)
+        return self.K.eye(n, dtype=self.matrix.dtype)
 
     def expectation(self, state, normalize=False):
         statec = tf.math.conj(state)
@@ -57,17 +52,57 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
-            new_matrix = tf.matmul(self.matrix, o.matrix)
+            new_matrix = self.K.matmul(self.matrix, o.matrix)
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, (tf.Tensor, np.ndarray)):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                return tf.matmul(self.matrix, o[:, tf.newaxis])[:, 0]
+                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
             elif rank == 2: # matrix
-                return tf.matmul(self.matrix, o)
+                return self.K.matmul(self.matrix, o)
             else:
                 raise ValueError(f'Cannot multiply Hamiltonian with '
                                   'rank-{rank} tensor.')
         else:
             raise NotImplementedError(f'Hamiltonian matrix multiplication to '
                                        '{type(o)} not implemented.')
+
+
+class NumpyHamiltonian(TensorflowHamiltonian):
+
+    import scipy
+    NUMERIC_TYPES = NUMERIC_TYPES
+    K = np
+
+    def _calculate_exp(self, a):
+        if self._eigenvectors is None:
+            return self.scipy.linalg.expm(-1j * a * self.matrix)
+        else:
+            expd = np.diag(np.exp(-1j * a * self._eigenvalues))
+            ud = np.transpose(np.conj(self._eigenvectors))
+            return self._eigenvectors @ (expd @ ud)
+
+    def expectation(self, state, normalize=False):
+        statec = np.conj(state)
+        hstate = self @ state
+        ev = np.sum(statec * hstate).real
+        if normalize:
+            return ev / (np.abs(state) ** 2).sum()
+        return ev
+
+    def __mul__(self, o):
+        """Multiplication to scalar operator."""
+        if isinstance(o, np.ndarray):
+            new_matrix = self.matrix * o.astype(self.matrix.dtype)
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, tf.Tensor):
+            new_matrix = self.matrix * o.numpy().astype(self.matrix.dtype)
+            return self.__class__(self.nqubits, new_matrix)
+        else:
+            return hamiltonians.Hamiltonian.__mul__(self, o)
+
+    def __matmul__(self, o):
+        if isinstance(o, tf.Tensor):
+            return TensorflowHamiltonian.__matmul__(self, o.numpy())
+        else:
+            return TensorflowHamiltonian.__matmul__(self, o)

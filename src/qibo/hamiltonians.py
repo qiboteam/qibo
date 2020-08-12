@@ -2,10 +2,23 @@
 import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES
+from qibo.base import hamiltonians as base_hamiltonians
 if BACKEND_NAME == "tensorflow":
-    from qibo.tensorflow.hamiltonians import TensorflowHamiltonian as Hamiltonian
+    from qibo.tensorflow import hamiltonians
 else: # pragma: no cover
     raise NotImplementedError("Only Tensorflow backend is implemented.")
+
+
+class Hamiltonian(base_hamiltonians.Hamiltonian):
+
+    def __new__(cls, nqubits, matrix):
+        if isinstance(matrix, np.ndarray):
+            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+        elif isinstance(matrix, K.Tensor):
+            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
+        else:
+            raise TypeError("Invalid type {} of Hamiltonian matrix."
+                            "".format(type(matrix)))
 
 
 def _multikron(matrix_list):
@@ -31,7 +44,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def XXZ(nqubits, delta=0.5):
+def XXZ(nqubits, delta=0.5, numpy=True):
     """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
@@ -40,6 +53,8 @@ def XXZ(nqubits, delta=0.5):
     Args:
         nqubits (int): number of quantum bits.
         delta (float): coefficient for the Z component (default 0.5).
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
 
     Example:
         ::
@@ -52,18 +67,21 @@ def XXZ(nqubits, delta=0.5):
     hy = _build_spin_model(nqubits, matrices.Y, condition)
     hz = _build_spin_model(nqubits, matrices.Z, condition)
     matrix = hx + hy + delta * hz
+    if not numpy:
+        matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, matrix)
 
 
-def _OneBodyPauli(nqubits, matrix):
+def _OneBodyPauli(nqubits, matrix, numpy=True):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     condition = lambda i, j: i == j % nqubits
-    ham = _build_spin_model(nqubits, matrix, condition)
-    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+    ham = -_build_spin_model(nqubits, matrix, condition)
+    if not numpy:
+        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, ham)
 
 
-def X(nqubits):
+def X(nqubits, numpy=True):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -71,11 +89,13 @@ def X(nqubits):
 
     Args:
         nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.X)
+    return _OneBodyPauli(nqubits, matrices.X, numpy)
 
 
-def Y(nqubits):
+def Y(nqubits, numpy=True):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -83,11 +103,13 @@ def Y(nqubits):
 
     Args:
         nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.Y)
+    return _OneBodyPauli(nqubits, matrices.Y, numpy)
 
 
-def Z(nqubits):
+def Z(nqubits, numpy=True):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -95,11 +117,13 @@ def Z(nqubits):
 
     Args:
         nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.Z)
+    return _OneBodyPauli(nqubits, matrices.Z, numpy)
 
 
-def TFIM(nqubits, h=0.0):
+def TFIM(nqubits, h=0.0, numpy=True):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::
@@ -108,11 +132,14 @@ def TFIM(nqubits, h=0.0):
     Args:
         nqubits (int): number of quantum bits.
         h (float): value of the transverse field.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
     """
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
-    ham = _build_spin_model(nqubits, matrices.Z, condition)
+    ham = -_build_spin_model(nqubits, matrices.Z, condition)
     if h != 0:
         condition = lambda i, j: i == j % nqubits
-        ham += _build_spin_model(nqubits, matrices.X, condition)
-    ham = K.cast(-ham, dtype=DTYPES.get('DTYPECPX'))
+        ham -= _build_spin_model(nqubits, matrices.X, condition)
+    if not numpy:
+        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, ham)
