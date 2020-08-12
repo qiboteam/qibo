@@ -9,7 +9,9 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
 
 
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):
-
+    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
+    TensorFlow.
+    """
     NUMERIC_TYPES = NUMERIC_TYPES
     K = tf
 
@@ -69,9 +71,10 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
 
 
 class NumpyHamiltonian(TensorflowHamiltonian):
-
+    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
+    numpy.
+    """
     import scipy
-    NUMERIC_TYPES = NUMERIC_TYPES
     K = np
 
     def _calculate_exp(self, a):

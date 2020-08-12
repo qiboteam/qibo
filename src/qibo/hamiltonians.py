@@ -11,6 +11,7 @@ else: # pragma: no cover
 
 
 class Hamiltonian(base_hamiltonians.Hamiltonian):
+    """"""
 
     def __new__(cls, nqubits, matrix):
         if isinstance(matrix, np.ndarray):
