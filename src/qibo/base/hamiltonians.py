@@ -1,3 +1,6 @@
+from qibo import gates
+
+
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
@@ -146,3 +149,36 @@ class Hamiltonian(object):
     def __matmul__(self, o): # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
         raise NotImplementedError
+
+
+class LocalHamiltonian(object):
+
+    def __init__(self, terms):
+        for term in terms:
+            if not issubclass(type(term), Hamiltonian):
+                raise TypeError("Invalid term type {}.".format(type(term)))
+            if term.nqubits not in {1, 2}:
+                raise ValueError("LocalHamiltonian terms should target one or "
+                                 "two qubits but {} was given."
+                                 "".format(term.nqubits))
+        self.nqubits = len(terms)
+        self.terms = terms
+        self._dt = None
+        self._gates = []
+
+    def trotter(self, dt):
+        if self._dt != dt:
+            # TODO: Use a Circuit instead of a gate list
+            self._dt = dt
+            self._gates = []
+            n = len(self.terms) - len(self.terms) % 2
+            terms = iter(self.terms[:n])
+            for i, term in enumerate(terms):
+                i1, i2, i3 = 2 * i, 2 * i + 1, (2 * i + 2) % self.nqubits
+                self._gates.append(gates.Unitary(term.exp(dt / 2.0), i1, i2))
+                self._gates.append(gates.Unitary(next(terms).exp(dt), i2, i3))
+                self._gates.append(gates.Unitary(term.exp(dt / 2.0), i1, i2))
+            if len(self.terms) % 2:
+                e = self.terms[-1].exp(dt)
+                self._gates.append(gates.Unitary(e, self.nqubits - 1, 0))
+        return self._gates

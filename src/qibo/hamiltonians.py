@@ -3,6 +3,7 @@ import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES
 from qibo.base import hamiltonians as base_hamiltonians
+from qibo.base.hamiltonians import LocalHamiltonian
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
 else: # pragma: no cover

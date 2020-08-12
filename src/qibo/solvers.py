@@ -1,6 +1,8 @@
 from qibo import K
 from qibo.base import hamiltonians
 
+HAMILTONIAN_TYPES = (hamiltonians.Hamiltonian, hamiltonians.LocalHamiltonian)
+
 
 class BaseSolver:
     """Basic solver that should be inherited by all solvers.
@@ -14,13 +16,23 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
+        if issubclass(type(hamiltonian), HAMILTONIAN_TYPES):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
 
     def __call__(self, state): # pragma: no cover
         raise NotImplementedError
+
+
+class TrotterizedExponential(BaseSolver):
+
+    def __call__(self, state):
+        gates = self.hamiltonian(self.t).trotter(self.dt)
+        self.t += self.dt
+        for gate in gates:
+            state = gate(state)
+        return state
 
 
 class Exponential(BaseSolver):
@@ -32,6 +44,13 @@ class Exponential(BaseSolver):
     Calculates the evolution operator in every step and thus is compatible with
     time-dependent Hamiltonians.
     """
+
+    def __new__(cls, dt, hamiltonian):
+        if isinstance(hamiltonian, hamiltonians.LocalHamiltonian):
+            # FIXME: This won't work for time-dependent local Hamiltonians
+            return TrotterizedExponential(dt, hamiltonian)
+        else:
+            return super(Exponential, cls).__new__(cls)
 
     def __call__(self, state):
         propagator = self.hamiltonian(self.t).exp(self.dt)

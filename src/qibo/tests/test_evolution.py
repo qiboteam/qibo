@@ -84,6 +84,24 @@ def test_state_evolution_final_state():
     assert_states_equal(final_psi, target_psi)
 
 
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
+    target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
+    ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
+    prop = expm(-1j * dt * ham_matrix)
+    for n in range(int(1 / dt)):
+        target_psi.append(prop.dot(target_psi[-1]))
+
+    from qibo import matrices
+    term_matrix = -(np.kron(matrices.Z, matrices.Z) +
+                    h * np.kron(matrices.X, matrices.I))
+    term = hamiltonians.Hamiltonian(2, term_matrix)
+    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
+    checker = TimeStepChecker(target_psi, atol=dt)
+    evolution = models.StateEvolution(ham, dt, callbacks=[checker])
+    final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
+
+
 @pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
 def test_hamiltonian_t(t):
     """Test adiabatic evolution hamiltonian as a function of time."""
