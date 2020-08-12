@@ -1,6 +1,7 @@
 """Models for time evolution of state vectors."""
 import numpy as np
-from qibo import solvers, optimizers, hamiltonians
+from qibo import solvers, optimizers
+from qibo.base import hamiltonians
 from qibo.tensorflow import circuit
 
 
@@ -8,8 +9,8 @@ class StateEvolution:
     """Unitary time evolution of a state vector under a Hamiltonian.
 
     Args:
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian to
-            evolve under.
+        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
+            to evolve under.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
@@ -80,8 +81,8 @@ class AdiabaticEvolution(StateEvolution):
         H(t) = (1 - s(t)) H_0 + s(t) H_1
 
     Args:
-        h0 (:class:`qibo.hamiltonians.Hamiltonian`): Easy Hamiltonian.
-        h1 (:class:`qibo.hamiltonians.Hamiltonian`): Problem Hamiltonian.
+        h0 (:class:`qibo.base.hamiltonians.Hamiltonian`): Easy Hamiltonian.
+        h1 (:class:`qibo.base.hamiltonians.Hamiltonian`): Problem Hamiltonian.
             These Hamiltonians should be time-independent.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution. Can be either a function of time s(t) or a
@@ -95,12 +96,12 @@ class AdiabaticEvolution(StateEvolution):
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
-        if not isinstance(h0, hamiltonians.Hamiltonian):
-            raise TypeError(f"h0 should be a hamiltonians.Hamiltonian object "
-                             "but is {type(h0)}.")
-        if not isinstance(h1, hamiltonians.Hamiltonian):
-            raise TypeError(f"h1 should be a hamiltonians.Hamiltonian object "
-                             "but is {type(h1)}.")
+        if not issubclass(type(h0), hamiltonians.Hamiltonian):
+            raise TypeError("h0 should be a hamiltonians.Hamiltonian object "
+                             "but is {}.".format(type(h0)))
+        if not issubclass(type(h1), hamiltonians.Hamiltonian):
+            raise TypeError("h1 should be a hamiltonians.Hamiltonian object "
+                            "but is {}.".format(type(h1)))
         if h0.nqubits != h1.nqubits:
             raise ValueError("H0 has {} qubits while H1 has {}."
                              "".format(h0.nqubits, h1.nqubits))

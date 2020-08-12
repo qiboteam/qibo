@@ -1,4 +1,5 @@
-from qibo import K, hamiltonians
+from qibo import K
+from qibo.base import hamiltonians
 
 
 class BaseSolver:
@@ -13,7 +14,7 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        if isinstance(hamiltonian, hamiltonians.Hamiltonian):
+        if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian

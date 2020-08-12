@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y, NUMERIC_TYPES
+from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
+from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 
 def test_hamiltonian_initialization():
@@ -92,7 +93,7 @@ def test_hamiltonian_matmul():
 def test_hamiltonian_exponentiation():
     from scipy.linalg import expm
     H = XXZ(nqubits=2, delta=0.5)
-    target_matrix = expm(-0.5j * H.matrix)
+    target_matrix = expm(-0.5j * H.matrix.numpy())
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
     _ = H.eigenvectors()
