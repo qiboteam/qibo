@@ -188,30 +188,32 @@ class LocalHamiltonian(object):
         self._dt = None
         self._circuit = None
 
+    def _terms(self, dt, odd=False):
+        for term in self.terms[int(odd)::2]:
+            yield term.exp(dt / (2.0 - float(odd)))
+
+    def _allterms(self, dt):
+        for term in self._terms(dt):
+            yield term
+        for term in self._terms(dt, odd=True):
+            yield term
+        for term in self._terms(dt):
+            yield term
+
     def _create_circuit(self, dt):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
+        # even gates
+        even = lambda: (gates.Unitary(term, 2 * i, (2 * i + 1) % self.nqubits)
+                        for i, term in enumerate(self._terms(dt)))
+        # odd gates
+        odd = (gates.Unitary(term, 2 * i + 1, (2 * i + 2) % self.nqubits)
+               for i, term in enumerate(self._terms(dt, odd=True)))
+
         self._circuit = Circuit(self.nqubits)
-        unitaries = iter(self._unitaries(dt))
-        for i in range(self.nqubits // 2):
-            i1, i2, i3 = 2 * i, 2 * i + 1, (2 * i + 2) % self.nqubits
-            self._circuit.add(gates.Unitary(next(unitaries), i1, i2))
-            self._circuit.add(gates.Unitary(next(unitaries), i2, i3))
-            self._circuit.add(gates.Unitary(next(unitaries), i1, i2))
-        if self.nqubits % 2:
-            self._circuit.add(gates.Unitary(next(unitaries), self.nqubits - 1, 0))
-
-
-    def _unitaries(self, dt):
-        """Yields unitary matrices of the Trotterized evolution."""
-        n = len(self.terms) - len(self.terms) % 2
-        terms = iter(self.terms[:n])
-        for i, term in enumerate(terms):
-            yield term.exp(dt / 2.0)
-            yield next(terms).exp(dt)
-            yield term.exp(dt / 2.0)
-        if len(self.terms) % 2:
-            yield self.terms[-1].exp(dt)
+        self._circuit.add(even())
+        self._circuit.add(odd)
+        self._circuit.add(even())
 
     def circuit(self, dt):
         """Returns a :class:`qibo.base.circuit.BaseCircuit` that implements a
@@ -225,5 +227,5 @@ class LocalHamiltonian(object):
             self._create_circuit(dt)
         elif dt != self._dt:
             self._dt = dt
-            self._circuit.set_parameters(list(self._unitaries(dt)))
+            self._circuit.set_parameters(list(self._allterms(dt)))
         return self._circuit
