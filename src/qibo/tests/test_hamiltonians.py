@@ -93,10 +93,10 @@ def test_hamiltonian_exponentiation():
     from scipy.linalg import expm
     H = XXZ(nqubits=2, delta=0.5)
     target_matrix = expm(-0.5j * H.matrix)
-    np.testing.assert_allclose(H.exp(-0.5j), target_matrix)
+    np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
     _ = H.eigenvectors()
-    np.testing.assert_allclose(H.exp(-0.5j), target_matrix)
+    np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
 
 def test_hamiltonian_runtime_errors():

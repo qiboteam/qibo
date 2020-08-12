@@ -182,7 +182,7 @@ def test_energy_callback(dt=1e-2):
     target_energies = [calc_energy(target_psi)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(-1j * dt).numpy()
+        prop = ham(n * dt).exp(dt).numpy()
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
@@ -199,7 +199,7 @@ def test_rk4_evolution(dt=1e-3):
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(-1j * dt).numpy()
+        prop = ham(n * dt).exp(dt).numpy()
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)

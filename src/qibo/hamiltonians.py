@@ -2,7 +2,6 @@
 import numpy as np
 from qibo import matrices, K
 from qibo.config import DTYPES
-from abc import ABCMeta
 
 
 NUMERIC_TYPES = (np.int, np.float, np.complex,
@@ -19,7 +18,6 @@ class Hamiltonian(object):
             computational basis as an array of shape
             ``(2 ** nqubits, 2 ** nqubits)``.
     """
-    __metaclass__ = ABCMeta
 
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
@@ -33,6 +31,7 @@ class Hamiltonian(object):
         self.matrix = matrix
         self._eigenvalues = None
         self._eigenvectors = None
+        self._exp = {"a": None, "result": None}
 
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
@@ -48,17 +47,22 @@ class Hamiltonian(object):
         return self._eigenvectors
 
     def exp(self, a):
-        """Computes a tensor corresponding to exp(a * H).
+        """Computes a tensor corresponding to exp(-1j * a * H).
 
         Args:
             a (complex): Complex number to multiply Hamiltonian before
                 exponentiation.
         """
-        if self._eigenvectors is None:
-            return K.linalg.expm(a * self.matrix)
-        expd = K.linalg.diag(K.exp(a * self._eigenvalues))
-        ud = K.transpose(K.math.conj(self._eigenvectors))
-        return K.matmul(self._eigenvectors, K.matmul(expd, ud))
+        if self._exp["a"] != a:
+            self._exp["a"] = a
+            if self._eigenvectors is None:
+                self._exp["result"] = K.linalg.expm(-1j * a * self.matrix)
+            else:
+                expd = K.linalg.diag(K.exp(-1j * a * self._eigenvalues))
+                ud = K.transpose(K.math.conj(self._eigenvectors))
+                self._exp["result"] = K.matmul(self._eigenvectors,
+                                               K.matmul(expd, ud))
+        return self._exp["result"]
 
     def expectation(self, state, normalize=False):
         """Computes the real expectation value for a given state.
