@@ -9,6 +9,8 @@ def test_hamiltonian_initialization():
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
     H1 = Hamiltonian(2, np.eye(4))
+    with pytest.raises(ValueError):
+        H1 = Hamiltonian(-2, np.eye(4))
     with pytest.raises(RuntimeError):
         H2 = Hamiltonian(np.eye(2), np.eye(4))
     with pytest.raises(ValueError):

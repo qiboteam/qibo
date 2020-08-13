@@ -12,11 +12,16 @@ class Hamiltonian(object):
 
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
-            raise RuntimeError(f'nqubits must be an integer')
+            raise RuntimeError("nqubits must be an integer but is {}."
+                               "".format(type(nqubits)))
+        if nqubits < 0:
+            raise ValueError("nqubits must be a positive integer but is {}."
+                             "".format(nqubits))
         shape = tuple(matrix.shape)
         if shape != 2 * (2 ** nqubits,):
-            raise ValueError(f"The Hamiltonian is defined for {nqubits} qubits "
-                              "while the given matrix has shape {shape}.")
+            raise ValueError("The Hamiltonian is defined for {} qubits while "
+                             "the given matrix has shape {}."
+                             "".format(nqubits, shape))
 
         self.nqubits = nqubits
         self.matrix = matrix
@@ -55,10 +60,10 @@ class Hamiltonian(object):
             a (complex): Complex number to multiply Hamiltonian before
                 exponentiation.
         """
-        if self._exp["a"] != a:
+        if self._exp.get("a") != a:
             self._exp["a"] = a
             self._exp["result"] = self._calculate_exp(a)
-        return self._exp["result"]
+        return self._exp.get("result")
 
     def expectation(self, state, normalize=False): # pragma: no cover
         """Computes the real expectation value for a given state.
