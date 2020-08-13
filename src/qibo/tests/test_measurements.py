@@ -55,6 +55,19 @@ def assert_register_results(
             assert v == collections.Counter(binary_frequencies[k])
 
 
+def test_gate_result_initialization_errors():
+    """Check ``ValueError``s during the initialization of ``GateResult`` object."""
+    from qibo.base import measurements
+    decimal_samples = np.random.randint(0, 4, (100,))
+    binary_samples = np.random.randint(0, 2, (100, 2))
+    with pytest.raises(ValueError):
+        res = measurements.GateResult((0, 1), decimal_samples=decimal_samples,
+                                      binary_samples=binary_samples)
+    binary_samples = np.random.randint(0, 2, (100, 4))
+    with pytest.raises(ValueError):
+        res = measurements.GateResult((0, 1), binary_samples=binary_samples)
+
+
 def test_convert_to_binary():
     """Check that `_convert_to_binary` method works properly."""
     # Create a result object to access `_convert_to_binary`

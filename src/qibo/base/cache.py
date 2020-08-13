@@ -32,7 +32,7 @@ class BaseCache:
 
     @property
     def vector(self):
-        if self._vector is None:
+        if self._vector is None: # pragma: no cover
             raise_error(NotImplementedError, "Vector cache should be defined in __init__.")
         return self._vector
 
@@ -63,11 +63,11 @@ class BaseCache:
     def cast_shapes(self, cast_func):
         pass
 
-    def _calculate_density_matrix(self):
+    def _calculate_density_matrix(self): # pragma: no cover
         """Calculates `left` and `right` elements."""
         raise_error(NotImplementedError)
 
-    def _calculate_density_matrix_controlled(self):
+    def _calculate_density_matrix_controlled(self): # pragma: no cover
         """Calculates `left0` and `right0` elements."""
         raise_error(NotImplementedError)
 
@@ -89,7 +89,7 @@ class DefaultEinsumCache(BaseCache):
                  ncontrol: Optional[int] = None):
       super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
 
-      if nqubits + len(qubits) > len(self._chars):
+      if nqubits + len(qubits) > len(self._chars): # pragma: no cover
           raise_error(NotImplementedError, "Not enough einsum characters.")
 
       input_state = list(self._chars[:nqubits])
@@ -108,7 +108,7 @@ class DefaultEinsumCache(BaseCache):
       self._vector = f"{self.input},{self.gate}->{self.output}"
 
     def _calculate_density_matrix(self):
-        if self.nqubits > len(self.rest):
+        if self.nqubits > len(self.rest): # pragma: no cover
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
         rest = self.rest[:self.nqubits]
@@ -116,7 +116,7 @@ class DefaultEinsumCache(BaseCache):
         self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
     def _calculate_density_matrix_controlled(self):
-        if self.nqubits + 1 > len(self.rest):
+        if self.nqubits + 1 > len(self.rest): # pragma: no cover
             raise_error(NotImplementedError, "Not enough einsum characters.")
         rest, c = self.rest[:self.nqubits], self.rest[self.nqubits]
         self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"

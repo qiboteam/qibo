@@ -88,15 +88,15 @@ class GateResult:
         return self._frequencies
 
     @staticmethod
-    def _convert_to_binary(x: TensorType, n: int) -> TensorType:
+    def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
         raise_error(NotImplementedError)
 
     @staticmethod
-    def _convert_to_decimal(x: TensorType, n: int) -> TensorType:
+    def _convert_to_decimal(x: TensorType, n: int) -> TensorType: # pragma: no cover
         raise_error(NotImplementedError)
 
     @staticmethod
-    def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]:
+    def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -190,7 +190,7 @@ class CircuitResult:
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
                                     gate_result: GateResult
-                                    ) -> Dict[str, GateResult]:
+                                    ) -> Dict[str, GateResult]: # pragma: no cover
         """Calculates the individual register `GateResults`.
 
         This uses the `register_qubits` map to divide the bitstrings to their
