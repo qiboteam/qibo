@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import matrices, K
-from qibo.config import BACKEND_NAME, DTYPES
+from qibo.config import BACKEND_NAME, DTYPES, raise_error
 from qibo.base import hamiltonians as base_hamiltonians
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
 else: # pragma: no cover
-    raise NotImplementedError("Only Tensorflow backend is implemented.")
+    # case not tested because backend is preset to TensorFlow
+    raise raise_error(NotImplementedError,
+                      "Only Tensorflow backend is implemented.")
 
 
 class Hamiltonian(base_hamiltonians.Hamiltonian):
@@ -18,8 +20,8 @@ class Hamiltonian(base_hamiltonians.Hamiltonian):
         elif isinstance(matrix, K.Tensor):
             return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
         else:
-            raise TypeError("Invalid type {} of Hamiltonian matrix."
-                            "".format(type(matrix)))
+            raise raise_error(TypeError, "Invalid type {} of Hamiltonian "
+                                         "matrix.".format(type(matrix)))
 
 
 def _multikron(matrix_list):

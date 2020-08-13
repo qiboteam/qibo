@@ -98,11 +98,11 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
         if not issubclass(type(h0), hamiltonians.Hamiltonian):
-            raise TypeError("h0 should be a hamiltonians.Hamiltonian object "
-                             "but is {}.".format(type(h0)))
+            raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
+                                   "object but is {}.".format(type(h0)))
         if not issubclass(type(h1), hamiltonians.Hamiltonian):
-            raise TypeError("h1 should be a hamiltonians.Hamiltonian object "
-                            "but is {}.".format(type(h1)))
+            raise_error(TypeError, "h1 should be a hamiltonians.Hamiltonian "
+                                   "object but is {}.".format(type(h1)))
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))

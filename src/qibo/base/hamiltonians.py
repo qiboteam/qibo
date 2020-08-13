@@ -1,3 +1,6 @@
+from qibo.config import raise_error
+
+
 class Hamiltonian(object):
     """This class implements the abstract Hamiltonian operator.
 
@@ -12,16 +15,16 @@ class Hamiltonian(object):
 
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
-            raise RuntimeError("nqubits must be an integer but is {}."
-                               "".format(type(nqubits)))
+            raise_error(RuntimeError, "nqubits must be an integer but is "
+                                            "{}.".format(type(nqubits)))
         if nqubits < 0:
-            raise ValueError("nqubits must be a positive integer but is {}."
-                             "".format(nqubits))
+            raise_error(ValueError, "nqubits must be a positive integer but is "
+                                    "{}".format(nqubits))
         shape = tuple(matrix.shape)
         if shape != 2 * (2 ** nqubits,):
-            raise ValueError("The Hamiltonian is defined for {} qubits while "
-                             "the given matrix has shape {}."
-                             "".format(nqubits, shape))
+            raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
+                                    "while the given matrix has shape {}."
+                                    "".format(nqubits, shape))
 
         self.nqubits = nqubits
         self.matrix = matrix
@@ -30,16 +33,20 @@ class Hamiltonian(object):
         self._exp = {"a": None, "result": None}
 
     def _calculate_eigenvalues(self): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
     def _calculate_eigenvectors(self): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
     def _calculate_exp(self, a): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
     def _eye(self, n=None): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
@@ -76,23 +83,24 @@ class Hamiltonian(object):
         Returns:
             Real number corresponding to the expectation value.
         """
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
     def __add__(self, o):
         """Add operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
             new_matrix = self.matrix + o.matrix
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, self.NUMERIC_TYPES):
             return self.__class__(self.nqubits, self.matrix + o * self._eye())
         else:
-            raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, "Hamiltonian addition to {} not "
+                                             "implemented.".format(type(o)))
 
-    def __radd__(self, o): # pragma: no cover
+    def __radd__(self, o):
         """Right operator addition."""
         return self.__add__(o)
 
@@ -100,29 +108,30 @@ class Hamiltonian(object):
         """Subtraction operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be subtracted.")
             new_matrix = self.matrix - o.matrix
             return self.__class__(self.nqubits, new_matrix)
-        elif isinstance(o, self.NUMERIC_TYPES): # pragma: no cover
+        elif isinstance(o, self.NUMERIC_TYPES):
             return self.__class__(self.nqubits, self.matrix - o * self._eye())
         else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
 
     def __rsub__(self, o):
         """Right subtraction operator."""
         if isinstance(o, self.__class__): # pragma: no cover
+            # impractical case because it will be handled by `__sub__`
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
             new_matrix = o.matrix - self.matrix
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, self.NUMERIC_TYPES):
             return self.__class__(self.nqubits, o * self._eye() - self.matrix)
         else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
 
     def __mul__(self, o):
         """Multiplication to scalar operator."""
@@ -141,8 +150,8 @@ class Hamiltonian(object):
                     r._eigenvectors = self._eye(int(self._eigenvectors.shape[0]))
             return r
         else:
-            raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
+                                             "not implemented.".format(type(o)))
 
     def __rmul__(self, o):
         """Right scalar multiplication."""
@@ -150,4 +159,5 @@ class Hamiltonian(object):
 
     def __matmul__(self, o): # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)

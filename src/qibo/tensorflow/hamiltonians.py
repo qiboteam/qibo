@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from qibo.config import raise_error
 from qibo.base import hamiltonians
 
 
@@ -63,11 +64,11 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
             elif rank == 2: # matrix
                 return self.K.matmul(self.matrix, o)
             else:
-                raise ValueError(f'Cannot multiply Hamiltonian with '
-                                  'rank-{rank} tensor.')
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
         else:
-            raise NotImplementedError(f'Hamiltonian matrix multiplication to '
-                                       '{type(o)} not implemented.')
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                             "implemented.".format(type(o)))
 
 
 class NumpyHamiltonian(TensorflowHamiltonian):
