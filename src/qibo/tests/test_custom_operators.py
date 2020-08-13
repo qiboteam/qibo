@@ -344,6 +344,7 @@ def test_custom_op_toy_callback(gate, compile):
         c2 = tf.reduce_sum(mask * state0)
         return state0, tf.stack([c1, c2])
     if compile: # pragma: no cover
+        # case not tested because it fails
         apply_operator = tf.function(apply_operator)
     state, callback = apply_operator(state)
 
@@ -352,6 +353,7 @@ def test_custom_op_toy_callback(gate, compile):
 
 
 def check_unimplemented_error(func, *args): # pragma: no cover
+    # method not tested by GitHub workflows because it requires GPU
     error = tf.python.framework.errors_impl.UnimplementedError
     with pytest.raises(error):
         func(*args)
@@ -375,6 +377,7 @@ def test_transpose_state(nqubits, ndevices):
         state = tf.reshape(state, shape)
         pieces = [state[i] for i in range(ndevices)]
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
+            # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.transpose_state,
                                       pieces, new_state, nqubits, qubit_order)
         else:
@@ -398,6 +401,7 @@ def test_swap_pieces_zero_global(nqubits):
 
         piece0, piece1 = state[0], state[1]
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
+            # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.swap_pieces,
                                       piece0, piece1, local - 1, nqubits - 1)
         else:
@@ -432,6 +436,7 @@ def test_swap_pieces(nqubits):
         state = tf.reshape(state, shape)
         piece0, piece1 = state[0], state[1]
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
+            # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.swap_pieces,
                                       piece0, piece1, local_qubit - 1, nqubits - 1)
         else:

@@ -449,6 +449,7 @@ def test_probabilistic_measurement(accelerators):
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"): # pragma: no cover
+        # case not tested in GitHub workflows because it requires GPU
         decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
         binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
     else:
@@ -472,6 +473,7 @@ def test_unbalanced_probabilistic_measurement():
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"): # pragma: no cover
+        # case not tested in GitHub workflows because it requires GPU
         decimal_freqs = {0: 196, 1: 153, 2: 156, 3: 495}
         binary_freqs = {"00": 196, "01": 153, "10": 156, "11": 495}
     else:
