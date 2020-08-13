@@ -102,6 +102,8 @@ def test_vqe_compile_error():
 
 def test_vqe_sgd_error():
     """Check that ``RuntimeError`` is raised when using SGD with custom gates."""
+    import qibo
+    qibo.set_backend("custom")
     nqubits = 6
     circuit = Circuit(nqubits)
     for q in range(nqubits):
