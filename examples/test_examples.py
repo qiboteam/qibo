@@ -173,3 +173,18 @@ def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="vqe.py")
+
+
+@pytest.mark.parametrize("nclasses", [3])
+@pytest.mark.parametrize("nqubits", [4])
+@pytest.mark.parametrize("nlayers", [4, 5])
+@pytest.mark.parametrize("nshots", [int(1e5)])
+@pytest.mark.parametrize("training", [False])
+@pytest.mark.parametrize("RY", [True])
+def test_variational_classifier(nclasses, nqubits, nlayers,
+                                nshots, training, RY, method='Powell'):
+    args = locals()
+    path = os.path.join(base_dir, "variational_classifier")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
