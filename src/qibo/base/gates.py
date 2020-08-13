@@ -183,7 +183,7 @@ class Gate(object):
         Returns:
             Unitary matrix as an array or tensor supported by the backend.
         """
-        raise_error(NotImplementedError)
+        return raise_error(NotImplementedError)
 
     @staticmethod
     def control_unitary(unitary): # pragma: no cover
@@ -1064,7 +1064,7 @@ class VariationalLayer(ParametrizedGate):
         return {q: p for q, p in zip(self.target_qubits, params)}
 
     def _calculate_unitaries(self): # pragma: no cover
-        raise_error(NotImplementedError)
+        return raise_error(NotImplementedError)
 
     @property
     def parameter(self) -> List[float]:
