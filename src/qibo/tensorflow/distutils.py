@@ -225,7 +225,8 @@ class DistributedQueues(DistributedBase):
         gate = new_remaining_queue[0]
         target_set = set(gate.target_qubits)
         global_targets = target_set & self.qubits.set
-        if isinstance(gate, gates.SWAP): # special case of swap on two global qubits
+        if isinstance(gate, gates.SWAP): # pragma: no cover
+            # special case of swap on two global qubits
             assert len(global_targets) == 2
             global_targets.remove(target_set.pop())
 

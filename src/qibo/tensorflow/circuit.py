@@ -52,11 +52,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         callback_results = {gate.callback: [] for gate in self.queue
                             if hasattr(gate, "callback")}
         for gate in self.queue:
-            if gate.is_channel and not self.using_density_matrix:
+            if gate.is_channel and not self.using_density_matrix: # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 # Switch from vector to density matrix
                 self.using_density_matrix = True
                 state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            if isinstance(gate, gates.CallbackGate):
+            if isinstance(gate, gates.CallbackGate): # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 callback = gate.callback
                 value = callback(state,
                                  is_density_matrix=self.using_density_matrix)

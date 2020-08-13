@@ -307,6 +307,9 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 class Unitary(TensorflowGate, base_gates.Unitary):
 
     def __init__(self, unitary, *q, name: Optional[str] = None):
+        if not isinstance(unitary, (np.ndarray, tf.Tensor)):
+            raise_error(TypeError, "Unknown type {} of unitary matrix."
+                                   "".format(type(unitary)))
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         TensorflowGate.__init__(self)
         self._unitary = self.construct_unitary()
@@ -319,9 +322,6 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             matrix = tf.identity(tf.cast(unitary, dtype=dtype))
         elif isinstance(unitary, np.ndarray):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
-        else: # pragma: no cover
-            raise_error(TypeError, "Unknown type {} of unitary matrix"
-                                   "".format(type(unitary)))
         return matrix
 
 
@@ -385,6 +385,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor: # pragma: no cover
+        # impractical case because VariationalLayer is not called by circuits
         return self.cgates.VariationalLayer.__call__(self, state, is_density_matrix)
 
 
@@ -419,6 +420,7 @@ class TensorflowChannel(TensorflowGate):
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         """Loops over `self.gates` to calculate sum of Krauss operators."""
+        # abstract method
         raise_error(NotImplementedError)
 
 

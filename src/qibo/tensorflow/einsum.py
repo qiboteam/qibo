@@ -60,7 +60,8 @@ class DefaultEinsum:
             String to use in einsum for performing partial density of a
             density matrix.
         """
-        if (2 - int(measuring)) * nqubits > len(cls._chars):
+        if (2 - int(measuring)) * nqubits > len(cls._chars): # pragma: no cover
+            # case not tested because it requires large instance
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
         left_in, right_in, left_out, right_out = [], [], [], []

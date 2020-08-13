@@ -33,6 +33,7 @@ class BaseCache:
     @property
     def vector(self):
         if self._vector is None: # pragma: no cover
+            # abstract method
             raise_error(NotImplementedError, "Vector cache should be defined in __init__.")
         return self._vector
 
@@ -50,7 +51,7 @@ class BaseCache:
 
     @property
     def left0(self):
-        if self._left0 is None:
+        if self._left0 is None: # pragma: no cover
             self._calculate_density_matrix_controlled()
         return self._left0
 
@@ -65,10 +66,12 @@ class BaseCache:
 
     def _calculate_density_matrix(self): # pragma: no cover
         """Calculates `left` and `right` elements."""
+        # abstract method
         raise_error(NotImplementedError)
 
     def _calculate_density_matrix_controlled(self): # pragma: no cover
         """Calculates `left0` and `right0` elements."""
+        # abstract method
         raise_error(NotImplementedError)
 
 
@@ -250,7 +253,7 @@ class ControlCache:
         if not is_density_matrix:
             return self._reverse
 
-        if self._reverse_dm is None:
+        if self._reverse_dm is None: # pragma: no cover
             self.calculate_dm()
         return self._reverse_dm
 

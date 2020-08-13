@@ -253,3 +253,19 @@ def test_fuse_circuit_two_qubit_only():
     target_state = c()
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)
+
+
+def test_fuse_and_set_parameters():
+    """Check gate fusion when ``circuit.set_parameters`` is used."""
+    c = Circuit(2)
+    c.add(gates.RX(0, theta=0.1234))
+    c.add(gates.RX(1, theta=0.1234))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.RY(0, theta=0.1234))
+    c.add(gates.RY(1, theta=0.1234))
+    fused_c = c.fuse()
+    np.testing.assert_allclose(fused_c(), c())
+
+    c.set_parameters(4 * [0.4321])
+    fused_c.set_parameters(4 * [0.4321])
+    np.testing.assert_allclose(fused_c(), c())

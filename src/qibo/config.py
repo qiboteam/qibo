@@ -14,6 +14,7 @@ BACKEND_NAME = "tensorflow"
 LEAST_SIGNIFICANT_QUBIT = 0
 
 if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
+    # case not tested because least significant qubit is preset to 0
     raise_error(NotImplementedError, "The least significant qubit should be 0.")
 
 
@@ -68,10 +69,12 @@ if BACKEND_NAME == "tensorflow":
     }
     # set default device to GPU if it exists
     if DEVICES['GPU']: # pragma: no cover
+        # case not tested by GitHub workflows because it requires a GPU
         DEVICES['DEFAULT'] = DEVICES['GPU'][0].name
     elif DEVICES['CPU']:
         DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
     else: # pragma: no cover
+        # case not tested by GitHub workflows because it requires no device
         raise_error(RuntimeError, "Unable to find Tensorflow devices.")
 
     # Define numpy and tensorflow matrices
@@ -159,6 +162,7 @@ if BACKEND_NAME == "tensorflow":
                 CPU or GPU.
         """
         if not ALLOW_SWITCHERS and device_name != DEVICES['DEFAULT']:  # pragma: no cover
+            # no testing is implemented for warnings
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
         parts = device_name[1:].split(":")
@@ -185,6 +189,7 @@ if BACKEND_NAME == "tensorflow":
 
 
 else: # pragma: no cover
+    # case not tested because the backend is preset to TensorFlow
     raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
 
 

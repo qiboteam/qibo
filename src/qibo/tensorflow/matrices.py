@@ -32,7 +32,8 @@ class NumpyMatrices:
             return np.complex128
         elif DTYPES.get("DTYPECPX") == tf.complex64:
             return np.complex64
-        else:
+        else: # pragma: no cover
+            # case not tested because DTYPECPX is preset to a valid type
             raise_error(TypeError, "Unknown complex type {}."
                                    "".format(DTYPES.get("DTYPECPX")))
 

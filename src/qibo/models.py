@@ -1,5 +1,6 @@
 from qibo.config import BACKEND_NAME, raise_error
 if BACKEND_NAME != "tensorflow": # pragma: no cover
+    # case not tested because backend is preset to TensorFlow
     raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
@@ -180,7 +181,7 @@ class VQE(object):
             # check if gates are using the MatmulEinsum backend
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
-                if not isinstance(gate, TensorflowGate): # pragma: no cover
+                if not isinstance(gate, TensorflowGate):
                     raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')

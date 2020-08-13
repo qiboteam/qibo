@@ -68,6 +68,17 @@ def test_different_hamiltonian_addition():
     np.testing.assert_allclose(H.matrix, matrix)
 
 
+def test_right_operations():
+    """Tests operations not covered by ``test_hamiltonian_overloading``."""
+    H1 = Y(nqubits=3)
+    H2 = 2 + H1
+    target_matrix = 2 * np.eye(8) + H1.matrix
+    np.testing.assert_allclose(H2.matrix, target_matrix)
+    H2 = H1 - 2
+    target_matrix = H1.matrix - 2 * np.eye(8)
+    np.testing.assert_allclose(H2.matrix, target_matrix)
+
+
 def test_hamiltonian_matmul():
     """Test matrix multiplication between Hamiltonians and state vectors."""
     H1 = TFIM(nqubits=3, h=1.0)

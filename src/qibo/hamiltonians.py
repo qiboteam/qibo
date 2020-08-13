@@ -95,7 +95,7 @@ class Hamiltonian(object):
             raise_error(NotImplementedError, f'Hamiltonian addition to {type(o)} '
                                               'not implemented.')
 
-    def __radd__(self, o): # pragma: no cover
+    def __radd__(self, o):
         """Right operator addition."""
         return self.__add__(o)
 
@@ -107,7 +107,7 @@ class Hamiltonian(object):
                                           'number of qubits can be added.')
             new_matrix = self.matrix - o.matrix
             return self.__class__(self.nqubits, new_matrix)
-        elif isinstance(o, NUMERIC_TYPES): # pragma: no cover
+        elif isinstance(o, NUMERIC_TYPES):
             new_matrix = (self.matrix -
                           o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype))
             return self.__class__(self.nqubits, new_matrix)
@@ -118,6 +118,7 @@ class Hamiltonian(object):
     def __rsub__(self, o):
         """Right subtraction operator."""
         if isinstance(o, self.__class__): # pragma: no cover
+            # impractical case because it will be handled by `__sub__`
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, 'Only hamiltonians with the same '
                                           'number of qubits can be added.')

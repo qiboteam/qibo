@@ -1,5 +1,6 @@
 def cma(loss, initial_parameters): # pragma: no cover
     """Genetic optimizer."""
+    # cma is not tested because it takes a lot of time
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7)
     return r[1].result.fbest, r[1].result.xbest
@@ -65,6 +66,7 @@ def optimize(loss, initial_parameters, method='Powell',
             Relevant only for the ``"sgd"`` optimizer.
     """
     if method == "cma": # pragma: no cover
+        # cma is not tested because it takes a lot of time
         return cma(loss, initial_parameters)
     elif method == "sgd":
         return sgd(loss, initial_parameters, options, compile)

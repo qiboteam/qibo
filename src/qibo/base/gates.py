@@ -183,6 +183,7 @@ class Gate(object):
         Returns:
             Unitary matrix as an array or tensor supported by the backend.
         """
+        # abstract method
         return raise_error(NotImplementedError)
 
     @staticmethod
@@ -192,9 +193,10 @@ class Gate(object):
         Helper method for ``construct_unitary`` for gates where ``controlled_by``
         has been used.
         """
+        # abstract method
         raise_error(NotImplementedError)
 
-    def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
+    def __matmul__(self, other: "Gate") -> "Gate":
         """Gate multiplication."""
         if self.qubits != other.qubits:
             raise_error(NotImplementedError, "Cannot multiply gates that target "
@@ -207,6 +209,7 @@ class Gate(object):
         return None
 
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
+        # abstract method
         return self.__matmul__(other)
 
     def _calculate_qubits_tensor(self):
@@ -220,6 +223,7 @@ class Gate(object):
         Calculates the ``matrix`` required to apply the gate to state vectors.
         This is not necessarily the same as the unitary matrix of the gate.
         """
+        # abstract method
         pass
 
     def commutes(self, gate: "Gate") -> bool:
@@ -288,6 +292,7 @@ class Gate(object):
         Returns:
             The state vector after the action of the gate.
         """
+        # abstract method
         raise_error(NotImplementedError)
 
 
@@ -390,8 +395,9 @@ class X(Gate):
             decomp_gates = [*part1, *part2]
 
         else: # pragma: no cover
-            raise_error(NotImplementedError, "X decomposition is not implemented for "
-                                             "zero free qubits.")
+            # impractical case
+            raise_error(NotImplementedError, "X decomposition not implemented "
+                                             "for zero free qubits.")
 
         decomp_gates.extend(decomp_gates)
         return decomp_gates
@@ -489,8 +495,9 @@ class M(Gate):
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:
-            raise_error(ValueError, "Cannot calculate set of unmeasured qubits if "
-                                    "the number of qubits in the circuit is unknown.")
+            raise_error(RuntimeError, "Cannot calculate set of unmeasured "
+                                      "qubits if the number of qubits in the "
+                                      "circuit is unknown.")
         if self._unmeasured_qubits is not None:
             raise_error(RuntimeError, "Cannot recalculate unmeasured qubits.")
         target_qubits = set(self.target_qubits)
@@ -970,8 +977,6 @@ class Unitary(ParametrizedGate):
 
     @property
     def unitary(self):
-        if self._unitary is None: # pragma: no cover
-            self._unitary = self.construct_unitary()
         return self._unitary
 
 
@@ -1064,6 +1069,7 @@ class VariationalLayer(ParametrizedGate):
         return {q: p for q, p in zip(self.target_qubits, params)}
 
     def _calculate_unitaries(self): # pragma: no cover
+        # abstract method
         return raise_error(NotImplementedError)
 
     @property
@@ -1122,8 +1128,9 @@ class NoiseChannel(Gate):
 
     @property
     def unitary(self): # pragma: no cover
-        raise_error(NotImplementedError, "Unitary property is not implemented for "
-                                         "channels yet.")
+        # future TODO
+        raise_error(NotImplementedError, "Unitary property not implemented for "
+                                         "channels.")
 
     def controlled_by(self, *q):
         """"""
@@ -1178,14 +1185,16 @@ class GeneralChannel(Gate):
         for qubits, matrix in A:
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
-            if shape != (rank, rank): # pragma: no cover
-                raise_error(ValueError, "Invalid Krauss operator shape {} for acting "
-                                        "on {} qubits.".format(shape, len(qubits)))
+            if shape != (rank, rank):
+                raise_error(ValueError, "Invalid Krauss operator shape {} for "
+                                        " acting on {} qubits."
+                                        "".format(shape, len(qubits)))
 
     @property
     def unitary(self): # pragma: no cover
-        raise_error(NotImplementedError, "Unitary property is not implemented for "
-                                         "channels yet.")
+        # future TODO
+        raise_error(NotImplementedError, "Unitary property not implemented for "
+                                         "channels.")
 
     def controlled_by(self, *q):
         """"""
