@@ -59,6 +59,8 @@ class BaseCircuit(object):
     from qibo.base import fusion
 
     def __init__(self, nqubits):
+        if not isinstance(nqubits, int):
+            raise_error(RuntimeError, f'nqubits must be an integer')
         if nqubits < 1:
             raise_error(ValueError, 'nqubits must be > 0')
         self.nqubits = nqubits
