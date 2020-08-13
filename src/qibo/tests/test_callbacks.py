@@ -12,7 +12,7 @@ _atol = 1e-8
 
 def test_entropy_product_state():
     """Check that the |++> state has zero entropy."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = callbacks.EntanglementEntropy()
     state = np.ones(4) / 2.0
 
     result = entropy(state).numpy()

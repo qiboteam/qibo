@@ -20,15 +20,17 @@ class Callback:
     @property
     def nqubits(self) -> int: # pragma: no cover
         """Total number of qubits in the circuit that the callback was added in."""
+        # abstract method
         return self._nqubits
 
     @nqubits.setter
     def nqubits(self, n: int): # pragma: no cover
+        # abstract method
         self._nqubits = n
 
     def __getitem__(self, k) -> tf.Tensor:
         if isinstance(k, int):
-            if k > len(self._results):
+            if k >= len(self._results):
                 raise_error(IndexError, "Attempting to access callbacks {} run but "
                                         "the callback has been used in {} executions."
                                         "".format(k, len(self._results)))
@@ -38,6 +40,7 @@ class Callback:
         raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
     def append(self, result: tf.Tensor):
