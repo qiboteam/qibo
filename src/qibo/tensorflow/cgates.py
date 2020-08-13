@@ -509,7 +509,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.pairs)]
-        if additional_matrix is not None: # pragma: no cover
+        if additional_matrix is not None:
             self.additional_unitary = self.unitary_constructor(
                 additional_matrix, self.additional_target)
 
@@ -518,7 +518,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         TensorflowGate.__call__(self, state, is_density_matrix)
         for i, unitary in enumerate(self.unitaries):
             state = unitary(state, is_density_matrix)
-        if self.additional_unitary is not None: # pragma: no cover
+        if self.additional_unitary is not None:
             state = self.additional_unitary(state, is_density_matrix)
         return state
 

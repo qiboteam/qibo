@@ -890,7 +890,8 @@ def test_controlled_by_unitary_action(backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variational_layer_call(nqubits=6):
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer_call(nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     theta = 2 * np.pi * np.random.random(nqubits)
