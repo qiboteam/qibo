@@ -126,12 +126,13 @@ def test_measurement_gate_errors():
     """Check various errors that are raised by the measurement gate."""
     state = np.zeros(4)
     state[-1] = 1
+    # add targets after calling
     gate = gates.M(1)
     result = gate(state, nshots=100)
-    # add targets after calling
     with pytest.raises(RuntimeError):
         gate._add((0,))
     # try to set unmeasured qubits before setting ``nqubits``
+    gate = gates.M(1)
     with pytest.raises(RuntimeError):
         gate._set_unmeasured_qubits()
     # try to set unmeasured qubit a second time
