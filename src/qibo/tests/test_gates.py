@@ -59,6 +59,8 @@ def test_flatten(backend):
     c.add(gates.Flatten(target_state))
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    gate = gates.Flatten(target_state)
+    gate(final_state)
     qibo.set_backend(original_backend)
 
 
@@ -840,6 +842,10 @@ def test_construct_unitary(backend):
     np.testing.assert_allclose(gates.ZPow(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary, target_matrix)
+    from qibo import matrices
+    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
+                              [0, 0, 0, 1]])
+    np.testing.assert_allclose(matrices.SWAP, target_matrix)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

@@ -385,6 +385,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor: # pragma: no cover
+        # impractical case because VariationalLayer is not called by circuits
         return self.cgates.VariationalLayer.__call__(self, state, is_density_matrix)
 
 
@@ -419,6 +420,7 @@ class TensorflowChannel(TensorflowGate):
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         """Loops over `self.gates` to calculate sum of Krauss operators."""
+        # abstract method
         raise_error(NotImplementedError)
 
 

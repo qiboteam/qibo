@@ -193,7 +193,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                     self._swap(state, *gate)
                 else:
                     self._special_gate_execute(state, gate)
-        for gate in special_gates:
+        for gate in special_gates: # pragma: no cover
             self._special_gate_execute(state, gate)
 
         self._final_state = state
