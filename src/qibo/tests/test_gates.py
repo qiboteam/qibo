@@ -777,6 +777,26 @@ def test_unitary_bad_shape(backend):
             gate = gates.Unitary(matrix, 0, 1, 2)
     qibo.set_backend(original_backend)
 
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_unitary_various_type_initialization(backend):
+    import tensorflow as tf
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = tf.cast(np.random.random((4, 4)), dtype=tf.complex128)
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(TypeError):
+        gate = gates.Unitary("abc", 0, 1)
+    qibo.set_backend(original_backend)
+
+
+def test_control_unitary_error():
+    matrix = np.random.random((4, 4))
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(ValueError):
+        unitary = gate.control_unitary(np.random.random((16, 16)))
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary(backend):
     qibo.set_backend(backend)
