@@ -4,6 +4,7 @@ import collections
 from abc import ABCMeta, abstractmethod
 from qibo.base import gates
 from qibo import gates as gate_module
+from qibo.config import raise_error
 from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
@@ -58,6 +59,8 @@ class BaseCircuit(object):
     from qibo.base import fusion
 
     def __init__(self, nqubits):
+        if nqubits < 1:
+            raise_error(ValueError, 'nqubits must be > 0')
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = []
@@ -92,9 +95,9 @@ class BaseCircuit(object):
         for k, kwarg1 in c1._init_kwargs.items():
             kwarg2 = c2._init_kwargs[k]
             if kwarg1 != kwarg2:
-                raise ValueError("Cannot add circuits with different kwargs. "
-                                 "{} is {} for first circuit and {} for the "
-                                 "second.".format(k, kwarg1, kwarg2))
+                raise_error(ValueError, "Cannot add circuits with different kwargs. "
+                                        "{} is {} for first circuit and {} for the "
+                                        "second.".format(k, kwarg1, kwarg2))
         newcircuit = cls(**c1._init_kwargs)
         # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
@@ -110,8 +113,8 @@ class BaseCircuit(object):
         elif c2.measurement_gate is not None:
             for k, v in c2.measurement_tuples.items():
                 if k in newcircuit.measurement_tuples:
-                    raise KeyError("Register name {} already exists in the "
-                                   "circuit.".format(k))
+                    raise_error(KeyError, "Register name {} already exists in the "
+                                          "circuit.".format(k))
                 newcircuit._check_measured(v)
                 newcircuit.measurement_tuples[k] = v
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
@@ -138,8 +141,8 @@ class BaseCircuit(object):
                     new_circuit.parametrized_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
             if self.fusion_groups: # pragma: no cover
-                raise NotImplementedError("Cannot create deep copy of fused "
-                                          "circuit.")
+                raise_error(NotImplementedError, "Cannot create deep copy of fused "
+                                                 "circuit.")
         else:
             new_circuit.queue = list(self.queue)
             new_circuit.parametrized_gates = list(self.parametrized_gates)
@@ -199,21 +202,21 @@ class BaseCircuit(object):
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
         if isinstance(noise_map, tuple) or isinstance(noise_map, list):
             if len(noise_map) != 3:
-                raise ValueError("Noise map expects three probabilities "
-                                 "but received {}.".format(len(noise_map)))
+                raise_error(ValueError, "Noise map expects three probabilities "
+                                        "but received {}.".format(len(noise_map)))
             return {q: noise_map for q in range(self.nqubits)}
         elif isinstance(noise_map, dict):
             if len(noise_map) != self.nqubits:
-                raise ValueError("Noise map has {} qubits while the circuit "
-                                 "has {}.".format(len(noise_map), self.nqubits))
+                raise_error(ValueError, "Noise map has {} qubits while the circuit "
+                                        "has {}.".format(len(noise_map), self.nqubits))
             for v in noise_map.values():
                 if len(v) != 3:
-                    raise ValueError("Noise map expects three probabilities "
-                                     "but received {}.".format(v))
+                    raise_error(ValueError, "Noise map expects three probabilities "
+                                            "but received {}.".format(v))
             return noise_map
 
-        raise TypeError("Type {} of noise map is not recognized."
-                        "".format(type(noise_map)))
+        raise_error(TypeError, "Type {} of noise map is not recognized."
+                               "".format(type(noise_map)))
 
     def decompose(self, *free: int) -> "BaseCircuit":
         """Decomposes circuit's gates to gates supported by OpenQASM.
@@ -280,8 +283,8 @@ class BaseCircuit(object):
         noise_map = self._check_noise_map(noise_map)
         if measurement_noise is not None:
             if self.measurement_gate is None:
-                raise ValueError("Passed measurement noise but the circuit "
-                                 "does not contain measurement gates.")
+                raise_error(ValueError, "Passed measurement noise but the circuit "
+                                        "does not contain measurement gates.")
             measurement_noise = self._check_noise_map(measurement_noise)
             # apply measurement noise only to the qubits that are measured
             # and leave default noise to the rest
@@ -293,8 +296,8 @@ class BaseCircuit(object):
         noise_gates = []
         for gate in self.queue:
             if isinstance(gate, gates.NoiseChannel):
-                raise ValueError("`.with_noise` method is not available for "
-                                 "circuits that already contain noise channels.")
+                raise_error(ValueError, "`.with_noise` method is not available for "
+                                        "circuits that already contain noise channels.")
             noise_gates.append([gate_module.NoiseChannel(q, *list(p))
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
@@ -325,8 +328,8 @@ class BaseCircuit(object):
         for qubit in gate_qubits:
             if (self.measurement_gate is not None and
                 qubit in self.measurement_gate.target_qubits):
-                raise ValueError("Cannot reuse qubit {} because it is already "
-                                 "measured".format(qubit))
+                raise_error(ValueError, "Cannot reuse qubit {} because it is already "
+                                        "measured".format(qubit))
 
     def add(self, gate):
         """Add a gate to a given queue.
@@ -344,18 +347,18 @@ class BaseCircuit(object):
         elif isinstance(gate, gates.Gate):
             self._add(gate)
         else:
-            raise TypeError("Unknown gate type {}.".format(type(gate)))
+            raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
     def _add(self, gate: gates.Gate):
         if self._final_state is not None:
-            raise RuntimeError("Cannot add gates to a circuit after it is "
-                               "executed.")
+            raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
+                                      "executed.")
 
         for q in gate.target_qubits:
             if q >= self.nqubits:
-                raise ValueError("Attempting to add gate with target qubits {} "
-                                 "on a circuit of {} qubits."
-                                 "".format(gate.target_qubits, self.nqubits))
+                raise_error(ValueError, "Attempting to add gate with target qubits {} "
+                                        "on a circuit of {} qubits."
+                                        "".format(gate.target_qubits, self.nqubits))
 
         self._set_nqubits(gate)
         self._check_measured(gate.qubits)
@@ -374,11 +377,11 @@ class BaseCircuit(object):
         Helper method for ``circuit.add(gate)``.
         """
         if gate._nqubits is None: # pragma: no cover
-            raise NotImplementedError
+            raise_error(NotImplementedError)
         elif gate.nqubits != self.nqubits:
-            raise ValueError("Attempting to add gate with {} total qubits to "
-                             "a circuit with {} qubits."
-                             "".format(gate.nqubits, self.nqubits))
+            raise_error(ValueError, "Attempting to add gate with {} total qubits to "
+                                    "a circuit with {} qubits."
+                                    "".format(gate.nqubits, self.nqubits))
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.
@@ -393,8 +396,8 @@ class BaseCircuit(object):
             name = "register{}".format(len(self.measurement_tuples))
             gate.register_name = name
         elif name in self.measurement_tuples:
-            raise KeyError("Register name {} has already been used."
-                           "".format(name))
+            raise_error(KeyError, "Register name {} has already been used."
+                                  "".format(name))
 
         # Update circuit's global measurement gate
         if self.measurement_gate is None:
@@ -451,7 +454,7 @@ class BaseCircuit(object):
         if isinstance(gate, type) and issubclass(gate, gates.Gate):
             return [(i, g) for i, g in enumerate(self.queue)
                     if isinstance(g, gate)]
-        raise TypeError("Gate identifier {} not recognized.".format(gate))
+        raise_error(TypeError, "Gate identifier {} not recognized.".format(gate))
 
     def _set_parameters_list(self, parameters: List, n: int):
         """Helper method for ``set_parameters`` when a list is given.
@@ -467,9 +470,9 @@ class BaseCircuit(object):
                 gate.parameter = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
-            raise ValueError("Given list of parameters has length {} while "
-                             "the circuit contains {} parametrized gates."
-                             "".format(n, len(self.parametrized_gates)))
+            raise_error(ValueError, "Given list of parameters has length {} while "
+                                    "the circuit contains {} parametrized gates."
+                                    "".format(n, len(self.parametrized_gates)))
 
         for fusion_group in self.fusion_groups:
             fusion_group.update()
@@ -508,16 +511,16 @@ class BaseCircuit(object):
             self._set_parameters_list(parameters, len(parameters))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
-                raise TypeError("Cannot accept new parameters as dictionary "
-                                "for fused circuits. Use list, tuple or array.")
+                raise_error(TypeError, "Cannot accept new parameters as dictionary "
+                                       "for fused circuits. Use list, tuple or array.")
             if set(parameters.keys()) != self.parametrized_gates.set:
-                raise ValueError("Dictionary with gate parameters does not "
-                                 "agree with the circuit gates.")
+                raise_error(ValueError, "Dictionary with gate parameters does not "
+                                        "agree with the circuit gates.")
             for gate in self.parametrized_gates:
                 gate.parameter = parameters[gate]
         else:
-            raise TypeError("Invalid type of parameters {}."
-                            "".format(type(parameters)))
+            raise_error(TypeError, "Invalid type of parameters {}."
+                                   "".format(type(parameters)))
 
     def get_parameters(self, format: str = "list") -> Union[List, Dict]:
         """Returns the parameters of all parametrized gates in the circuit.
@@ -547,7 +550,7 @@ class BaseCircuit(object):
                     params.append(gate.parameter)
             return params
         else:
-            raise ValueError(f"Unknown format {format} given in ``get_parameters``.")
+            raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
     @property
     def summary(self) -> str:
@@ -593,12 +596,12 @@ class BaseCircuit(object):
         If the circuit is executed more than once, only the last final state
         is returned.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def execute(self, *args): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend."""
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     def __call__(self, *args): # pragma: no cover
         """Equivalent to ``circuit.execute``."""
@@ -619,16 +622,16 @@ class BaseCircuit(object):
         # Set measurements
         for reg_name, reg_qubits in self.measurement_tuples.items():
             if not reg_name.islower():
-                raise NameError("OpenQASM does not support capital letters in "
-                                "register names but {} was used".format(reg_name))
+                raise_error(NameError, "OpenQASM does not support capital letters in "
+                                       "register names but {} was used".format(reg_name))
             code.append(f"creg {reg_name}[{len(reg_qubits)}];")
 
         # Add gates
         for gate in self.queue:
             if gate.name not in gates.QASM_GATES:
-                raise ValueError(f"Gate {gate.name} is not supported by OpenQASM.")
+                raise_error(ValueError, f"Gate {gate.name} is not supported by OpenQASM.")
             if gate.is_controlled_by:
-                raise ValueError("OpenQASM does not support multi-controlled gates.")
+                raise_error(ValueError, "OpenQASM does not support multi-controlled gates.")
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             name = gate.name
@@ -714,7 +717,7 @@ class BaseCircuit(object):
                 if name:
                     index = next(_args)
                     if not index.isdigit():
-                        raise ValueError("Invalid QASM qubit arguments:", args)
+                        raise_error(ValueError, "Invalid QASM qubit arguments:", args)
                     yield name, int(index)
 
         # Remove comment lines
@@ -723,7 +726,7 @@ class BaseCircuit(object):
         lines = (line for line in lines.split(";") if line)
 
         if next(lines) != "OPENQASM 2.0":
-            raise ValueError("QASM code should start with 'OPENQASM 2.0'.")
+            raise_error(ValueError, "QASM code should start with 'OPENQASM 2.0'.")
 
         qubits = {} # Dict[Tuple[str, int], int]: map from qubit tuple to qubit id
         cregs_size = {} # Dict[str, int]: map from `creg` name to its size
@@ -750,24 +753,24 @@ class BaseCircuit(object):
             elif command == "measure":
                 args = args.split("->")
                 if len(args) != 2:
-                    raise ValueError("Invalid QASM measurement:", line)
+                    raise_error(ValueError, "Invalid QASM measurement:", line)
                 qubit = next(read_args(args[0]))
                 if qubit not in qubits:
-                    raise ValueError("Qubit {} is not defined in QASM code."
-                                     "".format(qubit))
+                    raise_error(ValueError, "Qubit {} is not defined in QASM code."
+                                            "".format(qubit))
 
                 register, idx = next(read_args(args[1]))
                 if register not in cregs_size:
-                    raise ValueError("Classical register name {} is not defined "
-                                     "in QASM code.".format(register))
+                    raise_error(ValueError, "Classical register name {} is not defined "
+                                            "in QASM code.".format(register))
                 if idx >= cregs_size[register]:
-                    raise ValueError("Cannot access index {} of register {} "
-                                     "with {} qubits."
-                                     "".format(idx, register, cregs_size[register]))
+                    raise_error(ValueError, "Cannot access index {} of register {} "
+                                            "with {} qubits."
+                                            "".format(idx, register, cregs_size[register]))
                 if register in registers:
                     if idx in registers[register]:
-                        raise KeyError("Key {} of register {} has already "
-                                       "been used.".format(idx, register))
+                        raise_error(KeyError, "Key {} of register {} has already "
+                                              "been used.".format(idx, register))
                     registers[register][idx] = qubits[qubit]
                 else:
                     registers[register] = {idx: qubits[qubit]}
@@ -778,33 +781,33 @@ class BaseCircuit(object):
                 if len(pieces) == 1:
                     gatename, theta = pieces[0], None
                     if gatename not in gates.QASM_GATES:
-                        raise ValueError("QASM command {} is not recognized."
-                                         "".format(command))
+                        raise_error(ValueError, "QASM command {} is not recognized."
+                                                "".format(command))
                     if gatename in gates.PARAMETRIZED_GATES:
-                        raise ValueError("Missing theta parameter for QASM "
-                                         "gate {}.".format(gatename))
+                        raise_error(ValueError, "Missing theta parameter for QASM "
+                                                "gate {}.".format(gatename))
 
                 elif len(pieces) == 2:
                     gatename, theta = pieces
                     if gatename not in gates.PARAMETRIZED_GATES:
-                        raise ValueError("Invalid QASM command {}."
-                                         "".format(command))
+                        raise_error(ValueError, "Invalid QASM command {}."
+                                                "".format(command))
                     try:
                         theta = float(theta)
                     except ValueError:
-                        raise ValueError("Invalid value {} for theta parameter."
-                                         "".format(theta))
+                        raise_error(ValueError, "Invalid value {} for theta parameter."
+                                                "".format(theta))
 
                 else:
-                    raise ValueError("QASM command {} is not recognized."
-                                     "".format(command))
+                    raise_error(ValueError, "QASM command {} is not recognized."
+                                            "".format(command))
 
                 # Add gate to gate list
                 qubit_list = []
                 for qubit in read_args(args):
                     if qubit not in qubits:
-                        raise ValueError("Qubit {} is not defined in QASM "
-                                         "code.".format(qubit))
+                        raise_error(ValueError, "Qubit {} is not defined in QASM "
+                                                "code.".format(qubit))
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gates.QASM_GATES[gatename],
                                   list(qubit_list),

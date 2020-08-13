@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPES, EIGVAL_CUTOFF
+from qibo.config import DTYPES, EIGVAL_CUTOFF, raise_error
 from typing import List, Optional, Union
 
 
@@ -29,16 +29,16 @@ class Callback:
     def __getitem__(self, k) -> tf.Tensor:
         if isinstance(k, int):
             if k > len(self._results):
-                raise IndexError("Attempting to access callbacks {} run but "
-                                 "the callback has been used in {} executions."
-                                 "".format(k, len(self._results)))
+                raise_error(IndexError, "Attempting to access callbacks {} run but "
+                                        "the callback has been used in {} executions."
+                                        "".format(k, len(self._results)))
             return self._results[k]
         if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
             return tf.stack(self._results[k])
-        raise IndexError("Unrecognized type for index {}.".format(k))
+        raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     def append(self, result: tf.Tensor):
         self._results.append(result)
@@ -100,8 +100,8 @@ class PartialTrace(Callback):
         """
         # Cast state in the proper shape
         if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
-            raise TypeError("State of unknown type {} was given in callback "
-                            "calculation.".format(type(state)))
+            raise_error(TypeError, "State of unknown type {} was given in callback "
+                                   "calculation.".format(type(state)))
         if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
@@ -213,8 +213,8 @@ class Overlap(Callback):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         if is_density_matrix:
-            raise NotImplementedError("Overlap callback is not implemented "
-                                      "for density matrices.")
+            raise_error(NotImplementedError, "Overlap callback is not implemented "
+                                             "for density matrices.")
 
         overlap = tf.abs(tf.reduce_sum(self.statec * state))
         if self.norm is not None:

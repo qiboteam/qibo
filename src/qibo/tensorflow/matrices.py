@@ -1,6 +1,6 @@
 import numpy as np
 import tensorflow as tf
-from qibo.config import DTYPES
+from qibo.config import DTYPES, raise_error
 
 
 class NumpyMatrices:
@@ -33,8 +33,8 @@ class NumpyMatrices:
         elif DTYPES.get("DTYPECPX") == tf.complex64:
             return np.complex64
         else:
-            raise TypeError("Unknown complex type {}."
-                            "".format(DTYPES.get("DTYPECPX")))
+            raise_error(TypeError, "Unknown complex type {}."
+                                   "".format(DTYPES.get("DTYPECPX")))
 
     @property
     def I(self):

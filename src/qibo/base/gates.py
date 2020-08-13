@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 from qibo import config
+from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
@@ -71,16 +72,16 @@ class Gate(object):
         self._target_qubits = tuple(qubits)
         if len(self._target_qubits) != len(set(qubits)):
             repeated = self._find_repeated(qubits)
-            raise ValueError("Target qubit {} was given twice for gate {}."
-                             "".format(repeated, self.name))
+            raise_error(ValueError, "Target qubit {} was given twice for gate {}."
+                                    "".format(repeated, self.name))
 
     def _set_control_qubits(self, qubits: Sequence[int]):
         """Helper method for setting control qubits."""
         self._control_qubits = set(qubits)
         if len(self._control_qubits) != len(qubits):
             repeated = self._find_repeated(qubits)
-            raise ValueError("Control qubit {} was given twice for gate {}."
-                             "".format(repeated, self.name))
+            raise_error(ValueError, "Control qubit {} was given twice for gate {}."
+                                    "".format(repeated, self.name))
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
@@ -119,8 +120,8 @@ class Gate(object):
         """Checks that there are no qubits that are both target and controls."""
         common = set(self._target_qubits) & self._control_qubits
         if common:
-            raise ValueError("{} qubits are both targets and controls for "
-                             "gate {}.".format(common, self.name))
+            raise_error(ValueError, "{} qubits are both targets and controls for "
+                                    "gate {}.".format(common, self.name))
 
     @property
     def nqubits(self) -> int:
@@ -130,15 +131,15 @@ class Gate(object):
         when the gate is called on a state. The user should not set this.
         """
         if self._nqubits is None:
-            raise ValueError("Accessing number of qubits for gate {} but "
-                             "this is not yet set.".format(self))
+            raise_error(ValueError, "Accessing number of qubits for gate {} but "
+                                    "this is not yet set.".format(self))
         return self._nqubits
 
     @property
     def nstates(self) -> int:
         if self._nstates is None:
-            raise ValueError("Accessing number of qubits for gate {} but "
-                             "this is not yet set.".format(self))
+            raise_error(ValueError, "Accessing number of qubits for gate {} but "
+                                    "this is not yet set.".format(self))
         return self._nstates
 
     @nqubits.setter
@@ -150,8 +151,8 @@ class Gate(object):
         The user is not supposed to set `nqubits` by hand.
         """
         if self._nqubits is not None:
-            raise RuntimeError("The number of qubits for this gates is already "
-                               "set to {}.".format(self._nqubits))
+            raise_error(RuntimeError, "The number of qubits for this gates is already "
+                                      "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
         self._calculate_qubits_tensor()
@@ -165,8 +166,8 @@ class Gate(object):
         gate to a state vector.
         """
         if len(self.qubits) > 2:
-            raise NotImplementedError("Cannot calculate unitary matrix for "
-                                      "gates that target more than two qubits.")
+            raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
+                                             "gates that target more than two qubits.")
         if self._unitary is None:
             self._unitary = self.construct_unitary()
             if self.is_controlled_by:
@@ -182,7 +183,7 @@ class Gate(object):
         Returns:
             Unitary matrix as an array or tensor supported by the backend.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     @staticmethod
     def control_unitary(unitary): # pragma: no cover
@@ -191,13 +192,13 @@ class Gate(object):
         Helper method for ``construct_unitary`` for gates where ``controlled_by``
         has been used.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
         """Gate multiplication."""
         if self.qubits != other.qubits:
-            raise NotImplementedError("Cannot multiply gates that target "
-                                      "different qubits.")
+            raise_error(NotImplementedError, "Cannot multiply gates that target "
+                                             "different qubits.")
         if self.__class__.__name__ == other.__class__.__name__:
             square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
             if self.__class__.__name__ in square_identity:
@@ -249,13 +250,13 @@ class Gate(object):
             controlled in the given qubits.
         """
         if self.control_qubits:
-            raise RuntimeError("Cannot use `controlled_by` method on gate {} "
-                               "because it is already controlled by {}."
-                               "".format(self, self.control_qubits))
+            raise_error(RuntimeError, "Cannot use `controlled_by` method on gate {} "
+                                      "because it is already controlled by {}."
+                                      "".format(self, self.control_qubits))
         if self._nqubits is not None:
-            raise RuntimeError("Cannot use controlled_by on a gate that is "
-                               "part of a Circuit or has been called on a "
-                               "state.")
+            raise_error(RuntimeError, "Cannot use controlled_by on a gate that is "
+                                      "part of a Circuit or has been called on a "
+                                      "state.")
         if qubits:
             self.is_controlled_by = True
             self.control_qubits = qubits
@@ -287,7 +288,7 @@ class Gate(object):
         Returns:
             The state vector after the action of the gate.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
 
 class H(Gate):
@@ -341,13 +342,13 @@ class X(Gate):
             same effect as applying the original multi-control gate.
         """
         if set(free) & set(self.qubits):
-            raise ValueError("Cannot decompose multi-control X gate if free "
-                             "qubits coincide with target or controls.")
+            raise_error(ValueError, "Cannot decompose multi-control X gate if free "
+                                    "qubits coincide with target or controls.")
         if self._nqubits is not None:
             for q in free:
                 if q >= self.nqubits:
-                    raise ValueError("Gate acts on {} qubits but {} was given "
-                                     "as free qubit.".format(self.nqubits, q))
+                    raise_error(ValueError, "Gate acts on {} qubits but {} was given "
+                                            "as free qubit.".format(self.nqubits, q))
 
         controls = self.control_qubits
         target = self.target_qubits[0]
@@ -389,8 +390,8 @@ class X(Gate):
             decomp_gates = [*part1, *part2]
 
         else: # pragma: no cover
-            raise NotImplementedError("X decomposition is not implemented for "
-                                      "zero free qubits.")
+            raise_error(NotImplementedError, "X decomposition is not implemented for "
+                                             "zero free qubits.")
 
         decomp_gates.extend(decomp_gates)
         return decomp_gates
@@ -482,16 +483,16 @@ class M(Gate):
             qubits: Tuple of qubit ids to be added to the measurement's qubits.
         """
         if self._unmeasured_qubits is not None:
-            raise RuntimeError("Cannot add qubits to a measurement gate that "
-                               "was executed.")
+            raise_error(RuntimeError, "Cannot add qubits to a measurement gate that "
+                                      "was executed.")
         self.target_qubits += qubits
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:
-            raise ValueError("Cannot calculate set of unmeasured qubits if "
-                             "the number of qubits in the circuit is unknown.")
+            raise_error(ValueError, "Cannot calculate set of unmeasured qubits if "
+                                    "the number of qubits in the circuit is unknown.")
         if self._unmeasured_qubits is not None:
-            raise RuntimeError("Cannot recalculate unmeasured qubits.")
+            raise_error(RuntimeError, "Cannot recalculate unmeasured qubits.")
         target_qubits = set(self.target_qubits)
         unmeasured_qubits = []
         reduced_target_qubits = dict()
@@ -524,12 +525,12 @@ class M(Gate):
 
     def controlled_by(self, *q):
         """"""
-        raise NotImplementedError("Measurement gates cannot be controlled.")
+        raise_error(NotImplementedError, "Measurement gates cannot be controlled.")
 
     @property
     def unitary(self):
-        raise ValueError("Measurements cannot be represented as unitary "
-                         "matrices.")
+        raise_error(ValueError, "Measurements cannot be represented as unitary "
+                                "matrices.")
 
 
 class ParametrizedGate(Gate):
@@ -856,8 +857,8 @@ class GeneralizedfSim(ParametrizedGate):
     def parameter(self, x):
         shape = tuple(x[0].shape)
         if shape != (2, 2):
-            raise ValueError("Invalid shape {} of rotation for generalized "
-                             "fSim gate".format(shape))
+            raise_error(ValueError, "Invalid shape {} of rotation for generalized "
+                                    "fSim gate".format(shape))
         self._unitary = None
         self.__unitary, self._phi = x
         self._reprepare()
@@ -962,8 +963,8 @@ class Unitary(ParametrizedGate):
         elif shape == (2 ** (2 * self.rank),):
             self.__unitary = x.reshape(true_shape)
         else:
-            raise ValueError("Invalid shape {} of unitary matrix acting on "
-                             "{} target qubits.".format(shape, self.rank))
+            raise_error(ValueError, "Invalid shape {} of unitary matrix acting on "
+                                    "{} target qubits.".format(shape, self.rank))
         self._unitary = None
         self._reprepare()
 
@@ -1045,9 +1046,9 @@ class VariationalLayer(ParametrizedGate):
         elif len(additional_targets) == 1:
             self.additional_target = additional_targets.pop()
         else:
-            raise ValueError("Variational layer can have at most one additional "
-                             "target for one qubit gates but has {}."
-                             "".format(additional_targets))
+            raise_error(ValueError, "Variational layer can have at most one additional "
+                                    "target for one qubit gates but has {}."
+                                    "".format(additional_targets))
 
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
@@ -1057,13 +1058,13 @@ class VariationalLayer(ParametrizedGate):
 
     def _create_params_dict(self, params: List[float]) -> Dict[int, float]:
         if len(self.target_qubits) != len(params):
-            raise ValueError("VariationalLayer has {} target qubits but {} "
-                             "parameters were given."
-                             "".format(len(self.target_qubits), len(params)))
+            raise_error(ValueError, "VariationalLayer has {} target qubits but {} "
+                                    "parameters were given."
+                                    "".format(len(self.target_qubits), len(params)))
         return {q: p for q, p in zip(self.target_qubits, params)}
 
     def _calculate_unitaries(self): # pragma: no cover
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     @property
     def parameter(self) -> List[float]:
@@ -1087,8 +1088,8 @@ class VariationalLayer(ParametrizedGate):
 
     @property
     def unitary(self):
-        raise ValueError("Unitary property does not exist for the "
-                         "``VariationalLayer``.")
+        raise_error(ValueError, "Unitary property does not exist for the "
+                                "``VariationalLayer``.")
 
 
 class NoiseChannel(Gate):
@@ -1121,12 +1122,12 @@ class NoiseChannel(Gate):
 
     @property
     def unitary(self): # pragma: no cover
-        raise NotImplementedError("Unitary property is not implemented for "
-                                  "channels yet.")
+        raise_error(NotImplementedError, "Unitary property is not implemented for "
+                                         "channels yet.")
 
     def controlled_by(self, *q):
         """"""
-        raise ValueError("Noise channel cannot be controlled on qubits.")
+        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
 
 class GeneralChannel(Gate):
@@ -1178,17 +1179,17 @@ class GeneralChannel(Gate):
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
             if shape != (rank, rank): # pragma: no cover
-                raise ValueError("Invalid Krauss operator shape {} for acting "
-                                 "on {} qubits.".format(shape, len(qubits)))
+                raise_error(ValueError, "Invalid Krauss operator shape {} for acting "
+                                        "on {} qubits.".format(shape, len(qubits)))
 
     @property
     def unitary(self): # pragma: no cover
-        raise NotImplementedError("Unitary property is not implemented for "
-                                  "channels yet.")
+        raise_error(NotImplementedError, "Unitary property is not implemented for "
+                                         "channels yet.")
 
     def controlled_by(self, *q):
         """"""
-        raise ValueError("Channel cannot be controlled on qubits.")
+        raise_error(ValueError, "Channel cannot be controlled on qubits.")
 
 
 class Flatten(Gate):

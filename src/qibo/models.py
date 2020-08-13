@@ -1,6 +1,6 @@
-from qibo.config import BACKEND_NAME
+from qibo.config import BACKEND_NAME, raise_error
 if BACKEND_NAME != "tensorflow": # pragma: no cover
-    raise NotImplementedError("Only Tensorflow backend is implemented.")
+    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
@@ -66,8 +66,8 @@ def QFT(nqubits: int, with_swaps: bool = True,
     """
     if accelerators is not None:
         if not with_swaps:
-            raise NotImplementedError("Distributed QFT is only implemented "
-                                      "with SWAPs.")
+            raise_error(NotImplementedError, "Distributed QFT is only implemented "
+                                             "with SWAPs.")
         return _DistributedQFT(nqubits, accelerators, memory_device)
 
     import numpy as np
@@ -99,9 +99,9 @@ def _DistributedQFT(nqubits: int,
     if accelerators is not None:
         circuit.global_qubits = range(circuit.nlocal, nqubits)
         if icrit < circuit.nglobal:
-            raise NotImplementedError("Cannot implement QFT for {} qubits "
-                                      "using {} global qubits."
-                                      "".format(nqubits, circuit.nglobal))
+            raise_error(NotImplementedError, "Cannot implement QFT for {} qubits "
+                                             "using {} global qubits."
+                                             "".format(nqubits, circuit.nglobal))
 
     for i1 in range(nqubits):
         if i1 < icrit:
@@ -171,8 +171,8 @@ class VQE(object):
 
         if compile:
             if not self.circuit.using_tfgates:
-                raise RuntimeError("Cannot compile VQE that uses custom operators. "
-                                   "Set the compile flag to False.")
+                raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
+                                          "Set the compile flag to False.")
             from qibo import K
             loss = K.function(loss)
 
@@ -181,9 +181,9 @@ class VQE(object):
             from qibo.tensorflow.gates import TensorflowGate
             for gate in self.circuit.queue:
                 if not isinstance(gate, TensorflowGate): # pragma: no cover
-                    raise RuntimeError('SGD VQE requires native Tensorflow '
-                                       'gates because gradients are not '
-                                       'supported in the custom kernels.')
+                    raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
+                                              'gates because gradients are not '
+                                              'supported in the custom kernels.')
 
             result, parameters = self.optimizers.optimize(loss, initial_state,
                                                           "sgd", options,

@@ -5,7 +5,7 @@ import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
 from qibo.config import tfmatrices as matrices
-from qibo.config import BACKEND, DTYPES
+from qibo.config import BACKEND, DTYPES, raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -320,8 +320,8 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         elif isinstance(unitary, np.ndarray):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
         else: # pragma: no cover
-            raise TypeError("Unknown type {} of unitary matrix"
-                            "".format(type(unitary)))
+            raise_error(TypeError, "Unknown type {} of unitary matrix"
+                                   "".format(type(unitary)))
         return matrix
 
 
@@ -410,8 +410,8 @@ class TensorflowChannel(TensorflowGate):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
                  ) -> tf.Tensor:
         if not is_density_matrix:
-            raise ValueError("Noise channel can only be applied to density "
-                             "matrices.")
+            raise_error(ValueError, "Noise channel can only be applied to density "
+                                    "matrices.")
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape)) // 2
 
@@ -419,7 +419,7 @@ class TensorflowChannel(TensorflowGate):
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         """Loops over `self.gates` to calculate sum of Krauss operators."""
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
 
 class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):

@@ -14,7 +14,19 @@ BACKEND_NAME = "tensorflow"
 LEAST_SIGNIFICANT_QUBIT = 0
 
 if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
-    raise NotImplementedError("The least significant qubit should be 0.")
+    raise_error(NotImplementedError, "The least significant qubit should be 0.")
+
+
+def raise_error(exception, message=None, args=None):
+    """Raise exception with logging error.
+
+    Args:
+        exception (Exception): python exception.
+        message (str): the error message.
+    """
+    log.error(message)
+    raise exception(message, args)
+
 
 # Load backend specifics
 if BACKEND_NAME == "tensorflow":
@@ -60,7 +72,7 @@ if BACKEND_NAME == "tensorflow":
     elif DEVICES['CPU']:
         DEVICES['DEFAULT'] = DEVICES['CPU'][0].name
     else: # pragma: no cover
-        raise RuntimeError("Unable to find Tensorflow devices.")
+        raise_error(RuntimeError, "Unable to find Tensorflow devices.")
 
     # Define numpy and tensorflow matrices
     # numpy matrices are exposed to user via ``from qibo import matrices``
@@ -96,7 +108,7 @@ if BACKEND_NAME == "tensorflow":
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.MatmulEinsum()
         else:
-            raise RuntimeError(f"Gate backend '{backend}' not supported.")
+            raise_error(RuntimeError, f"Gate backend '{backend}' not supported.")
 
     def get_backend():
         """Get backend used to implement gates.
@@ -125,7 +137,7 @@ if BACKEND_NAME == "tensorflow":
             DTYPES['DTYPECPX'] = tf.complex128
             DTYPES['NPTYPECPX'] = np.complex128
         else:
-            raise RuntimeError(f'dtype {dtype} not supported.')
+            raise_error(RuntimeError, f'dtype {dtype} not supported.')
         DTYPES['STRING'] = dtype
         matrices.allocate_matrices()
         tfmatrices.allocate_matrices()
@@ -151,13 +163,13 @@ if BACKEND_NAME == "tensorflow":
                           category=RuntimeWarning)
         parts = device_name[1:].split(":")
         if device_name[0] != "/" or len(parts) < 2 or len(parts) > 3:
-            raise ValueError("Device name should follow the pattern: "
+            raise_error(ValueError, "Device name should follow the pattern: "
                              "/{device type}:{device number}.")
         device_type, device_number = parts[-2], int(parts[-1])
         if device_type not in {"CPU", "GPU"}:
-            raise ValueError(f"Unknown device type {device_type}.")
+            raise_error(ValueError, f"Unknown device type {device_type}.")
         if device_number >= len(DEVICES[device_type]):
-            raise ValueError(f"Device {device_name} does not exist.")
+            raise_error(ValueError, f"Device {device_name} does not exist.")
 
         DEVICES['DEFAULT'] = device_name
         with tf.device(device_name):
@@ -173,7 +185,7 @@ if BACKEND_NAME == "tensorflow":
 
 
 else: # pragma: no cover
-    raise NotImplementedError("Only Tensorflow backend is implemented.")
+    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
 
 
 # Configuration for logging mechanism
@@ -207,6 +219,6 @@ class CustomColorHandler(logging.StreamHandler):
 
 
 # allocate logger object
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(CustomColorHandler())
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(CustomColorHandler())

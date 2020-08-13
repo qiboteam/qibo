@@ -3,6 +3,7 @@
 import numpy as np
 import tensorflow as tf
 import joblib
+from qibo.config import raise_error
 from qibo.base import gates
 from qibo import gates as gate_module
 from qibo.tensorflow import callbacks, circuit, measurements
@@ -57,8 +58,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(np.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
-            raise ValueError("Number of calculation devices should be a power "
-                             "of 2 but is {}.".format(self.ndevices))
+            raise_error(ValueError, "Number of calculation devices should be a power "
+                                    "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
 
@@ -70,13 +71,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         # Do not set ``gate.nqubits`` during gate addition because this will
         # be set by ``self.queues`` when creating the gates on each device.
         if gate._nqubits is not None:
-            raise ValueError("Attempting to add gate with preset number of "
-                             "qubits in distributed circuit.")
+            raise_error(ValueError, "Attempting to add gate with preset number of "
+                                    "qubits in distributed circuit.")
 
     def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
         if not deep:
-            raise ValueError("Non-deep copy is not allowed for distributed "
-                             "circuits because they modify gate objects.")
+            raise_error(ValueError, "Non-deep copy is not allowed for distributed "
+                                    "circuits because they modify gate objects.")
         return super(TensorflowDistributedCircuit, self).copy(deep)
 
     def _fuse_copy(self) -> "TensorflowDistributedCircuit":
@@ -84,13 +85,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def fuse(self) -> "TensorflowDistributedCircuit":
         if self.queues.queues:
-            raise RuntimeError("Cannot fuse distributed circuit after "
-                               "its first execution.")
+            raise_error(RuntimeError, "Cannot fuse distributed circuit after "
+                                      "its first execution.")
         return super(TensorflowDistributedCircuit, self).fuse()
 
     def with_noise(self, noise_map, measurement_noise=None):
-        raise NotImplementedError("Distributed circuit does not support "
-                                  "density matrices yet.")
+        raise_error(NotImplementedError, "Distributed circuit does not support "
+                                         "density matrices yet.")
 
     def _add(self, gate: gates.Gate):
         """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
@@ -98,19 +99,19 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         Also checks that there are sufficient qubits to use as global.
         """
         if not isinstance(gate, gate_module.TensorflowGate):
-            raise NotImplementedError("Distributed circuit does not support "
-                                      "native tensorflow gates.")
+            raise_error(NotImplementedError, "Distributed circuit does not support "
+                                             "native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):
             gate._prepare()
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
               not isinstance(gate, gates.M)):
-            raise ValueError("Insufficient qubits to use for global in "
-                             "distributed circuit.")
+            raise_error(ValueError, "Insufficient qubits to use for global in "
+                                    "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
 
     def compile(self):
         """"""
-        raise RuntimeError("Cannot compile circuit that uses custom operators.")
+        raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
     def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
         for gate in gates:
@@ -221,9 +222,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         try:
             return self._execute(initial_state=initial_state, nshots=nshots)
         except oom_error:
-            raise RuntimeError("State does not fit in memory during distributed "
-                               "execution. Please create a new circuit with "
-                               "different device configuration and try again.")
+            raise_error(RuntimeError, "State does not fit in memory during distributed "
+                                      "execution. Please create a new circuit with "
+                                      "different device configuration and try again.")
 
     def _cast_initial_state(self, initial_state: Optional[InitStateType] = None) -> tf.Tensor:
         """Checks and casts initial state given by user."""

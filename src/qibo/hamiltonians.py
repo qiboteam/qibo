@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import matrices, K
-from qibo.config import DTYPES
+from qibo.config import DTYPES, raise_error
 from abc import ABCMeta
 
 
@@ -23,11 +23,11 @@ class Hamiltonian(object):
 
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
-            raise RuntimeError(f'nqubits must be an integer')
+            raise_error(RuntimeError, f'nqubits must be an integer')
         shape = tuple(matrix.shape)
         if shape != 2 * (2 ** nqubits,):
-            raise ValueError(f"The Hamiltonian is defined for {nqubits} qubits "
-                              "while the given matrix has shape {shape}.")
+            raise_error(ValueError, f"The Hamiltonian is defined for {nqubits} qubits "
+                                     "while the given matrix has shape {shape}.")
 
         self.nqubits = nqubits
         self.matrix = matrix
@@ -83,8 +83,8 @@ class Hamiltonian(object):
         """Add operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, 'Only hamiltonians with the same '
+                                          'number of qubits can be added.')
             new_matrix = self.matrix + o.matrix
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, NUMERIC_TYPES):
@@ -92,8 +92,8 @@ class Hamiltonian(object):
                           o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype))
             return self.__class__(self.nqubits, new_matrix)
         else:
-            raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, f'Hamiltonian addition to {type(o)} '
+                                              'not implemented.')
 
     def __radd__(self, o): # pragma: no cover
         """Right operator addition."""
@@ -103,8 +103,8 @@ class Hamiltonian(object):
         """Subtraction operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, 'Only hamiltonians with the same '
+                                          'number of qubits can be added.')
             new_matrix = self.matrix - o.matrix
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, NUMERIC_TYPES): # pragma: no cover
@@ -112,15 +112,15 @@ class Hamiltonian(object):
                           o * K.eye(2 ** self.nqubits, dtype=self.matrix.dtype))
             return self.__class__(self.nqubits, new_matrix)
         else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, f'Hamiltonian subtraction to {type(o)} '
+                                              'not implemented.')
 
     def __rsub__(self, o):
         """Right subtraction operator."""
         if isinstance(o, self.__class__): # pragma: no cover
             if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
+                raise_error(RuntimeError, 'Only hamiltonians with the same '
+                                          'number of qubits can be added.')
             new_matrix = o.matrix - self.matrix
             return self.__class__(self.nqubits, new_matrix)
         elif isinstance(o, NUMERIC_TYPES):
@@ -128,8 +128,8 @@ class Hamiltonian(object):
                           - self.matrix)
             return self.__class__(self.nqubits, new_matrix)
         else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, f'Hamiltonian subtraction to {type(o)} '
+                                              'not implemented.')
 
     def __mul__(self, o):
         """Multiplication to scalar operator."""
@@ -152,8 +152,8 @@ class Hamiltonian(object):
             new_matrix = self.matrix * K.cast(o, dtype=self.matrix.dtype)
             return self.__class__(self.nqubits, new_matrix)
         else:
-            raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
-                                      'not implemented.')
+            raise_error(NotImplementedError, f'Hamiltonian multiplication to {type(o)} '
+                                              'not implemented.')
 
     def __rmul__(self, o):
         """Right scalar multiplication."""
@@ -171,11 +171,11 @@ class Hamiltonian(object):
             elif rank == 2: # matrix
                 return K.matmul(self.matrix, o)
             else:
-                raise ValueError(f'Cannot multiply Hamiltonian with '
-                                  'rank-{rank} tensor.')
+                raise_error(ValueError, f'Cannot multiply Hamiltonian with '
+                                         'rank-{rank} tensor.')
         else:
-            raise NotImplementedError(f'Hamiltonian matrix multiplication to '
-                                       '{type(o)} not implemented.')
+            raise_error(NotImplementedError, f'Hamiltonian matrix multiplication to '
+                                              '{type(o)} not implemented.')
 
 
 def _multikron(matrix_list):

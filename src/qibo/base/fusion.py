@@ -1,4 +1,5 @@
 from qibo.base import gates as base_gates
+from qibo.config import raise_error
 from typing import List, Optional, Set, Tuple
 
 
@@ -85,7 +86,7 @@ class FusionGroup:
     def first_gate(self, i: int) -> Optional["Gate"]:
         """First one-qubit gate of the group."""
         if i < 0 or i > 1:
-            raise ValueError(f"Invalid integer {i} given in FusionGroup.first_gate.")
+            raise_error(ValueError, f"Invalid integer {i} given in FusionGroup.first_gate.")
         gates = self.gates0 if i == 0 else self.gates1
         for group in gates:
             if group:
@@ -170,7 +171,7 @@ class FusionGroup:
             RuntimeError: If the group is completed.
         """
         if self.completed:
-            raise RuntimeError("Cannot add gates to completed FusionGroup.")
+            raise_error(RuntimeError, "Cannot add gates to completed FusionGroup.")
 
         if not gate.qubits:
             self._add_special_gate(gate)
@@ -179,23 +180,23 @@ class FusionGroup:
         elif len(gate.qubits) == 2:
             self._add_two_qubit_gate(gate)
         else:
-            raise ValueError("Cannot add gate acting on {} qubits in fusion "
-                             "group.".format(len(gate.qubits)))
+            raise_error(ValueError, "Cannot add gate acting on {} qubits in fusion "
+                                    "group.".format(len(gate.qubits)))
 
     def calculate(self):
         """Calculates fused gate."""
         if not self.completed:
-            raise RuntimeError("Cannot calculate fused gates for incomplete "
-                               "FusionGroup.")
+            raise_error(RuntimeError, "Cannot calculate fused gates for incomplete "
+                                      "FusionGroup.")
         return self._calculate()
 
     def _calculate(self): # pragma: no cover
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     def _add_special_gate(self, gate: "Gate"):
         """Adds ``CallbackGate`` or ``Flatten`` on ``FusionGroup``."""
         if self.qubits or self.special_gate is not None:
-            raise ValueError("Cannot add special gate on fusion group.")
+            raise_error(ValueError, "Cannot add special gate on fusion group.")
         self.special_gate = gate
         self.completed = True
 
@@ -209,9 +210,9 @@ class FusionGroup:
             self.qubit1 = qubit
             self.gates1[-1].append(gate)
         else:
-            raise ValueError("Cannot add gate on qubit {} in fusion group of "
-                             "qubits {} and {}."
-                             "".format(qubit, self.qubit0, self.qubit1))
+            raise_error(ValueError, "Cannot add gate on qubit {} in fusion group of "
+                                    "qubits {} and {}."
+                                    "".format(qubit, self.qubit0, self.qubit1))
 
     def _add_two_qubit_gate(self, gate: "Gate"):
         """Adds two-qubit gate to ``FusionGroup``."""
@@ -224,11 +225,11 @@ class FusionGroup:
 
         # this case is not used by the current scheme
         elif self.qubit1 is None: # pragma: no cover
-            raise NotImplementedError
+            raise_error(NotImplementedError)
 
             if self.is_efficient(gate):
-                raise ValueError("It is not efficient to add {} in FusionGroup "
-                                 "with only one qubit set.".format(gate))
+                raise_error(ValueError, "It is not efficient to add {} in FusionGroup "
+                                        "with only one qubit set.".format(gate))
 
             if self.qubit0 == qubit0:
                 self.qubit1 = qubit1
@@ -237,15 +238,15 @@ class FusionGroup:
                 self.qubit1 = qubit0
                 self.two_qubit_gates.append(gate)
             else:
-                raise ValueError("Cannot add gate on qubits {} and {} in "
-                                 "fusion group of qubit {}."
-                                 "".format(qubit0, qubit1, self.qubit0))
+                raise_error(ValueError, "Cannot add gate on qubits {} and {} in "
+                                        "fusion group of qubit {}."
+                                        "".format(qubit0, qubit1, self.qubit0))
 
         else:
             if self.qubits != {qubit0, qubit1}:
-                raise ValueError("Cannot add gate on qubits {} and {} in "
-                                 "fusion group of qubits {} and {}."
-                                 "".format(qubit0, qubit1, self.qubit0, self.qubit1))
+                raise_error(ValueError, "Cannot add gate on qubits {} and {} in "
+                                        "fusion group of qubits {} and {}."
+                                        "".format(qubit0, qubit1, self.qubit0, self.qubit1))
             self.two_qubit_gates.append(gate)
 
         self.gates0.append([])

@@ -15,7 +15,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None):
 def sgd(loss, initial_parameters, options=None, compile=False):
     """Stochastic Gradient Descent optimizer using Tensorflow backpropagation."""
     from qibo import K
-    from qibo.config import logger
+    from qibo.config import log
     sgd_options = {"nepochs": 1000000,
                     "nmessage": 1000,
                     "optimizer": "Adagrad",
@@ -41,7 +41,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
         if e % sgd_options["nmessage"] == 1:
-            logger.info('ite %d : loss %f' % (e, l.numpy()))
+            log.info('ite %d : loss %f', e, l.numpy())
 
     return loss(vparams).numpy(), vparams.numpy()
 

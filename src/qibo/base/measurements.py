@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import collections
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
+from qibo.config import raise_error
 TensorType = Any
 
 
@@ -32,12 +33,12 @@ class GateResult:
         self.sampled_state = state
 
         if decimal_samples is not None and binary_samples is not None:
-            raise ValueError("Measurement result object cannot be created "
-                             "when samples are given both in decimal and "
-                             "binary. Use one of the two.")
+            raise_error(ValueError, "Measurement result object cannot be created "
+                                    "when samples are given both in decimal and "
+                                    "binary. Use one of the two.")
         if binary_samples is not None and binary_samples.shape[-1] != self.nqubits:
-            raise ValueError("Binary samples are for {} qubits but the given "
-                             "qubits are {}.".format(binary_samples.shape[-1], qubits))
+            raise_error(ValueError, "Binary samples are for {} qubits but the given "
+                                    "qubits are {}.".format(binary_samples.shape[-1], qubits))
 
         self._decimal = decimal_samples
         self._binary = binary_samples
@@ -88,15 +89,15 @@ class GateResult:
 
     @staticmethod
     def _convert_to_binary(x: TensorType, n: int) -> TensorType:
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     @staticmethod
     def _convert_to_decimal(x: TensorType, n: int) -> TensorType:
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
     @staticmethod
     def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]:
-        raise NotImplementedError
+        raise_error(NotImplementedError)
 
 
 class CircuitResult:
@@ -195,4 +196,4 @@ class CircuitResult:
         This uses the `register_qubits` map to divide the bitstrings to their
         appropriate registers.
         """
-        raise NotImplementedError
+        raise_error(NotImplementedError)
