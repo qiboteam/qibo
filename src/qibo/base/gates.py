@@ -196,7 +196,7 @@ class Gate(object):
         # abstract method
         raise_error(NotImplementedError)
 
-    def __matmul__(self, other: "Gate") -> "Gate": # pragma: no cover
+    def __matmul__(self, other: "Gate") -> "Gate":
         """Gate multiplication."""
         if self.qubits != other.qubits:
             raise_error(NotImplementedError, "Cannot multiply gates that target "
@@ -977,8 +977,6 @@ class Unitary(ParametrizedGate):
 
     @property
     def unitary(self):
-        if self._unitary is None: # pragma: no cover
-            self._unitary = self.construct_unitary()
         return self._unitary
 
 
