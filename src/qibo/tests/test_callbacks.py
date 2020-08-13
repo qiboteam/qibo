@@ -272,3 +272,49 @@ def test_entropy_bad_indexing():
         entropy[1]
     with pytest.raises(IndexError):
         entropy["a"]
+
+
+def test_norm():
+    """Check norm callback for state vectors and density matrices."""
+    norm = callbacks.Norm()
+
+    state = np.random.random(4) + 1j * np.random.random(4)
+    target_norm = np.sqrt((np.abs(state) ** 2).sum())
+    np.testing.assert_allclose(norm(state), target_norm)
+
+    state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    target_norm = np.trace(state)
+    np.testing.assert_allclose(norm(state, True), target_norm)
+
+
+def test_overlap():
+    state0 = np.random.random(4) + 1j * np.random.random(4)
+    overlap = callbacks.Overlap(state0)
+    overlapn = callbacks.Overlap(state0, normalize=True)
+
+    state1 = np.random.random(4) + 1j * np.random.random(4)
+    target_overlap = np.abs((state0.conj() * state1).sum())
+    np.testing.assert_allclose(overlap(state1), target_overlap)
+
+    norm0 = np.sqrt((np.abs(state0) ** 2).sum())
+    norm1 = np.sqrt((np.abs(state1) ** 2).sum())
+    target_overlap /= norm0 * norm1
+    np.testing.assert_allclose(overlapn(state1), target_overlap)
+
+    with pytest.raises(NotImplementedError):
+        overlap(state1, is_density_matrix=True)
+
+
+def test_energy():
+    """Check energy callback for state vectors and density matrices."""
+    from qibo import hamiltonians
+    ham = hamiltonians.TFIM(4, h=1.0)
+    energy = callbacks.Energy(ham)
+
+    state = np.random.random(16) + 1j * np.random.random(16)
+    target_energy = state.conj().dot(ham.matrix.numpy().dot(state))
+    np.testing.assert_allclose(energy(state), target_energy)
+
+    state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
+    target_energy = np.trace(ham.matrix.numpy().dot(state))
+    np.testing.assert_allclose(energy(state, True), target_energy)

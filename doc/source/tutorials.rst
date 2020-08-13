@@ -17,3 +17,4 @@ physics problems.
     tutorials/autoencoder/README.md    
     tutorials/hash-grover/README.md
     tutorials/variational_classifier/README.md
+    tutorials/adiabatic/README.md

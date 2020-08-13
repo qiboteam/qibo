@@ -9,8 +9,9 @@ parser.add_argument("--N", default=100, help="Number of random states.", type=in
 parser.add_argument("--p", default=0.001, help="Probability of occurring an error.", type=float)
 parser.add_argument("--shots", default=1000, help="Shots used for measuring every circuit.", type=float)
 parser.add_argument("--post_selection", default=True, help="Post selection technique", type=bool)
+parser.add_argument("--no_plot", action="store_true", help="Avoid plots")
 
-def main(N, p, shots, post_selection):
+def main(N, p, shots, post_selection, no_plot):
     #Initialize exact and measured tangles
     tangles = np.empty(N)
     opt_tangles = np.empty(N)
@@ -36,20 +37,21 @@ def main(N, p, shots, post_selection):
             print('Initialized state with seed %s'%i + '/ %s'%N)
         state = create_random_state(i)
         tangles[i] = compute_random_tangle(i)
-        fun, params = canonize(state, circuit, shots=shots)
+        fun, params = canonize(state, circuit, shots=np.int32(shots))
         opt_tangles[i] = canonical_tangle(state, params, circuit, post_selection=post_selection)
 
-    print('Painting results')
-    fig, ax = plt.subplots() # Plotting
-    if post_selection:
-        color = 'red'
-    else:
-        color='green'
-    ax.scatter(tangles, opt_tangles, s=20, c=color)
-    ax.plot([0., 1.], [0., 1.], color='black')
-    ax.set(xlabel='Exact tangle', ylabel='Measured tangle', xlim=[0,1], ylim=[0,1])
-    plt.grid('on')
-    plt.show()
+    if not no_plot:
+        print('Painting results')
+        fig, ax = plt.subplots() # Plotting
+        if post_selection:
+            color = 'red'
+        else:
+            color='green'
+        ax.scatter(tangles, opt_tangles, s=20, c=color)
+        ax.plot([0., 1.], [0., 1.], color='black')
+        ax.set(xlabel='Exact tangle', ylabel='Measured tangle', xlim=[0,1], ylim=[0,1])
+        plt.grid('on')
+        plt.show()
 
 
 if __name__ == "__main__":
