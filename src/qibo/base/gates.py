@@ -495,8 +495,9 @@ class M(Gate):
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:
-            raise_error(ValueError, "Cannot calculate set of unmeasured qubits if "
-                                    "the number of qubits in the circuit is unknown.")
+            raise_error(RuntimeError, "Cannot calculate set of unmeasured "
+                                      "qubits if the number of qubits in the "
+                                      "circuit is unknown.")
         if self._unmeasured_qubits is not None:
             raise_error(RuntimeError, "Cannot recalculate unmeasured qubits.")
         target_qubits = set(self.target_qubits)

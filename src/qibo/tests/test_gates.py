@@ -957,6 +957,14 @@ def test_variational_layer_errors(backend):
         c.add(gates.VariationalLayer(range(7), pairs,
                                      gates.RY, gates.CZ,
                                      np.zeros(7), np.zeros(7)))
+    with pytest.raises(ValueError):
+        c.add(gates.VariationalLayer(range(10), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(10), np.zeros(10)))
+
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
+                                  np.zeros(6), np.zeros(6))
+    np.testing.assert_allclose(gate.parameter, np.zeros(12))
     qibo.set_backend(original_backend)
 
 

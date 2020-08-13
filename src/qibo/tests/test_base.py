@@ -229,6 +229,11 @@ def test_base_gate_errors():
         nqubits = gate.nqubits
     with pytest.raises(ValueError):
         nstates = gate.nstates
+    # Access nstates
+    gate2 = H(0)
+    gate2.nqubits = 3
+    _ = gate2.nstates
+    
     with pytest.raises(RuntimeError):
         gate.nqubits = 2
         gate.nqubits = 3

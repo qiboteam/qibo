@@ -122,6 +122,30 @@ def test_measurement_gate2():
                    binary_frequencies={"1": 100})
 
 
+def test_measurement_gate_errors():
+    """Check various errors that are raised by the measurement gate."""
+    state = np.zeros(4)
+    state[-1] = 1
+    gate = gates.M(1)
+    result = gate(state, nshots=100)
+    # add targets after calling
+    with pytest.raises(RuntimeError):
+        gate._add((0,))
+    # try to set unmeasured qubits before setting ``nqubits``
+    with pytest.raises(RuntimeError):
+        gate._set_unmeasured_qubits()
+    # try to set unmeasured qubit a second time
+    gate = gates.M(1)
+    gate.nqubits = 3
+    gate._unmeasured_qubits = (0, 2)
+    with pytest.raises(RuntimeError):
+        gate._set_unmeasured_qubits()
+    # get reduced target qubits
+    gate = gates.M(1)
+    gate.nqubits = 3
+    assert gate.reduced_target_qubits == [0]
+
+
 def test_multiple_qubit_measurement_gate():
     """Check that multiple qubit measurement gate works when called on |10>."""
     state = np.zeros(4)

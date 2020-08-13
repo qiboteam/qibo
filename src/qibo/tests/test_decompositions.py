@@ -120,6 +120,14 @@ def test_x_decomposition_errors(use_toffolis):
         decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
 
 
+def test_x_decompose_few_controls():
+    """Check ``X`` decomposition with len(controls) < 3."""
+    gate = gates.X(0)
+    decomp = gate.decompose(1, 2)
+    assert len(decomp) == 1
+    assert isinstance(decomp[0], gates.X)
+
+
 def test_circuit_decompose():
     """Check ``circuit.decompose`` agrees with multi-control ``X`` decomposition."""
     c = Circuit(6)
