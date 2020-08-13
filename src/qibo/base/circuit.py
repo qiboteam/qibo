@@ -143,6 +143,7 @@ class BaseCircuit(object):
                     new_circuit.parametrized_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
             if self.fusion_groups: # pragma: no cover
+                # impractical case
                 raise_error(NotImplementedError, "Cannot create deep copy of fused "
                                                  "circuit.")
         else:
@@ -378,12 +379,9 @@ class BaseCircuit(object):
 
         Helper method for ``circuit.add(gate)``.
         """
-        if gate._nqubits is None: # pragma: no cover
-            raise_error(NotImplementedError)
-        elif gate.nqubits != self.nqubits:
-            raise_error(ValueError, "Attempting to add gate with {} total qubits to "
-                                    "a circuit with {} qubits."
-                                    "".format(gate.nqubits, self.nqubits))
+        raise_error(ValueError, "Attempting to add gate with {} total qubits "
+                                "to a circuit with {} qubits."
+                                "".format(gate.nqubits, self.nqubits))
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.
@@ -598,15 +596,18 @@ class BaseCircuit(object):
         If the circuit is executed more than once, only the last final state
         is returned.
         """
+        # abstract method
         raise_error(NotImplementedError)
 
     @abstractmethod
     def execute(self, *args): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend."""
+        # abstract method
         raise_error(NotImplementedError)
 
     def __call__(self, *args): # pragma: no cover
         """Equivalent to ``circuit.execute``."""
+        # abstract method
         return self.execute(*args)
 
     def to_qasm(self):

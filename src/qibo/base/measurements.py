@@ -89,14 +89,17 @@ class GateResult:
 
     @staticmethod
     def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
     @staticmethod
     def _convert_to_decimal(x: TensorType, n: int) -> TensorType: # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
     @staticmethod
     def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
 
@@ -196,4 +199,5 @@ class CircuitResult:
         This uses the `register_qubits` map to divide the bitstrings to their
         appropriate registers.
         """
+        # abstract method
         raise_error(NotImplementedError)

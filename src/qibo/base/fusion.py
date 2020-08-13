@@ -75,7 +75,7 @@ class FusionGroup:
         It assumes that the parameters of the gate objects contained in the
         current ``FusionGroup`` have already been updated.
         """
-        if self._fused_gates is None: # pragma: no cover
+        if self._fused_gates is None:
             return self.gates
         updated_gates = self.calculate()
         for gate, new_gate in zip(self._fused_gates, updated_gates):
@@ -191,6 +191,7 @@ class FusionGroup:
         return self._calculate()
 
     def _calculate(self): # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
     def _add_special_gate(self, gate: "Gate"):
@@ -223,7 +224,7 @@ class FusionGroup:
             if self.is_efficient(gate):
                 self.completed = True
 
-        # this case is not used by the current scheme
+        # case not used by the current scheme
         elif self.qubit1 is None: # pragma: no cover
             raise_error(NotImplementedError)
 

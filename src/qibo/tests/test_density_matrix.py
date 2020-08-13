@@ -339,6 +339,17 @@ def test_controlled_by_channel():
         gate = gates.GeneralChannel(config).controlled_by(1)
     qibo.set_backend(original_backend)
 
+
+def test_krauss_operator_bad_shape():
+    """Test that defining a Krauss operator with wrong shape raises error."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend("matmuleinsum")
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    with pytest.raises(ValueError):
+        gate = gates.GeneralChannel([((0, 1), a1)])
+    qibo.set_backend(original_backend)
+
+
 def test_circuit_with_noise_gates():
     """Check that ``circuit.with_noise()`` adds the proper noise channels."""
     original_backend = qibo.get_backend()
