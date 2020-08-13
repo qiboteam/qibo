@@ -20,6 +20,7 @@ class BaseSolver:
             self.hamiltonian = hamiltonian
 
     def __call__(self, state): # pragma: no cover
+        # abstract method
         raise_error(NotImplementedError)
 
 

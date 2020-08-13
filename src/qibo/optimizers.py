@@ -1,4 +1,4 @@
-def cma(loss, initial_parameters): # pragma: no cover
+def cma(loss, initial_parameters):
     """Genetic optimizer."""
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7)
@@ -64,7 +64,7 @@ def optimize(loss, initial_parameters, method='Powell',
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
             Relevant only for the ``"sgd"`` optimizer.
     """
-    if method == "cma": # pragma: no cover
+    if method == "cma":
         return cma(loss, initial_parameters)
     elif method == "sgd":
         return sgd(loss, initial_parameters, options, compile)

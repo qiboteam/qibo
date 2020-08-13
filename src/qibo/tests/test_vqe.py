@@ -98,3 +98,19 @@ def test_vqe_compile_error():
         best, params = v.minimize(initial_parameters, method="BFGS",
                                   options={'maxiter': 1}, compile=True)
     qibo.set_backend(original_backend)
+
+
+def test_vqe_sgd_error():
+    """Check that ``RuntimeError`` is raised when using SGD with custom gates."""
+    nqubits = 6
+    circuit = Circuit(nqubits)
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=0))
+    for q in range(0, nqubits-1, 2):
+        circuit.add(gates.CZ(q, q+1))
+
+    hamiltonian = XXZ(nqubits=nqubits)
+    initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
+    v = VQE(circuit, hamiltonian)
+    with pytest.raises(RuntimeError):
+        best, params = v.minimize(initial_parameters, method="sgd")
