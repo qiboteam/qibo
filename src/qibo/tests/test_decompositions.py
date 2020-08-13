@@ -31,7 +31,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
         theta = None
     elif len(pieces) == 3:
         gatename, theta, targets = pieces
-    else:
+    else: # pragma: no cover
+        # case not tested because it fails
         raise RuntimeError("Cirq gate parsing failed with {}.".format(pieces))
 
     qubits = list(int(x) for x in targets.replace(" ", "").split(","))
@@ -44,7 +45,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
     if theta is not None:
         if "π" in theta:
             theta = np.pi * float(theta.replace("π", ""))
-        else:
+        else: # pragma: no cover
+            # case doesn't happen in tests (could remove)
             theta = float(theta)
         np.testing.assert_allclose(theta, qibo_gate.parameter)
 
@@ -118,6 +120,14 @@ def test_x_decomposition_errors(use_toffolis):
     c.add(gate)
     with pytest.raises(ValueError):
         decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
+
+
+def test_x_decompose_few_controls():
+    """Check ``X`` decomposition with len(controls) < 3."""
+    gate = gates.X(0)
+    decomp = gate.decompose(1, 2)
+    assert len(decomp) == 1
+    assert isinstance(decomp[0], gates.X)
 
 
 def test_circuit_decompose():

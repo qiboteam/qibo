@@ -27,6 +27,7 @@ def assert_regression_fixture(array, filename):
     try:
         array_fixture = load(filename)
     except: # pragma: no cover
+        # case not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
     np.testing.assert_allclose(array, array_fixture, rtol=1e-5)
@@ -77,8 +78,8 @@ def test_vqe(method, options, compile, filename):
     qibo.set_backend(original_backend)
 
 
-def test_vqe_compile_error():
-    """Check that ``RuntimeError`` is raised when compiling custom gates."""
+def test_vqe_custom_gates_errors():
+    """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
@@ -93,7 +94,12 @@ def test_vqe_compile_error():
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
     v = VQE(circuit, hamiltonian)
+    # compile with custom gates
     with pytest.raises(RuntimeError):
         best, params = v.minimize(initial_parameters, method="BFGS",
                                   options={'maxiter': 1}, compile=True)
+    # use SGD with custom gates
+    with pytest.raises(RuntimeError):
+        best, params = v.minimize(initial_parameters, method="sgd",
+                                  compile=False)
     qibo.set_backend(original_backend)

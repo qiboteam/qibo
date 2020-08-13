@@ -1,5 +1,6 @@
 def cma(loss, initial_parameters): # pragma: no cover
     """Genetic optimizer."""
+    # cma is not tested because it takes a lot of time
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7)
     return r[1].result.fbest, r[1].result.xbest
@@ -15,6 +16,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None):
 def sgd(loss, initial_parameters, options=None, compile=False):
     """Stochastic Gradient Descent optimizer using Tensorflow backpropagation."""
     from qibo import K
+    from qibo.config import log
     sgd_options = {"nepochs": 1000000,
                     "nmessage": 1000,
                     "optimizer": "Adagrad",
@@ -40,7 +42,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
         if e % sgd_options["nmessage"] == 1:
-            print('ite %d : loss %f' % (e, l.numpy()))
+            log.info('ite %d : loss %f', e, l.numpy())
 
     return loss(vparams).numpy(), vparams.numpy()
 
@@ -64,6 +66,7 @@ def optimize(loss, initial_parameters, method='Powell',
             Relevant only for the ``"sgd"`` optimizer.
     """
     if method == "cma": # pragma: no cover
+        # cma is not tested because it takes a lot of time
         return cma(loss, initial_parameters)
     elif method == "sgd":
         return sgd(loss, initial_parameters, options, compile)

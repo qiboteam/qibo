@@ -41,6 +41,7 @@ def assert_regression_fixture(array, filename):
     try:
         array_fixture = load(filename)
     except: # pragma: no cover
+        # case is not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
     np.testing.assert_allclose(array, array_fixture, rtol=1e-5)

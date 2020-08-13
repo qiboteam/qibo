@@ -55,6 +55,19 @@ def assert_register_results(
             assert v == collections.Counter(binary_frequencies[k])
 
 
+def test_gate_result_initialization_errors():
+    """Check ``ValueError``s during the initialization of ``GateResult`` object."""
+    from qibo.base import measurements
+    decimal_samples = np.random.randint(0, 4, (100,))
+    binary_samples = np.random.randint(0, 2, (100, 2))
+    with pytest.raises(ValueError):
+        res = measurements.GateResult((0, 1), decimal_samples=decimal_samples,
+                                      binary_samples=binary_samples)
+    binary_samples = np.random.randint(0, 2, (100, 4))
+    with pytest.raises(ValueError):
+        res = measurements.GateResult((0, 1), binary_samples=binary_samples)
+
+
 def test_convert_to_binary():
     """Check that `_convert_to_binary` method works properly."""
     # Create a result object to access `_convert_to_binary`
@@ -107,6 +120,31 @@ def test_measurement_gate2():
                    binary_samples=np.ones((100, 1)),
                    decimal_frequencies={1: 100},
                    binary_frequencies={"1": 100})
+
+
+def test_measurement_gate_errors():
+    """Check various errors that are raised by the measurement gate."""
+    state = np.zeros(4)
+    state[-1] = 1
+    # add targets after calling
+    gate = gates.M(1)
+    result = gate(state, nshots=100)
+    with pytest.raises(RuntimeError):
+        gate._add((0,))
+    # try to set unmeasured qubits before setting ``nqubits``
+    gate = gates.M(1)
+    with pytest.raises(RuntimeError):
+        gate._set_unmeasured_qubits()
+    # try to set unmeasured qubit a second time
+    gate = gates.M(1)
+    gate.nqubits = 3
+    gate._unmeasured_qubits = (0, 2)
+    with pytest.raises(RuntimeError):
+        gate._set_unmeasured_qubits()
+    # get reduced target qubits
+    gate = gates.M(1)
+    gate.nqubits = 3
+    assert gate.reduced_target_qubits == [0]
 
 
 def test_multiple_qubit_measurement_gate():
@@ -412,6 +450,7 @@ def test_probabilistic_measurement(accelerators):
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"): # pragma: no cover
+        # case not tested in GitHub workflows because it requires GPU
         decimal_freqs = {0: 273, 1: 233, 2: 242, 3: 252}
         binary_freqs = {"00": 273, "01": 233, "10": 242, "11": 252}
     else:
@@ -435,6 +474,7 @@ def test_unbalanced_probabilistic_measurement():
 
     # update reference values based on device
     if tf.config.list_physical_devices("GPU"): # pragma: no cover
+        # case not tested in GitHub workflows because it requires GPU
         decimal_freqs = {0: 196, 1: 153, 2: 156, 3: 495}
         binary_freqs = {"00": 196, "01": 153, "10": 156, "11": 495}
     else:
