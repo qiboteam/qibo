@@ -196,26 +196,20 @@ class CustomColorHandler(logging.StreamHandler):
     """Custom color handler for logging algorithm."""
 
     colors = {
-        logging.DEBUG: {'[Qibo|%(levelname)s]:': t.bold},
-        logging.INFO: {'[Qibo|%(levelname)s]:': t.bold_green},
-        logging.WARNING: {'[Qibo|%(levelname)s]:': t.bold_yellow},
-        logging.ERROR: {'[Qibo|%(levelname)s]:': t.bold_red, '%(message)s': t.bold},
-        logging.CRITICAL: {'[Qibo|%(levelname)s]:': t.bold_white_on_red, '%(message)s': t.bold},
+        logging.DEBUG: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold},
+        logging.INFO: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_green},
+        logging.WARNING: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_yellow},
+        logging.ERROR: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_red, '%(message)s': t.bold},
+        logging.CRITICAL: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_white_on_red, '%(message)s': t.bold},
     }
 
     def format(self, record):
         """Format the record with specific color."""
         levelcolors = self.colors[record.levelno]
-        fmt = '[Qibo|%(levelname)s]: %(message)s'
+        fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
         for s, subs in levelcolors.items():
             fmt = fmt.replace(s, subs(s))
-        if self.formatter:
-            cls = type(self.formatter)
-            new_formatter = cls(fmt, self.formatter.datefmt,
-                                self.formatter._style)
-        else:
-            new_formatter = logging.Formatter(fmt)
-        return new_formatter.format(record)
+        return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
 
 
 # allocate logger object
