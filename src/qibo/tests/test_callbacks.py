@@ -268,6 +268,7 @@ def test_entropy_bad_indexing():
     c.add(gates.CallbackGate(entropy))
     state = c()
 
+    entropy[0]
     with pytest.raises(IndexError):
         entropy[1]
     with pytest.raises(IndexError):
