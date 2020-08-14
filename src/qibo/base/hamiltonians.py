@@ -11,6 +11,7 @@ class Hamiltonian(object):
             ``(2 ** nqubits, 2 ** nqubits)``.
     """
     NUMERIC_TYPES = None
+    ARRAY_TYPES = None
     K = None # calculation backend (numpy or TensorFlow)
 
     def __init__(self, nqubits, matrix):
@@ -36,10 +37,6 @@ class Hamiltonian(object):
         # abstract method
         raise_error(NotImplementedError)
 
-    def _eye(self, n=None): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
         if self._eigenvalues is None:
@@ -61,7 +58,7 @@ class Hamiltonian(object):
         """
         if self._exp.get("a") != a:
             self._exp["a"] = a
-            self._exp["result"] = self._calculate_exp(a)
+            self._exp["result"] = self._calculate_exp(a) # pylint: disable=E1111
         return self._exp.get("result")
 
     def expectation(self, state, normalize=False): # pragma: no cover
@@ -77,6 +74,11 @@ class Hamiltonian(object):
         """
         # abstract method
         raise_error(NotImplementedError)
+
+    def _eye(self, n=None):
+        if n is None:
+            n = int(self.matrix.shape[0])
+        return self.K.eye(n, dtype=self.matrix.dtype)
 
     def __add__(self, o):
         """Add operator."""
@@ -125,18 +127,22 @@ class Hamiltonian(object):
             raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
                                              "not implemented.".format(type(o)))
 
+    def _real(self, o):
+        """Calculates real part of number or tensor."""
+        return o.real
+
     def __mul__(self, o):
         """Multiplication to scalar operator."""
-        if isinstance(o, self.NUMERIC_TYPES):
+        if isinstance(o, self.NUMERIC_TYPES) or isinstance(o, self.ARRAY_TYPES):
             new_matrix = self.matrix * o
             r = self.__class__(self.nqubits, new_matrix)
             if self._eigenvalues is not None:
-                if o.real >= 0:
+                if self._real(o) >= 0:
                     r._eigenvalues = o * self._eigenvalues
                 else:
                     r._eigenvalues = o * self._eigenvalues[::-1]
             if self._eigenvectors is not None:
-                if o.real > 0:
+                if self._real(o) > 0:
                     r._eigenvectors = self._eigenvectors
                 elif o == 0:
                     r._eigenvectors = self._eye(int(self._eigenvectors.shape[0]))

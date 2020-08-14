@@ -26,11 +26,6 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
             ud = tf.transpose(tf.math.conj(self._eigenvectors))
             return tf.matmul(self._eigenvectors, tf.matmul(expd, ud))
 
-    def _eye(self, n=None):
-        if n is None:
-            n = int(self.matrix.shape[0])
-        return self.K.eye(n, dtype=self.matrix.dtype)
-
     def expectation(self, state, normalize=False):
         statec = tf.math.conj(state)
         hstate = self @ state
@@ -40,13 +35,18 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
             return ev / norm
         return ev
 
+    def _real(self, o):
+        if isinstance(o, tf.Tensor):
+            if o.shape:
+                return np.array(o)[0].real
+            else:
+                return np.array(o).real
+        return super(TensorflowHamiltonian, self)._real(o)
+
     def __mul__(self, o):
         """Multiplication to scalar operator."""
-        if isinstance(o, np.ndarray):
-            o = getattr(np, str(o.dtype))(o)
-        elif isinstance(o, tf.Tensor):
-            o = np.array(o)
-            o = getattr(np, str(o.dtype))(o)
+        if isinstance(o, tf.Tensor):
+            o = tf.cast(o, dtype=self.matrix.dtype)
         return super(TensorflowHamiltonian, self).__mul__(o)
 
 
