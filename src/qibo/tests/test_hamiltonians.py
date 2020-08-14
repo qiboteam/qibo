@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
+from qibo.hamiltonians import Hamiltonian, LocalHamiltonian, XXZ, TFIM, Y
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 
@@ -223,3 +223,14 @@ def test_hamiltonian_eigenvectors(dtype):
     V4 = np.array(H4._eigenvectors)
     U4 = np.array(H4._eigenvalues)
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
+
+
+def test_tfim_local_hamiltonian(nqubits=3):
+    import numpy as np
+    from qibo import matrices
+    matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
+    term = Hamiltonian(2, matrix)
+    local_ham = LocalHamiltonian.from_single_term(nqubits, term)
+    target_ham = TFIM(nqubits, h=1.0, numpy=True)
+    final_ham = local_ham.dense_hamiltonian()
+    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)

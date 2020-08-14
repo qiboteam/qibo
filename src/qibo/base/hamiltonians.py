@@ -1,5 +1,6 @@
+import numpy as np # TODO: Remove this when you create `NumpyLocalHamiltonian`
 from qibo import gates
-from qibo.config import raise_error
+from qibo.config import raise_error, EINSUM_CHARS
 
 
 class Hamiltonian(object):
@@ -207,8 +208,10 @@ class LocalHamiltonian(object):
 
     def __init__(self, *parts):
         all_targets = set()
+        self.dtype = None
         for part in parts:
             for targets, term in part.items():
+                self.dense_class = term.__class__
                 if not issubclass(type(term), Hamiltonian):
                     raise_error(TypeError, "Invalid term type {}.".format(type(term)))
                 if len(targets) != term.nqubits:
@@ -216,6 +219,14 @@ class LocalHamiltonian(object):
                                             "qubits."
                                             "".format(targets, term.nqubits))
                 all_targets |= set(targets)
+                if self.dtype is None:
+                    self.dtype = term.matrix.dtype
+                else:
+                    if term.matrix.dtype != self.dtype:
+                        raise_error(TypeError, "Terms of different types {} "
+                                               "and {} were given."
+                                               "".format(term.matrix.dtype,
+                                                         self.dtype))
 
         self.nqubits = len(all_targets)
         self.parts = parts
@@ -243,10 +254,32 @@ class LocalHamiltonian(object):
                      for i in range(nqubits // 2)}
         return cls(even_terms, odd_terms)
 
+    def dense_hamiltonian(self):
+        # TODO: Move this to a NumpyLocalHamiltonian
+        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it only happens in large examples
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
+        chars = EINSUM_CHARS[:2 * self.nqubits]
+        # TODO: Use `__iter__` for this loop because it is used many times
+        for part in self.parts:
+            for targets, term in part.items():
+                tmat = term.matrix.reshape(2 * term.nqubits * (2,))
+                n = self.nqubits - len(targets)
+                emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+                # TODO: Perhaps use `itertools.chain` to concatenate generators
+                tc = ("".join((chars[i] for i in targets)) +
+                      "".join((chars[i + self.nqubits] for i in targets)))
+                ec = "".join((c for c in chars if c not in tc))
+                matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+
+        matrix = matrix.reshape(2 * (2 ** self.nqubits,))
+        return self.dense_class(self.nqubits, matrix)
+
     def _create_circuit(self, dt):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
-
         self._circuit = Circuit(self.nqubits)
         for part in self.parts:
             for targets, term in part.items():
@@ -261,6 +294,16 @@ class LocalHamiltonian(object):
                 gate = gates.Unitary(term.exp(dt / 2.0), *targets)
                 self.term_gates[term].add(gate)
                 self._circuit.add(gate)
+
+    def __mul__(self, o):
+        """Multiplication to scalar operator."""
+        for part in self.parts:
+            for targets, term in part.items():
+                part[targets] = o * term
+
+    def __rmul__(self, o):
+        """Right scalar multiplication."""
+        return self.__mul__(o)
 
     def circuit(self, dt):
         """Circuit implementing second order Trotter time step.
