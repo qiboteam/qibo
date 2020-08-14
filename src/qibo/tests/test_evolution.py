@@ -98,8 +98,8 @@ def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
     term_matrix = -(np.kron(matrices.Z, matrices.Z) +
                     h * np.kron(matrices.X, matrices.I))
     term = hamiltonians.Hamiltonian(2, term_matrix)
-    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
-    checker = TimeStepChecker(target_psi, atol=1e-6)
+    ham = hamiltonians.LocalHamiltonian.from_single_term(nqubits, term)
+    checker = TimeStepChecker(target_psi, atol=1e-4)
     evolution = models.StateEvolution(ham, dt, callbacks=[checker])
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 

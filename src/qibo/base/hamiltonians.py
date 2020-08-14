@@ -178,74 +178,89 @@ class Hamiltonian(object):
 class LocalHamiltonian(object):
     """Local Hamiltonian operator used for Trotterized time evolution.
 
-    The Hamiltonian represented is a sum of two-qubit interaction terms as the
-    example analyzed in Section 4.1 of
+    The Hamiltonian represented by this class has the form of Eq. (57) in
     `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
-    Periodic boundary conditions are assumed.
 
     Args:
-        terms (list): List of :class:`qibo.base.hamiltonians.Hamiltonian`
-            objects that correspond to the local operators. The total
-            Hamiltonian is the sum of all the terms in the list.
+        *parts (dict): Dictionary whose values are
+            :class:`qibo.base.hamiltonians.Hamiltonian` objects representing
+            the h operators of Eq. (58) in the reference. The keys of the
+            dictionary are tuples of qubit ids (int) that represent the targets
+            of each h term.
+
 
     Example:
         ::
 
             from qibo import matrices, hamiltonians
-            # Create local term for critical TFIM Hamiltonian
+            # Create h term for critical TFIM Hamiltonian
             matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
             term = hamiltonians.Hamiltonian(2, matrix)
-            # Create a ``LocalHamiltonian`` object corresponding to a critical TFIM for 5 qubits
-            h = hamiltonians.LocalHamiltonian(5 * [term])
+            # TFIM with periodic boundary conditions is translationally
+            # invariant and therefore the same term can be used for all qubits
+            # Create even and odd Hamiltonian parts (Eq. (43))
+            even_part = {(0, 1): term, (2, 3): term}
+            odd_part = {(1, 2): term, (3, 0): term}
+            # Create a ``LocalHamiltonian`` object using these parts
+            h = hamiltonians.LocalHamiltonian(even_part, odd_part)
     """
 
-    def __init__(self, terms):
-        for term in terms:
-            if not issubclass(type(term), Hamiltonian):
-                raise_error(TypeError, "Invalid term type {}.".format(type(term)))
-            if term.nqubits != 2:
-                raise_error(ValueError, "LocalHamiltonian terms should target "
-                                        "one or two qubits but targets {}."
-                                        "".format(term.nqubits))
-        self.nqubits = len(terms)
-        self.terms = terms
+    def __init__(self, *parts):
+        all_targets = set()
+        for part in parts:
+            for targets, term in part.items():
+                if not issubclass(type(term), Hamiltonian):
+                    raise_error(TypeError, "Invalid term type {}.".format(type(term)))
+                if len(targets) != term.nqubits:
+                    raise_error(ValueError, "Term targets {} but supports {} "
+                                            "qubits."
+                                            "".format(targets, term.nqubits))
+                all_targets |= set(targets)
+
+        self.nqubits = len(all_targets)
+        self.parts = parts
+        self.term_gates = {}
         self._dt = None
         self._circuit = None
 
-    def _terms(self, dt, odd=False):
-        """Generates exponentials of the Trotter decomposition.
+    @classmethod
+    def from_single_term(cls, nqubits, term):
+        """Creates Local Hamiltonian for translationally invariant models.
+
+        It is assumed that the system has periodic boundary conditions and
+        the local term acts on two qubits.
 
         Args:
-            dt (float): Time step to use for the decomposition.
-            odd (bool): If ``True`` it generates the exponentials for Hodd,
-                otherwise for Heven (see paper for details).
+            nqubits (int): Number of qubits in the system.
+            term (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
+                object representing the local operator. The total Hamiltonian
+                is sum of this term acting on each of the qubits.
         """
-        for term in self.terms[int(odd)::2]:
-            yield term.exp(dt / (2.0 - float(odd)))
-
-    def _allterms(self, dt):
-        """Generates all terms for the 2nd order Trotter decomposition."""
-        for term in self._terms(dt):
-            yield term
-        for term in self._terms(dt, odd=True):
-            yield term
-        for term in self._terms(dt):
-            yield term
+        # TODO: Add check that `term` acts on two qubits
+        even_terms = {(2 * i, (2 * i + 1) % nqubits): term
+                       for i in range(nqubits // 2 + nqubits % 2)}
+        odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
+                     for i in range(nqubits // 2)}
+        return cls(even_terms, odd_terms)
 
     def _create_circuit(self, dt):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
-        # even gates
-        even = lambda: (gates.Unitary(term, 2 * i, (2 * i + 1) % self.nqubits)
-                        for i, term in enumerate(self._terms(dt)))
-        # odd gates
-        odd = (gates.Unitary(term, 2 * i + 1, (2 * i + 2) % self.nqubits)
-               for i, term in enumerate(self._terms(dt, odd=True)))
 
         self._circuit = Circuit(self.nqubits)
-        self._circuit.add(even())
-        self._circuit.add(odd)
-        self._circuit.add(even())
+        for part in self.parts:
+            for targets, term in part.items():
+                gate = gates.Unitary(term.exp(dt / 2.0), *targets)
+                if term in self.term_gates:
+                    self.term_gates[term].add(gate)
+                else:
+                    self.term_gates[term] = {gate}
+                self._circuit.add(gate)
+        for part in self.parts[::-1]:
+            for targets, term in part.items():
+                gate = gates.Unitary(term.exp(dt / 2.0), *targets)
+                self.term_gates[term].add(gate)
+                self._circuit.add(gate)
 
     def circuit(self, dt):
         """Circuit implementing second order Trotter time step.
@@ -257,10 +272,14 @@ class LocalHamiltonian(object):
             :class:`qibo.base.circuit.BaseCircuit` that implements a single
             time step of the second order Trotterized evolution.
         """
-        if self._circuit is None:
+        if dt != self._dt:
             self._dt = dt
-            self._create_circuit(dt)
-        elif dt != self._dt:
-            self._dt = dt
-            self._circuit.set_parameters(list(self._allterms(dt)))
+            if self._circuit is None:
+                self._create_circuit(dt)
+            else:
+                self._circuit.set_parameters({
+                    gate: term.exp(dt / 2.0)
+                    for term, term_gates in self.term_gates.items()
+                    for gate in term_gates
+                    })
         return self._circuit
