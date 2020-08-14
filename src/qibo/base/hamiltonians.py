@@ -17,7 +17,7 @@ class Hamiltonian(object):
         if not isinstance(nqubits, int):
             raise_error(RuntimeError, "nqubits must be an integer but is "
                                             "{}.".format(type(nqubits)))
-        if nqubits < 0:
+        if nqubits < 1:
             raise_error(ValueError, "nqubits must be a positive integer but is "
                                     "{}".format(nqubits))
         shape = tuple(matrix.shape)
