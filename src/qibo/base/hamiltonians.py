@@ -10,8 +10,8 @@ class Hamiltonian(object):
             computational basis as an array of shape
             ``(2 ** nqubits, 2 ** nqubits)``.
     """
-
     NUMERIC_TYPES = None
+    K = None # calculation backend (numpy or TensorFlow)
 
     def __init__(self, nqubits, matrix):
         if not isinstance(nqubits, int):
@@ -32,14 +32,6 @@ class Hamiltonian(object):
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
 
-    def _calculate_eigenvalues(self): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
-    def _calculate_eigenvectors(self): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
     def _calculate_exp(self, a): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
@@ -51,13 +43,13 @@ class Hamiltonian(object):
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
         if self._eigenvalues is None:
-            self._eigenvalues = self._calculate_eigenvalues()
+            self._eigenvalues = self.K.linalg.eigvalsh(self.matrix)
         return self._eigenvalues
 
     def eigenvectors(self):
         """Computes a tensor with the eigenvectors for the Hamiltonian."""
         if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self._calculate_eigenvectors()
+            self._eigenvalues, self._eigenvectors = self.K.linalg.eigh(self.matrix)
         return self._eigenvectors
 
     def exp(self, a):
@@ -157,7 +149,20 @@ class Hamiltonian(object):
         """Right scalar multiplication."""
         return self.__mul__(o)
 
-    def __matmul__(self, o): # pragma: no cover
+    def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
-        # abstract method
-        raise_error(NotImplementedError)
+        if isinstance(o, self.__class__):
+            new_matrix = self.K.matmul(self.matrix, o.matrix)
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, self.ARRAY_TYPES):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return self.K.matmul(self.matrix, o)
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+        else:
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                             "implemented.".format(type(o)))

@@ -88,9 +88,12 @@ def test_right_operations():
 
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_mul(numpy):
-    """Test multiplication with ``np.array`` scalar."""
+    """Test multiplication with ``np.array`` and ``tf.Tensor`` scalar."""
+    import tensorflow as tf
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
     h2 = h * np.array(2)
+    np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
+    h2 = h * tf.cast(2, dtype=tf.complex128)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
 
 
