@@ -243,8 +243,7 @@ def test_tfim_local_hamiltonian(nqubits):
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
-def test_local_hamiltonian_mul(nqubits):
+def test_local_hamiltonian_scalar_mul(nqubits=3):
     local_ham = create_ising_local(nqubits, h=1.0)
     target_ham = 2 * TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 * local_ham).dense_hamiltonian()
@@ -253,3 +252,43 @@ def test_local_hamiltonian_mul(nqubits):
     local_ham = create_ising_local(nqubits, h=1.0)
     local_dense = (local_ham * 2).dense_hamiltonian()
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_local_hamiltonian_scalar_add(nqubits=4):
+    local_ham = create_ising_local(nqubits, h=1.0)
+    target_ham = 2 + TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 + local_ham).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    local_ham = create_ising_local(nqubits, h=1.0)
+    local_dense = (local_ham + 2).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_local_hamiltonian_scalar_sub(nqubits=3):
+    local_ham = create_ising_local(nqubits, h=1.0)
+    target_ham = 2 - TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 - local_ham).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    target_ham = TFIM(nqubits, h=1.0, numpy=True) - 2
+    local_ham = create_ising_local(nqubits, h=1.0)
+    local_dense = (local_ham - 2).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_local_hamiltonian_operator_add_and_sub(nqubits=3):
+    local_ham1 = create_ising_local(nqubits, h=1.0)
+    local_ham2 = create_ising_local(nqubits, h=0.5)
+
+    local_ham = local_ham1 + local_ham2
+    target_ham = (TFIM(nqubits, h=1.0, numpy=True) +
+                  TFIM(nqubits, h=0.5, numpy=True))
+    dense = local_ham.dense_hamiltonian()
+    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+
+    local_ham = local_ham1 - local_ham2
+    target_ham = (TFIM(nqubits, h=1.0, numpy=True) -
+                  TFIM(nqubits, h=0.5, numpy=True))
+    dense = local_ham.dense_hamiltonian()
+    np.testing.assert_allclose(dense.matrix, target_ham.matrix)

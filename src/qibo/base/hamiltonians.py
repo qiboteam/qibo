@@ -1,3 +1,4 @@
+import itertools
 import numpy as np # TODO: Remove this when you create `NumpyLocalHamiltonian`
 from qibo import gates
 from qibo.config import raise_error, EINSUM_CHARS
@@ -209,8 +210,8 @@ class LocalHamiltonian(object):
     def __init__(self, *parts):
         self.dtype = None
         self.parts = parts
-        self.terms_set = set() # set of all terms unique
-        all_targets = set()
+        self.term_gates = {}
+        targets_set = set()
         for targets, term in self:
             self.dense_class = term.__class__
             if not issubclass(type(term), Hamiltonian):
@@ -218,17 +219,23 @@ class LocalHamiltonian(object):
             if len(targets) != term.nqubits:
                 raise_error(ValueError, "Term targets {} but supports {} qubits."
                                         "".format(targets, term.nqubits))
-            all_targets |= set(targets)
-            self.terms_set.add(term)
+
+            if targets in targets_set:
+                raise_error(ValueError, "Targets {} are given in more than "
+                                        "one term.".format(targets))
+            targets_set.add(targets)
+            if term not in self.term_gates:
+                self.term_gates[term] = set()
+
             if self.dtype is None:
                 self.dtype = term.matrix.dtype
-            else:
-                if term.matrix.dtype != self.dtype:
-                    raise_error(TypeError, "Terms of different types {} and {} "
-                                            "were given.".format(
-                                              term.matrix.dtype, self.dtype))
-        self.nqubits = len(all_targets)
-        self.term_gates = {}
+            elif term.matrix.dtype != self.dtype:
+                raise_error(TypeError, "Terms of different types {} and {} "
+                                        "were given.".format(
+                                            term.matrix.dtype, self.dtype))
+
+        self.nqubits = len({t for targets in targets_set for t in targets})
+        self.nterms = sum(len(part) for part in self.parts)
         self._dt = None
         self._circuit = None
 
@@ -260,6 +267,7 @@ class LocalHamiltonian(object):
                 yield targets, term
 
     def dense_hamiltonian(self):
+        # TODO: Add docstring
         # TODO: Move this to a NumpyLocalHamiltonian
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
@@ -272,9 +280,8 @@ class LocalHamiltonian(object):
             tmat = term.matrix.reshape(2 * term.nqubits * (2,))
             n = self.nqubits - len(targets)
             emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
-            # TODO: Perhaps use `itertools.chain` to concatenate generators
-            tc = ("".join((chars[i] for i in targets)) +
-                  "".join((chars[i + self.nqubits] for i in targets)))
+            gen = lambda x: (chars[i + x] for i in targets)
+            tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
             ec = "".join((c for c in chars if c not in tc))
             matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
 
@@ -285,27 +292,68 @@ class LocalHamiltonian(object):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits)
-        for targets, term in self:
-            gate = gates.Unitary(term.exp(dt / 2.0), *targets)
-            if term in self.term_gates:
-                self.term_gates[term].add(gate)
-            else:
-                self.term_gates[term] = {gate}
-            self._circuit.add(gate)
-        for part in self.parts[::-1]:
+        for part in itertools.chain(self.parts, self.parts[::-1]):
             for targets, term in part.items():
                 gate = gates.Unitary(term.exp(dt / 2.0), *targets)
                 self.term_gates[term].add(gate)
                 self._circuit.add(gate)
 
-    def __mul__(self, o):
-        """Multiplication to scalar operator."""
+    def _scalar_op(self, op, o):
+        """Helper method for implementing operations with scalars.
+
+        Args:
+            op (str): String that defines the operation, such as '__add__' or
+                '__mul__'.
+            o: Scalar to perform operation for.
+        """
         new_parts = []
-        new_terms = {term: o * term for term in self.terms_set}
+        new_terms = {term: getattr(term, op)(o) for term in self.term_gates.keys()}
         new_parts = ({targets: new_terms[term]
                       for targets, term in part.items()}
                      for part in self.parts)
+        # TODO: Transfer `_circuit` and `term_gates` to the new object
         return self.__class__(*new_parts)
+
+    def _hamiltonian_op(self, op, o):
+        if len(self.parts) != len(o.parts):
+            raise_error(ValueError, "Cannot add local Hamiltonians if their "
+                                    "parts are not compatible.")
+        new_parts = []
+        for part1, part2 in zip(self.parts, o.parts):
+            if set(part1.keys()) != set(part2.keys()):
+                raise_error(ValueError, "Cannot add local Hamiltonians if their "
+                                        "parts are not compatible.")
+            new_parts.append({
+                targets: getattr(part1[targets], op)(part2[targets])
+                for targets in part1.keys()
+                })
+        return self.__class__(*new_parts)
+
+    def __add__(self, o):
+        """Add operator."""
+        if isinstance(o, self.__class__):
+            return self._hamiltonian_op("__add__", o)
+        else:
+            return self._scalar_op("__add__", o / self.nterms)
+
+    def __radd__(self, o):
+        """Right operator addition."""
+        return self.__add__(o)
+
+    def __sub__(self, o):
+        """Subtraction operator."""
+        if isinstance(o, self.__class__):
+            return self._hamiltonian_op("__sub__", o)
+        else:
+            return self._scalar_op("__sub__", o / self.nterms)
+
+    def __rsub__(self, o):
+        """Right subtraction operator."""
+        return self._scalar_op("__rsub__", o / self.nterms)
+
+    def __mul__(self, o):
+        """Multiplication to scalar operator."""
+        return self._scalar_op("__mul__", o)
 
     def __rmul__(self, o):
         """Right scalar multiplication."""
