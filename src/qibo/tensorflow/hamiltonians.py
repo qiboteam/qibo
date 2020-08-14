@@ -37,10 +37,7 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
 
     def _real(self, o):
         if isinstance(o, tf.Tensor):
-            if o.shape:
-                return np.array(o)[0].real
-            else:
-                return np.array(o).real
+            return np.array(o).real
         return super(TensorflowHamiltonian, self)._real(o)
 
     def __mul__(self, o):

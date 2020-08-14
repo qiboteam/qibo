@@ -93,6 +93,7 @@ def test_hamiltonian_mul(numpy):
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
     h2 = h * np.array(2)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
+    _ = h.eigenvectors()
     h2 = h * tf.cast(2, dtype=tf.complex128)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
 
