@@ -254,6 +254,13 @@ class LocalHamiltonian(object):
                      for i in range(nqubits // 2)}
         return cls(even_terms, odd_terms)
 
+    def __iter__(self):
+        """Helper iteration method to loop over the Hamiltonian terms."""
+        # TODO: Use this iterator in all places where this loop is used.
+        for part in self.parts:
+            for targets, term in part.items():
+                yield targets, term
+
     def dense_hamiltonian(self):
         # TODO: Move this to a NumpyLocalHamiltonian
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
@@ -263,16 +270,15 @@ class LocalHamiltonian(object):
         matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
         chars = EINSUM_CHARS[:2 * self.nqubits]
         # TODO: Use `__iter__` for this loop because it is used many times
-        for part in self.parts:
-            for targets, term in part.items():
-                tmat = term.matrix.reshape(2 * term.nqubits * (2,))
-                n = self.nqubits - len(targets)
-                emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
-                # TODO: Perhaps use `itertools.chain` to concatenate generators
-                tc = ("".join((chars[i] for i in targets)) +
-                      "".join((chars[i + self.nqubits] for i in targets)))
-                ec = "".join((c for c in chars if c not in tc))
-                matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+        for targets, term in self:
+            tmat = term.matrix.reshape(2 * term.nqubits * (2,))
+            n = self.nqubits - len(targets)
+            emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+            # TODO: Perhaps use `itertools.chain` to concatenate generators
+            tc = ("".join((chars[i] for i in targets)) +
+                  "".join((chars[i + self.nqubits] for i in targets)))
+            ec = "".join((c for c in chars if c not in tc))
+            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
 
         matrix = matrix.reshape(2 * (2 ** self.nqubits,))
         return self.dense_class(self.nqubits, matrix)
