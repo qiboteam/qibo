@@ -1,8 +1,5 @@
-<<<<<<< HEAD
 from qibo import gates
-=======
 from qibo.config import raise_error
->>>>>>> hambackend
 
 
 class Hamiltonian(object):
@@ -205,11 +202,11 @@ class LocalHamiltonian(object):
     def __init__(self, terms):
         for term in terms:
             if not issubclass(type(term), Hamiltonian):
-                raise TypeError("Invalid term type {}.".format(type(term)))
+                raise_error(TypeError, "Invalid term type {}.".format(type(term)))
             if term.nqubits != 2:
-                raise ValueError("LocalHamiltonian terms should target one or "
-                                 "two qubits but {} was given."
-                                 "".format(term.nqubits))
+                raise_error(ValueError, "LocalHamiltonian terms should target "
+                                        "one or two qubits but targets {}."
+                                        "".format(term.nqubits))
         self.nqubits = len(terms)
         self.terms = terms
         self._dt = None
@@ -251,14 +248,14 @@ class LocalHamiltonian(object):
         self._circuit.add(even())
 
     def circuit(self, dt):
-        """2nd order Trotter decomposition time step circuit.
+        """Circuit implementing second order Trotter time step.
 
         Args:
             dt (float): Time step to use for Trotterization.
 
         Returns:
             :class:`qibo.base.circuit.BaseCircuit` that implements a single
-            time step of the Trotterized evolution.
+            time step of the second order Trotterized evolution.
         """
         if self._circuit is None:
             self._dt = dt
