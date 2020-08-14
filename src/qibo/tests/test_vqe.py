@@ -38,6 +38,7 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
+               ("cma", {"maxfevals": 2}, False, None),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
@@ -73,6 +74,10 @@ def test_vqe(method, options, compile, filename):
     v = VQE(circuit, hamiltonian)
     best, params = v.minimize(initial_parameters, method=method,
                               options=options, compile=compile)
+    if method == "cma":
+        # remove `outcmaes` folder
+        import shutil
+        shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
     qibo.set_backend(original_backend)
