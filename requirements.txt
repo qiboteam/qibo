@@ -6,3 +6,4 @@ scipy
 cma
 joblib
 matplotlib
+blessings

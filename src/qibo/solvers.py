@@ -1,4 +1,5 @@
 from qibo import K, hamiltonians
+from qibo.config import raise_error
 
 
 class BaseSolver:
@@ -19,7 +20,8 @@ class BaseSolver:
             self.hamiltonian = hamiltonian
 
     def __call__(self, state): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 class TimeIndependentExponential(BaseSolver):

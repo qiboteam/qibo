@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates
 from qibo.tensorflow import custom_operators as op
-from qibo.config import DTYPES
+from qibo.config import DTYPES, raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -135,7 +135,7 @@ class DistributedQueues(DistributedBase):
         global qubits list.
         """
         if not queue:
-            raise RuntimeError("No gates available to set for distributed run.")
+            raise_error(RuntimeError, "No gates available to set for distributed run.")
 
         counter = self.count(queue, self.nqubits)
         if self.qubits is None:
@@ -225,7 +225,8 @@ class DistributedQueues(DistributedBase):
         gate = new_remaining_queue[0]
         target_set = set(gate.target_qubits)
         global_targets = target_set & self.qubits.set
-        if isinstance(gate, gates.SWAP): # special case of swap on two global qubits
+        if isinstance(gate, gates.SWAP): # pragma: no cover
+            # special case of swap on two global qubits
             assert len(global_targets) == 2
             global_targets.remove(target_set.pop())
 
@@ -295,10 +296,10 @@ class DistributedQueues(DistributedBase):
             elif set(gate.target_qubits) & self.qubits.set: # global swap gate
                 global_qubits = set(gate.target_qubits) & self.qubits.set
                 if not isinstance(gate, gates.SWAP):
-                    raise ValueError("Only SWAP gates are supported for "
-                                     "global qubits.")
+                    raise_error(ValueError, "Only SWAP gates are supported for "
+                                            "global qubits.")
                 if len(global_qubits) > 1:
-                    raise ValueError("SWAPs between global qubits are not allowed.")
+                    raise_error(ValueError, "SWAPs between global qubits are not allowed.")
 
                 global_qubit = global_qubits.pop()
                 local_qubit = gate.target_qubits[0]
@@ -459,7 +460,7 @@ class DistributedState(DistributedBase):
           return self.pieces[global_ids][local_ids]
 
       else:
-          raise TypeError("Unknown index type {}.".format(type(key)))
+          raise_error(TypeError, "Unknown index type {}.".format(type(key)))
 
     def __array__(self) -> np.ndarray:
         return self.vector.numpy()

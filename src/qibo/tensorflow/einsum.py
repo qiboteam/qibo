@@ -19,6 +19,7 @@ examples.
 """
 import tensorflow as tf
 from qibo.base import cache
+from qibo.config import raise_error
 from typing import Dict, Optional, Sequence, Set
 
 
@@ -59,8 +60,9 @@ class DefaultEinsum:
             String to use in einsum for performing partial density of a
             density matrix.
         """
-        if (2 - int(measuring)) * nqubits > len(cls._chars):
-            raise NotImplementedError("Not enough einsum characters.")
+        if (2 - int(measuring)) * nqubits > len(cls._chars): # pragma: no cover
+            # case not tested because it requires large instance
+            raise_error(NotImplementedError, "Not enough einsum characters.")
 
         left_in, right_in, left_out, right_out = [], [], [], []
         for i in range(nqubits):

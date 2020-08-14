@@ -2,6 +2,7 @@
 import numpy as np
 from qibo import solvers, optimizers, hamiltonians
 from qibo.tensorflow import circuit
+from qibo.config import log, raise_error
 
 
 class StateEvolution:
@@ -33,7 +34,7 @@ class StateEvolution:
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[]):
         self.nqubits = hamiltonian.nqubits
         if dt <= 0:
-            raise ValueError(f"Time step dt should be positive but is {dt}.")
+            raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
@@ -67,8 +68,8 @@ class StateEvolution:
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
         if initial_state is None:
-            raise ValueError("StateEvolution cannot be used without initial "
-                             "state.")
+            raise_error(ValueError, "StateEvolution cannot be used without initial "
+                                    "state.")
         return circuit.TensorflowCircuit._cast_initial_state(
             self, initial_state)
 
@@ -96,14 +97,14 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
         if not isinstance(h0, hamiltonians.Hamiltonian):
-            raise TypeError(f"h0 should be a hamiltonians.Hamiltonian object "
-                             "but is {type(h0)}.")
+            raise_error(TypeError, f"h0 should be a hamiltonians.Hamiltonian object "
+                                    "but is {type(h0)}.")
         if not isinstance(h1, hamiltonians.Hamiltonian):
-            raise TypeError(f"h1 should be a hamiltonians.Hamiltonian object "
-                             "but is {type(h1)}.")
+            raise_error(TypeError, f"h1 should be a hamiltonians.Hamiltonian object "
+                                    "but is {type(h1)}.")
         if h0.nqubits != h1.nqubits:
-            raise ValueError("H0 has {} qubits while H1 has {}."
-                             "".format(h0.nqubits, h1.nqubits))
+            raise_error(ValueError, "H0 has {} qubits while H1 has {}."
+                                    "".format(h0.nqubits, h1.nqubits))
         ham = lambda t: h0
         ham.nqubits = h0.nqubits
         super(AdiabaticEvolution, self).__init__(ham, dt, solver, callbacks)
@@ -122,15 +123,15 @@ class AdiabaticEvolution(StateEvolution):
         elif nparams == 2: # given ``s`` has undefined parameters
             self._param_schedule = s
         else:
-            raise ValueError(f"Scheduling function shoud take one or two "
-                              "arguments but it takes {nparams}.")
+            raise_error(ValueError, f"Scheduling function shoud take one or two "
+                                     "arguments but it takes {nparams}.")
 
     @property
     def schedule(self):
         """Returns scheduling as a function of time."""
         if self._schedule is None:
-            raise ValueError("Cannot access scheduling function before setting "
-                             "its free parameters.")
+            raise_error(ValueError, "Cannot access scheduling function before setting "
+                                    "its free parameters.")
         return self._schedule
 
     @schedule.setter
@@ -138,17 +139,17 @@ class AdiabaticEvolution(StateEvolution):
         """Sets scheduling s(t) function."""
         s0 = f(0)
         if np.abs(s0) > self.ATOL:
-            raise ValueError(f"s(0) should be 0 but is {s0}.")
+            raise_error(ValueError, f"s(0) should be 0 but is {s0}.")
         s1 = f(1)
         if np.abs(s1 - 1) > self.ATOL:
-            raise ValueError(f"s(1) should be 1 but is {s1}.")
+            raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """"""
         if start_time != 0:
-            raise NotImplementedError("Adiabatic evolution supports only t=0 "
-                                      "as initial time.")
+            raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
+                                             "as initial time.")
         self.set_hamiltonian(final_time - start_time)
         return super(AdiabaticEvolution, self).execute(
             final_time, start_time, initial_state)
@@ -187,7 +188,7 @@ class AdiabaticEvolution(StateEvolution):
         if self.opt_messages:
             self.opt_history["params"].append(params)
             self.opt_history["loss"].append(loss)
-            print(f"Params: {params}  -  <H1> = {loss}")
+            log.info(f"Params: {params}  -  <H1> = {loss}")
         return loss
 
     def _nploss(self, params):

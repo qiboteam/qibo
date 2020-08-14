@@ -12,7 +12,7 @@ _atol = 1e-8
 
 def test_entropy_product_state():
     """Check that the |++> state has zero entropy."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = callbacks.EntanglementEntropy()
     state = np.ones(4) / 2.0
 
     result = entropy(state).numpy()
@@ -268,6 +268,7 @@ def test_entropy_bad_indexing():
     c.add(gates.CallbackGate(entropy))
     state = c()
 
+    entropy[0]
     with pytest.raises(IndexError):
         entropy[1]
     with pytest.raises(IndexError):

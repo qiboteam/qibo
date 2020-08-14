@@ -323,6 +323,18 @@ def test_general_channel(backend):
     qibo.set_backend(original_backend)
 
 
+def test_tensorflow_channel_errors():
+    import tensorflow as tf
+    original_backend = qibo.get_backend()
+    qibo.set_backend("matmuleinsum")
+    gate = gates.NoiseChannel(0, 0.1, 0.2, 0.3)
+    state = tf.cast(np.random.random(4 * (2,)), dtype=tf.complex128)
+    with pytest.raises(ValueError):
+        state = gate(state, is_density_matrix=False)
+    state = gate(state)
+    qibo.set_backend(original_backend)
+
+
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     original_backend = qibo.get_backend()
@@ -338,6 +350,17 @@ def test_controlled_by_channel():
     with pytest.raises(ValueError):
         gate = gates.GeneralChannel(config).controlled_by(1)
     qibo.set_backend(original_backend)
+
+
+def test_krauss_operator_bad_shape():
+    """Test that defining a Krauss operator with wrong shape raises error."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend("matmuleinsum")
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    with pytest.raises(ValueError):
+        gate = gates.GeneralChannel([((0, 1), a1)])
+    qibo.set_backend(original_backend)
+
 
 def test_circuit_with_noise_gates():
     """Check that ``circuit.with_noise()`` adds the proper noise channels."""

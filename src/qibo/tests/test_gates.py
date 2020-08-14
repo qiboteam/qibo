@@ -59,6 +59,8 @@ def test_flatten(backend):
     c.add(gates.Flatten(target_state))
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    gate = gates.Flatten(target_state)
+    gate(final_state)
     qibo.set_backend(original_backend)
 
 
@@ -777,6 +779,26 @@ def test_unitary_bad_shape(backend):
             gate = gates.Unitary(matrix, 0, 1, 2)
     qibo.set_backend(original_backend)
 
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_unitary_various_type_initialization(backend):
+    import tensorflow as tf
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = tf.cast(np.random.random((4, 4)), dtype=tf.complex128)
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(TypeError):
+        gate = gates.Unitary("abc", 0, 1)
+    qibo.set_backend(original_backend)
+
+
+def test_control_unitary_error():
+    matrix = np.random.random((4, 4))
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(ValueError):
+        unitary = gate.control_unitary(np.random.random((16, 16)))
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary(backend):
     qibo.set_backend(backend)
@@ -820,6 +842,10 @@ def test_construct_unitary(backend):
     np.testing.assert_allclose(gates.ZPow(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary, target_matrix)
+    from qibo import matrices
+    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
+                              [0, 0, 0, 1]])
+    np.testing.assert_allclose(matrices.SWAP, target_matrix)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -864,7 +890,8 @@ def test_controlled_by_unitary_action(backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variational_layer_call(nqubits=6):
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer_call(nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     theta = 2 * np.pi * np.random.random(nqubits)
@@ -957,6 +984,14 @@ def test_variational_layer_errors(backend):
         c.add(gates.VariationalLayer(range(7), pairs,
                                      gates.RY, gates.CZ,
                                      np.zeros(7), np.zeros(7)))
+    with pytest.raises(ValueError):
+        c.add(gates.VariationalLayer(range(10), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(10), np.zeros(10)))
+
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
+                                  np.zeros(6), np.zeros(6))
+    np.testing.assert_allclose(gate.parameter, np.zeros(12))
     qibo.set_backend(original_backend)
 
 

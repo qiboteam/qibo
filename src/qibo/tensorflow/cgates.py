@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import BACKEND, DTYPES, DEVICES
+from qibo.config import BACKEND, DTYPES, DEVICES, raise_error
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -23,7 +23,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __init__(self):
         if not tf.executing_eagerly():
-            raise NotImplementedError("Custom operator gates should not be "
+            raise_error(NotImplementedError, "Custom operator gates should not be "
                                       "used in compiled mode.")
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
@@ -35,9 +35,9 @@ class TensorflowGate(base_gates.Gate):
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
         shape = tuple(unitary.shape)
-        if shape != (2, 2): # pragma: no cover
-            raise ValueError("Cannot use ``control_unitary`` method for input "
-                             "matrix of shape {}.".format(shape))
+        if shape != (2, 2):
+            raise_error(ValueError, "Cannot use ``control_unitary`` method for "
+                                    "input matrix of shape {}.".format(shape))
         matrix = tf.eye(4, dtype=DTYPES.get('DTYPECPX'))
         ids = [[2, 2], [2, 3], [3, 2], [3, 3]]
         values = tf.reshape(unitary, (4,))
@@ -202,8 +202,9 @@ class M(TensorflowGate, base_gates.M):
         return tf.transpose(probs, perm=self.reduced_target_qubits)
 
     def _get_cpu(self): # pragma: no cover
+        # case not covered by GitHub workflows because it requires OOM
         if not DEVICES['CPU']:
-            raise RuntimeError("Cannot find CPU device to use for sampling.")
+            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
         return DEVICES['CPU'][0]
 
     def __call__(self, state: tf.Tensor, nshots: int,
@@ -222,6 +223,7 @@ class M(TensorflowGate, base_gates.M):
 
         device = DEVICES['DEFAULT']
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
+            # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
             device = self._get_cpu()
 
@@ -230,6 +232,7 @@ class M(TensorflowGate, base_gates.M):
             with tf.device(device):
                 samples_dec = sample()
         except oom_error: # pragma: no cover
+            # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
             device = self._get_cpu()
             with tf.device(device):
@@ -431,11 +434,14 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 class Unitary(MatrixGate, base_gates.Unitary):
 
     def __init__(self, unitary, *q, name: Optional[str] = None):
+        if not isinstance(unitary, (np.ndarray, tf.Tensor)):
+            raise_error(TypeError, "Unknown type {} of unitary matrix."
+                                   "".format(type(unitary)))
         base_gates.Unitary.__init__(self, unitary, *q, name=name)
         MatrixGate.__init__(self)
         rank = self.rank
         if rank > 2:
-            raise NotImplementedError("Unitary matrix gate supports only one "
+            raise_error(NotImplementedError, "Unitary matrix gate supports only one "
                                       "qubit gates but {} target qubits were "
                                       "given.".format(len(self.target_qubits)))
         self._unitary = self.construct_unitary()
@@ -444,11 +450,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
         unitary = self.parameter
         if isinstance(unitary, np.ndarray):
             return unitary.astype(DTYPES.get('NPTYPECPX'))
-        if isinstance(unitary, tf.Tensor): # pragma: no cover
+        if isinstance(unitary, tf.Tensor):
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
-        else: # pragma: no cover
-            raise TypeError("Unknown type {} of unitary matrix."
-                            "".format(type(unitary)))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -506,7 +509,7 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = [self.unitary_constructor(matrices[i], *targets)
                           for i, targets in enumerate(self.pairs)]
-        if additional_matrix is not None: # pragma: no cover
+        if additional_matrix is not None:
             self.additional_unitary = self.unitary_constructor(
                 additional_matrix, self.additional_target)
 
@@ -559,7 +562,8 @@ class TensorflowChannel(TensorflowGate):
 
     def __new__(cls, *args, **kwargs):
         if BACKEND.get('GATES') == 'custom': # pragma: no cover
-            raise NotImplementedError("Density matrices are not supported by "
+            # future TODO
+            raise_error(NotImplementedError, "Density matrices are not supported by "
                                       "custom operator gates.")
         else:
             from qibo.tensorflow import gates
