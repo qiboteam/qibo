@@ -9,6 +9,8 @@ def test_hamiltonian_initialization():
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
     H1 = Hamiltonian(2, np.eye(4))
+    with pytest.raises(ValueError):
+        H1 = Hamiltonian(-2, np.eye(4))
     with pytest.raises(RuntimeError):
         H2 = Hamiltonian(np.eye(2), np.eye(4))
     with pytest.raises(ValueError):
@@ -73,11 +75,26 @@ def test_different_hamiltonian_addition(numpy):
     np.testing.assert_allclose(H.matrix, matrix)
 
 
+def test_right_operations():
+    """Tests operations not covered by ``test_hamiltonian_overloading``."""
+    H1 = Y(nqubits=3)
+    H2 = 2 + H1
+    target_matrix = 2 * np.eye(8) + H1.matrix
+    np.testing.assert_allclose(H2.matrix, target_matrix)
+    H2 = H1 - 2
+    target_matrix = H1.matrix - 2 * np.eye(8)
+    np.testing.assert_allclose(H2.matrix, target_matrix)
+
+
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_mul(numpy):
-    """Test multiplication with ``np.array`` scalar."""
+    """Test multiplication with ``np.array`` and ``tf.Tensor`` scalar."""
+    import tensorflow as tf
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
     h2 = h * np.array(2)
+    np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
+    _ = h.eigenvectors()
+    h2 = h * tf.cast(2, dtype=tf.complex128)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
 
 

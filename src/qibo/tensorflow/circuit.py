@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND
+from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -52,11 +52,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         callback_results = {gate.callback: [] for gate in self.queue
                             if hasattr(gate, "callback")}
         for gate in self.queue:
-            if gate.is_channel and not self.using_density_matrix:
+            if gate.is_channel and not self.using_density_matrix: # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 # Switch from vector to density matrix
                 self.using_density_matrix = True
                 state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            if isinstance(gate, gates.CallbackGate):
+            if isinstance(gate, gates.CallbackGate): # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 callback = gate.callback
                 value = callback(state,
                                  is_density_matrix=self.using_density_matrix)
@@ -69,12 +71,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def compile(self):
         """Compiles the circuit as a Tensorflow graph."""
         if self._compiled_execute is not None:
-            raise RuntimeError("Circuit is already compiled.")
+            raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
-            raise RuntimeError("Cannot compile circuit without gates.")
+            raise_error(RuntimeError, "Cannot compile circuit without gates.")
         if not self.using_tfgates:
-            raise RuntimeError("Cannot compile circuit that uses custom "
-                               "operators.")
+            raise_error(RuntimeError, "Cannot compile circuit that uses custom "
+                                      "operators.")
         self._compiled_execute = tf.function(self._execute_for_compile)
 
     @property
@@ -148,9 +150,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
             with tf.device(device):
                 return self._execute(initial_state=initial_state, nshots=nshots)
         except oom_error:
-            raise RuntimeError(f"State does not fit in {device} memory."
-                               "Please switch the execution device to a "
-                               "different one using ``qibo.set_device``.")
+            raise_error(RuntimeError, f"State does not fit in {device} memory."
+                                       "Please switch the execution device to a "
+                                       "different one using ``qibo.set_device``.")
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
@@ -166,8 +168,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
-            raise RuntimeError("Cannot access final state before the circuit "
-                               "is executed.")
+            raise_error(RuntimeError, "Cannot access final state before the circuit "
+                                      "is executed.")
         return self._final_state
 
     def _cast_initial_state(self, initial_state: Optional[InitStateType] = None
@@ -177,13 +179,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         if not (isinstance(initial_state, np.ndarray) or
                 isinstance(initial_state, tf.Tensor)):
-            raise TypeError("Initial state type {} is not recognized."
-                            "".format(type(initial_state)))
+            raise_error(TypeError, "Initial state type {} is not recognized."
+                                   "".format(type(initial_state)))
 
         shape = tuple(initial_state.shape)
         def shape_error():
-            raise ValueError("Invalid initial state shape {} for circuit "
-                             "with {} qubits.".format(shape, self.nqubits))
+            raise_error(ValueError, "Invalid initial state shape {} for circuit "
+                                    "with {} qubits.".format(shape, self.nqubits))
 
         if len(shape) not in {1, 2}:
             shape_error()

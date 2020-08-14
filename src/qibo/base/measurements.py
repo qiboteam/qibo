@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import collections
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
+from qibo.config import raise_error
 TensorType = Any
 
 
@@ -32,12 +33,12 @@ class GateResult:
         self.sampled_state = state
 
         if decimal_samples is not None and binary_samples is not None:
-            raise ValueError("Measurement result object cannot be created "
-                             "when samples are given both in decimal and "
-                             "binary. Use one of the two.")
+            raise_error(ValueError, "Measurement result object cannot be created "
+                                    "when samples are given both in decimal and "
+                                    "binary. Use one of the two.")
         if binary_samples is not None and binary_samples.shape[-1] != self.nqubits:
-            raise ValueError("Binary samples are for {} qubits but the given "
-                             "qubits are {}.".format(binary_samples.shape[-1], qubits))
+            raise_error(ValueError, "Binary samples are for {} qubits but the given "
+                                    "qubits are {}.".format(binary_samples.shape[-1], qubits))
 
         self._decimal = decimal_samples
         self._binary = binary_samples
@@ -87,16 +88,19 @@ class GateResult:
         return self._frequencies
 
     @staticmethod
-    def _convert_to_binary(x: TensorType, n: int) -> TensorType:
-        raise NotImplementedError
+    def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
 
     @staticmethod
-    def _convert_to_decimal(x: TensorType, n: int) -> TensorType:
-        raise NotImplementedError
+    def _convert_to_decimal(x: TensorType, n: int) -> TensorType: # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
 
     @staticmethod
-    def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]:
-        raise NotImplementedError
+    def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 class CircuitResult:
@@ -189,10 +193,11 @@ class CircuitResult:
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
                                     gate_result: GateResult
-                                    ) -> Dict[str, GateResult]:
+                                    ) -> Dict[str, GateResult]: # pragma: no cover
         """Calculates the individual register `GateResults`.
 
         This uses the `register_qubits` map to divide the bitstrings to their
         appropriate registers.
         """
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)

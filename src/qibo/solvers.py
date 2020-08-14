@@ -1,5 +1,6 @@
 from qibo import K
 from qibo.base import hamiltonians
+from qibo.config import raise_error
 
 HAMILTONIAN_TYPES = (hamiltonians.Hamiltonian, hamiltonians.LocalHamiltonian)
 
@@ -22,7 +23,8 @@ class BaseSolver:
             self.hamiltonian = hamiltonian
 
     def __call__(self, state): # pragma: no cover
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 class TrotterizedExponential(BaseSolver):

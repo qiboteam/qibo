@@ -27,6 +27,7 @@ def assert_regression_fixture(array, filename):
     try:
         array_fixture = load(filename)
     except: # pragma: no cover
+        # case not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
     np.testing.assert_allclose(array, array_fixture, rtol=1e-5)
@@ -37,6 +38,7 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
+               ("cma", {"maxfevals": 2}, False, None),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
@@ -72,13 +74,17 @@ def test_vqe(method, options, compile, filename):
     v = VQE(circuit, hamiltonian)
     best, params = v.minimize(initial_parameters, method=method,
                               options=options, compile=compile)
+    if method == "cma":
+        # remove `outcmaes` folder
+        import shutil
+        shutil.rmtree("outcmaes")
     if filename is not None:
         assert_regression_fixture(params, REGRESSION_FOLDER/filename)
     qibo.set_backend(original_backend)
 
 
-def test_vqe_compile_error():
-    """Check that ``RuntimeError`` is raised when compiling custom gates."""
+def test_vqe_custom_gates_errors():
+    """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
@@ -93,7 +99,12 @@ def test_vqe_compile_error():
     hamiltonian = XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
     v = VQE(circuit, hamiltonian)
+    # compile with custom gates
     with pytest.raises(RuntimeError):
         best, params = v.minimize(initial_parameters, method="BFGS",
                                   options={'maxiter': 1}, compile=True)
+    # use SGD with custom gates
+    with pytest.raises(RuntimeError):
+        best, params = v.minimize(initial_parameters, method="sgd",
+                                  compile=False)
     qibo.set_backend(original_backend)
