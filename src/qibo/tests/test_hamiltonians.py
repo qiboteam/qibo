@@ -225,12 +225,31 @@ def test_hamiltonian_eigenvectors(dtype):
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
 
 
-def test_tfim_local_hamiltonian(nqubits=3):
+def create_ising_local(nqubits, h=1.0):
+    """Creates TFIM as ``LocalHamiltonian``."""
     import numpy as np
     from qibo import matrices
-    matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
+    matrix = -(np.kron(matrices.Z, matrices.Z) +
+               h * np.kron(matrices.X, matrices.I))
     term = Hamiltonian(2, matrix)
-    local_ham = LocalHamiltonian.from_single_term(nqubits, term)
+    return LocalHamiltonian.from_single_term(nqubits, term)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_tfim_local_hamiltonian(nqubits):
+    local_ham = create_ising_local(nqubits, h=1.0)
     target_ham = TFIM(nqubits, h=1.0, numpy=True)
     final_ham = local_ham.dense_hamiltonian()
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_local_hamiltonian_mul(nqubits):
+    local_ham = create_ising_local(nqubits, h=1.0)
+    target_ham = 2 * TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 * local_ham).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    local_ham = create_ising_local(nqubits, h=1.0)
+    local_dense = (local_ham * 2).dense_hamiltonian()
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)

@@ -207,29 +207,27 @@ class LocalHamiltonian(object):
     """
 
     def __init__(self, *parts):
-        all_targets = set()
         self.dtype = None
-        for part in parts:
-            for targets, term in part.items():
-                self.dense_class = term.__class__
-                if not issubclass(type(term), Hamiltonian):
-                    raise_error(TypeError, "Invalid term type {}.".format(type(term)))
-                if len(targets) != term.nqubits:
-                    raise_error(ValueError, "Term targets {} but supports {} "
-                                            "qubits."
-                                            "".format(targets, term.nqubits))
-                all_targets |= set(targets)
-                if self.dtype is None:
-                    self.dtype = term.matrix.dtype
-                else:
-                    if term.matrix.dtype != self.dtype:
-                        raise_error(TypeError, "Terms of different types {} "
-                                               "and {} were given."
-                                               "".format(term.matrix.dtype,
-                                                         self.dtype))
-
-        self.nqubits = len(all_targets)
         self.parts = parts
+        self.terms_set = set() # set of all terms unique
+        all_targets = set()
+        for targets, term in self:
+            self.dense_class = term.__class__
+            if not issubclass(type(term), Hamiltonian):
+                raise_error(TypeError, "Invalid term type {}.".format(type(term)))
+            if len(targets) != term.nqubits:
+                raise_error(ValueError, "Term targets {} but supports {} qubits."
+                                        "".format(targets, term.nqubits))
+            all_targets |= set(targets)
+            self.terms_set.add(term)
+            if self.dtype is None:
+                self.dtype = term.matrix.dtype
+            else:
+                if term.matrix.dtype != self.dtype:
+                    raise_error(TypeError, "Terms of different types {} and {} "
+                                            "were given.".format(
+                                              term.matrix.dtype, self.dtype))
+        self.nqubits = len(all_targets)
         self.term_gates = {}
         self._dt = None
         self._circuit = None
@@ -287,14 +285,13 @@ class LocalHamiltonian(object):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits)
-        for part in self.parts:
-            for targets, term in part.items():
-                gate = gates.Unitary(term.exp(dt / 2.0), *targets)
-                if term in self.term_gates:
-                    self.term_gates[term].add(gate)
-                else:
-                    self.term_gates[term] = {gate}
-                self._circuit.add(gate)
+        for targets, term in self:
+            gate = gates.Unitary(term.exp(dt / 2.0), *targets)
+            if term in self.term_gates:
+                self.term_gates[term].add(gate)
+            else:
+                self.term_gates[term] = {gate}
+            self._circuit.add(gate)
         for part in self.parts[::-1]:
             for targets, term in part.items():
                 gate = gates.Unitary(term.exp(dt / 2.0), *targets)
@@ -303,9 +300,12 @@ class LocalHamiltonian(object):
 
     def __mul__(self, o):
         """Multiplication to scalar operator."""
-        for part in self.parts:
-            for targets, term in part.items():
-                part[targets] = o * term
+        new_parts = []
+        new_terms = {term: o * term for term in self.terms_set}
+        new_parts = ({targets: new_terms[term]
+                      for targets, term in part.items()}
+                     for part in self.parts)
+        return self.__class__(*new_parts)
 
     def __rmul__(self, o):
         """Right scalar multiplication."""
