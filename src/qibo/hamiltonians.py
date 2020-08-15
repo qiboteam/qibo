@@ -142,7 +142,7 @@ def TFIM(nqubits, h=0.0, numpy=False):
     ham = -_build_spin_model(nqubits, matrices.Z, condition)
     if h != 0:
         condition = lambda i, j: i == j % nqubits
-        ham -= _build_spin_model(nqubits, matrices.X, condition)
+        ham -= h * _build_spin_model(nqubits, matrices.X, condition)
     if not numpy:
         ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, ham)
