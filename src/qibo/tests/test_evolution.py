@@ -269,6 +269,7 @@ def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
 
 
 def test_set_scheduling_parameters():
+    """Test ``AdiabaticEvolution.set_parameters``."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p[0]) * np.sqrt(t) + p[0] * t
@@ -287,6 +288,7 @@ test_values = [("BFGS", {'maxiter': 1}, True, "adiabatic_bfgs.out"),
                ("sgd", {"nepochs": 5}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_scheduling_optimization(method, options, messages, filename):
+    """Test optimization of s(t)."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t

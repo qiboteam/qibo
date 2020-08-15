@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
+from qibo.hamiltonians import Hamiltonian, TrotterHamiltonian, XXZ, TFIM, Y
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 
@@ -227,14 +227,16 @@ def test_hamiltonian_eigenvectors(dtype):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("model", [TFIM, XXZ, Y])
-def test_local_hamiltonian_to_dense(nqubits, model):
+def test_trotter_hamiltonian_to_dense(nqubits, model):
+    """Test that Trotter Hamiltonian dense form agrees with normal Hamiltonian."""
     local_ham = model(nqubits, trotter=True)
     target_ham = model(nqubits, numpy=True)
     final_ham = local_ham.dense_hamiltonian()
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
 
 
-def test_local_hamiltonian_scalar_mul(nqubits=3):
+def test_trotter_hamiltonian_scalar_mul(nqubits=3):
+    """Test multiplication of Trotter Hamiltonian with scalar."""
     local_ham = TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 * TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 * local_ham).dense_hamiltonian()
@@ -245,7 +247,8 @@ def test_local_hamiltonian_scalar_mul(nqubits=3):
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-def test_local_hamiltonian_scalar_add(nqubits=4):
+def test_trotter_hamiltonian_scalar_add(nqubits=4):
+    """Test addition of Trotter Hamiltonian with scalar."""
     local_ham = TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 + TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 + local_ham).dense_hamiltonian()
@@ -256,7 +259,8 @@ def test_local_hamiltonian_scalar_add(nqubits=4):
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-def test_local_hamiltonian_scalar_sub(nqubits=3):
+def test_trotter_hamiltonian_scalar_sub(nqubits=3):
+    """Test subtraction of Trotter Hamiltonian with scalar."""
     local_ham = TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 - TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 - local_ham).dense_hamiltonian()
@@ -268,7 +272,8 @@ def test_local_hamiltonian_scalar_sub(nqubits=3):
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-def test_local_hamiltonian_operator_add_and_sub(nqubits=3):
+def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
+    """Test addition and subtraction between Trotter Hamiltonians."""
     local_ham1 = TFIM(nqubits, h=1.0, trotter=True)
     local_ham2 = TFIM(nqubits, h=0.5, trotter=True)
 
@@ -283,3 +288,45 @@ def test_local_hamiltonian_operator_add_and_sub(nqubits=3):
                   TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense_hamiltonian()
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+
+
+def test_trotter_hamiltonian_initialization_errors():
+    """Test errors in initialization of ``TrotterHamiltonian``."""
+    # Wrong type of terms
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian({(0, 1): "abc"})
+    # Wrong number of target qubits
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian({(0, 1): TFIM(nqubits=3, numpy=True)})
+    # Same targets multiple times
+    h = TFIM(nqubits=2, numpy=True)
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian({(0, 1): h}, {(0, 1): h})
+    # Different term matrix types
+    h2 = Hamiltonian(2, np.eye(4, dtype=np.float32))
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
+    # ``from_twoqubit_term`` initialization with nqubits < 0
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian.from_twoqubit_term(-2, h)
+    # ``from_twoqubit_term`` initialization with more than 2 targets
+    h = TFIM(nqubits=3, numpy=True)
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian.from_twoqubit_term(4, h)
+
+
+def test_trotter_hamiltonian_operation_errors():
+    """Test errors in ``TrotterHamiltonian`` addition and subtraction."""
+    # test addition with different number of parts
+    h1 = TFIM(nqubits=5, trotter=True)
+    term = TFIM(nqubits=2, numpy=True)
+    h2 = TrotterHamiltonian({(0, 1): term, (2, 3): term},
+                            {(1, 2): term, (3, 4): term},
+                            {(4, 0): term})
+    with pytest.raises(ValueError):
+        h = h1 + h2
+    # test subtraction with incompatible parts
+    h2 = TrotterHamiltonian({(0, 1): term, (2, 3): term},
+                            {(1, 2): term, (3, 4): term})
+    with pytest.raises(ValueError):
+        h = h1 - h2

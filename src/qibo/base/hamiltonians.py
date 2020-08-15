@@ -1,5 +1,5 @@
 import itertools
-import numpy as np # TODO: Remove this when you create `NumpyTrotterHamiltonian`
+import numpy as np # Consider removing this by creating a ``NumpyTrotterHamiltonian``
 from qibo import gates
 from qibo.config import raise_error, EINSUM_CHARS
 
@@ -255,6 +255,9 @@ class TrotterHamiltonian(object):
                 object representing the local operator. The total Hamiltonian
                 is sum of this term acting on each of the qubits.
         """
+        if not isinstance(nqubits, int) or nqubits < 1:
+            raise_error(ValueError, "nqubits must be a positive integer but is "
+                                    "{}".format(nqubits))
         if term.nqubits != 2:
             raise_error(ValueError, "Term in translationally invariant local "
                                     "Hamiltonians should act on two qubits "
@@ -267,7 +270,6 @@ class TrotterHamiltonian(object):
 
     def __iter__(self):
         """Helper iteration method to loop over the Hamiltonian terms."""
-        # TODO: Use this iterator in all places where this loop is used.
         for part in self.parts:
             for targets, term in part.items():
                 yield targets, term
@@ -279,7 +281,6 @@ class TrotterHamiltonian(object):
             A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
             equivalent to this local Hamiltonian.
         """
-        # TODO: Move this to a NumpyTrotterHamiltonian
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
