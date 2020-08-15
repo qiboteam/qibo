@@ -1,5 +1,5 @@
 import itertools
-import numpy as np # TODO: Remove this when you create `NumpyLocalHamiltonian`
+import numpy as np # TODO: Remove this when you create `NumpyTrotterHamiltonian`
 from qibo import gates
 from qibo.config import raise_error, EINSUM_CHARS
 
@@ -177,8 +177,8 @@ class Hamiltonian(object):
                                              "implemented.".format(type(o)))
 
 
-class LocalHamiltonian(object):
-    """Local Hamiltonian operator used for Trotterized time evolution.
+class TrotterHamiltonian(object):
+    """Hamiltonian operator used for Trotterized time evolution.
 
     The Hamiltonian represented by this class has the form of Eq. (57) in
     `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
@@ -203,8 +203,12 @@ class LocalHamiltonian(object):
             # Create even and odd Hamiltonian parts (Eq. (43))
             even_part = {(0, 1): term, (2, 3): term}
             odd_part = {(1, 2): term, (3, 0): term}
-            # Create a ``LocalHamiltonian`` object using these parts
-            h = hamiltonians.LocalHamiltonian(even_part, odd_part)
+            # Create a ``TrotterHamiltonian`` object using these parts
+            h = hamiltonians.TrotterHamiltonian(even_part, odd_part)
+
+            # Alternatively the precoded TFIM model may be used with the
+            # ``trotter`` flag set to ``True``
+            h = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     """
 
     def __init__(self, *parts):
@@ -275,7 +279,7 @@ class LocalHamiltonian(object):
             A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
             equivalent to this local Hamiltonian.
         """
-        # TODO: Move this to a NumpyLocalHamiltonian
+        # TODO: Move this to a NumpyTrotterHamiltonian
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -331,7 +335,7 @@ class LocalHamiltonian(object):
 
         Args:
             op (str): String that defines the operation, such as '__add__'.
-            o (:class:`qibo.base.hamiltonians.LocalHamiltonian`): Other local
+            o (:class:`qibo.base.hamiltonians.TrotterHamiltonian`): Other local
                 Hamiltonian to perform the operation.
         """
         if len(self.parts) != len(o.parts):
@@ -413,4 +417,4 @@ class LocalHamiltonian(object):
         return self._circuit
 
 
-HAMILTONIAN_TYPES = (Hamiltonian, LocalHamiltonian)
+HAMILTONIAN_TYPES = (Hamiltonian, TrotterHamiltonian)

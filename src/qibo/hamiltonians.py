@@ -3,7 +3,7 @@ import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES, raise_error
 from qibo.base import hamiltonians as base_hamiltonians
-from qibo.base.hamiltonians import LocalHamiltonian
+from qibo.base.hamiltonians import TrotterHamiltonian
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
 else: # pragma: no cover
@@ -60,7 +60,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.LocalHamiltonian` object, otherwise
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
 
     Example:
@@ -74,7 +74,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         hy = np.kron(matrices.Y, matrices.Y)
         hz = np.kron(matrices.Z, matrices.Z)
         term = Hamiltonian(2, hx + hy + delta * hz)
-        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -91,7 +91,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False):
     if trotter:
         term_matrix = -np.kron(matrix, matrices.I)
         term = Hamiltonian(2, term_matrix)
-        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
@@ -111,7 +111,7 @@ def X(nqubits, numpy=False, trotter=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.LocalHamiltonian` object, otherwise
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.X, numpy, trotter)
@@ -128,7 +128,7 @@ def Y(nqubits, numpy=False, trotter=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.LocalHamiltonian` object, otherwise
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Y, numpy, trotter)
@@ -145,7 +145,7 @@ def Z(nqubits, numpy=False, trotter=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.LocalHamiltonian` object, otherwise
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Z, numpy, trotter)
@@ -163,14 +163,14 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.LocalHamiltonian` object, otherwise
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
     if trotter:
         term_matrix = -np.kron(matrices.Z, matrices.Z)
         term_matrix -= h * np.kron(matrices.X, matrices.I)
         term = Hamiltonian(2, term_matrix)
-        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)

@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, LocalHamiltonian, XXZ, TFIM, Y
+from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 

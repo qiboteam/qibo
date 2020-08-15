@@ -87,7 +87,7 @@ def test_state_evolution_final_state():
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
-    """Test state evolution using trotterization of ``LocalHamiltonian``."""
+    """Test state evolution using trotterization of ``TrotterHamiltonian``."""
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
     prop = expm(-1j * dt * ham_matrix)
@@ -230,7 +230,7 @@ def test_rk4_evolution(dt=1e-3):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
-    """Test using ``LocalHamiltonian`` in adiabatic evolution model."""
+    """Test using ``TrotterHamiltonian`` in adiabatic evolution model."""
     dense_h0 = hamiltonians.X(nqubits)
     dense_h1 = hamiltonians.TFIM(nqubits, h=h)
     dense_adev = models.AdiabaticEvolution(dense_h0, dense_h1, lambda t: t, dt)
@@ -250,7 +250,7 @@ def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
-    """Test adiabatic evolution using trotterization of ``LocalHamiltonian``."""
+    """Test adiabatic evolution using trotterization of ``TrotterHamiltonian``."""
     dense_h0 = hamiltonians.X(nqubits)
     dense_h1 = hamiltonians.TFIM(nqubits)
 
