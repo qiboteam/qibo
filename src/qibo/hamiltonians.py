@@ -48,7 +48,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def XXZ(nqubits, delta=0.5, numpy=False):
+def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
     """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
@@ -66,6 +66,13 @@ def XXZ(nqubits, delta=0.5, numpy=False):
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+    if trotter:
+        hx = np.kron(matrices.X, matrices.X)
+        hy = np.kron(matrices.Y, matrices.Y)
+        hz = np.kron(matrices.Z, matrices.Z)
+        term = Hamiltonian(2, hx + hy + delta * hz)
+        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
     hy = _build_spin_model(nqubits, matrices.Y, condition)
@@ -76,8 +83,13 @@ def XXZ(nqubits, delta=0.5, numpy=False):
     return Hamiltonian(nqubits, matrix)
 
 
-def _OneBodyPauli(nqubits, matrix, numpy=False):
+def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+    if trotter:
+        term_matrix = -np.kron(matrix, matrices.I)
+        term = Hamiltonian(2, term_matrix)
+        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
     if not numpy:
@@ -85,7 +97,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=False):
     return Hamiltonian(nqubits, ham)
 
 
-def X(nqubits, numpy=False):
+def X(nqubits, numpy=False, trotter=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -96,10 +108,10 @@ def X(nqubits, numpy=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.X, numpy)
+    return _OneBodyPauli(nqubits, matrices.X, numpy, trotter)
 
 
-def Y(nqubits, numpy=False):
+def Y(nqubits, numpy=False, trotter=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -110,10 +122,10 @@ def Y(nqubits, numpy=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.Y, numpy)
+    return _OneBodyPauli(nqubits, matrices.Y, numpy, trotter)
 
 
-def Z(nqubits, numpy=False):
+def Z(nqubits, numpy=False, trotter=False):
     """Non-interacting pauli-X Hamiltonian.
 
     .. math::
@@ -124,10 +136,10 @@ def Z(nqubits, numpy=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
     """
-    return _OneBodyPauli(nqubits, matrices.Z, numpy)
+    return _OneBodyPauli(nqubits, matrices.Z, numpy, trotter)
 
 
-def TFIM(nqubits, h=0.0, numpy=False):
+def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::
@@ -139,6 +151,12 @@ def TFIM(nqubits, h=0.0, numpy=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
     """
+    if trotter:
+        term_matrix = -np.kron(matrices.Z, matrices.Z)
+        term_matrix -= h * np.kron(matrices.X, matrices.I)
+        term = Hamiltonian(2, term_matrix)
+        return LocalHamiltonian.from_twoqubit_term(nqubits, term)
+
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)
     if h != 0:

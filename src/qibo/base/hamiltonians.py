@@ -239,7 +239,7 @@ class LocalHamiltonian(object):
         self._circuit = None
 
     @classmethod
-    def from_single_term(cls, nqubits, term):
+    def from_twoqubit_term(cls, nqubits, term):
         """Creates Local Hamiltonian for translationally invariant models.
 
         It is assumed that the system has periodic boundary conditions and

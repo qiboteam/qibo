@@ -94,11 +94,7 @@ def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
     for n in range(int(1 / dt)):
         target_psi.append(prop.dot(target_psi[-1]))
 
-    from qibo import matrices
-    term_matrix = -(np.kron(matrices.Z, matrices.Z) +
-                    h * np.kron(matrices.X, matrices.I))
-    term = hamiltonians.Hamiltonian(2, term_matrix)
-    ham = hamiltonians.LocalHamiltonian.from_single_term(nqubits, term)
+    ham = hamiltonians.TFIM(nqubits, h=h, trotter=True)
     checker = TimeStepChecker(target_psi, atol=1e-4)
     evolution = models.StateEvolution(ham, dt, callbacks=[checker])
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
@@ -239,13 +235,8 @@ def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
     dense_h1 = hamiltonians.TFIM(nqubits, h=h)
     dense_adev = models.AdiabaticEvolution(dense_h0, dense_h1, lambda t: t, dt)
 
-    from qibo import matrices
-    m0 = -np.kron(matrices.X, matrices.I)
-    h0 = hamiltonians.Hamiltonian(2, m0)
-    m1 = -np.kron(matrices.Z, matrices.Z) - h * np.kron(matrices.X, matrices.I)
-    h1 = hamiltonians.Hamiltonian(2, m1)
-    local_h0 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h0)
-    local_h1 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h1)
+    local_h0 = hamiltonians.X(nqubits, trotter=True)
+    local_h1 = hamiltonians.TFIM(nqubits, h=h, trotter=True)
     local_adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt)
 
     dense_adev.set_hamiltonian(final_time=1)
@@ -269,14 +260,8 @@ def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
         prop = ham(n * dt).exp(dt).numpy()
         target_psi.append(prop.dot(target_psi[-1]))
 
-    from qibo import matrices
-    m0 = -np.kron(matrices.X, matrices.I)
-    h0 = hamiltonians.Hamiltonian(2, m0)
-    m1 = -np.kron(matrices.Z, matrices.Z)
-    h1 = hamiltonians.Hamiltonian(2, m1)
-    local_h0 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h0)
-    local_h1 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h1)
-
+    local_h0 = hamiltonians.X(nqubits, trotter=True)
+    local_h1 = hamiltonians.TFIM(nqubits, trotter=True)
     checker = TimeStepChecker(target_psi, atol=dt)
     adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
                                      callbacks=[checker])

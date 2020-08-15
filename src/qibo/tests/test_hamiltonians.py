@@ -232,13 +232,14 @@ def create_ising_local(nqubits, h=1.0):
     matrix = -(np.kron(matrices.Z, matrices.Z) +
                h * np.kron(matrices.X, matrices.I))
     term = Hamiltonian(2, matrix)
-    return LocalHamiltonian.from_single_term(nqubits, term)
+    return LocalHamiltonian.from_twoqubit_term(nqubits, term)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-def test_tfim_local_hamiltonian(nqubits):
-    local_ham = create_ising_local(nqubits, h=1.0)
-    target_ham = TFIM(nqubits, h=1.0, numpy=True)
+@pytest.mark.parametrize("model", [TFIM, XXZ, Y])
+def test_local_hamiltonian_to_dense(nqubits, model):
+    local_ham = model(nqubits, trotter=True)
+    target_ham = model(nqubits, numpy=True)
     final_ham = local_ham.dense_hamiltonian()
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
 
