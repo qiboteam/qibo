@@ -362,8 +362,8 @@ class TrotterHamiltonian(object):
 
         new = self.__class__(*new_parts())
         if self._circuit is not None:
-            new.term_gates = {new_term: self.term_gates[t1] & self.term_gates[t2]
-                              for (t1, t2), new_term in new_terms.items()}
+            new.term_gates = {new_term: self.term_gates[t1]
+                              for (t1, _), new_term in new_terms.items()}
             new._circuit = self._circuit
             new._circuit.dt = None
         return new

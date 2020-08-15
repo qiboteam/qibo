@@ -111,6 +111,9 @@ class AdiabaticEvolution(StateEvolution):
         super(AdiabaticEvolution, self).__init__(ham, dt, solver, callbacks)
         self.h0 = h0
         self.h1 = h1
+        if isinstance(h0, hamiltonians.TrotterHamiltonian):
+            # create Trotter circuit so that is not re-created for every time step
+            self.h0.circuit(dt)
 
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
