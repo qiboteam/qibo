@@ -334,20 +334,33 @@ class LocalHamiltonian(object):
             o (:class:`qibo.base.hamiltonians.LocalHamiltonian`): Other local
                 Hamiltonian to perform the operation.
         """
-        # TODO: Do this without creating many new terms
         if len(self.parts) != len(o.parts):
             raise_error(ValueError, "Cannot add local Hamiltonians if their "
                                     "parts are not compatible.")
-        new_parts = []
-        for part1, part2 in zip(self.parts, o.parts):
-            if set(part1.keys()) != set(part2.keys()):
-                raise_error(ValueError, "Cannot add local Hamiltonians if their "
-                                        "parts are not compatible.")
-            new_parts.append({
-                targets: getattr(part1[targets], op)(part2[targets])
-                for targets in part1.keys()
-                })
-        return self.__class__(*new_parts)
+
+        new_terms = {}
+        def new_parts():
+            for part1, part2 in zip(self.parts, o.parts):
+                if set(part1.keys()) != set(part2.keys()):
+                    raise_error(ValueError, "Cannot add local Hamiltonians "
+                                            "if their parts are not "
+                                            "compatible.")
+                new_part = {}
+                for targets in part1.keys():
+                    term_tuple = (part1[targets], part2[targets])
+                    if term_tuple not in new_terms:
+                        new_terms[term_tuple] = getattr(part1[targets], op)(
+                            part2[targets])
+                    new_part[targets] = new_terms[term_tuple]
+                yield new_part
+
+        new = self.__class__(*new_parts())
+        if self._circuit is not None:
+            new.term_gates = {new_term: self.term_gates[t1] & self.term_gates[t2]
+                              for (t1, t2), new_term in new_terms.items()}
+            new._circuit = self._circuit
+            new._circuit.dt = None
+        return new
 
     def __add__(self, o):
         """Add operator."""
