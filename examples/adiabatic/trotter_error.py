@@ -1,4 +1,4 @@
-"""Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
+"""Error of evolution using Trotter decomposition."""
 import argparse
 import numpy as np
 import matplotlib
@@ -14,7 +14,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--hfield", default=1, type=float)
 parser.add_argument("--T", default=1, type=float)
-#parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--save", action="store_true")
 
 
@@ -38,7 +37,6 @@ def main(nqubits, hfield, T, save):
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
 
     nsteps_list = np.arange(50, 550, 50)
-    #dt_list = [5e-2, 2e-2, 1e-2, 8e-3, 5e-3, 3e-3, 2e-3]
     overlaps = []
     for nsteps in nsteps_list:
         exact_ev = models.StateEvolution(dense_h, dt=T/nsteps)
