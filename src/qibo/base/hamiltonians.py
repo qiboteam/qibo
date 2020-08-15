@@ -200,7 +200,7 @@ class TrotterHamiltonian(object):
             term = hamiltonians.Hamiltonian(2, matrix)
             # TFIM with periodic boundary conditions is translationally
             # invariant and therefore the same term can be used for all qubits
-            # Create even and odd Hamiltonian parts (Eq. (43))
+            # Create even and odd Hamiltonian parts (Eq. (43) in arXiv:1901.05824)
             even_part = {(0, 1): term, (2, 3): term}
             odd_part = {(1, 2): term, (3, 0): term}
             # Create a ``TrotterHamiltonian`` object using these parts
@@ -244,10 +244,11 @@ class TrotterHamiltonian(object):
 
     @classmethod
     def from_twoqubit_term(cls, nqubits, term):
-        """Creates Local Hamiltonian for translationally invariant models.
+        """:class:`qibo.base.hamiltonians.TrotterHamiltonian` for
+        translationally invariant models.
 
-        It is assumed that the system has periodic boundary conditions and
-        the local term acts on two qubits.
+        It is assumed that the system has periodic boundary conditions and the
+        local term acts on exactly two qubits.
 
         Args:
             nqubits (int): Number of qubits in the system.

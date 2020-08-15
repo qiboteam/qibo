@@ -876,48 +876,77 @@ a :class:`qibo.base.hamiltonians.Hamiltonian` in the
 
 The above script will still use the exact time evolution operator with the
 exponentiation repeated for each time step. The integration method can
-be changed using the ``solver`` argument when executing. Currently the default
-exponential solver (``"exp"``) and a fourth-order Runge-Kutta solver (``"rk4"``)
-are implemented.
+be changed using the ``solver`` argument when executing. The solvers that are
+currently implemented are the default exponential solver (``"exp"``)
+and a fourth-order Runge-Kutta solver (``"rk4"``).
 
-Qibo also provides functionality to use Trotter steps for local Hamiltonians
-with up to two-qubit interactions. The implementation is based in Section 4.1
-of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_ and is implemented
-via the :class:`qibo.base.hamiltonians.LocalHamiltonian` object. For example:
+
+Using Trotter decomposition
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Trotter decomposition provides a way to represent the unitary evolution of
+quantum states as a sequence of two qubit unitaries. This allows to represent
+the physical process of time evolution as a quantum circuit. Qibo provides
+functionality to perform this transformation if the underlying Hamiltonian is
+defined as a sum of commuting parts that consist of terms that can be
+exponentiated efficiently. Such Hamiltonian can be implemented in Qibo using
+the :class:`qibo.base.hamiltonians.TrotterHamiltonian`, which is based in Sec.
+4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_. Bellow is an
+example of how to use this object in practice:
 
 .. code-block::  python
 
     import numpy as np
     from qibo import hamiltonians, matrices
 
-    # Create a critical TFIM for 5 qubits as a ``LocalHamiltonian``
-    nqubits = 5
+    # Create a two-qubit term for the cirtical TFIM model
     matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
     term = hamiltonians.Hamiltonian(2, matrix)
-    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
-    # Get the circuit that implements the Trotterized evolution for given ``dt``
+    # define the even and odd parts of the total Hamiltonian for 5 qubits
+    # periodic boundary conditions are assumed
+    even = {(0, 1): term, (2, 3): term, (4, 0): term}
+    odd = {(1, 2): term, (3, 4): term}
+    # create the ``TrotterHamiltonian`` using these terms
+    ham = hamiltonians.TrotterHamiltonian(even, odd)
+
+    # alternatively one can use the ``from_twoqubit_term`` convenience method
+    # which works for translationally invariant Hamiltonians
+    ham = hamiltonians.TrotterHamiltonian.from_twoqubit_term(nqubits=5, term=term)
+
+    # or one can use the pre-coded TFIM model enabling the ``trotter`` flag
+    ham = hamiltonians.TFIM(nqubits=5, trotter=True)
+
+    # once the Hamiltonian is created we can get the Trotter circuit that
+    # implements a single time step ``dt``
     circuit = ham.circuit(dt=1e-2)
 
+This is a standard :class:`qibo.tensorflow.circuit.TensorflowCircuit` that
+contains :class:`qibo.base.gates.Unitary` gates corresponding to the
+exponentials of the Trotter decomposition and can be executed on any state.
 
-creates a local Hamiltonian for the critical transverse field Ising model and
-gets the Qibo circuit that implements a single step of the Trotterized time
-evolution for a given time step ``dt``. This circuit contains
-:class:`qibo.base.gates.Unitary` gates that correspond to the exponentials of
-the Trotter decomposition of the unitary time evolution operator.
-
-If the :class:`qibo.base.hamiltonians.LocalHamiltonian` is passed to a
-:class:`qibo.evolution.StateEvolution` model with the exponential solver,
-then the evolution will be simulated by applying the Trotter circuit repeatedly:
+A :class:`qibo.base.hamiltonians.TrotterHamiltonian` can also be used to
+simulate time evolution. This can be done by passing the Hamiltonian to a
+:class:`qibo.evolution.StateEvolution` model and using the exponential solver.
+Qibo automatically finds that this Hamiltonian can be Trotterized and uses this
+to perform the evolution. For example:
 
 .. code-block::  python
 
-    from qibo import models
+    from qibo import models, hamiltonians
 
-    ham = hamiltonians.LocalHamiltonian(nqubits * [term])
+    nqubits = 5
+    # Create a critical TFIM Hamiltonian as ``TrotterHamiltonian``
+    ham = hamiltonians.TFIM(nqubits=nqubits, h=1.0, trotter=True)
+    # Define the |+++++> initial state
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    # Define the evolution model
     evolve = models.StateEvolution(ham, dt=1e-3)
-    # Evolve by applying the Trotter circuit repeatedly in the state
+    # Evolve for total time T=1
     final_state = evolve(final_time=1, initial_state=initial_state)
+
+This script creates the Trotter circuit for ``dt=1e-3`` and applies it
+repeatedly to the given initial state T / dt = 1000 times to obtain the
+final state of the evolution.
 
 
 How to simulate adiabatic time evolution?
@@ -959,6 +988,28 @@ corresponds to the ratio ``t / final_time`` during evolution. The second
 optional argument is a vector of free parameters that can be optimized. The
 function should, by definition, satisfy the properties s(0, p) = 0 and
 s(1, p) = 1 for any p, otherwise errors will be raised.
+
+The state evolution functionality described in the previous example can also be
+used for simulating adiabatic evolution. The solver can be specified during the
+initialization of the :class:`qibo.models.AdiabaticEvolution` model and a
+Trotter decomposition may be used with the exponential solver. The Trotter
+decomposition will be used automatically if ``h0`` and ``h1`` are defined
+using the :class:`qibo.base.hamiltonians.TrotterHamiltonian` object. For
+pre-coded Hamiltonians this can be done simply as
+
+.. code-block::  python
+
+    h0 = hamiltonians.X(nqubits, trotter=True)
+    h1 = hamiltonians.TFIM(nqubits, h=0, trotter=True)
+
+
+Note that ``h0`` and ``h1`` should have the same type, either both
+:class:`qibo.base.hamiltonians.Hamiltonian` or both
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+
+
+Optimizing the scheduling function
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The free parameters ``p`` of the scheduling function can be optimized using
 the :meth:`qibo.evolution.AdiabaticEvolution.minimize` method. The parameters
