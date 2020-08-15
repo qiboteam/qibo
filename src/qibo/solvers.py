@@ -2,8 +2,6 @@ from qibo import K
 from qibo.base import hamiltonians
 from qibo.config import raise_error
 
-HAMILTONIAN_TYPES = (hamiltonians.Hamiltonian, hamiltonians.LocalHamiltonian)
-
 
 class BaseSolver:
     """Basic solver that should be inherited by all solvers.
@@ -17,7 +15,7 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        if issubclass(type(hamiltonian), HAMILTONIAN_TYPES):
+        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
@@ -52,8 +50,11 @@ class Exponential(BaseSolver):
     """
 
     def __new__(cls, dt, hamiltonian):
-        if isinstance(hamiltonian, hamiltonians.LocalHamiltonian):
-            # FIXME: This won't work for time-dependent local Hamiltonians
+        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
+            h0 = hamiltonian
+        else:
+            h0 = hamiltonian(0)
+        if isinstance(h0, hamiltonians.LocalHamiltonian):
             return TrotterizedExponential(dt, hamiltonian)
         else:
             return super(Exponential, cls).__new__(cls)

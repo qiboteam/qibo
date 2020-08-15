@@ -236,7 +236,6 @@ class LocalHamiltonian(object):
 
         self.nqubits = len({t for targets in targets_set for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
-        self._dt = None
         self._circuit = None
 
     @classmethod
@@ -252,7 +251,10 @@ class LocalHamiltonian(object):
                 object representing the local operator. The total Hamiltonian
                 is sum of this term acting on each of the qubits.
         """
-        # TODO: Add check that `term` acts on two qubits
+        if term.nqubits != 2:
+            raise_error(ValueError, "Term in translationally invariant local "
+                                    "Hamiltonians should act on two qubits "
+                                    "but acts on {}.".format(term.nqubits))
         even_terms = {(2 * i, (2 * i + 1) % nqubits): term
                        for i in range(nqubits // 2 + nqubits % 2)}
         odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
@@ -267,7 +269,12 @@ class LocalHamiltonian(object):
                 yield targets, term
 
     def dense_hamiltonian(self):
-        # TODO: Add docstring
+        """Creates an equivalent Hamiltonian model that holds the full matrix.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
+            equivalent to this local Hamiltonian.
+        """
         # TODO: Move this to a NumpyLocalHamiltonian
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
@@ -275,7 +282,6 @@ class LocalHamiltonian(object):
 
         matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
         chars = EINSUM_CHARS[:2 * self.nqubits]
-        # TODO: Use `__iter__` for this loop because it is used many times
         for targets, term in self:
             tmat = term.matrix.reshape(2 * term.nqubits * (2,))
             n = self.nqubits - len(targets)
@@ -292,6 +298,7 @@ class LocalHamiltonian(object):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits)
+        self._circuit.dt = None
         for part in itertools.chain(self.parts, self.parts[::-1]):
             for targets, term in part.items():
                 gate = gates.Unitary(term.exp(dt / 2.0), *targets)
@@ -311,10 +318,23 @@ class LocalHamiltonian(object):
         new_parts = ({targets: new_terms[term]
                       for targets, term in part.items()}
                      for part in self.parts)
-        # TODO: Transfer `_circuit` and `term_gates` to the new object
-        return self.__class__(*new_parts)
+        new = self.__class__(*new_parts)
+        if self._circuit is not None:
+            new._circuit = self._circuit
+            new._circuit.dt = None
+            new.term_gates = {new_terms[term]: gate_set
+                              for term, gate_set in self.term_gates.items()}
+        return new
 
     def _hamiltonian_op(self, op, o):
+        """Helper method for implementing operations between local Hamiltonians.
+
+        Args:
+            op (str): String that defines the operation, such as '__add__'.
+            o (:class:`qibo.base.hamiltonians.LocalHamiltonian`): Other local
+                Hamiltonian to perform the operation.
+        """
+        # TODO: Do this without creating many new terms
         if len(self.parts) != len(o.parts):
             raise_error(ValueError, "Cannot add local Hamiltonians if their "
                                     "parts are not compatible.")
@@ -369,14 +389,15 @@ class LocalHamiltonian(object):
             :class:`qibo.base.circuit.BaseCircuit` that implements a single
             time step of the second order Trotterized evolution.
         """
-        if dt != self._dt:
-            self._dt = dt
-            if self._circuit is None:
-                self._create_circuit(dt)
-            else:
-                self._circuit.set_parameters({
-                    gate: term.exp(dt / 2.0)
-                    for term, term_gates in self.term_gates.items()
-                    for gate in term_gates
-                    })
+        if self._circuit is None:
+            self._create_circuit(dt)
+        elif dt != self._circuit.dt:
+            self._circuit.dt = dt
+            self._circuit.set_parameters({
+                gate: term.exp(dt / 2.0)
+                for term, term_gates in self.term_gates.items()
+                for gate in term_gates})
         return self._circuit
+
+
+HAMILTONIAN_TYPES = (Hamiltonian, LocalHamiltonian)

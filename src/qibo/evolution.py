@@ -97,10 +97,10 @@ class AdiabaticEvolution(StateEvolution):
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
-        if not issubclass(type(h0), hamiltonians.Hamiltonian):
+        if not issubclass(type(h0), hamiltonians.HAMILTONIAN_TYPES):
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
-        if not issubclass(type(h1), hamiltonians.Hamiltonian):
+        if not issubclass(type(h1), hamiltonians.HAMILTONIAN_TYPES):
             raise_error(TypeError, "h1 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h1)))
         if h0.nqubits != h1.nqubits:

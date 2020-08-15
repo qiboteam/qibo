@@ -109,8 +109,7 @@ def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
     assert_states_equal(final_psi, target_psi[-1], atol=1e-4)
 
 
-@pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
-def test_hamiltonian_t(t):
+def test_hamiltonian_t():
     """Test adiabatic evolution hamiltonian as a function of time."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
@@ -122,8 +121,9 @@ def test_hamiltonian_t(t):
     ham = lambda t: - (1 - t) * m1 - t * m2
 
     adev.set_hamiltonian(final_time=1)
-    matrix = adev.solver.hamiltonian(t).matrix
-    np.testing.assert_allclose(matrix, ham(t))
+    for t in np.random.random(10):
+        matrix = adev.solver.hamiltonian(t).matrix
+        np.testing.assert_allclose(matrix, ham(t))
 
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])
@@ -219,7 +219,6 @@ def test_rk4_evolution(dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4")
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
@@ -228,8 +227,60 @@ def test_rk4_evolution(dt=1e-3):
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
-    adev.callbacks = [checker]
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4",
+                                     callbacks=[checker])
     final_psi = adev(final_time=1, initial_state=target_psi[0])
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
+    """Test using ``LocalHamiltonian`` in adiabatic evolution model."""
+    dense_h0 = hamiltonians.X(nqubits)
+    dense_h1 = hamiltonians.TFIM(nqubits, h=h)
+    dense_adev = models.AdiabaticEvolution(dense_h0, dense_h1, lambda t: t, dt)
+
+    from qibo import matrices
+    m0 = -np.kron(matrices.X, matrices.I)
+    h0 = hamiltonians.Hamiltonian(2, m0)
+    m1 = -np.kron(matrices.Z, matrices.Z) - h * np.kron(matrices.X, matrices.I)
+    h1 = hamiltonians.Hamiltonian(2, m1)
+    local_h0 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h0)
+    local_h1 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h1)
+    local_adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt)
+
+    dense_adev.set_hamiltonian(final_time=1)
+    local_adev.set_hamiltonian(final_time=1)
+    for t in np.random.random(10):
+        local_matrix = local_adev.solver.hamiltonian(t)
+        local_matrix = local_matrix.dense_hamiltonian().matrix
+        target_matrix = dense_adev.solver.hamiltonian(t).matrix
+        np.testing.assert_allclose(local_matrix, target_matrix)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
+    """Test adiabatic evolution using trotterization of ``LocalHamiltonian``."""
+    dense_h0 = hamiltonians.X(nqubits)
+    dense_h1 = hamiltonians.TFIM(nqubits)
+
+    target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
+    ham = lambda t: dense_h0 * (1 - t) + dense_h1 * t
+    for n in range(int(1 / dt)):
+        prop = ham(n * dt).exp(dt).numpy()
+        target_psi.append(prop.dot(target_psi[-1]))
+
+    from qibo import matrices
+    m0 = -np.kron(matrices.X, matrices.I)
+    h0 = hamiltonians.Hamiltonian(2, m0)
+    m1 = -np.kron(matrices.Z, matrices.Z)
+    h1 = hamiltonians.Hamiltonian(2, m1)
+    local_h0 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h0)
+    local_h1 = hamiltonians.LocalHamiltonian.from_single_term(nqubits, h1)
+
+    checker = TimeStepChecker(target_psi, atol=dt)
+    adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
+                                     callbacks=[checker])
+    final_psi = adev(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
 def test_set_scheduling_parameters():
