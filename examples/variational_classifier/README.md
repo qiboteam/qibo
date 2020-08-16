@@ -12,21 +12,21 @@ The standard [iris data set](https://archive.ics.uci.edu/ml/datasets/iris) is ch
 
 ![ansatz](images/ansatz.png)
 
-where R stands for Ry rotations (if `RY=True`) or RxRzRx rotations.
+where R stands for Ry rotations (if `RxRzRx=False`) or RxRzRx rotations.
 
 ## How to run an example
 
 To run a particular instance of the problem, we have to set up the initial
 arguments:
 - `nclases` (int): number of classes of the training set (default=3)
-- `nqubits` (int): number of quantum bits. (default=4)
-- `nlayers` (int): number of ansatz layers. (default=11)
+- `nqubits` (int): number of quantum bits. It must be larger than 1 (default=4)
+- `nlayers` (int): number of ansatz layers. (default=5)
 - `nshots` (int): number of shots used when sampling the circuit. (default=100000)
-- `training`(bool): if True, actual training occurs. If False, pre-computed optimal values are employed, with default nqubits and nlayers. (default=False)
-- `RY` (bool): if True, Ry rotations are used in the ansatz. If False, RxRzRx are employed instead. (default=True)
+- `training`(flag): if True, actual training occurs. If False, pre-computed optimal values are employed, with default nqubits and nlayers. (default=False)
+- `RxRzRx` (flag): if True, RxRzRx rotations are used in the ansatz. If False, Ry are employed instead. (default=False)
 - `method` (string): classical optimization method, supported by scipy.optimize.minimize. (default='Powell')
 
-To run an example with the optimal values obtained for 4 qubits and 11 layers, you should execute the following command:
+To run an example with the optimal values obtained for 4 qubits and 5 layers, you should execute the following command:
 
 ```bash
 python main.py
@@ -35,11 +35,11 @@ python main.py
 To run an example with different values, and actually train the classifier, type for example:
 
 ```bash
-python main.py --nqubits 4 --nlayers 5 --nshots 100000 --training True
+python main.py --nqubits 4 --nlayers 5 --nshots 100000 --training
 ```
 
 Note that nclases must be 3 and cannot be changed in this example, because we are classifing the Iris data set.
 
 ## Results
 
-The classification accuracy for the training and test sets is found to be around 67% and 62%, respectively.
+The classification accuracy for the training and test sets is found to be around 70% and 67%, respectively.
