@@ -278,7 +278,6 @@ models_config = [
 @pytest.mark.parametrize("numpy", [True, False])
 def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
-    folder = REGRESSION_FOLDER/"hamiltonian_matrices"
     kwargs["numpy"] = numpy
     H = model(**kwargs)
-    assert_regression_fixture(H.matrix, folder/filename)
+    assert_regression_fixture(H.matrix, REGRESSION_FOLDER/filename)
