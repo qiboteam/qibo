@@ -109,6 +109,76 @@ this decomposition we refer to the related publication on
 decomposition of multi-controlled ``X`` gates is implemented.
 
 
+.. _measurement-examples:
+How to perform measurements?
+----------------------------
+
+In order to obtain measurement results from a circuit one has to add measurement
+gates (:class:`qibo.base.gates.M`) and provide a number of shots (``nshots``)
+when executing the circuit. This will return a :class:`qibo.base.measurements.CircuitResult`
+object which contains all the information about the measured samples.
+For example
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(2)
+    c.add(gates.X(0))
+    # Add a measurement register on both qubits
+    c.add(gates.M(0, 1))
+    # Execute the circuit with the default initial state |00>.
+    result = c(nshots=100)
+
+Measurements are now accessible using the ``samples`` and ``frequencies`` methods
+on the ``result`` object. In particular
+
+* ``result.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
+* ``result.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
+* ``result.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
+* ``result.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
+
+In addition to the functionality described above, it is possible to collect
+measurement results grouped according to registers. The registers are defined
+during the addition of measurement gates in the circuit. For example
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(5)
+    c.add(gates.X(0))
+    c.add(gates.X(4))
+    c.add(gates.M(0, 1, register_name="A"))
+    c.add(gates.M(3, 4, register_name="B"))
+    result = c(nshots=100)
+
+creates a circuit with five qubits that has two registers: ``A`` consisting of
+qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
+qubit ``2`` remains unmeasured. Measured results can now be accessed as
+
+* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
+* ``result.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
+
+Setting ``registers=False`` (default option) will ignore the registers and return the
+results similarly to the previous example. For example ``result.frequencies(binary=True)``
+will return ``collections.Counter({"1001": 100})``.
+
+It is possible to define registers of multiple qubits by either passing
+the qubit ids seperately, such as ``gates.M(0, 1, 2, 4)``, or using the ``*``
+operator: ``gates.M(*[0, 1, 2, 4])``. The ``*`` operator is useful if qubit
+ids are saved in an iterable. For example ``gates.M(*range(5))`` is equivalent
+to ``gates.M(0, 1, 2, 3, 4)``.
+
+Unmeasured qubits are ignored by the measurement objects. Also, the
+order that qubits appear in the results is defined by the order the user added
+the measurements and not the qubit ids.
+
+
 .. _gpu-examples:
 
 How to select hardware devices?
@@ -258,93 +328,6 @@ however the user may create the full state as follows:
     # will print the 40th component of the final state vector
     print(final_state[20:25])
     # will print the components from 20 to 24 (inclusive)
-
-
-How to modify the simulation precision?
----------------------------------------
-
-By default the simulation is performed in ``double`` precision (``complex128``).
-We provide the ``qibo.set_precision`` function to modify the default behaviour.
-Note that `qibo.set_precision` must be called before allocating circuits:
-
-.. code-block:: python
-
-        import qibo
-        qibo.set_precision("single") # enables complex64
-        # or
-        qibo.set_precision("double") # re-enables complex128
-
-        # ... continue with circuit creation and execution
-
-
-.. _measurement-examples:
-How to perform measurements?
-----------------------------
-
-In order to obtain measurement results from a circuit one has to add measurement
-gates (:class:`qibo.base.gates.M`) and provide a number of shots (``nshots``)
-when executing the circuit. This will return a :class:`qibo.base.measurements.CircuitResult`
-object which contains all the information about the measured samples.
-For example
-
-.. code-block:: python
-
-    import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
-
-    c = Circuit(2)
-    c.add(gates.X(0))
-    # Add a measurement register on both qubits
-    c.add(gates.M(0, 1))
-    # Execute the circuit with the default initial state |00>.
-    result = c(nshots=100)
-
-Measurements are now accessible using the ``samples`` and ``frequencies`` methods
-on the ``result`` object. In particular
-
-* ``result.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
-* ``result.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
-* ``result.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
-* ``result.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
-
-In addition to the functionality described above, it is possible to collect
-measurement results grouped according to registers. The registers are defined
-during the addition of measurement gates in the circuit. For example
-
-.. code-block:: python
-
-    import numpy as np
-    from qibo.models import Circuit
-    from qibo import gates
-
-    c = Circuit(5)
-    c.add(gates.X(0))
-    c.add(gates.X(4))
-    c.add(gates.M(0, 1, register_name="A"))
-    c.add(gates.M(3, 4, register_name="B"))
-    result = c(nshots=100)
-
-creates a circuit with five qubits that has two registers: ``A`` consisting of
-qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
-qubit ``2`` remains unmeasured. Measured results can now be accessed as
-
-* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
-* ``result.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
-
-Setting ``registers=False`` (default option) will ignore the registers and return the
-results similarly to the previous example. For example ``result.frequencies(binary=True)``
-will return ``collections.Counter({"1001": 100})``.
-
-It is possible to define registers of multiple qubits by either passing
-the qubit ids seperately, such as ``gates.M(0, 1, 2, 4)``, or using the ``*``
-operator: ``gates.M(*[0, 1, 2, 4])``. The ``*`` operator is useful if qubit
-ids are saved in an iterable. For example ``gates.M(*range(5))`` is equivalent
-to ``gates.M(0, 1, 2, 3, 4)``.
-
-Unmeasured qubits are ignored by the measurement objects. Also, the
-order that qubits appear in the results is defined by the order the user added
-the measurements and not the qubit ids.
 
 
 How to use callbacks?
