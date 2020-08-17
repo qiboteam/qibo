@@ -265,6 +265,10 @@ def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
     checker = TimeStepChecker(target_psi, atol=dt)
     adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
                                      callbacks=[checker])
+    # check error when not using initial state
+    with pytest.raises(ValueError):
+        final_psi = adev(final_time=1)
+    # do actual evolution
     final_psi = adev(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
