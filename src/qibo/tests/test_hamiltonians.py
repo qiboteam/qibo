@@ -1,7 +1,32 @@
+import pathlib
 import numpy as np
 import pytest
 from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, X, Y, Z
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
+
+
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name('regressions')
+
+def assert_regression_fixture(array, filename):
+    """Check array matches data inside filename.
+
+    Args:
+        array: numpy array/
+        filename: fixture filename
+
+    If filename does not exists, this function
+    creates the missing file otherwise it loads
+    from file and compare.
+    """
+    def load(filename):
+        return np.load(filename)
+    try:
+        array_fixture = load(filename)
+    except: # pragma: no cover
+        # case not tested in GitHub workflows because files exist
+        np.save(filename, array)
+        array_fixture = load(filename)
+    np.testing.assert_allclose(array, array_fixture)
 
 
 @pytest.mark.parametrize("numpy", [True, False])
@@ -239,24 +264,21 @@ def test_hamiltonian_eigenvectors(dtype, numpy):
 
 
 models_config = [
-    (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0"),
-    (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5"),
-    (TFIM, {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0"),
-    (XXZ, {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0"),
-    (XXZ, {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5"),
-    (XXZ, {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0"),
-    (X, {"nqubits": 3}, "x_N3"),
-    (Y, {"nqubits": 4}, "y_N4"),
-    (Z, {"nqubits": 5}, "z_N5")
+    (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.npy"),
+    (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.npy"),
+    (TFIM, {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0.npy"),
+    (XXZ, {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0.npy"),
+    (XXZ, {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5.npy"),
+    (XXZ, {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0.npy"),
+    (X, {"nqubits": 3}, "x_N3.npy"),
+    (Y, {"nqubits": 4}, "y_N4.npy"),
+    (Z, {"nqubits": 5}, "z_N5.npy")
 ]
 @pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
 @pytest.mark.parametrize("numpy", [True, False])
 def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
-    import pathlib
-    folder = pathlib.Path(__file__).with_name('regressions')
-    target_matrix = np.load(folder/f"hamiltonian_matrices/{filename}.npy")
-
+    folder = REGRESSION_FOLDER/"hamiltonian_matrices"
     kwargs["numpy"] = numpy
     H = model(**kwargs)
-    np.testing.assert_allclose(H.matrix, target_matrix)
+    assert_regression_fixture(H.matrix, folder/filename)
