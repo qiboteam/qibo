@@ -180,9 +180,9 @@ def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
 @pytest.mark.parametrize("nlayers", [4, 5])
 @pytest.mark.parametrize("nshots", [int(1e5)])
 @pytest.mark.parametrize("training", [False])
-@pytest.mark.parametrize("RY", [True])
+@pytest.mark.parametrize("RxRzRx", [False])
 def test_variational_classifier(nclasses, nqubits, nlayers,
-                                nshots, training, RY, method='Powell'):
+                                nshots, training, RxRzRx, method='Powell'):
     args = locals()
     path = os.path.join(base_dir, "variational_classifier")
     sys.path[-1] = path
