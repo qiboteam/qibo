@@ -13,6 +13,8 @@ physics problems.
     tutorials/unary/README.md
     tutorials/3_tangle/README.md
     tutorials/qsvd/README.md
+    tutorials/autoencoder/README.md
     tutorials/autoencoder/README.md    
     tutorials/hash-grover/README.md
+    tutorials/variational_classifier/README.md
     tutorials/adiabatic/README.md
