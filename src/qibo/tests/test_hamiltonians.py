@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
+from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, X, Y, Z
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 
@@ -236,3 +236,27 @@ def test_hamiltonian_eigenvectors(dtype, numpy):
     V4 = np.array(H4._eigenvectors)
     U4 = np.array(H4._eigenvalues)
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
+
+
+models_config = [
+    (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0"),
+    (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5"),
+    (TFIM, {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0"),
+    (XXZ, {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0"),
+    (XXZ, {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5"),
+    (XXZ, {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0"),
+    (X, {"nqubits": 3}, "x_N3"),
+    (Y, {"nqubits": 4}, "y_N4"),
+    (Z, {"nqubits": 5}, "z_N5")
+]
+@pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
+@pytest.mark.parametrize("numpy", [True, False])
+def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
+    """Test pre-coded Hamiltonian models generate the proper matrices."""
+    import pathlib
+    folder = pathlib.Path(__file__).with_name('regressions')
+    target_matrix = np.load(folder/f"hamiltonian_matrices/{filename}.npy")
+
+    kwargs["numpy"] = numpy
+    H = model(**kwargs)
+    np.testing.assert_allclose(H.matrix, target_matrix)
