@@ -1,5 +1,5 @@
-Advanced examples
-=================
+Tutorials
+=========
 
 In this section we present some examples of quantum circuits applied to specific
 physics problems.
@@ -13,6 +13,6 @@ physics problems.
     tutorials/unary/README.md
     tutorials/3_tangle/README.md
     tutorials/qsvd/README.md
-    tutorials/autoencoder/README.md    
+    tutorials/autoencoder/README.md
     tutorials/hash-grover/README.md
     tutorials/adiabatic/README.md

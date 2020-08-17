@@ -1,4 +1,4 @@
-# Advanced examples
+# Tutorials
 
 In this folder we present some examples of quantum circuits applied to specific
 physics problems.
