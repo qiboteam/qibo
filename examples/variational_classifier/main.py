@@ -50,12 +50,12 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             try:
                 optimal_angles = np.load('data/optimal_angles_ry_{}q_{}l.npy'.format(nqubits,nlayers))
             except:
-                raise ValueError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
+                raise FileNotFoundError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
         else:
             try:
                 optimal_angles = np.load('data/optimal_angles_rxrzrx_{}q_{}l.npy'.format(nqubits,nlayers))
             except:
-                raise ValueError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
+                raise FileNotFoundError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
     else:
         # We choose initial random parameters (execpt for the biases, that we set to zero)
         measured_qubits = int(np.ceil(np.log2(nclasses))) 
