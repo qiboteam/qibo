@@ -4,17 +4,25 @@ from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, Y
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 
 
-def test_hamiltonian_initialization():
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_initialization(numpy):
     """Testing hamiltonian initialization errors."""
+    if numpy:
+        eye = lambda n: np.eye(n)
+    else:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        eye = lambda n: tf.eye(n, dtype=DTYPES.get('DTYPECPX'))
+
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
-    H1 = Hamiltonian(2, np.eye(4))
+    H1 = Hamiltonian(2, eye(4))
     with pytest.raises(ValueError):
-        H1 = Hamiltonian(-2, np.eye(4))
+        H1 = Hamiltonian(-2, eye(4))
     with pytest.raises(RuntimeError):
-        H2 = Hamiltonian(np.eye(2), np.eye(4))
+        H2 = Hamiltonian(eye(2), eye(4))
     with pytest.raises(ValueError):
-        H3 = Hamiltonian(4, np.eye(10))
+        H3 = Hamiltonian(4, eye(10))
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
@@ -75,9 +83,10 @@ def test_different_hamiltonian_addition(numpy):
     np.testing.assert_allclose(H.matrix, matrix)
 
 
-def test_right_operations():
+@pytest.mark.parametrize("numpy", [True, False])
+def test_right_operations(numpy):
     """Tests operations not covered by ``test_hamiltonian_overloading``."""
-    H1 = Y(nqubits=3)
+    H1 = Y(nqubits=3, numpy=numpy)
     H2 = 2 + H1
     target_matrix = 2 * np.eye(8) + H1.matrix
     np.testing.assert_allclose(H2.matrix, target_matrix)
@@ -149,10 +158,11 @@ def test_hamiltonian_expectation(numpy):
     np.testing.assert_allclose(h.expectation(state, True), target_ev / norm)
 
 
-def test_hamiltonian_runtime_errors():
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_runtime_errors(numpy):
     """Testing hamiltonian runtime errors."""
-    H1 = XXZ(nqubits=2, delta=0.5)
-    H2 = XXZ(nqubits=3, delta=0.1)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H2 = XXZ(nqubits=3, delta=0.1, numpy=numpy)
 
     with pytest.raises(RuntimeError):
         R = H1 + H2
@@ -160,10 +170,11 @@ def test_hamiltonian_runtime_errors():
         R = H1 - H2
 
 
-def test_hamiltonian_notimplemented_errors():
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_notimplemented_errors(numpy):
     """Testing hamiltonian not implemented errors."""
-    H1 = XXZ(nqubits=2, delta=0.5)
-    H2 = XXZ(nqubits=2, delta=0.1)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H2 = XXZ(nqubits=2, delta=0.1, numpy=numpy)
 
     with pytest.raises(NotImplementedError):
         R = H1 * H2
@@ -176,9 +187,10 @@ def test_hamiltonian_notimplemented_errors():
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
-def test_hamiltonian_eigenvalues(dtype):
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_eigenvalues(dtype, numpy):
     """Testing hamiltonian eigenvalues scaling."""
-    H1 = XXZ(nqubits=2, delta=0.5)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
 
     H1_eigen = H1.eigenvalues()
     hH1_eigen = np.linalg.eigvalsh(H1.matrix)
@@ -198,9 +210,10 @@ def test_hamiltonian_eigenvalues(dtype):
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
-def test_hamiltonian_eigenvectors(dtype):
+@pytest.mark.parametrize("numpy", [True, False])
+def test_hamiltonian_eigenvectors(dtype, numpy):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = XXZ(nqubits=2, delta=0.5)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
 
     V1 = np.array(H1.eigenvectors())
     U1 = np.array(H1.eigenvalues())
