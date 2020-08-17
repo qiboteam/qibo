@@ -1,6 +1,6 @@
 # Grover's Algorithm for solving a Toy Sponge Hash function
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/grover3sat](https://github.com/Quantum-TII/qibo/tree/hash-grover/examples/hash-grover)
+Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/hash-grover](https://github.com/Quantum-TII/qibo/tree/hash-grover/examples/hash-grover)
 
 ## Introduction
 
@@ -16,7 +16,7 @@ This program builds the necessary parts of the algorithm in order to simulate th
 
 ### Oracle
 
-The Grover Oracle needs to apply the Toy Sponge Hash construction in a reversible way. 
+The Grover Oracle needs to apply the Toy Sponge Hash construction in a reversible way.
 
 The Chacha permutation [chacah-20080120](https://cr.yp.to/chacha/chacha-20080120.pdf) used as the base for the Toy Sponge Hash construction is built on top of a QuarterRound module. As a a quantum circuit this Quarter Round can be constructed using a quantum adder modulo `2^n`, CNOT gates between registers and a qubit shuffling, represented as a gate with a circle-arrow. This shuffle is achived as a qubit relabelling and does not incur any quantum cost. This circuit can be represented as
 
@@ -64,7 +64,7 @@ Changing the argument `--hash` (int) allows find preimages of different hash val
 
 Changing the argument `--bits` (int) allows to fine tune the maximum number of bits of the hash function. If less than needed, the minimum amount of bits required will be used.
 
-Should the number of preimages be known, please add them in `--collisions` (int), which is set to `None` by default. 
+Should the number of preimages be known, please add them in `--collisions` (int), which is set to `None` by default.
 
 Some examples for hash values with known collisions:
 
