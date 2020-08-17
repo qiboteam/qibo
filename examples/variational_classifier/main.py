@@ -47,13 +47,19 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
     # We load pre-trained angles or actually train the Quantum_Classifer
     if not training:
         if RY:
-            optimal_angles = np.load('data/optimal_angles_ry_{}q_{}l.npy'.format(nqubits,nlayers))
+            try:
+                optimal_angles = np.load('data/optimal_angles_ry_{}q_{}l.npy'.format(nqubits,nlayers))
+            except:
+                raise ValueError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
         else:
-            optimal_angles = np.load('data/optimal_angles_rxrzrx_{}q_{}l.npy'.format(nqubits,nlayers))
+            try:
+                optimal_angles = np.load('data/optimal_angles_rxrzrx_{}q_{}l.npy'.format(nqubits,nlayers))
+            except:
+                raise ValueError('There are no pre-trained angles saved for this choice of nqubits, nlayers and type of ansatz.')
     else:
         # We choose initial random parameters (execpt for the biases, that we set to zero)
         measured_qubits = int(np.ceil(np.log2(nclasses))) 
-        if RY:  # if Ry rotations are employed in the anstaz
+        if RY:  # if Ry rotations are employed in the ansatz
             initial_parameters = 2*np.pi * np.random.rand(2*nqubits*nlayers+nqubits+measured_qubits)
             for bias in range(measured_qubits):       
                 initial_parameters[bias] = 0.                
@@ -61,7 +67,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             cost_function, optimal_angles = qc.minimize(initial_parameters, data_train, labels_train,
                                               nshots=nshots, method=method)
             np.save('data/optimal_angles_ry_{}q_{}l.npy'.format(nqubits,nlayers), optimal_angles)
-        else:  # if RxRzRx rotations are employed in the anstaz
+        else:  # if RxRzRx rotations are employed in the ansatz
             initial_parameters = 2*np.pi * np.random.rand(6*nqubits*nlayers+3*nqubits+measured_qubits)           
             for bias in range(measured_qubits):       
                 initial_parameters[bias] = 0.                
