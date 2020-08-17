@@ -200,3 +200,19 @@ construction. For number of qubits higher than 30, the QFT can be distributed to
 multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
 the section :ref:`How to select hardware devices? <gpu-examples>`.
 
+
+How to modify the simulation precision?
+---------------------------------------
+
+By default the simulation is performed in ``double`` precision (``complex128``).
+We provide the ``qibo.set_precision`` function to modify the default behaviour.
+Note that `qibo.set_precision` must be called before allocating circuits:
+
+.. code-block:: python
+
+        import qibo
+        qibo.set_precision("single") # enables complex64
+        # or
+        qibo.set_precision("double") # re-enables complex128
+
+        # ... continue with circuit creation and execution

@@ -154,23 +154,6 @@ however the user may create the full state as follows:
     # will print the components from 20 to 24 (inclusive)
 
 
-How to modify the simulation precision?
----------------------------------------
-
-By default the simulation is performed in ``double`` precision (``complex128``).
-We provide the ``qibo.set_precision`` function to modify the default behaviour.
-Note that `qibo.set_precision` must be called before allocating circuits:
-
-.. code-block:: python
-
-        import qibo
-        qibo.set_precision("single") # enables complex64
-        # or
-        qibo.set_precision("double") # re-enables complex128
-
-        # ... continue with circuit creation and execution
-
-
 How to use callbacks?
 ---------------------
 
