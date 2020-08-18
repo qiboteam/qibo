@@ -12,6 +12,7 @@ parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--method", default="Powell", type=str)
 parser.add_argument("--maxiter", default=None, type=int)
+parser.add_argument("--normalize", action="store_true")
 parser.add_argument("--save", default=None, type=str)
 
 
@@ -22,7 +23,7 @@ def spolynomial(t, params):
     return f
 
 
-def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
+def main(nqubits, hfield, params, dt, solver, method, maxiter, normalize, save):
     """Optimizes the scheduling of the adiabatic evolution.
 
     The ansatz for s(t) is a polynomial whose order is defined by the length of
@@ -36,6 +37,7 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
         solver (str): Solver used for integration.
         method (str): Which scipy optimizer to use.
         maxiter (int): Maximum iterations for scipy optimizer.
+        normalize (bool): Apply state normalization at each step of the ODE solver.
         save (str): Name to use for saving optimization history.
             If ``None`` history will not be saved.
     """
@@ -60,7 +62,7 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     print("\nBest energy found:", energy)
     print("Final parameters:", parameters)
 
-    final_state = evolution(parameters[-1])
+    final_state = evolution(parameters[-1], normalize=normalize)
     overlap = callbacks.Overlap(target_state)(final_state).numpy()
     print("Target energy:", target_energy)
     print("Overlap:", overlap)
