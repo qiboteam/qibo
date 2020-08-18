@@ -1,4 +1,4 @@
-# Quantum autoencoder for compression of data
+# Quantum autoencoder for data compression
 
 Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder).
 
