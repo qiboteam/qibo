@@ -29,7 +29,7 @@ def assert_regression_fixture(array, filename, rtol=1e-5):
     np.testing.assert_allclose(array, array_fixture, rtol=rtol)
 
 
-def random_numpy_complex(shape, dtype):
+def random_numpy_complex(shape, dtype=np.complex128):
   return (np.random.random(shape) + 1j * np.random.random(shape)).astype(dtype)
 
 

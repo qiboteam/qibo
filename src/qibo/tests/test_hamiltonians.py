@@ -123,8 +123,8 @@ def test_hamiltonian_matmul(numpy):
     np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
-    v = (np.random.random(8) + 1j * np.random.random(8)).astype(m1.dtype)
-    m = (np.random.random((8, 8)) + 1j * np.random.random((8, 8))).astype(m1.dtype)
+    v = utils.random_numpy_complex(8, dtype=m1.dtype)
+    m = utils.random_numpy_complex((8, 8), dtype=m1.dtype)
     np.testing.assert_allclose(H1 @ v, m1.dot(v))
     np.testing.assert_allclose(H1 @ m, m1 @ m)
 
@@ -151,7 +151,7 @@ def test_hamiltonian_expectation(numpy):
     h = XXZ(nqubits=3, delta=0.5, numpy=numpy)
     matrix = np.array(h.matrix)
 
-    state = np.random.random(8) + 1j * np.random.random(8)
+    state = utils.random_numpy_complex(8)
     norm = (np.abs(state) ** 2).sum()
     target_ev = (state.conj() * matrix.dot(state)).sum().real
 

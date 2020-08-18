@@ -332,7 +332,7 @@ def test_cz(backend):
     """Check CZ gate is working properly on random state."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    init_state = utils.random_numpy_state(nqubits)
+    init_state = utils.random_numpy_state(2)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     target_state = matrix.dot(init_state)
@@ -427,7 +427,7 @@ def test_generalized_fsim(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
-    rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    rotation = utils.random_numpy_complex((2, 2))
 
     c = Circuit(3, accelerators)
     c.add((gates.H(i) for i in range(3)))
@@ -450,7 +450,7 @@ def test_generalized_fsim_error(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
-    rotation = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
+    rotation = utils.random_numpy_complex((4, 4))
     c = Circuit(2)
     with pytest.raises(ValueError):
         c.add(gates.GeneralizedfSim(0, 1, rotation, phi))
@@ -786,7 +786,7 @@ def test_unitary_various_type_initialization(backend):
     import tensorflow as tf
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    matrix = tf.cast(np.random.random((4, 4)), dtype=tf.complex128)
+    matrix = utils.random_tensorflow_complex((4, 4), dtype=tf.float64)
     gate = gates.Unitary(matrix, 0, 1)
     with pytest.raises(TypeError):
         gate = gates.Unitary("abc", 0, 1)
@@ -882,7 +882,7 @@ def test_construct_unitary_errors(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_unitary_action(backend):
     qibo.set_backend(backend)
-    init_state = utils.random_numpy_state(nqubits)
+    init_state = utils.random_numpy_state(2)
     gate = gates.RX(1, theta=0.1234).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
