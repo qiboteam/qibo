@@ -4,8 +4,9 @@ Testing tensorflow circuit and gates.
 import numpy as np
 import pytest
 import qibo
-from qibo.models import Circuit
 from qibo import gates
+from qibo.models import Circuit
+from qibo.tests import utils
 
 _BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
 _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
@@ -331,7 +332,7 @@ def test_cz(backend):
     """Check CZ gate is working properly on random state."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    init_state = np.random.random(4) + 1j * np.random.random(4)
+    init_state = utils.random_numpy_state(nqubits)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     target_state = matrix.dot(init_state)
@@ -881,7 +882,7 @@ def test_construct_unitary_errors(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_unitary_action(backend):
     qibo.set_backend(backend)
-    init_state = np.random.random(4) + 1j * np.random.random(4)
+    init_state = utils.random_numpy_state(nqubits)
     gate = gates.RX(1, theta=0.1234).controlled_by(0)
     c = Circuit(2)
     c.add(gate)

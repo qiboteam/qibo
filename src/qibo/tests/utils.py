@@ -29,6 +29,17 @@ def assert_regression_fixture(array, filename, rtol=1e-5):
     np.testing.assert_allclose(array, array_fixture, rtol=rtol)
 
 
+def random_numpy_complex(shape, dtype):
+  return (np.random.random(shape) + 1j * np.random.random(shape)).astype(dtype)
+
+
+def random_tensorflow_complex(shape, dtype):
+    import tensorflow as tf
+    _re = tf.random.uniform(shape, dtype=dtype)
+    _im = tf.random.uniform(shape, dtype=dtype)
+    return tf.complex(_re, _im)
+
+
 def random_numpy_state(nqubits, dtype=np.complex128):
     """Generates a random normalized state vector as numpy array.
 
@@ -39,5 +50,5 @@ def random_numpy_state(nqubits, dtype=np.complex128):
     Returns:
         Numpy array for state vector of shape (2 ** nqubits,).
     """
-    x = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
+    x = random_numpy_complex(2 ** nqubits, dtype)
     return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
