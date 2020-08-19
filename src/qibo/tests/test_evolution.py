@@ -201,7 +201,7 @@ def test_rk4_evolution(dt=1e-3):
     checker = TimeStepChecker(target_psi, atol=dt)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4",
                                      callbacks=[checker])
-    final_psi = adev(final_time=1, initial_state=target_psi[0])
+    final_psi = adev(final_time=1)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

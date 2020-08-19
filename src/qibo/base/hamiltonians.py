@@ -52,6 +52,13 @@ class Hamiltonian(object):
             self._eigenvalues, self._eigenvectors = self.K.linalg.eigh(self.matrix)
         return self._eigenvectors
 
+    def ground_state(self):
+        """Computes the ground state of the Hamiltonian.
+
+        Uses the ``eigenvectors`` method and returns the first eigenvector.
+        """
+        return self.eigenvectors()[:, 0]
+
     def exp(self, a):
         """Computes a tensor corresponding to exp(-1j * a * H).
 

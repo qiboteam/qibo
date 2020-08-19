@@ -181,7 +181,7 @@ class AdiabaticEvolution(StateEvolution):
             if isinstance(self.h0, hamiltonians.TrotterHamiltonian):
                 raise ValueError("Initial state of adiabatic evolution must be "
                                  "given if ``TrotterHamiltonian`` is used.")
-            return self.h0.eigenvectors()[:, 0]
+            return self.h0.ground_state()
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
 
     def _loss(self, params):

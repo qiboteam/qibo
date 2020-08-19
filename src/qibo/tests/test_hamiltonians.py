@@ -220,6 +220,8 @@ def test_hamiltonian_eigenvectors(dtype, numpy):
     V1 = np.array(H1.eigenvectors())
     U1 = np.array(H1.eigenvalues())
     np.testing.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
+    # Check ground state
+    np.testing.assert_allclose(H1.ground_state(), V1[:, 0])
 
     c1 = dtype(2.5)
     H2 = c1 * H1
