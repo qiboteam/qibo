@@ -2,17 +2,17 @@
 import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES, raise_error
-from qibo.base import hamiltonians as base_hamiltonians
-from qibo.base.hamiltonians import TrotterHamiltonian
+from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
+    from qibo.tensorflow.hamiltonians import TensorflowTrotterHamiltonian as TrotterHamiltonian
 else: # pragma: no cover
     # case not tested because backend is preset to TensorFlow
     raise raise_error(NotImplementedError,
                       "Only Tensorflow backend is implemented.")
 
 
-class Hamiltonian(base_hamiltonians.Hamiltonian):
+class Hamiltonian(BaseHamiltonian):
     """"""
 
     def __new__(cls, nqubits, matrix):

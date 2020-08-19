@@ -1,6 +1,7 @@
+import itertools
 import numpy as np
 import tensorflow as tf
-from qibo.config import raise_error
+from qibo.config import raise_error, EINSUM_CHARS
 from qibo.base import hamiltonians
 
 
@@ -11,9 +12,7 @@ ARRAY_TYPES = (tf.Tensor, np.ndarray)
 
 
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):
-    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
-    TensorFlow.
-    """
+    """TensorFlow implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
     NUMERIC_TYPES = NUMERIC_TYPES
     ARRAY_TYPES = ARRAY_TYPES
     K = tf
@@ -48,9 +47,7 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
 
 
 class NumpyHamiltonian(TensorflowHamiltonian):
-    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
-    numpy.
-    """
+    """Numpy implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
     import scipy
     K = np
 
@@ -69,3 +66,29 @@ class NumpyHamiltonian(TensorflowHamiltonian):
         if normalize:
             return ev / (np.abs(state) ** 2).sum()
         return ev
+
+
+class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
+    """TensorFlow implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+
+    def expectation(self, state, normalize=False):
+        raise_error(NotImplementedError)
+
+    def dense_hamiltonian(self):
+        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it only happens in large examples
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
+        chars = EINSUM_CHARS[:2 * self.nqubits]
+        for targets, term in self:
+            tmat = term.matrix.reshape(2 * term.nqubits * (2,))
+            n = self.nqubits - len(targets)
+            emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+            gen = lambda x: (chars[i + x] for i in targets)
+            tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
+            ec = "".join((c for c in chars if c not in tc))
+            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+
+        matrix = matrix.reshape(2 * (2 ** self.nqubits,))
+        return self.dense_class(self.nqubits, matrix)

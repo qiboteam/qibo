@@ -263,14 +263,17 @@ def test_set_scheduling_parameters():
     np.testing.assert_allclose(final_psi, target_psi)
 
 
-test_names = "method,options,messages,filename"
-test_values = [("BFGS", {'maxiter': 1}, True, "adiabatic_bfgs.out"),
-               ("sgd", {"nepochs": 5}, False, None)]
+test_names = "method,options,messages,trotter,filename"
+test_values = [
+    ("BFGS", {'maxiter': 1}, True, False, "adiabatic_bfgs.out"),
+    ("BFGS", {'maxiter': 1}, True, True, "trotter_adiabatic_bfgs.out"),
+    ("sgd", {"nepochs": 5}, False, False, None)
+    ]
 @pytest.mark.parametrize(test_names, test_values)
-def test_scheduling_optimization(method, options, messages, filename):
+def test_scheduling_optimization(method, options, messages, trotter, filename):
     """Test optimization of s(t)."""
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+    h0 = hamiltonians.X(3, trotter=trotter)
+    h1 = hamiltonians.TFIM(3, trotter=trotter)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
     best, params = adevp.minimize([0.5, 1], method=method, options=options,

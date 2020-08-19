@@ -1,7 +1,6 @@
 import itertools
-import numpy as np # Consider removing this by creating a ``NumpyTrotterHamiltonian``
 from qibo import gates
-from qibo.config import raise_error, EINSUM_CHARS
+from qibo.config import raise_error
 
 
 class Hamiltonian(object):
@@ -225,6 +224,8 @@ class TrotterHamiltonian(object):
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
         self.parts = parts
+        # maps each distinct ``Hamiltonian`` term to the set of gates that
+        # are associated with it
         self.expgate_sets = {}
         targets_set = set()
         for targets, term in self:
@@ -251,8 +252,14 @@ class TrotterHamiltonian(object):
 
         self.nqubits = len({t for targets in targets_set for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
+        # Function that creates the ground state of this Hamiltonian
+        # can be ``None``
         self.ground_state_func = ground_state
+        # Circuit that implements on Trotter dt step
         self._circuit = None
+        # List of gates that implement each Hamiltonian term. Useful for
+        # calculating expectation
+        self.term_gates = []
 
     @classmethod
     def from_twoqubit_term(cls, nqubits, term, ground_state=None):
@@ -296,7 +303,7 @@ class TrotterHamiltonian(object):
                                              "implemented.")
         return self.ground_state_func()
 
-    def expectation(self, state, normalize=False):
+    def expectation(self, state, normalize=False): # pragma: no cover
         """Computes the real expectation value for a given state.
 
         Args:
@@ -307,6 +314,17 @@ class TrotterHamiltonian(object):
         Returns:
             Real number corresponding to the expectation value.
         """
+        # abstract method
+        raise_error(NotImplementedError)
+
+    def dense_hamiltonian(self): # pragma: no cover
+        """Creates an equivalent Hamiltonian model that holds the full matrix.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
+            equivalent to this local Hamiltonian.
+        """
+        # abstract method
         raise_error(NotImplementedError)
 
     def __iter__(self):
@@ -314,31 +332,6 @@ class TrotterHamiltonian(object):
         for part in self.parts:
             for targets, term in part.items():
                 yield targets, term
-
-    def dense_hamiltonian(self):
-        """Creates an equivalent Hamiltonian model that holds the full matrix.
-
-        Returns:
-            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
-            equivalent to this local Hamiltonian.
-        """
-        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
-            # case not tested because it only happens in large examples
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
-        chars = EINSUM_CHARS[:2 * self.nqubits]
-        for targets, term in self:
-            tmat = term.matrix.reshape(2 * term.nqubits * (2,))
-            n = self.nqubits - len(targets)
-            emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
-            gen = lambda x: (chars[i + x] for i in targets)
-            tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
-            ec = "".join((c for c in chars if c not in tc))
-            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
-
-        matrix = matrix.reshape(2 * (2 ** self.nqubits,))
-        return self.dense_class(self.nqubits, matrix)
 
     def _create_circuit(self, dt):
         """Creates circuit that implements the Trotterized evolution."""
