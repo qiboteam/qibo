@@ -62,7 +62,8 @@ def test_state_evolution_final_state():
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
+def test_trotterized_evolution(nqubits, accelerators, h=1.0, dt=1e-3):
     """Test state evolution using trotterization of ``TrotterHamiltonian``."""
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
@@ -72,11 +73,12 @@ def test_trotterized_evolution(nqubits, h=1.0, dt=1e-3):
 
     ham = hamiltonians.TFIM(nqubits, h=h, trotter=True)
     checker = TimeStepChecker(target_psi, atol=1e-4)
-    evolution = models.StateEvolution(ham, dt, callbacks=[checker])
+    evolution = models.StateEvolution(ham, dt, callbacks=[checker],
+                                      accelerators=accelerators)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
     # Change dt
-    evolution = models.StateEvolution(ham, 1e-4)
+    evolution = models.StateEvolution(ham, 1e-4, accelerators=accelerators)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
     assert_states_equal(final_psi, target_psi[-1], atol=1e-4)
 
@@ -128,6 +130,9 @@ def test_state_evolution_errors():
     # dt < 0
     with pytest.raises(ValueError):
         adev = models.StateEvolution(ham, dt=-1e-2)
+    # pass accelerators without trotter Hamiltonian
+    with pytest.raises(NotImplementedError):
+        adev = models.StateEvolution(ham, dt=1e-2, accelerators={"/GPU:0": 2})
 
 
 def test_adiabatic_evolution_errors():

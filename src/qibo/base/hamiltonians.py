@@ -333,10 +333,11 @@ class TrotterHamiltonian(object):
             for targets, term in part.items():
                 yield targets, term
 
-    def _create_circuit(self, dt):
+    def _create_circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
         """Creates circuit that implements the Trotterized evolution."""
         from qibo.models import Circuit
-        self._circuit = Circuit(self.nqubits)
+        self._circuit = Circuit(self.nqubits, accelerators=accelerators,
+                                memory_device=memory_device)
         self._circuit.dt = None
         for part in itertools.chain(self.parts, self.parts[::-1]):
             for targets, term in part.items():
@@ -350,7 +351,7 @@ class TrotterHamiltonian(object):
                            for targets, term in self]
         return self._terms
 
-    def circuit(self, dt):
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
         """Circuit implementing second order Trotter time step.
 
         Args:
@@ -361,7 +362,7 @@ class TrotterHamiltonian(object):
             time step of the second order Trotterized evolution.
         """
         if self._circuit is None:
-            self._create_circuit(dt)
+            self._create_circuit(dt, accelerators, memory_device)
         elif dt != self._circuit.dt:
             self._circuit.dt = dt
             self._circuit.set_parameters({
