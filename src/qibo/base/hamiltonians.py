@@ -225,7 +225,7 @@ class TrotterHamiltonian(object):
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
         self.parts = parts
-        self.term_gates = {}
+        self.expgate_sets = {}
         targets_set = set()
         for targets, term in self:
             self.dense_class = term.__class__
@@ -239,8 +239,8 @@ class TrotterHamiltonian(object):
                 raise_error(ValueError, "Targets {} are given in more than "
                                         "one term.".format(targets))
             targets_set.add(targets)
-            if term not in self.term_gates:
-                self.term_gates[term] = set()
+            if term not in self.expgate_sets:
+                self.expgate_sets[term] = set()
 
             if self.dtype is None:
                 self.dtype = term.matrix.dtype
@@ -296,6 +296,19 @@ class TrotterHamiltonian(object):
                                              "implemented.")
         return self.ground_state_func()
 
+    def expectation(self, state, normalize=False):
+        """Computes the real expectation value for a given state.
+
+        Args:
+            state (array): the expectation state.
+            normalize (bool): If ``True`` the expectation value is divided
+                with the state's norm squared.
+
+        Returns:
+            Real number corresponding to the expectation value.
+        """
+        raise_error(NotImplementedError)
+
     def __iter__(self):
         """Helper iteration method to loop over the Hamiltonian terms."""
         for part in self.parts:
@@ -335,7 +348,7 @@ class TrotterHamiltonian(object):
         for part in itertools.chain(self.parts, self.parts[::-1]):
             for targets, term in part.items():
                 gate = gates.Unitary(term.exp(dt / 2.0), *targets)
-                self.term_gates[term].add(gate)
+                self.expgate_sets[term].add(gate)
                 self._circuit.add(gate)
 
     def _scalar_op(self, op, o):
@@ -347,7 +360,7 @@ class TrotterHamiltonian(object):
             o: Scalar to perform operation for.
         """
         new_parts = []
-        new_terms = {term: getattr(term, op)(o) for term in self.term_gates.keys()}
+        new_terms = {term: getattr(term, op)(o) for term in self.expgate_sets.keys()}
         new_parts = ({targets: new_terms[term]
                       for targets, term in part.items()}
                      for part in self.parts)
@@ -355,8 +368,8 @@ class TrotterHamiltonian(object):
         if self._circuit is not None:
             new._circuit = self._circuit
             new._circuit.dt = None
-            new.term_gates = {new_terms[term]: gate_set
-                              for term, gate_set in self.term_gates.items()}
+            new.expgate_sets = {new_terms[term]: gate_set
+                              for term, gate_set in self.expgate_sets.items()}
         return new
 
     def _hamiltonian_op(self, op, o):
@@ -389,7 +402,7 @@ class TrotterHamiltonian(object):
 
         new = self.__class__(*new_parts())
         if self._circuit is not None:
-            new.term_gates = {new_term: self.term_gates[t1]
+            new.expgate_sets = {new_term: self.expgate_sets[t1]
                               for (t1, _), new_term in new_terms.items()}
             new._circuit = self._circuit
             new._circuit.dt = None
@@ -441,8 +454,8 @@ class TrotterHamiltonian(object):
             self._circuit.dt = dt
             self._circuit.set_parameters({
                 gate: term.exp(dt / 2.0)
-                for term, term_gates in self.term_gates.items()
-                for gate in term_gates})
+                for term, expgates in self.expgate_sets.items()
+                for gate in expgates})
         return self._circuit
 
 
