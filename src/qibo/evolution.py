@@ -178,9 +178,6 @@ class AdiabaticEvolution(StateEvolution):
         is the common practice in adiabatic evolution.
         """
         if initial_state is None:
-            if isinstance(self.h0, hamiltonians.TrotterHamiltonian):
-                raise ValueError("Initial state of adiabatic evolution must be "
-                                 "given if ``TrotterHamiltonian`` is used.")
             return self.h0.ground_state()
         return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
 

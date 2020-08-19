@@ -196,7 +196,11 @@ class TrotterHamiltonian(object):
             the h operators of Eq. (58) in the reference. The keys of the
             dictionary are tuples of qubit ids (int) that represent the targets
             of each h term.
-
+        ground_state (Callable): Optional callable with no arguments that
+            returns the ground state of this ``TrotterHamiltonian``. Specifying
+            this method is useful if the ``TrotterHamiltonian`` is used as
+            the easy Hamiltonian of the adiabatic evolution and its ground
+            state is used as the initial condition.
 
     Example:
         ::
@@ -218,7 +222,7 @@ class TrotterHamiltonian(object):
             h = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     """
 
-    def __init__(self, *parts):
+    def __init__(self, *parts, ground_state=None):
         self.dtype = None
         self.parts = parts
         self.term_gates = {}
@@ -247,10 +251,11 @@ class TrotterHamiltonian(object):
 
         self.nqubits = len({t for targets in targets_set for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
+        self.ground_state_func = ground_state
         self._circuit = None
 
     @classmethod
-    def from_twoqubit_term(cls, nqubits, term):
+    def from_twoqubit_term(cls, nqubits, term, ground_state=None):
         """:class:`qibo.base.hamiltonians.TrotterHamiltonian` for
         translationally invariant models.
 
@@ -262,6 +267,9 @@ class TrotterHamiltonian(object):
             term (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
                 object representing the local operator. The total Hamiltonian
                 is sum of this term acting on each of the qubits.
+            ground_state (Callable): Optional callable with no arguments that
+                returns the ground state of this ``TrotterHamiltonian``.
+                See ``__init__`` documentation for more details.
         """
         if not isinstance(nqubits, int) or nqubits < 1:
             raise_error(ValueError, "nqubits must be a positive integer but is "
@@ -274,7 +282,19 @@ class TrotterHamiltonian(object):
                        for i in range(nqubits // 2 + nqubits % 2)}
         odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
                      for i in range(nqubits // 2)}
-        return cls(even_terms, odd_terms)
+        return cls(even_terms, odd_terms, ground_state=ground_state)
+
+    def ground_state(self):
+        """Computes the ground state of the Hamiltonian.
+
+        If method is needed it should be implemented efficiently for the
+        particular Hamiltonian upon initializing.
+        """
+        if self.ground_state_func is None:
+            raise_error(NotImplementedError, "The ground state of this "
+                                             "``TrotterHamiltonian`` is not "
+                                             "implemented.")
+        return self.ground_state_func()
 
     def __iter__(self):
         """Helper iteration method to loop over the Hamiltonian terms."""

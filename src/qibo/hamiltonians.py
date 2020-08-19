@@ -86,12 +86,14 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
     return Hamiltonian(nqubits, matrix)
 
 
-def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False):
+def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
+                  ground_state=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     if trotter:
         term_matrix = -np.kron(matrix, matrices.I)
         term = Hamiltonian(2, term_matrix)
-        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+        return TrotterHamiltonian.from_twoqubit_term(
+            nqubits, term, ground_state=ground_state)
 
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
@@ -114,7 +116,11 @@ def X(nqubits, numpy=False, trotter=False):
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
-    return _OneBodyPauli(nqubits, matrices.X, numpy, trotter)
+    def ground_state():
+        n = K.cast(2 ** nqubits, dtype=DTYPES.get('DTYPEINT'))
+        state = K.ones(n, dtype=DTYPES.get('DTYPECPX'))
+        return state / K.math.sqrt(K.cast(n, dtype=state.dtype))
+    return _OneBodyPauli(nqubits, matrices.X, numpy, trotter, ground_state)
 
 
 def Y(nqubits, numpy=False, trotter=False):

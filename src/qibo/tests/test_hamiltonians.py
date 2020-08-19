@@ -347,6 +347,10 @@ def test_trotter_hamiltonian_operation_errors():
                             {(1, 2): term, (3, 4): term})
     with pytest.raises(ValueError):
         h = h1 - h2
+    # test getting ground state without implementing it
+    with pytest.raises(NotImplementedError):
+        gs = h1.ground_state()
+
 
 
 models_config = [
