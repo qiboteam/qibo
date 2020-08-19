@@ -4,15 +4,10 @@ import pytest
 import cirq
 from qibo import gates
 from qibo.models import Circuit
+from qibo.tests import utils
 
 _QIBO_TO_CIRQ = {"CNOT": "CNOT", "RY": "Ry", "TOFFOLI": "TOFFOLI"}
 _ATOL = 1e-6
-
-
-def random_initial_state(nqubits, dtype=np.complex128):
-    """Generates a random normalized state vector."""
-    x = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
-    return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
 
 
 def assert_gates_equivalent(qibo_gate, cirq_gate):
@@ -97,7 +92,7 @@ def test_x_decomposition_execution(target, controls, free, use_toffolis):
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
-    init_state = random_initial_state(nqubits)
+    init_state = utils.random_numpy_state(nqubits)
 
     targetc = Circuit(nqubits)
     targetc.add(gate)
@@ -141,7 +136,7 @@ def test_circuit_decompose():
 
     decomp_c = c.decompose(5)
 
-    init_state = random_initial_state(c.nqubits)
+    init_state = utils.random_numpy_state(c.nqubits)
     target_state = c(np.copy(init_state)).numpy()
     final_state = decomp_c(np.copy(init_state)).numpy()
     np.testing.assert_allclose(final_state, target_state, atol=_ATOL)

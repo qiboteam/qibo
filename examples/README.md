@@ -1,4 +1,4 @@
-# Advanced examples
+# Tutorials
 
 In this folder we present some examples of quantum circuits applied to specific
 physics problems.
@@ -9,8 +9,9 @@ physics problems.
 - [Quantum unary approach to option pricing](unary/README.md)
 - [Measuring the tangle of three-qubit states](3_tangle/README.md)
 - [Quantum Singular Value Decomposer](qsvd/README.md)
-- [Quantum autoenconder for compression of data](autoencoder/README.md)
+- [Quantum autoenconder for data compression](autoencoder/README.md)
 - [Grover's Algorithm for solving a Toy Sponge Hash function](hash-grover/README.md)
+- [Variational Quantum Classifier](variational_classifier/README.md)
 - [Simple Adiabatic Evolution Examples](adiabatic/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
