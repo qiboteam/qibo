@@ -57,10 +57,10 @@ def test_initial_state():
     assert_states_equal(init_psi, target_psi)
 
 
-@pytest.mark.parametrize(("solver", "atol", "normalize"), [("exp", 0, False),
-                                              ("rk4", 1e-2, True),
-                                              ("rk45", 1e-2, True)])
-def test_state_evolution(solver, atol, normalize):
+@pytest.mark.parametrize(("solver", "atol"), [("exp", 0),
+                                              ("rk4", 1e-2),
+                                              ("rk45", 1e-2)])
+def test_state_evolution(solver, atol):
     """Check state evolution under H = Z1 + Z2."""
     # Analytical solution
     t = np.linspace(0, 1, 1001)
@@ -72,7 +72,7 @@ def test_state_evolution(solver, atol, normalize):
     checker = TimeStepChecker(target_psi, atol=atol)
     evolution = models.StateEvolution(hamiltonians.Z(2), dt=dt, solver=solver,
                                       callbacks=[checker])
-    final_psi = evolution(final_time=1, initial_state=target_psi[0], normalize=normalize)
+    final_psi = evolution(final_time=1, initial_state=target_psi[0])
 
 
 def test_state_evolution_final_state():
