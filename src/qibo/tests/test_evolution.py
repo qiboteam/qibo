@@ -192,11 +192,12 @@ def test_energy_callback(dt=1e-2):
     np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
 
 
-def test_rk4_evolution(dt=1e-3):
+@pytest.mark.parametrize("solver", ["rk4", "rk45"])
+def test_rk4_evolution(solver, dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver="rk4")
+    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt, solver=solver)
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
