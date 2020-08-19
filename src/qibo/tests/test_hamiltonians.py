@@ -307,6 +307,23 @@ def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
 
 
+@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
+def test_trotter_hamiltonian_matmul(nqubits, normalize):
+    """Test Trotter Hamiltonian expectation value."""
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    dense_ham = TFIM(nqubits, h=1.0)
+
+    state = utils.random_tensorflow_complex((2 ** nqubits,))
+    trotter_ev = dense_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(trotter_ev, target_ev)
+
+    state = utils.random_numpy_complex((2 ** nqubits,))
+    trotter_ev = dense_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(trotter_ev, target_ev)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms
@@ -347,10 +364,15 @@ def test_trotter_hamiltonian_operation_errors():
                             {(1, 2): term, (3, 4): term})
     with pytest.raises(ValueError):
         h = h1 - h2
+    # test matmul with bad type
+    with pytest.raises(NotImplementedError):
+        s = h1 @ "abc"
+    # test matmul with bad shape
+    with pytest.raises(ValueError):
+        s = h1 @ np.zeros((2, 2))
     # test getting ground state without implementing it
     with pytest.raises(NotImplementedError):
         gs = h1.ground_state()
-
 
 
 models_config = [

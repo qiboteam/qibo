@@ -40,7 +40,6 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
         return super(TensorflowHamiltonian, self)._real(o)
 
     def __mul__(self, o):
-        """Multiplication to scalar operator."""
         if isinstance(o, tf.Tensor):
             o = tf.cast(o, dtype=self.matrix.dtype)
         return super(TensorflowHamiltonian, self).__mul__(o)
@@ -72,7 +71,7 @@ class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
     """TensorFlow implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
 
     def expectation(self, state, normalize=False):
-        raise_error(NotImplementedError)
+        return TensorflowHamiltonian.expectation(self, state, normalize)
 
     def dense_hamiltonian(self):
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
@@ -92,3 +91,22 @@ class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
 
         matrix = matrix.reshape(2 * (2 ** self.nqubits,))
         return self.dense_class(self.nqubits, matrix)
+
+    def __matmul__(self, state):
+        if isinstance(state, tf.Tensor):
+            copy = lambda x: tf.cast(x.numpy(), dtype=x.dtype)
+        elif isinstance(state, np.ndarray):
+            copy = np.copy
+        else:
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                             "implemented.".format(type(state)))
+        rank = len(tuple(state.shape))
+        if rank != 1:
+            raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                    "rank-{} tensor.".format(rank))
+        result = tf.zeros_like(state)
+        for gate in self.terms():
+            # Create copy of state so that the original is not modified
+            statec = copy(state)
+            result += gate(statec)
+        return result

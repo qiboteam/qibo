@@ -259,7 +259,7 @@ class TrotterHamiltonian(object):
         self._circuit = None
         # List of gates that implement each Hamiltonian term. Useful for
         # calculating expectation
-        self.term_gates = []
+        self._terms = None
 
     @classmethod
     def from_twoqubit_term(cls, nqubits, term, ground_state=None):
@@ -344,6 +344,32 @@ class TrotterHamiltonian(object):
                 self.expgate_sets[term].add(gate)
                 self._circuit.add(gate)
 
+    def terms(self):
+        if self._terms is None:
+            self._terms = [gates.Unitary(term.matrix, *targets)
+                           for targets, term in self]
+        return self._terms
+
+    def circuit(self, dt):
+        """Circuit implementing second order Trotter time step.
+
+        Args:
+            dt (float): Time step to use for Trotterization.
+
+        Returns:
+            :class:`qibo.base.circuit.BaseCircuit` that implements a single
+            time step of the second order Trotterized evolution.
+        """
+        if self._circuit is None:
+            self._create_circuit(dt)
+        elif dt != self._circuit.dt:
+            self._circuit.dt = dt
+            self._circuit.set_parameters({
+                gate: term.exp(dt / 2.0)
+                for term, expgates in self.expgate_sets.items()
+                for gate in expgates})
+        return self._circuit
+
     def _scalar_op(self, op, o):
         """Helper method for implementing operations with scalars.
 
@@ -396,7 +422,7 @@ class TrotterHamiltonian(object):
         new = self.__class__(*new_parts())
         if self._circuit is not None:
             new.expgate_sets = {new_term: self.expgate_sets[t1]
-                              for (t1, _), new_term in new_terms.items()}
+                                for (t1, _), new_term in new_terms.items()}
             new._circuit = self._circuit
             new._circuit.dt = None
         return new
@@ -431,25 +457,10 @@ class TrotterHamiltonian(object):
         """Right scalar multiplication."""
         return self.__mul__(o)
 
-    def circuit(self, dt):
-        """Circuit implementing second order Trotter time step.
-
-        Args:
-            dt (float): Time step to use for Trotterization.
-
-        Returns:
-            :class:`qibo.base.circuit.BaseCircuit` that implements a single
-            time step of the second order Trotterized evolution.
-        """
-        if self._circuit is None:
-            self._create_circuit(dt)
-        elif dt != self._circuit.dt:
-            self._circuit.dt = dt
-            self._circuit.set_parameters({
-                gate: term.exp(dt / 2.0)
-                for term, expgates in self.expgate_sets.items()
-                for gate in expgates})
-        return self._circuit
+    def __matmul__(self, state): # pragma: no cover
+        """Matrix multiplication with state vectors."""
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 HAMILTONIAN_TYPES = (Hamiltonian, TrotterHamiltonian)
