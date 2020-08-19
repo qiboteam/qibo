@@ -15,10 +15,9 @@ parser.add_argument("--hfield", default=4, type=float)
 parser.add_argument("--T", default=1, type=float)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
-parser.add_argument("--normalize", action="store_true")
 parser.add_argument("--save", action="store_true")
 
-def main(nqubits, hfield, T, dt, solver, normalize, save):
+def main(nqubits, hfield, T, dt, solver, save):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian.
 
     Plots how the <H1> energy and the overlap with the actual ground state
@@ -31,7 +30,6 @@ def main(nqubits, hfield, T, dt, solver, normalize, save):
         T (float): Total time of the adiabatic evolution.
         dt (float): Time step used for integration.
         solver (str): Solver used for integration.
-        normalize (bool): Apply state normalization at each step of the ODE solver.
         save (bool): Whether to save the plots.
     """
     h0 = hamiltonians.X(nqubits)
@@ -50,7 +48,7 @@ def main(nqubits, hfield, T, dt, solver, normalize, save):
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
                                           solver=solver,
                                           callbacks=[energy, overlap])
-    final_psi = evolution(final_time=T, normalize=normalize)
+    final_psi = evolution(final_time=T)
 
     # Plots
     tt = np.linspace(0, T, int(T / dt) + 1)
