@@ -9,8 +9,9 @@ def optimize(loss, initial_parameters, method='Powell',
         loss (callable): Loss as a function of ``parameters``.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters that are optimized.
-        method (str): Name of optimizer to use (``'cma'``, ``'sgd'`` or one of
-            the supported Newtonian methods).
+        method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
+            one of the Newtonian methods supported by
+            :meth:`qibo.optimizers.newtonian`.
         options (dict): Dictionary with options. See the specific optimizer
             bellow for a list of the supported options.
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
