@@ -2,7 +2,8 @@
 import numpy as np
 from qibo import solvers, optimizers, hamiltonians
 from qibo.tensorflow import circuit
-from qibo.config import log, raise_error
+from qibo.config import log, raise_error, K, DTYPES
+from qibo.callbacks import Norm
 
 
 class StateEvolution:
@@ -37,7 +38,10 @@ class StateEvolution:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
+        self.normalize_state = True if "rk" in solver else False
         self.callbacks = callbacks
+        if self.normalize_state:
+            log.info('Normalizing state during RK solution.')
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -57,8 +61,13 @@ class StateEvolution:
             callback.append(callback(state))
         for _ in range(nsteps):
             state = self.solver(state)
-            for callback in self.callbacks:
-                callback.append(callback(state))
+            if self.callbacks:
+                if self.normalize_state:
+                    state = self._normalize(state)
+                for callback in self.callbacks:
+                    callback.append(callback(state))
+        if self.normalize_state:
+            state = self._normalize(state)
         return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):
@@ -72,6 +81,11 @@ class StateEvolution:
                                     "state.")
         return circuit.TensorflowCircuit._cast_initial_state(
             self, initial_state)
+
+    def _normalize(self, state):
+        """Normalize state object."""
+        norm = K.cast(Norm()(state), dtype=DTYPES.get("DTYPECPX"))
+        return state / norm
 
 
 class AdiabaticEvolution(StateEvolution):
