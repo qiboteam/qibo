@@ -237,8 +237,12 @@ def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
         np.testing.assert_allclose(local_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
-def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
+#@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nqubits,accelerators,dt",
+                         [(3, None, 1e-3),
+                          (4, None, 1e-3),
+                          (4, {"/GPU:0": 2}, 1e-2)])
+def test_trotterized_adiabatic_evolution(nqubits, accelerators, dt):
     """Test adiabatic evolution using trotterization of ``TrotterHamiltonian``."""
     dense_h0 = hamiltonians.X(nqubits)
     dense_h1 = hamiltonians.TFIM(nqubits)
@@ -253,7 +257,8 @@ def test_trotterized_adiabatic_evolution(nqubits, dt=1e-3):
     local_h1 = hamiltonians.TFIM(nqubits, trotter=True)
     checker = TimeStepChecker(target_psi, atol=dt)
     adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
-                                     callbacks=[checker])
+                                     callbacks=[checker],
+                                     accelerators=accelerators)
     final_psi = adev(final_time=1)
 
 

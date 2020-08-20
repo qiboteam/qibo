@@ -134,10 +134,18 @@ class AdiabaticEvolution(StateEvolution):
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            for more details. This option is available only when the Trotter
+            decomposition is used for the time evolution.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
     """
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
+    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
         if not issubclass(type(h0), hamiltonians.HAMILTONIAN_TYPES):
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
@@ -147,14 +155,10 @@ class AdiabaticEvolution(StateEvolution):
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
-        ham = lambda t: h0
-        ham.nqubits = h0.nqubits
-        super(AdiabaticEvolution, self).__init__(ham, dt, solver, callbacks)
+        super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,
+                                                 accelerators, memory_device)
         self.h0 = h0
         self.h1 = h1
-        if isinstance(h0, hamiltonians.TrotterHamiltonian):
-            # create Trotter circuit so that is not re-created for every time step
-            self.h0.circuit(dt)
 
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
