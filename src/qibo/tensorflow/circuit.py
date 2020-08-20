@@ -22,6 +22,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __init__(self, nqubits):
         super(TensorflowCircuit, self).__init__(nqubits)
         self._compiled_execute = None
+        self.check_initial_state_shape = True
 
     def _set_nqubits(self, gate):
         if gate._nqubits is None:
@@ -88,7 +89,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute`` on specified device."""
         self.using_density_matrix = False
-        state = self._cast_initial_state(initial_state)
+        state = self._get_initial_state(initial_state)
 
         if self.using_tfgates:
             shape = (1 + self.using_density_matrix) * self.nqubits * (2,)
@@ -172,21 +173,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, initial_state: Optional[InitStateType] = None
-                            ) -> tf.Tensor:
-        if initial_state is None:
-            return self._default_initial_state()
-
-        if not (isinstance(initial_state, np.ndarray) or
-                isinstance(initial_state, tf.Tensor)):
+    def _check_initial_shape(self, state: InitStateType):
+        """Checks shape of given initial state."""
+        if not isinstance(state, (np.ndarray, tf.Tensor)):
             raise_error(TypeError, "Initial state type {} is not recognized."
-                                   "".format(type(initial_state)))
+                                    "".format(type(state)))
 
-        shape = tuple(initial_state.shape)
+        shape = tuple(state.shape)
         def shape_error():
-            raise_error(ValueError, "Invalid initial state shape {} for circuit "
-                                    "with {} qubits.".format(shape, self.nqubits))
-
+            raise_error(ValueError, "Invalid initial state shape {} for "
+                                    "circuit with {} qubits."
+                                    "".format(shape, self.nqubits))
         if len(shape) not in {1, 2}:
             shape_error()
         if len(shape) == 1 and 2 ** self.nqubits != shape[0]:
@@ -196,10 +193,24 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 shape_error()
             self.using_density_matrix = True
 
-        return tf.cast(initial_state, dtype=DTYPES.get('DTYPECPX'))
+    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+        if isinstance(state, tf.Tensor):
+            return state
+        elif isinstance(state, np.ndarray):
+            return tf.cast(state, dtype=DTYPES.get('DTYPECPX'))
+        raise_error(TypeError, "Initial state type {} is not recognized."
+                                "".format(type(state)))
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
         zeros = tf.zeros(2 ** self.nqubits, dtype=DTYPES.get('DTYPECPX'))
-        initial_state = op.initial_state(zeros)
-        return initial_state
+        state = op.initial_state(zeros)
+        return state
+
+    def _get_initial_state(self, state: Optional[InitStateType] = None
+                           ) -> tf.Tensor:
+        if state is None:
+            return self._default_initial_state()
+        if self.check_initial_state_shape:
+            self._check_initial_shape(state)
+        return self._cast_initial_state(state)

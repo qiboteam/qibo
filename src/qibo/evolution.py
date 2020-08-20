@@ -69,8 +69,8 @@ class StateEvolution:
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor."""
         if initial_state is None:
-            raise_error(ValueError, "StateEvolution cannot be used without initial "
-                                    "state.")
+            raise_error(ValueError, "StateEvolution cannot be used without "
+                                    "initial state.")
         return circuit.TensorflowCircuit._cast_initial_state(
             self, initial_state)
 
