@@ -65,18 +65,19 @@ class StateEvolution:
         else:
             self.normalize_state = lambda s: s
 
+        self.accelerators = accelerators
+        def calculate_callbacks(state):
+            for callback in self.callbacks:
+                callback.append(callback(state))
         if accelerators is None:
-            self._callbacks_func = self._calculate_callbacks
+            self._calculate_callbacks = calculate_callbacks
         else:
-            def _calculate_callbacks_distributed(state):
+            def calculate_callbacks_distributed(state):
                 with K.device(memory_device):
-                    for callback in self.callbacks:
-                        callback.append(callback(state.vector))
-            self._callbacks_func = _calculate_callbacks_distributed
-
-    def _calculate_callbacks(self, state):
-        for callback in self.callbacks:
-            callback.append(callback(state))
+                    if not isinstance(state, (np.ndarray, K.Tensor)):
+                        state = state.vector
+                    calculate_callbacks(state)
+            self._calculate_callbacks = calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -99,7 +100,7 @@ class StateEvolution:
             state = self.solver(state)
             if self.callbacks:
                 state = self.normalize_state(state)
-                self._callbacks_func(state)
+                self._calculate_callbacks(state)
         state = self.normalize_state(state)
         return state
 
@@ -107,13 +108,17 @@ class StateEvolution:
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
         return self.execute(final_time, start_time, initial_state)
 
-    def _cast_initial_state(self, initial_state=None):
+    def _cast_initial_state(self, state=None):
         """Casts initial state as a Tensorflow tensor."""
-        if initial_state is None:
+        if state is None:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
-        return circuit.TensorflowCircuit._cast_initial_state(
-            self, initial_state)
+        if self.accelerators is None:
+            return circuit.TensorflowCircuit._cast_initial_state(
+                self, state)
+        else:
+            c = self.solver.hamiltonian(0).circuit(self.solver.dt)
+            return c._get_initial_state(state)
 
 
 class AdiabaticEvolution(StateEvolution):
@@ -216,15 +221,19 @@ class AdiabaticEvolution(StateEvolution):
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 
-    def _cast_initial_state(self, initial_state=None):
+    def _cast_initial_state(self, state=None):
         """Casts initial state as a Tensorflow tensor.
 
         If initial state is not given the ground state of ``h0`` is used, which
         is the common practice in adiabatic evolution.
         """
-        if initial_state is None:
-            return self.h0.ground_state()
-        return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
+        if state is None:
+            if self.accelerators is None:
+                return self.h0.ground_state()
+            else:
+                c = self.solver.hamiltonian(0).circuit(self.solver.dt)
+                return c._get_initial_state("ones")
+        return super(AdiabaticEvolution, self)._cast_initial_state(state)
 
     def _loss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.

@@ -371,7 +371,7 @@ class DistributedState(DistributedBase):
         n = 2 ** (self.nqubits - self.nglobal)
         with tf.device(self.device):
             self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
-                      for _ in range(self.ndevices)]
+                           for _ in range(self.ndevices)]
 
         dtype = DTYPES.get('DTYPEINT')
         self.shapes = {
@@ -391,6 +391,14 @@ class DistributedState(DistributedBase):
       state = cls(circuit)
       with tf.device(state.device):
           op.initial_state(state.pieces[0])
+      return state
+
+    @classmethod
+    def ones(cls, circuit: "DistributedCircuit"):
+      """Creates the |+++...+> state for adiabatic evolution initialization."""
+      state = cls(circuit)
+      with tf.device(state.device):
+          state.pieces = [tf.Variable(tf.ones_like(p)) for p in state.pieces]
       return state
 
     @classmethod
