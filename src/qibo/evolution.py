@@ -47,6 +47,7 @@ class StateEvolution:
                                              "exponential solver.")
         if isinstance(hamiltonian, hamiltonians.TrotterHamiltonian):
             hamiltonian.circuit(dt, accelerators, memory_device)
+        self.is_distributed = accelerators is not None
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
 
@@ -69,7 +70,10 @@ class StateEvolution:
         for _ in range(nsteps):
             state = self.solver(state)
             for callback in self.callbacks:
-                callback.append(callback(state))
+                if self.is_distributed:
+                    callback.append(callback(state.vector))
+                else:
+                    callback.append(callback(state))
         return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):

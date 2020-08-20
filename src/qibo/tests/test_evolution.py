@@ -61,9 +61,11 @@ def test_state_evolution_final_state():
     assert_states_equal(final_psi, target_psi)
 
 
-@pytest.mark.parametrize("nqubits", [3, 4])
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
-def test_trotterized_evolution(nqubits, accelerators, h=1.0, dt=1e-3):
+@pytest.mark.parametrize("nqubits,accelerators,dt",
+                         [(3, None, 1e-3),
+                          (4, None, 1e-3),
+                          (4, {"/GPU:0": 1, "/GPU:1": 1}, 1e-2)])
+def test_trotterized_evolution(nqubits, accelerators, dt, h=1.0):
     """Test state evolution using trotterization of ``TrotterHamiltonian``."""
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)

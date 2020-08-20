@@ -232,6 +232,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if state is None:
             return utils.DistributedState.default(self)
 
+        if isinstance(state, utils.DistributedState):
+            return state
+
         full_state = super(TensorflowDistributedCircuit,
                            self)._get_initial_state(state)
         return utils.DistributedState.from_vector(full_state, self)
