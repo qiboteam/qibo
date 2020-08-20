@@ -16,6 +16,13 @@ class StateEvolution:
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            for more details. This option is available only when the Trotter
+            decomposition is used for the time evolution.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
 
     Example:
         ::
@@ -47,9 +54,22 @@ class StateEvolution:
                                              "exponential solver.")
         if isinstance(hamiltonian, hamiltonians.TrotterHamiltonian):
             hamiltonian.circuit(dt, accelerators, memory_device)
-        self.is_distributed = accelerators is not None
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
+
         self.callbacks = callbacks
+        if accelerators is None:
+            self._callbacks_func = self._calculate_callbacks
+        else:
+            import tensorflow as tf
+            def _calculate_callbacks_distributed(state):
+                with tf.device(memory_device):
+                    for callback in self.callbacks:
+                        callback.append(callback(state.vector))
+            self._callbacks_func = _calculate_callbacks_distributed
+
+    def _calculate_callbacks(self, state):
+        for callback in self.callbacks:
+            callback.append(callback(state))
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -60,20 +80,17 @@ class StateEvolution:
             initial_state (np.ndarray): Initial state of the evolution.
 
         Returns:
-            Final state vector a ``tf.Tensor``.
+            Final state vector a ``tf.Tensor`` or a
+            :class:`qibo.tensorflow.distutils.DistributedState` when a
+            distributed execution is used.
         """
         state = self._cast_initial_state(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
-        for callback in self.callbacks:
-            callback.append(callback(state))
+        self._calculate_callbacks(state)
         for _ in range(nsteps):
             state = self.solver(state)
-            for callback in self.callbacks:
-                if self.is_distributed:
-                    callback.append(callback(state.vector))
-                else:
-                    callback.append(callback(state))
+            self._callbacks_func(state)
         return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):
