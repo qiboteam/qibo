@@ -92,7 +92,7 @@ class StateEvolution:
             :class:`qibo.tensorflow.distutils.DistributedState` when a
             distributed execution is used.
         """
-        state = self._cast_initial_state(initial_state)
+        state = self.get_initial_state(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
         self._calculate_callbacks(state)
@@ -108,8 +108,8 @@ class StateEvolution:
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
         return self.execute(final_time, start_time, initial_state)
 
-    def _cast_initial_state(self, state=None):
-        """Casts initial state as a Tensorflow tensor."""
+    def get_initial_state(self, state=None):
+        """"""
         if state is None:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
@@ -118,7 +118,7 @@ class StateEvolution:
                 self, state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
-            return c._get_initial_state(state)
+            return c.get_initial_state(state)
 
 
 class AdiabaticEvolution(StateEvolution):
@@ -221,7 +221,7 @@ class AdiabaticEvolution(StateEvolution):
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 
-    def _cast_initial_state(self, state=None):
+    def get_initial_state(self, state=None):
         """Casts initial state as a Tensorflow tensor.
 
         If initial state is not given the ground state of ``h0`` is used, which
@@ -232,8 +232,8 @@ class AdiabaticEvolution(StateEvolution):
                 return self.h0.ground_state()
             else:
                 c = self.solver.hamiltonian(0).circuit(self.solver.dt)
-                return c._get_initial_state("ones")
-        return super(AdiabaticEvolution, self)._cast_initial_state(state)
+                return c.get_initial_state("ones")
+        return super(AdiabaticEvolution, self).get_initial_state(state)
 
     def _loss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.

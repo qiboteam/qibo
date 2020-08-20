@@ -179,7 +179,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute``."""
-        state = self._get_initial_state(initial_state)
+        state = self.get_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
@@ -224,11 +224,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
 
-    def _get_initial_state(
+    def get_initial_state(
           self, state: Optional[Union[InitStateType, str]] = None
           ) -> tf.Tensor:
-        """Checks and casts initial state given by user."""
-        if not self.queues.queues:
+        """"""
+        if not self.queues.queues and self.queue:
             self.queues.set(self.queue)
         if state is None:
             return utils.DistributedState.default(self)
@@ -237,5 +237,5 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         elif isinstance(state, utils.DistributedState):
             return state
         full_state = super(TensorflowDistributedCircuit,
-                           self)._get_initial_state(state)
+                           self).get_initial_state(state)
         return utils.DistributedState.from_vector(full_state, self)

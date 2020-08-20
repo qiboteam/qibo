@@ -29,7 +29,7 @@ def test_initial_state():
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     target_psi = np.ones(8) / np.sqrt(8)
-    init_psi = adev._cast_initial_state()
+    init_psi = adev.get_initial_state()
     assert_states_equal(init_psi, target_psi)
 
 

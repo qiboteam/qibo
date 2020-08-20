@@ -89,7 +89,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute`` on specified device."""
         self.using_density_matrix = False
-        state = self._get_initial_state(initial_state)
+        state = self.get_initial_state(initial_state)
 
         if self.using_tfgates:
             shape = (1 + self.using_density_matrix) * self.nqubits * (2,)
@@ -207,8 +207,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         state = op.initial_state(zeros)
         return state
 
-    def _get_initial_state(self, state: Optional[InitStateType] = None
+    def get_initial_state(self, state: Optional[InitStateType] = None
                            ) -> tf.Tensor:
+        """"""
         if state is None:
             return self._default_initial_state()
         if self.check_initial_state_shape:
