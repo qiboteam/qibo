@@ -1,7 +1,7 @@
 # Runtime requirements for qibo
 
 numpy
-tensorflow>=2.2,<=2.3
+tensorflow==2.3
 scipy
 cma
 joblib
