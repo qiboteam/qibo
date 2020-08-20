@@ -81,7 +81,33 @@ class RungeKutta4(BaseSolver):
         return (state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)[:, 0]
 
 
+class RungeKutta45(BaseSolver):
+    """Solver based on the 5th order Runge-Kutta method."""
+
+    def __call__(self, state):
+        state = state[:, K.newaxis]
+        ham1 = self.hamiltonian(self.t)
+        ham2 = self.hamiltonian(self.t + self.dt / 4.0)
+        ham3 = self.hamiltonian(self.t + 3 * self.dt / 8.0)
+        ham4 = self.hamiltonian(self.t + 12 * self.dt / 13.0)
+        ham5 = self.hamiltonian(self.t + self.dt)
+        ham6 = self.hamiltonian(self.t + self.dt / 2.0)
+        k1 = ham1 @ state
+        k2 = ham2 @ (state + self.dt * k1 / 4.0)
+        k3 = ham3 @ (state + self.dt * (3 * k1 + 9 * k2) / 32.0)
+        k4 = ham4 @ (state + self.dt * (1932 * k1 -
+                                        7200 * k2 + 7296 * k3) / 2197.0)
+        k5 = ham5 @ (state + self.dt * (439 * k1 / 216.0 - 8 *
+                                        k2 + 3680 * k3 / 513.0 - 845 * k4 / 4104.0))
+        k6 = ham6 @ (state + self.dt * (-8 * k1 / 27.0 + 2 * k2 -
+                                        3544 * k3 / 2565 + 1859 * k4 / 4104 - 11 * k5 / 40.0))
+        self.t += self.dt
+        return (state - 1j * self.dt * (16 * k1 / 135.0 + 6656 * k3 / 12825.0 + 28561 * k4 / 56430.0 -
+                                        9 * k5 / 50.0 + 2 * k6 / 55.0))[:, 0]
+
+
 factory = {
     "exp": Exponential,
-    "rk4": RungeKutta4
+    "rk4": RungeKutta4,
+    "rk45": RungeKutta45
 }
