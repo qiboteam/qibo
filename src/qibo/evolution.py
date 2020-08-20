@@ -3,7 +3,8 @@ import numpy as np
 from qibo import solvers, optimizers
 from qibo.base import hamiltonians
 from qibo.tensorflow import circuit
-from qibo.config import log, raise_error
+from qibo.config import log, raise_error, K
+from qibo.callbacks import Norm
 
 
 class StateEvolution:
@@ -39,6 +40,12 @@ class StateEvolution:
         self.dt = dt
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
         self.callbacks = callbacks
+        if "rk" in solver:
+            norm = Norm()
+            self.normalize_state = lambda s: s / K.cast(norm(s), dtype=s.dtype)
+            log.info('Normalizing state during RK solution.')
+        else:
+            self.normalize_state = lambda s: s
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -58,8 +65,11 @@ class StateEvolution:
             callback.append(callback(state))
         for _ in range(nsteps):
             state = self.solver(state)
-            for callback in self.callbacks:
-                callback.append(callback(state))
+            if self.callbacks:
+                state = self.normalize_state(state)
+                for callback in self.callbacks:
+                    callback.append(callback(state))
+        state = self.normalize_state(state)
         return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):
