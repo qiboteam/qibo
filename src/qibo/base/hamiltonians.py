@@ -338,6 +338,7 @@ class TrotterHamiltonian(object):
         from qibo.models import Circuit
         self._circuit = Circuit(self.nqubits, accelerators=accelerators,
                                 memory_device=memory_device)
+        self._circuit.check_initial_state_shape = False
         self._circuit.dt = None
         for part in itertools.chain(self.parts, self.parts[::-1]):
             for targets, term in part.items():
