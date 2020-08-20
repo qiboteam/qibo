@@ -34,7 +34,8 @@ def test_initial_state():
 
 
 @pytest.mark.parametrize(("solver", "atol"), [("exp", 0),
-                                              ("rk4", 1e-2)])
+                                              ("rk4", 1e-2),
+                                              ("rk45", 1e-2)])
 def test_state_evolution(solver, atol):
     """Check state evolution under H = Z1 + Z2."""
     # Analytical solution
@@ -172,13 +173,17 @@ def test_adiabatic_evolution_errors():
         final_state = adevp(final_time=1)
 
 
-def test_energy_callback(dt=1e-2):
+@pytest.mark.parametrize(("solver", "atol"),
+                         [("exp", 1e-10),
+                          ("rk4", 1e-2),
+                          ("rk45", 1e-2)])
+def test_energy_callback(solver, atol, dt=1e-2):
     """Test using energy callback in adiabatic evolution."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     energy = callbacks.Energy(h1)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
-                                     callbacks=[energy])
+                                     callbacks=[energy], solver=solver)
     final_psi = adev(final_time=1)
 
     target_psi = np.ones(4) / 2
@@ -190,11 +195,12 @@ def test_energy_callback(dt=1e-2):
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
-    assert_states_equal(final_psi, target_psi)
-    np.testing.assert_allclose(energy[:], target_energies, atol=1e-10)
+    assert_states_equal(final_psi, target_psi, atol=atol)
+    np.testing.assert_allclose(energy[:], target_energies, atol=atol)
 
 
-def test_rk4_evolution(dt=1e-3):
+@pytest.mark.parametrize("solver", ["rk4", "rk45"])
+def test_rk4_evolution(solver, dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)

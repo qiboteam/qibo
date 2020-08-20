@@ -3,7 +3,8 @@ import numpy as np
 from qibo import solvers, optimizers
 from qibo.base import hamiltonians
 from qibo.tensorflow import circuit
-from qibo.config import log, raise_error
+from qibo.config import log, raise_error, K
+from qibo.callbacks import Norm
 
 
 class StateEvolution:
@@ -57,12 +58,18 @@ class StateEvolution:
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
         self.callbacks = callbacks
+        if "rk" in solver:
+            norm = Norm()
+            self.normalize_state = lambda s: s / K.cast(norm(s), dtype=s.dtype)
+            log.info('Normalizing state during RK solution.')
+        else:
+            self.normalize_state = lambda s: s
+
         if accelerators is None:
             self._callbacks_func = self._calculate_callbacks
         else:
-            import tensorflow as tf
             def _calculate_callbacks_distributed(state):
-                with tf.device(memory_device):
+                with K.device(memory_device):
                     for callback in self.callbacks:
                         callback.append(callback(state.vector))
             self._callbacks_func = _calculate_callbacks_distributed
@@ -90,7 +97,10 @@ class StateEvolution:
         self._calculate_callbacks(state)
         for _ in range(nsteps):
             state = self.solver(state)
-            self._callbacks_func(state)
+            if self.callbacks:
+                state = self.normalize_state(state)
+                self._callbacks_func(state)
+        state = self.normalize_state(state)
         return state
 
     def __call__(self, final_time, start_time=0.0, initial_state=None):

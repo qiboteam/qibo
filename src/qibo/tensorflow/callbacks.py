@@ -205,13 +205,9 @@ class Overlap(Callback):
             calculation.
     """
 
-    def __init__(self, state: Union[np.ndarray, tf.Tensor],
-                 normalize: bool = False):
+    def __init__(self, state: Union[np.ndarray, tf.Tensor]):
         super(Overlap, self).__init__()
         self.statec = tf.math.conj(tf.cast(state, dtype=DTYPES.get('DTYPECPX')))
-        self.norm = None
-        if normalize:
-            self.norm = Norm.norm(self.statec)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
@@ -219,11 +215,7 @@ class Overlap(Callback):
             raise_error(NotImplementedError, "Overlap callback is not implemented "
                                              "for density matrices.")
 
-        overlap = tf.abs(tf.reduce_sum(self.statec * state))
-        if self.norm is not None:
-            norm = Norm.norm(state, is_density_matrix)
-            overlap = overlap / (norm * self.norm)
-        return overlap
+        return tf.abs(tf.reduce_sum(self.statec * state))
 
 
 class Energy(Callback):
