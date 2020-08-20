@@ -17,6 +17,7 @@ parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--save", action="store_true")
 
+
 def main(nqubits, hfield, T, dt, solver, save):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian.
 

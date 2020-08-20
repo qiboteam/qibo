@@ -2,7 +2,7 @@
 import numpy as np
 from qibo import solvers, optimizers, hamiltonians
 from qibo.tensorflow import circuit
-from qibo.config import log, raise_error, K, DTYPES
+from qibo.config import log, raise_error
 
 
 class StateEvolution:
