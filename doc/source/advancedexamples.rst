@@ -299,12 +299,13 @@ a flat list.
 Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
 recreating a new circuit with new parameter values.
 
-.. vqe-example:
+.. _vqe-example:
 
 How to write a VQE?
 -------------------
 
-The VQE requires an ansatz function and a ``Hamiltonian`` object. There are examples of VQE optimization in ``examples/benchmarks``:
+The VQE requires an ansatz function and a ``Hamiltonian`` object.
+There are examples of VQE optimization in ``examples/benchmarks``:
 
     - ``vqe.py``: a simple example with the XXZ model.
 
@@ -339,16 +340,13 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
                                             2*nqubits*nlayers + nqubits)
     best, params = vqe.minimize(initial_parameters, method='BFGS')
 
-The user can choose one of the following methods for minimization:
 
-    - ``"cma"``: Genetic optimizer,
-    - ``"sgd"``: Gradient descent using Tensorflow's automatic differentiation and built-in `Adagrad <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers/Adagrad>`_ optimizer,
-    - All methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
-
-Note that if ``"sgd"`` is used then the user has to use a backend based on
-tensorflow primitives and not the default custom backend because custom operators
-currently do not support automatic differentiation. To switch the backend one
-can do ``qibo.set_backend("matmuleinsum")``.
+For more information on the available options of the ``vqe.minimize`` call we
+refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
+Note that if the Stochastic Gradient Descent optimizer is used then the user
+has to use a backend based on tensorflow primitives and not the default custom
+backend, as custom operators currently do not support automatic differentiation.
+To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
 Check the next example on automatic differentiation for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
