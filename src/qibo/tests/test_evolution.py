@@ -52,7 +52,7 @@ def test_state_evolution(solver, atol):
 
 
 def test_state_evolution_final_state():
-    """Check time-independent Hamiltonian state evolution without giving dt."""
+    """Check time-independent Hamiltonian state evolution."""
     evolution = models.StateEvolution(hamiltonians.Z(2), dt=1)
     # Analytical solution
     phase = np.exp(2j)
@@ -60,6 +60,20 @@ def test_state_evolution_final_state():
     target_psi = np.array([phase, 1, 1, phase.conj()])
     final_psi = evolution(final_time=1, initial_state=initial_psi)
     assert_states_equal(final_psi, target_psi)
+
+
+def test_state_time_dependent_evolution_final_state(nqubits=2, dt=1e-2):
+    """Check time-dependent Hamiltonian state evolution."""
+    ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
+    # Analytical solution
+    target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
+    for n in range(int(1 / dt)):
+        prop = expm(-1j * dt * ham(n * dt).matrix.numpy())
+        target_psi.append(prop.dot(target_psi[-1]))
+
+    checker = TimeStepChecker(target_psi, atol=1e-8)
+    evolution = models.StateEvolution(ham, dt=dt, callbacks=[checker])
+    final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
 @pytest.mark.parametrize("nqubits,accelerators,dt",
@@ -127,6 +141,9 @@ def test_state_evolution_errors():
     """Test ``ValueError``s for ``StateEvolution`` model."""
     ham = hamiltonians.Z(2)
     evolution = models.StateEvolution(ham, dt=1)
+    # time-dependent Hamiltonian bad type
+    with pytest.raises(TypeError):
+        evol = models.StateEvolution(lambda t: "abc", dt=1e-2)
     # execute without initial state
     with pytest.raises(ValueError):
         final_state = evolution(final_time=1)

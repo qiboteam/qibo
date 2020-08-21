@@ -42,19 +42,26 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        self.nqubits = hamiltonian.nqubits
+        if isinstance(hamiltonian, hamiltonians.HAMILTONIAN_TYPES):
+            ham = hamiltonian
+        else:
+            ham = hamiltonian(0)
+            if not isinstance(ham, hamiltonians.HAMILTONIAN_TYPES):
+                raise TypeError("Hamiltonian type {} not understood."
+                                "".format(type(ham)))
+        self.nqubits = ham.nqubits
         if dt <= 0:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
         if (accelerators is not None and
-            (not isinstance(hamiltonian, hamiltonians.TrotterHamiltonian)
+            (not isinstance(ham, hamiltonians.TrotterHamiltonian)
              or solver != "exp")):
             raise_error(NotImplementedError, "Distributed evolution is only "
                                              "implemented using the Trotter "
                                              "exponential solver.")
-        if isinstance(hamiltonian, hamiltonians.TrotterHamiltonian):
-            hamiltonian.circuit(dt, accelerators, memory_device)
+        if isinstance(ham, hamiltonians.TrotterHamiltonian):
+            ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
         self.callbacks = callbacks
