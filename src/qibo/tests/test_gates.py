@@ -1129,6 +1129,10 @@ def test_bad_initial_state(backend, accelerators):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
     with pytest.raises(TypeError):
         final_state = c(initial_state=0)
+    c = Circuit(2, accelerators)
+    c.check_initial_state_shape = False
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=0)
     qibo.set_backend(original_backend)
 
 
