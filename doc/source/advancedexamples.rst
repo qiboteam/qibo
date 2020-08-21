@@ -730,6 +730,12 @@ This script creates the Trotter circuit for ``dt=1e-3`` and applies it
 repeatedly to the given initial state T / dt = 1000 times to obtain the
 final state of the evolution.
 
+Since Trotter evolution is based on Qibo circuits, it also supports distributed
+execution on multiple devices. This can be enabled by passing an
+``accelerators`` dictionary when defining the
+:class:`qibo.evolution.StateEvolution` model. Check the
+:ref:`How to select hardware devices? <gpu-examples>` example for more details.
+
 
 How to simulate adiabatic time evolution?
 -----------------------------------------
@@ -787,7 +793,10 @@ pre-coded Hamiltonians this can be done simply as
 
 Note that ``h0`` and ``h1`` should have the same type, either both
 :class:`qibo.base.hamiltonians.Hamiltonian` or both
-:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`. When Trotter evolution is
+used, it is also possible to execute on multiple devices by passing an
+``accelerators`` dictionary in the creation of the
+:class:`qibo.evolution.AdiabaticEvolution` model.
 
 
 Optimizing the scheduling function
