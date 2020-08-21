@@ -305,11 +305,12 @@ def test_energy():
     from qibo import hamiltonians
     ham = hamiltonians.TFIM(4, h=1.0)
     energy = callbacks.Energy(ham)
+    matrix = np.array(ham.matrix)
 
     state = np.random.random(16) + 1j * np.random.random(16)
-    target_energy = state.conj().dot(ham.matrix.numpy().dot(state))
+    target_energy = state.conj().dot(matrix.dot(state))
     np.testing.assert_allclose(energy(state), target_energy)
 
     state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
-    target_energy = np.trace(ham.matrix.numpy().dot(state))
+    target_energy = np.trace(matrix.dot(state))
     np.testing.assert_allclose(energy(state, True), target_energy)

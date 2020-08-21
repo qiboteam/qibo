@@ -3,13 +3,7 @@ import numpy as np
 import qibo
 from qibo import models, gates
 from qibo.tensorflow import distutils
-
-
-def random_state(nqubits):
-    shape = (2 ** nqubits,)
-    x = np.random.random(shape) + 1j * np.random.random(shape)
-    x = x / np.sqrt((np.abs(x) ** 2).sum())
-    return x
+from qibo.tests import utils
 
 
 def check_device_queues(queues):
@@ -165,7 +159,7 @@ def test_default_initialization():
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_user_initialization(nqubits):
     import itertools
-    target_state = random_state(nqubits)
+    target_state = utils.random_numpy_state(nqubits)
 
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(nqubits, devices)
@@ -234,7 +228,7 @@ def test_simple_execution(ndevices):
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(dist_c.nlocal)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -256,7 +250,7 @@ def test_execution_pretransformed_circuit(ndevices):
     c.add(gates.SWAP(0, 2))
     c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -275,7 +269,7 @@ def test_simple_execution_global(ndevices):
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -296,7 +290,7 @@ def test_execution_with_global_swap():
     c.add((gates.H(i) for i in range(6)))
     c.add((gates.SWAP(i, i + 1) for i in range(5)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -310,7 +304,7 @@ def test_execution_special_gate(ndevices):
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
     dist_c = models.DistributedCircuit(6, devices)
-    initial_state = random_state(dist_c.nqubits)
+    initial_state = utils.random_numpy_state(dist_c.nqubits)
     dist_c.add(gates.Flatten(np.copy(initial_state)))
     dist_c.add((gates.H(i) for i in range(dist_c.nlocal)))
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
@@ -338,7 +332,7 @@ def test_controlled_execution(ndevices):
     c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     c.add(gates.CNOT(0, 2))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -362,7 +356,7 @@ def test_controlled_execution_large(ndevices):
     c.add(gates.SWAP(2, 3))
     c.add([gates.X(2), gates.X(3), gates.X(4)])
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -416,7 +410,7 @@ def test_distributed_qft_execution(nqubits, accelerators):
     dist_c = models.QFT(nqubits, accelerators=accelerators)
     c = models.QFT(nqubits)
 
-    initial_state = random_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     final_state = dist_c(initial_state).numpy()
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)

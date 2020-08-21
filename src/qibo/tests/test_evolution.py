@@ -1,10 +1,8 @@
-import pathlib
 import pytest
 import numpy as np
 from qibo import callbacks, hamiltonians, models
+from qibo.tests import utils
 from scipy.linalg import expm
-
-REGRESSION_FOLDER = pathlib.Path(__file__).with_name('regressions')
 
 
 def assert_states_equal(state, target_state, atol=0):
@@ -23,28 +21,6 @@ class TimeStepChecker(callbacks.Callback):
 
     def __call__(self, state):
         assert_states_equal(state, next(self.target_states), atol=self.atol)
-
-
-def assert_regression_fixture(array, filename):
-    """Check array matches data inside filename.
-
-    Args:
-        array: numpy array/
-        filename: fixture filename
-
-    If filename does not exists, this function
-    creates the missing file otherwise it loads
-    from file and compare.
-    """
-    def load(filename):
-        return np.loadtxt(filename)
-    try:
-        array_fixture = load(filename)
-    except: # pragma: no cover
-        # case is not tested in GitHub workflows because files exist
-        np.savetxt(filename, array)
-        array_fixture = load(filename)
-    np.testing.assert_allclose(array, array_fixture, rtol=1e-5)
 
 
 def test_initial_state():
@@ -188,7 +164,7 @@ def test_energy_callback(solver, atol, dt=1e-2):
     target_energies = [calc_energy(target_psi)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(-1j * dt).numpy()
+        prop = ham(n * dt).exp(dt).numpy()
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
@@ -206,7 +182,7 @@ def test_rk4_evolution(solver, dt=1e-3):
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(-1j * dt).numpy()
+        prop = ham(n * dt).exp(dt).numpy()
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
@@ -240,4 +216,4 @@ def test_scheduling_optimization(method, options, messages, filename):
     best, params = adevp.minimize([0.5, 1], method=method, options=options,
                                   messages=messages)
     if filename is not None:
-        assert_regression_fixture(params, REGRESSION_FOLDER/filename)
+        utils.assert_regression_fixture(params, filename)

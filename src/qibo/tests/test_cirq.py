@@ -7,16 +7,10 @@ import pytest
 import qibo
 from qibo import models, gates
 from qibo.tensorflow import gates as native_gates
+from qibo.tests import utils
 
 
 _BACKENDS = ['custom', 'defaulteinsum', 'matmuleinsum']
-
-
-def random_initial_state(nqubits, dtype=np.complex128):
-    """Generates a random normalized state vector."""
-    x = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
-    return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
-
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):
     """Generates a random unitary matrix of shape (2^nqubits, 2^nqubits)."""
@@ -57,7 +51,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
-    initial_state = random_initial_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
 
@@ -245,7 +239,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
 def test_qft(backend, nqubits, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_state = random_initial_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     c = models.QFT(nqubits, accelerators=accelerators)
     final_state = c(np.copy(initial_state)).numpy()
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]

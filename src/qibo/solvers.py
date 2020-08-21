@@ -1,4 +1,5 @@
-from qibo import K, hamiltonians
+from qibo import K
+from qibo.base import hamiltonians
 from qibo.config import raise_error
 
 
@@ -14,7 +15,7 @@ class BaseSolver:
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        if isinstance(hamiltonian, hamiltonians.Hamiltonian):
+        if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
@@ -22,25 +23,6 @@ class BaseSolver:
     def __call__(self, state): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
-
-
-class TimeIndependentExponential(BaseSolver):
-    """Exact solver that uses the matrix exponential of the Hamiltonian:
-
-    .. math::
-        U(t) = e^{-i H t}
-
-    Calculates the evolution operator during initialization and thus can be
-    used only for Hamiltonians without explicit time dependence.
-    """
-
-    def __init__(self, dt, hamiltonian):
-        super(TimeIndependentExponential, self).__init__(dt, hamiltonian)
-        self.propagator = hamiltonian.exp(-1j * dt)
-
-    def __call__(self, state):
-        self.t += self.dt
-        return K.matmul(self.propagator, state[:, K.newaxis])[:, 0]
 
 
 class Exponential(BaseSolver):
@@ -53,14 +35,8 @@ class Exponential(BaseSolver):
     time-dependent Hamiltonians.
     """
 
-    def __new__(cls, dt, hamiltonian):
-        if isinstance(hamiltonian, hamiltonians.Hamiltonian):
-            return TimeIndependentExponential(dt, hamiltonian)
-        else:
-            return super(Exponential, cls).__new__(cls)
-
     def __call__(self, state):
-        propagator = self.hamiltonian(self.t).exp(-1j * self.dt)
+        propagator = self.hamiltonian(self.t).exp(self.dt)
         self.t += self.dt
         return K.matmul(propagator, state[:, K.newaxis])[:, 0]
 
