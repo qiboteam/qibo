@@ -105,18 +105,30 @@ using the ``--type`` flag. This accepts one of the following options:
     Supports the following options:
         - ``--nlayers``: Total number of layers.
 
+
+VQE benchmark
+-------------
+
+It is possible to run a VQE optimization benchmark using ``vqe.py``. This
+supports the following options:
+
+* ``--nqubits`` (``int``): Number of qubits in the circuit.
+* ``--nlayers`` (``int``): Total number of layers in the circuit.
+* ``--method`` (``str``): Optimization method.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
+* ``--varlayer``: If used the circuit will be created using the
+  :class:`qibo.base.gates.VariationalLayer` gate which fuses one and two qubits
+  for efficiency.
+
+The script will perform the VQE minimization and will print the optimal energy
+found and its difference with the exact ground state energy. It will also
+show the total execution time.
+
+
 Benchmark results
 -----------------
 
-    .. |qft benchmark| image:: benchmarks/images/qft_c128.png
-      :width: 600
-      :alt: QFT Benchmark
+.. toctree::
+    :maxdepth: 1
 
-    The performance of Qibo simulator can be verified using the scripts under the
-    ``examples/benchmarks`` folder. In the following plot we compare two different Qibo
-    backends (the custom tensorflow operators and the ``MatmulEinsum`` backend)
-    with `Cirq <https://github.com/quantumlib/cirq>`_. The benchmarks are performed
-    on CPU and task is the Quantum Fourier Transform (QFT) using single
-    (``complex64``) precision.
-
-    |qft benchmark|
+    benchmarks/RESULTS.md
