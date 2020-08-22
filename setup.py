@@ -43,6 +43,12 @@ class BinaryDistribution(Distribution):
   def is_pure(self):
     return False
 
+# Patch to generate manylinux2010 packages
+from setuptools.command.install import install
+class InstallPlatlib(install):
+    def finalize_options(self):
+        install.finalize_options(self)
+        self.install_lib = self.install_platlib
 
 # Read in requirements
 requirements = open('requirements.txt').readlines()
@@ -58,7 +64,7 @@ setup(
     url="https://github.com/Quantum-TII/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    cmdclass={"build_py": Build},
+    cmdclass={"build_py": Build, "install": InstallPlatlib},
     package_data={"": ["*.so", "*.out"]},
     include_package_data=True,
     zip_safe=False,

@@ -1,7 +1,15 @@
+# Minimial instructions:
+#	Set CXX variable for the c++ compiler.
+#	Set the CUDA_PATH variable for the CUDA path / NVCC.
+#	Set the PYTHON variable for the python interpreter.
+
 # Compilers
-CXX := g++
 NVCC := $(CUDA_PATH)/bin/nvcc
-PYTHON_BIN_PATH = python
+PYTHON_BIN_PATH	:= python
+
+ifneq ($(PYTHON),)
+	PYTHON_BIN_PATH = $(PYTHON)
+endif
 
 # TARGET LIBRARIES
 TARGET_LIB = python/ops/_qibo_tf_custom_operators.so
