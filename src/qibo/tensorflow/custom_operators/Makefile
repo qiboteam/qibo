@@ -49,11 +49,11 @@ $(TARGET_LIB_CUDA): $(OBJECT_SRCS_CUDA)
 %.o: %.cc
 	$(CXX) -c $(CFLAGS) $^ -o $@
 
-%.cudao: %.cc
-	$(CXX) -c $(CFLAGS_CUDA) $^ -o $@
-
 %.cu.cudao: %.cu.cc
 	$(NVCC) -c -o $@ $^ $(CFLAGS_NVCC)
+
+%.cudao: %.cc
+	$(CXX) -c $(CFLAGS_CUDA) $^ -o $@
 
 clean:
 	rm -f $(TARGET_LIB) $(TARGET_LIB_CUDA) $(OBJECT_SRCS) $(OBJECT_SRCS_CUDA)
