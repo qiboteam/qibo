@@ -14,14 +14,20 @@ else: # pragma: no cover
 class Hamiltonian(base_hamiltonians.Hamiltonian):
     """"""
 
-    def __new__(cls, nqubits, matrix):
+    def __new__(cls, nqubits, matrix, numpy=False):
         if isinstance(matrix, np.ndarray):
-            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+            if not numpy:
+                matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
         elif isinstance(matrix, K.Tensor):
-            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
+            if numpy:
+                matrix = matrix.numpy()
         else:
             raise raise_error(TypeError, "Invalid type {} of Hamiltonian "
                                          "matrix.".format(type(matrix)))
+        if numpy:
+            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+        else:
+            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
 
 
 def _multikron(matrix_list):
@@ -72,7 +78,7 @@ def XXZ(nqubits, delta=0.5, numpy=False):
     matrix = hx + hy + delta * hz
     if not numpy:
         matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, matrix)
+    return Hamiltonian(nqubits, matrix, numpy=numpy)
 
 
 def _OneBodyPauli(nqubits, matrix, numpy=False):
@@ -81,7 +87,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=False):
     ham = -_build_spin_model(nqubits, matrix, condition)
     if not numpy:
         ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
+    return Hamiltonian(nqubits, ham, numpy=numpy)
 
 
 def X(nqubits, numpy=False):
@@ -145,4 +151,4 @@ def TFIM(nqubits, h=0.0, numpy=False):
         ham -= h * _build_spin_model(nqubits, matrices.X, condition)
     if not numpy:
         ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
+    return Hamiltonian(nqubits, ham, numpy=numpy)
