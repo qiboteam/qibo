@@ -76,8 +76,6 @@ def XXZ(nqubits, delta=0.5, numpy=False):
     hy = _build_spin_model(nqubits, matrices.Y, condition)
     hz = _build_spin_model(nqubits, matrices.Z, condition)
     matrix = hx + hy + delta * hz
-    if not numpy:
-        matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, matrix, numpy=numpy)
 
 
@@ -85,8 +83,6 @@ def _OneBodyPauli(nqubits, matrix, numpy=False):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
-    if not numpy:
-        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, ham, numpy=numpy)
 
 
@@ -149,6 +145,4 @@ def TFIM(nqubits, h=0.0, numpy=False):
     if h != 0:
         condition = lambda i, j: i == j % nqubits
         ham -= h * _build_spin_model(nqubits, matrices.X, condition)
-    if not numpy:
-        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
     return Hamiltonian(nqubits, ham, numpy=numpy)
