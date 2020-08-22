@@ -46,15 +46,11 @@ def h(qubits, n, matrix):
         matrix (np.array): 2x2 matrix to apply to a qubit
         
     Returns:
-        h (np.array): 2**n x 2**n hamiltonian
+        h (np.array): 2**qubits x 2**qubits hamiltonian
     """
-    h = 1
-    for i in range(qubits):
-        if i == n:
-            h = np.kron(h, matrix)
-        else:
-            h = np.kron(h, matrices.I)
-    return h
+    a = np.eye(2 ** n, dtype=matrix.dtype)
+    b = np.eye(2 ** (qubits - n - 1), dtype=matrix.dtype)
+    return np.kron(np.kron(a, matrix), b)
 
 
 def z(qubits, n):
@@ -65,21 +61,21 @@ def z(qubits, n):
         matrix (np.array): 2x2 matrix to apply to a qubit
         
     Returns:
-        h (np.array): 2**n x 2**n hamiltonian
+        h (np.array): 2**qubits x 2**qubits hamiltonian
     """
     matrix = 0.5*(matrices.I-matrices.Z)
     return h(qubits, n, matrix)
     
     
 def x(qubits, n):
-    """Apply matrix [[0.5, -0.5], [-0.5, 0.5]] to qubit n
+    """Apply matrix [[0, 1], [1, 0]] to qubit n
     Args:
         qubits (int): # of total qubits in the instance
         n (int): qubit position to apply matrix
         matrix (np.array): 2x2 matrix to apply to a qubit
         
     Returns:
-        h (np.array): 2**n x 2**n hamiltonian
+        h (np.array): 2**qubits x 2**qubits hamiltonian
     """
     matrix = matrices.X
     return h(qubits, n, matrix)
@@ -92,7 +88,7 @@ def h_c(qubits, clause):
         clause (list): Exact Cover clause
         
     Returns:
-        h_c (np.array): 2**n x 2**n hamiltonian that satisfies clause
+        h_c (np.array): 2**qubits x 2**qubits hamiltonian that satisfies clause
     """
     h_c = 0
     for i in clause:
@@ -108,7 +104,7 @@ def h_p(qubits, clauses):
         clauses (list): clauses for an Exact Cover instance
         
     Return:
-        h_p (np.array): 2**n x 2**n problem Hamiltonian
+        h_p (np.array): 2**qubits x 2**qubits problem Hamiltonian
     """
     h_p = 0
     for clause in clauses:
@@ -123,7 +119,7 @@ def h0(qubits, times):
         times (list): number of times a qubit apears in all clauses
         
     Return:
-        h0 (np.array): 2**n x 2**n initial Hamiltonian
+        h0 (np.array): 2**qubits x 2**qubits initial Hamiltonian
     """
     h0 = 0
     for i in range(qubits):
@@ -169,8 +165,8 @@ def plot(ground, first, gap, dt, T):
     """
     fig, ax = plt.subplots()
     times = np.arange(0, T, dt)
-    ax.plot(times, ground, label='ground state', color='black')
-    ax.plot(times, first, label='first excited state', color='black')
+    ax.plot(times, ground, label='ground state', color='C0')
+    ax.plot(times, first, label='first excited state', color='C1')
     plt.ylabel('energy')
     plt.xlabel('schedule')
     plt.title('Energy during adiabatic evolution')
@@ -179,10 +175,11 @@ def plot(ground, first, gap, dt, T):
     fig.savefig('energy.png', dpi=300, bbox_inches='tight')
     fig, ax = plt.subplots()
     times = np.arange(0, T, dt)
-    ax.plot(times, gap, label='gap energy', color='black')
+    ax.plot(times, gap, label='gap energy', color='C0')
     plt.ylabel('energy')
     plt.xlabel('schedule')
     plt.title('Energy during adiabatic evolution')
     ax.legend()
     fig.tight_layout()
-    fig.savefig('gap_energy.png', dpi=300, bbox_inches='tight') 
+    fig.savefig('gap_energy.png', dpi=300, bbox_inches='tight')
+    

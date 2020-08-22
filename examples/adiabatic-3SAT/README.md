@@ -4,13 +4,36 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiab
 
 ## Introduction
 
-Adiabatic evolution...
+Adiabatic quantum computation aims to reach the ground state of a problem Hamiltonian encoding the solution of a hard problem, by adiabatically evolving a system from the ground state a known, easy to prepare, Hamiltonian to the problem Hamiltonian.
 
 An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 bits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfills all the clauses at the same time.
 
 ## Adiabatic evolution
 
-...
+Adiabatic compution deals with finding the ground state of a Hamiltonian that encodes de solution of a computational problem. This has to be mapped to the time dependent Hamiltonian in the form
+
+![hamiltonian](images/H.png)
+
+where H_0 and H_p are the initial and problem Hamiltonian respectively, and s(t) defines the schedule that the adiabatic evolution follows. How fast this evolution can be performed depends on the minimum gap energy of the system during the evolution, that is the difference of energy between the ground state and the first excited state along the schedule. The smaller the gap energy the slower the evolution has to be.
+
+The initial Hamiltonian used in this example is the following, 
+
+![initial-hamiltonian](images/h0.png)
+
+which has a ground state of the equal superposition of all possible computational states.
+
+As for the problem Hamiltonian that encodes the solution of an Exact cover problem, first we define the operator
+
+![z-operator](images/z.png)
+
+that can be used to create a Hamiltonian with a ground state when the Exact Cover clause is satisfied. This clause Hamiltonian reads
+
+![clause-hamiltonian](images/hc.png)
+
+where the indices i, j, k represent the three different qubits that the particular clause adresses. After this is defined, the problem Hamiltonian only needs to add up all clause Hamiltonians, so that the only state that remains at 0 energy will be the one that fulfills at the same time
+
+![problem-hamiltonain](images/hp.png)
+
 
 ## How to run the example?
 
@@ -21,14 +44,14 @@ The program supports the following arguments:
 - `--nqubits` (int) allows for instances with different number of qubits (default=8).
 - `--T` (float) set the total time of the adiabatic evolution (default=10).
 - `--dt` (float) set the interval of the calculations over the adiabatic evolution (default=1e-2).
-- `--solver (str) set the type of solver for the evolution (default='exp').
+- `--solver` (str) set the type of solver for the evolution (default='exp').
 
 The program returns:
 
 - The most common solution found after the evolution.
 - The probability of the most common solution.
-- Plot detailing the evolution of the lowest two eigenvalues.
-- Plot detailing the evolution of the gap energy.
+- `energy.png` plots detailing the evolution of the lowest two eigenvalues.
+- `gap_energy.png` plots detailing the evolution of the gap energy.
 
 Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
 
