@@ -122,6 +122,9 @@ class AdiabaticEvolution(StateEvolution):
         self.h0 = h0
         self.h1 = h1
 
+        # Flag that remembers if ``set_hamiltonian`` have not been called
+        self.set_hamiltonian_flag = True
+
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
         self.opt_history = {"params": [], "loss": []}
@@ -171,12 +174,35 @@ class AdiabaticEvolution(StateEvolution):
             self.schedule = lambda t: self._param_schedule(t, params[:-1])
         self.set_hamiltonian(params[-1])
 
-    def set_hamiltonian(self, final_time):
+    def set_hamiltonian(self, total_time):
+        self.set_hamiltonian_flag = False
         def hamiltonian(t):
             # Disable warning that ``schedule`` is not Callable
-            st = self.schedule(t / final_time) # pylint: disable=E1102
+            st = self.schedule(t / total_time) # pylint: disable=E1102
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
+
+    def hamiltonian(self, t, total_time=None):
+        """Returns the adiabatic evolution Hamiltonian at a given time.
+
+        Args:
+            t (float): Time to calculate the Hamiltonian.
+            total_time (float): Total time of adiabatic evolution. Required
+                only if the user wants to access the Hamiltonian before
+                executing the model.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object representing
+            the adiabatic evolution Hamiltonian at time ``t``.
+        """
+        if total_time is not None:
+            self.set_hamiltonian(total_time)
+        else:
+            if self.set_hamiltonian_flag:
+                raise_error(RuntimeError, "Cannot access adiabatic evolution "
+                                          "Hamiltonian before setting the "
+                                          "the total evolution time.")
+        return self.solver.hamiltonian(t)
 
     def _cast_initial_state(self, initial_state=None):
         """Casts initial state as a Tensorflow tensor.
