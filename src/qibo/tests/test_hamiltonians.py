@@ -137,11 +137,11 @@ def test_hamiltonian_matmul(numpy):
 @pytest.mark.parametrize("trotter", [True, False])
 def test_hamiltonian_exponentiation(numpy, trotter):
     from scipy.linalg import expm
-    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=True)
+    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
     target_matrix = expm(-0.5j * np.array(H.matrix))
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
-    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=True)
+    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
     _ = H.eigenvectors()
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
