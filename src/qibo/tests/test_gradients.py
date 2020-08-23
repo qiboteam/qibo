@@ -4,6 +4,7 @@ import tensorflow as tf
 from qibo.tensorflow import custom_operators
 
 
+@pytest.mark.skip("tf.tensor_scatter_nd_update bug on GPU (tensorflow#42581)")
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("compile", [False, True])
 def test_initial_state_gradient(dtype, compile):
