@@ -66,7 +66,7 @@ then proceed with the installation of requirements with:
 
       2. exporting the ``CUDA_PATH`` variable with the CUDA installation path containing the cuda compiler.
 
-      For example, TensorFlow 2.2 supports CUDA 10.1. After installing
+      For example, TensorFlow 2.3 supports CUDA 10.1. After installing
       TensorFlow proceed with the NVCC 10.1 installation. On linux the
       installation path is ``/usr/local/cuda-10.1/``.
 

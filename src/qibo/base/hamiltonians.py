@@ -11,12 +11,15 @@ class Hamiltonian(object):
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape
             ``(2 ** nqubits, 2 ** nqubits)``.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     NUMERIC_TYPES = None
     ARRAY_TYPES = None
     K = None # calculation backend (numpy or TensorFlow)
 
-    def __init__(self, nqubits, matrix):
+    def __init__(self, nqubits, matrix, numpy=False):
         if not isinstance(nqubits, int):
             raise_error(RuntimeError, "nqubits must be an integer but is "
                                             "{}.".format(type(nqubits)))

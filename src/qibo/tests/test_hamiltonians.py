@@ -6,25 +6,23 @@ from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 from qibo.tests import utils
 
 
-@pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_initialization(numpy):
+def test_hamiltonian_initialization():
     """Testing hamiltonian initialization errors."""
-    if numpy:
-        eye = lambda n: np.eye(n)
-    else:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        eye = lambda n: tf.eye(n, dtype=DTYPES.get('DTYPECPX'))
-
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    dtype = DTYPES.get('DTYPECPX')
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
-    H1 = Hamiltonian(2, eye(4))
+    H1 = Hamiltonian(2, np.eye(4))
+    H1 = Hamiltonian(2, np.eye(4), numpy=True)
+    H1 = Hamiltonian(2, tf.eye(4, dtype=dtype))
+    H1 = Hamiltonian(2, tf.eye(4, dtype=dtype), numpy=True)
     with pytest.raises(ValueError):
-        H1 = Hamiltonian(-2, eye(4))
+        H1 = Hamiltonian(-2, np.eye(4))
     with pytest.raises(RuntimeError):
-        H2 = Hamiltonian(eye(2), eye(4))
+        H2 = Hamiltonian(np.eye(2), np.eye(4))
     with pytest.raises(ValueError):
-        H3 = Hamiltonian(4, eye(10))
+        H3 = Hamiltonian(4, np.eye(10))
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)

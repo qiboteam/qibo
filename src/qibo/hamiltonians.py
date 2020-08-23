@@ -15,14 +15,20 @@ else: # pragma: no cover
 class Hamiltonian(BaseHamiltonian):
     """"""
 
-    def __new__(cls, nqubits, matrix):
+    def __new__(cls, nqubits, matrix, numpy=False):
         if isinstance(matrix, np.ndarray):
-            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+            if not numpy:
+                matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
         elif isinstance(matrix, K.Tensor):
-            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
+            if numpy:
+                matrix = matrix.numpy()
         else:
             raise raise_error(TypeError, "Invalid type {} of Hamiltonian "
                                          "matrix.".format(type(matrix)))
+        if numpy:
+            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+        else:
+            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
 
 
 def _multikron(matrix_list):
@@ -59,6 +65,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         delta (float): coefficient for the Z component (default 0.5).
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
@@ -73,7 +80,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         hx = np.kron(matrices.X, matrices.X)
         hy = np.kron(matrices.Y, matrices.Y)
         hz = np.kron(matrices.Z, matrices.Z)
-        term = Hamiltonian(2, hx + hy + delta * hz)
+        term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
         return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
@@ -81,9 +88,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
     hy = _build_spin_model(nqubits, matrices.Y, condition)
     hz = _build_spin_model(nqubits, matrices.Z, condition)
     matrix = hx + hy + delta * hz
-    if not numpy:
-        matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, matrix)
+    return Hamiltonian(nqubits, matrix, numpy=numpy)
 
 
 def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
@@ -91,15 +96,13 @@ def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     if trotter:
         term_matrix = -np.kron(matrix, matrices.I)
-        term = Hamiltonian(2, term_matrix)
+        term = Hamiltonian(2, term_matrix, numpy=True)
         return TrotterHamiltonian.from_twoqubit_term(
             nqubits, term, ground_state=ground_state)
 
     condition = lambda i, j: i == j % nqubits
     ham = -_build_spin_model(nqubits, matrix, condition)
-    if not numpy:
-        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
+    return Hamiltonian(nqubits, ham, numpy=numpy)
 
 
 def X(nqubits, numpy=False, trotter=False):
@@ -112,6 +115,7 @@ def X(nqubits, numpy=False, trotter=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
@@ -133,6 +137,7 @@ def Y(nqubits, numpy=False, trotter=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
@@ -150,6 +155,7 @@ def Z(nqubits, numpy=False, trotter=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
@@ -168,6 +174,7 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         h (float): value of the transverse field.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
@@ -175,7 +182,7 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
     if trotter:
         term_matrix = -np.kron(matrices.Z, matrices.Z)
         term_matrix -= h * np.kron(matrices.X, matrices.I)
-        term = Hamiltonian(2, term_matrix)
+        term = Hamiltonian(2, term_matrix, numpy=True)
         return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
@@ -183,6 +190,4 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
     if h != 0:
         condition = lambda i, j: i == j % nqubits
         ham -= h * _build_spin_model(nqubits, matrices.X, condition)
-    if not numpy:
-        ham = K.cast(ham, dtype=DTYPES.get('DTYPECPX'))
-    return Hamiltonian(nqubits, ham)
+    return Hamiltonian(nqubits, ham, numpy=numpy)
