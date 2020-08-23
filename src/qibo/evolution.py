@@ -4,7 +4,7 @@ from qibo import solvers, optimizers
 from qibo.base import hamiltonians
 from qibo.tensorflow import circuit
 from qibo.config import log, raise_error, K
-from qibo.callbacks import Norm
+from qibo.callbacks import Norm, Gap
 
 
 class StateEvolution:
@@ -122,6 +122,11 @@ class AdiabaticEvolution(StateEvolution):
         self.h0 = h0
         self.h1 = h1
 
+        # Set evolution model to "Gap" callback if one exists
+        for callback in self.callbacks:
+            if isinstance(callback, Gap):
+                callback.evolution = self
+
         # Flag that remembers if ``set_hamiltonian`` have not been called
         self.set_hamiltonian_flag = True
 
@@ -182,11 +187,12 @@ class AdiabaticEvolution(StateEvolution):
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 
-    def hamiltonian(self, t, total_time=None):
+    def hamiltonian(self, t=None, total_time=None):
         """Returns the adiabatic evolution Hamiltonian at a given time.
 
         Args:
-            t (float): Time to calculate the Hamiltonian.
+            t (float): Time to calculate the Hamiltonian. If no time is given
+                the current time set in the solver is used.
             total_time (float): Total time of adiabatic evolution. Required
                 only if the user wants to access the Hamiltonian before
                 executing the model.
@@ -202,7 +208,7 @@ class AdiabaticEvolution(StateEvolution):
                 raise_error(RuntimeError, "Cannot access adiabatic evolution "
                                           "Hamiltonian before setting the "
                                           "the total evolution time.")
-        if t == self.solver.t:
+        if t is None or t == self.solver.t:
             return self.solver.current_hamiltonian
         return self.solver.hamiltonian(t)
 

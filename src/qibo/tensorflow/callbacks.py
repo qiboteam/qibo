@@ -245,3 +245,45 @@ class Energy(Callback):
             return tf.linalg.trace(tf.matmul(self.hamiltonian.matrix,
                                              state))
         return self.hamiltonian.expectation(state)
+
+
+class Gap(Callback):
+
+    def __init__(self, mode: Union[str, int] = "gap"):
+        super(Gap, self).__init__()
+        if isinstance(mode, str):
+            if mode != "gap":
+                raise_error(ValueError, "Unsupported mode {} for gap callback."
+                                        "".format(mode))
+        elif not isinstance(mode, int):
+            raise_error(TypeError, "Gap callback mode should be integer or "
+                                   "string but is {}.".format(type(mode)))
+        self._evolution = None
+        self.mode = mode
+
+    @property
+    def evolution(self):
+        return self._evolution
+
+    @evolution.setter
+    def evolution(self, ev: "models.AdiabaticEvolution"):
+        from qibo.models import AdiabaticEvolution
+        if not isinstance(ev, AdiabaticEvolution):
+            t = type(ev)
+            raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
+        self._evolution = ev
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        if is_density_matrix:
+            raise_error(NotImplementedError, "Adiabatic evolution gap callback "
+                                             "is not implemented for density "
+                                             "matrices.")
+        hamiltonian = self.evolution.hamiltonian()
+        # Call the eigenvectors so that they are cached for the ``exp`` call
+        hamiltonian.eigenvectors()
+        if isinstance(self.mode, int):
+            return tf.math.real(hamiltonian.eigenvalues()[self.mode])
+        # case: self.mode == "gap"
+        return tf.math.real(hamiltonian.eigenvalues()[1] -
+                            hamiltonian.eigenvalues()[0])

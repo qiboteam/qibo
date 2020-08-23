@@ -3,7 +3,7 @@ Testing tensorflow callbacks.
 """
 import pytest
 import numpy as np
-from qibo.models import Circuit
+from qibo.models import Circuit, AdiabaticEvolution
 from qibo import gates, callbacks
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
@@ -314,3 +314,43 @@ def test_energy():
     state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
     target_energy = np.trace(matrix.dot(state))
     np.testing.assert_allclose(energy(state, True), target_energy)
+
+
+def test_gap():
+    """Check gap callback for adiabatic evolution model."""
+    from qibo import hamiltonians
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(3, h=1.0)
+
+    ham = lambda t: ((1 - t) * h0.matrix + t * h1.matrix).numpy()
+    targets = {"ground": [], "excited": [], "gap": []}
+    for t in np.linspace(0, 1, 11):
+        eigvals = np.linalg.eigvalsh(ham(t)).real
+        targets["ground"].append(eigvals[0])
+        targets["excited"].append(eigvals[1])
+        targets["gap"].append(eigvals[1] - eigvals[0])
+
+    gap = callbacks.Gap()
+    ground = callbacks.Gap(0)
+    excited = callbacks.Gap(1)
+    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
+                                   callbacks=[gap, ground, excited])
+    final_state = evolution(final_time=1.0)
+
+    np.testing.assert_allclose(ground[:], targets["ground"])
+    np.testing.assert_allclose(excited[:], targets["excited"])
+    np.testing.assert_allclose(gap[:], targets["gap"])
+
+
+def test_gap_errors():
+    """Check errors in gap callback instantiation."""
+    # invalid string ``mode``
+    with pytest.raises(ValueError):
+        gap = callbacks.Gap("test")
+    # invalid ``mode`` type
+    with pytest.raises(TypeError):
+        gap = callbacks.Gap([])
+    # invalid evolution model type
+    with pytest.raises(TypeError):
+        gap = callbacks.Gap()
+        gap.evolution = "test"
