@@ -81,9 +81,8 @@ def test_hamiltonian_t():
         matrix = adev.hamiltonian(t).matrix
         np.testing.assert_allclose(matrix, ham(t, 1))
     #try using a different total time
-    adev.set_hamiltonian(total_time=2)
     for t in [0, 0.3, 0.7, 1.0]:
-        matrix = adev.hamiltonian(t).matrix
+        matrix = adev.hamiltonian(t, total_time=2).matrix
         np.testing.assert_allclose(matrix, ham(t, 2))
 
 
