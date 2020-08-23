@@ -38,6 +38,13 @@ retry yum install -y cuda-compiler-10-1 cuda-libraries-dev-10-1
 export PYTHON=$PYBIN/python
 export CUDA_PATH=/usr/local/cuda-10.1/
 
+# fix tf requirement to the latest tf version
+TFSTRING=`grep "tensorflow" requirements.txt`
+TFVERSION = `$TFSTRING | cut -f2 -d "<" | cut -f2 -d "="`
+echo $TFVERSION
+sed -i 's/$TFSTRING/tensorflow==$TFVERSION' requirements.txt
+
+# build wheel
 retry $PYTHON -m pip install -r requirements.txt
 retry $PYTHON setup.py bdist_wheel --dist-dir=wheelhouse
 
