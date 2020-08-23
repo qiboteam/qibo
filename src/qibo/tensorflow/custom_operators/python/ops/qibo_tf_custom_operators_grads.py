@@ -3,7 +3,7 @@ from tensorflow.python.framework import ops
 
 
 @ops.RegisterGradient("InitialState")
-def _initial_state_grad(op, grad):
+def _initial_state_grad(op, grad): # pragma: no cover
     """The gradients for `initial_state`.
 
     Args:
@@ -14,5 +14,6 @@ def _initial_state_grad(op, grad):
     Returns:
         Gradients with respect to the input of `initial_state`.
     """
+    # Not tested currently due to ``tf.tensor_scatter_nd_update`` bug on GPU
     to_initial_state = tf.concat([[0], grad[1:]], axis=0)
     return [to_initial_state]

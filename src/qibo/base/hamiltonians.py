@@ -9,8 +9,9 @@ class Hamiltonian(object):
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape
             ``(2 ** nqubits, 2 ** nqubits)``.
-        numpy (bool): If True the Hamiltonian is created using numpy as the
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     NUMERIC_TYPES = None
     ARRAY_TYPES = None
