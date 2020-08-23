@@ -202,6 +202,8 @@ class AdiabaticEvolution(StateEvolution):
                 raise_error(RuntimeError, "Cannot access adiabatic evolution "
                                           "Hamiltonian before setting the "
                                           "the total evolution time.")
+        if t == self.solver.t:
+            return self.solver.current_hamiltonian
         return self.solver.hamiltonian(t)
 
     def _cast_initial_state(self, initial_state=None):

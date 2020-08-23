@@ -13,13 +13,12 @@ class BaseSolver:
     """
 
     def __init__(self, dt, hamiltonian):
-        self._t = 0
         self.dt = dt
         if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
-        self.current_hamiltonian = self.hamiltonian(self.t)
+        self.t = 0
 
     @property
     def t(self):
