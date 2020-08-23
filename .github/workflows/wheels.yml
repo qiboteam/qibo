@@ -1,7 +1,13 @@
 # A single CI script with github workflow
 name: Build wheels
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - created
 
 jobs:
   build:
