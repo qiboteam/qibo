@@ -74,7 +74,7 @@ def test_hamiltonian_t(t):
     m2 = np.diag([2, -2, -2, 2])
     ham = lambda t: - (1 - t) * m1 - t * m2
 
-    adev.set_hamiltonian(final_time=1)
+    adev.set_hamiltonian(total_time=1)
     matrix = adev.solver.hamiltonian(t).matrix
     np.testing.assert_allclose(matrix, ham(t))
 

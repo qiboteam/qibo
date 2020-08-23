@@ -13,12 +13,24 @@ class BaseSolver:
     """
 
     def __init__(self, dt, hamiltonian):
-        self.t = 0
+        self._t = 0
         self.dt = dt
         if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
+        self.current_hamiltonian = self.hamiltonian(self.t)
+
+    @property
+    def t(self):
+        """Solver's current time."""
+        return self._t
+
+    @t.setter
+    def t(self, new_t):
+        """Updates solver's current time."""
+        self._t = new_t
+        self.current_hamiltonian = self.hamiltonian(self.t)
 
     def __call__(self, state): # pragma: no cover
         # abstract method
@@ -36,7 +48,7 @@ class Exponential(BaseSolver):
     """
 
     def __call__(self, state):
-        propagator = self.hamiltonian(self.t).exp(self.dt)
+        propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
         return K.matmul(propagator, state[:, K.newaxis])[:, 0]
 
@@ -46,7 +58,7 @@ class RungeKutta4(BaseSolver):
 
     def __call__(self, state):
         state = state[:, K.newaxis]
-        ham1 = self.hamiltonian(self.t)
+        ham1 = self.current_hamiltonian
         ham2 = self.hamiltonian(self.t + self.dt / 2.0)
         ham3 = self.hamiltonian(self.t + self.dt)
         k1 = ham1 @ state
@@ -62,7 +74,7 @@ class RungeKutta45(BaseSolver):
 
     def __call__(self, state):
         state = state[:, K.newaxis]
-        ham1 = self.hamiltonian(self.t)
+        ham1 = self.current_hamiltonian
         ham2 = self.hamiltonian(self.t + self.dt / 4.0)
         ham3 = self.hamiltonian(self.t + 3 * self.dt / 8.0)
         ham4 = self.hamiltonian(self.t + 12 * self.dt / 13.0)
