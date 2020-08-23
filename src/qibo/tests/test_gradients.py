@@ -7,9 +7,9 @@ from qibo.tensorflow import custom_operators
 @pytest.mark.skip("tf.tensor_scatter_nd_update bug on GPU (tensorflow#42581)")
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("compile", [False, True])
-def test_initial_state_gradient(dtype, compile):
+def test_initial_state_gradient(dtype, compile): # pragma: no cover
     """Check that initial_state works."""
-
+    # Test skipped due to ``tf.tensor_scatter_nd_update`` bug on GPU
     def grad_default(var):
         update = tf.constant([1], dtype=dtype)
         with tf.GradientTape() as tape:
