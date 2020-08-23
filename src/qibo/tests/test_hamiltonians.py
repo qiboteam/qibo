@@ -329,6 +329,9 @@ def test_trotter_hamiltonian_initialization_errors():
     # Wrong type of terms
     with pytest.raises(TypeError):
         ham = TrotterHamiltonian({(0, 1): "abc"})
+    # Wrong type of parts
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian([(0, 1)])
     # Wrong number of target qubits
     with pytest.raises(ValueError):
         ham = TrotterHamiltonian({(0, 1): TFIM(nqubits=3, numpy=True)})
