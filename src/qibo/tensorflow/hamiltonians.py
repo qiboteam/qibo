@@ -70,10 +70,7 @@ class NumpyHamiltonian(TensorflowHamiltonian):
 class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
     """TensorFlow implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
 
-    def expectation(self, state, normalize=False):
-        return TensorflowHamiltonian.expectation(self, state, normalize)
-
-    def dense_hamiltonian(self):
+    def _calculate_dense_matrix(self):
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -88,9 +85,10 @@ class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
             ec = "".join((c for c in chars if c not in tc))
             matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+        return matrix.reshape(2 * (2 ** self.nqubits,))
 
-        matrix = matrix.reshape(2 * (2 ** self.nqubits,))
-        return self.dense_class(self.nqubits, matrix)
+    def expectation(self, state, normalize=False):
+        return TensorflowHamiltonian.expectation(self, state, normalize)
 
     def __matmul__(self, state):
         if isinstance(state, tf.Tensor):

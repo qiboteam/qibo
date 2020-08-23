@@ -249,7 +249,7 @@ def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
     local_adev.set_hamiltonian(final_time=1)
     for t in np.random.random(10):
         local_matrix = local_adev.solver.hamiltonian(t)
-        local_matrix = local_matrix.dense_hamiltonian().matrix
+        local_matrix = local_matrix.dense.matrix
         target_matrix = dense_adev.solver.hamiltonian(t).matrix
         np.testing.assert_allclose(local_matrix, target_matrix)
 

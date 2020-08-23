@@ -1,6 +1,6 @@
 import itertools
 from qibo import gates
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 
 
 class Hamiltonian(object):
@@ -233,7 +233,6 @@ class TrotterHamiltonian(Hamiltonian):
                                        "dictionary but is {}."
                                        "".format(type(part)))
             for targets, term in part.items():
-                self.dense_class = term.__class__
                 if not issubclass(type(term), Hamiltonian):
                     raise_error(TypeError, "Invalid term type {}."
                                            "".format(type(term)))
@@ -266,6 +265,12 @@ class TrotterHamiltonian(Hamiltonian):
         # List of gates that implement each Hamiltonian term. Useful for
         # calculating expectation
         self._terms = None
+        # Define dense Hamiltonian attributes
+        self._matrix = None
+        self._dense = None
+        self._eigenvalues = None
+        self._eigenvectors = None
+        self._exp = {"a": None, "result": None}
 
     @classmethod
     def from_twoqubit_term(cls, nqubits, term, ground_state=None):
@@ -297,28 +302,43 @@ class TrotterHamiltonian(Hamiltonian):
                      for i in range(nqubits // 2)}
         return cls(even_terms, odd_terms, ground_state=ground_state)
 
-    def _calculate_exp(self, a): # pragma: no cover
+    def _calculate_dense_matrix(self, a): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
+    @property
+    def dense(self):
+        """Creates an equivalent Hamiltonian model that holds the full matrix.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
+            equivalent to this local Hamiltonian.
+        """
+        if self._dense is None:
+            from qibo import hamiltonians
+            matrix = self._calculate_dense_matrix()
+            print("abc")
+            self.dense = hamiltonians.Hamiltonian(self.nqubits, matrix)
+        return self._dense
+
+    @dense.setter
+    def dense(self, hamiltonian):
+        self._dense = hamiltonian
+        self._eigenvalues = hamiltonian._eigenvalues
+        self._eigenvectors = hamiltonian._eigenvectors
+        self._exp = hamiltonian._exp
+
+    @property
+    def matrix(self):
+        return self.dense.matrix
+
     def eigenvalues(self):
         """Computes the eigenvalues for the Hamiltonian."""
-        if self._eigenvalues is None:
-            self._eigenvalues = self.K.linalg.eigvalsh(self.matrix)
-        return self._eigenvalues
+        return self.dense.eigenvalues()
 
     def eigenvectors(self):
         """Computes a tensor with the eigenvectors for the Hamiltonian."""
-        if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = self.K.linalg.eigh(self.matrix)
-        return self._eigenvectors
-
-    def ground_state(self):
-        """Computes the ground state of the Hamiltonian.
-
-        Uses the ``eigenvectors`` method and returns the first eigenvector.
-        """
-        return self.eigenvectors()[:, 0]
+        return self.dense.eigenvectors()
 
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
@@ -327,10 +347,19 @@ class TrotterHamiltonian(Hamiltonian):
         particular Hamiltonian upon initializing.
         """
         if self.ground_state_func is None:
-            raise_error(NotImplementedError, "The ground state of this "
-                                             "``TrotterHamiltonian`` is not "
-                                             "implemented.")
+            log.info("Ground state function not available for ``TrotterHamiltonian``."
+                     "Using dense Hamiltonian eigenvectors.")
+            return self.eigenvectors()[:, 0]
         return self.ground_state_func()
+
+    def exp(self, a):
+        """Computes a tensor corresponding to exp(-1j * a * H).
+
+        Args:
+            a (complex): Complex number to multiply Hamiltonian before
+                exponentiation.
+        """
+        return self.dense.exp(a)
 
     def expectation(self, state, normalize=False): # pragma: no cover
         """Computes the real expectation value for a given state.
@@ -342,16 +371,6 @@ class TrotterHamiltonian(Hamiltonian):
 
         Returns:
             Real number corresponding to the expectation value.
-        """
-        # abstract method
-        raise_error(NotImplementedError)
-
-    def dense_hamiltonian(self): # pragma: no cover
-        """Creates an equivalent Hamiltonian model that holds the full matrix.
-
-        Returns:
-            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
-            equivalent to this local Hamiltonian.
         """
         # abstract method
         raise_error(NotImplementedError)
@@ -415,6 +434,8 @@ class TrotterHamiltonian(Hamiltonian):
                       for targets, term in part.items()}
                      for part in self.parts)
         new = self.__class__(*new_parts)
+        if self._dense is not None:
+            new.dense = getattr(self.dense, op)(o)
         if self._circuit is not None:
             new._circuit = self._circuit
             new._circuit.dt = None
