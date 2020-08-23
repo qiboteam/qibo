@@ -248,6 +248,41 @@ class Energy(Callback):
 
 
 class Gap(Callback):
+    """Callback for calculating the gap of adiabatic evolution Hamiltonians.
+
+    Can also be used to calculate the Hamiltonian eigenvalues at each time step
+    during the evolution.
+    Note that this callback can only be added in
+    :class:`qibo.evolution.AdiabaticEvolution` models.
+
+    Args:
+        mode (str/int): Defines which quantity this callback calculates.
+            If ``mode == 'gap'`` then the difference between ground state and
+            first excited state energy (gap) is calculated.
+            If ``mode`` is an integer, then the energy of the corresponding
+            eigenstate is calculated.
+
+    Example:
+        ::
+
+            from qibo import models, callbacks
+            # define easy and hard Hamiltonians for adiabatic evolution
+            h0 = hamiltonians.X(3)
+            h1 = hamiltonians.TFIM(3, h=1.0)
+            # define callbacks for logging the ground state, first excited
+            # and gap energy
+            ground = callbacks.Gap(0)
+            excited = callbacks.Gap(1)
+            gap = callbacks.Gap()
+            # define and execute the ``AdiabaticEvolution`` model
+            evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
+                                           callbacks=[gap, ground, excited])
+            final_state = evolution(final_time=1.0)
+            # print results
+            print(ground[:])
+            print(excited[:])
+            print(gap[:])
+    """
 
     def __init__(self, mode: Union[str, int] = "gap"):
         super(Gap, self).__init__()
@@ -263,10 +298,12 @@ class Gap(Callback):
 
     @property
     def evolution(self):
+        """:class:`qibo.evolution.AdiabaticEvolution` model used by the callback."""
         return self._evolution
 
     @evolution.setter
     def evolution(self, ev: "models.AdiabaticEvolution"):
+        """Sets the :class:`qibo.evolution.AdiabaticEvolution` model."""
         from qibo.models import AdiabaticEvolution
         if not isinstance(ev, AdiabaticEvolution):
             t = type(ev)
@@ -275,6 +312,9 @@ class Gap(Callback):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
+        if self.evolution is None:
+            raise_error(ValueError, "Gap callback can only be used in "
+                                    "adiabatic evolution models.")
         if is_density_matrix:
             raise_error(NotImplementedError, "Adiabatic evolution gap callback "
                                              "is not implemented for density "

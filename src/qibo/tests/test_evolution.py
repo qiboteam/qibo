@@ -62,21 +62,29 @@ def test_state_evolution_final_state():
     assert_states_equal(final_psi, target_psi)
 
 
-@pytest.mark.parametrize("t", [0, 0.3, 0.7, 1.0])
-def test_hamiltonian_t(t):
+def test_hamiltonian_t():
     """Test adiabatic evolution hamiltonian as a function of time."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
+    # try accessing hamiltonian before setting it
+    with pytest.raises(RuntimeError):
+        adev.hamiltonian()
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
     m2 = np.diag([2, -2, -2, 2])
-    ham = lambda t: - (1 - t) * m1 - t * m2
+    ham = lambda t, T: - (1 - t / T) * m1 - (t / T) * m2
 
     adev.set_hamiltonian(total_time=1)
-    matrix = adev.hamiltonian(t).matrix
-    np.testing.assert_allclose(matrix, ham(t))
+    for t in [0, 0.3, 0.7, 1.0]:
+        matrix = adev.hamiltonian(t).matrix
+        np.testing.assert_allclose(matrix, ham(t, 1))
+    #try using a different total time
+    adev.set_hamiltonian(total_time=2)
+    for t in [0, 0.3, 0.7, 1.0]:
+        matrix = adev.hamiltonian(t).matrix
+        np.testing.assert_allclose(matrix, ham(t, 2))
 
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])

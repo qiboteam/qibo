@@ -340,6 +340,9 @@ def test_gap():
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])
+    # check not implemented for density matrices
+    with pytest.raises(NotImplementedError):
+        gap(np.zeros(8), is_density_matrix=True)
 
 
 def test_gap_errors():
@@ -354,3 +357,7 @@ def test_gap_errors():
     with pytest.raises(TypeError):
         gap = callbacks.Gap()
         gap.evolution = "test"
+    # call before setting evolution model
+    with pytest.raises(ValueError):
+        gap = callbacks.Gap()
+        gap(np.ones(4))
