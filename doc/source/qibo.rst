@@ -187,9 +187,6 @@ The abstract Hamiltonian object of Qibo is:
     :members:
     :member-order: bysource
 
-If ``matrix`` is given as ``np.array`` then numpy is used for all the above
-calculations, while if ``matrix`` is given as a ``tf.Tensor`` then TensorFlow
-is used.
 
 In addition to the abstract model, we provide the following pre-coded
 Hamiltonians:
