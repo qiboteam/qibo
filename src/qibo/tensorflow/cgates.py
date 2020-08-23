@@ -38,10 +38,11 @@ class TensorflowGate(base_gates.Gate):
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method for "
                                     "input matrix of shape {}.".format(shape))
-        matrix = tf.eye(4, dtype=DTYPES.get('DTYPECPX'))
-        ids = [[2, 2], [2, 3], [3, 2], [3, 3]]
-        values = tf.reshape(unitary, (4,))
-        return tf.tensor_scatter_nd_update(matrix, ids, values)
+        dtype = DTYPES.get('DTYPECPX')
+        zeros = tf.zeros((2, 2), dtype=dtype)
+        part1 = tf.concat([tf.eye(2, dtype=dtype), zeros], axis=0)
+        part2 = tf.concat([zeros, unitary], axis=0)
+        return tf.concat([part1, part2], axis=1)
 
     def _calculate_qubits_tensor(self) -> tf.Tensor:
         """Calculates ``qubits`` tensor required for applying gates using custom operators."""
