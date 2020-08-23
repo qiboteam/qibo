@@ -183,7 +183,7 @@ class Hamiltonian(object):
                                              "implemented.".format(type(o)))
 
 
-class TrotterHamiltonian(object):
+class TrotterHamiltonian(Hamiltonian):
     """Hamiltonian operator used for Trotterized time evolution.
 
     The Hamiltonian represented by this class has the form of Eq. (57) in
@@ -223,33 +223,39 @@ class TrotterHamiltonian(object):
 
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
-        self.parts = parts
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
         targets_set = set()
-        for targets, term in self:
-            self.dense_class = term.__class__
-            if not issubclass(type(term), Hamiltonian):
-                raise_error(TypeError, "Invalid term type {}.".format(type(term)))
-            if len(targets) != term.nqubits:
-                raise_error(ValueError, "Term targets {} but supports {} qubits."
-                                        "".format(targets, term.nqubits))
+        for part in parts:
+            if not isinstance(part, dict):
+                raise_error(TypeError, "``TrotterHamiltonian`` part should be "
+                                       "dictionary but is {}."
+                                       "".format(type(part)))
+            for targets, term in part.items():
+                self.dense_class = term.__class__
+                if not issubclass(type(term), Hamiltonian):
+                    raise_error(TypeError, "Invalid term type {}."
+                                           "".format(type(term)))
+                if len(targets) != term.nqubits:
+                    raise_error(ValueError, "Term targets {} but supports {} "
+                                            "qubits."
+                                            "".format(targets, term.nqubits))
 
-            if targets in targets_set:
-                raise_error(ValueError, "Targets {} are given in more than "
-                                        "one term.".format(targets))
-            targets_set.add(targets)
-            if term not in self.expgate_sets:
-                self.expgate_sets[term] = set()
+                if targets in targets_set:
+                    raise_error(ValueError, "Targets {} are given in more than "
+                                            "one term.".format(targets))
+                targets_set.add(targets)
+                if term not in self.expgate_sets:
+                    self.expgate_sets[term] = set()
 
-            if self.dtype is None:
-                self.dtype = term.matrix.dtype
-            elif term.matrix.dtype != self.dtype:
-                raise_error(TypeError, "Terms of different types {} and {} "
-                                        "were given.".format(
-                                            term.matrix.dtype, self.dtype))
-
+                if self.dtype is None:
+                    self.dtype = term.matrix.dtype
+                elif term.matrix.dtype != self.dtype:
+                    raise_error(TypeError, "Terms of different types {} and {} "
+                                            "were given.".format(
+                                                term.matrix.dtype, self.dtype))
+        self.parts = parts
         self.nqubits = len({t for targets in targets_set for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
         # Function that creates the ground state of this Hamiltonian
@@ -290,6 +296,29 @@ class TrotterHamiltonian(object):
         odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
                      for i in range(nqubits // 2)}
         return cls(even_terms, odd_terms, ground_state=ground_state)
+
+    def _calculate_exp(self, a): # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
+
+    def eigenvalues(self):
+        """Computes the eigenvalues for the Hamiltonian."""
+        if self._eigenvalues is None:
+            self._eigenvalues = self.K.linalg.eigvalsh(self.matrix)
+        return self._eigenvalues
+
+    def eigenvectors(self):
+        """Computes a tensor with the eigenvectors for the Hamiltonian."""
+        if self._eigenvectors is None:
+            self._eigenvalues, self._eigenvectors = self.K.linalg.eigh(self.matrix)
+        return self._eigenvectors
+
+    def ground_state(self):
+        """Computes the ground state of the Hamiltonian.
+
+        Uses the ``eigenvectors`` method and returns the first eigenvector.
+        """
+        return self.eigenvectors()[:, 0]
 
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
