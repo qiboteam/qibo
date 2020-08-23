@@ -337,7 +337,7 @@ def test_trotter_hamiltonian_initialization_errors():
     with pytest.raises(ValueError):
         ham = TrotterHamiltonian({(0, 1): h}, {(0, 1): h})
     # Different term matrix types
-    h2 = Hamiltonian(2, np.eye(4, dtype=np.float32))
+    h2 = Hamiltonian(2, np.eye(4, dtype=np.float32), numpy=True)
     with pytest.raises(TypeError):
         ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
     # ``from_twoqubit_term`` initialization with nqubits < 0

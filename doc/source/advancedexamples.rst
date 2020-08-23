@@ -659,8 +659,8 @@ a :class:`qibo.base.hamiltonians.Hamiltonian` in the
 The above script will still use the exact time evolution operator with the
 exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. The solvers that are
-currently implemented are the default exponential solver (``"exp"``)
-and a fourth-order Runge-Kutta solver (``"rk4"``).
+currently implemented are the default exponential solver (``"exp"``) and two
+Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
 
 
 Using Trotter decomposition
