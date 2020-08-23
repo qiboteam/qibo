@@ -64,6 +64,7 @@ def XXZ(nqubits, delta=0.5, numpy=False):
         delta (float): coefficient for the Z component (default 0.5).
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
 
     Example:
         ::
@@ -96,6 +97,7 @@ def X(nqubits, numpy=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     return _OneBodyPauli(nqubits, matrices.X, numpy)
 
@@ -110,6 +112,7 @@ def Y(nqubits, numpy=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     return _OneBodyPauli(nqubits, matrices.Y, numpy)
 
@@ -124,6 +127,7 @@ def Z(nqubits, numpy=False):
         nqubits (int): number of quantum bits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     return _OneBodyPauli(nqubits, matrices.Z, numpy)
 
@@ -139,6 +143,7 @@ def TFIM(nqubits, h=0.0, numpy=False):
         h (float): value of the transverse field.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
     """
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)
