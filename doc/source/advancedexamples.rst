@@ -694,7 +694,26 @@ Here is an example of adiabatic evolution simulation:
 If the initial state is not specified the ground state of the easy Hamiltonian
 will be used, as it is common for adiabatic evolution. For proper scheduling
 and total evolution time the ``final_state`` should approximate the ground state
-of the "hard" Hamiltonian. Callbacks may also be used as in the previous example.
+of the "hard" Hamiltonian.
+
+Callbacks may also be used as in the previous example. An additional callback
+(:class:`qibo.tensorflow.callbacks.Gap`) is available for calculating the
+energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
+similar to other callbacks:
+
+.. code-block::  python
+
+    # define a callback for calculating the ground state energy
+    ground = callbacks.Gap(mode=0)
+    # define a callback for calculating the gap
+    gap = callbacks.Gap()
+    # define and execute the ``AdiabaticEvolution`` model
+    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
+                                   callbacks=[gap, ground])
+    final_state = evolution(final_time=1.0)
+    # print the values of the gap at each evolution time step
+    print(gap[:])
+
 
 The scheduling function ``s`` should be a callable that accepts one (s(t)) or
 two (s(t, p)) arguments. The first argument accepts values in [0, 1] and
