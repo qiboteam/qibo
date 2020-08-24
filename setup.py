@@ -54,11 +54,15 @@ class InstallPlatlib(install):
 requirements = open('requirements.txt').readlines()
 requirements = [r.strip() for r in requirements]
 
+# load long description from README
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="qibo",
     version=get_version(),
-    description="Quantum computing framework",
+    description="A framework for quantum computing with hardware acceleration.",
     author="Quantum-TII team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
@@ -79,5 +83,5 @@ setup(
         "tests": ["cirq"],
     },
     python_requires=">=3.6.0",
-    long_description="See readthedocs webpage with the documentation",
+    long_description=long_description,
 )
