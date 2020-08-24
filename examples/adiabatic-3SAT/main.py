@@ -38,7 +38,7 @@ def main(file_name, T, dt, solver):
     print('Most common solution after adiabatic evolution: {}.\n'.format(max_output))
     print('Found with probability: {}.\n'.format(max_prob))
     print('-'*20+'\n')
-    functions.plot(ground, first, gap, dt, T)
+    functions.plot(ground[:], excited[:], gap[:], dt, T)
     print('Plots finished.\n')
 
 

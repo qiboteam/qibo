@@ -164,7 +164,7 @@ def plot(ground, first, gap, dt, T):
         gap_energy.png: gap evolution during the adiabatic process.
     """
     fig, ax = plt.subplots()
-    times = np.arange(0, T, dt)
+    times = np.arange(0, T+dt, dt)
     ax.plot(times, ground, label='ground state', color='C0')
     ax.plot(times, first, label='first excited state', color='C1')
     plt.ylabel('energy')
@@ -174,7 +174,6 @@ def plot(ground, first, gap, dt, T):
     fig.tight_layout()
     fig.savefig('energy.png', dpi=300, bbox_inches='tight')
     fig, ax = plt.subplots()
-    times = np.arange(0, T, dt)
     ax.plot(times, gap, label='gap energy', color='C0')
     plt.ylabel('energy')
     plt.xlabel('schedule')
