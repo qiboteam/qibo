@@ -316,11 +316,12 @@ def test_energy():
     np.testing.assert_allclose(energy(state, True), target_energy)
 
 
-def test_gap():
+@pytest.mark.parametrize("trotter", [False, True])
+def test_gap(trotter):
     """Check gap callback for adiabatic evolution model."""
     from qibo import hamiltonians
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3, h=1.0)
+    h0 = hamiltonians.X(3, trotter=trotter)
+    h1 = hamiltonians.TFIM(3, h=1.0, trotter=trotter)
 
     ham = lambda t: ((1 - t) * h0.matrix + t * h1.matrix).numpy()
     targets = {"ground": [], "excited": [], "gap": []}
