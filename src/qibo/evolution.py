@@ -272,7 +272,7 @@ class AdiabaticEvolution(StateEvolution):
             if self.accelerators is None:
                 return self.h0.ground_state()
             else:
-                c = self.solver.hamiltonian(0).circuit(self.solver.dt)
+                c = self.hamiltonian(0).circuit(self.solver.dt)
                 return c.get_initial_state("ones")
         return super(AdiabaticEvolution, self).get_initial_state(state)
 

@@ -765,10 +765,15 @@ Here is an example of adiabatic evolution simulation:
     final_state = evolve(final_time=T)
 
 
-If the initial state is not specified the ground state of the easy Hamiltonian
-will be used, as it is common for adiabatic evolution. For proper scheduling
-and total evolution time the ``final_state`` should approximate the ground state
-of the "hard" Hamiltonian.
+According to the adiabatic theorem, for proper scheduling and total evolution
+time the ``final_state`` should approximate the ground state of the "hard"
+Hamiltonian.
+
+If the initial state is not specified, the ground state of the easy Hamiltonian
+will be used, which is common for adiabatic evolution. A distributed execution
+can be used by passing an ``accelerators`` dictionary during the initialization
+of the ``AdiabaticEvolution`` model. In this case the default initial state is
+|++...+> (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
 (:class:`qibo.tensorflow.callbacks.Gap`) is available for calculating the
