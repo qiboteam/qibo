@@ -1,0 +1,46 @@
+# A single CI script with github workflow
+name: Build wheels
+
+on:
+  push:
+    branches:
+      - master
+  release:
+    types:
+      - created
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        python-version: [3.6, 3.7, 3.8]
+    runs-on: ${{ matrix.os }}
+    steps:
+    - uses: actions/checkout@v1
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Patch requirements
+      run: |
+        TFSTRING=`grep "tensorflow" requirements.txt`
+        TFVERSION=`echo $TFSTRING | cut -f2 -d "<" | cut -f2 -d "="`
+        # ugly sed because macos does not accept -i
+        sed "s/$TFSTRING/tensorflow==$TFVERSION/" requirements.txt > new_requirements.txt
+        mv new_requirements.txt requirements.txt
+    - name: Build linux wheels
+      if: startsWith(matrix.os, 'ubuntu')
+      run: docker run --rm -e PYTHON_VERSION -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/.github/scripts/build-linux.sh
+      env:
+        PYTHON_VERSION: ${{ matrix.python-version }}
+    - name: Build macos wheels
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        pip install -r requirements.txt
+        python setup.py bdist_wheel
+    - name: Store wheels as artifacts
+      uses: actions/upload-artifact@v1
+      with:
+        name: wheels
+        path: dist

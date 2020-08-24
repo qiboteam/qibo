@@ -1088,10 +1088,12 @@ def test_compiling_twice_exception():
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_custom_compilation(backend):
+    import tensorflow as tf
+    from qibo.config import DTYPES
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    init_state = np.ones(4) / 2.0
+    init_state = tf.cast(np.ones(4) / 2.0, dtype=DTYPES.get('DTYPECPX'))
 
     def run_circuit(initial_state):
         c = Circuit(2)
@@ -1101,7 +1103,6 @@ def test_circuit_custom_compilation(backend):
         return c.execute(initial_state)
 
     r1 = run_circuit(init_state).numpy()
-    import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
     if backend == "custom":
         with pytest.raises(NotImplementedError):
@@ -1126,6 +1127,10 @@ def test_bad_initial_state(backend, accelerators):
         final_state = c(initial_state=np.zeros((2, 2)))
     with pytest.raises(ValueError):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=0)
+    c = Circuit(2, accelerators)
+    c.check_initial_state_shape = False
     with pytest.raises(TypeError):
         final_state = c(initial_state=0)
     qibo.set_backend(original_backend)

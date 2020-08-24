@@ -33,8 +33,10 @@ def random_numpy_complex(shape, dtype=np.complex128):
   return (np.random.random(shape) + 1j * np.random.random(shape)).astype(dtype)
 
 
-def random_tensorflow_complex(shape, dtype):
+def random_tensorflow_complex(shape, dtype="float64"):
     import tensorflow as tf
+    if isinstance(dtype, str):
+        dtype = getattr(tf, dtype)
     _re = tf.random.uniform(shape, dtype=dtype)
     _im = tf.random.uniform(shape, dtype=dtype)
     return tf.complex(_re, _im)
