@@ -105,16 +105,23 @@ def test_hamiltonian_t():
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
+    # try accessing hamiltonian before setting it
+    with pytest.raises(RuntimeError):
+        adev.hamiltonian()
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
     m2 = np.diag([2, -2, -2, 2])
-    ham = lambda t: - (1 - t) * m1 - t * m2
+    ham = lambda t, T: - (1 - t / T) * m1 - (t / T) * m2
 
-    adev.set_hamiltonian(final_time=1)
-    for t in np.random.random(10):
-        matrix = adev.solver.hamiltonian(t).matrix
-        np.testing.assert_allclose(matrix, ham(t))
+    adev.set_hamiltonian(total_time=1)
+    for t in [0, 0.3, 0.7, 1.0]:
+        matrix = adev.hamiltonian(t).matrix
+        np.testing.assert_allclose(matrix, ham(t, 1))
+    #try using a different total time
+    for t in [0, 0.3, 0.7, 1.0]:
+        matrix = adev.hamiltonian(t, total_time=2).matrix
+        np.testing.assert_allclose(matrix, ham(t, 2))
 
 
 @pytest.mark.parametrize("dt", [1e-1, 1e-2])
@@ -235,7 +242,7 @@ def test_rk4_evolution(solver, dt=1e-3):
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
+def test_trotter_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
     """Test using ``TrotterHamiltonian`` in adiabatic evolution model."""
     dense_h0 = hamiltonians.X(nqubits)
     dense_h1 = hamiltonians.TFIM(nqubits, h=h)
@@ -245,16 +252,12 @@ def test_local_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
     local_h1 = hamiltonians.TFIM(nqubits, h=h, trotter=True)
     local_adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt)
 
-    dense_adev.set_hamiltonian(final_time=1)
-    local_adev.set_hamiltonian(final_time=1)
     for t in np.random.random(10):
-        local_matrix = local_adev.solver.hamiltonian(t)
-        local_matrix = local_matrix.dense.matrix
-        target_matrix = dense_adev.solver.hamiltonian(t).matrix
+        local_matrix = local_adev.hamiltonian(t, total_time=1).dense.matrix
+        target_matrix = dense_adev.hamiltonian(t, total_time=1).matrix
         np.testing.assert_allclose(local_matrix, target_matrix)
 
 
-#@pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("nqubits,accelerators,dt",
                          [(3, None, 1e-3),
                           (4, None, 1e-3),

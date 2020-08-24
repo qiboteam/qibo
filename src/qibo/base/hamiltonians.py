@@ -57,7 +57,8 @@ class Hamiltonian(object):
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
 
-        Uses the ``eigenvectors`` method and returns the first eigenvector.
+        Uses the ``eigenvectors`` method and returns the lowest energy
+        eigenvector.
         """
         return self.eigenvectors()[:, 0]
 
@@ -346,8 +347,11 @@ class TrotterHamiltonian(Hamiltonian):
     def ground_state(self):
         """Computes the ground state of the Hamiltonian.
 
-        If method is needed it should be implemented efficiently for the
-        particular Hamiltonian upon initializing.
+        If this method is needed it should be implemented efficiently for the
+        particular Hamiltonian by passing the ``ground_state`` argument during
+        initialization. If this argument is not passed then this method will
+        diagonalize the full (dense) Hamiltonian matrix which is computationally
+        and memory intensive.
         """
         if self.ground_state_func is None:
             log.info("Ground state function not available for ``TrotterHamiltonian``."
