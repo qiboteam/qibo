@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
-from qibo import hamiltonians, models
+from qibo import hamiltonians, models, callbacks
 import functions
 import argparse
 
@@ -23,7 +23,10 @@ def main(file_name, T, dt, solver):
     H1 = hamiltonians.Hamiltonian(nqubits, functions.h_p(nqubits, clauses))
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     s = lambda t: t
-    evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver)
+    ground = callbacks.Gap(0)
+    excited = callbacks.Gap(1)
+    gap = callbacks.Gap()
+    evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver, callbacks=[gap, ground, excited])
     final_state = evolve(final_time=T, initial_state=initial_state)
     max_output = "{0:0{bits}b}".format((np.abs(final_state.numpy())**2).argmax(), bits = nqubits)
     max_prob = (np.abs(final_state.numpy())**2).max()
@@ -35,7 +38,6 @@ def main(file_name, T, dt, solver):
     print('Most common solution after adiabatic evolution: {}.\n'.format(max_output))
     print('Found with probability: {}.\n'.format(max_prob))
     print('-'*20+'\n')
-    ground, first, gap = functions.extract_gap(evolve, T, dt)
     functions.plot(ground, first, gap, dt, T)
     print('Plots finished.\n')
 
