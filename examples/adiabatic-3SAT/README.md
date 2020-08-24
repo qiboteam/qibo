@@ -4,13 +4,13 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiab
 
 ## Introduction
 
-Adiabatic quantum computation aims to reach the ground state of a problem Hamiltonian encoding the solution of a hard problem, by adiabatically evolving a system from the ground state a known, easy to prepare, Hamiltonian to the problem Hamiltonian.
+Adiabatic quantum computation aims to reach the ground state of a problem Hamiltonian encoding the solution of a hard problem, by adiabatically evolving a system from the ground state of a known, easy to prepare, Hamiltonian to the problem Hamiltonian.
 
 An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 bits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfills all the clauses at the same time.
 
 ## Adiabatic evolution
 
-Adiabatic compution deals with finding the ground state of a Hamiltonian that encodes de solution of a computational problem. This has to be mapped to the time dependent Hamiltonian in the form
+Adiabatic compution deals with finding the ground state of a Hamiltonian that encodes the solution of a computational problem. This has to be mapped to the time dependent Hamiltonian in the form
 
 ![hamiltonian](images/H.png)
 
