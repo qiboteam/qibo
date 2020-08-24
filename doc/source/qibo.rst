@@ -181,19 +181,36 @@ _______________________
 Hamiltonians
 ------------
 
-The abstract Hamiltonian object of Qibo is:
+The main abstract Hamiltonian object of Qibo is:
 
 .. autoclass:: qibo.base.hamiltonians.Hamiltonian
     :members:
     :member-order: bysource
 
 
-In addition to the abstract model, we provide the following pre-coded
+Qibo provides an additional object that represents Hamiltonians without using
+their full matrix representation and can be used for time evolution using the
+Trotter decomposition. The Hamiltonians represented by this object are sums of
+commuting terms, following the description of Sec. 4.1 of
+`arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+
+.. autoclass:: qibo.base.hamiltonians.TrotterHamiltonian
+    :members:
+    :member-order: bysource
+
+
+In addition to these abstract models, Qibo provides the following pre-coded
 Hamiltonians:
 
 .. automodule:: qibo.hamiltonians
    :members:
    :member-order: bysource
+
+
+Note that all pre-coded Hamiltonians can be created as either
+:class:`qibo.base.hamiltonians.Hamiltonian` or
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+
 
 _______________________
 

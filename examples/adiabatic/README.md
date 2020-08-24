@@ -47,7 +47,6 @@ energy and overlap. This is shown in the following plot
 
 We see that the best overlap for this example is obtained for T=4.
 
-
 ## Optimizing scheduling
 
 An example of scheduling function optimization can be run using the `optimize.py`
@@ -79,3 +78,21 @@ and total time T.
 Note that the optimized 3rd order polynomial s(t) is capable of reaching a
 good approximation of the ground state energy after total time T=2 which is
 less than the T=4 required for the linear s(t) analyzed in the previous section.
+
+## Error of Trotter decomposition
+
+The `trotter_error.py` script can be used to analyze the errors of time
+evolution that uses the Trotter decomposition. The overlap between the final
+state obtained using Trotter operators and the exact final state is used to
+quantify this error. The script uses the transverse field Ising model as the
+evolution Hamiltonian and supports the following options:
+
+- `nqubits` (int): Number of qubits in the system.
+- `hfield` (float): Transverse field Ising model h-field h value.
+- `T` (float): Total time of the adiabatic evolution.
+- `save` (bool): Whether to save the plots.
+
+In the following plot we see that for N=6 qubits, the error as quantified by
+1 - overlap scales as dt^4.
+
+![trottererror](images/trotter_error_n6T1.png)

@@ -1,6 +1,7 @@
+import itertools
 import numpy as np
 import tensorflow as tf
-from qibo.config import raise_error
+from qibo.config import raise_error, EINSUM_CHARS
 from qibo.base import hamiltonians
 
 
@@ -11,9 +12,7 @@ ARRAY_TYPES = (tf.Tensor, np.ndarray)
 
 
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):
-    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
-    TensorFlow.
-    """
+    """TensorFlow implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
     NUMERIC_TYPES = NUMERIC_TYPES
     ARRAY_TYPES = ARRAY_TYPES
     K = tf
@@ -41,16 +40,13 @@ class TensorflowHamiltonian(hamiltonians.Hamiltonian):
         return super(TensorflowHamiltonian, self)._real(o)
 
     def __mul__(self, o):
-        """Multiplication to scalar operator."""
         if isinstance(o, tf.Tensor):
             o = tf.cast(o, dtype=self.matrix.dtype)
         return super(TensorflowHamiltonian, self).__mul__(o)
 
 
 class NumpyHamiltonian(TensorflowHamiltonian):
-    """Implementation of :class:`qibo.base.hamiltonians.Hamiltonian` using
-    numpy.
-    """
+    """Numpy implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
     import scipy
     K = np
 
@@ -69,3 +65,46 @@ class NumpyHamiltonian(TensorflowHamiltonian):
         if normalize:
             return ev / (np.abs(state) ** 2).sum()
         return ev
+
+
+class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
+    """TensorFlow implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+
+    def _calculate_dense_matrix(self):
+        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it only happens in large examples
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
+        chars = EINSUM_CHARS[:2 * self.nqubits]
+        for targets, term in self:
+            tmat = term.matrix.reshape(2 * term.nqubits * (2,))
+            n = self.nqubits - len(targets)
+            emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+            gen = lambda x: (chars[i + x] for i in targets)
+            tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
+            ec = "".join((c for c in chars if c not in tc))
+            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+        return matrix.reshape(2 * (2 ** self.nqubits,))
+
+    def expectation(self, state, normalize=False):
+        return TensorflowHamiltonian.expectation(self, state, normalize)
+
+    def __matmul__(self, state):
+        if isinstance(state, tf.Tensor):
+            copy = lambda x: tf.cast(x.numpy(), dtype=x.dtype)
+        elif isinstance(state, np.ndarray):
+            copy = np.copy
+        else:
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                             "implemented.".format(type(state)))
+        rank = len(tuple(state.shape))
+        if rank != 1:
+            raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                    "rank-{} tensor.".format(rank))
+        result = tf.zeros_like(state)
+        for gate in self.terms():
+            # Create copy of state so that the original is not modified
+            statec = copy(state)
+            result += gate(statec)
+        return result

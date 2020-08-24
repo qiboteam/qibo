@@ -8,14 +8,14 @@ class BaseSolver:
 
     Args:
         dt (float): Time step size.
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object
+        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian object
             that the state evolves under.
     """
 
     def __init__(self, dt, hamiltonian):
         self.t = 0
         self.dt = dt
-        if issubclass(type(hamiltonian), hamiltonians.Hamiltonian):
+        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
@@ -23,6 +23,20 @@ class BaseSolver:
     def __call__(self, state): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
+
+
+class TrotterizedExponential(BaseSolver):
+    """Solver that uses Trotterized exponentials.
+
+    Created automatically from the :class:`qibo.solvers.Exponential` if the
+    given Hamiltonian object is a
+    :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+    """
+
+    def __call__(self, state):
+        circuit = self.hamiltonian(self.t).circuit(self.dt)
+        self.t += self.dt
+        return circuit(state)
 
 
 class Exponential(BaseSolver):
@@ -34,6 +48,16 @@ class Exponential(BaseSolver):
     Calculates the evolution operator in every step and thus is compatible with
     time-dependent Hamiltonians.
     """
+
+    def __new__(cls, dt, hamiltonian):
+        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
+            h0 = hamiltonian
+        else:
+            h0 = hamiltonian(0)
+        if isinstance(h0, hamiltonians.TrotterHamiltonian):
+            return TrotterizedExponential(dt, hamiltonian)
+        else:
+            return super(Exponential, cls).__new__(cls)
 
     def __call__(self, state):
         propagator = self.hamiltonian(self.t).exp(self.dt)

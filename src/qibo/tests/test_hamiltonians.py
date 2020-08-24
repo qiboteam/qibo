@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
-from qibo.hamiltonians import Hamiltonian, XXZ, TFIM, X, Y, Z
+from qibo.hamiltonians import Hamiltonian, TrotterHamiltonian
+from qibo.hamiltonians import XXZ, TFIM, X, Y, Z
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
 from qibo.tests import utils
 
@@ -133,20 +134,22 @@ def test_hamiltonian_matmul(numpy):
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_exponentiation(numpy):
+@pytest.mark.parametrize("trotter", [True, False])
+def test_hamiltonian_exponentiation(numpy, trotter):
     from scipy.linalg import expm
-    H = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
     target_matrix = expm(-0.5j * np.array(H.matrix))
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
-    H = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
     _ = H.eigenvectors()
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_expectation(numpy):
-    h = XXZ(nqubits=3, delta=0.5, numpy=numpy)
+@pytest.mark.parametrize("trotter", [True, False])
+def test_hamiltonian_expectation(numpy, trotter):
+    h = XXZ(nqubits=3, delta=0.5, numpy=numpy, trotter=trotter)
     matrix = np.array(h.matrix)
 
     state = utils.random_numpy_complex(8)
@@ -187,9 +190,10 @@ def test_hamiltonian_notimplemented_errors(numpy):
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
 @pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_eigenvalues(dtype, numpy):
+@pytest.mark.parametrize("trotter", [True, False])
+def test_hamiltonian_eigenvalues(dtype, numpy, trotter):
     """Testing hamiltonian eigenvalues scaling."""
-    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
 
     H1_eigen = H1.eigenvalues()
     hH1_eigen = np.linalg.eigvalsh(H1.matrix)
@@ -197,26 +201,27 @@ def test_hamiltonian_eigenvalues(dtype, numpy):
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    H2_eigen = H2._eigenvalues
     hH2_eigen = np.linalg.eigvalsh(c1 * H1.matrix)
     np.testing.assert_allclose(H2._eigenvalues, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    H3_eigen = H3._eigenvalues
     hH3_eigen = np.linalg.eigvalsh(H1.matrix * c2)
     np.testing.assert_allclose(H3._eigenvalues, hH3_eigen)
 
 
 @pytest.mark.parametrize("dtype", NUMERIC_TYPES)
 @pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_eigenvectors(dtype, numpy):
+@pytest.mark.parametrize("trotter", [True, False])
+def test_hamiltonian_eigenvectors(dtype, numpy, trotter):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy)
+    H1 = XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
 
     V1 = np.array(H1.eigenvectors())
     U1 = np.array(H1.eigenvalues())
     np.testing.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
+    # Check ground state
+    np.testing.assert_allclose(H1.ground_state(), V1[:, 0])
 
     c1 = dtype(2.5)
     H2 = c1 * H1
@@ -235,6 +240,139 @@ def test_hamiltonian_eigenvectors(dtype, numpy):
     V4 = np.array(H4._eigenvectors)
     U4 = np.array(H4._eigenvalues)
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("model", [TFIM, XXZ, Y])
+def test_trotter_hamiltonian_to_dense(nqubits, model):
+    """Test that Trotter Hamiltonian dense form agrees with normal Hamiltonian."""
+    local_ham = model(nqubits, trotter=True)
+    target_ham = model(nqubits, numpy=True)
+    final_ham = local_ham.dense
+    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
+
+
+def test_trotter_hamiltonian_scalar_mul(nqubits=3):
+    """Test multiplication of Trotter Hamiltonian with scalar."""
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    target_ham = 2 * TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 * local_ham).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    local_dense = (local_ham * 2).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_trotter_hamiltonian_scalar_add(nqubits=4):
+    """Test addition of Trotter Hamiltonian with scalar."""
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    target_ham = 2 + TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 + local_ham).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    local_dense = (local_ham + 2).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_trotter_hamiltonian_scalar_sub(nqubits=3):
+    """Test subtraction of Trotter Hamiltonian with scalar."""
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    target_ham = 2 - TFIM(nqubits, h=1.0, numpy=True)
+    local_dense = (2 - local_ham).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+    target_ham = TFIM(nqubits, h=1.0, numpy=True) - 2
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    local_dense = (local_ham - 2).dense
+    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+
+
+def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
+    """Test addition and subtraction between Trotter Hamiltonians."""
+    local_ham1 = TFIM(nqubits, h=1.0, trotter=True)
+    local_ham2 = TFIM(nqubits, h=0.5, trotter=True)
+
+    local_ham = local_ham1 + local_ham2
+    target_ham = (TFIM(nqubits, h=1.0, numpy=True) +
+                  TFIM(nqubits, h=0.5, numpy=True))
+    dense = local_ham.dense
+    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+
+    local_ham = local_ham1 - local_ham2
+    target_ham = (TFIM(nqubits, h=1.0, numpy=True) -
+                  TFIM(nqubits, h=0.5, numpy=True))
+    dense = local_ham.dense
+    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+
+
+@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
+def test_trotter_hamiltonian_matmul(nqubits, normalize):
+    """Test Trotter Hamiltonian expectation value."""
+    local_ham = TFIM(nqubits, h=1.0, trotter=True)
+    dense_ham = TFIM(nqubits, h=1.0)
+
+    state = utils.random_tensorflow_complex((2 ** nqubits,))
+    trotter_ev = dense_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(trotter_ev, target_ev)
+
+    state = utils.random_numpy_complex((2 ** nqubits,))
+    trotter_ev = dense_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(trotter_ev, target_ev)
+
+
+def test_trotter_hamiltonian_initialization_errors():
+    """Test errors in initialization of ``TrotterHamiltonian``."""
+    # Wrong type of terms
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian({(0, 1): "abc"})
+    # Wrong type of parts
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian([(0, 1)])
+    # Wrong number of target qubits
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian({(0, 1): TFIM(nqubits=3, numpy=True)})
+    # Same targets multiple times
+    h = TFIM(nqubits=2, numpy=True)
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian({(0, 1): h}, {(0, 1): h})
+    # Different term matrix types
+    h2 = Hamiltonian(2, np.eye(4, dtype=np.float32), numpy=True)
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
+    # ``from_twoqubit_term`` initialization with nqubits < 0
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian.from_twoqubit_term(-2, h)
+    # ``from_twoqubit_term`` initialization with more than 2 targets
+    h = TFIM(nqubits=3, numpy=True)
+    with pytest.raises(ValueError):
+        ham = TrotterHamiltonian.from_twoqubit_term(4, h)
+
+
+def test_trotter_hamiltonian_operation_errors():
+    """Test errors in ``TrotterHamiltonian`` addition and subtraction."""
+    # test addition with different number of parts
+    h1 = TFIM(nqubits=5, trotter=True)
+    term = TFIM(nqubits=2, numpy=True)
+    h2 = TrotterHamiltonian({(0, 1): term, (2, 3): term},
+                            {(1, 2): term, (3, 4): term},
+                            {(4, 0): term})
+    with pytest.raises(ValueError):
+        h = h1 + h2
+    # test subtraction with incompatible parts
+    h2 = TrotterHamiltonian({(0, 1): term, (2, 3): term},
+                            {(1, 2): term, (3, 4): term})
+    with pytest.raises(ValueError):
+        h = h1 - h2
+    # test matmul with bad type
+    with pytest.raises(NotImplementedError):
+        s = h1 @ "abc"
+    # test matmul with bad shape
+    with pytest.raises(ValueError):
+        s = h1 @ np.zeros((2, 2))
 
 
 models_config = [
