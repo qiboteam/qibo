@@ -13,13 +13,13 @@ Some of the key features of Qibo are:
 
 ## Documentation
 
-Qibo documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
+Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
 
-- [Installation](http://34.240.99.72/installation.html)
-- [Documentation](http://34.240.99.72)
-- [Components](http://34.240.99.72/qibo.html)
-- [Examples](http://34.240.99.72/examples.html)
-- [Benchmarks](http://34.240.99.72/benchmarks.html)
+- [Installation](https://qibo.readthedocs.io/en/latest/installation.html)
+- [Documentation](https://qibo.readthedocs.io/)
+- [Components](https://qibo.readthedocs.io/en/latest/qibo.html)
+- [Examples](https://qibo.readthedocs.io/en/latest/examples.html)
+- [Benchmarks](https://qibo.readthedocs.io/en/latest/benchmarks.html)
 
 ## Minimum Working Examples
 
