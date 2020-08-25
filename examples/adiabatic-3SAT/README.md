@@ -1,4 +1,4 @@
-# Adiabatic evolution for solving an Exact Cover problem.
+# Adiabatic evolution for solving an Exact Cover problem
 
 Code at: [https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiabatic-3SAT](https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiabatic-3SAT)
 
