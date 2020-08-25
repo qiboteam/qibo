@@ -45,13 +45,15 @@ The program supports the following arguments:
 - `--T` (float) set the total time of the adiabatic evolution (default=10).
 - `--dt` (float) set the interval of the calculations over the adiabatic evolution (default=1e-2).
 - `--solver` (str) set the type of solver for the evolution (default='exp').
+- `--plot` (bool) output plots of the energy and gap evolution, capped at less than 14 qubits. (default=True)
+- `--trotter` (bool) use Trotter decomposition for the Hamiltonians. (default=True)
 
 The program returns:
 
 - The most common solution found after the evolution.
 - The probability of the most common solution.
-- `energy.png` plots detailing the evolution of the lowest two eigenvalues.
-- `gap_energy.png` plots detailing the evolution of the gap energy.
+- `{}_qubits_energy.png` plots detailing the evolution of the lowest two eigenvalues for {} qubits. **(if enabled)**
+- `{}_qubits_gap.png` plots detailing the evolution of the gap energy for {} qubits. **(if enabled)**
 
 Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
 
