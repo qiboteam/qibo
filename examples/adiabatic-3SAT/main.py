@@ -2,6 +2,7 @@
 import numpy as np
 from qibo import hamiltonians, models, callbacks
 import functions
+from functions import str2bool
 import argparse
 
 
@@ -64,8 +65,8 @@ if __name__ == "__main__":
     parser.add_argument("--T", default=10, type=float)
     parser.add_argument("--dt", default=1e-2, type=float)
     parser.add_argument("--solver", default="exp", type=str)
-    parser.add_argument("--plot", default=True, type=bool)
-    parser.add_argument("--trotter", default=True, type=bool)
+    parser.add_argument("--plot", default=True, type=str2bool)
+    parser.add_argument("--trotter", default=True, type=str2bool)
     args = vars(parser.parse_args())
     args["file_name"] = 'n{}.txt'.format(args.pop('nqubits'))
     main(**args)

@@ -219,3 +219,14 @@ def plot(qubits, ground, first, gap, dt, T):
     fig.tight_layout()
     fig.savefig('{}_qubits_gap.png'.format(qubits), dpi=300, bbox_inches='tight')
     
+
+def str2bool(s):
+    """Get a bool response from a string.
+    Args:
+        s (str): string given as a boolean variable.
+        
+    Returns:
+        True if the input strings resembles a boolean variable.
+    """
+    return s.lower() in ("true", "yes", "1")
+    
