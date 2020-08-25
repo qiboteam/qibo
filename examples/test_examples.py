@@ -188,3 +188,16 @@ def test_variational_classifier(nclasses, nqubits, nlayers,
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
+
+
+@pytest.mark.parametrize("file_name", ["n8.txt"])
+@pytest.mark.parametrize("T", [10])
+@pytest.mark.parametrize("dt", [1e-2])
+@pytest.mark.parametrize("solver", ["exp"])
+@pytest.mark.parametrize("trotter", [True])
+def test_adiabatic3sat(file_name, T, dt, solver, trotter, plot=False):
+    args = locals()
+    path = os.path.join(base_dir, "adiabatic-3SAT")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
