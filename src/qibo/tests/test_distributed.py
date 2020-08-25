@@ -148,7 +148,7 @@ def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
-    state = c._cast_initial_state()
+    state = c.get_initial_state()
 
     final_state = state.numpy()
     target_state = np.zeros_like(final_state)
@@ -164,7 +164,7 @@ def test_user_initialization(nqubits):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(nqubits, devices)
     c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
-    state = c._cast_initial_state(target_state)
+    state = c.get_initial_state(target_state)
     np.testing.assert_allclose(state.numpy(), target_state)
 
     target_state = target_state.reshape(nqubits * (2,))

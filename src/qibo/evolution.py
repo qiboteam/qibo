@@ -4,7 +4,7 @@ from qibo import solvers, optimizers
 from qibo.base import hamiltonians
 from qibo.tensorflow import circuit
 from qibo.config import log, raise_error, K
-from qibo.callbacks import Norm
+from qibo.callbacks import Norm, Gap
 
 
 class StateEvolution:
@@ -17,6 +17,13 @@ class StateEvolution:
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            for more details. This option is available only when the Trotter
+            decomposition is used for the time evolution.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
 
     Example:
         ::
@@ -33,12 +40,30 @@ class StateEvolution:
             final_state2 = evolve(T=2, initial_state)
     """
 
-    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[]):
-        self.nqubits = hamiltonian.nqubits
+    def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
+        if isinstance(hamiltonian, hamiltonians.HAMILTONIAN_TYPES):
+            ham = hamiltonian
+        else:
+            ham = hamiltonian(0)
+            if not isinstance(ham, hamiltonians.HAMILTONIAN_TYPES):
+                raise TypeError("Hamiltonian type {} not understood."
+                                "".format(type(ham)))
+        self.nqubits = ham.nqubits
         if dt <= 0:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
+
+        if (accelerators is not None and
+            (not isinstance(ham, hamiltonians.TrotterHamiltonian)
+             or solver != "exp")):
+            raise_error(NotImplementedError, "Distributed evolution is only "
+                                             "implemented using the Trotter "
+                                             "exponential solver.")
+        if isinstance(ham, hamiltonians.TrotterHamiltonian):
+            ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
+
         self.callbacks = callbacks
         if "rk" in solver:
             norm = Norm()
@@ -46,6 +71,20 @@ class StateEvolution:
             log.info('Normalizing state during RK solution.')
         else:
             self.normalize_state = lambda s: s
+
+        self.accelerators = accelerators
+        def calculate_callbacks(state):
+            for callback in self.callbacks:
+                callback.append(callback(state))
+        if accelerators is None:
+            self._calculate_callbacks = calculate_callbacks
+        else:
+            def calculate_callbacks_distributed(state):
+                with K.device(memory_device):
+                    if not isinstance(state, (np.ndarray, K.Tensor)):
+                        state = state.vector
+                    calculate_callbacks(state)
+            self._calculate_callbacks = calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -56,19 +95,19 @@ class StateEvolution:
             initial_state (np.ndarray): Initial state of the evolution.
 
         Returns:
-            Final state vector a ``tf.Tensor``.
+            Final state vector a ``tf.Tensor`` or a
+            :class:`qibo.tensorflow.distutils.DistributedState` when a
+            distributed execution is used.
         """
-        state = self._cast_initial_state(initial_state)
+        state = self.get_initial_state(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
-        for callback in self.callbacks:
-            callback.append(callback(state))
+        self._calculate_callbacks(state)
         for _ in range(nsteps):
             state = self.solver(state)
             if self.callbacks:
                 state = self.normalize_state(state)
-                for callback in self.callbacks:
-                    callback.append(callback(state))
+                self._calculate_callbacks(state)
         state = self.normalize_state(state)
         return state
 
@@ -76,13 +115,17 @@ class StateEvolution:
         """Equivalent to :meth:`qibo.models.StateEvolution.execute`."""
         return self.execute(final_time, start_time, initial_state)
 
-    def _cast_initial_state(self, initial_state=None):
-        """Casts initial state as a Tensorflow tensor."""
-        if initial_state is None:
-            raise_error(ValueError, "StateEvolution cannot be used without initial "
-                                    "state.")
-        return circuit.TensorflowCircuit._cast_initial_state(
-            self, initial_state)
+    def get_initial_state(self, state=None):
+        """"""
+        if state is None:
+            raise_error(ValueError, "StateEvolution cannot be used without "
+                                    "initial state.")
+        if self.accelerators is None:
+            return circuit.TensorflowCircuit._cast_initial_state(
+                self, state)
+        else:
+            c = self.solver.hamiltonian(0).circuit(self.solver.dt)
+            return c.get_initial_state(state)
 
 
 class AdiabaticEvolution(StateEvolution):
@@ -103,24 +146,39 @@ class AdiabaticEvolution(StateEvolution):
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            for more details. This option is available only when the Trotter
+            decomposition is used for the time evolution.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
     """
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
-    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[]):
-        if not issubclass(type(h0), hamiltonians.Hamiltonian):
+    def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
+        if not issubclass(type(h0), hamiltonians.HAMILTONIAN_TYPES):
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
-        if not issubclass(type(h1), hamiltonians.Hamiltonian):
-            raise_error(TypeError, "h1 should be a hamiltonians.Hamiltonian "
-                                   "object but is {}.".format(type(h1)))
+        if type(h1) != type(h0):
+            raise_error(TypeError, "h1 should be of the same type {} of h0 but "
+                                   "is {}.".format(type(h0), type(h1)))
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
-        ham = lambda t: h0
-        ham.nqubits = h0.nqubits
-        super(AdiabaticEvolution, self).__init__(ham, dt, solver, callbacks)
+        super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,
+                                                 accelerators, memory_device)
         self.h0 = h0
         self.h1 = h1
+
+        # Set evolution model to "Gap" callback if one exists
+        for callback in self.callbacks:
+            if isinstance(callback, Gap):
+                callback.evolution = self
+
+        # Flag that remembers if ``set_hamiltonian`` have not been called
+        self.set_hamiltonian_flag = True
 
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
@@ -171,22 +229,52 @@ class AdiabaticEvolution(StateEvolution):
             self.schedule = lambda t: self._param_schedule(t, params[:-1])
         self.set_hamiltonian(params[-1])
 
-    def set_hamiltonian(self, final_time):
+    def set_hamiltonian(self, total_time):
+        self.set_hamiltonian_flag = False
         def hamiltonian(t):
             # Disable warning that ``schedule`` is not Callable
-            st = self.schedule(t / final_time) # pylint: disable=E1102
+            st = self.schedule(t / total_time) # pylint: disable=E1102
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 
-    def _cast_initial_state(self, initial_state=None):
+    def hamiltonian(self, t=None, total_time=None):
+        """Returns the adiabatic evolution Hamiltonian at a given time.
+
+        Args:
+            t (float): Time to calculate the Hamiltonian. If no time is given
+                the current time set in the solver is used.
+            total_time (float): Total time of adiabatic evolution. Required
+                only if the user wants to access the Hamiltonian before
+                executing the model.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object representing
+            the adiabatic evolution Hamiltonian at time ``t``.
+        """
+        if total_time is not None:
+            self.set_hamiltonian(total_time)
+        else:
+            if self.set_hamiltonian_flag:
+                raise_error(RuntimeError, "Cannot access adiabatic evolution "
+                                          "Hamiltonian before setting the "
+                                          "the total evolution time.")
+        if t is None or t == self.solver.t:
+            return self.solver.current_hamiltonian
+        return self.solver.hamiltonian(t)
+
+    def get_initial_state(self, state=None):
         """Casts initial state as a Tensorflow tensor.
 
         If initial state is not given the ground state of ``h0`` is used, which
         is the common practice in adiabatic evolution.
         """
-        if initial_state is None:
-            return self.h0.eigenvectors()[:, 0]
-        return super(AdiabaticEvolution, self)._cast_initial_state(initial_state)
+        if state is None:
+            if self.accelerators is None:
+                return self.h0.ground_state()
+            else:
+                c = self.hamiltonian(0).circuit(self.solver.dt)
+                return c.get_initial_state("ones")
+        return super(AdiabaticEvolution, self).get_initial_state(state)
 
     def _loss(self, params):
         """Expectation value of H1 for a choice of scheduling parameters.

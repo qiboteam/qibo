@@ -38,14 +38,3 @@ jobs:
         flags: unittests
         name: codecov-umbrella
         fail_ci_if_error: true
-    - name: Sphinx compile
-      if: startsWith(matrix.os, 'ubuntu') && github.ref == 'refs/heads/master'
-      run: |
-        make -C doc html
-        KEY=$( mktemp )
-        echo "$QIBO_TEAM" | base64 --decode > "$KEY"
-        scp -r -i "$KEY" -o StrictHostKeyChecking=no\
-          doc/build/html/* \
-          ubuntu@34.240.99.72:/var/www/html/
-      env:
-        QIBO_TEAM: ${{ secrets.QIBO_TEAM }}

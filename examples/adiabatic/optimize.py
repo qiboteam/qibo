@@ -43,7 +43,7 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
 
     # Calculate target values (H1 ground state)
-    target_state = h1.eigenvectors()[:, 0]
+    target_state = h1.ground_state()
     target_energy = h1.eigenvalues()[0].numpy().real
 
     # Check ground state
