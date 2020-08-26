@@ -2,22 +2,25 @@
 import numpy as np
 from qibo import hamiltonians, models, callbacks
 import functions
-from functions import str2bool
 import argparse
 
 
-def main(file_name, T, dt, solver, plot, trotter):
+def main(nqubits, instance, T, dt, solver, plot, trotter):
     """Adiabatic evoluition to find the solution of an exact cover instance
     Args:
-        file_name (str): name of the file that contains the information of an Exact Cover instance.
+        nqubits (int): number of qubits for the file that contains the information of an Exact Cover instance.
+        instance (int): intance used for the desired number of qubits.
+        T (float): maximum schedule time. The larger T, better final results.
         dt (float): time interval for the evolution.
         solver (str): solver used for the adiabatic evolution.
+        plot (bool): decides if plots of the energy and gap will be returned.
+        trotter (bool): decides if a Trotter Hamiltonian will be used.
 
     Returns:
         result of the most probable outcome after the adiabatic evolution. And plots of the energy and gap energy
         during the adiabatic evolution.
     """
-    control, solution, clauses = functions.read_file(file_name)
+    control, solution, clauses = functions.read_file(nqubits, instance)
     nqubits = int(control[0])
     if trotter == True:
         print('Using Trotter decomposition for the Hamiltonian\n')
@@ -62,11 +65,11 @@ def main(file_name, T, dt, solver, plot, trotter):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=8, type=int)
+    parser.add_argument("--instance", default=1, type=int)
     parser.add_argument("--T", default=10, type=float)
     parser.add_argument("--dt", default=1e-2, type=float)
     parser.add_argument("--solver", default="exp", type=str)
-    parser.add_argument("--plot", default=True, type=str2bool)
-    parser.add_argument("--trotter", default=True, type=str2bool)
+    parser.add_argument("--plot", action="store_true")
+    parser.add_argument("--trotter", action="store_true")
     args = vars(parser.parse_args())
-    args["file_name"] = 'n{}.txt'.format(args.pop('nqubits'))
     main(**args)

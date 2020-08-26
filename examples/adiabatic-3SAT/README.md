@@ -24,7 +24,7 @@ which has a ground state of the equal superposition of all possible computationa
 
 As for the problem Hamiltonian that encodes the solution of an Exact cover problem, first we define the operator
 
-![z-operator](images/z.png)
+![z-operator](images/z-matrix.png)
 
 that can be used to create a Hamiltonian with a ground state when the Exact Cover clause is satisfied. This clause Hamiltonian reads
 
@@ -42,11 +42,12 @@ Run the file `main.py` from the console to perform an adiabatic evolution for an
 The program supports the following arguments:
 
 - `--nqubits` (int) allows for instances with different number of qubits (default=8).
+- `--instance` (int) choose intance to use (default=1).
 - `--T` (float) set the total time of the adiabatic evolution (default=10).
 - `--dt` (float) set the interval of the calculations over the adiabatic evolution (default=1e-2).
 - `--solver` (str) set the type of solver for the evolution (default='exp').
-- `--plot` (bool) output plots of the energy and gap evolution, capped at less than 14 qubits. (default=True)
-- `--trotter` (bool) use Trotter decomposition for the Hamiltonians. (default=True)
+- `--plot` add this modifier to output energy and gap plots during the evolution. Capped under 14 qubits due to memory.
+- `--trotter` add this modifier to perform the trotterization of the Hamiltonian.
 
 The program returns:
 
@@ -55,7 +56,7 @@ The program returns:
 - `{}_qubits_energy.png` plots detailing the evolution of the lowest two eigenvalues for {} qubits. **(if enabled)**
 - `{}_qubits_gap.png` plots detailing the evolution of the gap energy for {} qubits. **(if enabled)**
 
-Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
+Initially supported number of qubits are [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], with 10 different instances for qubits 8 and up.
 
 The functions used in this example, including problem hamiltonian creation are included in `functions.py`.
 
