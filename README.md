@@ -2,6 +2,8 @@
 
 ![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
+[![Documentation Status](https://readthedocs.org/projects/qibo/badge/?version=latest)](https://qibo.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 Qibo is a Python library for classical simulation of quantum algorithms.
 
@@ -56,5 +58,4 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 ## Citation policy
 
 If you use the package please cite the following references:
-- https://doi.org/xx.xxxx/zenodo.xxxxx
-- https://arxiv.org/abs/xxxx.xxxxx
+- https://doi.org/10.5281/zenodo.3997194

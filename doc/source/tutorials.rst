@@ -17,3 +17,4 @@ physics problems.
     tutorials/hash-grover/README.md
     tutorials/variational_classifier/README.md
     tutorials/adiabatic/README.md
+    tutorials/adiabatic-3SAT/README.md

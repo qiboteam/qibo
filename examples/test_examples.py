@@ -188,3 +188,20 @@ def test_variational_classifier(nclasses, nqubits, nlayers,
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
+
+
+@pytest.mark.parametrize("file_name", ["n8.txt"])
+@pytest.mark.parametrize("T", [10, 5])
+@pytest.mark.parametrize("dt", [1e-2, 1e-1])
+@pytest.mark.parametrize("solver", ["exp", "rk45"])
+@pytest.mark.parametrize("trotter", [True, False])
+def test_adiabatic3sat(file_name, T, dt, solver, trotter, plot=False):
+    # remove ``functions`` module from 3SAT because the same name is used
+    # for a different module in the Hash
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "adiabatic-3SAT")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)

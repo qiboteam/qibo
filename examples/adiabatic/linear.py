@@ -11,7 +11,7 @@ matplotlib.rcParams["font.size"] = 14
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
-parser.add_argument("--hfield", default=4, type=float)
+parser.add_argument("--hfield", default=1, type=float)
 parser.add_argument("--T", default=1, type=float)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
@@ -37,7 +37,7 @@ def main(nqubits, hfield, T, dt, solver, save):
     h1 = hamiltonians.TFIM(nqubits, h=hfield)
 
     # Calculate target values (H1 ground state)
-    target_state = h1.eigenvectors()[:, 0]
+    target_state = h1.ground_state()
     target_energy = h1.eigenvalues()[0].numpy().real
 
     # Check ground state

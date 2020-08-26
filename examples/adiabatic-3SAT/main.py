@@ -69,7 +69,12 @@ if __name__ == "__main__":
     parser.add_argument("--T", default=10, type=float)
     parser.add_argument("--dt", default=1e-2, type=float)
     parser.add_argument("--solver", default="exp", type=str)
+<<<<<<< HEAD
     parser.add_argument("--plot", action="store_true")
     parser.add_argument("--trotter", action="store_true")
+=======
+    parser.add_argument("--plot", default=True, type=functions.str2bool)
+    parser.add_argument("--trotter", default=True, type=functions.str2bool)
+>>>>>>> 932c89a6b0801523bcd75e169c30b419d781380d
     args = vars(parser.parse_args())
     main(**args)
