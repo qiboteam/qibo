@@ -209,7 +209,7 @@ def plot(qubits, ground, first, gap, dt, T):
     plt.title('Energy during adiabatic evolution')
     ax.legend()
     fig.tight_layout()
-    fig.savefig('{}_qubits_energy.png'.format(qubtis), dpi=300, bbox_inches='tight')
+    fig.savefig('{}_qubits_energy.png'.format(qubits), dpi=300, bbox_inches='tight')
     fig, ax = plt.subplots()
     ax.plot(times, gap, label='gap energy', color='C0')
     plt.ylabel('energy')
