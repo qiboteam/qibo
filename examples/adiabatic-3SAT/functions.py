@@ -9,9 +9,9 @@ def read_file(file_name, instance):
     Args:
         file_name (str): name of the file that contains the instance information.
         instance (str): number of intance to use.
-        
+
     Returns:
-        control (list): important parameters of the instance. 
+        control (list): important parameters of the instance.
             [number of qubits, number of clauses, number of ones in the solution]
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
@@ -28,7 +28,7 @@ def times(qubits, clauses):
     Args:
         qubits (int): # of total qubits in the instance.
         clauses (list): clauses of the Exact Cover instance.
-        
+
     Returns:
         times (list): number of times a qubit apears in all clauses.
     """
@@ -45,7 +45,7 @@ def h(qubits, n, matrix):
         qubits (int): # of total qubits in the instance.
         n (int): qubit position to apply matrix.
         matrix (np.array): 2x2 matrix to apply to a qubit.
-        
+
     Returns:
         h (np.array): 2**qubits x 2**qubits hamiltonian.
     """
@@ -60,34 +60,34 @@ def z(qubits, n):
         qubits (int): # of total qubits in the instance.
         n (int): qubit position to apply matrix.
         matrix (np.array): 2x2 matrix to apply to a qubit.
-        
+
     Returns:
         h (np.array): 2**qubits x 2**qubits hamiltonian.
     """
     matrix = 0.5*(matrices.I-matrices.Z)
     return h(qubits, n, matrix)
-    
-    
+
+
 def x(qubits, n):
     """Apply matrix [[0, 1], [1, 0]] to qubit n.
     Args:
         qubits (int): # of total qubits in the instance.
         n (int): qubit position to apply matrix.
         matrix (np.array): 2x2 matrix to apply to a qubit.
-        
+
     Returns:
         h (np.array): 2**qubits x 2**qubits hamiltonian..
     """
     matrix = matrices.X
     return h(qubits, n, matrix)
-    
-    
+
+
 def h_c(qubits, clause):
     """Hamiltonian with ground state that satisfies an Exact Cover clause.
     Args:
         qubits (int): # of total qubits in the instance.
         clause (list): Exact Cover clause.
-        
+
     Returns:
         h_c (np.array): 2**qubits x 2**qubits hamiltonian that satisfies clause.
     """
@@ -96,14 +96,14 @@ def h_c(qubits, clause):
         h_c += z(qubits, i-1)
     h_c -= np.eye(2**qubits)
     return h_c**2
-    
-    
+
+
 def h_p(qubits, clauses):
     """Hamiltonian that satisfies all Exact Cover clauses.
     Args:
         qubits (int): # of total qubits in the instance.
         clauses (list): clauses for an Exact Cover instance.
-        
+
     Return:
         h_p (np.array): 2**qubits x 2**qubits problem Hamiltonian.
     """
@@ -111,14 +111,14 @@ def h_p(qubits, clauses):
     for clause in clauses:
         h_p += h_c(qubits, clause)
     return h_p
-    
-    
+
+
 def h0(qubits, times):
     """Initial hamiltonian for adiabatic evolution.
     Args:
         qubits (int): # of total qubits in the instance.
         times (list): number of times a qubit apears in all clauses.
-        
+
     Return:
         h0 (np.array): 2**qubits x 2**qubits initial Hamiltonian.
     """
@@ -135,8 +135,8 @@ def h_ct():
     """
     m1 = 0.5 * (np.kron(matrices.Z, matrices.Z) - np.kron(matrices.Z, matrices.I))
     return hamiltonians.Hamiltonian(2, m1, numpy=True)
-    
-    
+
+
 def h0t():
     """Generate the 2 qubit Hamiltonian for Trotter evolution, equivalent to the intial Hamiltonian.
     Returns:
@@ -151,7 +151,7 @@ def trotter_dict(clauses):
         must only contain commuting terms.
     Args:
         clauses (list): clauses for an Exact Cover instance.
-        
+
     Returns:
         parts0 (tuple(dict)): corresponding pair of qubits and initial Hamiltonian applied to them.
         parts1 (tuple(dict)): corresponding pair of qubits and clause Hamiltonian applied to them.
@@ -161,7 +161,7 @@ def trotter_dict(clauses):
     for q0, q1, q2 in clauses:
         pairs[(q0 - 1, q1 - 1)] += 1
         pairs[(q1 - 1, q2 - 1)] += 1
-        pairs[(q2 - 1, q0 - 1)] += 1 
+        pairs[(q2 - 1, q0 - 1)] += 1
     # Separate dictionaries to commuting parts
     multi_pairs, multi_sets = [], []
     for pair, n in pairs.items():
@@ -186,6 +186,21 @@ def trotter_dict(clauses):
     return parts0, parts1
 
 
+def spolynomial(t, params):
+    """General polynomial scheduling satisfying s(0)=0 and s(1)=1."""
+    f = sum(p * t ** (i + 2) for i, p in enumerate(params))
+    f += (1 - np.sum(params)) * t
+    return f
+
+
+def ground_state(nqubits):
+    """Returns |++...+> state to be used as the ground state of the easy Hamiltonian."""
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    s = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
+    return tf.cast(s, dtype=DTYPES.get('DTYPECPX'))
+
+
 def plot(qubits, ground, first, gap, dt, T):
     """Get the first two eigenvalues and the gap energy
     Args:
@@ -195,7 +210,7 @@ def plot(qubits, ground, first, gap, dt, T):
         gap (list): gap energy during the evolution.
         T (float): Final time for the schedue.
         dt (float): time interval for the evolution.
-        
+
     Returns:
         {}_qubits_energy.png: energy evolution of the ground and first excited state.
         {}_qubits_gap_energy.png: gap evolution during the adiabatic process.
@@ -218,4 +233,3 @@ def plot(qubits, ground, first, gap, dt, T):
     ax.legend()
     fig.tight_layout()
     fig.savefig('{}_qubits_gap.png'.format(qubits), dpi=300, bbox_inches='tight')
-    
