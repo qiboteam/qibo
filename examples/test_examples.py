@@ -183,7 +183,7 @@ def test_variational_classifier(nclasses, nqubits, nlayers,
 
 @pytest.mark.parametrize("nqubits", [4, 8])
 @pytest.mark.parametrize("instance", [1])
-def test_grover3sat(nqubits, isinstance):
+def test_grover3sat(nqubits, instance):
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()
