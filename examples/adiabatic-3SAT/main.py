@@ -6,7 +6,8 @@ import argparse
 
 
 def main(nqubits, instance, T, dt, solver, plot, trotter):
-    """Adiabatic evoluition to find the solution of an exact cover instance
+    """Adiabatic evoluition to find the solution of an exact cover instance.
+
     Args:
         nqubits (int): number of qubits for the file that contains the information of an Exact Cover instance.
         instance (int): intance used for the desired number of qubits.
@@ -20,8 +21,10 @@ def main(nqubits, instance, T, dt, solver, plot, trotter):
         result of the most probable outcome after the adiabatic evolution. And plots of the energy and gap energy
         during the adiabatic evolution.
     """
+    # Read 3SAT clauses from file
     control, solution, clauses = functions.read_file(nqubits, instance)
     nqubits = int(control[0])
+    # Define "easy" and "problem" Hamiltonians
     if trotter == True:
         print('Using Trotter decomposition for the Hamiltonian\n')
         parts0, parts1 = functions.trotter_dict(clauses)
@@ -32,6 +35,8 @@ def main(nqubits, instance, T, dt, solver, plot, trotter):
         t = functions.times(nqubits, clauses)
         H0 = hamiltonians.Hamiltonian(nqubits, functions.h0(nqubits, t))
         H1 = hamiltonians.Hamiltonian(nqubits, functions.h_p(nqubits, clauses))
+
+    # Define evolution model and (optionally) callbacks
     print('-'*20+'\n')
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     s = lambda t: t
@@ -46,6 +51,8 @@ def main(nqubits, instance, T, dt, solver, plot, trotter):
             evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver, callbacks=[gap, ground, excited])
     else:
         evolve = models.AdiabaticEvolution(H0, H1, s, dt, solver=solver)
+
+    # Perform evolution
     final_state = evolve(final_time=T, initial_state=initial_state)
     max_output = "{0:0{bits}b}".format((np.abs(final_state.numpy())**2).argmax(), bits = nqubits)
     max_prob = (np.abs(final_state.numpy())**2).max()

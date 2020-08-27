@@ -86,15 +86,6 @@ def test_autoencoder(nqubits, layers, compress, lambdas):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits", [4, 8])
-def test_grover3sat(nqubits):
-    args = {"file_name": f"n{nqubits}.txt"}
-    path = os.path.join(base_dir, "grover3sat")
-    sys.path[-1] = path
-    os.chdir(path)
-    run_script(args)
-
-
 @pytest.mark.parametrize(("h_value", "collisions", "b"),
                          [(163, 2, 7)])
 def test_hash_grover(h_value, collisions, b):
@@ -190,14 +181,25 @@ def test_variational_classifier(nclasses, nqubits, nlayers,
     run_script(args)
 
 
-@pytest.mark.parametrize("file_name", ["n8.txt"])
-@pytest.mark.parametrize("T", [10, 5])
+@pytest.mark.parametrize("nqubits", [4, 8])
+@pytest.mark.parametrize("instance", [1])
+def test_grover3sat(nqubits, isinstance):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "grover3sat")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
+
+
+@pytest.mark.parametrize("nqubits", [8])
+@pytest.mark.parametrize("instance", [1])
+@pytest.mark.parametrize("T", [5, 10])
 @pytest.mark.parametrize("dt", [1e-2, 1e-1])
 @pytest.mark.parametrize("solver", ["exp", "rk45"])
 @pytest.mark.parametrize("trotter", [True, False])
-def test_adiabatic3sat(file_name, T, dt, solver, trotter, plot=False):
-    # remove ``functions`` module from 3SAT because the same name is used
-    # for a different module in the Hash
+def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, plot=False):
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()
