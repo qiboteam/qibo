@@ -193,10 +193,7 @@ def test_grover3sat(nqubits, instance):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits", [8])
-@pytest.mark.parametrize("instance", [1])
-@pytest.mark.parametrize("T", [5, 10])
-@pytest.mark.parametrize("dt", [1e-1])
+@pytest.mark.parametrize("nqubits,instance,T,dt", [(8, 1, 10, 1e-1)])
 @pytest.mark.parametrize("solver", ["exp", "rk45"])
 @pytest.mark.parametrize("trotter", [True, False])
 @pytest.mark.parametrize("params", [None, [0.5, 0.5]])

@@ -77,7 +77,10 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
 
     if method is not None:
         print(f'Optimizing scheduling using {method}.\n')
-        params.append(T)
+        if params is None:
+            params = [T]
+        else:
+            params.append(T)
         if method == "sgd":
             options = {"nepochs": maxiter}
         else:

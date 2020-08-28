@@ -108,8 +108,9 @@ Should the solution not be known, leave an empty line in place of the solution a
 
 For demonstration we use `main.py` to optimize a 3SAT instance with N=10 qubits.
 We use a fourth order polynomial as the ansatz for the scheduling and after
-optimizing the coefficients and the total evolution time T using `scipy`s BFGS
-method we find that the optimal values are:
+optimizing the coefficients and the total evolution time T using
+[`scipy`s BFGS method](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize)
+we find that the optimal values are:
 `-3.96837267,0.6582704,1.29674208` and `T=46.85073995`.
 Executing the script for these parameters we find the correct bitstring
 solution `0110000101` to the 3SAT problem with probability 99%.
