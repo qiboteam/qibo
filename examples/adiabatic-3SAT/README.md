@@ -103,3 +103,21 @@ The second line is the solution of the instance.
 The following lines correspond to the three qubits present in each clause.
 
 Should the solution not be known, leave an empty line in place of the solution as well as remove the number of 1's in the solution.
+
+## Optimization example
+
+For demonstration we use `main.py` to optimize a 3SAT instance with N=10 qubits.
+We use a fourth order polynomial as the ansatz for the scheduling and after
+optimizing the coefficients and the total evolution time T using `scipy`s BFGS
+method we find that the optimal values are:
+`-3.96837267,0.6582704,1.29674208` and `T=46.85073995`.
+Executing the script for these parameters we find the correct bitstring
+solution `0110000101` to the 3SAT problem with probability 99%.
+
+In the plot that follows we show the ground and excited state energies for the
+adiabatic evolution Hamiltonian, as well as the difference between them (gap)
+and the final form of the optimized scheduling function. We observe that in
+agreement with what we expect from theory the scheduling is "slower" at the
+area where the gap is minimum.
+
+![gap-plot](images/optn10_plot.png)
