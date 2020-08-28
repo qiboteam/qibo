@@ -225,12 +225,12 @@ class QAOA(object):
             self.initial_state = self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
         else:
             self.initial_state = initial_state
-            
-        
+                   
     def loss(self, p, solver='exp'):
         """
         Args: 
             p (numpy.array or list): parameters of the QAOA.
+            solver (string): solver employed for StateEvolution.
         Returns:
             (numpy.float64) with the value of the loss function.
         """
@@ -245,15 +245,15 @@ class QAOA(object):
             state = evolution_operator(final_time=p[i], initial_state=state)
             
         return self.np.float64(self.hamiltonian.expectation(state))
-    
-    
+        
     def train(self, initial_p, method='Powell', solver='exp'):
         """
         Args:
             initial_p (numpy.array or list): initial guess for the parameters of the QAOA.
             method (string): minimization method.
+            solver (string): solver employed for StateEvolution.
         Returns:
-            (float, numpy.array) with (minimum found for the problem hamiltonian, optimal angles)
+            (float, numpy.array) with (minimum found for the problem Hamiltonian, optimal angles)
         """
         from scipy.optimize import minimize
         
