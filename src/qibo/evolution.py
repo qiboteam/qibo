@@ -50,8 +50,6 @@ class StateEvolution:
                 raise TypeError("Hamiltonian type {} not understood."
                                 "".format(type(ham)))
         self.nqubits = ham.nqubits
-        if dt <= 0:
-            raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
         if (accelerators is not None and
