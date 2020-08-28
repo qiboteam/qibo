@@ -10,20 +10,24 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     """Adiabatic evoluition to find the solution of an exact cover instance.
 
     Args:
-        nqubits (int): number of qubits for the file that contains the information of an Exact Cover instance.
+        nqubits (int): number of qubits for the file that contains the
+            information of an Exact Cover instance.
         instance (int): intance used for the desired number of qubits.
         T (float): maximum schedule time. The larger T, better final results.
         dt (float): time interval for the evolution.
         solver (str): solver used for the adiabatic evolution.
         plot (bool): decides if plots of the energy and gap will be returned.
         trotter (bool): decides if a Trotter Hamiltonian will be used.
-        params (list):
-        method (str):
-        maxiter (bool):
+        params (list): list of polynomial coefficients for scheduling function.
+            Default is linear scheduling.
+        method (str): Method to use for scheduling optimization (optional).
+        maxiter (bool): Maximum iterations for scheduling optimization (optional).
 
     Returns:
-        result of the most probable outcome after the adiabatic evolution. And plots of the energy and gap energy
-        during the adiabatic evolution.
+        Result of the most probable outcome after the adiabatic evolution.
+        Plots of the ground and excited state energies and the underlying gap
+        during the adiabatic evolution. The plots are created only if the
+        ``--plot`` option is enabled.
     """
     # Read 3SAT clauses from file
     control, solution, clauses = functions.read_file(nqubits, instance)
@@ -74,7 +78,10 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     if method is not None:
         print(f'Optimizing scheduling using {method}.\n')
         params.append(T)
-        options = {"maxiter": maxiter, "disp": True}
+        if method == "sgd":
+            options = {"nepochs": maxiter}
+        else:
+            options = {"maxiter": maxiter, "disp": True}
         energy, params = evolve.minimize(params, method=method,
                                          options=options)
         T = params[-1]

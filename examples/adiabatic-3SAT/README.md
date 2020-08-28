@@ -16,7 +16,7 @@ Adiabatic compution deals with finding the ground state of a Hamiltonian that en
 
 where H_0 and H_p are the initial and problem Hamiltonian respectively, and s(t) defines the schedule that the adiabatic evolution follows. How fast this evolution can be performed depends on the minimum gap energy of the system during the evolution, that is the difference of energy between the ground state and the first excited state along the schedule. The smaller the gap energy the slower the evolution has to be.
 
-The initial Hamiltonian used in this example is the following, 
+The initial Hamiltonian used in this example is the following,
 
 ![initial-hamiltonian](images/h0.png)
 
@@ -39,7 +39,7 @@ where the indices i, j, k represent the three different qubits that the particul
 
 Run the file `main.py` from the console to perform an adiabatic evolution for an instance of 8 qubits.
 
-The program supports the following arguments:
+The program supports the following basic arguments:
 
 - `--nqubits` (int) allows for instances with different number of qubits (default=8).
 - `--instance` (int) choose intance to use (default=1).
@@ -58,7 +58,28 @@ The program returns:
 
 Initially supported number of qubits are [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], with 10 different instances for qubits 8 and up.
 
-The functions used in this example, including problem hamiltonian creation are included in `functions.py`.
+The `main.py` script uses linear scheduling for the adiabatic evolution by
+default. The user may switch the scheduling function to a polynomial of
+arbitrary order by passing the following argument:
+
+- `--params` (str) list of float values seperated with commas (`,`) that
+  define the coefficients of the polynomial scheduling. The polynomial is
+  constructed so that it satisfies s(0)=0 and s(T)=T by definition.
+
+It is also possible to optimize the polynomial coefficients using the following
+arguments:
+
+- `--method` (str) optimization method to use. See the
+[https://qibo.readthedocs.io/en/latest/qibo.html#optimizers](Qibo optimizer documentation)
+for more details on the available optimization methods.
+- `--maxiter` (int) maximum number of optimization iterations
+
+When an optimization method is given then the given `--params` are used as the
+initial guess for the variational parameters. If no `--params` are given linear
+scheduling is used and only the final time `T` is optimized.
+
+The functions used in this example, including problem hamiltonian creation are
+included in `functions.py`.
 
 ## Create your own instances
 
