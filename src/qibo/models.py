@@ -195,3 +195,73 @@ class VQE(object):
 
         self.circuit.set_parameters(parameters)
         return result, parameters
+
+
+class QAOA(object):
+    """ This class implements the QAOA algorithm."""
+    import numpy as np
+    from qibo import hamiltonians
+        
+    def __init__(self, nqubits, hamiltonian, mixer=None, initial_state=None):
+        """
+        Initializes an instance of the QAOA.
+        
+        Args:
+            nqubits (int): number of qubits.
+            hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian whose ground state is sought.
+            mixer (qibo.hamiltonians.Hamiltonian): mixer Hamiltonian. If None, it is taken as -sum(sigma_x).
+            initial state: initial state of the algorithm. If None, it is taken as the uniform
+                           superposition over computational-basis states.
+        """
+        # problem hamiltonian
+        self.hamiltonian = hamiltonian
+        # mixer hamiltonian (default = -sum(sigma_x))
+        if mixer == None:
+            self.mixer = self.hamiltonians.X(nqubits)
+        else:
+            self.mixer = mixer
+        # initial state
+        if initial_state == None:
+            self.initial_state = self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
+        else:
+            self.initial_state = initial_state
+            
+        
+    def loss(self, p, solver='exp'):
+        """
+        Args: 
+            p (numpy.array or list): parameters of the QAOA.
+        Returns:
+            (numpy.float64) with the value of the loss function.
+        """
+        # We define the evolution operators for the mixer and problem hamiltonians 
+        evolve = []
+        for i in range(len(p)//2):
+            evolve.append(StateEvolution(self.hamiltonian, p[2*i], solver=solver))
+            evolve.append(StateEvolution(self.mixer, p[2*i+1], solver=solver))
+        # We evolve the state
+        state = self.initial_state
+        for i,evolution_operator in enumerate(evolve):
+            state = evolution_operator(final_time=p[i], initial_state=state)
+            
+        return self.np.float64(self.hamiltonian.expectation(state))
+    
+    
+    def train(self, initial_p, method='Powell', solver='exp'):
+        """
+        Args:
+            initial_p (numpy.array or list): initial guess for the parameters of the QAOA.
+            method (string): minimization method.
+        Returns:
+            (float, numpy.array) with (minimum found for the problem hamiltonian, optimal angles)
+        """
+        from scipy.optimize import minimize
+        
+        if len(initial_p)%2 != 0:
+            raise ValueError('Initial guess for the parameters must contain an even number of values')
+
+        print('Optimizing QAOA...')
+        result = minimize(self.loss, initial_p, args=(solver), method=method)
+        
+        return result.fun, result.x
+    
