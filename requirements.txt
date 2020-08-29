@@ -1,8 +1,8 @@
 # Runtime requirements for qibo
 
-numpy
+# numpy (included in tf)
+# scipy (included in tf)
 tensorflow>=2.2,<=2.3
-scipy
 cma
 joblib
 matplotlib
