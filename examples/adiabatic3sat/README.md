@@ -1,6 +1,6 @@
 # Adiabatic evolution for solving an Exact Cover problem.
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiabatic-3SAT](https://github.com/Quantum-TII/qibo/tree/adiabatic-3SAT/examples/adiabatic-3SAT)
+Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/adiabatic3sat](https://github.com/Quantum-TII/qibo/tree/master/examples/adiabatic3sat)
 
 ## Introduction
 
@@ -16,7 +16,7 @@ Adiabatic compution deals with finding the ground state of a Hamiltonian that en
 
 where H_0 and H_p are the initial and problem Hamiltonian respectively, and s(t) defines the schedule that the adiabatic evolution follows. How fast this evolution can be performed depends on the minimum gap energy of the system during the evolution, that is the difference of energy between the ground state and the first excited state along the schedule. The smaller the gap energy the slower the evolution has to be.
 
-The initial Hamiltonian used in this example is the following, 
+The initial Hamiltonian used in this example is the following,
 
 ![initial-hamiltonian](images/h0.png)
 
