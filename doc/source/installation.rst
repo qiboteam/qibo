@@ -14,7 +14,7 @@ Installing with pip
 -------------------
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-We provide precompiled packages for linux x86/64 and macosx 10.11 or greater
+We provide precompiled packages for linux x86/64 and macosx 10.15 or greater
 for multiple Python versions.
 
 Make sure you have Python 3.6 or greater, then
