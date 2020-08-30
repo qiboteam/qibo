@@ -201,67 +201,83 @@ class QAOA(object):
     """ This class implements the QAOA algorithm."""
     import numpy as np
     from qibo import hamiltonians
-        
-    def __init__(self, nqubits, hamiltonian, mixer=None, initial_state=None):
+
+    def __init__(self, hamiltonian, mixer=None, solver="exp"):
         """
         Initializes an instance of the QAOA.
-        
+
         Args:
-            nqubits (int): number of qubits.
             hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian whose ground state is sought.
             mixer (qibo.hamiltonians.Hamiltonian): mixer Hamiltonian. If None, it is taken as -sum(sigma_x).
-            initial state: initial state of the algorithm. If None, it is taken as the uniform
-                           superposition over computational-basis states.
+            solver (string): solver employed for StateEvolution.
         """
+        # list of QAOA variational parameters (angles)
+        self.params = None
         # problem hamiltonian
         self.hamiltonian = hamiltonian
+        self.nqubits = hamiltonian.qubits
+        # evolution solver
+        self.solver = solver
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer == None:
             self.mixer = self.hamiltonians.X(nqubits)
         else:
             self.mixer = mixer
-        # initial state
-        if initial_state == None:
-            self.initial_state = self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
+
+    def set_parameters(p):
+        self.params = p
+
+    def __call__(self, initial_state=None):
+        """Applies the QAOA exponentials to a state."""
+        # We define the evolution operators for the mixer and problem hamiltonians
+        evolve = []
+        for i in range(len(self.params)//2):
+            evolve.append(StateEvolution(self.hamiltonian, self.params[2*i], solver=self.solver))
+            evolve.append(StateEvolution(self.mixer, self.params[2*i+1], solver=self.solver))
+        # We evolve the state
+        state = self.get_initial_state(initial_state)
+        for i, evolution_operator in enumerate(evolve):
+            state = evolution_operator(final_time=self.params[i], initial_state=state)
+        return state
+
+    def get_initial_state(self, state=None):
+        # FIXME: Cast states to Tensorflow properly
+        if state is None:
+            return self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
         else:
-            self.initial_state = initial_state
-                   
-    def loss(self, p, solver='exp'):
-        """
-        Args: 
-            p (numpy.array or list): parameters of the QAOA.
-            solver (string): solver employed for StateEvolution.
+            return initial_state
+
+    def _loss(self, initial_state=None):
+        """Calculates the QAOA loss (energy).
+
+        Args:
+            initial_state (np.ndarray):
+
         Returns:
             (numpy.float64) with the value of the loss function.
         """
-        # We define the evolution operators for the mixer and problem hamiltonians 
-        evolve = []
-        for i in range(len(p)//2):
-            evolve.append(StateEvolution(self.hamiltonian, p[2*i], solver=solver))
-            evolve.append(StateEvolution(self.mixer, p[2*i+1], solver=solver))
-        # We evolve the state
-        state = self.initial_state
-        for i,evolution_operator in enumerate(evolve):
-            state = evolution_operator(final_time=p[i], initial_state=state)
-            
+        state = self(initial_state)
         return self.np.float64(self.hamiltonian.expectation(state))
-        
-    def train(self, initial_p, method='Powell', solver='exp'):
-        """
+
+    def minimize(self, initial_p, initial_state=None, method='Powell'):
+        """Optimizes the variational parameters of the QAOA.
+
         Args:
             initial_p (numpy.array or list): initial guess for the parameters of the QAOA.
-            method (string): minimization method.
-            solver (string): solver employed for StateEvolution.
+            initial_state (np.ndarray): initial state of the QAOA.
+
         Returns:
             (float, numpy.array) with (minimum found for the problem Hamiltonian, optimal angles)
         """
         from scipy.optimize import minimize
-        
+        def loss(p):
+            self.set_parameters(p)
+            return self._loss(initial_state)
+
         if len(initial_p)%2 != 0:
             raise ValueError('Initial guess for the parameters must contain an even number of values')
 
         print('Optimizing QAOA...')
-        result = minimize(self.loss, initial_p, args=(solver), method=method)
-        
+        result = minimize(loss, initial_p, method=method)
+
         return result.fun, result.x
-    
