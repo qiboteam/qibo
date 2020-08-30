@@ -203,7 +203,7 @@ def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()
-    path = os.path.join(base_dir, "adiabatic-3SAT")
+    path = os.path.join(base_dir, "adiabatic3sat")
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
