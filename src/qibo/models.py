@@ -215,16 +215,18 @@ class QAOA(object):
         self.params = None
         # problem hamiltonian
         self.hamiltonian = hamiltonian
-        self.nqubits = hamiltonian.qubits
+        self.nqubits = hamiltonian.nqubits
         # evolution solver
         self.solver = solver
         # mixer hamiltonian (default = -sum(sigma_x))
-        if mixer == None:
-            self.mixer = self.hamiltonians.X(nqubits)
+        if mixer is None:
+            trotter = isinstance(
+                self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+            self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
         else:
             self.mixer = mixer
 
-    def set_parameters(p):
+    def set_parameters(self, p):
         self.params = p
 
     def __call__(self, initial_state=None):
@@ -241,23 +243,10 @@ class QAOA(object):
         return state
 
     def get_initial_state(self, state=None):
-        # FIXME: Cast states to Tensorflow properly
+        """"""
         if state is None:
-            return self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
-        else:
-            return initial_state
-
-    def _loss(self, initial_state=None):
-        """Calculates the QAOA loss (energy).
-
-        Args:
-            initial_state (np.ndarray):
-
-        Returns:
-            (numpy.float64) with the value of the loss function.
-        """
-        state = self(initial_state)
-        return self.np.float64(self.hamiltonian.expectation(state))
+            state = self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
+        return SimpleCircuit._cast_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell'):
         """Optimizes the variational parameters of the QAOA.
@@ -272,10 +261,12 @@ class QAOA(object):
         from scipy.optimize import minimize
         def loss(p):
             self.set_parameters(p)
-            return self._loss(initial_state)
+            state = self(initial_state)
+            return self.np.float64(self.hamiltonian.expectation(state))
 
-        if len(initial_p)%2 != 0:
-            raise ValueError('Initial guess for the parameters must contain an even number of values')
+        if len(initial_p) % 2 != 0:
+            raise ValueError("Initial guess for the parameters must contain "
+                             "an even number of values.")
 
         print('Optimizing QAOA...')
         result = minimize(loss, initial_p, method=method)
