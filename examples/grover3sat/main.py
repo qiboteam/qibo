@@ -4,15 +4,16 @@ import functions
 import argparse
 
 
-def main(file_name):
+def main(nqubits, instance):
     """Grover search for the instance defined by the file_name.
     Args:
-        file_name (str): name of the file that contains the information of a 3SAT instance
+        nqubits (int): number of qubits for the file that contains the information of an Exact Cover instance.
+        instance (int): intance used for the desired number of qubits.
 
     Returns:
         result of the Grover search and comparison with the expected solution if given.
     """
-    control, solution, clauses = functions.read_file(file_name)
+    control, solution, clauses = functions.read_file(nqubits, instance)
     qubits = control[0]
     clauses_num = control[1]
     steps = int((np.pi/4)*np.sqrt(2**qubits))
@@ -31,6 +32,6 @@ def main(file_name):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=10, type=int)
+    parser.add_argument("--instance", default=1, type=int)
     args = vars(parser.parse_args())
-    file_name = 'n{}.txt'.format(args.get('nqubits'))
-    main(file_name)
+    main(**args)

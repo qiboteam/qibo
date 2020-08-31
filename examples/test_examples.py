@@ -86,15 +86,6 @@ def test_autoencoder(nqubits, layers, compress, lambdas):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits", [4, 8])
-def test_grover3sat(nqubits):
-    args = {"file_name": f"n{nqubits}.txt"}
-    path = os.path.join(base_dir, "grover3sat")
-    sys.path[-1] = path
-    os.chdir(path)
-    run_script(args)
-
-
 @pytest.mark.parametrize(("h_value", "collisions", "b"),
                          [(163, 2, 7)])
 def test_hash_grover(h_value, collisions, b):
@@ -185,6 +176,34 @@ def test_variational_classifier(nclasses, nqubits, nlayers,
                                 nshots, training, RxRzRx, method='Powell'):
     args = locals()
     path = os.path.join(base_dir, "variational_classifier")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
+
+
+@pytest.mark.parametrize("nqubits", [4, 8])
+@pytest.mark.parametrize("instance", [1])
+def test_grover3sat(nqubits, instance):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "grover3sat")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
+
+
+@pytest.mark.parametrize("nqubits,instance,T,dt", [(8, 1, 10, 1e-1)])
+@pytest.mark.parametrize("solver", ["exp", "rk45"])
+@pytest.mark.parametrize("trotter", [True, False])
+@pytest.mark.parametrize("params", [None, [0.5, 0.5]])
+@pytest.mark.parametrize("method", [None, "BFGS"])
+def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
+                       method, plot=False, maxiter=None):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "adiabatic3sat")
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)

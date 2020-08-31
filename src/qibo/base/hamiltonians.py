@@ -321,7 +321,6 @@ class TrotterHamiltonian(Hamiltonian):
         if self._dense is None:
             from qibo import hamiltonians
             matrix = self._calculate_dense_matrix() # pylint: disable=E1111
-            print("abc")
             self.dense = hamiltonians.Hamiltonian(self.nqubits, matrix)
         return self._dense
 
