@@ -217,7 +217,8 @@ class QAOA(object):
         self.hamiltonian = hamiltonian
         self.nqubits = hamiltonian.nqubits
         # evolution solver
-        self.solver = solver
+        from qibo import solvers
+        self.solver = solvers.factory[solver]
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer is None:
             trotter = isinstance(
@@ -230,16 +231,14 @@ class QAOA(object):
         self.params = p
 
     def __call__(self, initial_state=None):
-        """Applies the QAOA exponentials to a state."""
-        # We define the evolution operators for the mixer and problem hamiltonians
-        evolve = []
-        for i in range(len(self.params)//2):
-            evolve.append(StateEvolution(self.hamiltonian, self.params[2*i], solver=self.solver))
-            evolve.append(StateEvolution(self.mixer, self.params[2*i+1], solver=self.solver))
-        # We evolve the state
+        """Applies the QAOA exponential operators to a state."""
         state = self.get_initial_state(initial_state)
-        for i, evolution_operator in enumerate(evolve):
-            state = evolution_operator(final_time=self.params[i], initial_state=state)
+        for i in range(len(self.params) // 2):
+            solver = self.solver(self.params[2 * i], self.hamiltonian)
+            state = solver(state)
+            solver = self.solver(self.params[2 * i + 1], self.mixer)
+            state = solver(state)
+        # FIXME: Remember to normalize when using RK solvers!
         return state
 
     def get_initial_state(self, state=None):

@@ -5,12 +5,16 @@ from qibo import models, hamiltonians
 from qibo.tests import utils
 
 
-@pytest.mark.parametrize("trotter", [False])
+@pytest.mark.parametrize("trotter", [False, True])
 def test_qaoa_execution(trotter):
     h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
     m = hamiltonians.X(4, trotter=trotter)
-    params = np.random.random(4)
+    params = 0.01 * np.random.random(4) # Trotter requires small p's!
     state = utils.random_numpy_state(4)
+    if trotter:
+        atol = 1e-6
+    else:
+        atol = 0
 
     target_state = np.copy(state)
     h_matrix = h.matrix.numpy()
@@ -25,4 +29,4 @@ def test_qaoa_execution(trotter):
     qaoa = models.QAOA(h, mixer=m)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
-    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(final_state, target_state, atol=atol)
