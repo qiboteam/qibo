@@ -198,27 +198,26 @@ class VQE(object):
 
 
 class QAOA(object):
-    """ This class implements the QAOA algorithm."""
+    """ This class implements the QAOA algorithm.
+
+    Args:
+        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian
+            whose ground state is sought.
+        mixer (:class:`qibo.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+            If ``None``, :class:`qibo.hamiltonians.X` is used.
+        solver (str): solver used to apply the exponential operators.
+    """
     import numpy as np
     from qibo import hamiltonians
+    from qibo.config import K, log
+    from qibo.callbacks import Norm
 
     def __init__(self, hamiltonian, mixer=None, solver="exp"):
-        """
-        Initializes an instance of the QAOA.
-
-        Args:
-            hamiltonian (qibo.hamiltonians.Hamiltonian): problem Hamiltonian whose ground state is sought.
-            mixer (qibo.hamiltonians.Hamiltonian): mixer Hamiltonian. If None, it is taken as -sum(sigma_x).
-            solver (string): solver employed for StateEvolution.
-        """
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian
         self.hamiltonian = hamiltonian
         self.nqubits = hamiltonian.nqubits
-        # evolution solver
-        from qibo import solvers
-        self.solver = solvers.factory[solver]
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer is None:
             trotter = isinstance(
@@ -227,6 +226,19 @@ class QAOA(object):
         else:
             self.mixer = mixer
 
+        if "rk" in solver:
+            norm = self.Norm()
+            self.normalize_state = lambda s: s / self.K.cast(
+                norm(s), dtype=s.dtype)
+            self.log.info('Normalizing state during RK solution.')
+        else:
+            self.normalize_state = lambda s: s
+
+        # evolution solvers
+        from qibo import solvers
+        self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
+        self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
+
     def set_parameters(self, p):
         self.params = p
 
@@ -234,12 +246,11 @@ class QAOA(object):
         """Applies the QAOA exponential operators to a state."""
         state = self.get_initial_state(initial_state)
         for i in range(len(self.params) // 2):
-            solver = self.solver(self.params[2 * i], self.hamiltonian)
-            state = solver(state)
-            solver = self.solver(self.params[2 * i + 1], self.mixer)
-            state = solver(state)
-        # FIXME: Remember to normalize when using RK solvers!
-        return state
+            self.ham_solver.dt = self.params[2 * i]
+            state = self.ham_solver(state)
+            self.mix_solver.dt = self.params[2 * i + 1]
+            state = self.mix_solver(state)
+        return self.normalize_state(state)
 
     def get_initial_state(self, state=None):
         """"""
