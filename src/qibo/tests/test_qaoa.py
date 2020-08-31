@@ -34,3 +34,15 @@ def test_qaoa_execution_exp(solver, trotter):
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
     np.testing.assert_allclose(final_state, target_state, atol=atol)
+
+
+def test_qaoa_errors():
+    # Mixer not given
+    h = hamiltonians.TFIM(4, h=1.0, trotter=True)
+    m = hamiltonians.X(4, trotter=False)
+    qaoa = models.QAOA(h)
+    # Hamiltonians of different type
+    h = hamiltonians.TFIM(4, h=1.0, trotter=True)
+    m = hamiltonians.X(4, trotter=False)
+    with pytest.raises(TypeError):
+        qaoa = models.QAOA(h, mixer=m)

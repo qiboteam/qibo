@@ -198,18 +198,20 @@ class VQE(object):
 
 
 class QAOA(object):
-    """ This class implements the QAOA algorithm.
+    """ Quantum Approximate Optimization Algorithm (QAOA) model.
+
+    The QAOA is introduced in `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_.
 
     Args:
-        hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian
+        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
-        mixer (:class:`qibo.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+        mixer (:class:`qibo.base.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
     """
     import numpy as np
     from qibo import hamiltonians
-    from qibo.config import K, log
+    from qibo.config import K, DTYPES, log
     from qibo.callbacks import Norm
 
     def __init__(self, hamiltonian, mixer=None, solver="exp"):
@@ -224,8 +226,13 @@ class QAOA(object):
                 self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
             self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
         else:
+            if type(mixer) != type(hamiltonian):
+                  raise_error(TypeError, "Given Hamiltonian is of type {} "
+                                         "while mixer is of type {}."
+                                         "".format(type(hamiltonian),
+                                                   type(mixer)))
             self.mixer = mixer
-
+        # set normalizer if RK solver is used
         if "rk" in solver:
             norm = self.Norm()
             self.normalize_state = lambda s: s / self.K.cast(
@@ -233,13 +240,18 @@ class QAOA(object):
             self.log.info('Normalizing state during RK solution.')
         else:
             self.normalize_state = lambda s: s
-
         # evolution solvers
         from qibo import solvers
         self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
         self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
 
     def set_parameters(self, p):
+        """Sets the variational parameters.
+
+        Args:
+            p (np.ndarray): 1D-array or list holding the new values for the
+                variational parameters. List length should be an even number.
+        """
         self.params = p
 
     def __call__(self, initial_state=None):
@@ -255,14 +267,18 @@ class QAOA(object):
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            state = self.np.ones(2**nqubits) / self.np.sqrt(2**nqubits)
+            dtype = self.DTYPES.get('DTYPECPX')
+            n = self.K.cast(2 ** self.nqubits, dtype=self.DTYPES.get('DTYPEINT'))
+            state = self.K.ones(n, dtype=dtype)
+            norm = self.K.cast(2 ** float(self.nqubits / 2.0), dtype=dtype)
+            return state / norm
         return SimpleCircuit._cast_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell'):
         """Optimizes the variational parameters of the QAOA.
 
         Args:
-            initial_p (numpy.array or list): initial guess for the parameters of the QAOA.
+            initial_p (np.ndarray): initial guess for the parameters of the QAOA.
             initial_state (np.ndarray): initial state of the QAOA.
 
         Returns:

@@ -59,6 +59,7 @@ Application specific models
 .. automodule:: qibo.models
     :members:
     :member-order: bysource
+    :exclude-members: np, K, Norm
 
 
 .. _circuitaddition:
