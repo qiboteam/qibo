@@ -14,9 +14,9 @@ def test_qaoa_execution_exp(solver, trotter):
     state = utils.random_numpy_state(4)
     # set absolute test tolerance according to solver
     if "rk" in solver:
-        atol = 1e-3
+        atol = 1e-2
     elif trotter:
-        atol = 1e-6
+        atol = 1e-5
     else:
         atol = 0
 
