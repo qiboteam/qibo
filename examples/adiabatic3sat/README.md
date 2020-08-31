@@ -39,7 +39,7 @@ where the indices i, j, k represent the three different qubits that the particul
 
 Run the file `main.py` from the console to perform an adiabatic evolution for an instance of 8 qubits.
 
-The program supports the following arguments:
+The program supports the following basic arguments:
 
 - `--nqubits` (int) allows for instances with different number of qubits (default=8).
 - `--instance` (int) choose intance to use (default=1).
@@ -58,7 +58,28 @@ The program returns:
 
 Initially supported number of qubits are [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30], with 10 different instances for qubits 8 and up.
 
-The functions used in this example, including problem hamiltonian creation are included in `functions.py`.
+The `main.py` script uses linear scheduling for the adiabatic evolution by
+default. The user may switch the scheduling function to a polynomial of
+arbitrary order by passing the following argument:
+
+- `--params` (str) list of float values seperated with commas (`,`) that
+  define the coefficients of the polynomial scheduling. The polynomial is
+  constructed so that it satisfies s(0)=0 and s(T)=T by definition.
+
+It is also possible to optimize the polynomial coefficients using the following
+arguments:
+
+- `--method` (str) optimization method to use. See the
+[Qibo optimizer documentation](https://qibo.readthedocs.io/en/latest/qibo.html#optimizers)
+for more details on the available optimization methods.
+- `--maxiter` (int) maximum number of optimization iterations
+
+When an optimization method is given then the given `--params` are used as the
+initial guess for the variational parameters. If no `--params` are given linear
+scheduling is used and only the final time `T` is optimized.
+
+The functions used in this example, including problem hamiltonian creation are
+included in `functions.py`.
 
 ## Create your own instances
 
@@ -82,3 +103,28 @@ The second line is the solution of the instance.
 The following lines correspond to the three qubits present in each clause.
 
 Should the solution not be known, leave an empty line in place of the solution as well as remove the number of 1's in the solution.
+
+## Optimization example
+
+For demonstration we use `main.py` to optimize a 3SAT instance with N=10 qubits.
+We use a fourth order polynomial as the ansatz for the scheduling and after
+optimizing the coefficients and the total evolution time T using
+[`scipy`s BFGS method](https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html#scipy.optimize.minimize)
+we find that the optimal values are:
+`-3.96837267,0.6582704,1.29674208` and `T=46.85073995`.
+Executing the script for these parameters we find the correct bitstring
+solution `0110000101` to the 3SAT problem with probability 99%.
+
+In the left plot that follows we show the ground and excited state energies
+for the adiabatic evolution Hamiltonian, as well as the difference between
+them (gap) and the final form of the optimized scheduling function.
+We observe that in agreement with what we expect from theory the scheduling is
+"slower" at the area where the gap is minimum.
+
+![gap-plot](images/optn10_plot.png) ![prob-plot](images/prob_plot.png)
+
+On the right we plot the probability to measure the correct solution from the
+final state of the evolution as a function of the total evolution time T. We
+find that when using the optimized scheduling (fourth order polynomial) the
+probability reaches 99% within T=50, while for the default linear scheduling
+T=400 is required to reach the same probability.
