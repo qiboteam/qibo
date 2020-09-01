@@ -89,3 +89,21 @@ def test_qaoa_errors():
     # distributed execution with RK solver
     with pytest.raises(NotImplementedError):
         qaoa = models.QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
+
+
+test_names = "method,options,trotter,filename"
+test_values = [
+    ("BFGS", {'maxiter': 1}, False, "qaoa_bfgs.out"),
+    ("BFGS", {'maxiter': 1}, True, "trotter_qaoa_bfgs.out"),
+    ("Powell", {'maxiter': 1}, True, "trotter_qaoa_powell.out"),
+    # ("sgd", {"nepochs": 5}, False, None)
+    # TODO: Fix problem with SGD test
+    ]
+@pytest.mark.parametrize(test_names, test_values)
+def test_qaoa_optimization(method, options, trotter, filename):
+    h = hamiltonians.XXZ(3, trotter=trotter)
+    qaoa = models.QAOA(h)
+    initial_p = [0.05, 0.06, 0.07, 0.08]
+    best, params = qaoa.minimize(initial_p, method=method, options=options)
+    if filename is not None:
+        utils.assert_regression_fixture(params, filename)

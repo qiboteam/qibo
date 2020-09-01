@@ -217,8 +217,7 @@ class QAOA(object):
             Relevant only for distributed execution (when ``accelerators`` is
             given).
     """
-    import numpy as np
-    from qibo import hamiltonians
+    from qibo import hamiltonians, optimizers
     from qibo.config import K, DTYPES, log
     from qibo.callbacks import Norm
 
@@ -269,8 +268,8 @@ class QAOA(object):
         """Sets the variational parameters.
 
         Args:
-            p (np.ndarray): 1D-array or list holding the new values for the
-                variational parameters. List length should be an even number.
+            p (np.ndarray): 1D-array holding the new values for the variational
+                parameters. Length should be an even number.
         """
         self.params = p
 
@@ -284,10 +283,18 @@ class QAOA(object):
         return state
 
     def execute(self, initial_state=None):
-        """Applies the QAOA exponential operators to a state."""
+        """Applies the QAOA exponential operators to a state.
+
+        Args:
+            initial_state (np.ndarray): Initial state vector.
+
+        Returns:
+            State vector after applying the QAOA exponentials.
+        """
         state = self.get_initial_state(initial_state)
         self.calculate_callbacks(state)
-        for i in range(len(self.params) // 2):
+        n = int(self.params.shape[0])
+        for i in range(n // 2):
             state = self._apply_exp(state, self.ham_solver,
                                     self.params[2 * i])
             state = self._apply_exp(state, self.mix_solver,
@@ -315,7 +322,7 @@ class QAOA(object):
             return state / norm
         return SimpleCircuit._cast_initial_state(self, state)
 
-    def minimize(self, initial_p, initial_state=None, method='Powell'):
+    def minimize(self, initial_p, initial_state=None, method='Powell', options=None):
         """Optimizes the variational parameters of the QAOA.
 
         Args:
@@ -325,18 +332,24 @@ class QAOA(object):
         Returns:
             (float, numpy.array) with (minimum found for the problem Hamiltonian, optimal angles)
         """
-        from scipy.optimize import minimize
-        def loss(p):
-            self.set_parameters(p)
-            state = self(initial_state)
-            return self.np.float64(self.hamiltonian.expectation(state))
-
+        # TODO: Fix docstring
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
                                     "contain an even number of values but "
                                     "contains {}.".format(len(initial_p)))
 
-        print('Optimizing QAOA...')
-        result = minimize(loss, initial_p, method=method)
+        def _loss(p):
+            self.set_parameters(p)
+            state = self(initial_state)
+            return self.hamiltonian.expectation(state)
 
-        return result.fun, result.x
+        if method == "sgd":
+            loss = _loss
+        else:
+            import numpy as np
+            loss = lambda p: _loss(p).numpy()
+
+        result, parameters = self.optimizers.optimize(loss, initial_p, method,
+                                                      options)
+        self.set_parameters(parameters)
+        return result, parameters
