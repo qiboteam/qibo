@@ -208,13 +208,22 @@ class QAOA(object):
         mixer (:class:`qibo.base.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
+        callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            for more details. This option is available only when ``hamiltonian``
+            is a :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
     """
     import numpy as np
     from qibo import hamiltonians
     from qibo.config import K, DTYPES, log
     from qibo.callbacks import Norm
 
-    def __init__(self, hamiltonian, mixer=None, solver="exp"):
+    def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian
@@ -232,18 +241,18 @@ class QAOA(object):
                                          "".format(type(hamiltonian),
                                                    type(mixer)))
             self.mixer = mixer
-        # set normalizer if RK solver is used
-        if "rk" in solver:
-            norm = self.Norm()
-            self.normalize_state = lambda s: s / self.K.cast(
-                norm(s), dtype=s.dtype)
-            self.log.info('Normalizing state during RK solution.')
-        else:
-            self.normalize_state = lambda s: s
+
         # evolution solvers
         from qibo import solvers
         self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
         self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
+
+        self.callbacks = callbacks
+        self.accelerators = accelerators
+        self.normalize_state = StateEvolution._create_normalize_state(
+            self, solver)
+        self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
+            self, accelerators, memory_device)
 
     def set_parameters(self, p):
         """Sets the variational parameters.
@@ -254,15 +263,29 @@ class QAOA(object):
         """
         self.params = p
 
-    def __call__(self, initial_state=None):
+    def _apply_exp(self, state, solver, p):
+        """Helper method for ``execute``."""
+        solver.dt = p
+        state = solver(state)
+        if self.callbacks:
+            state = self.normalize_state(state)
+            self.calculate_callbacks(state)
+        return state
+
+    def execute(self, initial_state=None):
         """Applies the QAOA exponential operators to a state."""
         state = self.get_initial_state(initial_state)
+        self.calculate_callbacks(state)
         for i in range(len(self.params) // 2):
-            self.ham_solver.dt = self.params[2 * i]
-            state = self.ham_solver(state)
-            self.mix_solver.dt = self.params[2 * i + 1]
-            state = self.mix_solver(state)
+            state = self._apply_exp(state, self.ham_solver,
+                                    self.params[2 * i])
+            state = self._apply_exp(state, self.mix_solver,
+                                    self.params[2 * i + 1])
         return self.normalize_state(state)
+
+    def __call__(self, initial_state=None):
+        """Equivalent to :meth:`qibo.models.QAOA.execute`."""
+        return self.execute(initial_state)
 
     def get_initial_state(self, state=None):
         """"""
@@ -291,8 +314,9 @@ class QAOA(object):
             return self.np.float64(self.hamiltonian.expectation(state))
 
         if len(initial_p) % 2 != 0:
-            raise ValueError("Initial guess for the parameters must contain "
-                             "an even number of values.")
+            raise_error(ValueError, "Initial guess for the parameters must "
+                                    "contain an even number of values but "
+                                    "contains {}.".format(len(initial_p)))
 
         print('Optimizing QAOA...')
         result = minimize(loss, initial_p, method=method)
