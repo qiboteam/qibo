@@ -166,6 +166,18 @@ def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     run_script(args, script_name="vqe.py")
 
 
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nangles", [1, 2])
+@pytest.mark.parametrize("trotter", [False, True])
+@pytest.mark.parametrize("solver", [False, True])
+def test_vqe_benchmarks(nqubits, nangles, trotter, solver, method="Powell"):
+    args = locals()
+    path = os.path.join(base_dir, "benchmarks")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="qaoa.py")
+
+
 @pytest.mark.parametrize("nclasses", [3])
 @pytest.mark.parametrize("nqubits", [4])
 @pytest.mark.parametrize("nlayers", [4, 5])
