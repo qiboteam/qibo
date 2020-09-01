@@ -242,6 +242,17 @@ class QAOA(object):
                                                    type(mixer)))
             self.mixer = mixer
 
+        # create circuits for Trotter Hamiltonians
+        if (accelerators is not None and (
+            not isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+            or solver != "exp")):
+            raise_error(NotImplementedError, "Distributed QAOA is implemented "
+                                             "only with TrotterHamiltonian and "
+                                             "exponential solver.")
+        if isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian):
+            self.hamiltonian.circuit(1e-2, accelerators, memory_device)
+            self.mixer.circuit(1e-2, accelerators, memory_device)
+
         # evolution solvers
         from qibo import solvers
         self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
@@ -289,7 +300,14 @@ class QAOA(object):
 
     def get_initial_state(self, state=None):
         """"""
+        if self.accelerators is not None:
+            if state is None:
+                state = "ones"
+            c = self.hamiltonian.circuit(self.params[0])
+            return c.get_initial_state(state)
+
         if state is None:
+            # Generate |++...+> state
             dtype = self.DTYPES.get('DTYPECPX')
             n = self.K.cast(2 ** self.nqubits, dtype=self.DTYPES.get('DTYPEINT'))
             state = self.K.ones(n, dtype=dtype)
