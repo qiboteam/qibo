@@ -344,7 +344,9 @@ class QAOA(object):
             return self.hamiltonian.expectation(state)
 
         if method == "sgd":
-            loss = _loss
+            import tensorflow as tf
+            loss = lambda p: _loss(tf.cast(
+                p, dtype=self.DTYPES.get('DTYPECPX')))
         else:
             import numpy as np
             loss = lambda p: _loss(p).numpy()

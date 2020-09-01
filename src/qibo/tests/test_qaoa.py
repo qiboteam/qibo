@@ -5,9 +5,11 @@ from qibo import models, hamiltonians
 from qibo.tests import utils
 
 
-def test_initial_state():
-    h = hamiltonians.TFIM(3, h=1.0)
-    qaoa = models.QAOA(h)
+@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_initial_state(accelerators):
+    h = hamiltonians.TFIM(3, h=1.0, trotter=True)
+    qaoa = models.QAOA(h, accelerators=accelerators)
+    qaoa.set_parameters(np.random.random(4))
     target_state = np.ones(2 ** 3) / np.sqrt(2 ** 3)
     final_state = qaoa.get_initial_state()
     np.testing.assert_allclose(final_state, target_state)
@@ -96,8 +98,7 @@ test_values = [
     ("BFGS", {'maxiter': 1}, False, "qaoa_bfgs.out"),
     ("BFGS", {'maxiter': 1}, True, "trotter_qaoa_bfgs.out"),
     ("Powell", {'maxiter': 1}, True, "trotter_qaoa_powell.out"),
-    # ("sgd", {"nepochs": 5}, False, None)
-    # TODO: Fix problem with SGD test
+    ("sgd", {"nepochs": 5}, False, None)
     ]
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(method, options, trotter, filename):
