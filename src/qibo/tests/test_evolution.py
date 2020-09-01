@@ -76,12 +76,14 @@ def test_state_time_dependent_evolution_final_state(nqubits=2, dt=1e-2):
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
-@pytest.mark.parametrize("nqubits,accelerators,dt",
-                         [(3, None, 1e-3),
-                          (4, None, 1e-3),
-                          (4, {"/GPU:0": 2}, 1e-2)])
-def test_trotterized_evolution(nqubits, accelerators, dt, h=1.0):
+@pytest.mark.parametrize("nqubits,solver,accelerators,dt",
+                         [(3, "exp", None, 1e-3),
+                          (4, "exp", None, 1e-3),
+                          (4, "rk45", None, 1e-3),
+                          (4, "exp", {"/GPU:0": 2}, 1e-2)])
+def test_trotterized_evolution(nqubits, solver, accelerators, dt, h=1.0):
     """Test state evolution using trotterization of ``TrotterHamiltonian``."""
+    atol = 1e-4 if solver == "exp" else 1e-2
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
     prop = expm(-1j * dt * ham_matrix)
@@ -89,15 +91,16 @@ def test_trotterized_evolution(nqubits, accelerators, dt, h=1.0):
         target_psi.append(prop.dot(target_psi[-1]))
 
     ham = hamiltonians.TFIM(nqubits, h=h, trotter=True)
-    checker = TimeStepChecker(target_psi, atol=1e-4)
-    evolution = models.StateEvolution(ham, dt, callbacks=[checker],
+    checker = TimeStepChecker(target_psi, atol=atol)
+    evolution = models.StateEvolution(ham, dt, solver=solver,
+                                      callbacks=[checker],
                                       accelerators=accelerators)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
     # Change dt
     evolution = models.StateEvolution(ham, dt / 10, accelerators=accelerators)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
-    assert_states_equal(final_psi, target_psi[-1], atol=1e-4)
+    assert_states_equal(final_psi, target_psi[-1], atol=atol)
 
 
 def test_hamiltonian_t():
@@ -224,10 +227,11 @@ def test_energy_callback(solver, atol, dt=1e-2):
 
 
 @pytest.mark.parametrize("solver", ["rk4", "rk45"])
-def test_rk4_evolution(solver, dt=1e-3):
+@pytest.mark.parametrize("trotter", [False, True])
+def test_rk4_evolution(solver, trotter, dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
+    h0 = hamiltonians.X(3, trotter=trotter)
+    h1 = hamiltonians.TFIM(3, trotter=trotter)
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
