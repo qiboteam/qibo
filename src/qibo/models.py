@@ -157,9 +157,10 @@ class VQE(object):
             initial_state (array): a initial guess for the parameters of the
                 variational circuit.
             method (str): the desired minimization method.
-                One of ``"cma"`` (genetic optimizer), ``"sgd"`` (gradient descent) or
-                any of the methods supported by `scipy.optimize.minimize <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
+                See :meth:`qibo.optimizers.optimize` for available optimization
+                methods.
             options (dict): a dictionary with options for the different optimizers.
+            compile (bool): whether the TensorFlow graph should be compiled.
 
         Return:
             The final expectation value.
@@ -216,6 +217,20 @@ class QAOA(object):
         memory_device (str): Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import models, hamiltonians
+            # create XXZ Hamiltonian for four qubits
+            hamiltonian = hamiltonians.XXZ(4)
+            # create QAOA model for this Hamiltonian
+            qaoa = models.QAOA(hamiltonian)
+            # optimize using random initial variational parameters
+            # and default options and initial state
+            initial_parameters = 0.01 * np.random.random(4)
+            best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers
     from qibo.config import K, DTYPES, log
@@ -289,7 +304,7 @@ class QAOA(object):
             initial_state (np.ndarray): Initial state vector.
 
         Returns:
-            State vector after applying the QAOA exponentials.
+            State vector after applying the QAOA exponential gates.
         """
         state = self.get_initial_state(initial_state)
         self.calculate_callbacks(state)
@@ -326,13 +341,17 @@ class QAOA(object):
         """Optimizes the variational parameters of the QAOA.
 
         Args:
-            initial_p (np.ndarray): initial guess for the parameters of the QAOA.
-            initial_state (np.ndarray): initial state of the QAOA.
+            initial_p (np.ndarray): initial guess for the parameters.
+            initial_state (np.ndarray): initial state vector of the QAOA.
+            method (str): the desired minimization method.
+                See :meth:`qibo.optimizers.optimize` for available optimization
+                methods.
+            options (dict): a dictionary with options for the different optimizers.
 
-        Returns:
-            (float, numpy.array) with (minimum found for the problem Hamiltonian, optimal angles)
+        Return:
+            The final energy (expectation value of the ``hamiltonian``).
+            The corresponding best parameters.
         """
-        # TODO: Fix docstring
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
                                     "contain an even number of values but "
