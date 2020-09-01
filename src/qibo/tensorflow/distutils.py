@@ -398,7 +398,9 @@ class DistributedState(DistributedBase):
       """Creates the |+++...+> state for adiabatic evolution initialization."""
       state = cls(circuit)
       with tf.device(state.device):
-          state.pieces = [tf.Variable(tf.ones_like(p)) for p in state.pieces]
+          norm = tf.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
+          state.pieces = [tf.Variable(tf.ones_like(p) / norm)
+                          for p in state.pieces]
       return state
 
     @classmethod
