@@ -115,16 +115,18 @@ we find that the optimal values are:
 Executing the script for these parameters we find the correct bitstring
 solution `0110000101` to the 3SAT problem with probability 99%.
 
-In the left plot that follows we show the ground and excited state energies
+In the plot that follows we show the ground and excited state energies
 for the adiabatic evolution Hamiltonian, as well as the difference between
 them (gap) and the final form of the optimized scheduling function.
 We observe that in agreement with what we expect from theory the scheduling is
 "slower" at the area where the gap is minimum.
 
-![gap-plot](images/optn10_plot.png) ![prob-plot](images/prob_plot.png)
+![gap-plot](images/optn10_plot.png)
 
-On the right we plot the probability to measure the correct solution from the
+Below we plot the probability to measure the correct solution from the
 final state of the evolution as a function of the total evolution time T. We
 find that when using the optimized scheduling (fourth order polynomial) the
 probability reaches 99% within T=50, while for the default linear scheduling
 T=400 is required to reach the same probability.
+
+![prob-plot](images/prob_plot.png)
