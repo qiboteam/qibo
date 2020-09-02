@@ -94,6 +94,10 @@ def test_qaoa_errors():
     # distributed execution with RK solver
     with pytest.raises(NotImplementedError):
         qaoa = models.QAOA(h, solver="rk4", accelerators={"/GPU:0": 2})
+    # minimize with odd number of parameters
+    qaoa = models.QAOA(h)
+    with pytest.raises(ValueError):
+        qaoa.minimize(np.random.random(5))
 
 
 test_names = "method,options,trotter,filename"
