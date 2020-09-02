@@ -209,6 +209,7 @@ class QAOA(object):
         mixer (:class:`qibo.base.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
+            Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`

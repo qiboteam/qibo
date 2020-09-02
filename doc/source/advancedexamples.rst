@@ -378,8 +378,8 @@ How to use the QAOA?
 
 The quantum approximate optimization algorithm (QAOA) was introduced in
 `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_ and is a prominent
-algorithm for solving optimization problems using the circuit based model of
-quantum computation. Qibo provides an implementation of the QAOA as a model
+algorithm for solving hard optimization problems using the circuit-based model
+of quantum computation. Qibo provides an implementation of the QAOA as a model
 that can be defined using a :class:`qibo.base.hamiltonians.Hamiltonian`. When
 properly optimized, the QAOA ansatz will approximate the ground state of this
 Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
@@ -399,7 +399,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
     best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
 
 In the above example the initial guess for parameters has length four and
-therefore the QAOA ansatz consists of four gates, two using the
+therefore the QAOA ansatz consists of four operators, two using the
 ``hamiltonian`` and two using the mixer Hamiltonian. The user may specify the
 mixer Hamiltonian when defining the QAOA model, otherwise
 :class:`qibo.hamiltonians.X` will be used by default.
@@ -408,8 +408,12 @@ using :meth:`qibo.models.QAOA.set_parameters`.
 Similarly to the VQE, we refer to :ref:`Optimizers <Optimizers>` for more
 information on the available options of the ``qaoa.minimize``.
 
-The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential gates to
-the state vector. For more information on how solvers work we refer to the
+QAOA uses the |++...+> as the default initial state on which the variational
+operators are applied. The user may specify a different initial state when
+executing or optimizing by passing the ``initial_state`` argument.
+
+The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
+to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>`.
 As explained there, solvers will fall back to traditional Qibo circuits when a
 :class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
