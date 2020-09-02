@@ -84,4 +84,5 @@ setup(
     },
     python_requires=">=3.6.0",
     long_description=long_description,
+    long_description_content_type='text/markdown',
 )
