@@ -233,8 +233,7 @@ class QAOA(object):
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers
-    from qibo.config import K, DTYPES, log
-    from qibo.callbacks import Norm
+    from qibo.config import K, DTYPES
     from qibo.base.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
