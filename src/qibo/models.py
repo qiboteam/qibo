@@ -235,12 +235,16 @@ class QAOA(object):
     from qibo import hamiltonians, optimizers
     from qibo.config import K, DTYPES, log
     from qibo.callbacks import Norm
+    from qibo.base.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian
+        if not isinstance(hamiltonian, self.HAMILTONIAN_TYPES):
+            raise_error(TypeError, "Invalid Hamiltonian type {}."
+                                   "".format(type(hamiltonian)))
         self.hamiltonian = hamiltonian
         self.nqubits = hamiltonian.nqubits
         # mixer hamiltonian (default = -sum(sigma_x))

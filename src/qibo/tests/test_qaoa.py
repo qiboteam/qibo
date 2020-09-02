@@ -83,6 +83,9 @@ def test_qaoa_callbacks(accelerators):
 
 
 def test_qaoa_errors():
+    # Invalid Hamiltonian type
+    with pytest.raises(TypeError):
+        qaoa = models.QAOA("test")
     # Hamiltonians of different type
     h = hamiltonians.TFIM(4, h=1.0, trotter=True)
     m = hamiltonians.X(4, trotter=False)
