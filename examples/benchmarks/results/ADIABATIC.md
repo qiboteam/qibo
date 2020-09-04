@@ -1,5 +1,13 @@
 # Adiabatic evolution
 
+We use Qibo to simulate adiabatic evolution under the transverse field Ising
+Hamiltonians using linear scaling `s(t) = t`. We simulate for a total time
+of T=1 using double precision (`complex128`) and different
+[solvers](https://qibo.readthedocs.io/en/latest/qibo.html#solvers)
+on CPU and GPU. In the first section we provide the scaling of execution time
+as a function of the number of qubits in the system and in the second section
+as a function of the time step `dt` used to discretize and integrate in time.
+
 ## Scaling vs number of qubits
 
 `nqubits` | Trotter (GPU) | Trotter (multi-GPU) | Trotter (CPU) | Exp (GPU) | Exp (CPU) | RK4 (GPU) | RK4 (CPU) | Trotter RK4 (GPU) | Trotter RK4 (CPU)
@@ -36,6 +44,8 @@
 ![adiabatic-nqubits](../images/adiabatic_evolution.png)
 
 ## Scaling vs time step
+
+Results are for N=10 qubits.
 
 `dt (1e-3)` | Trotter (GPU) | Trotter (CPU) | Exp (GPU) | Exp (CPU)
 -- | -- | -- | -- | --

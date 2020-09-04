@@ -1,5 +1,17 @@
 # Measurement shots
 
+Qibo simulates quantum measurements using its standard dense state vector
+simulator, followed by sampling from the distribution corresponding to the final
+state vector. Since the dense state vector is used instead of repeated circuit
+executions, measurement time does not have a strong dependence on the number of
+shots.
+The plots and numbers below contain only the time required for sampling
+as the state vector simulation time (time required to apply gates) has been
+subtracted from the total execution time. The circuit used in this benchmark
+consists of a layer of ``H`` gates applied to every qubit followed by a
+measurement of all qubits.
+
+
 `nshots` | CPU N=12 | GPU N=12 | CPU N=22 | GPU N=22
 -- | -- | -- | -- | --
 10 | 0.00222 | 0.001 | 0.06738 | 0.01154

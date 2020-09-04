@@ -1,6 +1,39 @@
 # Hardware configurations
 
+A core point in Qibo is the support of different hardware configurations
+despite its simple installation procedure. The user can easily switch between
+CPU and GPU as described in
+[How to select hardware devices?](https://qibo.readthedocs.io/en/latest/advancedexamples.html#how-to-select-hardware-devices).
+A question that arises is how to determine the optimal device configuration for
+the circuit one would like to simulate.
+While the answer to this question depends both on the circuit specifics
+(number of qubits, number of gates, number of re-executions) and the
+exact hardware specifications (CPU or GPU model and available memory), here
+we provide a basic comparison using the DGX station to simulate the QFT circuit
+in double precision (`complex128`).
+
+
+## Heuristic rules
+
+Based on the results presented below, in the following table we provide some
+heuristic rules for optimal device selection according to the number of qubits.
+More stars means a shorter execution time is expected.
+We stress that these general rules may not be valid on every case as the optimal
+configuration depends on various factors, such as the exact circuit structure
+and hardware specifications (CPU and GPU speed and memory).
+
+`nqubits` | 0-15 | 15-30 | >30
+-- | :--: | :--: | :--:
+CPU single thread | `***` | `*` | `*`
+CPU multi-threading | `*` | `**` | `**`
+single GPU | `*` | `***` | `**`
+multi-GPU | - | - | `***`
+
+
 ## Large circuits
+
+Here we measure QFT execution time for large circuits (25 to 33 qubits) using
+different CPU thread configuration, single GPU and multi-GPU.
 
 `nqubits` | single-GPU | multi-GPU | 1-thread | 10-threads | 20-threads | 40-threads
 -- | -- | -- | -- | -- | -- | --
@@ -16,7 +49,11 @@
 
 ![hardware-large](../images/qibo_configurations.png)
 
+
 ## Small circuits
+
+Here we measure QFT execution time for small circuits (25 to 33 qubits) using
+different single-thread CPU, multi-thread CPU and GPU.
 
 `nqubits` | single-GPU | 1-thread | 40-threads
 -- | -- | -- | --

@@ -2,9 +2,9 @@
 
 The Quantum Fourier Transform is used as a subroutine in many quantum
 algorithms and thus constitutes an example with great practical importance.
-The gates used in this circuit are ``H``, ``CZPow``, and ``SWAP``,
+The gates used in this circuit are `H`, `CZPow`, and `SWAP`,
 all of which are available in Qibo and other used libraries,
-except QCGPU where ``SWAP`` was implemented using three ``CNOT`` gates.
+except QCGPU where `SWAP` was implemented using three `CNOT` gates.
 
 
 ## Quantum Fourier Transform (`complex64`)

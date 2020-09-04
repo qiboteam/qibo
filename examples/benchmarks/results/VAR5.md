@@ -4,7 +4,7 @@ Variational circuits are typically used in quantum machine learning and similar
 applications and constitute a good candidate for applications of near-term
 quantum computers due to their short depth and.
 The circuit used in the benchmark consists of a layer of RY rotations followed
-by a layer of CZ gates that entangle neighbouring qubits, as shown in the
+by a layer of ``CZ`` gates that entangle neighbouring qubits, as shown in the
 figure below:
 
 ![var5-circuit](../images/varcircuit.png)
