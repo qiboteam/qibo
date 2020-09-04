@@ -192,3 +192,21 @@ supports the following options:
 The script will perform the VQE minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
 show the total execution time.
+
+
+How to run QAOA benchmarks?
+---------------------------
+
+It is possible to run a QAOA optimization benchmark using ``qaoa.py``. This
+supports the following options:
+
+* ``--nqubits`` (``int``): Number of qubits in the circuit.
+* ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz. The parameters are initialized according to uniform distribution in [0, 0.1].
+* ``--trotter`` (``bool``): If ``True`` it uses the Trotter decomposition to apply the exponential operators.
+* ``--solver`` (``str``): :ref:`Solver <Solvers>` to use for applying the exponential operators.
+* ``--method`` (``str``): Optimization method.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
+
+The script will perform the QAOA minimization and will print the optimal energy
+found and its difference with the exact ground state energy. It will also
+show the total execution time.
