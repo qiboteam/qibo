@@ -33,6 +33,9 @@ respective default simulation precision and supported hardware configurations.
    * - `Qibo 0.1.0 <https://github.com/Quantum-TII/qibo>`_
      - single/double
      - multi-thread CPU, GPU, multi-GPU
+   * - `Cirq 0.8.1 <https://github.com/quantumlib/Cirq>`_
+     - single
+     - single-thread CPU
    * - `TFQ 0.3.0 <https://github.com/tensorflow/quantum>`_
      - single
      - single-thread CPU
