@@ -138,9 +138,38 @@ Benchmark results
 
 We compare Qibo performance with other publicly available libraries for quantum
 circuit simulation. We provide results from different hardware configurations.
-The libraries used in the benchmarks are shown in the table below.
+The libraries used in the benchmarks are shown in the table below with their
+respective default simulation precision and supported hardware configurations.
 
-[TODO: Add table with libraries]
+.. list-table:: Quantum libraries used in the benchmarks.
+   :widths: 30 25 50
+   :header-rows: 1
+
+   * - Library
+     - Precision
+     - Hardware
+   * - `Qibo 0.1.0 <https://github.com/Quantum-TII/qibo>`_
+     - single/double
+     - multi-thread CPU, GPU, multi-GPU
+   * - `TFQ 0.3.0 <https://github.com/tensorflow/quantum>`_
+     - single
+     - single-thread CPU
+   * - `Qiskit 0.14.2 <https://github.com/Qiskit>`_
+     - double
+     - single-thread CPU
+   * - `PyQuil 2.20.0 <https://github.com/rigetti/pyquil>`_
+     - double
+     - single-thread CPU
+   * - `IntelQS 0.14.2 <https://github.com/iqusoft/intel-qs>`_
+     - double
+     - multi-thread CPU
+   * - `QCGPU 0.1.1 <https://github.com/libtangle/qcgpu>`_
+     - single
+     - multi-thread CPU, GPU
+   * - `Qulacs 0.1.10.1 <https://github.com/qulacs/qulacs>`_
+     - double
+     - multi-thread CPU, GPU
+
 
 The default precision and hardware configuration is used for all libraries.
 Single-thread Qibo numbers were obtained using the `taskset` utility to restrict
@@ -155,4 +184,5 @@ Results are presented for the following examples:
     benchmarks/results/VAR5.md
     benchmarks/results/SHOTS.md
     benchmarks/results/PRECISION.md
+    benchmarks/results/ADIABATIC.md
     benchmarks/results/HARDWARE.md
