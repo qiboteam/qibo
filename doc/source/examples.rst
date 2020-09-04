@@ -201,6 +201,8 @@ multiple GPUs using ``QFT(31, accelerators)``. Further details are presented in
 the section :ref:`How to select hardware devices? <gpu-examples>`.
 
 
+.. _precision-example:
+
 How to modify the simulation precision?
 ---------------------------------------
 
