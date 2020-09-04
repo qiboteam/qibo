@@ -166,6 +166,18 @@ def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     run_script(args, script_name="vqe.py")
 
 
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("nangles", [2])
+@pytest.mark.parametrize("trotter", [False, True])
+@pytest.mark.parametrize("solver", ["exp", "rk4"])
+def test_qaoa_benchmarks(nqubits, nangles, trotter, solver, method="Powell"):
+    args = locals()
+    path = os.path.join(base_dir, "benchmarks")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="qaoa.py")
+
+
 @pytest.mark.parametrize("nclasses", [3])
 @pytest.mark.parametrize("nqubits", [4])
 @pytest.mark.parametrize("nlayers", [4, 5])
@@ -193,13 +205,13 @@ def test_grover3sat(nqubits, instance):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits,instance,T,dt", [(8, 1, 10, 1e-1)])
+@pytest.mark.parametrize("nqubits,instance,T,dt", [(4, 1, 10, 1e-1)])
 @pytest.mark.parametrize("solver", ["exp", "rk45"])
 @pytest.mark.parametrize("trotter", [True, False])
 @pytest.mark.parametrize("params", [None, [0.5, 0.5]])
-@pytest.mark.parametrize("method", [None, "BFGS"])
+@pytest.mark.parametrize("method,maxiter", [(None, None), ("BFGS", 1)])
 def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
-                       method, plot=False, maxiter=None):
+                       method, maxiter, plot=False):
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()

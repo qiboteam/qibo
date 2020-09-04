@@ -50,6 +50,8 @@ class StateEvolution:
                 raise TypeError("Hamiltonian type {} not understood."
                                 "".format(type(ham)))
         self.nqubits = ham.nqubits
+        if dt <= 0:
+            raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
         if (accelerators is not None and
@@ -63,26 +65,34 @@ class StateEvolution:
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
         self.callbacks = callbacks
+        self.accelerators = accelerators
+        self.normalize_state = self._create_normalize_state(solver)
+        self.calculate_callbacks = self._create_calculate_callbacks(
+            accelerators, memory_device)
+
+    def _create_normalize_state(self, solver):
         if "rk" in solver:
             norm = Norm()
-            self.normalize_state = lambda s: s / K.cast(norm(s), dtype=s.dtype)
             log.info('Normalizing state during RK solution.')
+            return lambda s: s / K.cast(norm(s), dtype=s.dtype)
         else:
-            self.normalize_state = lambda s: s
+            return lambda s: s
 
-        self.accelerators = accelerators
+    def _create_calculate_callbacks(self, accelerators, memory_device):
         def calculate_callbacks(state):
             for callback in self.callbacks:
                 callback.append(callback(state))
+
         if accelerators is None:
-            self._calculate_callbacks = calculate_callbacks
-        else:
-            def calculate_callbacks_distributed(state):
-                with K.device(memory_device):
-                    if not isinstance(state, (np.ndarray, K.Tensor)):
-                        state = state.vector
-                    calculate_callbacks(state)
-            self._calculate_callbacks = calculate_callbacks_distributed
+            return calculate_callbacks
+
+        def calculate_callbacks_distributed(state):
+            with K.device(memory_device):
+                if not isinstance(state, (np.ndarray, K.Tensor)):
+                    state = state.vector
+                calculate_callbacks(state)
+
+        return calculate_callbacks_distributed
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """Runs unitary evolution for a given total time.
@@ -100,12 +110,12 @@ class StateEvolution:
         state = self.get_initial_state(initial_state)
         self.solver.t = start_time
         nsteps = int((final_time - start_time) / self.solver.dt)
-        self._calculate_callbacks(state)
+        self.calculate_callbacks(state)
         for _ in range(nsteps):
             state = self.solver(state)
             if self.callbacks:
                 state = self.normalize_state(state)
-                self._calculate_callbacks(state)
+                self.calculate_callbacks(state)
         state = self.normalize_state(state)
         return state
 
