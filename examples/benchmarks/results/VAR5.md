@@ -1,5 +1,18 @@
 # Variational circuit (5 layers)
 
+Variational circuits are typically used in quantum machine learning and similar
+applications and constitute a good candidate for applications of near-term
+quantum computers due to their short depth and.
+The circuit used in the benchmark consists of a layer of RY rotations followed
+by a layer of CZ gates that entangle neighbouring qubits, as shown in the
+figure below:
+
+![var5-circuit](../images/varcircuit.png)
+
+The configuration is repeated for five layers and the variational parameters
+are chosen randomly from 0 to 2pi in all benchmarks.
+
+
 ## Variational circuit (`complex64`)
 
 `nqubits` | Qibo (V100) | QCGPU (V100) | Qibo (CPU) | QCGPU (CPU) | Cirq (CPU) | TFQ (CPU)
