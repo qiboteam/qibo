@@ -3,11 +3,11 @@ from qibo.models import Circuit
 import numpy as np
 
 
-def read_file(file_name):
-    """Collect data from .txt file that characterizes the problem instance
+def read_file(file_name, instance):
+    """Collect data from .txt file that characterizes the problem instance.
     Args:
-        file_name (str): name of the file that contains the instance information. Available
-            in \data are examples for instances with 4, 8, 10, 12 and 16 qubits.
+        file_name (str): name of the file that contains the instance information.
+        instance (str): number of intance to use.
         
     Returns:
         control (list): important parameters of the instance. 
@@ -15,7 +15,7 @@ def read_file(file_name):
         solution (list): list of the correct outputs of the instance for testing.
         clauses (list): list of all clauses, with the qubits each clause acts upon.
     """
-    file = open('data/{}'.format(file_name), 'r')
+    file = open('../data3sat/{q}bit/n{q}i{i}.txt'.format(q=file_name, i=instance), 'r')
     control = list(map(int, file.readline().split()))
     solution = list(map(str, file.readline().split()))
     clauses = [list(map(int, file.readline().split())) for _ in range(control[1])]

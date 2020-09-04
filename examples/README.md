@@ -13,6 +13,7 @@ physics problems.
 - [Grover's Algorithm for solving a Toy Sponge Hash function](hash-grover/README.md)
 - [Variational Quantum Classifier](variational_classifier/README.md)
 - [Simple Adiabatic Evolution Examples](adiabatic/README.md)
+- [Adiabatic evolution for solving an Exact Cover problem](adiabatic-3SAT/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - Variational Quantum Eigensolver (`benchmarks/vqe.py`)

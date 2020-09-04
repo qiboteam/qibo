@@ -13,12 +13,23 @@ class BaseSolver:
     """
 
     def __init__(self, dt, hamiltonian):
-        self.t = 0
         self.dt = dt
         if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
+        self.t = 0
+
+    @property
+    def t(self):
+        """Solver's current time."""
+        return self._t
+
+    @t.setter
+    def t(self, new_t):
+        """Updates solver's current time."""
+        self._t = new_t
+        self.current_hamiltonian = self.hamiltonian(self.t)
 
     def __call__(self, state): # pragma: no cover
         # abstract method
@@ -60,7 +71,7 @@ class Exponential(BaseSolver):
             return super(Exponential, cls).__new__(cls)
 
     def __call__(self, state):
-        propagator = self.hamiltonian(self.t).exp(self.dt)
+        propagator = self.current_hamiltonian.exp(self.dt)
         self.t += self.dt
         return K.matmul(propagator, state[:, K.newaxis])[:, 0]
 
@@ -69,8 +80,7 @@ class RungeKutta4(BaseSolver):
     """Solver based on the 4th order Runge-Kutta method."""
 
     def __call__(self, state):
-        state = state[:, K.newaxis]
-        ham1 = self.hamiltonian(self.t)
+        ham1 = self.current_hamiltonian
         ham2 = self.hamiltonian(self.t + self.dt / 2.0)
         ham3 = self.hamiltonian(self.t + self.dt)
         k1 = ham1 @ state
@@ -78,15 +88,14 @@ class RungeKutta4(BaseSolver):
         k3 = ham2 @ (state + self.dt * k2 / 2.0)
         k4 = ham3 @ (state + self.dt * k3)
         self.t += self.dt
-        return (state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)[:, 0]
+        return (state - 1j * self.dt * (k1 + 2 * k2 + 2 * k3 + k4) / 6.0)
 
 
 class RungeKutta45(BaseSolver):
     """Solver based on the 5th order Runge-Kutta method."""
 
     def __call__(self, state):
-        state = state[:, K.newaxis]
-        ham1 = self.hamiltonian(self.t)
+        ham1 = self.current_hamiltonian
         ham2 = self.hamiltonian(self.t + self.dt / 4.0)
         ham3 = self.hamiltonian(self.t + 3 * self.dt / 8.0)
         ham4 = self.hamiltonian(self.t + 12 * self.dt / 13.0)
@@ -103,7 +112,7 @@ class RungeKutta45(BaseSolver):
                                         3544 * k3 / 2565 + 1859 * k4 / 4104 - 11 * k5 / 40.0))
         self.t += self.dt
         return (state - 1j * self.dt * (16 * k1 / 135.0 + 6656 * k3 / 12825.0 + 28561 * k4 / 56430.0 -
-                                        9 * k5 / 50.0 + 2 * k6 / 55.0))[:, 0]
+                                        9 * k5 / 50.0 + 2 * k6 / 55.0))
 
 
 factory = {
