@@ -1,7 +1,13 @@
 Benchmarks
 ==========
 
-Code at: https://github.com/Quantum-TII/qibo/tree/master/examples/benchmarks.
+The following sections describe how to run Qibo benchmarks using the scripts
+found at: https://github.com/Quantum-TII/qibo/tree/master/examples/benchmarks.
+
+Comparison of Qibo to other libraries can be found in our
+`original publication <https://arxiv.org/abs/2009.3352360>`_
+and in the :ref:`Benchmark results <benchmark-results>` sections.
+
 
 Circuit benchmarks
 ------------------
@@ -124,6 +130,8 @@ The script will perform the VQE minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
 show the total execution time.
 
+
+.. _benchmark-results:
 
 Benchmark results
 -----------------
