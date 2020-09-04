@@ -1,4 +1,4 @@
-# Variational circuit (5 layers)
+# Variational circuit
 
 Variational circuits are typically used in quantum machine learning and similar
 applications and constitute a good candidate for applications of near-term
