@@ -153,5 +153,6 @@ Results are presented for the following examples:
 
     benchmarks/results/QFT.md
     benchmarks/results/VAR5.md
-    benchmarks/results/HARDWARE.md
     benchmarks/results/SHOTS.md
+    benchmarks/results/PRECISION.md
+    benchmarks/results/HARDWARE.md
