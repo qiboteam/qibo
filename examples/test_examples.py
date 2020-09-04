@@ -209,9 +209,9 @@ def test_grover3sat(nqubits, instance):
 @pytest.mark.parametrize("solver", ["exp", "rk45"])
 @pytest.mark.parametrize("trotter", [True, False])
 @pytest.mark.parametrize("params", [None, [0.5, 0.5]])
-@pytest.mark.parametrize("method", [None, "BFGS"])
+@pytest.mark.parametrize("method,maxiter", [(None, None), ("BFGS", 1)])
 def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
-                       method, plot=False, maxiter=None):
+                       method, maxiter, plot=False):
     if "functions" in sys.modules:
         del sys.modules["functions"]
     args = locals()
