@@ -23,10 +23,11 @@ def test_initial_state(accelerators):
                           ("rk4", True, None),
                           ("rk45", True, None),
                           ("exp", True, {"/GPU:0": 1, "/GPU:1": 1})])
-def test_qaoa_execution_exp(solver, trotter, accelerators):
+def test_qaoa_execution(solver, trotter, accelerators):
     h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
     m = hamiltonians.X(4, trotter=trotter)
-    params = 0.01 * np.random.random(4) # Trotter and RK require small p's!
+    # Trotter and RK require small p's!
+    params = 0.01 * (1 - 2 * np.random.random(4))
     state = utils.random_numpy_state(4)
     # set absolute test tolerance according to solver
     if "rk" in solver:
