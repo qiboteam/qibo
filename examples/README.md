@@ -16,5 +16,7 @@ physics problems.
 - [Adiabatic evolution for solving an Exact Cover problem](adiabatic-3SAT/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
-- Variational Quantum Eigensolver (`benchmarks/vqe.py`)
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)
+- Variational Quantum Eigensolver (`benchmarks/vqe.py`)
+- Adiabatic evolution for the Ising Hamiltonian using linear scaling (`benchmarks/evolution.py`)
+- Quantum approximate optimization algorithm model (`benchmarks/qaoa.py`)
