@@ -138,16 +138,19 @@ Benchmark results
 
 We compare Qibo performance with other publicly available libraries for quantum
 circuit simulation. We provide results from different hardware configurations.
-The libraries used in the benchmarks are shown in the table bellow. The
-default precision and hardware configuration is used for all libraries.
+The libraries used in the benchmarks are shown in the table below.
+
+[TODO: Add table with libraries]
+
+The default precision and hardware configuration is used for all libraries.
 Single-thread Qibo numbers were obtained using the `taskset` utility to restrict
 the number of threads.
 
-The sections that follow show the results for two different circuit types, the
-Quantum Fourier Transform and an example variational circuit.
+Results are presented for the following examples:
 
 .. toctree::
     :maxdepth: 1
 
     benchmarks/results/QFT.md
     benchmarks/results/VAR5.md
+    benchmarks/results/HARDWARE.md
