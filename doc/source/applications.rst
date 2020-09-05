@@ -2,7 +2,7 @@ Application tutorials
 =====================
 
 In this section we present some examples of quantum circuits applied to specific
-physics problems.
+problems.
 
 
 .. toctree::
