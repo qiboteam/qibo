@@ -347,7 +347,8 @@ Note that if the Stochastic Gradient Descent optimizer is used then the user
 has to use a backend based on tensorflow primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
 To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
-Check the next example on automatic differentiation for more details.
+Check the :ref:`How to use automatic differentiation? <autodiff-example>`
+for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
@@ -369,6 +370,65 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
     return circuit
 
+
+.. _qaoa-example:
+
+How to use the QAOA?
+--------------------
+
+The quantum approximate optimization algorithm (QAOA) was introduced in
+`arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_ and is a prominent
+algorithm for solving hard optimization problems using the circuit-based model
+of quantum computation. Qibo provides an implementation of the QAOA as a model
+that can be defined using a :class:`qibo.base.hamiltonians.Hamiltonian`. When
+properly optimized, the QAOA ansatz will approximate the ground state of this
+Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo import models, hamiltonians
+
+    # Create XXZ Hamiltonian for six qubits
+    hamiltonian = hamiltonians.XXZ(6)
+    # Create QAOA model
+    qaoa = models.QAOA(hamiltonian)
+
+    # Optimize starting from a random guess for the variational parameters
+    initial_parameters = 0.01 * np.random.uniform(4)
+    best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+
+In the above example the initial guess for parameters has length four and
+therefore the QAOA ansatz consists of four operators, two using the
+``hamiltonian`` and two using the mixer Hamiltonian. The user may specify the
+mixer Hamiltonian when defining the QAOA model, otherwise
+:class:`qibo.hamiltonians.X` will be used by default.
+Note that the user may set the values of the variational parameters explicitly
+using :meth:`qibo.models.QAOA.set_parameters`.
+Similarly to the VQE, we refer to :ref:`Optimizers <Optimizers>` for more
+information on the available options of the ``qaoa.minimize``.
+
+QAOA uses the |++...+> as the default initial state on which the variational
+operators are applied. The user may specify a different initial state when
+executing or optimizing by passing the ``initial_state`` argument.
+
+The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
+to the state vector. For more information on how solvers work we refer to the
+:ref:`How to simulate time evolution? <timeevol-example>`.
+As explained there, solvers will fall back to traditional Qibo circuits when a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
+:class:`qibo.base.hamiltonians.Hamiltonian`. In this case it is also possible
+to execute the QAOA circuit on multiple devices, by passing an ``accelerators``
+dictionary when defining the model. For example the previous example would
+have to be modified as:
+
+.. code-block:: python
+
+    hamiltonian = hamiltonians.XXZ(6, trotter=True)
+    qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
+
+
+.. _autodiff-example:
 
 How to use automatic differentiation?
 -------------------------------------
@@ -589,6 +649,8 @@ Similarly to ``noise_map``, ``measurement_noise`` can either be either a
 dictionary that maps each qubit to the corresponding probability triplet or
 a tuple if the same triplet shall be used on all measured qubits.
 
+
+.. _timeevol-example:
 
 How to simulate time evolution?
 -------------------------------
