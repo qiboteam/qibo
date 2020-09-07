@@ -58,4 +58,5 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 ## Citation policy
 
 If you use the package please cite the following references:
+- https://arxiv.org/abs/2009.01845
 - https://doi.org/10.5281/zenodo.3997194

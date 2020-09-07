@@ -3,7 +3,7 @@ Benchmarks
 
 Benchmark results
 -----------------
-In our `release publication <https://arxiv.org/abs/2009.3352360>`_ we compare
+In our `release publication <https://arxiv.org/abs/2009.01845>`_ we compare
 Qibo performance with other publicly available libraries for quantum circuit
 simulation and we provide results from different hardware configurations.
 For convenience the results can be found in the following examples for various
