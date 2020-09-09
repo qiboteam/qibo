@@ -43,7 +43,7 @@ The quantum circuit for the Grover search algorithm with any oracle takes the fo
 
 Run the file `main.py` from the console to find the solution of an instance of 10 qubits.
 
-Adding the argument `--nqubits` (int) allows for instances with different number of qubits.
+Adding the argument `--nqubits` (int) and `--instance` (int) allows for different Exact Cover instances with different number of qubits.
 
 The program returns:
 
@@ -52,7 +52,7 @@ The program returns:
 - Most common bitstring measured after all iterations.
 - Target solution of the problem (if included).
 
-Initially supported instances are of [4, 8, 10, 12, 14, 16] qubits.
+Initially supported instances are of [4, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30] qubits, with 10 different instances for qubits 8 and up.
 
 The functions used in this example, including gate by gate decompositions of both the oracle and diffusion transform are included in `functions.py`.
 

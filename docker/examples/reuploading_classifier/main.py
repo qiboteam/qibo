@@ -6,32 +6,32 @@ import pickle
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--name", default='tricrown',
+parser.add_argument("--dataset", default='tricrown',
                     help="Name of the example", type=str)
 parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
 
 
-def main(name, layers):
+def main(dataset, layers):
     """Perform classification for a given problem and number of layers.
 
     Args:
-        name (str): Name of the problem to create the dataset, to choose between
+        dataset (str): Problem to create the dataset, to choose between
             ['circle', '3_circles', 'square', '4_squares', 'crown', 'tricrown', 'wavy_lines']
         layers (int): Number of layers to use in the classifier
     """
-    ql = single_qubit_classifier(name, layers)  # Define classifier
+    ql = single_qubit_classifier(dataset, layers)  # Define classifier
     with open('saved_parameters.pkl', 'rb') as f:
         # Load previous results. Have we ever run these problem?
         data = pickle.load(f)
     try:
-        parameters = data[name][layers]
+        parameters = data[dataset][layers]
         print('Problem solved before, obtaining parameters from file...')
         print('-'*60)
     except:
         print('Problem never solved, finding optimal parameters...')
         result, parameters = ql.minimize(
             method='l-bfgs-b', options={'disp': True})
-        data[name][layers] = parameters
+        data[dataset][layers] = parameters
         with open('saved_parameters.pkl', 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
