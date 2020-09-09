@@ -10,8 +10,8 @@ RUN apt update
 RUN apt install -y python3-pip wget software-properties-common && \
     rm -rf /var/lib/apt/lists/* && \
     apt clean
-RUN pip install wheel 
+#RUN pip install wheel 
 RUN pip install scipy==1.4.1
 RUN pip install matplotlib
-RUN pip install qibo-0.0.1b2-cp38-cp38-linux_x86_64.whl
+RUN pip install qibo
 CMD ["bash"]
