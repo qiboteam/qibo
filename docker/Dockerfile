@@ -10,7 +10,8 @@ RUN apt update
 RUN apt install -y python3-pip wget software-properties-common && \
     rm -rf /var/lib/apt/lists/* && \
     apt clean
-#RUN pip install wheel 
+#RUN pip install 
+RUN python3 -m pip install -U pip
 RUN pip install scipy==1.4.1
 RUN pip install matplotlib
 RUN pip install qibo

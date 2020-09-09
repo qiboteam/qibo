@@ -2,7 +2,6 @@ from qibo.models import Circuit
 from qibo import gates
 import numpy as np
 from datasets import create_dataset, create_target, fig_template, world_map_template
-from qibo.hamiltonians import Hamiltonian
 from qibo.config import matrices
 import tensorflow as tf
 from matplotlib.cm import get_cmap
@@ -34,6 +33,7 @@ class single_qubit_classifier:
         self.test_set = create_dataset(name, samples=test_samples)
         self.target = create_target(name)
         self.params = np.random.randn(layers * 4)
+        self._circuit = self._initialize_circuit()
         try:
             os.makedirs('results/'+self.name+'/%s_layers' % self.layers)
         except:
@@ -47,6 +47,14 @@ class single_qubit_classifier:
         """
         self.params = new_params
 
+    def _initialize_circuit(self):
+        """Creates variational circuit."""
+        C = Circuit(1)
+        for l in range(self.layers):
+            C.add(gates.RY(0, theta=0))
+            C.add(gates.RZ(0, theta=0))
+        return C
+
     def circuit(self, x):
         """Method creating the circuit for a point (in the datasets).
 
@@ -56,16 +64,12 @@ class single_qubit_classifier:
         Returns:
             Qibo circuit.
         """
-        C = Circuit(1)
-        index = 0
-        for l in range(self.layers):
-            C.add(gates.RY(0, self.params[index]
-                           * x[0] + self.params[index + 1]))
-            index += 2
-            C.add(gates.RZ(0, self.params[index]
-                           * x[1] + self.params[index + 1]))
-            index += 2
-        return C
+        params = []
+        for i in range(0, 4 * self.layers, 4):
+            params.append(self.params[i] * x[0] + self.params[i + 1])
+            params.append(self.params[i + 2] * x[1] + self.params[i + 3])
+        self._circuit.set_parameters(params)
+        return self._circuit
 
     def cost_function_one_point_fidelity(self, x, y):
         """Method for computing the cost function for

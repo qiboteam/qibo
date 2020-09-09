@@ -22,7 +22,7 @@ parser.add_argument("--method", default='Powell',
 def main(nqubits, subsize, nlayers, nshots, RY, method):
 
     # We initialize the QSVD
-    Qsvd = QSVD(nqubits, subsize)
+    Qsvd = QSVD(nqubits, subsize, nlayers, RY=RY)
 
     # We choose an initial random state
     initial_state = np.random.uniform(-.5, .5, 2**nqubits) + \
@@ -45,7 +45,7 @@ def main(nqubits, subsize, nlayers, nshots, RY, method):
     schmidt = np.linalg.eigvalsh(reduced_dens)
     vneumann = -np.sum(schmidt[schmidt > 0]*np.log2(schmidt[schmidt > 0]))
     schmidt = -np.sort(-np.sqrt(np.abs(schmidt)))
-    print('Exact Schmidt coefficients: ', schmidt)    
+    print('Exact Schmidt coefficients: ', schmidt)
     print('Exact von Neumann entropy: ', vneumann)
 
     # We choose initial random parameters
@@ -59,17 +59,17 @@ def main(nqubits, subsize, nlayers, nshots, RY, method):
 
     # We train the QSVD
     print('Training QSVD...')
-    cost_function, optimal_angles = Qsvd.minimize(initial_parameters, nlayers, init_state=initial_state,
-                                                  nshots=nshots, RY=RY, method=method)
+    cost_function, optimal_angles = Qsvd.minimize(initial_parameters, init_state=initial_state,
+                                                  nshots=nshots, method=method)
 
     # We use the optimal angles to compute the Schmidt coefficients of the bipartion
     Schmidt_coefficients = Qsvd.Schmidt_coeff(
-        optimal_angles, nlayers, initial_state)
+        optimal_angles, initial_state)
     print('QSVD Schmidt coefficients: ', Schmidt_coefficients)
 
     # We compute the von Neumann entropy using the Schmidt coefficients
     VonNeumann_entropy = Qsvd.VonNeumann_entropy(
-        optimal_angles, nlayers, initial_state)
+        optimal_angles, initial_state)
     print('QSVD von Neumann entropy: ', VonNeumann_entropy)
 
 
