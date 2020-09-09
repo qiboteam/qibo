@@ -15,7 +15,13 @@ _______________________
 Models
 ------
 
-Qibo provides both :ref:`generalpurpose` and :ref:`applicationspecific`.
+Qibo provides models for both the circuit based and the adiabatic quantum
+computation paradigms. Circuit based models include :ref:`generalpurpose` which
+allow defining arbitrary circuits and :ref:`applicationspecific` such as the
+Quantum Fourier Transform (:class:`qibo.models.QFT`) and the
+Variational Quantum Eigensolver (:class:`qibo.models.VQE`).
+Adiabatic quantum computation is simulated using the :ref:`timeevolution`
+of state vectors.
 
 The general purpose model is called ``Circuit`` and holds the list of gates
 that are applied to the state vector or density matrix. All ``Circuit`` models
@@ -26,13 +32,9 @@ In order to perform calculations and apply gates to a state vector a backend
 has to be used. Our current backend of choice is `Tensorflow <http://tensorflow.org/>`_
 and the corresponding ``Circuit`` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
 
-Currently there are two application specific models implemented,
-the Quantum Fourier Transform (:class:`qibo.models.QFT`) and
-the Variational Quantum Eigensolver (:class:`qibo.models.VQE`).
-
 .. _generalpurpose:
 
-General purpose models
+General circuit models
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.base.circuit.BaseCircuit
@@ -42,6 +44,9 @@ General purpose models
     :members:
     :member-order: bysource
 .. autoclass:: qibo.tensorflow.distcircuit.TensorflowDistributedCircuit
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.tensorflow.distutils.DistributedState
     :members:
     :member-order: bysource
 
@@ -54,6 +59,7 @@ Application specific models
 .. automodule:: qibo.models
     :members:
     :member-order: bysource
+    :exclude-members: K
 
 
 .. _circuitaddition:
@@ -133,6 +139,20 @@ all the gates in the group.
     :members:
     :member-order: bysource
 
+
+
+.. _timeevolution:
+
+Time evolution
+^^^^^^^^^^^^^^
+
+.. autoclass:: qibo.evolution.StateEvolution
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.evolution.AdiabaticEvolution
+    :members:
+    :member-order: bysource
+
 _______________________
 
 .. _Gates:
@@ -162,11 +182,36 @@ _______________________
 Hamiltonians
 ------------
 
-We provide the following hamiltonians:
+The main abstract Hamiltonian object of Qibo is:
+
+.. autoclass:: qibo.base.hamiltonians.Hamiltonian
+    :members:
+    :member-order: bysource
+
+
+Qibo provides an additional object that represents Hamiltonians without using
+their full matrix representation and can be used for time evolution using the
+Trotter decomposition. The Hamiltonians represented by this object are sums of
+commuting terms, following the description of Sec. 4.1 of
+`arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+
+.. autoclass:: qibo.base.hamiltonians.TrotterHamiltonian
+    :members:
+    :member-order: bysource
+
+
+In addition to these abstract models, Qibo provides the following pre-coded
+Hamiltonians:
 
 .. automodule:: qibo.hamiltonians
    :members:
    :member-order: bysource
+
+
+Note that all pre-coded Hamiltonians can be created as either
+:class:`qibo.base.hamiltonians.Hamiltonian` or
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+
 
 _______________________
 
@@ -212,6 +257,36 @@ This can be added similarly to a standard gate and does not affect the state vec
    :members:
    :member-order: bysource
 
+
+.. _Solvers:
+
+Solvers
+-------
+
+Solvers are used to numerically calculate the time evolution of state vectors.
+They perform steps in time by integrating the time-dependent Schrodinger
+equation.
+
+.. automodule:: qibo.solvers
+   :members:
+   :member-order: bysource
+
+
+.. _Optimizers:
+
+Optimizers
+----------
+
+Optimizers are used automatically by the ``minimize`` methods of
+:class:`qibo.models.VQE` and :class:`qibo.evolution.AdiabaticEvolution` models.
+The user does not have to use any of the optimizer methods included in the
+current section, however the required options of each optimization method
+can be passed when calling the ``minimize`` method of the respective Qibo
+variational model.
+
+.. automodule:: qibo.optimizers
+   :members:
+   :member-order: bysource
 
 .. _Backends:
 

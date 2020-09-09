@@ -4,6 +4,7 @@ Elements cached are the indices strings required for ``tf.einsum`` or the
 shapes and transposition orders required for ``tf.matmul``.
 """
 from qibo.base import gates as base_gates
+from qibo.config import log, raise_error
 from typing import List, Optional, Sequence
 
 
@@ -31,8 +32,9 @@ class BaseCache:
 
     @property
     def vector(self):
-        if self._vector is None:
-            raise NotImplementedError("Vector cache should be defined in __init__.")
+        if self._vector is None: # pragma: no cover
+            # abstract method
+            raise_error(NotImplementedError, "Vector cache should be defined in __init__.")
         return self._vector
 
     @property
@@ -49,7 +51,7 @@ class BaseCache:
 
     @property
     def left0(self):
-        if self._left0 is None:
+        if self._left0 is None: # pragma: no cover
             self._calculate_density_matrix_controlled()
         return self._left0
 
@@ -62,13 +64,15 @@ class BaseCache:
     def cast_shapes(self, cast_func):
         pass
 
-    def _calculate_density_matrix(self):
+    def _calculate_density_matrix(self): # pragma: no cover
         """Calculates `left` and `right` elements."""
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
-    def _calculate_density_matrix_controlled(self):
+    def _calculate_density_matrix_controlled(self): # pragma: no cover
         """Calculates `left0` and `right0` elements."""
-        raise NotImplementedError
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 class DefaultEinsumCache(BaseCache):
@@ -88,8 +92,8 @@ class DefaultEinsumCache(BaseCache):
                  ncontrol: Optional[int] = None):
       super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
 
-      if nqubits + len(qubits) > len(self._chars):
-          raise NotImplementedError("Not enough einsum characters.")
+      if nqubits + len(qubits) > len(self._chars): # pragma: no cover
+          raise_error(NotImplementedError, "Not enough einsum characters.")
 
       input_state = list(self._chars[:nqubits])
       output_state = input_state[:]
@@ -107,16 +111,16 @@ class DefaultEinsumCache(BaseCache):
       self._vector = f"{self.input},{self.gate}->{self.output}"
 
     def _calculate_density_matrix(self):
-        if self.nqubits > len(self.rest):
-            raise NotImplementedError("Not enough einsum characters.")
+        if self.nqubits > len(self.rest): # pragma: no cover
+            raise_error(NotImplementedError, "Not enough einsum characters.")
 
         rest = self.rest[:self.nqubits]
         self._left = f"{self.input}{rest},{self.gate}->{self.output}{rest}"
         self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
     def _calculate_density_matrix_controlled(self):
-        if self.nqubits + 1 > len(self.rest):
-            raise NotImplementedError("Not enough einsum characters.")
+        if self.nqubits + 1 > len(self.rest): # pragma: no cover
+            raise_error(NotImplementedError, "Not enough einsum characters.")
         rest, c = self.rest[:self.nqubits], self.rest[self.nqubits]
         self._left0 = f"{c}{self.input}{rest},{self.gate}->{c}{self.output}{rest}"
         self._right0 = f"{c}{rest}{self.input},{self.gate}->{c}{rest}{self.output}"
@@ -249,7 +253,7 @@ class ControlCache:
         if not is_density_matrix:
             return self._reverse
 
-        if self._reverse_dm is None:
+        if self._reverse_dm is None: # pragma: no cover
             self.calculate_dm()
         return self._reverse_dm
 

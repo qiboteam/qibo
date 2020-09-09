@@ -1,189 +1,193 @@
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo import matrices
-from qibo import K
-from abc import ABCMeta, abstractmethod
+from qibo import matrices, K
+from qibo.config import BACKEND_NAME, DTYPES, raise_error
+from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
+if BACKEND_NAME == "tensorflow":
+    from qibo.tensorflow import hamiltonians
+    from qibo.tensorflow.hamiltonians import TensorflowTrotterHamiltonian as TrotterHamiltonian
+else: # pragma: no cover
+    # case not tested because backend is preset to TensorFlow
+    raise raise_error(NotImplementedError,
+                      "Only Tensorflow backend is implemented.")
 
 
-NUMERIC_TYPES = (np.int, np.float, np.complex,
-                 np.int32, np.int64, np.float32,
-                 np.float64, np.complex64, np.complex128)
+class Hamiltonian(BaseHamiltonian):
+    """"""
+
+    def __new__(cls, nqubits, matrix, numpy=False):
+        if isinstance(matrix, np.ndarray):
+            if not numpy:
+                matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+        elif isinstance(matrix, K.Tensor):
+            if numpy:
+                matrix = matrix.numpy()
+        else:
+            raise raise_error(TypeError, "Invalid type {} of Hamiltonian "
+                                         "matrix.".format(type(matrix)))
+        if numpy:
+            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
+        else:
+            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
 
 
-def isclassinstance(o, w):
-    """Check if objects are from the same base class."""
-    return (isinstance(o, w.__class__) or
-            issubclass(o.__class__, w.__class__) or
-            issubclass(w.__class__, o.__class__))
-
-
-class Hamiltonian(object):
-    """This class implements the abstract Hamiltonian operator.
+def _multikron(matrix_list):
+    """Calculates Kronecker product of a list of matrices.
 
     Args:
-        nqubits (int): number of quantum bits.
+        matrices (list): List of matrices as ``np.ndarray``s.
+
+    Returns:
+        ``np.ndarray`` of the Kronecker product of all ``matrices``.
     """
-    __metaclass__ = ABCMeta
-
-    def __init__(self, nqubits):
-        if not isinstance(nqubits, int):
-            raise RuntimeError(f'nqubits must be an integer')
-        self.hamiltonian = None
-        self.nqubits = nqubits
-        self._eigenvalues = None
-        self._eigenvectors = None
-
-    @abstractmethod
-    def _build(self, *args, **kwargs):
-        """Implements the Hamiltonian construction."""
-        pass
-
-    def eigenvalues(self):
-        """Computes the eigenvalues for the Hamiltonian."""
-        if self._eigenvalues is None:
-            self._eigenvalues = K.linalg.eigvalsh(self.hamiltonian)
-        return self._eigenvalues
-
-    def eigenvectors(self):
-        """Computes the eigenvectors for the Hamiltonian."""
-        if self._eigenvectors is None:
-            self._eigenvalues, self._eigenvectors = K.linalg.eigh(
-                self.hamiltonian)
-        return self._eigenvectors
-
-    def expectation(self, state):
-        """Computes the real expectation value for a given state.
-        Args:
-            state (array): the expectation state.
-        """
-        a = K.math.conj(state)
-        b = K.tensordot(self.hamiltonian, state, axes=1)
-        n = K.math.real(K.reduce_sum(a*b))
-        return n
-
-    def __add__(self, o):
-        """Add operator."""
-        if isclassinstance(o, self):
-            if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o.hamiltonian
-            return r
-        elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian + o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
-        else:
-            raise NotImplementedError(f'Hamiltonian addition to {type(o)} '
-                                      'not implemented.')
-
-    def __radd__(self, o):
-        """Right operator addition."""
-        return self.__add__(o)
-
-    def __sub__(self, o):
-        """Subtraction operator."""
-        if isclassinstance(o, self):
-            if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o.hamiltonian
-            return r
-        elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian - o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype)
-            return r
-        else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
-
-    def __rsub__(self, o):
-        """Right subtraction operator."""
-        if isclassinstance(o, self):
-            if self.nqubits != o.nqubits:
-                raise RuntimeError('Only hamiltonians with the same '
-                                   'number of qubits can be added.')
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o.hamiltonian - self.hamiltonian
-            return r
-        elif isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = o * \
-                K.eye(2 ** self.nqubits, dtype=self.hamiltonian.dtype) - \
-                self.hamiltonian
-            return r
-        else:
-            raise NotImplementedError(f'Hamiltonian subtraction to {type(o)} '
-                                      'not implemented.')
-
-    def __mul__(self, o):
-        """Multiplication to scalar operator."""
-        if isinstance(o, NUMERIC_TYPES):
-            r = self.__class__(nqubits=self.nqubits)
-            r.hamiltonian = self.hamiltonian * o
-            if self._eigenvalues is not None:
-                if o.real >= 0:
-                    r._eigenvalues = o * self._eigenvalues
-                else:
-                    r._eigenvalues = o * self._eigenvalues[::-1]
-            if self._eigenvectors is not None:
-                if o.real > 0:
-                    r._eigenvectors = self._eigenvectors
-                elif o.real == 0:
-                    r._eigenvectors = K.eye(
-                        self._eigenvectors.shape[0], dtype=self.hamiltonian.dtype)
-            return r
-        else:
-            raise NotImplementedError(f'Hamiltonian multiplication to {type(o)} '
-                                      'not implemented.')
-
-    def __rmul__(self, o):
-        """Right scalar multiplication."""
-        return self.__mul__(o)
+    h = 1
+    for m in matrix_list:
+        h = np.kron(h, m)
+    return h
 
 
-class XXZ(Hamiltonian):
-    """This class implements the Heisenberg XXZ model.
-    The mode uses the Pauli matrices and build the final
-    Hamiltonian:
+def _build_spin_model(nqubits, matrix, condition):
+    """Helper method for building nearest-neighbor spin model Hamiltonians."""
+    h = sum(_multikron((matrix if condition(i, j) else matrices.I
+                        for j in range(nqubits)))
+            for i in range(nqubits))
+    return h
+
+
+def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
+    """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
-        H = H_x + H_y + \\delta \cdot H_z.
+        H = \\sum _{i=0}^N \\left ( X_iX_{i + 1} + Y_iY_{i + 1} + \\delta Z_iZ_{i + 1} \\right ).
 
     Args:
         nqubits (int): number of quantum bits.
         delta (float): coefficient for the Z component (default 0.5).
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
 
     Example:
         ::
 
-            from qibo.hamiltonian import XXZ
+            from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
+    if trotter:
+        hx = np.kron(matrices.X, matrices.X)
+        hy = np.kron(matrices.Y, matrices.Y)
+        hz = np.kron(matrices.Z, matrices.Z)
+        term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
+        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
 
-    def __init__(self, delta=0.5, **kwargs):
-        """Initialize XXZ model."""
-        Hamiltonian.__init__(self, **kwargs)
-        hx = self._build(matrices.X)
-        hy = self._build(matrices.Y)
-        hz = self._build(matrices.Z)
-        self.hamiltonian = hx + hy + delta * hz
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+    hx = _build_spin_model(nqubits, matrices.X, condition)
+    hy = _build_spin_model(nqubits, matrices.Y, condition)
+    hz = _build_spin_model(nqubits, matrices.Z, condition)
+    matrix = hx + hy + delta * hz
+    return Hamiltonian(nqubits, matrix, numpy=numpy)
 
-    def _build(self, *args, **kwargs):
-        """Builds the Heisenber model for a given operator sigma"""
-        hamiltonian = 0
-        eye = matrices.I
-        n = self.nqubits
-        for i in range(n):
-            h = 1
-            for j in range(n):
-                if i == j % n or i == (j+1) % n:
-                    h = np.kron(args[0], h)
-                else:
-                    h = np.kron(eye, h)
-            hamiltonian += h
-        return hamiltonian
+
+def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
+                  ground_state=None):
+    """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
+    if trotter:
+        term_matrix = -np.kron(matrix, matrices.I)
+        term = Hamiltonian(2, term_matrix, numpy=True)
+        return TrotterHamiltonian.from_twoqubit_term(
+            nqubits, term, ground_state=ground_state)
+
+    condition = lambda i, j: i == j % nqubits
+    ham = -_build_spin_model(nqubits, matrix, condition)
+    return Hamiltonian(nqubits, ham, numpy=numpy)
+
+
+def X(nqubits, numpy=False, trotter=False):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N X_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+    """
+    def ground_state():
+        n = K.cast(2 ** nqubits, dtype=DTYPES.get('DTYPEINT'))
+        state = K.ones(n, dtype=DTYPES.get('DTYPECPX'))
+        return state / K.math.sqrt(K.cast(n, dtype=state.dtype))
+    return _OneBodyPauli(nqubits, matrices.X, numpy, trotter, ground_state)
+
+
+def Y(nqubits, numpy=False, trotter=False):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Y_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+    """
+    return _OneBodyPauli(nqubits, matrices.Y, numpy, trotter)
+
+
+def Z(nqubits, numpy=False, trotter=False):
+    """Non-interacting pauli-X Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i=0}^N Z_i.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+    """
+    return _OneBodyPauli(nqubits, matrices.Z, numpy, trotter)
+
+
+def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
+    """Transverse field Ising model with periodic boundary conditions.
+
+    .. math::
+        H = - \\sum _{i=0}^N \\left ( Z_i Z_{i + 1} + h X_i \\right ).
+
+    Args:
+        nqubits (int): number of quantum bits.
+        h (float): value of the transverse field.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+    """
+    if trotter:
+        term_matrix = -np.kron(matrices.Z, matrices.Z)
+        term_matrix -= h * np.kron(matrices.X, matrices.I)
+        term = Hamiltonian(2, term_matrix, numpy=True)
+        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+
+    condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
+    ham = -_build_spin_model(nqubits, matrices.Z, condition)
+    if h != 0:
+        condition = lambda i, j: i == j % nqubits
+        ham -= h * _build_spin_model(nqubits, matrices.X, condition)
+    return Hamiltonian(nqubits, ham, numpy=numpy)

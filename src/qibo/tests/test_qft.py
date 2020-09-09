@@ -4,6 +4,7 @@ Testing Quantum Fourier Transform (QFT) circuit.
 import numpy as np
 import pytest
 from qibo import gates, models
+from qibo.tests import utils
 
 _atol = 1e-7
 
@@ -49,15 +50,10 @@ def test_qft_transformation(nqubits):
     np.testing.assert_allclose(final_state, exact_state, atol=_atol)
 
 
-def random_state(nqubits):
-    x = np.random.random(2**nqubits) + 1j * np.random.random(2**nqubits)
-    return x / np.sqrt((np.abs(x)**2).sum())
-
-
 @pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
 def test_qft_transformation_random(nqubits):
     """Check QFT transformation for random initial state."""
-    initial_state = random_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     exact_state = exact_qft(initial_state)
 
     c_init = models.Circuit(nqubits)
@@ -71,10 +67,18 @@ def test_qft_transformation_random(nqubits):
 @pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
 def test_distributed_qft_agreement(nqubits):
     """Check ``_DistributedQFT`` agrees with normal ``QFT``."""
-    initial_state = random_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     exact_state = exact_qft(initial_state)
 
     c = models._DistributedQFT(nqubits)
     final_state = c(np.copy(initial_state)).numpy()
 
     np.testing.assert_allclose(final_state, exact_state, atol=_atol)
+
+
+def test_distributed_qft_error():
+    """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
+    with pytest.raises(NotImplementedError):
+        c = models._DistributedQFT(2, accelerators={"/GPU:0": 4})
+    with pytest.raises(NotImplementedError):
+        c = models.QFT(10, with_swaps=False, accelerators={"/GPU:0": 2})

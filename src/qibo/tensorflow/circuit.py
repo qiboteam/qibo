@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND
+from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -22,6 +22,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def __init__(self, nqubits):
         super(TensorflowCircuit, self).__init__(nqubits)
         self._compiled_execute = None
+        self.check_initial_state_shape = True
 
     def _set_nqubits(self, gate):
         if gate._nqubits is None:
@@ -52,11 +53,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         callback_results = {gate.callback: [] for gate in self.queue
                             if hasattr(gate, "callback")}
         for gate in self.queue:
-            if gate.is_channel and not self.using_density_matrix:
+            if gate.is_channel and not self.using_density_matrix: # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 # Switch from vector to density matrix
                 self.using_density_matrix = True
                 state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            if isinstance(gate, gates.CallbackGate):
+            if isinstance(gate, gates.CallbackGate): # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
                 callback = gate.callback
                 value = callback(state,
                                  is_density_matrix=self.using_density_matrix)
@@ -69,12 +72,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def compile(self):
         """Compiles the circuit as a Tensorflow graph."""
         if self._compiled_execute is not None:
-            raise RuntimeError("Circuit is already compiled.")
+            raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
-            raise RuntimeError("Cannot compile circuit without gates.")
+            raise_error(RuntimeError, "Cannot compile circuit without gates.")
         if not self.using_tfgates:
-            raise RuntimeError("Cannot compile circuit that uses custom "
-                               "operators.")
+            raise_error(RuntimeError, "Cannot compile circuit that uses custom "
+                                      "operators.")
         self._compiled_execute = tf.function(self._execute_for_compile)
 
     @property
@@ -85,7 +88,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute`` on specified device."""
-        state = self._cast_initial_state(initial_state)
+        self.using_density_matrix = False
+        state = self.get_initial_state(initial_state)
 
         if self.using_tfgates:
             shape = (1 + self.using_density_matrix) * self.nqubits * (2,)
@@ -147,9 +151,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
             with tf.device(device):
                 return self._execute(initial_state=initial_state, nshots=nshots)
         except oom_error:
-            raise RuntimeError(f"State does not fit in {device} memory."
-                               "Please switch the execution device to a "
-                               "different one using ``qibo.set_device``.")
+            raise_error(RuntimeError, f"State does not fit in {device} memory."
+                                       "Please switch the execution device to a "
+                                       "different one using ``qibo.set_device``.")
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
@@ -165,25 +169,21 @@ class TensorflowCircuit(circuit.BaseCircuit):
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
-            raise RuntimeError("Cannot access final state before the circuit "
-                               "is executed.")
+            raise_error(RuntimeError, "Cannot access final state before the circuit "
+                                      "is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, initial_state: Optional[InitStateType] = None
-                            ) -> tf.Tensor:
-        if initial_state is None:
-            return self._default_initial_state()
+    def _check_initial_shape(self, state: InitStateType):
+        """Checks shape of given initial state."""
+        if not isinstance(state, (np.ndarray, tf.Tensor)):
+            raise_error(TypeError, "Initial state type {} is not recognized."
+                                    "".format(type(state)))
 
-        if not (isinstance(initial_state, np.ndarray) or
-                isinstance(initial_state, tf.Tensor)):
-            raise TypeError("Initial state type {} is not recognized."
-                            "".format(type(initial_state)))
-
-        shape = tuple(initial_state.shape)
+        shape = tuple(state.shape)
         def shape_error():
-            raise ValueError("Invalid initial state shape {} for circuit "
-                             "with {} qubits.".format(shape, self.nqubits))
-
+            raise_error(ValueError, "Invalid initial state shape {} for "
+                                    "circuit with {} qubits."
+                                    "".format(shape, self.nqubits))
         if len(shape) not in {1, 2}:
             shape_error()
         if len(shape) == 1 and 2 ** self.nqubits != shape[0]:
@@ -193,10 +193,25 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 shape_error()
             self.using_density_matrix = True
 
-        return tf.cast(initial_state, dtype=DTYPES.get('DTYPECPX'))
+    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+        if isinstance(state, tf.Tensor):
+            return state
+        elif isinstance(state, np.ndarray):
+            return tf.cast(state, dtype=DTYPES.get('DTYPECPX'))
+        raise_error(TypeError, "Initial state type {} is not recognized."
+                                "".format(type(state)))
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
         zeros = tf.zeros(2 ** self.nqubits, dtype=DTYPES.get('DTYPECPX'))
-        initial_state = op.initial_state(zeros)
-        return initial_state
+        state = op.initial_state(zeros)
+        return state
+
+    def get_initial_state(self, state: Optional[InitStateType] = None
+                           ) -> tf.Tensor:
+        """"""
+        if state is None:
+            return self._default_initial_state()
+        if self.check_initial_state_shape:
+            self._check_initial_shape(state)
+        return self._cast_initial_state(state)

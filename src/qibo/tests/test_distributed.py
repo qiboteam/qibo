@@ -2,13 +2,8 @@ import pytest
 import numpy as np
 import qibo
 from qibo import models, gates
-
-
-def random_state(nqubits):
-    shape = (2 ** nqubits,)
-    x = np.random.random(shape) + 1j * np.random.random(shape)
-    x = x / np.sqrt((np.abs(x) ** 2).sum())
-    return x
+from qibo.tensorflow import distutils
+from qibo.tests import utils
 
 
 def check_device_queues(queues):
@@ -18,7 +13,7 @@ def check_device_queues(queues):
             target_qubits = set()
             for gate in device_gates:
                 target_qubits |= set(gate.original_gate.target_qubits)
-            assert not queues.global_qubits_set & target_qubits
+            assert not queues.qubits.set & target_qubits
 
 
 def test_invalid_devices():
@@ -42,7 +37,7 @@ def test_transform_queue_simple():
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = models.DistributedCircuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
-    c.global_qubits = [0]
+    c.queues.qubits = distutils.DistributedQubits([0], c.nqubits)
     tqueue = c.queues.transform(c.queue)
     assert len(tqueue) == 6
     for i in range(3):
@@ -68,7 +63,7 @@ def test_transform_queue_more_gates():
     c.add(gates.CZ(0, 1))
     c.add(gates.CNOT(3, 0))
     c.add(gates.CNOT(1, 2))
-    c.global_qubits = [2, 3]
+    c.queues.qubits = distutils.DistributedQubits([2, 3], c.nqubits)
     tqueue = c.queues.transform(c.queue)
 
     assert len(tqueue) == 10
@@ -99,8 +94,7 @@ def test_set_gates_simple():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(4)))
-    c.global_qubits = [4, 5]
-    c.set_gates()
+    c.queues.set(c.queue)
 
     check_device_queues(c.queues)
     assert len(c.queues.queues) == 1
@@ -115,8 +109,8 @@ def test_set_gates_with_global_swap():
     c.add([gates.H(0), gates.H(2), gates.H(3)])
     c.add(gates.SWAP(3, 4))
     c.add([gates.X(1), gates.X(2)])
-    c.global_qubits = [4, 5]
-    c.set_gates()
+    c.queues.qubits = distutils.DistributedQubits([4, 5], c.nqubits)
+    c.queues.create(c.queues.transform(c.queue))
 
     check_device_queues(c.queues)
     assert len(c.queues.special_queue) == 1
@@ -138,7 +132,7 @@ def test_set_gates_controlled():
     c.add(gates.Z(1).controlled_by(0))
     c.add(gates.SWAP(2, 3))
     c.add([gates.X(2), gates.X(3), gates.X(4)])
-    c.set_gates()
+    c.queues.set(c.queue)
 
     check_device_queues(c.queues)
     assert len(c.queues.queues) == 7
@@ -153,30 +147,29 @@ def test_set_gates_controlled():
 def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(6, devices)
-    c._cast_initial_state()
-    assert c.global_qubits == [0, 1]
+    c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
+    state = c.get_initial_state()
 
-    final_state = c.final_state.numpy()
+    final_state = state.numpy()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1
-    np.testing.assert_allclose(target_state, final_state)
+    np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_user_initialization(nqubits):
     import itertools
-    target_state = random_state(nqubits)
+    target_state = utils.random_numpy_state(nqubits)
 
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.DistributedCircuit(nqubits, devices)
-    c._cast_initial_state(target_state)
-
-    final_state = c.final_state.numpy()
-    np.testing.assert_allclose(target_state, final_state)
+    c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
+    state = c.get_initial_state(target_state)
+    np.testing.assert_allclose(state.numpy(), target_state)
 
     target_state = target_state.reshape(nqubits * (2,))
     for i, s in enumerate(itertools.product([0, 1], repeat=c.nglobal)):
-        piece = c.pieces[i].numpy()
+        piece = state.pieces[i].numpy()
         target_piece = target_state[s]
         np.testing.assert_allclose(target_piece.ravel(), piece)
 
@@ -184,15 +177,9 @@ def test_user_initialization(nqubits):
 def test_distributed_circuit_errors():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.Circuit(6, devices)
-    # Access global qubits before setting them
-    with pytest.raises(ValueError):
-        global_qubits = c.global_qubits
-    # Attempt to set wrong number of global qubits
-    with pytest.raises(ValueError):
-        c.global_qubits = [1, 2, 3]
     # Attempt to set gates before adding any gate
     with pytest.raises(RuntimeError):
-        c.set_gates()
+        c.queues.set(c.queue)
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
         final_state = c.final_state
@@ -217,13 +204,13 @@ def test_unsupported_gates_errors():
     c = models.Circuit(4, {"/GPU:0": 2})
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.global_qubits = [0]
+    c.queues.qubits = distutils.DistributedQubits([0], c.nqubits)
     with pytest.raises(ValueError):
         c.queues.create(c.queue)
 
     c = models.Circuit(4, {"/GPU:0": 4})
     c.add(gates.SWAP(0, 1))
-    c.global_qubits = [0, 1]
+    c.queues.qubits = distutils.DistributedQubits([0, 1], c.nqubits)
     with pytest.raises(ValueError):
         c.queues.create(c.queue)
 
@@ -241,7 +228,7 @@ def test_simple_execution(ndevices):
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(dist_c.nlocal)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -263,7 +250,7 @@ def test_execution_pretransformed_circuit(ndevices):
     c.add(gates.SWAP(0, 2))
     c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -282,7 +269,7 @@ def test_simple_execution_global(ndevices):
     c = models.Circuit(6)
     c.add((gates.H(i) for i in range(6)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -303,7 +290,7 @@ def test_execution_with_global_swap():
     c.add((gates.H(i) for i in range(6)))
     c.add((gates.SWAP(i, i + 1) for i in range(5)))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -317,7 +304,7 @@ def test_execution_special_gate(ndevices):
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
     dist_c = models.DistributedCircuit(6, devices)
-    initial_state = random_state(dist_c.nqubits)
+    initial_state = utils.random_numpy_state(dist_c.nqubits)
     dist_c.add(gates.Flatten(np.copy(initial_state)))
     dist_c.add((gates.H(i) for i in range(dist_c.nlocal)))
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
@@ -345,7 +332,7 @@ def test_controlled_execution(ndevices):
     c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     c.add(gates.CNOT(0, 2))
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -369,7 +356,7 @@ def test_controlled_execution_large(ndevices):
     c.add(gates.SWAP(2, 3))
     c.add([gates.X(2), gates.X(3), gates.X(4)])
 
-    initial_state = random_state(c.nqubits)
+    initial_state = utils.random_numpy_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state)).numpy()
     target_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(target_state, final_state)
@@ -408,7 +395,7 @@ def test_distributed_circuit_addition():
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     c = models.QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    c.set_gates()
+    c.queues.set(c.queue)
     check_device_queues(c.queues)
 
 
@@ -423,8 +410,31 @@ def test_distributed_qft_execution(nqubits, accelerators):
     dist_c = models.QFT(nqubits, accelerators=accelerators)
     c = models.QFT(nqubits)
 
-    initial_state = random_state(nqubits)
+    initial_state = utils.random_numpy_state(nqubits)
     final_state = dist_c(initial_state).numpy()
     target_state = c(initial_state).numpy()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
+
+
+def test_distributed_state_getitem():
+    theta = np.random.random(4)
+    c = models.DistributedCircuit(4, {"/GPU:0": 2})
+    c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    state = c()
+    c = models.Circuit(4)
+    c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    target_state = c().numpy()
+
+    # Check indexing
+    state_vector = np.array([state[i] for i in range(2 ** 4)])
+    np.testing.assert_allclose(state_vector, target_state)
+    # Check slicing
+    np.testing.assert_allclose(state[:], target_state)
+    np.testing.assert_allclose(state[2:5], target_state[2:5])
+    # Check list indexing
+    ids = [2, 4, 6]
+    np.testing.assert_allclose(state[ids], target_state[ids])
+    # Check error
+    with pytest.raises(TypeError):
+        state["a"]

@@ -1,7 +1,9 @@
-![logo](doc/source/qibo_logo.svg)
+![](doc/source/qibo_logo.svg)
 
 ![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
 [![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
+[![Documentation Status](https://readthedocs.org/projects/qibo/badge/?version=latest)](https://qibo.readthedocs.io/en/latest/?badge=latest)
+[![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
 Qibo is a Python library for classical simulation of quantum algorithms.
 
@@ -13,13 +15,13 @@ Some of the key features of Qibo are:
 
 ## Documentation
 
-Qibo documentation is available at [qibo.readthedocs.io](http://34.240.99.72/). (usr: qiboteam, pwd: qilimanjaro)
+Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
 
-- [Installation](http://34.240.99.72/installation.html)
-- [Documentation](http://34.240.99.72)
-- [Components](http://34.240.99.72/qibo.html)
-- [Examples](http://34.240.99.72/examples.html)
-- [Benchmarks](http://34.240.99.72/benchmarks.html)
+- [Installation](https://qibo.readthedocs.io/en/latest/installation.html)
+- [Documentation](https://qibo.readthedocs.io/)
+- [Components](https://qibo.readthedocs.io/en/latest/qibo.html)
+- [Examples](https://qibo.readthedocs.io/en/latest/examples.html)
+- [Benchmarks](https://qibo.readthedocs.io/en/latest/benchmarks.html)
 
 ## Minimum Working Examples
 
@@ -56,5 +58,5 @@ In both cases, the simulation will run in a single device CPU or GPU in double p
 ## Citation policy
 
 If you use the package please cite the following references:
-- https://doi.org/xx.xxxx/zenodo.xxxxx
-- https://arxiv.org/abs/xxxx.xxxxx
+- https://arxiv.org/abs/2009.01845
+- https://doi.org/10.5281/zenodo.3997194

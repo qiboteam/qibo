@@ -8,6 +8,13 @@ from qibo.models import *
 from qibo.gates import *
 
 
+@pytest.mark.parametrize('nqubits', [0, -10, 2.5])
+def test_circuit_noqubit(nqubits):
+    """Check that circuit raises errors with non physical setup."""
+    with pytest.raises( (ValueError, RuntimeError) ):
+        c = Circuit(nqubits)
+
+
 def test_circuit_sanity():
     """Check if the number of qbits is preserved."""
     c = Circuit(2)
@@ -222,6 +229,11 @@ def test_base_gate_errors():
         nqubits = gate.nqubits
     with pytest.raises(ValueError):
         nstates = gate.nstates
+    # Access nstates
+    gate2 = H(0)
+    gate2.nqubits = 3
+    _ = gate2.nstates
+    
     with pytest.raises(RuntimeError):
         gate.nqubits = 2
         gate.nqubits = 3

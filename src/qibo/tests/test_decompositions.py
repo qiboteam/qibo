@@ -4,15 +4,10 @@ import pytest
 import cirq
 from qibo import gates
 from qibo.models import Circuit
+from qibo.tests import utils
 
 _QIBO_TO_CIRQ = {"CNOT": "CNOT", "RY": "Ry", "TOFFOLI": "TOFFOLI"}
 _ATOL = 1e-6
-
-
-def random_initial_state(nqubits, dtype=np.complex128):
-    """Generates a random normalized state vector."""
-    x = np.random.random(2 ** nqubits) + 1j * np.random.random(2 ** nqubits)
-    return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
 
 
 def assert_gates_equivalent(qibo_gate, cirq_gate):
@@ -31,7 +26,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
         theta = None
     elif len(pieces) == 3:
         gatename, theta, targets = pieces
-    else:
+    else: # pragma: no cover
+        # case not tested because it fails
         raise RuntimeError("Cirq gate parsing failed with {}.".format(pieces))
 
     qubits = list(int(x) for x in targets.replace(" ", "").split(","))
@@ -44,7 +40,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
     if theta is not None:
         if "π" in theta:
             theta = np.pi * float(theta.replace("π", ""))
-        else:
+        else: # pragma: no cover
+            # case doesn't happen in tests (could remove)
             theta = float(theta)
         np.testing.assert_allclose(theta, qibo_gate.parameter)
 
@@ -95,7 +92,7 @@ def test_x_decomposition_execution(target, controls, free, use_toffolis):
     """Check that applying the decomposition is equivalent to applying the multi-control gate."""
     gate = gates.X(target).controlled_by(*controls)
     nqubits = max((target,) + controls + free) + 1
-    init_state = random_initial_state(nqubits)
+    init_state = utils.random_numpy_state(nqubits)
 
     targetc = Circuit(nqubits)
     targetc.add(gate)
@@ -120,6 +117,14 @@ def test_x_decomposition_errors(use_toffolis):
         decomp = gate.decompose(5, 6, use_toffolis=use_toffolis)
 
 
+def test_x_decompose_few_controls():
+    """Check ``X`` decomposition with len(controls) < 3."""
+    gate = gates.X(0)
+    decomp = gate.decompose(1, 2)
+    assert len(decomp) == 1
+    assert isinstance(decomp[0], gates.X)
+
+
 def test_circuit_decompose():
     """Check ``circuit.decompose`` agrees with multi-control ``X`` decomposition."""
     c = Circuit(6)
@@ -131,7 +136,7 @@ def test_circuit_decompose():
 
     decomp_c = c.decompose(5)
 
-    init_state = random_initial_state(c.nqubits)
+    init_state = utils.random_numpy_state(c.nqubits)
     target_state = c(np.copy(init_state)).numpy()
     final_state = decomp_c(np.copy(init_state)).numpy()
     np.testing.assert_allclose(final_state, target_state, atol=_ATOL)

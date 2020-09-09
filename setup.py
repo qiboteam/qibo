@@ -43,22 +43,32 @@ class BinaryDistribution(Distribution):
   def is_pure(self):
     return False
 
+# Patch to generate manylinux2010 packages
+from setuptools.command.install import install
+class InstallPlatlib(install):
+    def finalize_options(self):
+        install.finalize_options(self)
+        self.install_lib = self.install_platlib
 
 # Read in requirements
 requirements = open('requirements.txt').readlines()
 requirements = [r.strip() for r in requirements]
 
+# load long description from README
+this_directory = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="qibo",
     version=get_version(),
-    description="Quantum computing framework",
+    description="A framework for quantum computing with hardware acceleration.",
     author="Quantum-TII team",
     author_email="",
     url="https://github.com/Quantum-TII/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    cmdclass={"build_py": Build},
+    cmdclass={"build_py": Build, "install": InstallPlatlib},
     package_data={"": ["*.so", "*.out"]},
     include_package_data=True,
     zip_safe=False,
@@ -69,9 +79,10 @@ setup(
     ],
     install_requires=requirements,
     extras_require={
-        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex"],
+        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables"],
         "tests": ["cirq"],
     },
     python_requires=">=3.6.0",
-    long_description="See readthedocs webpage with the documentation",
+    long_description=long_description,
+    long_description_content_type='text/markdown',
 )

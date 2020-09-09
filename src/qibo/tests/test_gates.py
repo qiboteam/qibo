@@ -4,8 +4,9 @@ Testing tensorflow circuit and gates.
 import numpy as np
 import pytest
 import qibo
-from qibo.models import Circuit
 from qibo import gates
+from qibo.models import Circuit
+from qibo.tests import utils
 
 _BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
 _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
@@ -59,6 +60,8 @@ def test_flatten(backend):
     c.add(gates.Flatten(target_state))
     final_state = c.execute().numpy()
     np.testing.assert_allclose(final_state, target_state)
+    gate = gates.Flatten(target_state)
+    gate(final_state)
     qibo.set_backend(original_backend)
 
 
@@ -329,7 +332,7 @@ def test_cz(backend):
     """Check CZ gate is working properly on random state."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    init_state = np.random.random(4) + 1j * np.random.random(4)
+    init_state = utils.random_numpy_state(2)
     matrix = np.eye(4)
     matrix[3, 3] = -1
     target_state = matrix.dot(init_state)
@@ -424,7 +427,7 @@ def test_generalized_fsim(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
-    rotation = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
+    rotation = utils.random_numpy_complex((2, 2))
 
     c = Circuit(3, accelerators)
     c.add((gates.H(i) for i in range(3)))
@@ -447,7 +450,7 @@ def test_generalized_fsim_error(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = np.random.random()
-    rotation = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
+    rotation = utils.random_numpy_complex((4, 4))
     c = Circuit(2)
     with pytest.raises(ValueError):
         c.add(gates.GeneralizedfSim(0, 1, rotation, phi))
@@ -777,6 +780,26 @@ def test_unitary_bad_shape(backend):
             gate = gates.Unitary(matrix, 0, 1, 2)
     qibo.set_backend(original_backend)
 
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_unitary_various_type_initialization(backend):
+    import tensorflow as tf
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = utils.random_tensorflow_complex((4, 4), dtype=tf.float64)
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(TypeError):
+        gate = gates.Unitary("abc", 0, 1)
+    qibo.set_backend(original_backend)
+
+
+def test_control_unitary_error():
+    matrix = np.random.random((4, 4))
+    gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(ValueError):
+        unitary = gate.control_unitary(np.random.random((16, 16)))
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary(backend):
     qibo.set_backend(backend)
@@ -820,6 +843,10 @@ def test_construct_unitary(backend):
     np.testing.assert_allclose(gates.ZPow(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
     np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary, target_matrix)
+    from qibo import matrices
+    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
+                              [0, 0, 0, 1]])
+    np.testing.assert_allclose(matrices.SWAP, target_matrix)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -855,7 +882,7 @@ def test_construct_unitary_errors(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_unitary_action(backend):
     qibo.set_backend(backend)
-    init_state = np.random.random(4) + 1j * np.random.random(4)
+    init_state = utils.random_numpy_state(2)
     gate = gates.RX(1, theta=0.1234).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
@@ -864,7 +891,8 @@ def test_controlled_by_unitary_action(backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_variational_layer_call(nqubits=6):
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer_call(nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     theta = 2 * np.pi * np.random.random(nqubits)
@@ -957,6 +985,14 @@ def test_variational_layer_errors(backend):
         c.add(gates.VariationalLayer(range(7), pairs,
                                      gates.RY, gates.CZ,
                                      np.zeros(7), np.zeros(7)))
+    with pytest.raises(ValueError):
+        c.add(gates.VariationalLayer(range(10), pairs,
+                                     gates.RY, gates.CZ,
+                                     np.zeros(10), np.zeros(10)))
+
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
+                                  np.zeros(6), np.zeros(6))
+    np.testing.assert_allclose(gate.parameter, np.zeros(12))
     qibo.set_backend(original_backend)
 
 
@@ -1052,10 +1088,12 @@ def test_compiling_twice_exception():
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_custom_compilation(backend):
+    import tensorflow as tf
+    from qibo.config import DTYPES
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    init_state = np.ones(4) / 2.0
+    init_state = tf.cast(np.ones(4) / 2.0, dtype=DTYPES.get('DTYPECPX'))
 
     def run_circuit(initial_state):
         c = Circuit(2)
@@ -1065,7 +1103,6 @@ def test_circuit_custom_compilation(backend):
         return c.execute(initial_state)
 
     r1 = run_circuit(init_state).numpy()
-    import tensorflow as tf
     compiled_circuit = tf.function(run_circuit)
     if backend == "custom":
         with pytest.raises(NotImplementedError):
@@ -1090,6 +1127,10 @@ def test_bad_initial_state(backend, accelerators):
         final_state = c(initial_state=np.zeros((2, 2)))
     with pytest.raises(ValueError):
         final_state = c(initial_state=np.zeros((2, 2, 2)))
+    with pytest.raises(TypeError):
+        final_state = c(initial_state=0)
+    c = Circuit(2, accelerators)
+    c.check_initial_state_shape = False
     with pytest.raises(TypeError):
         final_state = c(initial_state=0)
     qibo.set_backend(original_backend)
