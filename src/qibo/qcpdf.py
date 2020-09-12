@@ -5,7 +5,7 @@
         * ansatz cleanup
 """
 import numpy as np
-import qibo.models as models
+from qibo import models
 from qibo.hamiltonians import Hamiltonian, matrices
 from qibo import gates
 from qibo.config import raise_error
