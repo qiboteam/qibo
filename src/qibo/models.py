@@ -5,6 +5,7 @@ if BACKEND_NAME != "tensorflow": # pragma: no cover
 from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
+from qibo.qcpdf import PDFModel
 from typing import Dict, Optional
 
 

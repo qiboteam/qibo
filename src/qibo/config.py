@@ -26,7 +26,10 @@ def raise_error(exception, message=None, args=None):
         message (str): the error message.
     """
     log.error(message)
-    raise exception(message, args)
+    if args:
+        raise exception(message, args)
+    else:
+        raise exception(message)
 
 
 # Load backend specifics
