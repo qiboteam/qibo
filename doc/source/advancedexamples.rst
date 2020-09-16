@@ -166,6 +166,10 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 .. code-block::  python
 
     from qibo import models, gates, callbacks
+
+    # create entropy callback where qubit 0 is the first subsystem
+    entropy = callbacks.EntanglementEntropy([0])
+
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
@@ -174,8 +178,6 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
     c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
-    # create entropy callback where qubit 0 is the first subsystem
-    entropy = callbacks.EntanglementEntropy([0])
     # execute the circuit using the callback
     final_state = c()
 
@@ -203,6 +205,7 @@ For example
 .. code-block::  python
 
     import numpy as np
+    from qibo import callbacks
     # create a singlet state vector
     state = np.zeros(4)
     state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
@@ -227,7 +230,7 @@ such gates are added in a circuit their parameters can be updated using the
     from qibo.models import Circuit
     from qibo import gates
     # create a circuit with all parameters set to 0.
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     c.add(gates.RX(0, theta=0))
     c.add(gates.RY(1, theta=0))
     c.add(gates.CZ(1, 2))
@@ -246,14 +249,14 @@ the circuit. For example:
 
 .. code-block::  python
 
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     g0 = gates.RX(0, theta=0)
     g1 = gates.RY(1, theta=0)
     g2 = gates.fSim(0, 2, theta=0, phi=0)
     c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
 
     # set new values to the circuit's parameters using a dictionary
-    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
+    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)}
     c.set_parameters(params)
     # equivalently the parameter's can be update with a list as
     params = [0.123, 0.456, (0.789, 0.321)]
@@ -328,7 +331,6 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
         circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
         circuit.add(gates.CZ(0, nqubits-1))
     circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-    return circuit
 
     # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)

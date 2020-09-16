@@ -27,7 +27,7 @@ Here is an example of a circuit with 2 qubits:
     # should print `np.array([1, 0, 0, 0])`
 
 If you are planning to freeze the circuit and just query for different initial
-states then you can use the ``Circuit.compile`` method which will improve
+states then you can use the ``Circuit.compile()`` method which will improve
 evaluation performance, e.g.:
 
 .. code-block:: python
@@ -43,7 +43,7 @@ evaluation performance, e.g.:
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CRZ(0, 1, 0.1234))
+    c.add(gates.CZPow(0, 1, 0.1234))
     c.compile()
 
     for i in range(100):
@@ -58,13 +58,16 @@ backend which uses custom tensorflow operators to apply gates.
 How to print a circuit summary?
 -------------------------------
 
-It is possible to print a summary of the circuit using ``circuit.summary()``.
+It is possible to print a summary of the circuit using ``circuit.summary``.
 This will print basic information about the circuit, including its depth, the
 total number of qubits and all gates in order of the number of times they appear.
 The QASM name is used as identifier of gates.
 For example
 
 .. code-block:: python
+
+    from qibo.models import Circuit
+    from qibo import gates
 
     c = Circuit(3)
     c.add(gates.H(0))
@@ -73,10 +76,10 @@ For example
     c.add(gates.CNOT(1, 2))
     c.add(gates.H(2))
     c.add(gates.TOFFOLI(0, 1, 2))
-    print(c.summary())
+    print(c.summary)
     # Prints
     '''
-    Circuit depth = 7
+    Circuit depth = 6
     Number of qubits = 3
     Most common gates:
     h: 3
@@ -86,7 +89,7 @@ For example
 
 The circuit property ``circuit.gate_types`` will also return a ``collections.Counter``
 that contains the gate types and the corresponding numbers of appearance. The
-method ``circuit.gates_of_type`` can be used to access gate objects of specific type.
+method ``circuit.gates_of_type()`` can be used to access gate objects of specific type.
 For example for the circuit of the previous example:
 
 .. code-block:: python
@@ -98,7 +101,7 @@ For example for the circuit of the previous example:
     # returns "h"
 
     all_h_gates = c.gates_of_type("h")
-    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, H(2))]
+    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))]
 
 A circuit may contain multi-controlled or other gates that are not supported by
 OpenQASM. The ``circuit.decompose(*free)`` method decomposes such gates to
@@ -121,7 +124,6 @@ For example
 
 .. code-block:: python
 
-    import numpy as np
     from qibo.models import Circuit
     from qibo import gates
 
@@ -146,7 +148,6 @@ during the addition of measurement gates in the circuit. For example
 
 .. code-block:: python
 
-    import numpy as np
     from qibo.models import Circuit
     from qibo import gates
 
@@ -192,7 +193,7 @@ A simple Quantum Fourier Transform (QFT) example to test your installation:
     circuit = QFT(15)
 
     # Simulate final state wavefunction default initial state is |00>
-    final_state = c()
+    final_state = circuit()
 
 
 Please note that the ``QFT()`` function is simply a shorthand for the circuit
