@@ -5,7 +5,7 @@ There are several way availables  for  installing the Docker Engine. Look at thi
 Execute the command
 
 ```
-$ docker run -it --rm javierserrano/qibo:bash
+$ docker run -it --rm javierserrano/qibo:0.1.0
 ```
 ## Play with the Qibo examples
 Once you are running the container you can play with the examples
