@@ -109,10 +109,12 @@ def maplog_to(x):
 
 def entangler(circuit):
     qubits = circuit.nqubits
-    for q in range(0, qubits, 2):
-        circuit.add(gates.CZ(q, q + 1))
-    for q in range(1, qubits + 1, 2):
-        circuit.add(gates.CZ(q, (q + 1) % qubits))
+    if qubits > 1:
+        for q in range(0, qubits, 2):
+            circuit.add(gates.CZ(q, q + 1))
+    if qubits > 2:
+        for q in range(1, qubits + 1, 2):
+            circuit.add(gates.CZ(q, (q + 1) % qubits))
 
 def ansatz_0(layers, qubits=1):
     """
@@ -341,18 +343,7 @@ def ansatz_5(layers, qubits=1):
     3 parameters per layer and qubit: U3(a, b, c) Ry(x) Rx (log(x))
     """
     circuit = models.Circuit(qubits)
-    if qubits != 1:
-        for l in range(layers - 1):
-            for q in range(qubits):
-                circuit.add(gates.RZ(q, theta=0))
-                circuit.add(gates.RY(q, theta=0))
-                circuit.add(gates.RZ(q, theta=0))
-                circuit.add(gates.RY(q, theta=0))
-                circuit.add(gates.RX(q, theta=0))
-
-            entangler(circuit)
-
-
+    for l in range(layers - 1):
         for q in range(qubits):
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
@@ -360,17 +351,27 @@ def ansatz_5(layers, qubits=1):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RX(q, theta=0))
 
+        entangler(circuit)
+
+
+    for q in range(qubits):
+        circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
+        circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
+        circuit.add(gates.RX(q, theta=0))
+
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
         for l in range(layers):
             for q in range(qubits):
-                p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
                 p[i + 4] = maplog_to(x)
                 i += 5
-                j += 1
+                j += 3
 
         return p
 
@@ -539,7 +540,7 @@ def ansatz_8(layers, qubits=2):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers - 1):
+        for l in range(layers):
             for q in range(0, qubits, 2):
                 p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
@@ -552,20 +553,6 @@ def ansatz_8(layers, qubits=2):
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
-
-        for q in range(0, qubits, 2):
-            p[i: i + 3] = theta[j: j + 3]
-            p[i + 3] = map_to(x)
-            p[i + 4: i + 7] = theta[j + 3: j + 6]
-            i += 7
-            j += 6
-
-            p[i: i + 3] = theta[j: j + 3]
-            p[i + 3] = map_to(x)
-            p[i + 4: i + 7] = theta[j + 3: j + 6]
-            i += 7
-            j += 6
-
         return p
 
     nparams = 6 * layers * qubits
@@ -635,6 +622,7 @@ def ansatz_9(layers, qubits=2):
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
+        return p
 
     nparams = 6 * layers * qubits
 
@@ -721,7 +709,7 @@ def ansatz_w3(layers, qubits=1):
         for l in range(layers):
             for q in range(qubits):
                 p[i] = theta[j] + theta[j + 1] * map_to(x)
-                p[i + 1] = theta[j + 2] + theta[j + 4] * map_to(x)
+                p[i + 1] = theta[j + 2] + theta[j + 3] * map_to(x)
                 i += 2
                 j += 4
         return p
@@ -751,7 +739,7 @@ def ansatz_w4(layers, qubits=1):
         for l in range(layers):
             for q in range(qubits):
                 p[i] = theta[j] + theta[j + 1] * map_to(x)
-                p[i + 1] = theta[j + 2] + theta[j + 4] * maplog_to(x)
+                p[i + 1] = theta[j + 2] + theta[j + 3] * maplog_to(x)
                 i += 2
                 j += 4
         return p
@@ -781,7 +769,7 @@ def ansatz_w5(layers, qubits=1):
         for l in range(layers):
             for q in range(qubits):
                 p[i] = theta[j] + theta[j + 1] * maplog_to(x)
-                p[i + 1] = theta[j + 2] + theta[j + 4] * maplog_to(x)
+                p[i + 1] = theta[j + 2] + theta[j + 3] * maplog_to(x)
                 i += 2
                 j += 4
         return p
