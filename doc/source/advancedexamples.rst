@@ -284,8 +284,13 @@ The following gates support parameter setting:
 
 .. code-block:: python
 
-    c = Circuit(5)
-    pairs = list((i, i + 1) for i in range(0, 4, 2))
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    nqubits = 5
+    c = Circuit(nqubits)
+    pairs = [(i, i + 1) for i in range(0, 4, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  params=np.zeros(5)))
@@ -340,7 +345,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    best, params = vqe.minimize(initial_parameters, method='BFGS')
+    best, params = vqe.minimize(initial_parameters, method='BFGS', compile=False)
 
 
 For more information on the available options of the ``vqe.minimize`` call we
@@ -350,7 +355,7 @@ has to use a backend based on tensorflow primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
 To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
-for more details.
+section for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
@@ -361,7 +366,7 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
 .. code-block:: python
 
     circuit = models.Circuit(nqubits)
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     theta = np.zeros(nqubits)
     for l in range(nlayers):
         circuit.add(gates.VariationalLayer(range(nqubits), pairs,
@@ -370,7 +375,6 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
-    return circuit
 
 
 .. _qaoa-example:
@@ -397,7 +401,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
     qaoa = models.QAOA(hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = 0.01 * np.random.uniform(4)
+    initial_parameters = 0.01 * np.random.uniform(0,1,4)
     best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
 
 In the above example the initial guess for parameters has length four and
@@ -416,7 +420,7 @@ executing or optimizing by passing the ``initial_state`` argument.
 
 The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
-:ref:`How to simulate time evolution? <timeevol-example>`.
+:ref:`How to simulate time evolution? <timeevol-example>` section.
 As explained there, solvers will fall back to traditional Qibo circuits when a
 :class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
 :class:`qibo.base.hamiltonians.Hamiltonian`. In this case it is also possible
