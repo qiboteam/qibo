@@ -130,6 +130,7 @@ class EntanglementEntropy(PartialTrace):
             for the entropy calculation.
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
+        compute_spectrum (bool): Compute the entanglement spectrum. Default is False.
 
     Example:
         ::
@@ -150,25 +151,41 @@ class EntanglementEntropy(PartialTrace):
             print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
+            print(entropy.spectrum)
+            # Print the entanglement spectrum.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
 
+    def __init__(self, partition: Optional[List[int]] = None, compute_spectrum: bool = False):
+        self.compute_spectrum = compute_spectrum
+        self.spectrum = list()
+        super(EntanglementEntropy, self).__init__(partition)
+
     @classmethod
-    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
-      """Calculates entropy by diagonalizing the density matrix."""
-      # Diagonalize
-      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
-      # Treating zero and negative eigenvalues
-      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
-      return entropy / cls._log2
+    def _entropy(cls, rho: tf.Tensor, compute_eigvals: bool = False):
+        """Calculates entropy by diagonalizing the density matrix."""
+        # Diagonalize
+        eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+        # Treating zero and negative eigenvalues
+        masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
+        entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
+        if compute_eigvals:
+            return entropy / cls._log2, masked_eigvals
+        else:
+            return entropy / cls._log2
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         # Construct reduced density matrix
         rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
-        return self._entropy(rho)
+        if self.compute_spectrum:
+            entropy, eigvals = self._entropy(rho, compute_eigvals=True)
+            spectrum = - tf.math.log(eigvals)
+            self.spectrum.append(spectrum)
+        else:
+            entropy = self._entropy(rho)
+        return entropy
 
 
 class Norm(Callback):

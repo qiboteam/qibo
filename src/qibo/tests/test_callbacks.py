@@ -5,6 +5,8 @@ import pytest
 import numpy as np
 from qibo.models import Circuit, AdiabaticEvolution
 from qibo import gates, callbacks
+from qibo.config import EIGVAL_CUTOFF
+
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
 _atol = 1e-8
@@ -12,7 +14,7 @@ _atol = 1e-8
 
 def test_entropy_product_state():
     """Check that the |++> state has zero entropy."""
-    entropy = callbacks.EntanglementEntropy()
+    entropy = callbacks.EntanglementEntropy(compute_spectrum=True)
     state = np.ones(4) / 2.0
 
     result = entropy(state).numpy()
@@ -44,9 +46,13 @@ def test_entropy_random_state():
     s = s / s.sum()
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
-    result = callbacks.EntanglementEntropy._entropy(rho).numpy()
+    result, eigvals = callbacks.EntanglementEntropy._entropy(rho, compute_eigvals=True)
     target = - (s * np.log2(s)).sum()
-    np.testing.assert_allclose(result, target)
+    np.testing.assert_allclose(result.numpy(), target)
+
+    ref_eigvals = np.linalg.eigvalsh(rho)
+    masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
+    np.testing.assert_allclose(masked_eigvals, eigvals)
 
 
 def test_entropy_switch_partition():
@@ -88,7 +94,7 @@ def test_entropy_numerical():
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_entropy_in_circuit(accelerators):
     """Check that entropy calculation works in circuit."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
     c = Circuit(2, accelerators)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
@@ -99,6 +105,10 @@ def test_entropy_in_circuit(accelerators):
 
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
+
+    target_spectrum = [0, 0, np.log(2), np.log(2)]
+    entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
+    np.testing.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
 
 
 def test_entropy_in_distributed_circuit():
