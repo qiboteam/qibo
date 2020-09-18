@@ -181,7 +181,7 @@ class EntanglementEntropy(PartialTrace):
         # Calculate entropy of reduced density matrix
         if self.compute_spectrum:
             entropy, eigvals = self._entropy(rho, compute_eigvals=True)
-            spectrum = - tf.math.log(eigvals)
+            spectrum = -1 * tf.math.log(eigvals)
             self.spectrum.append(spectrum)
         else:
             entropy = self._entropy(rho)
