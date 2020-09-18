@@ -166,6 +166,10 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 .. code-block::  python
 
     from qibo import models, gates, callbacks
+
+    # create entropy callback where qubit 0 is the first subsystem
+    entropy = callbacks.EntanglementEntropy([0])
+
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
@@ -174,8 +178,6 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
     c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
-    # create entropy callback where qubit 0 is the first subsystem
-    entropy = callbacks.EntanglementEntropy([0])
     # execute the circuit using the callback
     final_state = c()
 
@@ -203,6 +205,7 @@ For example
 .. code-block::  python
 
     import numpy as np
+    from qibo import callbacks
     # create a singlet state vector
     state = np.zeros(4)
     state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
@@ -227,7 +230,7 @@ such gates are added in a circuit their parameters can be updated using the
     from qibo.models import Circuit
     from qibo import gates
     # create a circuit with all parameters set to 0.
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     c.add(gates.RX(0, theta=0))
     c.add(gates.RY(1, theta=0))
     c.add(gates.CZ(1, 2))
@@ -246,14 +249,14 @@ the circuit. For example:
 
 .. code-block::  python
 
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     g0 = gates.RX(0, theta=0)
     g1 = gates.RY(1, theta=0)
     g2 = gates.fSim(0, 2, theta=0, phi=0)
     c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
 
     # set new values to the circuit's parameters using a dictionary
-    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
+    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)}
     c.set_parameters(params)
     # equivalently the parameter's can be update with a list as
     params = [0.123, 0.456, (0.789, 0.321)]
@@ -281,8 +284,13 @@ The following gates support parameter setting:
 
 .. code-block:: python
 
-    c = Circuit(5)
-    pairs = list((i, i + 1) for i in range(0, 4, 2))
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    nqubits = 5
+    c = Circuit(nqubits)
+    pairs = [(i, i + 1) for i in range(0, 4, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  params=np.zeros(5)))
@@ -328,7 +336,6 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
         circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
         circuit.add(gates.CZ(0, nqubits-1))
     circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-    return circuit
 
     # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
@@ -338,7 +345,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    best, params = vqe.minimize(initial_parameters, method='BFGS')
+    best, params = vqe.minimize(initial_parameters, method='BFGS', compile=False)
 
 
 For more information on the available options of the ``vqe.minimize`` call we
@@ -348,7 +355,7 @@ has to use a backend based on tensorflow primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
 To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
-for more details.
+section for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
@@ -359,7 +366,7 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
 .. code-block:: python
 
     circuit = models.Circuit(nqubits)
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     theta = np.zeros(nqubits)
     for l in range(nlayers):
         circuit.add(gates.VariationalLayer(range(nqubits), pairs,
@@ -368,7 +375,6 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
-    return circuit
 
 
 .. _qaoa-example:
@@ -395,7 +401,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
     qaoa = models.QAOA(hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = 0.01 * np.random.uniform(4)
+    initial_parameters = 0.01 * np.random.uniform(0,1,4)
     best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
 
 In the above example the initial guess for parameters has length four and
@@ -414,7 +420,7 @@ executing or optimizing by passing the ``initial_state`` argument.
 
 The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
-:ref:`How to simulate time evolution? <timeevol-example>`.
+:ref:`How to simulate time evolution? <timeevol-example>` section.
 As explained there, solvers will fall back to traditional Qibo circuits when a
 :class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
 :class:`qibo.base.hamiltonians.Hamiltonian`. In this case it is also possible

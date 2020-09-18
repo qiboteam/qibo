@@ -33,7 +33,7 @@ from qibo.models import QFT
 circuit = QFT(15)
 
 # Simulate final state wavefunction default initial state is |00>
-final_state = c()
+final_state = circuit()
 ```
 
 Here another example with more gates and shots simulation:
