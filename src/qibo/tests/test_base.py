@@ -29,6 +29,7 @@ def test_importing_full_qibo():
     c.add(qibo.gates.H(0))
     assert c.nqubits == 2
     assert c.depth == 1
+    assert c.ngates == 1
 
 
 def test_importing_qibo_modules():
@@ -38,6 +39,7 @@ def test_importing_qibo_modules():
     c.add(gates.H(0))
     assert c.nqubits == 2
     assert c.depth == 1
+    assert c.ngates == 1
 
 
 def test_circuit_add():
@@ -46,7 +48,8 @@ def test_circuit_add():
     c.add(H(0))
     c.add(H(1))
     c.add(CNOT(0, 1))
-    assert c.depth == 3
+    assert c.depth == 2
+    assert c.ngates == 3
 
 
 def test_circuit_add_bad_gate():
@@ -73,11 +76,13 @@ def test_circuit_add_iterable():
     c = Circuit(2)
     # Try adding list
     c.add([H(0), H(1), CNOT(0, 1)])
-    assert c.depth == 3
+    assert c.depth == 2
+    assert c.ngates == 3
     assert isinstance(c.queue[-1], CNOT)
     # Try adding tuple
     c.add((H(0), H(1), CNOT(0, 1)))
-    assert c.depth == 6
+    assert c.depth == 4
+    assert c.ngates == 6
     assert isinstance(c.queue[-1], CNOT)
     qibo.set_backend(original_backend)
 
@@ -92,7 +97,8 @@ def test_circuit_add_generator():
         yield CNOT(0, 1)
     c = Circuit(2)
     c.add(gen())
-    assert c.depth == 3
+    assert c.depth == 2
+    assert c.ngates == 3
     assert isinstance(c.queue[-1], CNOT)
     qibo.set_backend(original_backend)
 
@@ -107,7 +113,8 @@ def test_circuit_add_nested_generator():
         yield CNOT(0, 1)
     c = Circuit(2)
     c.add((gen() for _ in range(3)))
-    assert c.depth == 9
+    assert c.depth == 6
+    assert c.ngates == 9
     assert isinstance(c.queue[2], CNOT)
     assert isinstance(c.queue[5], CNOT)
     assert isinstance(c.queue[7], H)
@@ -121,14 +128,14 @@ def test_circuit_addition():
     c1 = Circuit(2)
     c1.add(H(0))
     c1.add(H(1))
-    assert c1.depth == 2
+    assert c1.depth == 1
 
     c2 = Circuit(2)
     c2.add(CNOT(0, 1))
     assert c2.depth == 1
 
     c3 = c1 + c2
-    assert c3.depth == 3
+    assert c3.depth == 2
     qibo.set_backend(original_backend)
 
 
@@ -186,10 +193,13 @@ def test_summary():
     c.add(CNOT(1, 2))
     c.add(TOFFOLI(0, 1, 2))
     c.add(H(2))
-    target_summary = "\n".join(["Circuit depth = 6",
+    target_summary = "\n".join(["Circuit depth = 5",
+                                "Total number of gates = 6",
                                 "Number of qubits = 3",
                                 "Most common gates:",
                                 "h: 3", "cx: 2", "ccx: 1"])
+    print(target_summary)
+    print(c.summary)
     assert c.summary == target_summary
 
 
@@ -200,6 +210,7 @@ def test_circuit_copy(deep):
     c1.add([H(0), H(1), CNOT(0, 1)])
     c2 = c1.copy(deep)
     assert c2.depth == c1.depth
+    assert c2.ngates == c1.ngates
     assert c2.nqubits == c1.nqubits
     for g1, g2 in zip(c1.queue, c2.queue):
         if deep:
@@ -233,7 +244,7 @@ def test_base_gate_errors():
     gate2 = H(0)
     gate2.nqubits = 3
     _ = gate2.nstates
-    
+
     with pytest.raises(RuntimeError):
         gate.nqubits = 2
         gate.nqubits = 3
