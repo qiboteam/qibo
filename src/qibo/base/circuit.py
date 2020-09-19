@@ -573,7 +573,6 @@ class BaseCircuit(object):
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
-    @property
     def summary(self) -> str:
         """Generates a summary of the circuit.
 

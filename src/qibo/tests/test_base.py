@@ -185,7 +185,7 @@ def test_gates_of_type():
 
 
 def test_summary():
-    """Check ``BaseCircuit.summary`` method."""
+    """Check ``BaseCircuit.summary()`` method."""
     c = Circuit(3)
     c.add(H(0))
     c.add(H(1))
@@ -198,9 +198,7 @@ def test_summary():
                                 "Number of qubits = 3",
                                 "Most common gates:",
                                 "h: 3", "cx: 2", "ccx: 1"])
-    print(target_summary)
-    print(c.summary)
-    assert c.summary == target_summary
+    assert c.summary() == target_summary
 
 
 @pytest.mark.parametrize("deep", [False, True])
