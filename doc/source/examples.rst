@@ -58,7 +58,7 @@ backend which uses custom tensorflow operators to apply gates.
 How to print a circuit summary?
 -------------------------------
 
-It is possible to print a summary of the circuit using ``circuit.summary``.
+It is possible to print a summary of the circuit using ``circuit.summary()``.
 This will print basic information about the circuit, including its depth, the
 total number of qubits and all gates in order of the number of times they appear.
 The QASM name is used as identifier of gates.
@@ -76,10 +76,11 @@ For example
     c.add(gates.CNOT(1, 2))
     c.add(gates.H(2))
     c.add(gates.TOFFOLI(0, 1, 2))
-    print(c.summary)
+    print(c.summary())
     # Prints
     '''
-    Circuit depth = 6
+    Circuit depth = 5
+    Total number of gates = 6
     Number of qubits = 3
     Most common gates:
     h: 3
