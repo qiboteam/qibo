@@ -370,7 +370,8 @@ def test_circuit_with_noise_gates():
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     noisy_c = c.with_noise((0.1, 0.2, 0.3))
 
-    assert noisy_c.depth == 9
+    assert noisy_c.depth == 6
+    assert noisy_c.ngates == 9
     from qibo.tensorflow import gates as native_gates
     for i in [1, 2, 4, 5, 7, 8]:
         assert isinstance(noisy_c.queue[i], native_gates.NoiseChannel)
