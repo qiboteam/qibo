@@ -10,7 +10,7 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
-class _ParametrizedGates:
+class _ParametrizedGates(list):
     """Simple data structure for keeping track of parametrized gates.
 
     Useful for the ``circuit.set_parameters()`` method.
@@ -19,20 +19,14 @@ class _ParametrizedGates:
     """
 
     def __init__(self):
-        self.list = []
+        super(_ParametrizedGates, self).__init__(self)
         self.set = set()
         self.nparams = 0
 
     def append(self, gate: gates.ParametrizedGate):
-        self.list.append(gate)
+        super(_ParametrizedGates, self).append(gate)
         self.set.add(gate)
         self.nparams += gate.nparams
-
-    def __len__(self):
-        return len(self.list)
-
-    def __iter__(self):
-        return iter(self.list)
 
 
 class BaseCircuit(object):
