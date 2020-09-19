@@ -486,6 +486,8 @@ class BaseCircuit(object):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i]
         elif n == self.parametrized_gates.nparams:
+            import numpy as np
+            parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i + k: i + k + gate.nparams]

@@ -85,12 +85,12 @@ def test_circuit_set_parameters_with_list(backend, accelerators):
     c.set_parameters(params)
     np.testing.assert_allclose(c(), target_c())
 
-    # Attempt using a flat list / np.ndarray
-    new_params = np.random.random(4)
-    params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
-    target_c.set_parameters(params)
-    c.set_parameters(new_params)
-    np.testing.assert_allclose(c(), target_c())
+    # Attempt using a flat np.ndarray/list
+    for new_params in (np.random.random(4), list(np.random.random(4))):
+        params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
+        target_c.set_parameters(params)
+        c.set_parameters(new_params)
+        np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 
