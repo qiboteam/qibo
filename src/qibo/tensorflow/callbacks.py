@@ -167,7 +167,7 @@ class EntanglementEntropy(PartialTrace):
         eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
         # Treating zero and negative eigenvalues
         masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-        spectrum = - tf.math.log(masked_eigvals)
+        spectrum = -1 * tf.math.log(masked_eigvals)
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
         entropy = - tf.reduce_sum(masked_eigvals * - spectrum)
