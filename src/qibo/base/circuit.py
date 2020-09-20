@@ -30,25 +30,25 @@ class _ParametrizedGates(list):
 
 
 class _Queue(list):
-  """List that holds the queue of gates of a circuit.
+    """List that holds the queue of gates of a circuit.
 
-  In addition to the queue, it holds a list of gate moments, where each gate
-  is placed in the earliest possible position depending for the qubits it acts.
-  """
+    In addition to the queue, it holds a list of gate moments, where each gate
+    is placed in the earliest possible position depending for the qubits it acts.
+    """
 
-  def __init__(self, nqubits):
-      super(_Queue, self).__init__(self)
-      self.nqubits = nqubits
-      self.moments = [nqubits * [None]]
+    def __init__(self, nqubits):
+        super(_Queue, self).__init__(self)
+        self.nqubits = nqubits
+        self.moments = [nqubits * [None]]
 
-  def append(self, gate: gates.ParametrizedGate):
-      super(_Queue, self).append(gate)
-      for q in gate.qubits:
-          if self.moments[-1][q] is not None:
-              # Add a moment
-              self.moments.append(len(self.moments[-1]) * [None])
-      for q in gate.qubits:
-          self.moments[-1][q] = gate
+    def append(self, gate: gates.ParametrizedGate):
+        super(_Queue, self).append(gate)
+        for q in gate.qubits:
+            if self.moments[-1][q] is not None:
+                # Add a moment
+                self.moments.append(len(self.moments[-1]) * [None])
+        for q in gate.qubits:
+            self.moments[-1][q] = gate
 
 
 class BaseCircuit(object):
