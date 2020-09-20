@@ -5,6 +5,8 @@ import pytest
 import numpy as np
 from qibo.models import Circuit, AdiabaticEvolution
 from qibo import gates, callbacks
+from qibo.config import EIGVAL_CUTOFF
+
 
 # Absolute testing tolerance for the cases of zero entanglement entropy
 _atol = 1e-8
@@ -44,9 +46,15 @@ def test_entropy_random_state():
     s = s / s.sum()
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
-    result = callbacks.EntanglementEntropy._entropy(rho).numpy()
+    callback = callbacks.EntanglementEntropy(compute_spectrum=True)
+    result = callback._entropy(rho)
     target = - (s * np.log2(s)).sum()
-    np.testing.assert_allclose(result, target)
+    np.testing.assert_allclose(result.numpy(), target)
+
+    ref_eigvals = np.linalg.eigvalsh(rho)
+    masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
+    ref_spectrum = - np.log(masked_eigvals)
+    np.testing.assert_allclose(callback.spectrum[0].numpy(), ref_spectrum)
 
 
 def test_entropy_switch_partition():
@@ -77,7 +85,8 @@ def test_entropy_numerical():
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
                         1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
     rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPES.get('DTYPECPX'))
-    result = callbacks.EntanglementEntropy._entropy(rho).numpy()
+    callback = callbacks.EntanglementEntropy()
+    result = callback._entropy(rho).numpy()
 
     mask = eigvals > 0
     target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
@@ -88,7 +97,7 @@ def test_entropy_numerical():
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_entropy_in_circuit(accelerators):
     """Check that entropy calculation works in circuit."""
-    entropy = callbacks.EntanglementEntropy([0])
+    entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
     c = Circuit(2, accelerators)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
@@ -99,6 +108,10 @@ def test_entropy_in_circuit(accelerators):
 
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
+
+    target_spectrum = [0, 0, np.log(2), np.log(2)]
+    entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
+    np.testing.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
 
 
 def test_entropy_in_distributed_circuit():

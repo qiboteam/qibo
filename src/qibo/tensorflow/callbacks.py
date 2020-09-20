@@ -130,13 +130,14 @@ class EntanglementEntropy(PartialTrace):
             for the entropy calculation.
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
+        compute_spectrum (bool): Compute the entanglement spectrum. Default is False.
 
     Example:
         ::
 
             from qibo import models, gates, callbacks
             # create entropy callback where qubit 0 is the first subsystem
-            entropy = callbacks.EntanglementEntropy([0])
+            entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
             # initialize circuit with 2 qubits and add gates
             c = models.Circuit(2)
             # add callback gates between normal gates
@@ -150,18 +151,27 @@ class EntanglementEntropy(PartialTrace):
             print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
+            print(entropy.spectrum)
+            # Print the entanglement spectrum.
     """
     _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
 
-    @classmethod
-    def _entropy(cls, rho: tf.Tensor) -> tf.Tensor:
-      """Calculates entropy by diagonalizing the density matrix."""
-      # Diagonalize
-      eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
-      # Treating zero and negative eigenvalues
-      masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-      entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
-      return entropy / cls._log2
+    def __init__(self, partition: Optional[List[int]] = None, compute_spectrum: bool = False):
+        self.compute_spectrum = compute_spectrum
+        self.spectrum = list()
+        super(EntanglementEntropy, self).__init__(partition)
+
+    def _entropy(self, rho: tf.Tensor) -> tf.Tensor:
+        """Calculates entropy by diagonalizing the density matrix."""
+        # Diagonalize
+        eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+        # Treating zero and negative eigenvalues
+        masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
+        spectrum = -1 * tf.math.log(masked_eigvals)
+        if self.compute_spectrum:
+            self.spectrum.append(spectrum)
+        entropy = tf.reduce_sum(masked_eigvals * spectrum)
+        return entropy / self._log2
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
