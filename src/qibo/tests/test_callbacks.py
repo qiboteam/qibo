@@ -46,13 +46,15 @@ def test_entropy_random_state():
     s = s / s.sum()
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
-    result, eigvals = callbacks.EntanglementEntropy._entropy(rho, compute_eigvals=True)
+    callback = callbacks.EntanglementEntropy(compute_spectrum=True)
+    result = callback._entropy(rho)
     target = - (s * np.log2(s)).sum()
     np.testing.assert_allclose(result.numpy(), target)
 
     ref_eigvals = np.linalg.eigvalsh(rho)
     masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
-    np.testing.assert_allclose(masked_eigvals, eigvals)
+    ref_spectrum = - np.log(masked_eigvals)
+    np.testing.assert_allclose(callback.spectrum[0].numpy(), ref_spectrum)
 
 
 def test_entropy_switch_partition():
@@ -83,7 +85,8 @@ def test_entropy_numerical():
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
                         1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
     rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPES.get('DTYPECPX'))
-    result = callbacks.EntanglementEntropy._entropy(rho).numpy()
+    callback = callbacks.EntanglementEntropy()
+    result = callback._entropy(rho).numpy()
 
     mask = eigvals > 0
     target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()

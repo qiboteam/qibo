@@ -137,7 +137,7 @@ class EntanglementEntropy(PartialTrace):
 
             from qibo import models, gates, callbacks
             # create entropy callback where qubit 0 is the first subsystem
-            entropy = callbacks.EntanglementEntropy([0])
+            entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
             # initialize circuit with 2 qubits and add gates
             c = models.Circuit(2)
             # add callback gates between normal gates
@@ -161,31 +161,24 @@ class EntanglementEntropy(PartialTrace):
         self.spectrum = list()
         super(EntanglementEntropy, self).__init__(partition)
 
-    @classmethod
-    def _entropy(cls, rho: tf.Tensor, compute_eigvals: bool = False):
+    def _entropy(self, rho: tf.Tensor) -> tf.Tensor:
         """Calculates entropy by diagonalizing the density matrix."""
         # Diagonalize
         eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
         # Treating zero and negative eigenvalues
         masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-        entropy = - tf.reduce_sum(masked_eigvals * tf.math.log(masked_eigvals))
-        if compute_eigvals:
-            return entropy / cls._log2, masked_eigvals
-        else:
-            return entropy / cls._log2
+        spectrum = - tf.math.log(masked_eigvals)
+        if self.compute_spectrum:
+            self.spectrum.append(spectrum)
+        entropy = - tf.reduce_sum(masked_eigvals * - spectrum)
+        return entropy / self._log2
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         # Construct reduced density matrix
         rho = super(EntanglementEntropy, self).__call__(state, is_density_matrix)
         # Calculate entropy of reduced density matrix
-        if self.compute_spectrum:
-            entropy, eigvals = self._entropy(rho, compute_eigvals=True)
-            spectrum = -1 * tf.math.log(eigvals)
-            self.spectrum.append(spectrum)
-        else:
-            entropy = self._entropy(rho)
-        return entropy
+        return self._entropy(rho)
 
 
 class Norm(Callback):
