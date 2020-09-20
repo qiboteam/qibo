@@ -170,7 +170,7 @@ class EntanglementEntropy(PartialTrace):
         spectrum = -1 * tf.math.log(masked_eigvals)
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
-        entropy = - tf.reduce_sum(masked_eigvals * - spectrum)
+        entropy = tf.reduce_sum(masked_eigvals * spectrum)
         return entropy / self._log2
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
