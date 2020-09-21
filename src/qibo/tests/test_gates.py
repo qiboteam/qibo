@@ -303,26 +303,29 @@ def test_controlled_u1(backend):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_u2(backend):
-    """Check controlled U2 and fallback to CU2."""
+    """Check controlled by U2."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     phi = 0.1234
     lam = 0.4321
 
-    initial_state = utils.random_numpy_state(2)
-    c = Circuit(2)
-    c.add(gates.U2(1, phi, lam).controlled_by(0))
-    final_state = c(np.copy(initial_state))
+    c = Circuit(3)
+    c.add([gates.X(0), gates.X(1)])
+    c.add(gates.U2(2, phi, lam).controlled_by(0, 1))
+    c.add([gates.X(0), gates.X(1)])
+    final_state = c()
 
-    c = Circuit(2)
-    c.add(gates.CU2(0, 1, phi, lam))
-    target_state = c(np.copy(initial_state))
+    c = Circuit(3)
+    c.add([gates.X(0), gates.X(1)])
+    c.add(gates.U2(2, phi, lam))
+    c.add([gates.X(0), gates.X(1)])
+    target_state = c()
     np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_u3(backend):
-    """Check controlled U3 and fallback to CU3."""
+    """Check controlled U3 fall backs to CU3."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1
@@ -333,6 +336,7 @@ def test_controlled_u3(backend):
     c = Circuit(2)
     c.add(gates.U3(1, theta, phi, lam).controlled_by(0))
     final_state = c(np.copy(initial_state))
+    assert c.queue[0].__class__.__name__ == "CU3"
 
     c = Circuit(2)
     c.add(gates.CU3(0, 1, theta, phi, lam))
