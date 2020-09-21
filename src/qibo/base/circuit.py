@@ -711,15 +711,15 @@ class BaseCircuit(object):
         """
         kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(**kwargs)
-        for gate_name, qubits, param in gate_list:
+        for gate_name, qubits, params in gate_list:
             gate = getattr(gate_module, gate_name)
             if gate_name == "M":
-                circuit.add(gate(*qubits, register_name=param))
-            elif param is None:
+                circuit.add(gate(*qubits, register_name=params))
+            elif params is None:
                 circuit.add(gate(*qubits))
             else:
                 # assume parametrized gate
-                circuit.add(gate(*qubits, theta=param))
+                circuit.add(gate(*qubits, *params))
         return circuit
 
     @staticmethod
@@ -811,24 +811,25 @@ class BaseCircuit(object):
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
                 if len(pieces) == 1:
-                    gatename, theta = pieces[0], None
+                    gatename, params = pieces[0], None
                     if gatename not in gates.QASM_GATES:
                         raise_error(ValueError, "QASM command {} is not recognized."
                                                 "".format(command))
                     if gatename in gates.PARAMETRIZED_GATES:
-                        raise_error(ValueError, "Missing theta parameter for QASM "
+                        raise_error(ValueError, "Missing parameters for QASM "
                                                 "gate {}.".format(gatename))
 
                 elif len(pieces) == 2:
-                    gatename, theta = pieces
+                    gatename, params = pieces
                     if gatename not in gates.PARAMETRIZED_GATES:
                         raise_error(ValueError, "Invalid QASM command {}."
                                                 "".format(command))
+                    params = params.replace(" ", "").split(",")
                     try:
-                        theta = float(theta)
+                        params = [float(p) for p in params]
                     except ValueError:
-                        raise_error(ValueError, "Invalid value {} for theta parameter."
-                                                "".format(theta))
+                        raise_error(ValueError, "Invalid value {} for gate parameters."
+                                                "".format(params))
 
                 else:
                     raise_error(ValueError, "QASM command {} is not recognized."
@@ -843,7 +844,7 @@ class BaseCircuit(object):
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gates.QASM_GATES[gatename],
                                   list(qubit_list),
-                                  theta))
+                                  params))
 
         # Create measurement gate qubit lists from registers
         for i, (gatename, register, _) in enumerate(gate_list):

@@ -415,8 +415,8 @@ def test_from_qasm_ugates():
     target = """OPENQASM 2.0;
 qreg q[2];
 u1(0.1) q[0];
-u2(0.2) q[1];
-cu3(0.3, 0.4, 0.5) q[0],q[1];"""
+u2(0.2,0.6) q[1];
+cu3(0.3,0.4,0.5) q[0],q[1];"""
     c = Circuit.from_qasm(target)
     assert c.depth == 2
     assert isinstance(c.queue[0], gates.U1)
@@ -424,7 +424,7 @@ cu3(0.3, 0.4, 0.5) q[0],q[1];"""
     assert isinstance(c.queue[2], gates.CU3)
 
     c2 = Circuit(2)
-    c2.add([gates.U1(0, 0.1), gates.U2(1, 0.2)])
+    c2.add([gates.U1(0, 0.1), gates.U2(1, 0.2, 0.6)])
     c2.add(gates.U3(1, 0.3, 0.4, 0.5).controlled_by(0))
     np.testing.assert_allclose(c2().numpy(), c().numpy())
 
