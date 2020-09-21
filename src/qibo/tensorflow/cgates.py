@@ -357,46 +357,63 @@ class CZ(TensorflowGate, base_gates.CZ):
 
 
 class _CUn_(MatrixGate):
-
     base = U1
+
+    def __init__(self, q0, q1, **params):
+        MatrixGate.__init__(self)
+        cbase = "C{}".format(self.base.__name__)
+        getattr(base_gates, cbase).__init__(self, q0, q1, **params)
 
     def _prepare(self):
         self.base._prepare(self)
 
-    def construct_unitary(self) -> np.ndarray:
-        matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
-        matrix[2:, 2:] = self.base.construct_unitary(self)
-        return matrix
+    def construct_unitary(self) -> tf.Tensor:
+        return MatrixGate.control_unitary(self.base.construct_unitary(self))
 
     def __call__(self, state, is_density_matrix: bool = False):
         return self.base.__call__(self, state, is_density_matrix)
 
 
-class CU1(_CUn_, base_gates.CU1):
+class CRX(_CUn_, base_gates.CRX):
+    base = RX
 
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CRY(_CUn_, base_gates.CRY):
+    base = RY
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CRZ(_CUn_, base_gates.CRZ):
+    base = RZ
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CU1(_CUn_, base_gates.CU1):
     base = U1
 
     def __init__(self, q0, q1, theta):
-        base_gates.CU1.__init__(self, q0, q1, theta)
-        _CUn_.__init__(self)
+        _CUn_.__init__(self, q0, q1, theta=theta)
 
 
 class CU2(_CUn_, base_gates.CU2):
-
     base = U2
 
     def __init__(self, q0, q1, phi, lam):
-        base_gates.CU2.__init__(self, q0, q1, phi, lam)
-        _CUn_.__init__(self)
+        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam)
 
 
 class CU3(_CUn_, base_gates.CU3):
-
     base = U3
 
     def __init__(self, q0, q1, theta, phi, lam):
-        base_gates.CU3.__init__(self, q0, q1, theta, phi, lam)
-        _CUn_.__init__(self)
+        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):

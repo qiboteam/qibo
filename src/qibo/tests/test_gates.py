@@ -322,6 +322,10 @@ def test_controlled_u2(backend):
     target_state = c()
     np.testing.assert_allclose(final_state, target_state)
 
+    # for coverage
+    gate = gates.CU2(0, 1, phi, lam)
+    assert gate.parameter == (phi, lam)
+
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_u3(backend):
@@ -342,6 +346,10 @@ def test_controlled_u3(backend):
     c.add(gates.CU3(0, 1, theta, phi, lam))
     target_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, target_state)
+
+    # for coverage
+    gate = gates.U3(0, theta, phi, lam)
+    assert gate.parameter == (theta, phi, lam)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -972,6 +980,10 @@ def test_controlled_by_unitary_action(backend):
     gate = gates.RX(1, theta=0.1234).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
+
+    print(gate)
+    print(gate.target_qubits, gate.control_qubits)
+
     target_state = c(np.copy(init_state)).numpy()
     final_state = gate.unitary.numpy().dot(init_state)
     np.testing.assert_allclose(final_state, target_state)

@@ -7,11 +7,12 @@ from typing import Dict, List, Optional, Sequence, Tuple
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
               "u1": "U1", "u2": "U2", "u3": "U3",
-              "cx": "CNOT", "swap": "SWAP",
+              "cx": "CNOT", "swap": "SWAP", "cz": "CZ",
+              "crx": "CRX", "cry": "CRY", "crz": "CRZ",
               "cu1": "CU1", "cu3": "CU3",
               "ccx": "TOFFOLI"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
-                      "cu1", "cu3"}
+                      "crx", "cry", "crz", "cu1", "cu3"}
 
 
 class Gate(object):
@@ -572,7 +573,35 @@ class ParametrizedGate(Gate):
         self._reprepare()
 
 
-class RX(ParametrizedGate):
+class _Rn_(ParametrizedGate):
+    """Abstract class for defining the RX, RY and RZ rotations.
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+    axis = "n"
+
+    def __init__(self, q, theta):
+        super(_Rn_, self).__init__()
+        self.name = "r{}".format(self.axis)
+        self.target_qubits = (q,)
+        self.parameter = theta
+
+        self.init_args = [q]
+        self.init_kwargs = {"theta": theta}
+
+    def controlled_by(self, *q):
+        """Fall back to CRn if there is only one control."""
+        if len(q) == 1:
+            gate = getattr(self.module, "CR{}".format(self.axis.capitalize()))(
+              q[0], self.target_qubits[0], **self.init_kwargs)
+        else:
+            gate = super(_Rn_, self).controlled_by(*q)
+        return gate
+
+
+class RX(_Rn_):
     """Rotation around the X-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -589,18 +618,10 @@ class RX(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
     """
-
-    def __init__(self, q, theta):
-        super(RX, self).__init__()
-        self.name = "rx"
-        self.target_qubits = (q,)
-        self.parameter = theta
-
-        self.init_args = [q]
-        self.init_kwargs = {"theta": theta}
+    axis = "x"
 
 
-class RY(ParametrizedGate):
+class RY(_Rn_):
     """Rotation around the Y-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -617,18 +638,10 @@ class RY(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
     """
-
-    def __init__(self, q, theta):
-        super(RY, self).__init__()
-        self.name = "ry"
-        self.target_qubits = (q,)
-        self.parameter = theta
-
-        self.init_args = [q]
-        self.init_kwargs = {"theta": theta}
+    axis = "y"
 
 
-class RZ(ParametrizedGate):
+class RZ(_Rn_):
     """Rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -643,21 +656,11 @@ class RZ(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
     """
-
-    def __init__(self, q, theta):
-        super(RZ, self).__init__()
-        self.name = "rz"
-        self.target_qubits = (q,)
-        self.parameter = theta
-
-        self.init_args = [q]
-        self.init_kwargs = {"theta": theta}
+    axis = "z"
 
 
 class _Un_(ParametrizedGate):
-    """General unitary gate.
-
-    Abstract method for defining the U1, U2 and U3 gates.
+    """Abstract class for defining the U1, U2 and U3 gates.
 
     Args:
         q (int): the qubit id number.
@@ -671,7 +674,7 @@ class _Un_(ParametrizedGate):
         self.init_args = [q]
 
     def controlled_by(self, *q):
-        """Fall back to CU1 if there is only one control."""
+        """Fall back to CUn if there is only one control."""
         if len(q) == 1:
             gate = getattr(self.module, "CU{}".format(self.order))(
               q[0], self.target_qubits[0], **self.init_kwargs)
@@ -778,6 +781,16 @@ class U3(_Un_):
 class CNOT(Gate):
     """The Controlled-NOT gate.
 
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        0 & 0 & 1 & 0 \\\\
+        \\end{pmatrix}
+
     Args:
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
@@ -821,10 +834,94 @@ class CZ(Gate):
         self.init_args = [q0, q1]
 
 
-class _CUn_(ParametrizedGate):
-    """General controlled unitary gate.
+class _CRn_(ParametrizedGate):
+    """Abstract method for defining the CU1, CU2 and CU3 gates.
 
-    Abstract method for defining the CU1, CU2 and CU3 gates.
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): the rotation angle.
+    """
+    axis = "n"
+
+    def __init__(self, q0, q1, theta):
+        super(_CRn_, self).__init__()
+        self.name = "cr{}".format(self.axis)
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.parameter = theta
+
+        self.init_args = [q0, q1]
+        self.init_kwargs = {"theta": theta}
+
+
+class CRX(_CRn_):
+    """Controlled rotation around the X-axis for the Bloch sphere.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & \\cos \\frac{\\theta }{2}  & -i\\sin \\frac{\\theta }{2} \\\\
+        0 & 0 & -i\\sin \\frac{\\theta }{2}  & \\cos \\frac{\\theta }{2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): the rotation angle.
+    """
+    axis = "x"
+
+
+class CRY(_CRn_):
+    """Controlled rotation around the X-axis for the Bloch sphere.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & \\cos \\frac{\\theta }{2}  & -\\sin \\frac{\\theta }{2} \\\\
+        0 & 0 & \\sin \\frac{\\theta }{2}  & \\cos \\frac{\\theta }{2} \\\\
+        \\end{pmatrix}
+
+    Note that this differs from the :class:`qibo.base.gates.RZ` gate.
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): the rotation angle.
+    """
+    axis = "y"
+
+
+class CRZ(_CRn_):
+    """Controlled rotation around the X-axis for the Bloch sphere.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & e^{-i \\theta / 2} & 0 \\\\
+        0 & 0 & 0 & e^{i \\theta / 2} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): the rotation angle.
+    """
+    axis = "z"
+
+
+class _CUn_(ParametrizedGate):
+    """Abstract method for defining the CU1, CU2 and CU3 gates.
 
     Args:
         q0 (int): the control qubit id number.
@@ -853,7 +950,7 @@ class CU1(_CUn_):
         0 & 0 & 0 & e^{i \\theta } \\\\
         \\end{pmatrix}
 
-    Note that this differs from the :class:`qibo.base.gates.RZ` gate.
+    Note that this differs from the :class:`qibo.base.gates.CRZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
@@ -948,6 +1045,16 @@ class CU3(_CUn_):
 
 class SWAP(Gate):
     """The swap gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 0 & 1 \\\\
+        \\end{pmatrix}
 
     Args:
         q0 (int): the first qubit to be swapped id number.
