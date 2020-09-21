@@ -224,6 +224,28 @@ class U1(TensorflowGate, base_gates.U1):
         return tf.linalg.diag(diag)
 
 
+class U2(TensorflowGate, base_gates.U2):
+
+    def __init__(self, q, phi, lam):
+        base_gates.U2.__init__(self, q, phi, lam)
+        TensorflowGate.__init__(self)
+
+    def construct_unitary(self):
+        from qibo.tensorflow import cgates
+        return cgates.U2.construct_unitary(self)
+
+
+class U3(TensorflowGate, base_gates.U3):
+
+    def __init__(self, q, theta, phi, lam):
+        base_gates.U3.__init__(self, q, theta, phi, lam)
+        TensorflowGate.__init__(self)
+
+    def construct_unitary(self):
+        from qibo.tensorflow import cgates
+        return cgates.U3.construct_unitary(self)
+
+
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):

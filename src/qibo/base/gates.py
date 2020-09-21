@@ -701,6 +701,75 @@ class U1(_Un_):
         self.init_kwargs = {"theta": theta}
 
 
+class U2(_Un_):
+    """Second general unitary gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}}
+        \\begin{pmatrix}
+        1 & -e^{i\\lambda} \\\\
+        e^{i\\phi} & e^{i (\\phi + \\lambda )} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+    order = 2
+
+    def __init__(self, q, phi, lam):
+        super(U2, self).__init__(q)
+        self._phi, self._lam = None, None
+        self.init_kwargs = {"phi": phi, "lam": lam}
+        self.parameter = phi, lam
+
+    @property
+    def parameter(self):
+        return self._phi, self._lam
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._phi, self._lam = x
+        self._reprepare()
+
+
+class U3(_Un_):
+    """Second general unitary gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        \\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{i\\lambda}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{i\\phi}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+    order = 3
+
+    def __init__(self, q, theta, phi, lam):
+        super(U3, self).__init__(q)
+        self._theta, self._phi, self._lam = None, None, None
+        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
+        self.parameter = theta, phi, lam
+
+    @property
+    def parameter(self):
+        return self._theta, self._phi, self._lam
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._theta, self._phi, self._lam = x
+        self._reprepare()
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 

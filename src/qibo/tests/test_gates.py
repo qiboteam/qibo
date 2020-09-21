@@ -235,6 +235,49 @@ def test_u1(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_u2(backend):
+    """Check U2 gate on random state."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    phi = 0.1234
+    lam = 0.4321
+
+    initial_state = utils.random_numpy_state(1)
+    c = Circuit(1)
+    c.add(gates.U2(0, phi, lam))
+    final_state = c(np.copy(initial_state))
+
+    matrix = np.array([[1, -np.exp(1j * lam)],
+                       [np.exp(1j * phi), np.exp(1j * (lam + phi))]])
+    target_state = matrix.dot(initial_state) / np.sqrt(2)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_u3(backend):
+    """Check U3 gate on random state."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1111
+    phi = 0.1234
+    lam = 0.4321
+
+    initial_state = utils.random_numpy_state(1)
+    c = Circuit(1)
+    c.add(gates.U3(0, theta, phi, lam))
+    final_state = c(np.copy(initial_state))
+
+    cost, sint = np.cos(theta / 2), np.sin(theta / 2)
+    matrix = np.array([[cost, -np.exp(1j * lam) * sint],
+                       [np.exp(1j * phi) * sint,
+                        np.exp(1j * (lam + phi)) * cost]])
+    target_state = matrix.dot(initial_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_U1(backend):
     """Check controlled U1 and fallback to CU1."""
     original_backend = qibo.get_backend()

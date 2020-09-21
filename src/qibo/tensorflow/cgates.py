@@ -299,6 +299,35 @@ class U1(MatrixGate, base_gates.U1):
                               self.nqubits, self.target_qubits[0])
 
 
+class U2(MatrixGate, base_gates.U2):
+
+    def __init__(self, q, phi, lam):
+        base_gates.U2.__init__(self, q, phi, lam)
+        MatrixGate.__init__(self)
+
+    def construct_unitary(self) -> np.ndarray:
+        ephi = np.exp(1j * self._phi)
+        elam = np.exp(1j * self._lam)
+        return np.array([[1, -elam], [ephi, ephi * elam]],
+                        dtype=DTYPES.get('NPTYPECPX')) / np.sqrt(2)
+
+
+class U3(MatrixGate, base_gates.U3):
+
+    def __init__(self, q, theta, phi, lam):
+        base_gates.U3.__init__(self, q, theta, phi, lam)
+        MatrixGate.__init__(self)
+
+    def construct_unitary(self) -> np.ndarray:
+        cost = np.cos(self._theta / 2)
+        sint = np.sin(self._theta / 2)
+        ephi = np.exp(1j * self._phi)
+        elam = np.exp(1j * self._lam)
+        return np.array([[cost, -elam * sint],
+                         [ephi * sint, ephi * elam * cost]],
+                        dtype=DTYPES.get('NPTYPECPX'))
+
+
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
