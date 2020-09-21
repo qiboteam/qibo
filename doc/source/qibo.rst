@@ -111,7 +111,7 @@ created for the next round. The algorithm terminates once all gates are assigned
 to a group.
 
 A ``FusionGroup`` can either start with any one- or two-qubit gate
-except ``CNOT``, ``CZ``, ``SWAP`` and ``CZPow`` because it is more efficient
+except ``CNOT``, ``CZ``, ``SWAP`` and ``CU1`` because it is more efficient
 to apply such gates on their own rather than fusing them with others. These gates
 are fused only when "sandwiched" between one-qubit gates. For example
 

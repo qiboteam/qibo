@@ -271,7 +271,7 @@ keys should be all the parametrized gates in the circuit.
 
 The following gates support parameter setting:
 
-* ``RX``, ``RY``, ``RZ``, ``ZPow``, ``CZPow``: Accept a single ``theta`` parameter.
+* ``RX``, ``RY``, ``RZ``, ``U1``, ``CU1``: Accept a single ``theta`` parameter.
 * :class:`qibo.base.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
 * :class:`qibo.base.gates.GeneralizedfSim`: Accepts a tuple of two parameters
   ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
