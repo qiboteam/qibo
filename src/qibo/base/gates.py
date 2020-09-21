@@ -652,8 +652,34 @@ class RZ(ParametrizedGate):
         self.init_kwargs = {"theta": theta}
 
 
-class U1(ParametrizedGate):
-    """First general rotation.
+class _Un_(ParametrizedGate):
+    """General unitary gate.
+
+    Abstract method for defining the U1, U2 and U3 gates.
+
+    Args:
+        q (int): the qubit id number.
+    """
+    order = 0
+
+    def __init__(self, q):
+        super(_Un_, self).__init__()
+        self.name = "u{}".format(self.order)
+        self.target_qubits = (q,)
+        self.init_args = [q]
+
+    def controlled_by(self, *q):
+        """Fall back to CU1 if there is only one control."""
+        if len(q) == 1:
+            gate = getattr(self.module, "CU{}".format(self.order))(
+              q[0], self.target_qubits[0], **self.init_kwargs)
+        else:
+            gate = super(_Un_, self).controlled_by(*q)
+        return gate
+
+
+class U1(_Un_):
+    """First general unitary gate.
 
     Corresponds to the following unitary matrix
 
@@ -667,24 +693,12 @@ class U1(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
     """
+    order = 1
 
     def __init__(self, q, theta):
-        super(U1, self).__init__()
-        self.name = "u1"
-        self.target_qubits = (q,)
+        super(U1, self).__init__(q)
         self.parameter = theta
-
-        self.init_args = [q]
         self.init_kwargs = {"theta": theta}
-
-    def controlled_by(self, *q):
-        """Fall back to CU1 if there is only one control."""
-        if len(q) == 1:
-            gate = getattr(self.module, "CU1")(q[0], self.target_qubits[0],
-                                               theta=self.parameter)
-        else:
-            gate = super(U1, self).controlled_by(*q)
-        return gate
 
 
 class CNOT(Gate):
@@ -733,7 +747,26 @@ class CZ(Gate):
         self.init_args = [q0, q1]
 
 
-class CU1(ParametrizedGate):
+class _CUn_(ParametrizedGate):
+    """General controlled unitary gate.
+
+    Abstract method for defining the CU1, CU2 and CU3 gates.
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+    """
+    order = 0
+
+    def __init__(self, q0, q1):
+        super(_CUn_, self).__init__()
+        self.name = "cu{}".format(self.order)
+        self.control_qubits = (q0,)
+        self.target_qubits = (q1,)
+        self.init_args = [q0, q1]
+
+
+class CU1(_CUn_):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -753,15 +786,11 @@ class CU1(ParametrizedGate):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
+    order = 1
 
     def __init__(self, q0, q1, theta):
-        super(CU1, self).__init__()
-        self.name = "cu1"
-        self.control_qubits = (q0,)
-        self.target_qubits = (q1,)
+        super(CU1, self).__init__(q0, q1)
         self.parameter = theta
-
-        self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
 
 
