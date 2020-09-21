@@ -661,10 +661,15 @@ class BaseCircuit(object):
                 raise_error(ValueError, "OpenQASM does not support multi-controlled gates.")
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            name = gate.name
             if gate.name in gates.PARAMETRIZED_GATES:
                 # TODO: Make sure that our parameter convention agrees with OpenQASM
-                name += f"({gate.parameter})"
+                if isinstance(gate.parameter, Iterable):
+                    params = (str(x) for x in gate.parameter)
+                    name = "{}({})".format(gate.name, ", ".join(params))
+                else:
+                    name = f"{gate.name}({gate.parameter})"
+            else:
+                name = gate.name
             code.append(f"{name} {qubits};")
 
         # Add measurements

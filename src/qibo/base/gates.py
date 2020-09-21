@@ -10,7 +10,8 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "cx": "CNOT", "swap": "SWAP",
               "cu1": "CU1", "cu3": "CU3",
               "ccx": "TOFFOLI"}
-PARAMETRIZED_GATES = {"rx", "ry", "rz", "cu1"}
+PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
+                      "cu1", "cu3"}
 
 
 class Gate(object):
