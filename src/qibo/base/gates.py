@@ -9,7 +9,7 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "u1": "U1",
               "cx": "CNOT", "swap": "SWAP",
               "cu1": "CU1", "ccx": "TOFFOLI"}
-PARAMETRIZED_GATES = {"rx", "ry", "rz", "crz"}
+PARAMETRIZED_GATES = {"rx", "ry", "rz", "cu1"}
 
 
 class Gate(object):
@@ -756,7 +756,7 @@ class CU1(ParametrizedGate):
 
     def __init__(self, q0, q1, theta):
         super(CU1, self).__init__()
-        self.name = "crz"
+        self.name = "cu1"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.parameter = theta

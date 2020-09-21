@@ -254,7 +254,7 @@ def test_controlled_U1(backend):
     np.testing.assert_allclose(final_state, target_state)
 
     gate = gates.U1(0, theta).controlled_by(1)
-    assert gate.__class__.__name__ == "cu1"
+    assert gate.__class__.__name__ == "CU1"
     qibo.set_backend(original_backend)
 
 
