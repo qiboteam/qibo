@@ -6,9 +6,10 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
-              "u1": "U1",
+              "u1": "U1", "u2": "U2", "u3": "U3",
               "cx": "CNOT", "swap": "SWAP",
-              "cu1": "CU1", "ccx": "TOFFOLI"}
+              "cu1": "CU1", "cu3": "CU3",
+              "ccx": "TOFFOLI"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "cu1"}
 
 
@@ -715,7 +716,8 @@ class U2(_Un_):
 
     Args:
         q (int): the qubit id number.
-        theta (float): the rotation angle.
+        phi (float): first rotation angle.
+        lamb (float): second rotation angle.
     """
     order = 2
 
@@ -737,7 +739,7 @@ class U2(_Un_):
 
 
 class U3(_Un_):
-    """Second general unitary gate.
+    """Third general unitary gate.
 
     Corresponds to the following unitary matrix
 
@@ -749,7 +751,9 @@ class U3(_Un_):
 
     Args:
         q (int): the qubit id number.
-        theta (float): the rotation angle.
+        theta (float): first rotation angle.
+        phi (float): second rotation angle.
+        lamb (float): third rotation angle.
     """
     order = 3
 
@@ -836,7 +840,7 @@ class _CUn_(ParametrizedGate):
 
 
 class CU1(_CUn_):
-    """Controlled rotation around the Z-axis of the Bloch sphere.
+    """Controlled first general unitary gate.
 
     Corresponds to the following unitary matrix
 
@@ -861,6 +865,84 @@ class CU1(_CUn_):
         super(CU1, self).__init__(q0, q1)
         self.parameter = theta
         self.init_kwargs = {"theta": theta}
+
+
+class CU2(_CUn_):
+    """Controlled second general unitary gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\frac{1}{\\sqrt{2}}
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & -e^{i\\lambda} \\\\
+        0 & 0 & e^{i\\phi} & e^{i (\\phi + \\lambda )} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        phi (float): first rotation angle.
+        lamb (float): second rotation angle.
+    """
+    order = 2
+
+    def __init__(self, q0, q1, phi, lam):
+        super(CU2, self).__init__(q0, q1)
+        self._phi, self._lam = None, None
+        self.init_kwargs = {"phi": phi, "lam": lam}
+        self.parameter = phi, lam
+
+    @property
+    def parameter(self):
+        return self._phi, self._lam
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._phi, self._lam = x
+        self._reprepare()
+
+
+class CU3(_CUn_):
+    """Controlled third general unitary gate.
+
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & \\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{i\\lambda}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{i\\phi}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): first rotation angle.
+        phi (float): second rotation angle.
+        lamb (float): third rotation angle.
+    """
+    order = 3
+
+    def __init__(self, q0, q1, theta, phi, lam):
+        super(CU3, self).__init__(q0, q1)
+        self._theta, self._phi, self._lam = None, None, None
+        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
+        self.parameter = theta, phi, lam
+
+    @property
+    def parameter(self):
+        return self._theta, self._phi, self._lam
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._theta, self._phi, self._lam = x
+        self._reprepare()
 
 
 class SWAP(Gate):

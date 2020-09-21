@@ -356,21 +356,47 @@ class CZ(TensorflowGate, base_gates.CZ):
         return Z.__call__(self, state, is_density_matrix)
 
 
-class CU1(MatrixGate, base_gates.CU1):
+class _CUn_(MatrixGate):
+
+    base = U1
+
+    def _prepare(self):
+        self.base._prepare(self)
+
+    def construct_unitary(self) -> np.ndarray:
+        matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
+        matrix[2:, 2:] = self.base.construct_unitary(self)
+        return matrix
+
+    def __call__(self, state, is_density_matrix: bool = False):
+        return self.base.__call__(self, state, is_density_matrix)
+
+
+class CU1(_CUn_, base_gates.CU1):
+
+    base = U1
 
     def __init__(self, q0, q1, theta):
         base_gates.CU1.__init__(self, q0, q1, theta)
-        MatrixGate.__init__(self)
+        _CUn_.__init__(self)
 
-    def _prepare(self):
-        U1._prepare(self)
 
-    def construct_unitary(self) -> np.ndarray:
-        return np.diag([1, 1, 1, np.exp(1j * self.parameter)]).astype(
-            DTYPES.get('NPTYPECPX'))
+class CU2(_CUn_, base_gates.CU2):
 
-    def __call__(self, state, is_density_matrix: bool = False):
-        return U1.__call__(self, state, is_density_matrix)
+    base = U2
+
+    def __init__(self, q0, q1, phi, lam):
+        base_gates.CU2.__init__(self, q0, q1, phi, lam)
+        _CUn_.__init__(self)
+
+
+class CU3(_CUn_, base_gates.CU3):
+
+    base = U3
+
+    def __init__(self, q0, q1, theta, phi, lam):
+        base_gates.CU3.__init__(self, q0, q1, theta, phi, lam)
+        _CUn_.__init__(self)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):

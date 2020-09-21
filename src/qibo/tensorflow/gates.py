@@ -220,8 +220,7 @@ class U1(TensorflowGate, base_gates.U1):
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t)
-        diag = tf.concat([1, phase], axis=0)
-        return tf.linalg.diag(diag)
+        return tf.linalg.diag([1, phase])
 
 
 class U2(TensorflowGate, base_gates.U2):
@@ -268,18 +267,39 @@ class CZ(TensorflowGate, base_gates.CZ):
         return tf.linalg.diag(diag)
 
 
-class CU1(TensorflowGate, base_gates.CU1):
+class _CUn_(TensorflowGate):
+
+    base = U1
+
+    def construct_unitary(self) -> tf.Tensor:
+        return TensorflowGate.control_unitary(self.base.construct_unitary(self))
+
+
+class CU1(_CUn_, base_gates.CU1):
+
+    base = U1
 
     def __init__(self, q0, q1, theta):
         base_gates.CU1.__init__(self, q0, q1, theta)
-        TensorflowGate.__init__(self)
+        _CUn_.__init__(self)
 
-    def construct_unitary(self) -> tf.Tensor:
-        dtype = DTYPES.get('DTYPECPX')
-        th = tf.cast(self.parameter, dtype=dtype)
-        phase = tf.exp(1j * th)[tf.newaxis]
-        diag = tf.concat([tf.ones(3, dtype=dtype), phase], axis=0)
-        return tf.linalg.diag(diag)
+
+class CU2(_CUn_, base_gates.CU2):
+
+    base = U2
+
+    def __init__(self, q0, q1, phi, lam):
+        base_gates.CU2.__init__(self, q0, q1, phi, lam)
+        _CUn_.__init__(self)
+
+
+class CU3(_CUn_, base_gates.CU3):
+
+    base = U3
+
+    def __init__(self, q0, q1, theta, phi, lam):
+        base_gates.CU3.__init__(self, q0, q1, theta, phi, lam)
+        _CUn_.__init__(self)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):
