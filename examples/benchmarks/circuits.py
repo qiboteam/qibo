@@ -11,7 +11,7 @@ def SupremacyLikeCircuit(nqubits: int, nlayers: int):
             gate = getattr(gates, one_qubit_gates[int(np.random.randint(0, len(one_qubit_gates)))])
             yield gate(i, np.pi / 2.0)
         for i in range(nqubits):
-            yield gates.CZPow(i, (i + d) % nqubits, np.pi / 6.0)
+            yield gates.CU1(i, (i + d) % nqubits, np.pi / 6.0)
         d += 1
         if d > nqubits - 1:
             d = 1
