@@ -10,7 +10,7 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
-class _ParametrizedGates:
+class _ParametrizedGates(list):
     """Simple data structure for keeping track of parametrized gates.
 
     Useful for the ``circuit.set_parameters()`` method.
@@ -19,20 +19,36 @@ class _ParametrizedGates:
     """
 
     def __init__(self):
-        self.list = []
+        super(_ParametrizedGates, self).__init__(self)
         self.set = set()
         self.nparams = 0
 
     def append(self, gate: gates.ParametrizedGate):
-        self.list.append(gate)
+        super(_ParametrizedGates, self).append(gate)
         self.set.add(gate)
         self.nparams += gate.nparams
 
-    def __len__(self):
-        return len(self.list)
 
-    def __iter__(self):
-        return iter(self.list)
+class _Queue(list):
+    """List that holds the queue of gates of a circuit.
+
+    In addition to the queue, it holds a list of gate moments, where each gate
+    is placed in the earliest possible position depending for the qubits it acts.
+    """
+
+    def __init__(self, nqubits):
+        super(_Queue, self).__init__(self)
+        self.nqubits = nqubits
+        self.moments = [nqubits * [None]]
+
+    def append(self, gate: gates.ParametrizedGate):
+        super(_Queue, self).append(gate)
+        for q in gate.qubits:
+            if self.moments[-1][q] is not None:
+                # Add a moment
+                self.moments.append(len(self.moments[-1]) * [None])
+        for q in gate.qubits:
+            self.moments[-1][q] = gate
 
 
 class BaseCircuit(object):
@@ -65,7 +81,7 @@ class BaseCircuit(object):
             raise_error(ValueError, 'nqubits must be > 0')
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
-        self.queue = []
+        self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         # Flag to keep track if the circuit was executed
@@ -133,9 +149,9 @@ class BaseCircuit(object):
         Returns:
             The copied circuit object.
         """
+        import copy
         new_circuit = self.__class__(**self._init_kwargs)
         if deep:
-            import copy
             for gate in self.queue:
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
@@ -147,7 +163,7 @@ class BaseCircuit(object):
                 raise_error(NotImplementedError, "Cannot create deep copy of fused "
                                                  "circuit.")
         else:
-            new_circuit.queue = list(self.queue)
+            new_circuit.queue = copy.copy(self.queue)
             new_circuit.parametrized_gates = list(self.parametrized_gates)
             new_circuit.measurement_gate = self.measurement_gate
             new_circuit.fusion_groups = list(self.fusion_groups)
@@ -422,9 +438,14 @@ class BaseCircuit(object):
         return self.nqubits
 
     @property
-    def depth(self) -> int:
+    def ngates(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
+
+    @property
+    def depth(self) -> int:
+        """Circuit depth if each gate is placed at the earliest possible position."""
+        return len(self.queue.moments)
 
     @property
     def gate_types(self) -> collections.Counter:
@@ -465,6 +486,8 @@ class BaseCircuit(object):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i]
         elif n == self.parametrized_gates.nparams:
+            import numpy as np
+            parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i + k: i + k + gate.nparams]
@@ -552,7 +575,6 @@ class BaseCircuit(object):
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
-    @property
     def summary(self) -> str:
         """Generates a summary of the circuit.
 
@@ -574,7 +596,8 @@ class BaseCircuit(object):
                 print(c.summary())
                 # Prints
                 '''
-                Circuit depth = 7
+                Circuit depth = 5
+                Total number of gates = 7
                 Number of qubits = 3
                 Most common gates:
                 h: 3
@@ -582,8 +605,9 @@ class BaseCircuit(object):
                 ccx: 1
                 '''
         """
-        logs = ["Circuit depth = {}".format(self.depth),
-                "Number of qubits = {}".format(self.nqubits),
+        logs = [f"Circuit depth = {self.depth}",
+                f"Total number of gates = {self.ngates}",
+                f"Number of qubits = {self.nqubits}",
                 "Most common gates:"]
         common_gates = self.gate_types.most_common()
         logs.extend("{}: {}".format(g, n) for g, n in common_gates)

@@ -170,7 +170,7 @@ h q[0];
 h q[1];"""
     c = Circuit.from_qasm(target, accelerators)
     assert c.nqubits == 2
-    assert c.depth == 2
+    assert c.depth == 1
     assert isinstance(c.queue[0], gates.H)
     assert isinstance(c.queue[1], gates.H)
 
@@ -201,7 +201,8 @@ cx q[1],q[0];
 ccx q[1],q[2],q[0];"""
     c = Circuit.from_qasm(target, accelerators)
     assert c.nqubits == 3
-    assert c.depth == 5
+    assert c.depth == 4
+    assert c.ngates == 5
     assert isinstance(c.queue[0], gates.CNOT)
     assert c.queue[0].qubits == (0, 2)
     assert isinstance(c.queue[1], gates.X)
@@ -228,7 +229,7 @@ swap a[0],c[1];
 ccx b[0],c[1],c[0];"""
     c = Circuit.from_qasm(target)
     assert c.nqubits == 5
-    assert c.depth == 4
+    assert c.depth == 3
     assert isinstance(c.queue[0], gates.CNOT)
     assert c.queue[0].qubits == (0, 2)
     assert isinstance(c.queue[1], gates.X)
@@ -375,7 +376,7 @@ rx(0.1234) q[0];
 rz(0.4321) q[1];
 crz(0.567) q[0],q[1];"""
     c = Circuit.from_qasm(target)
-    assert c.depth == 3
+    assert c.depth == 2
     assert isinstance(c.queue[0], gates.RX)
     assert isinstance(c.queue[1], gates.RZ)
     assert isinstance(c.queue[2], gates.CZPow)
@@ -425,7 +426,7 @@ creg a[2]; h q[0];x q[1]; cx q[0], q[1];
 measure q[0] -> a[0];measure q[1]->a[1]"""
     c = Circuit.from_qasm(target)
     assert c.nqubits == 2
-    assert c.depth == 3
+    assert c.depth == 2
     assert isinstance(c.queue[0], gates.H)
     assert isinstance(c.queue[1], gates.X)
     assert isinstance(c.queue[2], gates.CNOT)
