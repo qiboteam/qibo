@@ -217,15 +217,15 @@ def test_rz_phase1(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_zpow(backend):
-    """Check ZPow gate is working properly when qubit is on |1>."""
+def test_u1(backend):
+    """Check U1 gate is working properly when qubit is on |1>."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
 
     c = Circuit(1)
     c.add(gates.X(0))
-    c.add(gates.ZPow(0, theta))
+    c.add(gates.U1(0, theta))
     final_state = c.execute().numpy()
 
     target_state = np.zeros_like(final_state)
@@ -235,8 +235,8 @@ def test_zpow(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_controlled_zpow(backend):
-    """Check controlled ZPow and fallback to CZPow."""
+def test_controlled_U1(backend):
+    """Check controlled U1 and fallback to CU1."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
@@ -245,7 +245,7 @@ def test_controlled_zpow(backend):
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.X(2))
-    c.add(gates.ZPow(2, theta).controlled_by(0, 1))
+    c.add(gates.U1(2, theta).controlled_by(0, 1))
     c.add(gates.X(0))
     c.add(gates.X(1))
     final_state = c.execute().numpy()
@@ -253,8 +253,8 @@ def test_controlled_zpow(backend):
     target_state[1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
 
-    gate = gates.ZPow(0, theta).controlled_by(1)
-    assert gate.__class__.__name__ == "CZPow"
+    gate = gates.U1(0, theta).controlled_by(1)
+    assert gate.__class__.__name__ == "cu1"
     qibo.set_backend(original_backend)
 
 
@@ -350,8 +350,8 @@ def test_cz(backend):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_czpow(backend, accelerators):
-    """Check CZPow gate is working properly on |11>."""
+def test_cu1(backend, accelerators):
+    """Check CU1 gate is working properly on |11>."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
@@ -359,7 +359,7 @@ def test_czpow(backend, accelerators):
     c = Circuit(2, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CZPow(0, 1, theta))
+    c.add(gates.CU1(0, 1, theta))
     final_state = c.execute().numpy()
 
     phase = np.exp(1j * theta)
@@ -840,9 +840,9 @@ def test_construct_unitary(backend):
     target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
     np.testing.assert_allclose(gates.RZ(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.ZPow(0, theta).unitary, target_matrix)
+    np.testing.assert_allclose(gates.U1(0, theta).unitary, target_matrix)
     target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CZPow(0, 1, theta).unitary, target_matrix)
+    np.testing.assert_allclose(gates.CU1(0, 1, theta).unitary, target_matrix)
     from qibo import matrices
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1]])
@@ -1007,14 +1007,14 @@ def test_custom_circuit(backend):
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CZPow(0, 1, theta))
+    c.add(gates.CU1(0, 1, theta))
     r1 = c.execute().numpy()
 
     # custom circuit
     def custom_circuit(initial_state, theta):
         l1 = gates.X(0)(initial_state)
         l2 = gates.X(1)(l1)
-        o = gates.CZPow(0, 1, theta)(l2)
+        o = gates.CU1(0, 1, theta)(l2)
         return o
 
     init2 = c._default_initial_state()
@@ -1045,7 +1045,7 @@ def test_compiled_circuit(backend):
         c = Circuit(2)
         c.add(gates.X(0))
         c.add(gates.X(1))
-        c.add(gates.CZPow(0, 1, theta))
+        c.add(gates.CU1(0, 1, theta))
         return c
 
     # Try to compile circuit without gates
@@ -1099,7 +1099,7 @@ def test_circuit_custom_compilation(backend):
         c = Circuit(2)
         c.add(gates.X(0))
         c.add(gates.X(1))
-        c.add(gates.CZPow(0, 1, theta))
+        c.add(gates.CU1(0, 1, theta))
         return c.execute(initial_state)
 
     r1 = run_circuit(init_state).numpy()
@@ -1188,7 +1188,7 @@ def test_circuit_copy(backend, accelerators, deep):
     theta = 0.1234
 
     c1 = Circuit(2, accelerators)
-    c1.add([gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)])
+    c1.add([gates.X(0), gates.X(1), gates.CU1(0, 1, theta)])
     if not deep and accelerators is not None:
         with pytest.raises(ValueError):
             c2 = c1.copy(deep)

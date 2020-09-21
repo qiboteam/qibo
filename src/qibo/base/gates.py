@@ -6,8 +6,9 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
+              "u1": "U1",
               "cx": "CNOT", "swap": "SWAP",
-              "crz": "CZPow", "ccx": "TOFFOLI"}
+              "cu1": "CU1", "ccx": "TOFFOLI"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "crz"}
 
 
@@ -651,9 +652,8 @@ class RZ(ParametrizedGate):
         self.init_kwargs = {"theta": theta}
 
 
-class ZPow(ParametrizedGate):
-    """Equivalent to :class:`qibo.base.gates.RZ` with a different global phase.
-
+class U1(ParametrizedGate):
+    """First general rotation.
 
     Corresponds to the following unitary matrix
 
@@ -669,8 +669,8 @@ class ZPow(ParametrizedGate):
     """
 
     def __init__(self, q, theta):
-        super(ZPow, self).__init__()
-        self.name = "rz"
+        super(U1, self).__init__()
+        self.name = "u1"
         self.target_qubits = (q,)
         self.parameter = theta
 
@@ -678,12 +678,12 @@ class ZPow(ParametrizedGate):
         self.init_kwargs = {"theta": theta}
 
     def controlled_by(self, *q):
-        """Fall back to CZPow if there is only one control."""
+        """Fall back to CU1 if there is only one control."""
         if len(q) == 1:
-            gate = getattr(self.module, "CZPow")(q[0], self.target_qubits[0],
-                                                 theta=self.parameter)
+            gate = getattr(self.module, "CU1")(q[0], self.target_qubits[0],
+                                               theta=self.parameter)
         else:
-            gate = super(ZPow, self).controlled_by(*q)
+            gate = super(U1, self).controlled_by(*q)
         return gate
 
 
@@ -733,7 +733,7 @@ class CZ(Gate):
         self.init_args = [q0, q1]
 
 
-class CZPow(ParametrizedGate):
+class CU1(ParametrizedGate):
     """Controlled rotation around the Z-axis of the Bloch sphere.
 
     Corresponds to the following unitary matrix
@@ -755,7 +755,7 @@ class CZPow(ParametrizedGate):
     """
 
     def __init__(self, q0, q1, theta):
-        super(CZPow, self).__init__()
+        super(CU1, self).__init__()
         self.name = "crz"
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)

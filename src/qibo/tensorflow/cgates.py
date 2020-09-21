@@ -278,10 +278,10 @@ class RZ(MatrixGate, base_gates.RZ):
         return np.diag([phase.conj(), phase]).astype(DTYPES.get('NPTYPECPX'))
 
 
-class ZPow(MatrixGate, base_gates.ZPow):
+class U1(MatrixGate, base_gates.U1):
 
     def __init__(self, q, theta):
-        base_gates.ZPow.__init__(self, q, theta)
+        base_gates.U1.__init__(self, q, theta)
         MatrixGate.__init__(self)
 
     def _prepare(self):
@@ -327,21 +327,21 @@ class CZ(TensorflowGate, base_gates.CZ):
         return Z.__call__(self, state, is_density_matrix)
 
 
-class CZPow(MatrixGate, base_gates.CZPow):
+class CU1(MatrixGate, base_gates.CU1):
 
     def __init__(self, q0, q1, theta):
-        base_gates.CZPow.__init__(self, q0, q1, theta)
+        base_gates.CU1.__init__(self, q0, q1, theta)
         MatrixGate.__init__(self)
 
     def _prepare(self):
-        ZPow._prepare(self)
+        U1._prepare(self)
 
     def construct_unitary(self) -> np.ndarray:
         return np.diag([1, 1, 1, np.exp(1j * self.parameter)]).astype(
             DTYPES.get('NPTYPECPX'))
 
     def __call__(self, state, is_density_matrix: bool = False):
-        return ZPow.__call__(self, state, is_density_matrix)
+        return U1.__call__(self, state, is_density_matrix)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):

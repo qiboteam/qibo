@@ -79,7 +79,7 @@ def QFT(nqubits: int, with_swaps: bool = True,
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, nqubits):
             theta = np.pi / 2 ** (i2 - i1)
-            circuit.add(gates.CZPow(i2, i1, theta))
+            circuit.add(gates.CU1(i2, i1, theta))
 
     if with_swaps:
         for i in range(nqubits // 2):
@@ -114,7 +114,7 @@ def _DistributedQFT(nqubits: int,
         circuit.add(gates.H(i1eff))
         for i2 in range(i1 + 1, nqubits):
             theta = np.pi / 2 ** (i2 - i1)
-            circuit.add(gates.CZPow(i2, i1eff, theta))
+            circuit.add(gates.CU1(i2, i1eff, theta))
 
     return circuit
 

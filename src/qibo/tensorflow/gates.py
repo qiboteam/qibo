@@ -211,10 +211,10 @@ class RZ(TensorflowGate, base_gates.RZ):
         return tf.linalg.diag(diag)
 
 
-class ZPow(TensorflowGate, base_gates.ZPow):
+class U1(TensorflowGate, base_gates.U1):
 
     def __init__(self, q, theta):
-        base_gates.ZPow.__init__(self, q, theta)
+        base_gates.U1.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
@@ -246,10 +246,10 @@ class CZ(TensorflowGate, base_gates.CZ):
         return tf.linalg.diag(diag)
 
 
-class CZPow(TensorflowGate, base_gates.CZPow):
+class CU1(TensorflowGate, base_gates.CU1):
 
     def __init__(self, q0, q1, theta):
-        base_gates.CZPow.__init__(self, q0, q1, theta)
+        base_gates.CU1.__init__(self, q0, q1, theta)
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
