@@ -896,6 +896,7 @@ def test_control_unitary_error():
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     np.testing.assert_allclose(gates.H(0).unitary, target_matrix)
@@ -941,10 +942,12 @@ def test_construct_unitary(backend):
     target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
                               [0, 0, 0, 1]])
     np.testing.assert_allclose(matrices.SWAP, target_matrix)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary_controlled_by(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
@@ -957,10 +960,12 @@ def test_construct_unitary_controlled_by(backend):
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
         unitary = gate.unitary
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary_errors(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     gate = gates.M(0)
     with pytest.raises(ValueError):
@@ -971,22 +976,42 @@ def test_construct_unitary_errors(backend):
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
         matrix = gate.unitary
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_unitary_action(backend):
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     init_state = utils.random_numpy_state(2)
     gate = gates.RX(1, theta=0.1234).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
-
-    print(gate)
-    print(gate.target_qubits, gate.control_qubits)
-
     target_state = c(np.copy(init_state)).numpy()
     final_state = gate.unitary.numpy().dot(init_state)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("name,params",
+                         [("CRX", {"theta": 0.1}),
+                          ("CRY", {"theta": 0.2}),
+                          ("CRZ", {"theta": 0.3}),
+                          ("CU1", {"theta": 0.1}),
+                          ("CU2", {"phi": 0.1, "lam": 0.2}),
+                          ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_controlled_rotations_from_un(backend, name, params):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    init_state = utils.random_numpy_state(2)
+    gate = getattr(gates, name)(0, 1, **params)
+    c = Circuit(2)
+    c.add(gate)
+    target_state = c(np.copy(init_state)).numpy()
+    final_state = gate.unitary.numpy().dot(init_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])

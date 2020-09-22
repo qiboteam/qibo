@@ -365,7 +365,9 @@ class _CUn_(MatrixGate):
         getattr(base_gates, cbase).__init__(self, q0, q1, **params)
 
     def _prepare(self):
-        self.base._prepare(self)
+        with tf.device(self.device):
+            self.matrix = tf.constant(self.base.construct_unitary(self),
+                                      dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> tf.Tensor:
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
@@ -400,6 +402,9 @@ class CU1(_CUn_, base_gates.CU1):
 
     def __init__(self, q0, q1, theta):
         _CUn_.__init__(self, q0, q1, theta=theta)
+
+    def _prepare(self):
+        U1._prepare(self)
 
 
 class CU2(_CUn_, base_gates.CU2):
