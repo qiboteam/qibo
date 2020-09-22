@@ -174,8 +174,8 @@ class Gate(object):
                                              "gates that target more than two qubits.")
         if self._unitary is None:
             self._unitary = self.construct_unitary()
-            if self.is_controlled_by:
-                self._unitary = self.control_unitary(self._unitary)
+        if self.is_controlled_by and tuple(self._unitary.shape) == (2, 2):
+            self._unitary = self.control_unitary(self._unitary)
         return self._unitary
 
     def construct_unitary(self): # pragma: no cover
@@ -1262,10 +1262,6 @@ class Unitary(ParametrizedGate):
                                     "{} target qubits.".format(shape, self.rank))
         self._unitary = None
         self._reprepare()
-
-    @property
-    def unitary(self):
-        return self._unitary
 
 
 class VariationalLayer(ParametrizedGate):

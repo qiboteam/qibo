@@ -984,10 +984,15 @@ def test_controlled_by_unitary_action(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     init_state = utils.random_numpy_state(2)
-    gate = gates.RX(1, theta=0.1234).controlled_by(0)
+    matrix = utils.random_numpy_complex((2, 2))
+    gate = gates.Unitary(matrix, 1).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
     target_state = c(np.copy(init_state)).numpy()
+
+    print(gate.is_controlled_by)
+    print(gate.unitary)
+
     final_state = gate.unitary.numpy().dot(init_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
