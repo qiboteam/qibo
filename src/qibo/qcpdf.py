@@ -89,7 +89,7 @@ def qcpdf_hamiltonian(nqubits, z_qubit=0):
         h = eye
         for _ in range(nqubits - 2):
             h = np.kron(eye, h)
-        h = np.kron(matrices.Z, h)
+        h = np.kron(h, matrices.Z)
     else:
         h = eye
         for _ in range(nqubits - 1):
