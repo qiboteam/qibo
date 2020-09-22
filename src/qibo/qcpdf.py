@@ -22,10 +22,10 @@ class PDFModel(object):
         multi_output (boolean): default false, allocates a multi-output model per PDF flavour.
     """
 
-    def __init__(self, ansatz, layers, nqubits, multi_output=False):
+    def __init__(self, ansatz, layers, nqubits, multi_output=False, tangling=True):
         try:
             self.circuit, self.rotation, self.nparams = globals(
-            )[f"ansatz_{ansatz}"](layers, nqubits)
+            )[f"ansatz_{ansatz}"](layers, nqubits,tangling=tangling)
         except KeyError:
             raise_error(NotImplementedError, "Ansatz not found.")
         if multi_output:
@@ -116,7 +116,7 @@ def entangler(circuit):
         for q in range(1, qubits + 1, 2):
             circuit.add(gates.CZ(q, (q + 1) % qubits))
 
-def ansatz_0(layers, qubits=1):
+def ansatz_0(layers, qubits=1, tangling=True):
     """
     2 parameters per layer and qubit: Ry(x + a) Rz(b)
     """
@@ -125,7 +125,7 @@ def ansatz_0(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
@@ -150,7 +150,7 @@ def ansatz_0(layers, qubits=1):
 
     return circuit, rotation, nparams
 
-def ansatz_1(layers, qubits=1):
+def ansatz_1(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: U3(a, b, c)Ry(x)
     """
@@ -162,7 +162,7 @@ def ansatz_1(layers, qubits=1):
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
 
     for q in range(qubits):
@@ -195,7 +195,7 @@ def ansatz_1(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_2(layers, qubits=1):
+def ansatz_2(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: U3(a, b, c) Ry(log x)
     """
@@ -207,7 +207,7 @@ def ansatz_2(layers, qubits=1):
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(qubits):
         circuit.add(gates.RZ(q, theta=0))
@@ -238,7 +238,7 @@ def ansatz_2(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_3(layers, qubits=1):
+def ansatz_3(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: U3(a, b, c) Ry(x + log(x))
     """
@@ -250,7 +250,7 @@ def ansatz_3(layers, qubits=1):
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(qubits):
         circuit.add(gates.RZ(q, theta=0))
@@ -281,7 +281,7 @@ def ansatz_3(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_4(layers, qubits=1):
+def ansatz_4(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: U3(a, b, c) Ry(pi x)
     """
@@ -293,7 +293,7 @@ def ansatz_4(layers, qubits=1):
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(qubits):
         circuit.add(gates.RZ(q, theta=0))
@@ -338,7 +338,7 @@ def ansatz_4(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_5(layers, qubits=1):
+def ansatz_5(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: U3(a, b, c) Ry(x) Rx (log(x))
     """
@@ -351,7 +351,7 @@ def ansatz_5(layers, qubits=1):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RX(q, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
 
     for q in range(qubits):
@@ -380,7 +380,7 @@ def ansatz_5(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_6(layers, qubits=2):
+def ansatz_6(layers, qubits=2, tangling=True):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -400,7 +400,7 @@ def ansatz_6(layers, qubits=2):
             circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(0, qubits, 2):
         circuit.add(gates.RZ(q, theta=0))
@@ -434,7 +434,7 @@ def ansatz_6(layers, qubits=2):
     return circuit, rotation, nparams
 
 
-def ansatz_7(layers, qubits=2):
+def ansatz_7(layers, qubits=2, tangling=True):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -454,7 +454,7 @@ def ansatz_7(layers, qubits=2):
             circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RX(q + 1, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
 
     for q in range(0, qubits, 2):
@@ -491,7 +491,7 @@ def ansatz_7(layers, qubits=2):
     return circuit, rotation, nparams
 
 
-def ansatz_8(layers, qubits=2):
+def ansatz_8(layers, qubits=2, tangling=True):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -517,7 +517,7 @@ def ansatz_8(layers, qubits=2):
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(0, qubits, 2):
         circuit.add(gates.RZ(q, theta=0))
@@ -560,7 +560,7 @@ def ansatz_8(layers, qubits=2):
     return circuit, rotation, nparams
 
 
-def ansatz_9(layers, qubits=2):
+def ansatz_9(layers, qubits=2, tangling=True):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -586,7 +586,7 @@ def ansatz_9(layers, qubits=2):
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
 
-        entangler(circuit)
+        if tangling: entangler(circuit)
 
     for q in range(0, qubits, 2):
         circuit.add(gates.RZ(q, theta=0))
@@ -629,7 +629,7 @@ def ansatz_9(layers, qubits=2):
     return circuit, rotation, nparams
 
 
-def ansatz_w1(layers, qubits=1):
+def ansatz_w1(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: Ry(wx + a), Rz(b)
     """
@@ -638,7 +638,7 @@ def ansatz_w1(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
@@ -658,7 +658,7 @@ def ansatz_w1(layers, qubits=1):
     nparams = 3 * layers * qubits
     return circuit, rotation, nparams
 
-def ansatz_w2(layers, qubits=1):
+def ansatz_w2(layers, qubits=1, tangling=True):
     """
     3 parameters per layer and qubit: Ry(w log(x) + a), Rz(b)
     """
@@ -667,7 +667,7 @@ def ansatz_w2(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
@@ -688,7 +688,7 @@ def ansatz_w2(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_w3(layers, qubits=1):
+def ansatz_w3(layers, qubits=1, tangling=True):
     """
     4 parameters per layer and qubit: Ry(wx + a), Rz(vx + b)
     """
@@ -697,7 +697,7 @@ def ansatz_w3(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
@@ -718,7 +718,7 @@ def ansatz_w3(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_w4(layers, qubits=1):
+def ansatz_w4(layers, qubits=1, tangling=True):
     """
     4 parameters per layer and qubit: Ry(wx + a), Rz(v log(x) + b)
     """
@@ -727,7 +727,7 @@ def ansatz_w4(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
@@ -748,7 +748,7 @@ def ansatz_w4(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_w5(layers, qubits=1):
+def ansatz_w5(layers, qubits=1, tangling=True):
     """
     4 parameters per layer and qubit: Ry(w log(x) + a), Rz(v log(x) + b)
     """
@@ -757,7 +757,7 @@ def ansatz_w5(layers, qubits=1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
-        entangler(circuit)
+        if tangling: entangler(circuit)
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
