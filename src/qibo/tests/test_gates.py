@@ -989,10 +989,6 @@ def test_controlled_by_unitary_action(backend):
     c = Circuit(2)
     c.add(gate)
     target_state = c(np.copy(init_state)).numpy()
-
-    print(gate.is_controlled_by)
-    print(gate.unitary)
-
     final_state = gate.unitary.numpy().dot(init_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)

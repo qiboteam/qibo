@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 from qibo import config
 from qibo.config import raise_error
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, List, Iterable, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -670,6 +670,7 @@ class _Un_(ParametrizedGate):
     def __init__(self, q):
         super(_Un_, self).__init__()
         self.name = "u{}".format(self.order)
+        self.nparams = self.order
         self.target_qubits = (q,)
         self.init_args = [q]
 
@@ -932,6 +933,7 @@ class _CUn_(ParametrizedGate):
     def __init__(self, q0, q1):
         super(_CUn_, self).__init__()
         self.name = "cu{}".format(self.order)
+        self.nparams = self.order
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]

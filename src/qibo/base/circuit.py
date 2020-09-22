@@ -490,7 +490,10 @@ class BaseCircuit(object):
             parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i + k: i + k + gate.nparams]
+                if gate.nparams == 1:
+                    gate.parameter = parameters[i + k]
+                else:
+                    gate.parameter = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
