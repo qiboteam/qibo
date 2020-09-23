@@ -328,6 +328,12 @@ class U3(MatrixGate, base_gates.U3):
                         dtype=DTYPES.get('NPTYPECPX'))
 
 
+class ZPow(MatrixGate, base_gates.ZPow):
+
+  def __new__(cls, q, theta):
+      return U1(q, theta)
+
+
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
@@ -419,6 +425,12 @@ class CU3(_CUn_, base_gates.CU3):
 
     def __init__(self, q0, q1, theta, phi, lam):
         _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
+
+
+class CZPow(MatrixGate, base_gates.CZPow):
+
+  def __new__(cls, q0, q1, theta):
+      return CU1(q0, q1, theta)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):

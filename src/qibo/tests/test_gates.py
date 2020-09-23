@@ -229,7 +229,7 @@ def test_u1(backend):
     final_state = c.execute().numpy()
 
     target_state = np.zeros_like(final_state)
-    target_state[1] = np.exp(1j * theta )
+    target_state[1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -350,6 +350,34 @@ def test_controlled_u3(backend):
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameter == (theta, phi, lam)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_zpow_gate(backend):
+    """Check ZPow and CZPow gate fall back to U1 and CU1 respectively."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 0.1234
+
+    c = Circuit(1)
+    c.add(gates.X(0))
+    c.add(gates.ZPow(0, theta))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[1] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+    assert c.queue[1].name == "u1"
+
+    c = Circuit(2)
+    c.add([gates.X(0), gates.X(1)])
+    c.add(gates.CZPow(0, 1, theta))
+    final_state = c.execute().numpy()
+    target_state = np.zeros_like(final_state)
+    target_state[-1] = np.exp(1j * theta)
+    np.testing.assert_allclose(final_state, target_state)
+    assert c.queue[2].name == "cu1"
+
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

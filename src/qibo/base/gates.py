@@ -779,6 +779,27 @@ class U3(_Un_):
         self._reprepare()
 
 
+class ZPow(Gate): # pragma: no cover
+    """Equivalent to :class:`qibo.base.gates.U1`.
+
+    Implemented to maintain compatibility with previous versions.
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 \\\\
+        0 & e^{i \\theta} \\\\
+        \\end{pmatrix}
+
+    Args:
+        q (int): the qubit id number.
+        theta (float): the rotation angle.
+    """
+    def __new__(cls, q, theta): # pragma: no cover
+        # code is not tested as it is substituted in `tensorflow` gates
+        return U1(q, theta)
+
+
 class CNOT(Gate):
     """The Controlled-NOT gate.
 
@@ -1043,6 +1064,30 @@ class CU3(_CUn_):
         self._unitary = None
         self._theta, self._phi, self._lam = x
         self._reprepare()
+
+
+class CZPow(Gate): # pragma: no cover
+    """Equivalent to :class:`qibo.base.gates.CU1`.
+
+    Implemented to maintain compatibility with previous versions.
+    Corresponds to the following unitary matrix
+
+    .. math::
+        \\begin{pmatrix}
+        1 & 0 & 0 & 0 \\\\
+        0 & 1 & 0 & 0 \\\\
+        0 & 0 & 1 & 0 \\\\
+        0 & 0 & 0 & e^{i \\theta } \\\\
+        \\end{pmatrix}
+
+    Args:
+        q0 (int): the control qubit id number.
+        q1 (int): the target qubit id number.
+        theta (float): the rotation angle.
+    """
+    def __new__(cls, q0, q1, theta): # pragma: no cover
+        # code is not tested as it is substituted in `tensorflow` gates
+        return CU1(q0, q1, theta)
 
 
 class SWAP(Gate):
