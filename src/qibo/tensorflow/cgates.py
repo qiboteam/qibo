@@ -14,7 +14,7 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "Flatten", "CallbackGate"}
+        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -331,7 +331,11 @@ class U3(MatrixGate, base_gates.U3):
 class ZPow(MatrixGate, base_gates.ZPow):
 
   def __new__(cls, q, theta):
-      return U1(q, theta)
+      if BACKEND.get('GATES') == 'custom':
+          return U1(q, theta)
+      else:
+          from qibo.tensorflow import gates
+          return gates.U1(q, theta)
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -430,7 +434,11 @@ class CU3(_CUn_, base_gates.CU3):
 class CZPow(MatrixGate, base_gates.CZPow):
 
   def __new__(cls, q0, q1, theta):
-      return CU1(q0, q1, theta)
+      if BACKEND.get('GATES') == 'custom':
+          return CU1(q0, q1, theta)
+      else:
+          from qibo.tensorflow import gates
+          return gates.CU1(q0, q1, theta)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):
