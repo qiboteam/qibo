@@ -1480,7 +1480,8 @@ class VariationalLayer(ParametrizedGate):
         varlayer = copy.copy(self)
         varlayer.is_dagger = True
         varlayer.unitaries = [u.dagger() for u in self.unitaries]
-        varlayer.additional_unitary = self.additional_unitary.dagger()
+        if self.additional_unitary is not None:
+            varlayer.additional_unitary = self.additional_unitary.dagger()
         return varlayer
 
     @property

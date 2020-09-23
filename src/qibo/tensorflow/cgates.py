@@ -551,6 +551,14 @@ class Unitary(MatrixGate, base_gates.Unitary):
         if isinstance(unitary, tf.Tensor):
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
 
+    def dagger(self) -> "Unitary":
+        unitary = self.parameter
+        if isinstance(unitary, np.ndarray):
+            ud = unitary.conj().T
+        if isinstance(unitary, tf.Tensor):
+            ud = tf.math.conj(tf.transpose(unitary))
+        return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         TensorflowGate.__call__(self, state, is_density_matrix)

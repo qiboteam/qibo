@@ -1195,6 +1195,46 @@ def test_dagger_two_qubit(backend, gate, params):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_unitary_dagger(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    gate = gates.Unitary(matrix, *range(nqubits))
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(nqubits)
+    final_state = c(np.copy(initial_state)).numpy()
+    target_state = matrix.dot(initial_state)
+    target_state = matrix.conj().T.dot(target_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_variational_layer_dagger(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    nqubits = 4
+    theta = 2 * np.pi * np.random.random((2, nqubits))
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ,
+                                  theta[0])#, theta[1])
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(nqubits)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_custom_circuit(backend):
     """Check consistency between Circuit and custom circuits"""
     import tensorflow as tf

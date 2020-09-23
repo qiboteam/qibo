@@ -385,6 +385,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
         return matrix
 
+    def dagger(self) -> "Unitary":
+        from qibo.tensorflow import cgates
+        return cgates.Unitary.dagger(self)
+
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
