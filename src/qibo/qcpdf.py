@@ -101,8 +101,6 @@ def qcpdf_hamiltonian(nqubits, z_qubit=0):
                 h = np.kron(matrices.Z, h)
             else:
                 h = np.kron(eye, h)
-    print(z_qubit)
-    print(h)
     return Hamiltonian(nqubits, h)
 
 
