@@ -1149,6 +1149,52 @@ def test_variational_layer_errors(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("gate,params",
+                         [("H", {}), ("X", {}), ("Z", {}),
+                          ("RX", {"theta": 0.1}),
+                          ("RY", {"theta": 0.2}),
+                          ("RZ", {"theta": 0.3}),
+                          ("U1", {"theta": 0.1}),
+                          ("U2", {"phi": 0.2, "lam": 0.3}),
+                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+def test_dagger_one_qubit(backend, gate, params):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(1)
+    gate = getattr(gates, gate)(0, **params)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(1)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("gate,params",
+                         [("CNOT", {}),
+                          ("CRX", {"theta": 0.1}),
+                          ("CRZ", {"theta": 0.3}),
+                          ("CU1", {"theta": 0.1}),
+                          ("CU2", {"phi": 0.2, "lam": 0.3}),
+                          ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
+                          ("fSim", {"theta": 0.1, "phi": 0.2})])
+def test_dagger_two_qubit(backend, gate, params):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(2)
+    gate = getattr(gates, gate)(0, 1, **params)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(2)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_custom_circuit(backend):
     """Check consistency between Circuit and custom circuits"""
     import tensorflow as tf
