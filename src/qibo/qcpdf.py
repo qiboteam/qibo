@@ -22,7 +22,11 @@ class PDFModel(object):
         multi_output (boolean): default false, allocates a multi-output model per PDF flavour.
     """
 
-    def __init__(self, ansatz, layers, nqubits, multi_output=False, tangling=True):
+    def __init__(self, ansatz, layers, nqubits, multi_output=False, tangling=True, measure_qubits=None):
+        if measure_qubits is None:
+            self.measure_qubits = nqubits
+        else:
+            self.measure_qubits = measure_qubits
         try:
             self.circuit, self.rotation, self.nparams = globals(
             )[f"ansatz_{ansatz}"](layers, nqubits,tangling=tangling)
@@ -30,7 +34,7 @@ class PDFModel(object):
             raise_error(NotImplementedError, "Ansatz not found.")
         if multi_output:
             self.hamiltonian = [qcpdf_hamiltonian(
-                nqubits, z_qubit=q) for q in range(nqubits)]
+                nqubits, z_qubit=q) for q in range(self.measure_qubits)]
         else:
             self.hamiltonian = [qcpdf_hamiltonian(nqubits)]
         self.multi_output = multi_output
@@ -88,14 +92,16 @@ def qcpdf_hamiltonian(nqubits, z_qubit=0):
         h = eye
         for _ in range(nqubits - 2):
             h = np.kron(eye, h)
-        h = np.kron(h, matrices.Z)
+        h = np.kron(matrices.Z, h)
     else:
         h = eye
         for _ in range(nqubits - 1):
-            if _ == z_qubit:
+            if _ + 1== z_qubit:
                 h = np.kron(matrices.Z, h)
             else:
                 h = np.kron(eye, h)
+    print(z_qubit)
+    print(h)
     return Hamiltonian(nqubits, h)
 
 
