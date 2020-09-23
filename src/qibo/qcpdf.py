@@ -57,6 +57,9 @@ class PDFModel(object):
         Returns:
             A numpy array with the PDF values.
         """
+        if len(parameters) != self.nparams:
+            raise_error(RuntimeError, 'Mismatch between number of parameters and model size.')
+
         pdf = np.zeros(shape=(len(self.hamiltonian), len(x)))
         for flavour, hamiltonian in enumerate(self.hamiltonian):
             for i in range(len(x)):
@@ -65,10 +68,6 @@ class PDFModel(object):
                 pdf_at_one = self._model(parameters, 1, hamiltonian)
                 pdf[flavour] -= pdf_at_one
         return pdf
-
-    def get_parameters(self):
-        """Return circuit parameters."""
-        return self.circuit.get_parameters()
 
 
 def qcpdf_hamiltonian(nqubits, z_qubit=0):
@@ -564,8 +563,8 @@ def ansatz_9(layers, qubits=2, tangling=True):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
-     U3(a, b, c) Ry(x) U3(a, b, c)      
-     U3(a, b, c) Rx(log(x)) U3(a, b, c) 
+     U3(a, b, c) Ry(x) U3(a, b, c)
+     U3(a, b, c) Rx(log(x)) U3(a, b, c)
     """
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
