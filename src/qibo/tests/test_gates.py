@@ -1267,12 +1267,11 @@ def test_variational_layer_dagger(backend, nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
-    nqubits = 4
     theta = 2 * np.pi * np.random.random((2, nqubits))
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ,
-                                  theta[0])#, theta[1])
+                                  theta[0], theta[1])
     c = Circuit(nqubits)
     c.add((gate, gate.dagger()))
 
