@@ -1479,6 +1479,8 @@ class VariationalLayer(ParametrizedGate):
     def dagger(self) -> "Gate":
         """"""
         import copy
+        if not self.unitaries:
+            self._prepare()
         varlayer = copy.copy(self)
         varlayer.is_dagger = True
         varlayer.unitaries = [u.dagger() for u in self.unitaries]

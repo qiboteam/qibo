@@ -445,12 +445,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return matrices, additional_matrix
 
     def _prepare(self):
-        matrices, additional_matrix = self._calculate_unitaries()
-        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
-                          for i, targets in enumerate(self.pairs)]
-        if self.additional_target is not None:
-            self.additional_unitary = self.unitary_constructor(
-                additional_matrix, self.additional_target)
+        self.cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor: # pragma: no cover

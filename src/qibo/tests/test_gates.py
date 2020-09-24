@@ -1173,17 +1173,24 @@ def test_dagger_two_qubit(backend, gate, params):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [1, 2])
-def test_unitary_dagger(backend, nqubits):
+@pytest.mark.parametrize("tfmatrix", [False, True])
+def test_unitary_dagger(backend, nqubits, tfmatrix):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    if tfmatrix:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
     gate = gates.Unitary(matrix, *range(nqubits))
     c = Circuit(nqubits)
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(nqubits)
     final_state = c(np.copy(initial_state)).numpy()
+    if tfmatrix:
+        matrix = matrix.numpy()
     target_state = matrix.dot(initial_state)
     target_state = matrix.conj().T.dot(target_state)
     np.testing.assert_allclose(final_state, target_state)
@@ -1191,7 +1198,8 @@ def test_unitary_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_generalizedfsim_dagger(backend):
+@pytest.mark.parametrize("tfmatrix", [False, True])
+def test_generalizedfsim_dagger(backend, tfmatrix):
     from scipy.linalg import expm
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -1199,6 +1207,10 @@ def test_generalizedfsim_dagger(backend):
     phi = 0.2
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
+    if tfmatrix:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
     gate = gates.GeneralizedfSim(0, 1, matrix, phi)
     c = Circuit(2)
     c.add((gate, gate.dagger()))
@@ -1209,7 +1221,6 @@ def test_generalizedfsim_dagger(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_variational_layer_dagger(backend, nqubits):
