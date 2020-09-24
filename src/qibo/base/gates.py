@@ -739,7 +739,7 @@ class U2(_Un_):
         \\frac{1}{\\sqrt{2}}
         \\begin{pmatrix}
         e^{-i(\\phi + \\lambda )/2} & -e^{-i(\\phi - \\lambda )/2} \\\\
-        e^{i(\\phi + \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
+        e^{i(\\phi - \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -1046,7 +1046,7 @@ class CU2(_CUn_):
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
         0 & 0 & e^{-i(\\phi + \\lambda )/2} & -e^{-i(\\phi - \\lambda )/2} \\\\
-        0 & 0 & e^{i(\\phi + \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
+        0 & 0 & e^{i(\\phi - \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -1093,7 +1093,7 @@ class CU3(_CUn_):
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
         0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda ) / 2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
