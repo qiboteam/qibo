@@ -178,7 +178,7 @@ class BaseCircuit(object):
         in the inverted circuit.
 
         Returns:
-            The inverse circuit.
+            The circuit inverse.
         """
         import copy
         new_circuit = self.__class__(**self._init_kwargs)
