@@ -247,6 +247,10 @@ class Gate(object):
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
+    def _dagger(self) -> "Gate":
+        """Helper method for :meth:`qibo.base.gates.Gate.dagger`."""
+        return self.__class__(*self.init_args, **self.init_kwargs)
+
     def dagger(self) -> "Gate":
         """Returns the dagger (conjugate transpose) of the gate.
 
@@ -254,7 +258,10 @@ class Gate(object):
             A :class:`qibo.base.gates.Gate` object representing the dagger of
             the original gate.
         """
-        return self.__class__(*self.init_args, **self.init_kwargs)
+        new_gate = self._dagger()
+        new_gate.is_controlled_by = self.is_controlled_by
+        new_gate.control_qubits = self.control_qubits
+        return new_gate
 
     def controlled_by(self, *qubits: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
@@ -600,7 +607,7 @@ class _Rn_(ParametrizedGate):
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], -self.parameter)
 
@@ -719,10 +726,9 @@ class U1(_Un_):
         self.parameter = theta
         self.init_kwargs = {"theta": theta}
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], -self.parameter)
-
 
 class U2(_Un_):
     """Second general unitary gate.
@@ -749,7 +755,7 @@ class U2(_Un_):
         self.init_kwargs = {"phi": phi, "lam": lam}
         self.parameter = phi, lam
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         import numpy as np
         phi = np.pi - self._lam
@@ -792,7 +798,7 @@ class U3(_Un_):
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
         self.parameter = theta, phi, lam
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         theta, lam, phi = tuple(-x for x in self.parameter)
         return self.__class__(self.target_qubits[0], theta, phi, lam)
@@ -905,7 +911,7 @@ class _CRn_(ParametrizedGate):
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1022,7 +1028,7 @@ class CU1(_CUn_):
         self.parameter = theta
         self.init_kwargs = {"theta": theta}
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1057,7 +1063,7 @@ class CU2(_CUn_):
         self.init_kwargs = {"phi": phi, "lam": lam}
         self.parameter = phi, lam
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         import numpy as np
         q0 = self.control_qubits[0]
@@ -1105,7 +1111,7 @@ class CU3(_CUn_):
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
         self.parameter = theta, phi, lam
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
@@ -1204,7 +1210,7 @@ class fSim(ParametrizedGate):
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
         return self.__class__(q0, q1, *(-x for x in self.parameter))
@@ -1253,7 +1259,7 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
 
-    def dagger(self) -> "Gate": # pragma: no cover
+    def _dagger(self) -> "Gate": # pragma: no cover
         """"""
         # abstract method
         raise_error(NotImplementedError)
@@ -1359,7 +1365,7 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
-    def dagger(self) -> "Gate": # pragma: no cover
+    def _dagger(self) -> "Gate": # pragma: no cover
         """"""
         # abstract method
         raise_error(NotImplementedError)
@@ -1476,7 +1482,7 @@ class VariationalLayer(ParametrizedGate):
         # abstract method
         return raise_error(NotImplementedError)
 
-    def dagger(self) -> "Gate":
+    def _dagger(self) -> "Gate":
         """"""
         import copy
         if not self.unitaries:

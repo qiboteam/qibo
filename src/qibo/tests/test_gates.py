@@ -1172,6 +1172,27 @@ def test_dagger_two_qubit(backend, gate, params):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("gate,params",
+                         [("H", {}), ("X", {}),
+                          ("RX", {"theta": 0.1}),
+                          ("RZ", {"theta": 0.2}),
+                          ("U2", {"phi": 0.2, "lam": 0.3}),
+                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+def test_dagger_controlled_by(backend, gate, params):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(4)
+    gate = getattr(gates, gate)(3, **params).controlled_by(0, 1, 2)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(4)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [1, 2])
 @pytest.mark.parametrize("tfmatrix", [False, True])
 def test_unitary_dagger(backend, nqubits, tfmatrix):
@@ -1194,6 +1215,24 @@ def test_unitary_dagger(backend, nqubits, tfmatrix):
     target_state = matrix.dot(initial_state)
     target_state = matrix.conj().T.dot(target_state)
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_unitary_controlled_by_dagger(backend):
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
+    c = Circuit(5)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(5)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 

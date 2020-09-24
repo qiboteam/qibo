@@ -354,9 +354,9 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
         from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim.construct_unitary(self)
 
-    def dagger(self) -> "GeneralizedfSim":
+    def _dagger(self) -> "GeneralizedfSim":
         from qibo.tensorflow import cgates
-        return cgates.GeneralizedfSim.dagger(self)
+        return cgates.GeneralizedfSim._dagger(self)
 
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
@@ -389,9 +389,9 @@ class Unitary(TensorflowGate, base_gates.Unitary):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
         return matrix
 
-    def dagger(self) -> "Unitary":
+    def _dagger(self) -> "Unitary":
         from qibo.tensorflow import cgates
-        return cgates.Unitary.dagger(self)
+        return cgates.Unitary._dagger(self)
 
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):

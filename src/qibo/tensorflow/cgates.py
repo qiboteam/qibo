@@ -509,7 +509,7 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         matrix[3, 3] = np.exp(-1j * phi)
         return matrix
 
-    def dagger(self) -> "GenerelizedfSim":
+    def _dagger(self) -> "GenerelizedfSim":
         unitary, phi = self.parameter
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
@@ -560,7 +560,7 @@ class Unitary(MatrixGate, base_gates.Unitary):
         if isinstance(unitary, tf.Tensor):
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
 
-    def dagger(self) -> "Unitary":
+    def _dagger(self) -> "Unitary":
         unitary = self.parameter
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
