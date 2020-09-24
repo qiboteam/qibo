@@ -247,8 +247,8 @@ def test_u2(backend):
     c.add(gates.U2(0, phi, lam))
     final_state = c(np.copy(initial_state))
 
-    matrix = np.array([[1, -np.exp(1j * lam)],
-                       [np.exp(1j * phi), np.exp(1j * (lam + phi))]])
+    matrix = np.array([[np.exp(-1j * (phi + lam) / 2), -np.exp(-1j * (phi - lam) / 2)],
+                       [np.exp(1j * (phi - lam) / 2), np.exp(1j * (phi + lam) / 2)]])
     target_state = matrix.dot(initial_state) / np.sqrt(2)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -269,9 +269,10 @@ def test_u3(backend):
     final_state = c(np.copy(initial_state))
 
     cost, sint = np.cos(theta / 2), np.sin(theta / 2)
-    matrix = np.array([[cost, -np.exp(1j * lam) * sint],
-                       [np.exp(1j * phi) * sint,
-                        np.exp(1j * (lam + phi)) * cost]])
+    ep = np.exp(1j * (phi + lam) / 2)
+    em = np.exp(1j * (phi - lam) / 2)
+    matrix = np.array([[ep.conj() * cost, - em.conj() * sint],
+                       [em * sint, ep * cost]])
     target_state = matrix.dot(initial_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)

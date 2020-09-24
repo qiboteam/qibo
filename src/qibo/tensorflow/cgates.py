@@ -306,9 +306,10 @@ class U2(MatrixGate, base_gates.U2):
         MatrixGate.__init__(self)
 
     def construct_unitary(self) -> np.ndarray:
-        ephi = np.exp(1j * self._phi)
-        elam = np.exp(1j * self._lam)
-        return np.array([[1, -elam], [ephi, ephi * elam]],
+        eplus = np.exp(1j * (self._phi + self._lam) / 2.0)
+        eminus = np.exp(1j * (self._phi - self._lam) / 2.0)
+        return np.array([[eplus.conj(), - eminus.conj()],
+                         [eminus, eplus]],
                         dtype=DTYPES.get('NPTYPECPX')) / np.sqrt(2)
 
 
@@ -321,10 +322,10 @@ class U3(MatrixGate, base_gates.U3):
     def construct_unitary(self) -> np.ndarray:
         cost = np.cos(self._theta / 2)
         sint = np.sin(self._theta / 2)
-        ephi = np.exp(1j * self._phi)
-        elam = np.exp(1j * self._lam)
-        return np.array([[cost, -elam * sint],
-                         [ephi * sint, ephi * elam * cost]],
+        eplus = np.exp(1j * (self._phi + self._lam) / 2.0)
+        eminus = np.exp(1j * (self._phi - self._lam) / 2.0)
+        return np.array([[eplus.conj() * cost, - eminus.conj() * sint],
+                         [eminus * sint, eplus * cost]],
                         dtype=DTYPES.get('NPTYPECPX'))
 
 
