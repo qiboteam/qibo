@@ -510,14 +510,13 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         return matrix
 
     def dagger(self) -> "GenerelizedfSim":
-        unitary = self.__unitary
+        unitary, phi = self.parameter
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
         else:
             ud = unitary.conj().T
-        phi = - self._phi
         q0, q1 = self.target_qubits
-        return self.__class__(q0, q1, ud, phi)
+        return self.__class__(q0, q1, ud, -phi)
 
     def __call__(self, state, is_density_matrix: bool = False):
         return fSim.__call__(self, state, is_density_matrix)

@@ -788,9 +788,7 @@ class U3(_Un_):
 
     def dagger(self) -> "Gate":
         """"""
-        theta = - self._theta
-        phi = - self._lam
-        lam = - self._phi
+        theta, lam, phi = tuple(-x for x in self.parameter)
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
     @property
@@ -1105,9 +1103,7 @@ class CU3(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta = - self._theta
-        phi = - self._lam
-        lam = - self._phi
+        theta, lam, phi = tuple(-x for x in self.parameter)
         return self.__class__(q0, q1, theta, phi, lam)
 
     @property
@@ -1205,7 +1201,7 @@ class fSim(ParametrizedGate):
     def dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
-        return self.__class__(q0, q1, -self._theta, -self._phi)
+        return self.__class__(q0, q1, *(-x for x in self.parameter))
 
     @property
     def parameter(self):
