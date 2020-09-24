@@ -170,6 +170,24 @@ class BaseCircuit(object):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
+    def invert(self) -> "BaseCircuit":
+        """Creates a new ``Circuit`` that is the inverse of the original.
+
+        Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains measurement gates, these are included
+        in the inverted circuit.
+
+        Returns:
+            The inverse circuit.
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        for gate in self.queue[::-1]:
+            new_circuit.add(gate.dagger())
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
     def _fuse_copy(self) -> "BaseCircuit":
         """Helper method for ``circuit.fuse``.
 

@@ -248,6 +248,12 @@ class Gate(object):
         return a or b
 
     def dagger(self) -> "Gate":
+        """Returns the dagger (conjugate transpose) of the gate.
+
+        Returns:
+            A :class:`qibo.base.gates.Gate` object representing the dagger of
+            the original gate.
+        """
         return self.__class__(*self.init_args, **self.init_kwargs)
 
     def controlled_by(self, *qubits: int) -> "Gate":
@@ -257,8 +263,8 @@ class Gate(object):
             *qubits (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
-            A :class:`qibo.base.gates.Gate` object in with the corresponding gate being
-            controlled in the given qubits.
+            A :class:`qibo.base.gates.Gate` object in with the corresponding
+            gate being controlled in the given qubits.
         """
         if self.control_qubits:
             raise_error(RuntimeError, "Cannot use `controlled_by` method on gate {} "

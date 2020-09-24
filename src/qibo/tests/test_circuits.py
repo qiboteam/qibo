@@ -215,6 +215,29 @@ def test_circuit_copy(backend, accelerators, deep):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+@pytest.mark.parametrize("fuse", [False, True])
+def test_circuit_invert(backend, accelerators, fuse):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(3, accelerators)
+    c.add(gates.RX(0, theta=0.1))
+    c.add(gates.U2(1, phi=0.2, lam=0.3))
+    c.add(gates.U3(2, theta=0.1, phi=0.3, lam=0.2))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0.1, phi=0.3))
+    c.add(gates.CU2(0, 1, phi=0.1, lam=0.1))
+    if fuse:
+        c = c.fuse()
+    invc = c.invert()
+    target_state = np.ones(2 ** 3) / np.sqrt(2 ** 3)
+    final_state = invc(c(np.copy(target_state)))
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.linux
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_memory_error(accelerators):
