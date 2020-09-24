@@ -759,7 +759,7 @@ class U2(_Un_):
         """"""
         import numpy as np
         phi = np.pi - self._lam
-        lam = np.pi - self._phi
+        lam = - np.pi - self._phi
         return self.__class__(self.target_qubits[0], phi, lam)
 
     @property
@@ -781,7 +781,7 @@ class U3(_Un_):
     .. math::
         \\begin{pmatrix}
         e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1069,7 +1069,7 @@ class CU2(_CUn_):
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         phi = np.pi - self._lam
-        lam = np.pi - self._phi
+        lam = - np.pi - self._phi
         return self.__class__(q0, q1, phi, lam)
 
     @property
@@ -1093,7 +1093,7 @@ class CU3(_CUn_):
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
         0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
