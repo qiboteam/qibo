@@ -738,8 +738,8 @@ class U2(_Un_):
     .. math::
         \\frac{1}{\\sqrt{2}}
         \\begin{pmatrix}
-        1 & -e^{i\\lambda} \\\\
-        e^{i\\phi} & e^{i (\\phi + \\lambda )} \\\\
+        e^{-i(\\phi + \\lambda )/2} & -e^{-i(\\phi - \\lambda )/2} \\\\
+        e^{i(\\phi + \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -780,8 +780,8 @@ class U3(_Un_):
 
     .. math::
         \\begin{pmatrix}
-        \\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{i\\lambda}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        e^{i\\phi}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
@@ -1045,8 +1045,8 @@ class CU2(_CUn_):
         \\begin{pmatrix}
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
-        0 & 0 & 1 & -e^{i\\lambda} \\\\
-        0 & 0 & e^{i\\phi} & e^{i (\\phi + \\lambda )} \\\\
+        0 & 0 & e^{-i(\\phi + \\lambda )/2} & -e^{-i(\\phi - \\lambda )/2} \\\\
+        0 & 0 & e^{i(\\phi + \\lambda )/2} & e^{i (\\phi + \\lambda )/2} \\\\
         \\end{pmatrix}
 
     Args:
@@ -1092,8 +1092,8 @@ class CU3(_CUn_):
         \\begin{pmatrix}
         1 & 0 & 0 & 0 \\\\
         0 & 1 & 0 & 0 \\\\
-        0 & 0 & \\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{i\\lambda}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
-        0 & 0 & e^{i\\phi}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda )}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi + \\lambda )/2}\\cos\\left (\\frac{\\theta }{2}\\right ) & -e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) \\\\
+        0 & 0 & e^{-i(\\phi - \\lambda )/2}\\sin\\left (\\frac{\\theta }{2}\\right ) & e^{i (\\phi + \\lambda ) / 2}\\cos\\left (\\frac{\\theta }{2}\\right ) \\\\
         \\end{pmatrix}
 
     Args:
