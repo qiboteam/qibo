@@ -1191,6 +1191,26 @@ def test_unitary_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_generalizedfsim_dagger(backend):
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    phi = 0.2
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.GeneralizedfSim(0, 1, matrix, phi)
+    c = Circuit(2)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(2)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.skip
+@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_variational_layer_dagger(backend, nqubits):
     original_backend = qibo.get_backend()

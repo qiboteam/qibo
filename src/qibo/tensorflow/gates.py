@@ -354,6 +354,10 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
         from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim.construct_unitary(self)
 
+    def dagger(self) -> "GeneralizedfSim":
+        from qibo.tensorflow import cgates
+        return cgates.GeneralizedfSim.dagger(self)
+
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 

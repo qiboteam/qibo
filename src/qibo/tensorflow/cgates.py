@@ -509,6 +509,16 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         matrix[3, 3] = np.exp(-1j * phi)
         return matrix
 
+    def dagger(self) -> "GenerelizedfSim":
+        unitary = self.__unitary
+        if isinstance(unitary, tf.Tensor):
+            ud = tf.math.conj(tf.transpose(unitary))
+        else:
+            ud = unitary.conj().T
+        phi = - self._phi
+        q0, q1 = self.target_qubits
+        return self.__class__(q0, q1, ud, phi)
+
     def __call__(self, state, is_density_matrix: bool = False):
         return fSim.__call__(self, state, is_density_matrix)
 
@@ -553,10 +563,10 @@ class Unitary(MatrixGate, base_gates.Unitary):
 
     def dagger(self) -> "Unitary":
         unitary = self.parameter
-        if isinstance(unitary, np.ndarray):
-            ud = unitary.conj().T
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
+        else:
+            ud = unitary.conj().T
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
