@@ -665,7 +665,6 @@ class BaseCircuit(object):
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                # TODO: Make sure that our parameter convention agrees with OpenQASM
                 if isinstance(gate.parameter, Iterable):
                     params = (str(x) for x in gate.parameter)
                     name = "{}({})".format(gate.name, ", ".join(params))
