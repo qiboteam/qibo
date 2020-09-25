@@ -306,6 +306,128 @@ class TrotterHamiltonian(Hamiltonian):
                      for i in range(nqubits // 2)}
         return cls(even_terms, odd_terms, ground_state=ground_state)
 
+    @staticmethod
+    def _symbols_to_dict(symbolic_hamiltonian, symbol_map):
+        """Transforms a symbolic Hamiltonian to a dictionary of targets and matrices.
+
+        Helper method for ``from_symbolic``.
+        Works for Hamiltonians with one and two qubit terms only.
+        The two qubit terms should be sufficiently many so that every
+        qubit appears as the first target at least once.
+
+        Args:
+            symbolic_hamiltonian: The full Hamiltonian written with symbols.
+            symbol_map (dict): Dictionary that maps each symbol to a pair of
+                (target, matrix).
+
+        Returns:
+            all_terms (dict): Dictionary that maps pairs of targets to the 4x4
+                              matrix that acts on this pair in the given
+                              Hamiltonian.
+            constant (float): The overall constant term of the Hamiltonian.
+        """
+        import numpy as np
+        one_qubit_terms, two_qubit_terms = dict(), dict()
+        first_targets = dict()
+        constant = 0
+        for term in symbolic_hamiltonian.args:
+            if term.args:
+                expression = term.args
+            else:
+                expression = (term,)
+
+            symbols = [x for x in expression if x.is_symbol]
+            numbers = [x for x in expression if not x.is_symbol]
+            if numbers:
+                if len(numbers) > 1:
+                    raise_error(ValueError, "Hamiltonian must be expanded "
+                                            " before using this method.")
+                const = float(numbers[0])
+            else:
+                const = 1
+
+            if not symbols:
+                constant += const
+            elif len(symbols) == 1:
+                target, matrix = symbol_map[symbols[0]]
+                one_qubit_terms[target] = const * matrix
+            elif len(symbols) == 2:
+                target1, matrix1 = symbol_map[symbols[0]]
+                target2, matrix2 = symbol_map[symbols[1]]
+                if target1 in first_targets and target2 not in first_targets:
+                    target1, target2 = target2, target1
+                    matrix1, matrix2 = matrix2, matrix1
+                two_qubit_terms[(target1, target2)] = const * np.kron(matrix1,
+                                                                      matrix2)
+                first_targets[target1] = (target1, target2)
+            else:
+                raise_error(ValueError, "Only one and two qubit terms are allowed.")
+
+        all_terms = dict(two_qubit_terms)
+        for target in one_qubit_terms.keys():
+            if target not in first_targets:
+                raise_error(ValueError, "Qubit {} has not been used as the "
+                                        "first target.".format(target))
+            pair = first_targets[target]
+            eye = np.eye(2, dtype=one_qubit_terms[target].dtype)
+            all_terms[pair] = (np.kron(one_qubit_terms[target], eye) +
+                               two_qubit_terms[pair])
+        return all_terms, constant
+
+    @staticmethod
+    def _split_keys(full_dict):
+        """Splits a dictionary of terms to multiple dictionaries.
+
+        Helper method for ``from_symbolic``.
+        Each qubit should not appear in more that one term in each
+        dictionary to ensure commutation relations in the definition
+        of :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+        """
+        all_pairs = set(full_dict.keys())
+        group_pairs = [set()]
+        group_singles = [set()]
+        for pair in all_pairs:
+            q0, q1 = pair
+            flag = True
+            for g, s in zip(group_pairs, group_singles):
+                if q0 not in s and q1 not in s:
+                    s.add(q0)
+                    s.add(q1)
+                    g.add(pair)
+                    flag = False
+                    break
+            if flag:
+                group_pairs.append({pair})
+                group_singles.append({q0, q1})
+        return [{k: full_dict[k] for k in g} for g in group_pairs]
+
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+        """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
+
+        Works for Hamiltonians with one and two qubit terms only.
+        The two qubit terms should be sufficiently many so that every
+        qubit appears as the first target at least once.
+
+        Args:
+            symbolic_hamiltonian: The full Hamiltonian written with symbols.
+            symbol_map (dict): Dictionary that maps each symbol that appears in
+                the Hamiltonian to a pair of (target, matrix).
+            ground_state (Callable): Optional callable with no arguments that
+                returns the ground state of this ``TrotterHamiltonian``.
+                See :class:`qibo.base.hamiltonians.TrotterHamiltonian` for more
+                details.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
+            implements the given symbolic Hamiltonian.
+        """
+        from qibo.hamiltonians import Hamiltonian
+        terms, constant = cls._symbols_to_dict(symbolic_hamiltonian, symbol_map)
+        terms = {k: Hamiltonian(2, v, numpy=True) for k, v in terms.items()}
+        parts = cls._split_keys(terms)
+        return cls(*parts, ground_state=ground_state) + constant
+
     def _calculate_dense_matrix(self, a): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)

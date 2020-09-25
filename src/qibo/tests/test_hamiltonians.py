@@ -375,6 +375,24 @@ def test_trotter_hamiltonian_operation_errors():
         s = h1 @ np.zeros((2, 2))
 
 
+def test_tfim_trotter_hamiltonian_from_symbols(nqubits=4):
+    import sympy
+    from qibo import matrices
+    h = 0.5
+    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
+    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+
+    symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
+    symham += z_symbols[0] * z_symbols[-1]
+    symham += h * sum(x_symbols)
+    symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
+    symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
+    trotter_ham = TrotterHamiltonian.from_symbolic(-symham, symmap)
+
+    target_ham = TFIM(nqubits, h=h)
+    np.testing.assert_allclose(trotter_ham.dense.matrix, target_ham.matrix)
+
+
 models_config = [
     (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
     (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.out"),
