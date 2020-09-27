@@ -375,7 +375,9 @@ def test_trotter_hamiltonian_operation_errors():
         s = h1 @ np.zeros((2, 2))
 
 
-def test_tfim_trotter_hamiltonian_from_symbols(nqubits=4):
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_tfim_trotter_hamiltonian_from_symbols(nqubits):
+    """Check creating ``TrotterHamiltonian`` for TFIM using sympy."""
     import sympy
     from qibo import matrices
     h = 0.5
@@ -392,6 +394,9 @@ def test_tfim_trotter_hamiltonian_from_symbols(nqubits=4):
     target_ham = TFIM(nqubits, h=h)
     np.testing.assert_allclose(trotter_ham.dense.matrix, target_ham.matrix)
 
+
+# TODO: Add more tests for ``TrotterHamiltonian.from_symbolic`` including
+# error tests
 
 models_config = [
     (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
