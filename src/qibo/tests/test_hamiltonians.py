@@ -403,6 +403,7 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("trotter", [False])
+# TODO: Fix this test for trotter=True
 def test_x_hamiltonian_from_symbols(nqubits, trotter):
     """Check creating sum(X) Hamiltonian using sympy."""
     import sympy
@@ -412,6 +413,49 @@ def test_x_hamiltonian_from_symbols(nqubits, trotter):
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
 
     target_matrix = X(nqubits).matrix
+    if trotter:
+        trotter_ham = TrotterHamiltonian.from_symbolic(symham, symmap)
+        final_matrix = trotter_ham.dense.matrix
+    else:
+        full_ham = Hamiltonian.from_symbolic(symham, symmap)
+        final_matrix = full_ham.matrix
+    np.testing.assert_allclose(final_matrix, target_matrix)
+
+
+@pytest.mark.parametrize("trotter", [False])
+# TODO: Fix this test for trotter=True
+def test_three_qubit_term_hamiltonian_from_symbols(trotter):
+    """Check creating Hamiltonian with three-qubit interaction using sympy."""
+    import sympy
+    from qibo import matrices
+    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
+    y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
+    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(4))))
+    symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
+    symmap.update({x: (i, matrices.Y) for i, x in enumerate(y_symbols)})
+    symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
+
+    symham = x_symbols[0] * y_symbols[1] * z_symbols[2]
+    symham += y_symbols[0] * z_symbols[1] * x_symbols[3]
+    symham += z_symbols[0] * x_symbols[2]
+    symham += x_symbols[1] * y_symbols[3]
+    symham += y_symbols[2]
+    symham += z_symbols[1]
+    symham -= 2
+
+    target_matrix = np.kron(np.kron(matrices.X, matrices.Y),
+                            np.kron(matrices.Z, matrices.I))
+    target_matrix += np.kron(np.kron(matrices.Y, matrices.Z),
+                             np.kron(matrices.I, matrices.X))
+    target_matrix += np.kron(np.kron(matrices.Z, matrices.I),
+                             np.kron(matrices.X, matrices.I))
+    target_matrix += np.kron(np.kron(matrices.I, matrices.X),
+                             np.kron(matrices.I, matrices.Y))
+    target_matrix += np.kron(np.kron(matrices.I, matrices.I),
+                             np.kron(matrices.Y, matrices.I))
+    target_matrix += np.kron(np.kron(matrices.I, matrices.Z),
+                             np.kron(matrices.I, matrices.I))
+    target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
     if trotter:
         trotter_ham = TrotterHamiltonian.from_symbolic(symham, symmap)
         final_matrix = trotter_ham.dense.matrix

@@ -435,6 +435,7 @@ class TrotterHamiltonian(Hamiltonian):
         all_pairs = set(full_dict.keys())
         group_pairs = [set()]
         group_singles = [set()]
+        # TODO: Generalize this for non-two-qubit terms
         for pair in all_pairs:
             q0, q1 = pair
             flag = True
@@ -473,6 +474,7 @@ class TrotterHamiltonian(Hamiltonian):
         """
         from qibo.hamiltonians import Hamiltonian
         terms, constant = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map).trotter_terms()
+        # TODO: Generalize for non-two-qubit terms
         terms = {k: Hamiltonian(2, v, numpy=True) for k, v in terms.items()}
         parts = cls._split_keys(terms)
         return cls(*parts, ground_state=ground_state) + constant
