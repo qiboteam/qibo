@@ -3,6 +3,7 @@ import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES, raise_error
 from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
+from qibo.base.hamiltonians import SymbolicHamiltonian
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
     from qibo.tensorflow.hamiltonians import TensorflowTrotterHamiltonian as TrotterHamiltonian
@@ -30,26 +31,17 @@ class Hamiltonian(BaseHamiltonian):
         else:
             return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
 
-
-def _multikron(matrix_list):
-    """Calculates Kronecker product of a list of matrices.
-
-    Args:
-        matrices (list): List of matrices as ``np.ndarray``s.
-
-    Returns:
-        ``np.ndarray`` of the Kronecker product of all ``matrices``.
-    """
-    h = 1
-    for m in matrix_list:
-        h = np.kron(h, m)
-    return h
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
+        """See :class:`qibo.base.hamiltonians.BaseHamiltonian` for docs."""
+        ham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
+        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
 
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(_multikron((matrix if condition(i, j) else matrices.I
-                        for j in range(nqubits)))
+    h = sum(SymbolicHamiltonian._multikron(
+      (matrix if condition(i, j) else matrices.I for j in range(nqubits)))
             for i in range(nqubits))
     return h
 

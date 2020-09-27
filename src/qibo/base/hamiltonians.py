@@ -1,4 +1,5 @@
 import itertools
+import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 
@@ -188,8 +189,10 @@ class Hamiltonian:
 
 
 class SymbolicHamiltonian:
+    # FIXME: Fix docstrings
 
     import sympy
+    from qibo import matrices
 
     def __init__(self, hamiltonian, symbol_map):
         self.symbolic = self.sympy.expand(hamiltonian)
@@ -197,6 +200,7 @@ class SymbolicHamiltonian:
 
         self.constant = 0
         self.terms = dict()
+        target_ids = set()
         for term in self.symbolic.args:
             if term.args:
                 expression = term.args
@@ -206,16 +210,16 @@ class SymbolicHamiltonian:
             symbols = [x for x in expression if x.is_symbol]
             numbers = [x for x in expression if not x.is_symbol]
             if numbers:
-                if len(numbers) > 1: # pragma: no cover
-                    # this case should not happen
-                    raise_error(NotImplementedError)
+                assert len(numbers) == 1
                 const = float(numbers[0])
             else:
+                assert symbols
                 const = 1
 
             if symbols:
                 n = len(symbols)
                 targets = tuple(symbol_map[s][0] for s in symbols)
+                target_ids |= set(targets)
                 matrices = (const,) + tuple(symbol_map[s][1] for s in symbols)
                 if n in self.terms:
                     self.terms[n][targets] = matrices
@@ -223,6 +227,34 @@ class SymbolicHamiltonian:
                     self.terms[n] = {targets: matrices}
             else:
                 self.constant += const
+
+        self.nqubits = max(target_ids) + 1
+
+    @staticmethod
+    def _multikron(matrix_list):
+        """Calculates Kronecker product of a list of matrices.
+
+        Args:
+            matrices (list): List of matrices as ``np.ndarray``s.
+
+        Returns:
+            ``np.ndarray`` of the Kronecker product of all ``matrices``.
+        """
+        h = 1
+        for m in matrix_list:
+            h = np.kron(h, m)
+        return h
+
+    def dense_matrix(self):
+        matrix = 0
+        for group in self.terms.values():
+            for targets, matrices in group.items():
+                matrix_list = self.nqubits * [self.matrices.I]
+                for t, m in zip(targets, matrices[1:]):
+                    matrix_list[t] = m
+                matrix += matrices[0] * self._multikron(matrix_list)
+        eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
+        return matrix + self.constant * eye
 
     def trotter_terms(self):
         """Transforms a symbolic Hamiltonian to a dictionary of targets and matrices.
@@ -243,14 +275,12 @@ class SymbolicHamiltonian:
                               Hamiltonian.
             constant (float): The overall constant term of the Hamiltonian.
         """
-        import numpy as np
         termkeys = set(self.terms.keys())
         if termkeys == {1}:
             return self.terms[1], self.constant
         if termkeys != {2} and termkeys != {1, 2}:
-            raise_error(NotImplementedError, "Hamiltonians with more than two "
-                                             "qubit terms are not supported by "
-                                             "the `parse_two_qubit` method.")
+            raise_error(NotImplementedError, "``TrotterHamiltonian`` supports "
+                                             "up to two qubit terms.")
 
         two_qubit, first_targets = dict(), dict()
         for (t1, t2), (c, m1, m2) in self.terms[2].items():

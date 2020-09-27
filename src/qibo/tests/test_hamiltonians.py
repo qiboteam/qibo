@@ -376,8 +376,9 @@ def test_trotter_hamiltonian_operation_errors():
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_tfim_trotter_hamiltonian_from_symbols(nqubits):
-    """Check creating ``TrotterHamiltonian`` for TFIM using sympy."""
+@pytest.mark.parametrize("trotter", [False, True])
+def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
+    """Check creating TFIM Hamiltonian using sympy."""
     import sympy
     from qibo import matrices
     h = 0.5
@@ -389,14 +390,36 @@ def test_tfim_trotter_hamiltonian_from_symbols(nqubits):
     symham += h * sum(x_symbols)
     symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
     symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
-    trotter_ham = TrotterHamiltonian.from_symbolic(-symham, symmap)
 
-    target_ham = TFIM(nqubits, h=h)
-    np.testing.assert_allclose(trotter_ham.dense.matrix, target_ham.matrix)
+    target_matrix = TFIM(nqubits, h=h).matrix
+    if trotter:
+        trotter_ham = TrotterHamiltonian.from_symbolic(-symham, symmap)
+        final_matrix = trotter_ham.dense.matrix
+    else:
+        full_ham = Hamiltonian.from_symbolic(-symham, symmap)
+        final_matrix = full_ham.matrix
+    np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-# TODO: Add more tests for ``TrotterHamiltonian.from_symbolic`` including
-# error tests
+@pytest.mark.parametrize("nqubits", [4, 5])
+@pytest.mark.parametrize("trotter", [False])
+def test_x_hamiltonian_from_symbols(nqubits, trotter):
+    """Check creating sum(X) Hamiltonian using sympy."""
+    import sympy
+    from qibo import matrices
+    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+    symham =  -sum(x_symbols)
+    symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
+
+    target_matrix = X(nqubits).matrix
+    if trotter:
+        trotter_ham = TrotterHamiltonian.from_symbolic(symham, symmap)
+        final_matrix = trotter_ham.dense.matrix
+    else:
+        full_ham = Hamiltonian.from_symbolic(symham, symmap)
+        final_matrix = full_ham.matrix
+    np.testing.assert_allclose(final_matrix, target_matrix)
+
 
 models_config = [
     (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
