@@ -3,7 +3,7 @@ from qibo import gates
 from qibo.config import log, raise_error
 
 
-class Hamiltonian(object):
+class Hamiltonian:
     """Abstract Hamiltonian operator using full matrix representation.
 
     Args:
@@ -187,6 +187,93 @@ class Hamiltonian(object):
                                              "implemented.".format(type(o)))
 
 
+class SymbolicHamiltonian:
+
+    import sympy
+
+    def __init__(self, hamiltonian, symbol_map):
+        self.symbolic = self.sympy.expand(hamiltonian)
+        self.map = symbol_map
+
+        self.constant = 0
+        self.terms = dict()
+        for term in self.symbolic.args:
+            if term.args:
+                expression = term.args
+            else:
+                expression = (term,)
+
+            symbols = [x for x in expression if x.is_symbol]
+            numbers = [x for x in expression if not x.is_symbol]
+            if numbers:
+                if len(numbers) > 1: # pragma: no cover
+                    # this case should not happen
+                    raise_error(NotImplementedError)
+                const = float(numbers[0])
+            else:
+                const = 1
+
+            if symbols:
+                n = len(symbols)
+                targets = tuple(symbol_map[s][0] for s in symbols)
+                matrices = (const,) + tuple(symbol_map[s][1] for s in symbols)
+                if n in self.terms:
+                    self.terms[n][targets] = matrices
+                else:
+                    self.terms[n] = {targets: matrices}
+            else:
+                self.constant += const
+
+    def trotter_terms(self):
+        """Transforms a symbolic Hamiltonian to a dictionary of targets and matrices.
+
+        Helper method for ``from_symbolic``.
+        Works for Hamiltonians with one and two qubit terms only.
+        The two qubit terms should be sufficiently many so that every
+        qubit appears as the first target at least once.
+
+        Args:
+            symbolic_hamiltonian: The full Hamiltonian written with symbols.
+            symbol_map (dict): Dictionary that maps each symbol to a pair of
+                (target, matrix).
+
+        Returns:
+            all_terms (dict): Dictionary that maps pairs of targets to the 4x4
+                              matrix that acts on this pair in the given
+                              Hamiltonian.
+            constant (float): The overall constant term of the Hamiltonian.
+        """
+        import numpy as np
+        termkeys = set(self.terms.keys())
+        if termkeys == {1}:
+            return self.terms[1], self.constant
+        if termkeys != {2} and termkeys != {1, 2}:
+            raise_error(NotImplementedError, "Hamiltonians with more than two "
+                                             "qubit terms are not supported by "
+                                             "the `parse_two_qubit` method.")
+
+        two_qubit, first_targets = dict(), dict()
+        for (t1, t2), (c, m1, m2) in self.terms[2].items():
+            if t1 in first_targets and t2 not in first_targets:
+                t1, t2 = t2, t1
+                m1, m2 = m2, m1
+            two_qubit[(t1, t2)] = c * np.kron(m1, m2)
+            first_targets[t1] = (t1, t2)
+
+        if 1 not in self.terms:
+            return two_qubit, self.constant
+
+        terms = dict(two_qubit)
+        for (t,), (c, m) in self.terms[1].items():
+            if t not in first_targets:
+                raise_error(ValueError, "Qubit {} has not been used as the "
+                                        "first target.".format(t))
+            pair = first_targets[t]
+            eye = np.eye(2, dtype=m.dtype)
+            terms[pair] = np.kron(c * m, eye) + two_qubit[pair]
+        return terms, self.constant
+
+
 class TrotterHamiltonian(Hamiltonian):
     """Hamiltonian operator used for Trotterized time evolution.
 
@@ -354,9 +441,8 @@ class TrotterHamiltonian(Hamiltonian):
             A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.base import symbolic
         from qibo.hamiltonians import Hamiltonian
-        terms, constant = symbolic.symbolic_to_dict(symbolic_hamiltonian, symbol_map)
+        terms, constant = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map).trotter_terms()
         terms = {k: Hamiltonian(2, v, numpy=True) for k, v in terms.items()}
         parts = cls._split_keys(terms)
         return cls(*parts, ground_state=ground_state) + constant
