@@ -264,30 +264,36 @@ class SymbolicHamiltonian:
                 matrix = matrices[0] * self._multikron(matrices[1:])
                 yield targets, matrix
 
-    def _reduce_two_qubit(self):
-        termkeys = set(self.terms.keys())
-        assert termkeys == {1, 2} or termkeys == {2}
+    def _merge_one_and_two_qubit(self, terms):
+        # Split terms to one and two-qubit
+        # Keep track of the first target in two-qubit terms
+        one_qubit, two_qubit, first_targets = dict(), dict(), dict()
+        for targets, matrix in terms.items():
+            assert len(targets) in {1, 2}
+            if len(targets) == 1:
+                one_qubit[targets] = matrix
+            else:
+                t1, t2 = targets
+                if t1 in first_targets and t2 not in first_targets:
+                    # swap target order
+                    # the matrix has to be recalculated as well!
+                    t1, t2 = t2, t1
+                    c, m1, m2 = self.terms[2][targets]
+                    matrix = c * np.kron(m2, m1)
+                two_qubit[(t1, t2)] = matrix
+                first_targets[t1] = (t1, t2)
 
-        two_qubit, first_targets = dict(), dict()
-        for (t1, t2), (c, m1, m2) in self.terms[2].items():
-            if t1 in first_targets and t2 not in first_targets:
-                t1, t2 = t2, t1
-                m1, m2 = m2, m1
-            two_qubit[(t1, t2)] = c * np.kron(m1, m2)
-            first_targets[t1] = (t1, t2)
-
-        if 1 not in self.terms:
-            return two_qubit
-
-        terms = dict(two_qubit)
-        for (t,), (c, m) in self.terms[1].items():
+        merged = dict(two_qubit)
+        for (t,), m in one_qubit.items():
             if t not in first_targets:
-                raise_error(ValueError, "Qubit {} has not been used as the "
-                                        "first target.".format(t))
+                log.info("Aborting merge of one and two-qubit terms during "
+                         "TrotterHamiltonian creation because the two-qubit "
+                         "terms are not sufficiently many.")
+                return terms
             pair = first_targets[t]
             eye = np.eye(2, dtype=m.dtype)
-            terms[pair] = np.kron(c * m, eye) + two_qubit[pair]
-        return terms
+            merged[pair] = np.kron(m, eye) + two_qubit[pair]
+        return merged
 
     def trotter_terms(self):
         """Transforms a symbolic Hamiltonian to a dictionary of targets and matrices.
@@ -308,10 +314,9 @@ class SymbolicHamiltonian:
                               Hamiltonian.
             constant (float): The overall constant term of the Hamiltonian.
         """
-        if max(self.terms.keys()) == 2:
-            terms = self._reduce_two_qubit()
-        else:
-            terms = {t: m for t, m in self.partial_matrices()}
+        terms = {t: m for t, m in self.partial_matrices()}
+        if max(self.terms.keys()) == 2 and 1 in self.terms:
+            terms = self._merge_one_and_two_qubit(terms)
         return terms, self.constant
 
 
