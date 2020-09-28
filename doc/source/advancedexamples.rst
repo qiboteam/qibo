@@ -307,6 +307,36 @@ a flat list.
 Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
 recreating a new circuit with new parameter values.
 
+
+How to invert a circuit?
+------------------------
+
+Many quantum algorithms require using a specific subroutine and its inverse
+in the same circuit. Qibo simplifies this implementation via the
+:meth:`qibo.base.circuit.BaseCircuit.invert` method. This method produces
+the inverse of a circuit by taking the dagger of all gates in reverse order. It
+can be used with circuit addition to simplify the construction of algorithms,
+for example:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    # Create a subroutine
+    subroutine = Circuit(6)
+    subroutine.add([gates.RX(i, theta=0.1) for i in range(5)])
+    subroutine.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
+
+    # Create the middle part of the circuit
+    middle = Circuit(6)
+    middle.add([gates.CU2(i, i + 1, phi=0.1, lam=0.2) for i in range(0, 5, 2)])
+
+    # Create the total circuit as subroutine + middle + subroutine^{-1}
+    circuit = subroutine + middle + subroutine.invert()
+
+
 .. _vqe-example:
 
 How to write a VQE?

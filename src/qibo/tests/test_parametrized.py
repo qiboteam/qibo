@@ -314,3 +314,27 @@ def test_set_parameters_with_gate_fusion(backend, accelerators):
     np.testing.assert_allclose(c(), fused_c())
 
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_variable_theta(backend, accelerators):
+    """Check that parametrized gates accept `tf.Variable` parameters."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    theta1 = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
+    theta2 = tf.Variable(0.4321, dtype=DTYPES.get('DTYPE'))
+
+    cvar = Circuit(2, accelerators)
+    cvar.add(gates.RX(0, theta1))
+    cvar.add(gates.RY(1, theta2))
+    final_state = cvar().numpy()
+
+    c = Circuit(2)
+    c.add(gates.RX(0, 0.1234))
+    c.add(gates.RY(1, 0.4321))
+    target_state = c().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)

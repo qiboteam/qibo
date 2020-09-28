@@ -1,5 +1,5 @@
 """
-Testing tensorflow circuit and gates.
+Testing Tensorflow gates.
 """
 import numpy as np
 import pytest
@@ -11,29 +11,6 @@ from qibo.tests import utils
 _BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
 _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
                     ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
-
-
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_circuit_addition_result(backend, accelerators):
-    """Check if circuit addition works properly on Tensorflow circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c1 = Circuit(2, accelerators)
-    c1.add(gates.H(0))
-    c1.add(gates.H(1))
-
-    c2 = Circuit(2, accelerators)
-    c2.add(gates.CNOT(0, 1))
-
-    c3 = c1 + c2
-
-    c = Circuit(2, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.CNOT(0, 1))
-
-    np.testing.assert_allclose(c3.execute().numpy(), c.execute().numpy())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -1150,214 +1127,155 @@ def test_variational_layer_errors(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_custom_circuit(backend):
-    """Check consistency between Circuit and custom circuits"""
-    import tensorflow as tf
+@pytest.mark.parametrize("gate,params",
+                         [("H", {}), ("X", {}), ("Z", {}),
+                          ("RX", {"theta": 0.1}),
+                          ("RY", {"theta": 0.2}),
+                          ("RZ", {"theta": 0.3}),
+                          ("U1", {"theta": 0.1}),
+                          ("U2", {"phi": 0.2, "lam": 0.3}),
+                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+def test_dagger_one_qubit(backend, gate, params):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    theta = 0.1234
 
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CU1(0, 1, theta))
-    r1 = c.execute().numpy()
+    c = Circuit(1)
+    gate = getattr(gates, gate)(0, **params)
+    c.add((gate, gate.dagger()))
 
-    # custom circuit
-    def custom_circuit(initial_state, theta):
-        l1 = gates.X(0)(initial_state)
-        l2 = gates.X(1)(l1)
-        o = gates.CU1(0, 1, theta)(l2)
-        return o
-
-    init2 = c._default_initial_state()
-    init3 = c._default_initial_state()
-    if backend != "custom":
-        init2 = tf.reshape(init2, (2, 2))
-        init3 = tf.reshape(init3, (2, 2))
-
-    r2 = custom_circuit(init2, theta).numpy().ravel()
-    np.testing.assert_allclose(r1, r2)
-
-    tf_custom_circuit = tf.function(custom_circuit)
-    if backend == "custom":
-        with pytest.raises(NotImplementedError):
-            r3 = tf_custom_circuit(init3, theta).numpy().ravel()
-    else:
-        r3 = tf_custom_circuit(init3, theta).numpy().ravel()
-        np.testing.assert_allclose(r2, r3)
+    initial_state = utils.random_numpy_state(1)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_compiled_circuit(backend):
-    """Check that compiling with `Circuit.compile` does not break results."""
+@pytest.mark.parametrize("gate,params",
+                         [("CNOT", {}),
+                          ("CRX", {"theta": 0.1}),
+                          ("CRZ", {"theta": 0.3}),
+                          ("CU1", {"theta": 0.1}),
+                          ("CU2", {"phi": 0.2, "lam": 0.3}),
+                          ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
+                          ("fSim", {"theta": 0.1, "phi": 0.2})])
+def test_dagger_two_qubit(backend, gate, params):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    def create_circuit(theta = 0.1234):
-        c = Circuit(2)
-        c.add(gates.X(0))
-        c.add(gates.X(1))
-        c.add(gates.CU1(0, 1, theta))
-        return c
 
-    # Try to compile circuit without gates
-    empty_c = Circuit(2)
-    with pytest.raises(RuntimeError):
-        empty_c.compile()
-
-    # Run eager circuit
-    c1 = create_circuit()
-    r1 = c1.execute().numpy()
-
-    # Run compiled circuit
-    c2 = create_circuit()
-    if backend == "custom":
-        with pytest.raises(RuntimeError):
-            c2.compile()
-    else:
-        c2.compile()
-        r2 = c2.execute().numpy()
-        init_state = c2._default_initial_state()
-        r3, _ = c2._execute_for_compile(init_state.numpy().reshape((2, 2)))
-        r3 = r3.numpy().ravel()
-        np.testing.assert_allclose(r1, r2)
-        np.testing.assert_allclose(r1, r3)
-    qibo.set_backend(original_backend)
-
-
-def test_compiling_twice_exception():
-    """Check that compiling a circuit a second time raises error."""
-    from qibo.tensorflow import gates
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    c.compile()
-    with pytest.raises(RuntimeError):
-        c.compile()
+    gate = getattr(gates, gate)(0, 1, **params)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(2)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_custom_compilation(backend):
-    import tensorflow as tf
-    from qibo.config import DTYPES
+@pytest.mark.parametrize("gate,params",
+                         [("H", {}), ("X", {}),
+                          ("RX", {"theta": 0.1}),
+                          ("RZ", {"theta": 0.2}),
+                          ("U2", {"phi": 0.2, "lam": 0.3}),
+                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
+def test_dagger_controlled_by(backend, gate, params):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    theta = 0.1234
-    init_state = tf.cast(np.ones(4) / 2.0, dtype=DTYPES.get('DTYPECPX'))
 
-    def run_circuit(initial_state):
-        c = Circuit(2)
-        c.add(gates.X(0))
-        c.add(gates.X(1))
-        c.add(gates.CU1(0, 1, theta))
-        return c.execute(initial_state)
+    c = Circuit(4)
+    gate = getattr(gates, gate)(3, **params).controlled_by(0, 1, 2)
+    c.add((gate, gate.dagger()))
 
-    r1 = run_circuit(init_state).numpy()
-    compiled_circuit = tf.function(run_circuit)
-    if backend == "custom":
-        with pytest.raises(NotImplementedError):
-            r2 = compiled_circuit(init_state)
-    else:
-        r2 = compiled_circuit(init_state)
-        np.testing.assert_allclose(r1, r2)
+    initial_state = utils.random_numpy_state(4)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_bad_initial_state(backend, accelerators):
-    """Check that errors are raised when bad initial state is passed."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [1, 2])
+@pytest.mark.parametrize("tfmatrix", [False, True])
+def test_unitary_dagger(backend, nqubits, tfmatrix):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    import tensorflow as tf
-    c = Circuit(2, accelerators)
-    c.add([gates.H(0), gates.H(1)])
-    with pytest.raises(ValueError):
-        final_state = c(initial_state=np.zeros(2**3))
-    with pytest.raises(ValueError):
-        final_state = c(initial_state=np.zeros((2, 2)))
-    with pytest.raises(ValueError):
-        final_state = c(initial_state=np.zeros((2, 2, 2)))
-    with pytest.raises(TypeError):
-        final_state = c(initial_state=0)
-    c = Circuit(2, accelerators)
-    c.check_initial_state_shape = False
-    with pytest.raises(TypeError):
-        final_state = c(initial_state=0)
-    qibo.set_backend(original_backend)
 
+    matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    if tfmatrix:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+    gate = gates.Unitary(matrix, *range(nqubits))
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_final_state_property(backend, accelerators):
-    """Check accessing final state using the circuit's property."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    import tensorflow as tf
-    c = Circuit(2, accelerators)
-    c.add([gates.H(0), gates.H(1)])
-
-    with pytest.raises(RuntimeError):
-        final_state = c.final_state
-
-    _ = c()
-    final_state = c.final_state.numpy()
-    target_state = np.ones(4) / 2
+    initial_state = utils.random_numpy_state(nqubits)
+    final_state = c(np.copy(initial_state)).numpy()
+    if tfmatrix:
+        matrix = matrix.numpy()
+    target_state = matrix.dot(initial_state)
+    target_state = matrix.conj().T.dot(target_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_variable_theta(backend, accelerators):
-    """Check that parametrized gates accept `tf.Variable` parameters."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_unitary_controlled_by_dagger(backend):
+    from scipy.linalg import expm
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    import tensorflow as tf
-    from qibo.config import DTYPES
-    theta1 = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
-    theta2 = tf.Variable(0.4321, dtype=DTYPES.get('DTYPE'))
 
-    cvar = Circuit(2, accelerators)
-    cvar.add(gates.RX(0, theta1))
-    cvar.add(gates.RY(1, theta2))
-    final_state = cvar().numpy()
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
+    c = Circuit(5)
+    c.add((gate, gate.dagger()))
 
+    initial_state = utils.random_numpy_state(5)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("tfmatrix", [False, True])
+def test_generalizedfsim_dagger(backend, tfmatrix):
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    phi = 0.2
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    if tfmatrix:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+    gate = gates.GeneralizedfSim(0, 1, matrix, phi)
     c = Circuit(2)
-    c.add(gates.RX(0, 0.1234))
-    c.add(gates.RY(1, 0.4321))
-    target_state = c().numpy()
+    c.add((gate, gate.dagger()))
 
-    np.testing.assert_allclose(final_state, target_state)
+    initial_state = utils.random_numpy_state(2)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-@pytest.mark.parametrize("deep", [False, True])
-def test_circuit_copy(backend, accelerators, deep):
-    """Check that circuit copy execution is equivalent to original circuit."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_variational_layer_dagger(backend, nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    theta = 0.1234
 
-    c1 = Circuit(2, accelerators)
-    c1.add([gates.X(0), gates.X(1), gates.CU1(0, 1, theta)])
-    if not deep and accelerators is not None:
-        with pytest.raises(ValueError):
-            c2 = c1.copy(deep)
-    else:
-        c2 = c1.copy(deep)
-        target_state = c1.execute().numpy()
-        final_state = c2.execute().numpy()
-        np.testing.assert_allclose(final_state, target_state)
+    theta = 2 * np.pi * np.random.random((2, nqubits))
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ,
+                                  theta[0], theta[1])
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+
+    initial_state = utils.random_numpy_state(nqubits)
+    final_state = c(np.copy(initial_state)).numpy()
+    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
-
-
-@pytest.mark.linux
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
-def test_memory_error(accelerators):
-    """Check that ``RuntimeError`` is raised if device runs out of memory."""
-    c = Circuit(40, accelerators=accelerators)
-    c.add((gates.H(i) for i in range(0, 40, 5)))
-    with pytest.raises(RuntimeError):
-        final_state = c()
