@@ -476,8 +476,7 @@ class TrotterHamiltonian(Hamiltonian):
         """
         from qibo.hamiltonians import Hamiltonian
         terms, constant = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map).trotter_terms()
-        # TODO: Generalize for non-two-qubit terms
-        terms = {k: Hamiltonian(2, v, numpy=True) for k, v in terms.items()}
+        terms = {k: Hamiltonian(len(k), v, numpy=True) for k, v in terms.items()}
         parts = cls._split_terms(terms)
         return cls(*parts, ground_state=ground_state) + constant
 

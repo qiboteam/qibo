@@ -444,8 +444,7 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("trotter", [False])
-# TODO: Fix this test for trotter=True
+@pytest.mark.parametrize("trotter", [False, True])
 def test_x_hamiltonian_from_symbols(nqubits, trotter):
     """Check creating sum(X) Hamiltonian using sympy."""
     import sympy
