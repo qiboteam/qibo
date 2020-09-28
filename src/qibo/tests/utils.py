@@ -54,3 +54,19 @@ def random_numpy_state(nqubits, dtype=np.complex128):
     """
     x = random_numpy_complex(2 ** nqubits, dtype)
     return (x / np.sqrt((np.abs(x) ** 2).sum())).astype(dtype)
+
+
+def random_numpy_hermitian(nqubits, dtype=np.complex128):
+    """Generates a random Hermitian matrix as a numpy array.
+
+    Args:
+        nqubits (int): Number of qubits in matrix.
+        dtype: Numpy type of the state array.
+
+    Returns:
+        Numpy array for the Hermitian matrix of shape
+        (2 ** nqubits, 2 ** nqubits).
+    """
+    shape = 2 * (2 ** nqubits,)
+    m = random_numpy_complex(shape, dtype)
+    return (m + m.T.conj()) / 2.0

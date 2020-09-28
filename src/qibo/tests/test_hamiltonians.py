@@ -324,6 +324,49 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     np.testing.assert_allclose(trotter_ev, target_ev)
 
 
+@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
+def test_trotter_hamiltonian_three_qubit_term(backend):
+    """Test creating ``TrotterHamiltonian`` with three qubit term."""
+    import qibo
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    m1 = utils.random_numpy_hermitian(3)
+    m2 = utils.random_numpy_hermitian(2)
+    m3 = utils.random_numpy_hermitian(1)
+
+    term1 = Hamiltonian(3, m1, numpy=True)
+    term2 = Hamiltonian(2, m2, numpy=True)
+    term3 = Hamiltonian(1, m3, numpy=True)
+    parts = [{(0, 1, 2): term1}, {(2, 3): term2, (1,): term3}]
+    trotter_h = TrotterHamiltonian(*parts)
+
+    # Test that the `TrotterHamiltonian` dense matrix is correct
+    eye = np.eye(2, dtype=m1.dtype)
+    mm1 = np.kron(m1, eye)
+    mm2 = np.kron(np.kron(eye, eye), m2)
+    mm3 = np.kron(np.kron(eye, m3), np.kron(eye, eye))
+    target_h = Hamiltonian(4, mm1 + mm2 + mm3)
+    np.testing.assert_allclose(trotter_h.dense.matrix, target_h.matrix)
+
+    dt = 1e-2
+    initial_state = utils.random_numpy_state(4)
+
+    if backend == "custom":
+        with pytest.raises(NotImplementedError):
+            circuit = trotter_h.circuit(dt=dt)
+    else:
+        circuit = trotter_h.circuit(dt=dt)
+        final_state = circuit(np.copy(initial_state))
+
+        u = [expm(-0.5j * dt * m) for m in [mm1, mm2, mm3]]
+        target_state = u[2].dot(u[1].dot(u[0])).dot(initial_state)
+        target_state = u[0].dot(u[1].dot(u[2])).dot(target_state)
+        np.testing.assert_allclose(final_state, target_state)
+
+    qibo.set_backend(original_backend)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms

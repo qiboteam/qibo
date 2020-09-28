@@ -442,9 +442,13 @@ class Unitary(MatrixGate, base_gates.Unitary):
         MatrixGate.__init__(self)
         rank = self.rank
         if rank > 2:
-            raise_error(NotImplementedError, "Unitary matrix gate supports only one "
-                                      "qubit gates but {} target qubits were "
-                                      "given.".format(len(self.target_qubits)))
+            n = len(self.target_qubits)
+            raise_error(NotImplementedError, "Unitary gate supports one or two-"
+                                             "qubit gates when using custom "
+                                             "operators, but {} target qubits "
+                                             "were given. Please switch to a "
+                                             "Tensorflow backend to execute "
+                                             "this operation.".format(n))
         self._unitary = self.construct_unitary()
 
     def construct_unitary(self) -> np.ndarray:
