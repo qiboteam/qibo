@@ -471,58 +471,9 @@ class TrotterHamiltonian(Hamiltonian):
         self._exp = {"a": None, "result": None}
 
     @classmethod
-    def from_twoqubit_term(cls, nqubits, term, ground_state=None):
-        """:class:`qibo.base.hamiltonians.TrotterHamiltonian` for
-        translationally invariant models.
-
-        It is assumed that the system has periodic boundary conditions and the
-        local term acts on exactly two qubits.
-
-        Args:
-            nqubits (int): Number of qubits in the system.
-            term (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
-                object representing the local operator. The total Hamiltonian
-                is sum of this term acting on each of the qubits.
-            ground_state (Callable): Optional callable with no arguments that
-                returns the ground state of this ``TrotterHamiltonian``.
-                See ``__init__`` documentation for more details.
-        """
-        if not isinstance(nqubits, int) or nqubits < 1:
-            raise_error(ValueError, "nqubits must be a positive integer but is "
-                                    "{}".format(nqubits))
-        if term.nqubits != 2:
-            raise_error(ValueError, "Term in translationally invariant local "
-                                    "Hamiltonians should act on two qubits "
-                                    "but acts on {}.".format(term.nqubits))
-        even_terms = {(2 * i, (2 * i + 1) % nqubits): term
-                       for i in range(nqubits // 2 + nqubits % 2)}
-        odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
-                     for i in range(nqubits // 2)}
-        return cls(even_terms, odd_terms, ground_state=ground_state)
-
-    @staticmethod
-    def _split_terms(terms):
-        """Splits a dictionary of terms to multiple dictionaries.
-
-        Helper method for ``from_symbolic``.
-        Each qubit should not appear in more that one term in each
-        dictionary to ensure commutation relations in the definition
-        of :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
-        """
-        groups, singles = [set()], [set()]
-        for targets in terms.keys():
-            flag = True
-            t = set(targets)
-            for g, s in zip(groups, singles):
-                if not t & s:
-                    s |= t
-                    g.add(targets)
-                    flag = False
-                    break
-            if flag:
-                groups.append({targets})
-                singles.append(t)
-        return [{k: terms[k] for k in g} for g in groups]
+    def from_dictionary(cls, terms, ground_state=None):
+        parts = cls._split_terms(terms)
+        return cls(*parts, ground_state=ground_state)
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
@@ -546,8 +497,39 @@ class TrotterHamiltonian(Hamiltonian):
                                               symbol_map).trotter_terms()
         terms = {k: Hamiltonian(len(k), v, numpy=True)
                  for k, v in terms.items()}
-        parts = cls._split_terms(terms)
-        return cls(*parts, ground_state=ground_state) + constant
+        return cls.from_dictionary(terms, ground_state=ground_state) + constant
+
+    @staticmethod
+    def _split_terms(terms):
+        """Splits a dictionary of terms to multiple parts.
+
+        Each qubit should not appear in more that one terms in each
+        part to ensure commutation relations in the definition of
+        :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            List of dictionary parts to be used for the creation of a
+            ``TrotterHamiltonian``. The parts are such that no qubit appears
+            twice in each part.
+        """
+        groups, singles = [set()], [set()]
+        for targets in terms.keys():
+            flag = True
+            t = set(targets)
+            for g, s in zip(groups, singles):
+                if not t & s:
+                    s |= t
+                    g.add(targets)
+                    flag = False
+                    break
+            if flag:
+                groups.append({targets})
+                singles.append(t)
+        return [{k: terms[k] for k in g} for g in groups]
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
         # abstract method

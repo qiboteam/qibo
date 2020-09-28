@@ -73,7 +73,9 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         hy = np.kron(matrices.Y, matrices.Y)
         hz = np.kron(matrices.Z, matrices.Z)
         term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+        terms = {(i, i + 1): term for i in range(nqubits - 1)}
+        terms[(nqubits - 1, 0)] = term
+        return TrotterHamiltonian.from_dictionary(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -86,15 +88,14 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
 def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
                   ground_state=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
-    if trotter:
-        term_matrix = -np.kron(matrix, matrices.I)
-        term = Hamiltonian(2, term_matrix, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(
-            nqubits, term, ground_state=ground_state)
+    if not trotter:
+        condition = lambda i, j: i == j % nqubits
+        ham = -_build_spin_model(nqubits, matrix, condition)
+        return Hamiltonian(nqubits, ham, numpy=numpy)
 
-    condition = lambda i, j: i == j % nqubits
-    ham = -_build_spin_model(nqubits, matrix, condition)
-    return Hamiltonian(nqubits, ham, numpy=numpy)
+    term = Hamiltonian(1, -matrix, numpy=True)
+    terms = {(i,): term for i in range(nqubits)}
+    return TrotterHamiltonian.from_dictionary(terms, ground_state=ground_state)
 
 
 def X(nqubits, numpy=False, trotter=False):
@@ -175,7 +176,9 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         term_matrix = -np.kron(matrices.Z, matrices.Z)
         term_matrix -= h * np.kron(matrices.X, matrices.I)
         term = Hamiltonian(2, term_matrix, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+        terms = {(i, i + 1): term for i in range(nqubits - 1)}
+        terms[(nqubits - 1, 0)] = term
+        return TrotterHamiltonian.from_dictionary(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)
