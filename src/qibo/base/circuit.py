@@ -170,6 +170,24 @@ class BaseCircuit(object):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
+    def invert(self) -> "BaseCircuit":
+        """Creates a new ``Circuit`` that is the inverse of the original.
+
+        Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains measurement gates, these are included
+        in the inverted circuit.
+
+        Returns:
+            The circuit inverse.
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        for gate in self.queue[::-1]:
+            new_circuit.add(gate.dagger())
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
     def _fuse_copy(self) -> "BaseCircuit":
         """Helper method for ``circuit.fuse``.
 
@@ -490,7 +508,10 @@ class BaseCircuit(object):
             parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i + k: i + k + gate.nparams]
+                if gate.nparams == 1:
+                    gate.parameter = parameters[i + k]
+                else:
+                    gate.parameter = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
@@ -661,10 +682,14 @@ class BaseCircuit(object):
                 raise_error(ValueError, "OpenQASM does not support multi-controlled gates.")
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            name = gate.name
             if gate.name in gates.PARAMETRIZED_GATES:
-                # TODO: Make sure that our parameter convention agrees with OpenQASM
-                name += f"({gate.parameter})"
+                if isinstance(gate.parameter, Iterable):
+                    params = (str(x) for x in gate.parameter)
+                    name = "{}({})".format(gate.name, ", ".join(params))
+                else:
+                    name = f"{gate.name}({gate.parameter})"
+            else:
+                name = gate.name
             code.append(f"{name} {qubits};")
 
         # Add measurements
@@ -706,15 +731,15 @@ class BaseCircuit(object):
         """
         kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(**kwargs)
-        for gate_name, qubits, param in gate_list:
+        for gate_name, qubits, params in gate_list:
             gate = getattr(gate_module, gate_name)
             if gate_name == "M":
-                circuit.add(gate(*qubits, register_name=param))
-            elif param is None:
+                circuit.add(gate(*qubits, register_name=params))
+            elif params is None:
                 circuit.add(gate(*qubits))
             else:
                 # assume parametrized gate
-                circuit.add(gate(*qubits, theta=param))
+                circuit.add(gate(*qubits, *params))
         return circuit
 
     @staticmethod
@@ -806,24 +831,25 @@ class BaseCircuit(object):
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
                 if len(pieces) == 1:
-                    gatename, theta = pieces[0], None
+                    gatename, params = pieces[0], None
                     if gatename not in gates.QASM_GATES:
                         raise_error(ValueError, "QASM command {} is not recognized."
                                                 "".format(command))
                     if gatename in gates.PARAMETRIZED_GATES:
-                        raise_error(ValueError, "Missing theta parameter for QASM "
+                        raise_error(ValueError, "Missing parameters for QASM "
                                                 "gate {}.".format(gatename))
 
                 elif len(pieces) == 2:
-                    gatename, theta = pieces
+                    gatename, params = pieces
                     if gatename not in gates.PARAMETRIZED_GATES:
                         raise_error(ValueError, "Invalid QASM command {}."
                                                 "".format(command))
+                    params = params.replace(" ", "").split(",")
                     try:
-                        theta = float(theta)
+                        params = [float(p) for p in params]
                     except ValueError:
-                        raise_error(ValueError, "Invalid value {} for theta parameter."
-                                                "".format(theta))
+                        raise_error(ValueError, "Invalid value {} for gate parameters."
+                                                "".format(params))
 
                 else:
                     raise_error(ValueError, "QASM command {} is not recognized."
@@ -838,7 +864,7 @@ class BaseCircuit(object):
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gates.QASM_GATES[gatename],
                                   list(qubit_list),
-                                  theta))
+                                  params))
 
         # Create measurement gate qubit lists from registers
         for i, (gatename, register, _) in enumerate(gate_list):

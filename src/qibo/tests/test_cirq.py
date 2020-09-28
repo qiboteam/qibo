@@ -102,13 +102,13 @@ def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(2, None), (3, 4), (2, 2)])
-def test_zpow_gate(backend, nqubits, ndevices):
-    """Check ZPow gate."""
+def test_u1_gate(backend, nqubits, ndevices):
+    """Check U1 gate."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     targets = random_active_qubits(nqubits, nactive=1)
-    qibo_gate = gates.ZPow(*targets, theta)
+    qibo_gate = gates.U1(*targets, theta)
     cirq_gate = [(cirq.ZPowGate(exponent=theta / np.pi), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
@@ -134,14 +134,14 @@ def test_two_qubit_gates(backend, gate_name, nqubits, ndevices):
                          [(2, None), (6, None), (6, 2),
                           (7, None), (7, 4)])
 def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
-    """Check ``CZPow`` and ``fSim`` gate."""
+    """Check ``CU1`` and ``fSim`` gate."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     phi = 0.4321
 
     targets = random_active_qubits(nqubits, nactive=2)
-    qibo_gate = gates.CZPow(*targets, np.pi * theta)
+    qibo_gate = gates.CU1(*targets, np.pi * theta)
     cirq_gate = [(cirq.CZPowGate(exponent=theta), targets)]
     assert_gates_equivalent(qibo_gate, cirq_gate, nqubits)
 

@@ -33,7 +33,7 @@ class FusionGroup:
 
     # ``FusionGroup`` cannot start with these gates because it is more
     # efficient to apply them on their own
-    _efficient_gates = {"CNOT", "CZ", "SWAP", "CZPow"}
+    _efficient_gates = {"CNOT", "CZ", "SWAP", "CU1"}
 
     def __init__(self):
         self.qubit0 = None
