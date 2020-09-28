@@ -40,20 +40,19 @@ class Hamiltonian:
         self._exp = {"a": None, "result": None}
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):  # pragma: no cover
-        """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):  # pragma: no cover
+        """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
         Args:
             symbolic_hamiltonian: The full Hamiltonian written with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
-            ground_state (Callable): Optional callable with no arguments that
-                returns the ground state of this ``TrotterHamiltonian``.
-                See :class:`qibo.base.hamiltonians.TrotterHamiltonian` for more
-                details.
+            numpy (bool): If ``True`` the Hamiltonian is created using numpy as
+                the calculation backend, otherwise TensorFlow is used.
+                Default option is ``numpy = False``.
 
         Returns:
-            A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
         # this method is defined for docs only.
