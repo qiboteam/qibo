@@ -256,6 +256,31 @@ class SymbolicHamiltonian:
         eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
 
+    def _reduce_two_qubit(self):
+        termkeys = set(self.terms.keys())
+        assert termkeys == {1, 2} or termkeys == {2}
+
+        two_qubit, first_targets = dict(), dict()
+        for (t1, t2), (c, m1, m2) in self.terms[2].items():
+            if t1 in first_targets and t2 not in first_targets:
+                t1, t2 = t2, t1
+                m1, m2 = m2, m1
+            two_qubit[(t1, t2)] = c * np.kron(m1, m2)
+            first_targets[t1] = (t1, t2)
+
+        if 1 not in self.terms:
+            return two_qubit
+
+        terms = dict(two_qubit)
+        for (t,), (c, m) in self.terms[1].items():
+            if t not in first_targets:
+                raise_error(ValueError, "Qubit {} has not been used as the "
+                                        "first target.".format(t))
+            pair = first_targets[t]
+            eye = np.eye(2, dtype=m.dtype)
+            terms[pair] = np.kron(c * m, eye) + two_qubit[pair]
+        return terms
+
     def trotter_terms(self):
         """Transforms a symbolic Hamiltonian to a dictionary of targets and matrices.
 
@@ -275,32 +300,13 @@ class SymbolicHamiltonian:
                               Hamiltonian.
             constant (float): The overall constant term of the Hamiltonian.
         """
-        termkeys = set(self.terms.keys())
-        if termkeys == {1}:
-            return self.terms[1], self.constant
-        if termkeys != {2} and termkeys != {1, 2}:
-            raise_error(NotImplementedError, "``TrotterHamiltonian`` supports "
-                                             "up to two qubit terms.")
-
-        two_qubit, first_targets = dict(), dict()
-        for (t1, t2), (c, m1, m2) in self.terms[2].items():
-            if t1 in first_targets and t2 not in first_targets:
-                t1, t2 = t2, t1
-                m1, m2 = m2, m1
-            two_qubit[(t1, t2)] = c * np.kron(m1, m2)
-            first_targets[t1] = (t1, t2)
-
-        if 1 not in self.terms:
-            return two_qubit, self.constant
-
-        terms = dict(two_qubit)
-        for (t,), (c, m) in self.terms[1].items():
-            if t not in first_targets:
-                raise_error(ValueError, "Qubit {} has not been used as the "
-                                        "first target.".format(t))
-            pair = first_targets[t]
-            eye = np.eye(2, dtype=m.dtype)
-            terms[pair] = np.kron(c * m, eye) + two_qubit[pair]
+        termmax = max(self.terms.keys())
+        if termmax == 1:
+            terms = {t: c * m for t, (c, m) in self.terms[1].items()}
+        elif termmax == 2:
+            terms = self._reduce_two_qubit()
+        else:
+            raise NotImplementedError
         return terms, self.constant
 
 
@@ -424,7 +430,7 @@ class TrotterHamiltonian(Hamiltonian):
         return cls(even_terms, odd_terms, ground_state=ground_state)
 
     @staticmethod
-    def _split_keys(full_dict):
+    def _split_terms(terms):
         """Splits a dictionary of terms to multiple dictionaries.
 
         Helper method for ``from_symbolic``.
@@ -432,24 +438,20 @@ class TrotterHamiltonian(Hamiltonian):
         dictionary to ensure commutation relations in the definition
         of :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
         """
-        all_pairs = set(full_dict.keys())
-        group_pairs = [set()]
-        group_singles = [set()]
-        # TODO: Generalize this for non-two-qubit terms
-        for pair in all_pairs:
-            q0, q1 = pair
+        groups, singles = [set()], [set()]
+        for targets in terms.keys():
             flag = True
-            for g, s in zip(group_pairs, group_singles):
-                if q0 not in s and q1 not in s:
-                    s.add(q0)
-                    s.add(q1)
-                    g.add(pair)
+            t = set(targets)
+            for g, s in zip(groups, singles):
+                if not t & s:
+                    s |= t
+                    g.add(targets)
                     flag = False
                     break
             if flag:
-                group_pairs.append({pair})
-                group_singles.append({q0, q1})
-        return [{k: full_dict[k] for k in g} for g in group_pairs]
+                groups.append({targets})
+                singles.append(t)
+        return [{k: terms[k] for k in g} for g in groups]
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
@@ -476,7 +478,7 @@ class TrotterHamiltonian(Hamiltonian):
         terms, constant = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map).trotter_terms()
         # TODO: Generalize for non-two-qubit terms
         terms = {k: Hamiltonian(2, v, numpy=True) for k, v in terms.items()}
-        parts = cls._split_keys(terms)
+        parts = cls._split_terms(terms)
         return cls(*parts, ground_state=ground_state) + constant
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
