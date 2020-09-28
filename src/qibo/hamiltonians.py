@@ -33,7 +33,7 @@ class Hamiltonian(BaseHamiltonian):
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
-        """See :class:`qibo.base.hamiltonians.BaseHamiltonian` for docs."""
+        """See :class:`qibo.base.hamiltonians.Hamiltonian` for docs."""
         ham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
         return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
 
