@@ -366,6 +366,24 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_trotter_hamiltonian_make_compatible(nqubits):
+    """Test that ``make_compatible`` method works for ``X`` Hamiltonian."""
+    h0target = X(nqubits)
+    h0 = X(nqubits, trotter=True)
+    h1 = XXZ(nqubits, delta=0.5, trotter=True)
+    assert not h1.is_compatible(h0)
+    assert not h0.is_compatible(h1)
+    np.testing.assert_allclose(h0.matrix, h0target.matrix)
+
+    h0c = h1.make_compatible(h0)
+    assert not h1.is_compatible(h0)
+    assert h1.is_compatible(h0c)
+    assert h0c.is_compatible(h1)
+    np.testing.assert_allclose(h0.matrix, h0target.matrix)
+    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms

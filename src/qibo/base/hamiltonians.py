@@ -493,8 +493,8 @@ class TrotterHamiltonian(Hamiltonian):
             implements the given symbolic Hamiltonian.
         """
         from qibo.hamiltonians import Hamiltonian
-        terms, constant = SymbolicHamiltonian(symbolic_hamiltonian,
-                                              symbol_map).trotter_terms()
+        terms, constant = SymbolicHamiltonian(
+          symbolic_hamiltonian, symbol_map).trotter_terms()
         terms = {k: Hamiltonian(len(k), v, numpy=True)
                  for k, v in terms.items()}
         return cls.from_dictionary(terms, ground_state=ground_state) + constant
@@ -530,6 +530,72 @@ class TrotterHamiltonian(Hamiltonian):
                 groups.append({targets})
                 singles.append(t)
         return [{k: terms[k] for k in g} for g in groups]
+
+    def is_compatible(self, o):
+        """Checks if a ``TrotterHamiltonian`` has the same part structure.
+
+        ``TrotterHamiltonian``s with the same part structure can be add.
+
+        Args:
+            o: The second Hamiltonian to check.
+
+        Returns:
+            ``True`` if ``o`` has the same structure as ``self`` otherwise
+            ``False``.
+        """
+        if isinstance(o, self.__class__):
+            if len(self.parts) != len(o.parts):
+                return False
+            for part1, part2 in zip(self.parts, o.parts):
+                if set(part1.keys()) != set(part2.keys()):
+                    return False
+            return True
+        return False
+
+    def make_compatible(self, o):
+        """Makes given ``TrotterHamiltonian`` compatible to the current one.
+
+        Args:
+            o: The ``TrotterHamiltonian`` to make compatible to the current.
+                Should be non-interacting (contain only one-qubit terms).
+
+        Returns:
+            A new :class:`qibo.base.hamiltonians.TrotterHamiltonian` object
+            that is equivalent to ``o`` but has the same part structure as
+            ``self``.
+        """
+        if not isinstance(o, self.__class__):
+            raise TypeError("Only ``TrotterHamiltonians`` can be made "
+                            "compatible but {} was given.".format(type(o)))
+        if self.is_compatible(o):
+            return o
+
+        oterms = {}
+        for part in o.parts:
+            for t, m in part.items():
+                if len(t) > 1:
+                    raise_error(NotImplementedError,
+                                "Only non-interacting Hamiltonians can be "
+                                "transformed using the ``make_compatible`` "
+                                "method.")
+                oterms[t[0]] = m
+
+        new_parts = []
+        for part in self.parts:
+            new_parts.append(dict())
+            for targets in part.keys():
+                if targets[0] in oterms:
+                    n = len(targets)
+                    h = oterms.pop(targets[0])
+                    m = h.matrix
+                    eye = np.eye(2 ** (n - 1), dtype=m.dtype)
+                    m = np.kron(h.matrix, eye)
+                    new_parts[-1][targets] = h.__class__(n, m, numpy=True)
+        if oterms:
+            raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
+                                    "be made compatible. The following terms "
+                                    "are remaining: {}".format(oterms.keys()))
+        return self.__class__(*new_parts, ground_state=o.ground_state_func)
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
         # abstract method
