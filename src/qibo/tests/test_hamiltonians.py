@@ -463,8 +463,7 @@ def test_x_hamiltonian_from_symbols(nqubits, trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("trotter", [False])
-# TODO: Fix this test for trotter=True
+@pytest.mark.parametrize("trotter", [False, True])
 def test_three_qubit_term_hamiltonian_from_symbols(trotter):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
     import sympy

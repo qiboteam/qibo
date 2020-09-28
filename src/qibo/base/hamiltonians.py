@@ -245,16 +245,24 @@ class SymbolicHamiltonian:
             h = np.kron(h, m)
         return h
 
-    def dense_matrix(self):
-        matrix = 0
+    def full_matrices(self):
         for group in self.terms.values():
             for targets, matrices in group.items():
                 matrix_list = self.nqubits * [self.matrices.I]
                 for t, m in zip(targets, matrices[1:]):
                     matrix_list[t] = m
-                matrix += matrices[0] * self._multikron(matrix_list)
+                yield matrices[0] * self._multikron(matrix_list)
+
+    def dense_matrix(self):
+        matrix = sum(self.full_matrices())
         eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
+
+    def partial_matrices(self):
+        for group in self.terms.values():
+            for targets, matrices in group.items():
+                matrix = matrices[0] * self._multikron(matrices)
+                yield targets, matrix
 
     def _reduce_two_qubit(self):
         termkeys = set(self.terms.keys())
@@ -306,7 +314,7 @@ class SymbolicHamiltonian:
         elif termmax == 2:
             terms = self._reduce_two_qubit()
         else:
-            raise NotImplementedError
+            terms = {t: m for t, m in self.partial_matrices()}
         return terms, self.constant
 
 
@@ -475,8 +483,10 @@ class TrotterHamiltonian(Hamiltonian):
             implements the given symbolic Hamiltonian.
         """
         from qibo.hamiltonians import Hamiltonian
-        terms, constant = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map).trotter_terms()
-        terms = {k: Hamiltonian(len(k), v, numpy=True) for k, v in terms.items()}
+        terms, constant = SymbolicHamiltonian(symbolic_hamiltonian,
+                                              symbol_map).trotter_terms()
+        terms = {k: Hamiltonian(len(k), v, numpy=True)
+                 for k, v in terms.items()}
         parts = cls._split_terms(terms)
         return cls(*parts, ground_state=ground_state) + constant
 
