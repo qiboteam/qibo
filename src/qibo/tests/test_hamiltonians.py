@@ -476,25 +476,25 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
     symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
 
     symham = x_symbols[0] * y_symbols[1] * z_symbols[2]
-    symham += y_symbols[0] * z_symbols[1] * x_symbols[3]
+    symham += 0.5 * y_symbols[0] * z_symbols[1] * x_symbols[3]
     symham += z_symbols[0] * x_symbols[2]
-    symham += x_symbols[1] * y_symbols[3]
+    symham += -3 * x_symbols[1] * y_symbols[3]
     symham += y_symbols[2]
-    symham += z_symbols[1]
+    symham += 1.5 * z_symbols[1]
     symham -= 2
 
     target_matrix = np.kron(np.kron(matrices.X, matrices.Y),
                             np.kron(matrices.Z, matrices.I))
-    target_matrix += np.kron(np.kron(matrices.Y, matrices.Z),
-                             np.kron(matrices.I, matrices.X))
+    target_matrix += 0.5 * np.kron(np.kron(matrices.Y, matrices.Z),
+                                   np.kron(matrices.I, matrices.X))
     target_matrix += np.kron(np.kron(matrices.Z, matrices.I),
                              np.kron(matrices.X, matrices.I))
-    target_matrix += np.kron(np.kron(matrices.I, matrices.X),
+    target_matrix += -3 * np.kron(np.kron(matrices.I, matrices.X),
                              np.kron(matrices.I, matrices.Y))
     target_matrix += np.kron(np.kron(matrices.I, matrices.I),
                              np.kron(matrices.Y, matrices.I))
-    target_matrix += np.kron(np.kron(matrices.I, matrices.Z),
-                             np.kron(matrices.I, matrices.I))
+    target_matrix += 1.5 * np.kron(np.kron(matrices.I, matrices.Z),
+                                   np.kron(matrices.I, matrices.I))
     target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
     if trotter:
         trotter_ham = TrotterHamiltonian.from_symbolic(symham, symmap)

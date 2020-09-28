@@ -261,7 +261,7 @@ class SymbolicHamiltonian:
     def partial_matrices(self):
         for group in self.terms.values():
             for targets, matrices in group.items():
-                matrix = matrices[0] * self._multikron(matrices)
+                matrix = matrices[0] * self._multikron(matrices[1:])
                 yield targets, matrix
 
     def _reduce_two_qubit(self):
@@ -308,10 +308,7 @@ class SymbolicHamiltonian:
                               Hamiltonian.
             constant (float): The overall constant term of the Hamiltonian.
         """
-        termmax = max(self.terms.keys())
-        if termmax == 1:
-            terms = {t: c * m for t, (c, m) in self.terms[1].items()}
-        elif termmax == 2:
+        if max(self.terms.keys()) == 2:
             terms = self._reduce_two_qubit()
         else:
             terms = {t: m for t, m in self.partial_matrices()}
