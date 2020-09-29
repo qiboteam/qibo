@@ -209,7 +209,7 @@ class Hamiltonian:
 
 
 class SymbolicHamiltonian:
-    """Parses symbolic Hamiltonians defined through ``sympy``.
+    """Parses symbolic Hamiltonians defined using ``sympy``.
 
     This class should not be used by users.
     It is used internally to help creating

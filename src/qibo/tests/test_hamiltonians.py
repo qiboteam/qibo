@@ -242,6 +242,27 @@ def test_hamiltonian_eigenvectors(dtype, numpy, trotter):
     np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
 
 
+models_config = [
+    (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
+    (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.out"),
+    (TFIM, {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0.out"),
+    (XXZ, {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0.out"),
+    (XXZ, {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5.out"),
+    (XXZ, {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0.out"),
+    (X, {"nqubits": 3}, "x_N3.out"),
+    (Y, {"nqubits": 4}, "y_N4.out"),
+    (Z, {"nqubits": 5}, "z_N5.out")
+]
+@pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
+@pytest.mark.parametrize("numpy", [True, False])
+def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
+    """Test pre-coded Hamiltonian models generate the proper matrices."""
+    kwargs["numpy"] = numpy
+    H = model(**kwargs)
+    matrix = np.array(H.matrix).ravel().real
+    utils.assert_regression_fixture(matrix, filename)
+
+
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("model", [TFIM, XXZ, Y])
 def test_trotter_hamiltonian_to_dense(nqubits, model):
@@ -382,6 +403,12 @@ def test_trotter_hamiltonian_make_compatible(nqubits):
     assert h0c.is_compatible(h1)
     np.testing.assert_allclose(h0.matrix, h0target.matrix)
     np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+    # for coverage
+    h0c = h1.make_compatible(h0c)
+    assert not h1.is_compatible("test")
+    h2 = XXZ(nqubits, delta=0.5, trotter=True)
+    h2.parts[0].pop((0, 1))
+    assert not h1.is_compatible(h2)
 
 
 def test_trotter_hamiltonian_initialization_errors():
@@ -416,7 +443,7 @@ def test_trotter_hamiltonian_operation_errors():
         h = h1 + h2
     # test subtraction with incompatible parts
     h2 = TrotterHamiltonian({(0, 1): term, (2, 3): term},
-                            {(1, 2): term, (3, 4): term})
+                            {(1, 2): term}, {(4, 0): term})
     with pytest.raises(ValueError):
         h = h1 - h2
     # test matmul with bad type
@@ -425,6 +452,16 @@ def test_trotter_hamiltonian_operation_errors():
     # test matmul with bad shape
     with pytest.raises(ValueError):
         s = h1 @ np.zeros((2, 2))
+    # test ``make_compatible`` with non-Trotter Hamiltonian
+    with pytest.raises(TypeError):
+        h2 = h1.make_compatible("test")
+    # test ``make_compatible`` with interacting Hamiltonian
+    with pytest.raises(NotImplementedError):
+        h2 = h1.make_compatible(h2)
+    # test ``make_compatible`` with insufficient two-qubit terms
+    h3 = X(nqubits=7, trotter=True)
+    with pytest.raises(ValueError):
+        h3 = h1.make_compatible(h3)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -515,22 +552,38 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-models_config = [
-    (TFIM, {"nqubits": 3, "h": 0.0}, "tfim_N3h0.0.out"),
-    (TFIM, {"nqubits": 3, "h": 0.5}, "tfim_N3h0.5.out"),
-    (TFIM, {"nqubits": 3, "h": 1.0}, "tfim_N3h1.0.out"),
-    (XXZ, {"nqubits": 3, "delta": 0.0}, "heisenberg_N3delta0.0.out"),
-    (XXZ, {"nqubits": 3, "delta": 0.5}, "heisenberg_N3delta0.5.out"),
-    (XXZ, {"nqubits": 3, "delta": 1.0}, "heisenberg_N3delta1.0.out"),
-    (X, {"nqubits": 3}, "x_N3.out"),
-    (Y, {"nqubits": 4}, "y_N4.out"),
-    (Z, {"nqubits": 5}, "z_N5.out")
-]
-@pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
-@pytest.mark.parametrize("numpy", [True, False])
-def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
-    """Test pre-coded Hamiltonian models generate the proper matrices."""
-    kwargs["numpy"] = numpy
-    H = model(**kwargs)
-    matrix = np.array(H.matrix).ravel().real
-    utils.assert_regression_fixture(matrix, filename)
+@pytest.mark.parametrize("sufficient", [True, False])
+def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
+    """Check that ``_merge_one_qubit`` works both when two-qubit are sufficient and no."""
+    import sympy
+    from qibo import matrices
+    from qibo.hamiltonians import SymbolicHamiltonian
+    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
+    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
+    symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
+    symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
+    symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(4))
+    symham += sum(x_symbols)
+    if sufficient:
+        symham += z_symbols[0] * z_symbols[-1]
+    symham = SymbolicHamiltonian(symham, symmap)
+    terms = {t: m for t, m in symham.partial_matrices()}
+    merged = symham._merge_one_qubit(terms)
+
+    two_qubit_keys = {(i, i + 1) for i in range(4)}
+    if sufficient:
+        target_matrix = (np.kron(matrices.Z, matrices.Z) +
+                         np.kron(matrices.X, matrices.I))
+        two_qubit_keys.add((4, 0))
+        assert set(merged.keys()) == two_qubit_keys
+        for matrix in merged.values():
+            np.testing.assert_allclose(matrix, target_matrix)
+    else:
+        one_qubit_keys = {(i,) for i in range(5)}
+        assert set(merged.keys()) == one_qubit_keys | two_qubit_keys
+        target_matrix = matrices.X
+        for t in one_qubit_keys:
+            np.testing.assert_allclose(merged[t], target_matrix)
+        target_matrix = np.kron(matrices.Z, matrices.Z)
+        for t in two_qubit_keys:
+            np.testing.assert_allclose(merged[t], target_matrix)
