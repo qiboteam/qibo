@@ -43,6 +43,9 @@ class Hamiltonian:
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):  # pragma: no cover
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
+        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        example for more details.
+
         Args:
             symbolic_hamiltonian: The full Hamiltonian written with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
@@ -478,6 +481,9 @@ class TrotterHamiltonian(Hamiltonian):
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
         """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
+
+        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        example for more details.
 
         Args:
             symbolic_hamiltonian: The full Hamiltonian written with symbols.
