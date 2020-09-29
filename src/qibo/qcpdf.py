@@ -114,10 +114,22 @@ def entangler(circuit):
     qubits = circuit.nqubits
     if qubits > 1:
         for q in range(0, qubits, 2):
-            circuit.add(gates.CZ(q, q + 1))
+            circuit.add(gates.CZPow(q, q + 1, theta=0))
     if qubits > 2:
         for q in range(1, qubits + 1, 2):
-            circuit.add(gates.CZ(q, (q + 1) % qubits))
+            circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
+
+def rotation_entangler(qubits, p, theta, i, j):
+    if qubits > 1:
+        for q in range(0, qubits, 2):
+            p[i] = theta[j]
+    if qubits > 2:
+        for q in range(1, qubits + 1, 2):
+            p[i + 1] = theta[j + 1]
+    i += 2
+    j += 2
+    return p,theta, i, j
+
 
 def ansatz_0(layers, qubits=1, tangling=True):
     """
@@ -185,6 +197,7 @@ def ansatz_1(layers, qubits=1, tangling=True):
                 p[i + 3] = map_to(x)
                 i += 4
                 j += 1
+            p, theta, i, j = rotation_entangler(circuit.nqubits, p, theta, i, j)
 
         for _ in range(qubits):
             p[i: i + 3] = theta[3 * j: 3 * j + 3]
@@ -650,12 +663,19 @@ def ansatz_w1(layers, qubits=1, tangling=True):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
+        for l in range(layers - 1):
             for q in range(qubits):
                 p[i] = theta[j] + theta[j + 1] * map_to(x)
                 p[i + 1] = theta[j + 2]
                 i += 2
                 j += 3
+
+
+        for q in range(qubits):
+            p[i] = theta[j] + theta[j + 1] * map_to(x)
+            p[i + 1] = theta[j + 2]
+            i += 2
+            j += 3
         return p
 
     nparams = 3 * layers * qubits
