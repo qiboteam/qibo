@@ -95,6 +95,47 @@ def test_circuit_set_parameters_with_list(backend, accelerators):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_set_parameters_ungates(backend, accelerators):
+    """Check updating parameters of circuit with list."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    c = Circuit(3, accelerators)
+    c.add(gates.RX(0, theta=0))
+    c.add(gates.CRY(0, 1, theta=0))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.U1(2, theta=0))
+    c.add(gates.CU2(0, 2, phi=0, lam=0))
+    c.add(gates.U3(1, theta=0, phi=0, lam=0))
+    # execute once
+    final_state = c()
+
+    params = [0.1, 0.2, 0.3, (0.4, 0.5), (0.6, 0.7, 0.8)]
+    target_c = Circuit(3)
+    target_c.add(gates.RX(0, theta=params[0]))
+    target_c.add(gates.CRY(0, 1, theta=params[1]))
+    target_c.add(gates.CZ(1, 2))
+    target_c.add(gates.U1(2, theta=params[2]))
+    target_c.add(gates.CU2(0, 2, *params[3]))
+    target_c.add(gates.U3(1, *params[4]))
+    c.set_parameters(params)
+    np.testing.assert_allclose(c(), target_c())
+
+    # Attempt using a flat list
+    params = np.random.random(8)
+    target_c = Circuit(3)
+    target_c.add(gates.RX(0, theta=params[0]))
+    target_c.add(gates.CRY(0, 1, theta=params[1]))
+    target_c.add(gates.CZ(1, 2))
+    target_c.add(gates.U1(2, theta=params[2]))
+    target_c.add(gates.CU2(0, 2, *params[3:5]))
+    target_c.add(gates.U3(1, *params[5:]))
+    c.set_parameters(params)
+    np.testing.assert_allclose(c(), target_c())
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_set_parameters_with_unitary(backend, accelerators):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     original_backend = qibo.get_backend()
@@ -132,10 +173,10 @@ def test_circuit_set_parameters_with_dictionary(backend, accelerators):
     c = Circuit(3, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(2))
-    c.add(gates.ZPow(0, theta=0))
+    c.add(gates.U1(0, theta=0))
     c.add(gates.RZ(1, theta=0))
     c.add(gates.CZ(1, 2))
-    c.add(gates.CZPow(0, 2, theta=0))
+    c.add(gates.CU1(0, 2, theta=0))
     c.add(gates.H(2))
     c.add(gates.Unitary(np.eye(2), 1))
     final_state = c()
@@ -144,10 +185,10 @@ def test_circuit_set_parameters_with_dictionary(backend, accelerators):
     target_c = Circuit(3, accelerators)
     target_c.add(gates.X(0))
     target_c.add(gates.X(2))
-    target_c.add(gates.ZPow(0, theta=params[0]))
+    target_c.add(gates.U1(0, theta=params[0]))
     target_c.add(gates.RZ(1, theta=params[1]))
     target_c.add(gates.CZ(1, 2))
-    target_c.add(gates.CZPow(0, 2, theta=params[2]))
+    target_c.add(gates.CU1(0, 2, theta=params[2]))
     target_c.add(gates.H(2))
     target_c.add(gates.Unitary(params[3], 1))
 
@@ -272,4 +313,28 @@ def test_set_parameters_with_gate_fusion(backend, accelerators):
     fused_c.set_parameters(new_params_list)
     np.testing.assert_allclose(c(), fused_c())
 
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_variable_theta(backend, accelerators):
+    """Check that parametrized gates accept `tf.Variable` parameters."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    theta1 = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
+    theta2 = tf.Variable(0.4321, dtype=DTYPES.get('DTYPE'))
+
+    cvar = Circuit(2, accelerators)
+    cvar.add(gates.RX(0, theta1))
+    cvar.add(gates.RY(1, theta2))
+    final_state = cvar().numpy()
+
+    c = Circuit(2)
+    c.add(gates.RX(0, 0.1234))
+    c.add(gates.RY(1, 0.4321))
+    target_state = c().numpy()
+
+    np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)

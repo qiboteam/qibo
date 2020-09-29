@@ -43,7 +43,7 @@ evaluation performance, e.g.:
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.X(1))
-    c.add(gates.CZPow(0, 1, 0.1234))
+    c.add(gates.CU1(0, 1, 0.1234))
     c.compile()
 
     for i in range(100):

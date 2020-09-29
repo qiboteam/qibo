@@ -211,17 +211,38 @@ class RZ(TensorflowGate, base_gates.RZ):
         return tf.linalg.diag(diag)
 
 
-class ZPow(TensorflowGate, base_gates.ZPow):
+class U1(TensorflowGate, base_gates.U1):
 
     def __init__(self, q, theta):
-        base_gates.ZPow.__init__(self, q, theta)
+        base_gates.U1.__init__(self, q, theta)
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameter, dtype=DTYPES.get('DTYPECPX'))
         phase = tf.exp(1j * t)
-        diag = tf.concat([1, phase], axis=0)
-        return tf.linalg.diag(diag)
+        return tf.linalg.diag([1, phase])
+
+
+class U2(TensorflowGate, base_gates.U2):
+
+    def __init__(self, q, phi, lam):
+        base_gates.U2.__init__(self, q, phi, lam)
+        TensorflowGate.__init__(self)
+
+    def construct_unitary(self):
+        from qibo.tensorflow import cgates
+        return cgates.U2.construct_unitary(self)
+
+
+class U3(TensorflowGate, base_gates.U3):
+
+    def __init__(self, q, theta, phi, lam):
+        base_gates.U3.__init__(self, q, theta, phi, lam)
+        TensorflowGate.__init__(self)
+
+    def construct_unitary(self):
+        from qibo.tensorflow import cgates
+        return cgates.U3.construct_unitary(self)
 
 
 class CNOT(TensorflowGate, base_gates.CNOT):
@@ -246,18 +267,58 @@ class CZ(TensorflowGate, base_gates.CZ):
         return tf.linalg.diag(diag)
 
 
-class CZPow(TensorflowGate, base_gates.CZPow):
+class _CUn_(TensorflowGate):
+    base = U1
 
-    def __init__(self, q0, q1, theta):
-        base_gates.CZPow.__init__(self, q0, q1, theta)
+    def __init__(self, q0, q1, **params):
+        cbase = "C{}".format(self.base.__name__)
+        getattr(base_gates, cbase).__init__(self, q0, q1, **params)
         TensorflowGate.__init__(self)
 
     def construct_unitary(self) -> tf.Tensor:
-        dtype = DTYPES.get('DTYPECPX')
-        th = tf.cast(self.parameter, dtype=dtype)
-        phase = tf.exp(1j * th)[tf.newaxis]
-        diag = tf.concat([tf.ones(3, dtype=dtype), phase], axis=0)
-        return tf.linalg.diag(diag)
+        return TensorflowGate.control_unitary(self.base.construct_unitary(self))
+
+
+class CRX(_CUn_, base_gates.CRX):
+    base = RX
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CRY(_CUn_, base_gates.CRY):
+    base = RY
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CRZ(_CUn_, base_gates.CRZ):
+    base = RZ
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CU1(_CUn_, base_gates.CU1):
+    base = U1
+
+    def __init__(self, q0, q1, theta):
+        _CUn_.__init__(self, q0, q1, theta=theta)
+
+
+class CU2(_CUn_, base_gates.CU2):
+    base = U2
+
+    def __init__(self, q0, q1, phi, lam):
+        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam)
+
+
+class CU3(_CUn_, base_gates.CU3):
+    base = U3
+
+    def __init__(self, q0, q1, theta, phi, lam):
+        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
 
 
 class SWAP(TensorflowGate, base_gates.SWAP):
@@ -293,6 +354,10 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
         from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim.construct_unitary(self)
 
+    def _dagger(self) -> "GeneralizedfSim":
+        from qibo.tensorflow import cgates
+        return cgates.GeneralizedfSim._dagger(self)
+
 
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
@@ -323,6 +388,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         elif isinstance(unitary, np.ndarray):
             matrix = tf.convert_to_tensor(unitary, dtype=dtype)
         return matrix
+
+    def _dagger(self) -> "Unitary":
+        from qibo.tensorflow import cgates
+        return cgates.Unitary._dagger(self)
 
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
@@ -376,12 +445,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return matrices, additional_matrix
 
     def _prepare(self):
-        matrices, additional_matrix = self._calculate_unitaries()
-        self.unitaries = [self.unitary_constructor(matrices[i], *targets)
-                          for i, targets in enumerate(self.pairs)]
-        if self.additional_target is not None:
-            self.additional_unitary = self.unitary_constructor(
-                additional_matrix, self.additional_target)
+        self.cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor: # pragma: no cover
