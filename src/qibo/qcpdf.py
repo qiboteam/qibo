@@ -8,7 +8,7 @@ import numpy as np
 from qibo import models
 from qibo.hamiltonians import Hamiltonian, matrices
 from qibo import gates
-from qibo.config import raise_error
+from qibo.config import raise_error, K, DTYPES
 
 
 class PDFModel(object):
@@ -44,7 +44,7 @@ class PDFModel(object):
     def _model(self, parameters, x, hamiltonian):
         """Internal function for the evaluation of PDFs."""
         params = self.rotation(parameters, x)
-        self.circuit.set_parameters(params)
+        self.circuit.set_parameters(params.numpy())
         c = self.circuit()
         z = hamiltonian.expectation(c)
         y = (1 - z) / (1 + z)
@@ -63,15 +63,15 @@ class PDFModel(object):
         """
         if len(parameters) != self.nparams:
             raise_error(RuntimeError, 'Mismatch between number of parameters and model size.')
-
-        pdf = np.zeros(shape=(len(self.hamiltonian), len(x)))
+        pdf = []
         for flavour, hamiltonian in enumerate(self.hamiltonian):
-            for i in range(len(x)):
-                pdf[flavour, i] = self._model(parameters, x[i], hamiltonian)
+            pdf.append([])
+            for i in x:
+                pdf[flavour].append(self._model(parameters, i, hamiltonian))
             if force_zero:
-                pdf_at_one = self._model(parameters, 1, hamiltonian)
+                pdf_at_one = self._model(parameters, K.constant(1, dtype=DTYPES.get("DTYPE")), hamiltonian)
                 pdf[flavour] -= pdf_at_one
-        return pdf
+        return K.stack(pdf)
 
 
 def qcpdf_hamiltonian(nqubits, z_qubit=0):
@@ -108,7 +108,10 @@ def map_to(x):
 
 
 def maplog_to(x):
-    return -np.pi * np.log10(x)
+    n = K.math.log(x)
+    d = K.math.log(K.constant(10, dtype=DTYPES.get("DTYPE")))
+    return - np.pi * n / d
+
 
 def entangler(circuit):
     qubits = circuit.nqubits
@@ -130,7 +133,7 @@ def rotation_entangler(qubits, p, theta, i, j):
             p[i + 1] = theta[j + 1]
             i += 1
             j += 1
-    return p,theta, i, j
+    return p, theta, i, j
 
 
 def ansatz_0(layers, qubits=1, tangling=True):
@@ -161,7 +164,7 @@ def ansatz_0(layers, qubits=1, tangling=True):
             p[i] = theta[i] + map_to(x)
             p[i + 1] = theta[i + 1]
             i += 2
-        return p
+        return K.stack(p)
 
     nparams = 2 * (layers) * qubits
 
@@ -220,7 +223,7 @@ def ansatz_1(layers, qubits=1):
             p[i + 3] = map_to(x)
             i += 4
             j += 3
-        return p
+        return K.stack(p)
 
     nparams = 3 * (layers) * qubits + (layers - 1) * qubits // 2 * (int(qubits > 1) + int(qubits > 2))
 
@@ -263,7 +266,7 @@ def ansatz_2(layers, qubits=1, tangling=True):
             p[i + 3] = -np.pi / 2 * np.log(x)
             i += 4
             j += 1
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
 
@@ -306,7 +309,7 @@ def ansatz_3(layers, qubits=1, tangling=True):
             p[i + 3] = map_to(x) + maplog_to(x)
             i += 4
             j += 1
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
 
@@ -363,7 +366,7 @@ def ansatz_4(layers, qubits=1, tangling=True):
                 p[i + 3] = maplog_to(x)
                 i += 4
                 j += 1
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
 
@@ -405,7 +408,7 @@ def ansatz_5(layers, qubits=1, tangling=True):
                 i += 5
                 j += 3
 
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
 
@@ -460,7 +463,7 @@ def ansatz_6(layers, qubits=2, tangling=True):
                 p[i + 3] = maplog_to(x)
                 i += 4
                 j += 3
-        return p
+        return K.stack(p)
 
     nparams = 6 * (layers) * qubits
     return circuit, rotation, nparams
@@ -516,7 +519,7 @@ def ansatz_7(layers, qubits=2, tangling=True):
                 i += 4
                 j += 3
 
-        return p
+        return K.stack(p)
 
     nparams = 6 * layers * qubits
 
@@ -585,7 +588,7 @@ def ansatz_8(layers, qubits=2, tangling=True):
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
-        return p
+        return K.stack(p)
 
     nparams = 6 * layers * qubits
 
@@ -654,7 +657,7 @@ def ansatz_9(layers, qubits=2, tangling=True):
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
-        return p
+        return K.stack(p)
 
     nparams = 6 * layers * qubits
 
@@ -692,7 +695,7 @@ def ansatz_w1(layers, qubits=1, tangling=True):
             p[i + 1] = theta[j + 2]
             i += 2
             j += 3
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
     return circuit, rotation, nparams
@@ -721,7 +724,7 @@ def ansatz_w2(layers, qubits=1, tangling=True):
                 p[i + 1] = theta[j + 2]
                 i += 2
                 j += 3
-        return p
+        return K.stack(p)
 
     nparams = 3 * layers * qubits
     return circuit, rotation, nparams
@@ -751,7 +754,7 @@ def ansatz_w3(layers, qubits=1, tangling=True):
                 p[i + 1] = theta[j + 2] + theta[j + 3] * map_to(x)
                 i += 2
                 j += 4
-        return p
+        return K.stack(p)
 
     nparams = 4 * layers * qubits
     return circuit, rotation, nparams
@@ -804,7 +807,7 @@ def ansatz_w4(layers, qubits=1):
             i += 2
             j += 4
 
-        return p
+        return K.stack(p)
 
     nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
     return circuit, rotation, nparams
@@ -834,7 +837,7 @@ def ansatz_w5(layers, qubits=1, tangling=True):
                 p[i + 1] = theta[j + 2] + theta[j + 3] * maplog_to(x)
                 i += 2
                 j += 4
-        return p
+        return K.stack(p)
 
     nparams = 4 * layers * qubits
     return circuit, rotation, nparams
