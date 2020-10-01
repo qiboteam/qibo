@@ -587,3 +587,29 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
         target_matrix = np.kron(matrices.Z, matrices.Z)
         for t in two_qubit_keys:
             np.testing.assert_allclose(merged[t], target_matrix)
+
+
+def test_symbolic_hamiltonian_errors():
+    """Check errors raised by `_SymbolicHamiltonian`."""
+    import sympy
+    from qibo import matrices
+    from qibo.hamiltonians import _SymbolicHamiltonian
+    a, b = sympy.symbols("a b")
+    ham = a * b
+    # Bad hamiltonian type
+    with pytest.raises(TypeError):
+        sh = _SymbolicHamiltonian("test", "test")
+    # Bad symbol map type
+    with pytest.raises(TypeError):
+        sh = _SymbolicHamiltonian(ham, "test")
+    # Bad symbol map key
+    with pytest.raises(TypeError):
+        sh = _SymbolicHamiltonian(ham, {"a": 2})
+    # Bad symbol map value
+    with pytest.raises(TypeError):
+        sh = _SymbolicHamiltonian(ham, {a: 2})
+    with pytest.raises(ValueError):
+        sh = _SymbolicHamiltonian(ham, {a: (1, 2, 3)})
+    # Missing symbol
+    with pytest.raises(ValueError):
+        sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X)})

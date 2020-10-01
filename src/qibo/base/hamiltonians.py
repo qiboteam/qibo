@@ -47,7 +47,7 @@ class Hamiltonian:
         example for more details.
 
         Args:
-            symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written
+            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
                 with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
@@ -224,7 +224,7 @@ class _SymbolicHamiltonian:
     and :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
 
     Args:
-        symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written with
+        symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written with
             symbols.
         symbol_map (dict): Dictionary that maps each symbol to a pair of
             (target, matrix).
@@ -233,6 +233,24 @@ class _SymbolicHamiltonian:
     from qibo import matrices
 
     def __init__(self, hamiltonian, symbol_map):
+        if not issubclass(hamiltonian.__class__, self.sympy.Expr):
+            raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
+                                   "expression but is {}."
+                                   "".format(type(hamiltonian)))
+        if not isinstance(symbol_map, dict):
+            raise_error(TypeError, "Symbol map must be a dictionary but is "
+                                   "{}.".format(type(symbol_map)))
+        for k, v in symbol_map.items():
+            if not isinstance(k, self.sympy.Symbol):
+                raise_error(TypeError, "Symbol map keys must be `sympy.Symbol` "
+                                       "but {} was found.".format(type(k)))
+            if not isinstance(v, tuple):
+                raise_error(TypeError, "Symbol map values must be tuples but "
+                                       "{} was found.".format(type(v)))
+            if len(v) != 2:
+                raise_error(ValueError, "Symbol map values must be tuples of "
+                                        "length 2 but length {} was found."
+                                        "".format(len(v)))
         self.symbolic = self.sympy.expand(hamiltonian)
         self.map = symbol_map
 
@@ -253,8 +271,13 @@ class _SymbolicHamiltonian:
             else:
                 assert symbols
                 const = 1
-
             if symbols:
+                for s in symbols:
+                    if s not in symbol_map:
+                        raise_error(ValueError,
+                                    "Symbolic Hamiltonian contains symbol {} "
+                                    "which does not exist in the symbol map."
+                                    "".format(s))
                 n = len(symbols)
                 targets = tuple(symbol_map[s][0] for s in symbols)
                 target_ids |= set(targets)
@@ -488,7 +511,7 @@ class TrotterHamiltonian(Hamiltonian):
         example for more details.
 
         Args:
-            symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written
+            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
                 with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
