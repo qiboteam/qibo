@@ -957,13 +957,14 @@ for the total evolution time should be the last value of the given
 How to define custom Hamiltonians using symbols?
 ------------------------------------------------
 
-In order to use the VQE, QAOA and time evolution models in Qibo the use has to
+In order to use the VQE, QAOA and time evolution models in Qibo the user has to
 define Hamiltonians based on :class:`qibo.base.hamiltonians.Hamiltonian`, or
 :class:`qibo.base.hamiltonians.TrotterHamiltonian` when the Trotter
 decomposition is to be used. Qibo provides pre-coded Hamiltonians for some
 common physics models, such as the transverse field Ising model (TFIM) and the
-Heisenberg model. In order to explore other problems the user needs to define
-the Hamiltonian objects from scratch.
+Heisenberg model (see :ref:`Hamiltonians <Hamiltonians>` for a complete list).
+In order to explore other problems the user needs to define the Hamiltonian
+objects from scratch.
 
 A standard way to define Hamiltonians is through their full matrix
 representation. For example the following code generates the TFIM Hamiltonian
@@ -1000,8 +1001,8 @@ To simplify the construction of arbitrary Hamiltonians, Qibo provides the
 :meth:`qibo.base.hamiltonians.Hamiltonian.from_symbolic` and
 :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods which
 allow the user to construct Hamiltonian objects just by writing their symbolic
-form using ``sympy`` symbols. For example, the TFIM on an arbitrary number of
-qubits ``nqubits`` could be constructed as:
+form using ``sympy`` symbols. For example, the TFIM on four qubits could be
+constructed as:
 
 .. code-block::  python
 
@@ -1010,20 +1011,20 @@ qubits ``nqubits`` could be constructed as:
     from qibo import hamiltonians, matrices
 
     # Define symbols for X and Z operators
-    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
-    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
+    Z = sympy.symbols("Z0 Z1 Z2 Z3")
+    X = sympy.symbols("X0 X1 X2 X3")
 
     # Define Hamiltonian using these symbols
     # ZZ terms
-    symbolic_ham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
+    symbolic_ham = sum(Z[i] * Z[i + 1] for i in range(3))
     # periodic boundary condition term
-    symbolic_ham += z_symbols[0] * z_symbols[-1]
+    symbolic_ham += Z[0] * Z[-1]
     # X terms
-    symbolic_ham += sum(x_symbols)
+    symbolic_ham += sum(X)
 
     # Define a map from symbols to actual matrices
-    symbol_map = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-    symbol_map.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
+    symbol_map = {s: (i, matrices.X) for i, s in enumerate(X)}
+    symbol_map.update({s: (i, matrices.Z) for i, s in enumerate(Z)})
 
     # Define a dense Hamiltonian
     ham = hamiltonians.Hamiltonian.from_symbolic(symbolic_ham, symbol_map)
