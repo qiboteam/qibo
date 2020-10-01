@@ -175,6 +175,9 @@ class AdiabaticEvolution(StateEvolution):
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
+        if isinstance(h0, hamiltonians.TrotterHamiltonian):
+            if not h1.is_compatible(h0):
+                h0 = h1.make_compatible(h0)
         super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,
                                                  accelerators, memory_device)
         self.h0 = h0
