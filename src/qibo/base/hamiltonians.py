@@ -47,7 +47,8 @@ class Hamiltonian:
         example for more details.
 
         Args:
-            symbolic_hamiltonian: The full Hamiltonian written with symbols.
+            symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written
+                with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
             numpy (bool): If ``True`` the Hamiltonian is created using numpy as
@@ -211,7 +212,7 @@ class Hamiltonian:
                                              "implemented.".format(type(o)))
 
 
-class SymbolicHamiltonian:
+class _SymbolicHamiltonian:
     """Parses symbolic Hamiltonians defined using ``sympy``.
 
     This class should not be used by users.
@@ -223,7 +224,8 @@ class SymbolicHamiltonian:
     and :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
 
     Args:
-        symbolic_hamiltonian: The full Hamiltonian written with symbols.
+        symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written with
+            symbols.
         symbol_map (dict): Dictionary that maps each symbol to a pair of
             (target, matrix).
     """
@@ -247,7 +249,7 @@ class SymbolicHamiltonian:
             numbers = [x for x in expression if not x.is_symbol]
             if numbers:
                 assert len(numbers) == 1
-                const = float(numbers[0])
+                const = self.matrices.dtype(numbers[0])
             else:
                 assert symbols
                 const = 1
@@ -486,7 +488,8 @@ class TrotterHamiltonian(Hamiltonian):
         example for more details.
 
         Args:
-            symbolic_hamiltonian: The full Hamiltonian written with symbols.
+            symbolic_hamiltonian (sympy.Symbol): The full Hamiltonian written
+                with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
             ground_state (Callable): Optional callable with no arguments that
@@ -499,7 +502,7 @@ class TrotterHamiltonian(Hamiltonian):
             implements the given symbolic Hamiltonian.
         """
         from qibo.hamiltonians import Hamiltonian
-        terms, constant = SymbolicHamiltonian(
+        terms, constant = _SymbolicHamiltonian(
           symbolic_hamiltonian, symbol_map).trotter_terms()
         terms = {k: Hamiltonian(len(k), v, numpy=True)
                  for k, v in terms.items()}

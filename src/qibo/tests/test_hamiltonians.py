@@ -557,7 +557,7 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     """Check that ``_merge_one_qubit`` works both when two-qubit are sufficient and no."""
     import sympy
     from qibo import matrices
-    from qibo.hamiltonians import SymbolicHamiltonian
+    from qibo.hamiltonians import _SymbolicHamiltonian
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
@@ -566,7 +566,7 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     symham += sum(x_symbols)
     if sufficient:
         symham += z_symbols[0] * z_symbols[-1]
-    symham = SymbolicHamiltonian(symham, symmap)
+    symham = _SymbolicHamiltonian(symham, symmap)
     terms = {t: m for t, m in symham.partial_matrices()}
     merged = symham._merge_one_qubit(terms)
 
