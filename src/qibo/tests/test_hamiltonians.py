@@ -411,6 +411,22 @@ def test_trotter_hamiltonian_make_compatible(nqubits):
     assert not h1.is_compatible(h2)
 
 
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_trotter_hamiltonian_make_compatible_repeating(nqubits):
+    """Check ``make_compatible`` when first target is repeated in parts."""
+    h0target = X(nqubits)
+    h0 = X(nqubits, trotter=True)
+    term = TFIM(2, numpy=True)
+    parts = [{(0, i): term} for i in range(1, nqubits)]
+    parts.extend(({(i, 0): term} for i in range(1, nqubits)))
+    h1 = TrotterHamiltonian(*parts)
+
+    h0c = h1.make_compatible(h0)
+    assert not h1.is_compatible(h0)
+    assert h1.is_compatible(h0c)
+    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms

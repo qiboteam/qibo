@@ -612,21 +612,28 @@ class TrotterHamiltonian(Hamiltonian):
                                 "method.")
                 oterms[t[0]] = m
 
+        normalizer = {}
+        for part in self.parts:
+            for targets in part.keys():
+                if targets[0] in normalizer:
+                    normalizer[targets[0]] += 1
+                else:
+                    normalizer[targets[0]] = 1
+        if set(normalizer.keys()) != set(oterms.keys()):
+            raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
+                                    "be made compatible.")
+
         new_parts = []
         for part in self.parts:
             new_parts.append(dict())
             for targets in part.keys():
                 if targets[0] in oterms:
                     n = len(targets)
-                    h = oterms.pop(targets[0])
+                    h = oterms[targets[0]]
                     m = h.matrix
                     eye = np.eye(2 ** (n - 1), dtype=m.dtype)
-                    m = np.kron(h.matrix, eye)
+                    m = np.kron(m, eye) / normalizer[targets[0]]
                     new_parts[-1][targets] = h.__class__(n, m, numpy=True)
-        if oterms:
-            raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
-                                    "be made compatible. The following terms "
-                                    "are remaining: {}".format(oterms.keys()))
         return self.__class__(*new_parts, ground_state=o.ground_state_func)
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
