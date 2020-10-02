@@ -263,8 +263,8 @@ class _SymbolicHamiltonian:
             else:
                 expression = (term,)
 
-            symbols = [x for x in expression if x.is_symbol]
-            numbers = [x for x in expression if not x.is_symbol]
+            numbers = [x for x in expression if isinstance(x, self.sympy.Number)]
+            symbols = [x for x in expression if not isinstance(x, self.sympy.Number)]
             if numbers:
                 assert len(numbers) == 1
                 const = self.matrices.dtype(numbers[0])
@@ -272,16 +272,25 @@ class _SymbolicHamiltonian:
                 assert symbols
                 const = 1
             if symbols:
+                targets, matrices = [], [const]
                 for s in symbols:
-                    if s not in symbol_map:
-                        raise_error(ValueError,
-                                    "Symbolic Hamiltonian contains symbol {} "
-                                    "which does not exist in the symbol map."
-                                    "".format(s))
-                n = len(symbols)
-                targets = tuple(symbol_map[s][0] for s in symbols)
+                    if s.is_symbol:
+                        self._check_symbolmap(s)
+                        targets.append(self.map[s][0])
+                        matrices.append(self.map[s][1])
+                    elif isinstance(s, self.sympy.Pow):
+                        ss, pow = s.args
+                        assert isinstance(pow, self.sympy.Integer)
+                        targets.append(self.map[ss][0])
+                        matrix = self.map[ss][1]
+                        for _ in range(int(pow) - 1):
+                            matrix = matrix.dot(matrix)
+                        matrices.append(matrix)
+                    else:
+                        raise_error(ValueError, f"Cannot parse symbol {s}.")
+                n = len(targets)
                 target_ids |= set(targets)
-                matrices = (const,) + tuple(symbol_map[s][1] for s in symbols)
+                targets, matrices = tuple(targets), tuple(matrices)
                 if n in self.terms:
                     self.terms[n][targets] = matrices
                 else:
@@ -290,6 +299,11 @@ class _SymbolicHamiltonian:
                 self.constant += const
 
         self.nqubits = max(target_ids) + 1
+
+    def _check_symbolmap(self, s):
+        if s not in self.map:
+            raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
+                                    "which does not exist in the symbol map.")
 
     @staticmethod
     def _multikron(matrix_list):

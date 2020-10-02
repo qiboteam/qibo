@@ -33,17 +33,20 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     control, solution, clauses = functions.read_file(nqubits, instance)
     nqubits = int(control[0])
     # Define "easy" and "problem" Hamiltonians
+    times = functions.times(nqubits, clauses)
+    sh0, smap0 = functions.h0(nqubits, times)
+    sh1, smap1 = functions.h_p(nqubits, clauses)
     if trotter:
         print('Using Trotter decomposition for the Hamiltonian\n')
         parts0, parts1 = functions.trotter_dict(clauses)
         gs = lambda: functions.ground_state(nqubits)
-        H0 = hamiltonians.TrotterHamiltonian(*parts0, ground_state=gs)
-        H1 = hamiltonians.TrotterHamiltonian(*parts1) + len(clauses)
+        H0 = hamiltonians.TrotterHamiltonian.from_symbolic(
+          sh0, smap0, ground_state=gs)
+        H1 = hamiltonians.TrotterHamiltonian.from_symbolic(sh1, smap1)
     else:
         print('Using the full Hamiltonian evolution\n')
-        t = functions.times(nqubits, clauses)
-        H0 = hamiltonians.Hamiltonian(nqubits, functions.h0(nqubits, t))
-        H1 = hamiltonians.Hamiltonian(nqubits, functions.h_p(nqubits, clauses))
+        H0 = hamiltonians.Hamiltonian.from_symbolic(sh0, smap0)
+        H1 = hamiltonians.Hamiltonian.from_symbolic(sh1, smap1)
 
     print('-'*20+'\n')
     if plot and nqubits >= 14:
@@ -110,6 +113,7 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
 
 
 if __name__ == "__main__":
+    import time
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=8, type=int)
     parser.add_argument("--instance", default=1, type=int)
@@ -122,6 +126,9 @@ if __name__ == "__main__":
     parser.add_argument("--method", default=None, type=str)
     parser.add_argument("--maxiter", default=None, type=int)
     args = vars(parser.parse_args())
+
     if args["params"] is not None:
         args["params"] = [float(x) for x in args["params"].split(",")]
+    start_time = time.time()
     main(**args)
+    print("\n Time:", time.time() - start_time)

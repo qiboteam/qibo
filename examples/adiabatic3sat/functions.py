@@ -1,3 +1,4 @@
+import sympy
 import numpy as np
 from qibo import matrices, hamiltonians
 import matplotlib.pyplot as plt
@@ -107,10 +108,11 @@ def h_p(qubits, clauses):
     Return:
         h_p (np.array): 2**qubits x 2**qubits problem Hamiltonian.
     """
-    h_p = 0
-    for clause in clauses:
-        h_p += h_c(qubits, clause)
-    return h_p
+    z = sympy.symbols(" ".join((f"z{i}" for i in range(qubits))))
+    z_matrix = (matrices.I - matrices.Z) / 2.0
+    smap = {s: (i, z_matrix) for i, s in enumerate(z)}
+    sham = sum(((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses))
+    return sham, smap
 
 
 def h0(qubits, times):
@@ -122,10 +124,10 @@ def h0(qubits, times):
     Return:
         h0 (np.array): 2**qubits x 2**qubits initial Hamiltonian.
     """
-    h0 = 0
-    for i in range(qubits):
-        h0 += times[i]*0.5*(np.eye(2**qubits)-x(qubits, i))
-    return h0
+    x = sympy.symbols(" ".join((f"x{i}" for i in range(qubits))))
+    smap = {s: (i, matrices.X) for i, s in enumerate(x)}
+    sham = sum((0.5 * times[i] * (1 - s) for i, s in enumerate(x)))
+    return sham, smap
 
 
 def h_ct():
