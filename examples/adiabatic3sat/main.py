@@ -34,11 +34,10 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     nqubits = int(control[0])
     # Define "easy" and "problem" Hamiltonians
     times = functions.times(nqubits, clauses)
-    sh0, smap0 = functions.h0(nqubits, times)
-    sh1, smap1 = functions.h_p(nqubits, clauses)
+    sh0, smap0 = functions.h_initial(nqubits, times)
+    sh1, smap1 = functions.h_problem(nqubits, clauses)
     if trotter:
         print('Using Trotter decomposition for the Hamiltonian\n')
-        parts0, parts1 = functions.trotter_dict(clauses)
         gs = lambda: functions.ground_state(nqubits)
         H0 = hamiltonians.TrotterHamiltonian.from_symbolic(
           sh0, smap0, ground_state=gs)
