@@ -534,9 +534,22 @@ class TrotterHamiltonian(Hamiltonian):
         from qibo.hamiltonians import Hamiltonian
         terms, constant = _SymbolicHamiltonian(
           symbolic_hamiltonian, symbol_map).trotter_terms()
-        terms = {k: Hamiltonian(len(k), v, numpy=True)
-                 for k, v in terms.items()}
-        return cls.from_dictionary(terms, ground_state=ground_state) + constant
+        # Avoid creating duplicate ``Hamiltonian`` objects for terms
+        # to take better advantage of caching and increase performance
+        unique_matrices = []
+        hterms = {}
+        for targets, matrix in terms.items():
+            flag = True
+            for m, h in unique_matrices:
+                if np.array_equal(matrix, m):
+                    ham = h
+                    flag = False
+                    break
+            if flag:
+                ham = Hamiltonian(len(targets), matrix, numpy=True)
+                unique_matrices.append((matrix, ham))
+            hterms[targets] = ham
+        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
 
     @staticmethod
     def _split_terms(terms):
