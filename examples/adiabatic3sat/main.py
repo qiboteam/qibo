@@ -112,7 +112,6 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
 
 
 if __name__ == "__main__":
-    import time
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=8, type=int)
     parser.add_argument("--instance", default=1, type=int)
@@ -125,9 +124,6 @@ if __name__ == "__main__":
     parser.add_argument("--method", default=None, type=str)
     parser.add_argument("--maxiter", default=None, type=int)
     args = vars(parser.parse_args())
-
     if args["params"] is not None:
         args["params"] = [float(x) for x in args["params"].split(",")]
-    start_time = time.time()
     main(**args)
-    print("\n Time:", time.time() - start_time)
