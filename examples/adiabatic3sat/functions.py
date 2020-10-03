@@ -53,7 +53,7 @@ def h_problem(qubits, clauses):
     z = sympy.symbols(" ".join((f"z{i}" for i in range(qubits))))
     z_matrix = (matrices.I - matrices.Z) / 2.0
     smap = {s: (i, z_matrix) for i, s in enumerate(z)}
-    sham = sum(((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses))
+    sham = sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
     return sham, smap
 
 
@@ -70,7 +70,7 @@ def h_initial(qubits, times):
     """
     x = sympy.symbols(" ".join((f"x{i}" for i in range(qubits))))
     smap = {s: (i, matrices.X) for i, s in enumerate(x)}
-    sham = sum((0.5 * times[i] * (1 - s) for i, s in enumerate(x)))
+    sham = sum(0.5 * times[i] * (1 - s) for i, s in enumerate(x))
     return sham, smap
 
 
