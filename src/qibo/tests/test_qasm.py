@@ -1,6 +1,9 @@
 import pytest
+import numpy as np
 from qibo.models import Circuit
 from qibo import gates, __version__
+import cirq
+from cirq.contrib.qasm_import import circuit_from_qasm, exception
 
 
 def assert_strings_equal(a, b):
@@ -30,6 +33,17 @@ qreg q[2];
 h q[0];
 h q[1];"""
     assert_strings_equal(c.to_qasm(), target)
+
+
+def test_simple_cirq_qiskit(atol=1e-7):
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.H(1))
+
+    c2 = circuit_from_qasm(c1.to_qasm())
+    final_state_c1 = c1()
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
 
 
 def test_unknown_gate_error():
@@ -69,6 +83,20 @@ cx q[1],q[0];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
+def test_multiqubit_gates_cirq_qiskit(atol=1e-7):
+    c1 = Circuit(2)
+    c1.add(gates.H(0))
+    c1.add(gates.CNOT(0, 1))
+    c1.add(gates.X(1))
+    c1.add(gates.SWAP(0, 1))
+    c1.add(gates.X(0).controlled_by(1))
+
+    c2 = circuit_from_qasm(c1.to_qasm())
+    final_state_c1 = c1()
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+
+
 def test_toffoli():
     c = Circuit(3)
     c.add(gates.Y(0))
@@ -90,6 +118,20 @@ ccx q[1],q[2],q[0];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
+def test_toffoli_cirq(atol=1e-7):
+    c1 = Circuit(3)
+    c1.add(gates.Y(0))
+    c1.add(gates.TOFFOLI(0, 1, 2))
+    c1.add(gates.X(1))
+    c1.add(gates.TOFFOLI(0, 2, 1))
+    c1.add(gates.Z(2))
+    c1.add(gates.TOFFOLI(1, 2, 0))
+    c2 = circuit_from_qasm(c1.to_qasm())
+    final_state_c1 = c1()
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+
+
 def test_parametrized_gate():
     c = Circuit(2)
     c.add(gates.Y(0))
@@ -101,6 +143,16 @@ qreg q[2];
 y q[0];
 ry(0.1234) q[1];"""
     assert_strings_equal(c.to_qasm(), target)
+
+
+def test_parametrized_gate_cirq(atol=1e-7):
+    c1 = Circuit(2)
+    c1.add(gates.Y(0))
+    c1.add(gates.RY(1, 0.1234))
+    c2 = circuit_from_qasm(c1.to_qasm())
+    final_state_c1 = c1()
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
 
 
 def test_cu1():
@@ -116,6 +168,16 @@ rx(0.1234) q[0];
 rz(0.4321) q[1];
 cu1(0.567) q[0],q[1];"""
     assert_strings_equal(c.to_qasm(), target)
+
+
+def test_cu1_cirq():
+    c1 = Circuit(2)
+    c1.add(gates.RX(0, 0.1234))
+    c1.add(gates.RZ(1, 0.4321))
+    c1.add(gates.CU1(0, 1, 0.567))
+    # catches unknown gate "cu1"
+    with pytest.raises(exception.QasmException):
+        c2 = circuit_from_qasm(c1.to_qasm())
 
 
 def test_ugates():
@@ -142,6 +204,26 @@ cu3(0.2, 0.3, 0.4) q[2],q[1];"""
         target = c.to_qasm()
 
 
+def test_ugates_cirq(atol=1e-7):
+    c1 = Circuit(3)
+    c1.add(gates.RX(0, 0.1))
+    c1.add(gates.RZ(1, 0.4))
+    c1.add(gates.U2(2, 0.5, 0.6))
+    c2 = circuit_from_qasm(c1.to_qasm())
+    final_state_c1 = c1()
+    final_state_c2 = cirq.Simulator().simulate(c2).final_state
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+
+    c1 = Circuit(3)
+    c1.add(gates.RX(0, 0.1))
+    c1.add(gates.RZ(1, 0.4))
+    c1.add(gates.U2(2, 0.5, 0.6))
+    c1.add(gates.CU3(2, 1, 0.2, 0.3, 0.4))
+    # catches unknown gate "cu3"
+    with pytest.raises(exception.QasmException):
+        c2 = circuit_from_qasm(c1.to_qasm())
+
+
 def test_crotations():
     c = Circuit(3)
     c.add(gates.RX(0, 0.1))
@@ -162,6 +244,17 @@ cry(0.3) q[2],q[1];"""
     c.add(gates.CU2(0, 1, 0.1, 0.2))
     with pytest.raises(ValueError):
         target = c.to_qasm()
+
+
+def test_crotations_cirq():
+    c1 = Circuit(3)
+    c1.add(gates.RX(0, 0.1))
+    c1.add(gates.RZ(1, 0.4))
+    c1.add(gates.CRX(0, 2, 0.5))
+    c1.add(gates.RY(1, 0.3).controlled_by(2))
+    # catches unknown gate "crx"
+    with pytest.raises(exception.QasmException):
+        c2 = circuit_from_qasm(c1.to_qasm())
 
 
 def test_measurements():
