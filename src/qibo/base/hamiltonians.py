@@ -279,7 +279,11 @@ class _SymbolicHamiltonian:
                 else:
                     raise_error(ValueError, f"Cannot parse factor {factor}.")
             target_ids |= set(targets)
-            self._add_term(tuple(targets), tuple(matrices))
+            targets, matrices = tuple(targets), tuple(matrices)
+            if targets in self.terms:
+                self.terms[targets] += matrices
+            else:
+                self.terms[targets] = matrices
         self.nqubits = max(target_ids) + 1
 
     def _check_symbolmap(self, s):
@@ -287,17 +291,6 @@ class _SymbolicHamiltonian:
         if s not in self.map:
             raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
                                     "which does not exist in the symbol map.")
-
-    def _add_term(self, targets, matrices):
-        """Adds Hamiltonian term to ``self.terms``."""
-        n = len(targets)
-        if n in self.terms:
-            if targets in self.terms[n]:
-                self.terms[n][targets] += matrices
-            else:
-                self.terms[n][targets] = matrices
-        else:
-            self.terms[n] = {targets: matrices}
 
     @staticmethod
     def _multikron(matrix_list):
@@ -322,16 +315,15 @@ class _SymbolicHamiltonian:
             the given symbolic form. Here ``nqubits`` is the total number of
             qubits that the Hamiltonian acts on.
         """
-        for group in self.terms.values():
-            for targets, matrices in group.items():
-                matrix_list = self.nqubits * [self.matrices.I]
-                n = len(targets)
-                total = 0
-                for i in range(0, len(matrices), n + 1):
-                    for t, m in zip(targets, matrices[i + 1: i + n + 1]):
-                        matrix_list[t] = m
-                    total += matrices[i] * self._multikron(matrix_list)
-                yield total
+        for targets, matrices in self.terms.items():
+            matrix_list = self.nqubits * [self.matrices.I]
+            n = len(targets)
+            total = 0
+            for i in range(0, len(matrices), n + 1):
+                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
+                    matrix_list[t] = m
+                total += matrices[i] * self._multikron(matrix_list)
+            yield total
 
     def partial_matrices(self):
         """Generator of matrices for each symbolic Hamiltonian term.
@@ -341,14 +333,13 @@ class _SymbolicHamiltonian:
             in the given symbolic form. Here ``ntargets`` is the number of
             qubits that the corresponding term acts on.
         """
-        for group in self.terms.values():
-            for targets, matrices in group.items():
-                n = len(targets)
-                matrix = 0
-                for i in range(0, len(matrices), n + 1):
-                    matrix += matrices[i] * self._multikron(
-                      matrices[i + 1: i + n + 1])
-                yield targets, matrix
+        for targets, matrices in self.terms.items():
+            n = len(targets)
+            matrix = 0
+            for i in range(0, len(matrices), n + 1):
+                matrix += matrices[i] * self._multikron(
+                  matrices[i + 1: i + n + 1])
+            yield targets, matrix
 
     def dense_matrix(self):
         """Creates the full Hamiltonian matrix.
@@ -391,7 +382,7 @@ class _SymbolicHamiltonian:
                     # swap target order
                     # the matrix has to be recalculated as well!
                     t1, t2 = t2, t1
-                    c, m1, m2 = self.terms[2][targets]
+                    c, m1, m2 = self.terms[targets]
                     matrix = c * np.kron(m2, m1)
                 two_qubit[(t1, t2)] = matrix
                 first_targets[t1] = (t1, t2)
@@ -420,7 +411,7 @@ class _SymbolicHamiltonian:
             constant (float): The overall constant term of the Hamiltonian.
         """
         terms = {t: m for t, m in self.partial_matrices()}
-        if max(self.terms.keys()) == 2 and 1 in self.terms:
+        if set(len(t) for t in terms.keys()) == {1, 2}:
             terms = self._merge_one_qubit(terms)
         return terms, self.constant
 
