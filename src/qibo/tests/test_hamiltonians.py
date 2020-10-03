@@ -654,3 +654,7 @@ def test_symbolic_hamiltonian_errors():
     # Missing symbol
     with pytest.raises(ValueError):
         sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X)})
+    # Factor that cannot be parsed
+    ham = a * b + sympy.cos(a) * b
+    with pytest.raises(ValueError):
+        sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})
