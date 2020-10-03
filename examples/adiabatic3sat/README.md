@@ -6,11 +6,11 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/adiabatic3sat
 
 Adiabatic quantum computation aims to reach the ground state of a problem Hamiltonian encoding the solution of a hard problem, by adiabatically evolving a system from the ground state of a known, easy to prepare, Hamiltonian to the problem Hamiltonian.
 
-An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 bits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfills all the clauses at the same time.
+An Exact Cover instance of a 3SAT problem is characterized by a set of clauses containing 3 bits that are considered satisfied if one of them is in position 1, while the other remain at 0. The solution of this instance is bitstring that fulfils all the clauses at the same time.
 
 ## Adiabatic evolution
 
-Adiabatic compution deals with finding the ground state of a Hamiltonian that encodes the solution of a computational problem. This has to be mapped to the time dependent Hamiltonian in the form
+Adiabatic computation deals with finding the ground state of a Hamiltonian that encodes the solution of a computational problem. This has to be mapped to the time dependent Hamiltonian in the form
 
 ![hamiltonian](images/H.png)
 
@@ -30,7 +30,7 @@ that can be used to create a Hamiltonian with a ground state when the Exact Cove
 
 ![clause-hamiltonian](images/hc.png)
 
-where the indices i, j, k represent the three different qubits that the particular clause adresses. After this is defined, the problem Hamiltonian only needs to add up all clause Hamiltonians, so that the only state that remains at 0 energy will be the one that fulfills at the same time
+where the indices i, j, k represent the three different qubits that the particular clause addresses. After this is defined, the problem Hamiltonian only needs to add up all clause Hamiltonians, so that the only state that remains at 0 energy will be the one that fulfils at the same time
 
 ![problem-hamiltonain](images/hp.png)
 
@@ -42,7 +42,7 @@ Run the file `main.py` from the console to perform an adiabatic evolution for an
 The program supports the following basic arguments:
 
 - `--nqubits` (int) allows for instances with different number of qubits (default=8).
-- `--instance` (int) choose intance to use (default=1).
+- `--instance` (int) choose instance to use (default=1).
 - `--T` (float) set the total time of the adiabatic evolution (default=10).
 - `--dt` (float) set the interval of the calculations over the adiabatic evolution (default=1e-2).
 - `--solver` (str) set the type of solver for the evolution (default='exp').
@@ -62,7 +62,7 @@ The `main.py` script uses linear scheduling for the adiabatic evolution by
 default. The user may switch the scheduling function to a polynomial of
 arbitrary order by passing the following argument:
 
-- `--params` (str) list of float values seperated with commas (`,`) that
+- `--params` (str) list of float values separated with commas (`,`) that
   define the coefficients of the polynomial scheduling. The polynomial is
   constructed so that it satisfies s(0)=0 and s(T)=T by definition.
 
@@ -70,7 +70,7 @@ It is also possible to optimize the polynomial coefficients using the following
 arguments:
 
 - `--method` (str) optimization method to use. See the
-[Qibo optimizer documentation](https://qibo.readthedocs.io/en/latest/qibo.html#optimizers)
+[Qibo optimizer documentation](https://qibo.readthedocs.io/en/stable/qibo.html#optimizers)
 for more details on the available optimization methods.
 - `--maxiter` (int) maximum number of optimization iterations
 
