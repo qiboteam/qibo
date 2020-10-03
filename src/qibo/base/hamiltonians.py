@@ -254,56 +254,50 @@ class _SymbolicHamiltonian:
         self.symbolic = self.sympy.expand(hamiltonian)
         self.map = symbol_map
 
+        term_dict = self.symbolic.as_coefficients_dict()
         self.constant = 0
+        if 1 in term_dict:
+            self.constant = self.matrices.dtype(term_dict.pop(1))
         self.terms = dict()
         target_ids = set()
-        for term in self.symbolic.args:
-            if term.args:
-                expression = term.args
-            else:
-                expression = (term,)
-
-            numbers = [x for x in expression if isinstance(x, self.sympy.Number)]
-            symbols = [x for x in expression if not isinstance(x, self.sympy.Number)]
-            if numbers:
-                assert len(numbers) == 1
-                const = self.matrices.dtype(numbers[0])
-            else:
-                assert symbols
-                const = 1
-            if symbols:
-                targets, matrices = [], [const]
-                for s in symbols:
-                    if s.is_symbol:
-                        self._check_symbolmap(s)
-                        targets.append(self.map[s][0])
-                        matrices.append(self.map[s][1])
-                    elif isinstance(s, self.sympy.Pow):
-                        ss, pow = s.args
-                        assert isinstance(pow, self.sympy.Integer)
-                        targets.append(self.map[ss][0])
-                        matrix = self.map[ss][1]
-                        for _ in range(int(pow) - 1):
-                            matrix = matrix.dot(matrix)
-                        matrices.append(matrix)
-                    else:
-                        raise_error(ValueError, f"Cannot parse symbol {s}.")
-                n = len(targets)
-                target_ids |= set(targets)
-                targets, matrices = tuple(targets), tuple(matrices)
-                if n in self.terms:
-                    self.terms[n][targets] = matrices
+        for term, coeff in term_dict.items():
+            targets, matrices = [], [self.matrices.dtype(coeff)]
+            for factor in term.as_ordered_factors():
+                if factor.is_symbol:
+                    self._check_symbolmap(factor)
+                    targets.append(self.map[factor][0])
+                    matrices.append(self.map[factor][1])
+                elif isinstance(factor, self.sympy.Pow):
+                    base, pow = factor.args
+                    assert isinstance(pow, self.sympy.Integer)
+                    self._check_symbolmap(base)
+                    targets.append(self.map[base][0])
+                    matrix = self.map[base][1]
+                    for _ in range(int(pow) - 1):
+                        matrix = matrix.dot(matrix)
+                    matrices.append(matrix)
                 else:
-                    self.terms[n] = {targets: matrices}
-            else:
-                self.constant += const
-
+                    raise_error(ValueError, f"Cannot parse factor {factor}.")
+            target_ids |= set(targets)
+            self._add_term(tuple(targets), tuple(matrices))
         self.nqubits = max(target_ids) + 1
 
     def _check_symbolmap(self, s):
+        """Checks if symbol exists in the given symbol map."""
         if s not in self.map:
             raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
                                     "which does not exist in the symbol map.")
+
+    def _add_term(self, targets, matrices):
+        """Adds Hamiltonian term to ``self.terms``."""
+        n = len(targets)
+        if n in self.terms:
+            if targets in self.terms[n]:
+                self.terms[n][targets] += matrices
+            else:
+                self.terms[n][targets] = matrices
+        else:
+            self.terms[n] = {targets: matrices}
 
     @staticmethod
     def _multikron(matrix_list):
@@ -331,9 +325,13 @@ class _SymbolicHamiltonian:
         for group in self.terms.values():
             for targets, matrices in group.items():
                 matrix_list = self.nqubits * [self.matrices.I]
-                for t, m in zip(targets, matrices[1:]):
-                    matrix_list[t] = m
-                yield matrices[0] * self._multikron(matrix_list)
+                n = len(targets)
+                total = 0
+                for i in range(0, len(matrices), n + 1):
+                    for t, m in zip(targets, matrices[i + 1: i + n + 1]):
+                        matrix_list[t] = m
+                    total += matrices[i] * self._multikron(matrix_list)
+                yield total
 
     def partial_matrices(self):
         """Generator of matrices for each symbolic Hamiltonian term.
@@ -345,7 +343,11 @@ class _SymbolicHamiltonian:
         """
         for group in self.terms.values():
             for targets, matrices in group.items():
-                matrix = matrices[0] * self._multikron(matrices[1:])
+                n = len(targets)
+                matrix = 0
+                for i in range(0, len(matrices), n + 1):
+                    matrix += matrices[i] * self._multikron(
+                      matrices[i + 1: i + n + 1])
                 yield targets, matrix
 
     def dense_matrix(self):
