@@ -110,8 +110,19 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
         functions.plot(nqubits, ground[:], excited[:], gap[:], dt, T)
         print('Plots finished.\n')
 
+    for part in evolve.h0.parts:
+        for k, v in part.items():
+            print(k, v)
+            print(v.matrix)
+    print()
+    for part in evolve.h1.parts:
+        for k, v in part.items():
+            print(k, v)
+            print(np.diag(v.matrix))
+
 
 if __name__ == "__main__":
+    import time
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=8, type=int)
     parser.add_argument("--instance", default=1, type=int)
@@ -126,4 +137,7 @@ if __name__ == "__main__":
     args = vars(parser.parse_args())
     if args["params"] is not None:
         args["params"] = [float(x) for x in args["params"].split(",")]
+
+    start_time = time.time()
     main(**args)
+    print("\nTotal time:", time.time() - start_time)
