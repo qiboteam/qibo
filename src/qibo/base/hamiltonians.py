@@ -534,7 +534,21 @@ class TrotterHamiltonian(Hamiltonian):
         from qibo.hamiltonians import Hamiltonian
         terms, constant = _SymbolicHamiltonian(
           symbolic_hamiltonian, symbol_map).trotter_terms()
-        hterms = cls._construct_terms(terms)
+        # Avoid creating duplicate ``Hamiltonian`` objects for terms
+        # to take better advantage of caching and increase performance
+        unique_matrices = []
+        hterms = {}
+        for targets, matrix in terms.items():
+            flag = True
+            for m, h in unique_matrices:
+                if np.array_equal(matrix, m):
+                    ham = h
+                    flag = False
+                    break
+            if flag:
+                ham = Hamiltonian(len(targets), matrix, numpy=True)
+                unique_matrices.append((matrix, ham))
+            hterms[targets] = ham
         return cls.from_dictionary(hterms, ground_state=ground_state) + constant
 
     @staticmethod
@@ -568,26 +582,6 @@ class TrotterHamiltonian(Hamiltonian):
                 groups.append({targets})
                 singles.append(t)
         return [{k: terms[k] for k in g} for g in groups]
-
-    @staticmethod
-    def _construct_terms(terms):
-        # Avoid creating duplicate ``Hamiltonian`` objects for terms
-        # to take better advantage of caching and increase performance
-        from qibo.hamiltonians import Hamiltonian
-        unique_matrices = []
-        hterms = {}
-        for targets, matrix in terms.items():
-            flag = True
-            for m, h in unique_matrices:
-                if np.array_equal(matrix, m):
-                    ham = h
-                    flag = False
-                    break
-            if flag:
-                ham = Hamiltonian(len(targets), matrix, numpy=True)
-                unique_matrices.append((matrix, ham))
-            hterms[targets] = ham
-        return hterms
 
     def is_compatible(self, o):
         """Checks if a ``TrotterHamiltonian`` has the same part structure.
@@ -649,17 +643,17 @@ class TrotterHamiltonian(Hamiltonian):
             raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
                                     "be made compatible.")
 
-        new_terms = {}
+        new_parts = []
         for part in self.parts:
+            new_parts.append(dict())
             for targets in part.keys():
                 if targets[0] in oterms:
-                    m = oterms[targets[0]].matrix
-                    eye = np.eye(2 ** (len(targets) - 1), dtype=m.dtype)
-                    new_terms[targets] = np.kron(m, eye) / normalizer[targets[0]]
-
-        new_terms = self._construct_terms(new_terms)
-        new_parts = ({t: new_terms[t] for t in part.keys()}
-                     for part in self.parts)
+                    n = len(targets)
+                    h = oterms[targets[0]]
+                    m = h.matrix
+                    eye = np.eye(2 ** (n - 1), dtype=m.dtype)
+                    m = np.kron(m, eye) / normalizer[targets[0]]
+                    new_parts[-1][targets] = h.__class__(n, m, numpy=True)
         return self.__class__(*new_parts, ground_state=o.ground_state_func)
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
