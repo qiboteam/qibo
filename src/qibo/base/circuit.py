@@ -846,7 +846,12 @@ class BaseCircuit(object):
                                                 "".format(command))
                     params = params.replace(" ", "").split(",")
                     try:
-                        params = [float(p) for p in params]
+                        for i, p in enumerate(params):
+                            if 'pi' in p:
+                                import numpy as np
+                                s = p.replace('pi', str(np.pi)).split('*')
+                                p = np.prod([float(j) for j in s], axis=0)
+                            params[i] = float(p)
                     except ValueError:
                         raise_error(ValueError, "Invalid value {} for gate parameters."
                                                 "".format(params))

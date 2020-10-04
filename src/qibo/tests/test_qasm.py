@@ -43,11 +43,15 @@ def test_simple_cirq():
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
+    final_state_c1 = c1()
 
     c2 = circuit_from_qasm(c1.to_qasm())
-    final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
     np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_unknown_gate_error():
@@ -94,11 +98,15 @@ def test_multiqubit_gates_cirq():
     c1.add(gates.X(1))
     c1.add(gates.SWAP(0, 1))
     c1.add(gates.X(0).controlled_by(1))
+    final_state_c1 = c1()
 
     c2 = circuit_from_qasm(c1.to_qasm())
-    final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
     np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_toffoli():
@@ -130,10 +138,15 @@ def test_toffoli_cirq():
     c1.add(gates.TOFFOLI(0, 2, 1))
     c1.add(gates.Z(2))
     c1.add(gates.TOFFOLI(1, 2, 0))
-    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
+
+    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
     np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_parametrized_gate():
@@ -153,10 +166,15 @@ def test_parametrized_gate_cirq():
     c1 = Circuit(2)
     c1.add(gates.Y(0))
     c1.add(gates.RY(1, 0.1234))
-    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
+
+    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
     np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
 
 def test_cu1():
@@ -213,10 +231,15 @@ def test_ugates_cirq():
     c1.add(gates.RX(0, 0.1))
     c1.add(gates.RZ(1, 0.4))
     c1.add(gates.U2(2, 0.5, 0.6))
-    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
+
+    c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
     np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
+
+    c3 = Circuit.from_qasm(c2.to_qasm())
+    final_state_c3 = c3()
+    np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
 
     c1 = Circuit(3)
     c1.add(gates.RX(0, 0.1))
