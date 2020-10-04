@@ -6,6 +6,10 @@ import cirq
 from cirq.contrib.qasm_import import circuit_from_qasm, exception
 
 
+# Absolute testing tolerance for cirq-qibo comparison
+_atol = 1e-7
+
+
 def assert_strings_equal(a, b):
     """Asserts that two strings are identical character by character."""
     assert len(a) == len(b)
@@ -35,7 +39,7 @@ h q[1];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
-def test_simple_cirq_qiskit(atol=1e-7):
+def test_simple_cirq():
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
@@ -43,7 +47,7 @@ def test_simple_cirq_qiskit(atol=1e-7):
     c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
 
 def test_unknown_gate_error():
@@ -83,7 +87,7 @@ cx q[1],q[0];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
-def test_multiqubit_gates_cirq_qiskit(atol=1e-7):
+def test_multiqubit_gates_cirq():
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.CNOT(0, 1))
@@ -94,7 +98,7 @@ def test_multiqubit_gates_cirq_qiskit(atol=1e-7):
     c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
 
 def test_toffoli():
@@ -118,7 +122,7 @@ ccx q[1],q[2],q[0];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
-def test_toffoli_cirq(atol=1e-7):
+def test_toffoli_cirq():
     c1 = Circuit(3)
     c1.add(gates.Y(0))
     c1.add(gates.TOFFOLI(0, 1, 2))
@@ -129,7 +133,7 @@ def test_toffoli_cirq(atol=1e-7):
     c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
 
 def test_parametrized_gate():
@@ -145,14 +149,14 @@ ry(0.1234) q[1];"""
     assert_strings_equal(c.to_qasm(), target)
 
 
-def test_parametrized_gate_cirq(atol=1e-7):
+def test_parametrized_gate_cirq():
     c1 = Circuit(2)
     c1.add(gates.Y(0))
     c1.add(gates.RY(1, 0.1234))
     c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
 
 def test_cu1():
@@ -204,7 +208,7 @@ cu3(0.2, 0.3, 0.4) q[2],q[1];"""
         target = c.to_qasm()
 
 
-def test_ugates_cirq(atol=1e-7):
+def test_ugates_cirq():
     c1 = Circuit(3)
     c1.add(gates.RX(0, 0.1))
     c1.add(gates.RZ(1, 0.4))
@@ -212,7 +216,7 @@ def test_ugates_cirq(atol=1e-7):
     c2 = circuit_from_qasm(c1.to_qasm())
     final_state_c1 = c1()
     final_state_c2 = cirq.Simulator().simulate(c2).final_state
-    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=atol)
+    np.testing.assert_allclose(final_state_c1, final_state_c2, atol=_atol)
 
     c1 = Circuit(3)
     c1.add(gates.RX(0, 0.1))
