@@ -378,6 +378,7 @@ def test_circuit_gate_generator_with_varlayer(backend, accelerators):
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_gate_generator_errors(backend, accelerators):
+    from qibo import callbacks
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
@@ -385,6 +386,16 @@ def test_circuit_gate_generator_errors(backend, accelerators):
     smallc.add((gates.H(i) for i in range(2)))
     with pytest.raises(ValueError):
         next(smallc.on_qubits(0, 1, 2))
+
+    smallc = Circuit(2, accelerators=accelerators)
+    smallc.add(gates.Flatten(np.ones(4) / np.sqrt(2)))
+    with pytest.raises(NotImplementedError):
+        next(smallc.on_qubits(0, 1))
+
+    smallc = Circuit(4, accelerators=accelerators)
+    smallc.add(gates.CallbackGate(callbacks.EntanglementEntropy([0, 1])))
+    with pytest.raises(NotImplementedError):
+        next(smallc.on_qubits(0, 1, 2, 3))
     qibo.set_backend(original_backend)
 
 

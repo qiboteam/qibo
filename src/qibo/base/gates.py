@@ -1657,7 +1657,8 @@ class Flatten(Gate):
         self.is_special_gate = True
 
     def on_qubits(self, *q):
-        return self.__class__(*self.init_args)
+        raise_error(NotImplementedError,
+                    "Cannot use `Flatten` gate on subroutine.")
 
 
 class CallbackGate(Gate):
@@ -1677,7 +1678,8 @@ class CallbackGate(Gate):
         self.is_special_gate = True
 
     def on_qubits(self, *q):
-        return self.__class__(*self.init_args)
+        raise_error(NotImplementedError,
+                    "Cannot use `CallbackGate` on subroutine.")
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):
