@@ -335,7 +335,33 @@ for example:
 
     # Create the total circuit as subroutine + middle + subroutine^{-1}
     circuit = subroutine + middle + subroutine.invert()
+    
 
+Note that circuit addition works only between circuits that act on the same number
+of qubits. It is often useful to add subroutines only on a subset of qubits of the 
+large circuit. This is possible using the :meth:`qibo.base.circuit.BaseCircuit.on_qubits`
+method. For example:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+    
+    # Create a small circuit of 4 qubits
+    smallc = Circuit(4)
+    smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
+    smallc.add((gates.CNOT(0, 1), CNOT(2, 3)))
+
+    # Create a large circuit on 8 qubits
+    largec = Circuit(8)
+    # Add the small circuit on even qubits
+    largec.add(smallc.on_qubits(*range(0, 8, 2)))
+    # Add a QFT on odd qubits
+    largec.add(models.QFT(4).on_qubits(*range(1, 8, 2)))
+    # Add an inverse QFT on first 6 qubits
+    largec.add(models.QFT(6).invert().on_qubits(*range(6)))
+    
 
 .. _vqe-example:
 
