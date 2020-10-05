@@ -164,7 +164,7 @@ class BaseCircuit(object):
         if len(q) != self.nqubits:
             raise_error(ValueError, "Cannot return gates on {} qubits because "
                                     "the circuit contains {} qubits."
-                                    "".format(len(qubits), self.nqubits))
+                                    "".format(len(q), self.nqubits))
         for gate in self.queue:
             yield gate.on_qubits(*(q[i] for i in gate.qubits))
 
