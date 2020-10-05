@@ -320,7 +320,6 @@ for example:
 
 .. code-block:: python
 
-    import numpy as np
     from qibo.models import Circuit
     from qibo import gates
 
@@ -344,7 +343,6 @@ method. For example:
 
 .. code-block:: python
 
-    import numpy as np
     from qibo import models, gates
 
     # Create a small circuit of 4 qubits
