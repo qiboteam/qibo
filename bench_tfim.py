@@ -19,7 +19,7 @@ def efficient_x(h1):
         state = K.ones(n, dtype=DTYPES.get('DTYPECPX'))
         return state / K.math.sqrt(K.cast(n, dtype=state.dtype))
 
-    term = np.kron(matrices.X, matrices.I)
+    term = - np.kron(matrices.X, matrices.I)
     term = hamiltonians.Hamiltonian(2, term, numpy=True)
     parts = [{k: term for k in part.keys()} for part in h1.parts]
     return hamiltonians.TrotterHamiltonian(*parts, ground_state=ground_state)
@@ -37,18 +37,7 @@ def main(nqubits, dt, T, efficient):
         h0 = efficient_x(h1)
     else:
         h0 = hamiltonians.X(nqubits=nqubits, trotter=True)
-
-    print_parts(h0)
-    print()
-    print_parts(h1)
-
     evolve = models.AdiabaticEvolution(h0, h1, lambda t: t, dt)
-
-    print("\n\n\n")
-    print_parts(evolve.h0)
-    print()
-    print_parts(evolve.h1)
-
     final_state = evolve(final_time=T)
 
 

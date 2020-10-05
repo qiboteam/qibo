@@ -459,7 +459,8 @@ class TrotterHamiltonian(Hamiltonian):
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
-        self.term_map = {}
+        self.term_sets = {}
+        self.targets_map = {}
         for part in parts:
             if not isinstance(part, dict):
                 raise_error(TypeError, "``TrotterHamiltonian`` part should be "
@@ -474,11 +475,14 @@ class TrotterHamiltonian(Hamiltonian):
                                             "qubits."
                                             "".format(targets, term.nqubits))
 
-                if targets in self.term_map:
+                if targets in self.targets_map:
                     raise_error(ValueError, "Targets {} are given in more than "
                                             "one term.".format(targets))
-                self.term_map[targets] = term
-                if term not in self.expgate_sets:
+                self.targets_map[targets] = term
+                if term in self.term_sets:
+                    self.term_sets[term].add(targets)
+                else:
+                    self.term_sets[term] = {targets}
                     self.expgate_sets[term] = set()
 
                 if self.dtype is None:
@@ -488,7 +492,7 @@ class TrotterHamiltonian(Hamiltonian):
                                             "were given.".format(
                                                 term.matrix.dtype, self.dtype))
         self.parts = parts
-        self.nqubits = len({t for targets in self.term_map.keys()
+        self.nqubits = len({t for targets in self.targets_map.keys()
                             for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
         # Function that creates the ground state of this Hamiltonian
@@ -627,7 +631,7 @@ class TrotterHamiltonian(Hamiltonian):
                             "compatible but {} was given.".format(type(o)))
         if self.is_compatible(o):
             return o
-        for targets in o.term_map.keys():
+        for targets in o.targets_map.keys():
             if len(targets) > 1:
                 raise_error(NotImplementedError,
                             "Only non-interacting Hamiltonians can be "
@@ -635,26 +639,37 @@ class TrotterHamiltonian(Hamiltonian):
                             "method but the given Hamiltonian contains "
                             "a {} qubit term.".format(len(targets)))
         normalizer = {}
-        for targets in self.term_map.keys():
+        for targets in self.targets_map.keys():
             idx = (targets[0],)
             if idx in normalizer:
                 normalizer[idx] += 1
             else:
                 normalizer[idx] = 1
-        if set(normalizer.keys()) != set(o.term_map.keys()):
+        if set(normalizer.keys()) != set(o.targets_map.keys()):
             raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
                                     "be made compatible.")
 
         new_terms = {}
-        for targets in self.term_map.keys():
-            idx = (targets[0],)
-            assert idx in o.term_map
-            n = len(targets)
-            ham = o.term_map[idx]
-            mat = ham.matrix
-            eye = np.eye(2 ** (n - 1), dtype=mat.dtype)
-            mat = np.kron(mat, eye) / normalizer[idx]
-            new_terms[targets] = ham.__class__(n, mat, numpy=True)
+        for target_set in self.term_sets.values():
+            hams = []
+            for targets in target_set:
+                idx = (targets[0],)
+                assert idx in o.targets_map
+                n = len(targets)
+                h = o.targets_map[idx]
+                m = h.matrix
+                eye = np.eye(2 ** (n - 1), dtype=m.dtype)
+                m = np.kron(m, eye) / normalizer[idx]
+                flag = True
+                for ham in hams:
+                    if np.array_equal(m, ham.matrix):
+                        new_terms[targets] = ham
+                        flag = False
+                        break
+                if flag:
+                    newham = h.__class__(n, m, numpy=True)
+                    new_terms[targets] = newham
+                    hams.append(newham)
 
         new_parts = [{t: new_terms[t] for t in part.keys()}
                      for part in self.parts]
