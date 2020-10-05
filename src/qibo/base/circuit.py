@@ -138,6 +138,14 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
+    def on_qubits(self, *q) -> Iterable[gates.Gate]:
+        if len(q) != self.nqubits:
+            raise_error(ValueError, "Cannot return gates on {} qubits because "
+                                    "the circuit contains {} qubits."
+                                    "".format(len(qubits), self.nqubits))
+        for gate in self.queue:
+            yield gate.on_qubits(*(q[i] for i in gate.qubits))
+
     def copy(self, deep: bool = False) -> "BaseCircuit":
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 

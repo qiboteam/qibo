@@ -247,6 +247,23 @@ class Gate(object):
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
+    def _new_args(self, *q):
+        """Helper method for :meth:`qibo.base.gates.Gate.on_qubits`."""
+        return q
+
+    def on_qubits(self, *q) -> "Gate":
+        """Creates the same gate targeting different qubits.
+
+        Args:
+            q (int): Qubit index (or indeces) that the new gate should act on.
+        """
+        n = len(self.qubits)
+        if len(q) != n:
+            raise_error(ValueError, "{} gate cannot be created on {} qubits "
+                                    "because it requires {}."
+                                    "".format(self.name, len(q), n))
+        return self.__class__(*self._new_args(*q), **self.init_kwargs)
+
     def _dagger(self) -> "Gate":
         """Helper method for :meth:`qibo.base.gates.Gate.dagger`."""
         return self.__class__(*self.init_args, **self.init_kwargs)
@@ -1365,6 +1382,11 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
+    def _new_args(self, *q) -> "Gate":
+        args = self.init_args[0]
+        args.extend(q)
+        return args
+
     def _dagger(self) -> "Gate": # pragma: no cover
         """"""
         # abstract method
@@ -1481,6 +1503,11 @@ class VariationalLayer(ParametrizedGate):
     def _calculate_unitaries(self): # pragma: no cover
         # abstract method
         return raise_error(NotImplementedError)
+
+    def _new_args(self, *q):
+        args = [list(q)]
+        args.extend(self.init_args[1:])
+        return args
 
     def _dagger(self) -> "Gate":
         """"""
@@ -1612,6 +1639,11 @@ class GeneralChannel(Gate):
                                         " acting on {} qubits."
                                         "".format(shape, len(qubits)))
 
+    def _new_args(self, *q): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "Cannot change qubits of generalized "
+                                         "channel.")
+
     @property
     def unitary(self): # pragma: no cover
         # future TODO
@@ -1638,6 +1670,9 @@ class Flatten(Gate):
         self.init_args = [coefficients]
         self.is_special_gate = True
 
+    def _new_args(self, *q):
+        return self.init_args
+
 
 class CallbackGate(Gate):
     """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
@@ -1654,6 +1689,9 @@ class CallbackGate(Gate):
         self.callback = callback
         self.init_args = [callback]
         self.is_special_gate = True
+
+    def _new_args(self, *q):
+        return self.init_args
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):
