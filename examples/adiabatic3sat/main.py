@@ -113,7 +113,6 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     for part in evolve.h0.parts:
         for k, v in part.items():
             print(k, v)
-            print(v.matrix)
     print()
     for part in evolve.h1.parts:
         for k, v in part.items():

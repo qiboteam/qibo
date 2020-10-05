@@ -6,7 +6,7 @@ from qibo import hamiltonians, models, matrices
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default=10, type=int)
+parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--T", default=10.0, type=float)
 parser.add_argument("--efficient", action="store_true")
