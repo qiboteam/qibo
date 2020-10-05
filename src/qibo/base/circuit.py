@@ -149,14 +149,13 @@ class BaseCircuit(object):
         Example:
             ::
 
-                from qibo.models import Circuit
-                from qibo import gates
+                from qibo import gates, models
                 # create small circuit on 4 qubits
-                smallc = Circuit(4)
+                smallc = models.Circuit(4)
                 smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
-                smallc.add((gates.CNOT(0, 1), CNOT(2, 3)))
+                smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
                 # create large circuit on 8 qubits
-                largec = Circuit(8)
+                largec = models.Circuit(8)
                 largec.add((gates.RY(i, theta=0.1) for i in range(8)))
                 # add the small circuit to the even qubits of the large one
                 largec.add(smallc.on_qubits(*range(0, 8, 2)))
@@ -247,9 +246,8 @@ class BaseCircuit(object):
         Example:
             ::
 
-                from qibo.models import Circuit
-                from qibo import gates
-                c = Circuit(2)
+                from qibo import models, gates
+                c = models.Circuit(2)
                 c.add([gates.H(0), gates.H(1)])
                 c.add(gates.CNOT(0, 1))
                 c.add([gates.Y(0), gates.Y(1)])
