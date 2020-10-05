@@ -322,6 +322,61 @@ def test_circuit_gate_generator_after_exec(backend, accelerators, distsmall):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_gate_generator_with_unitary(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    unitaries = np.random.random((2, 2, 2))
+    smallc = Circuit(2)
+    smallc.add((gates.Unitary(u, i) for i, u in enumerate(unitaries)))
+    smallc.add(gates.CNOT(0, 1))
+
+    largec = Circuit(4, accelerators=accelerators)
+    largec.add(gates.RY(1, theta=0.1))
+    largec.add(gates.RY(2, theta=0.2))
+    largec.add(smallc.on_qubits(0, 3))
+
+    targetc = Circuit(4)
+    targetc.add(gates.RY(1, theta=0.1))
+    targetc.add(gates.RY(2, theta=0.2))
+    targetc.add(gates.Unitary(unitaries[0], 0))
+    targetc.add(gates.Unitary(unitaries[1], 3))
+    targetc.add(gates.CNOT(0, 3))
+    assert largec.depth == targetc.depth
+    np.testing.assert_allclose(largec(), targetc())
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+def test_circuit_gate_generator_with_varlayer(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    thetas = np.random.random([2, 4])
+    smallc = Circuit(4)
+    smallc.add(gates.VariationalLayer(range(4), [(0, 1), (2, 3)],
+                                      gates.RX, gates.CNOT,
+                                      thetas[0]))
+
+    largec = Circuit(8, accelerators=accelerators)
+    largec.add(smallc.on_qubits(*range(0, 8, 2)))
+    largec.add(gates.VariationalLayer(range(1, 8, 2), [(1, 3), (5, 7)],
+                                      gates.RY, gates.CZ,
+                                      thetas[1]))
+
+    targetc = Circuit(8)
+    targetc.add(gates.VariationalLayer(range(0, 8, 2), [(0, 2), (4, 6)],
+                                       gates.RX, gates.CNOT,
+                                       thetas[0]))
+    targetc.add(gates.VariationalLayer(range(1, 8, 2), [(1, 3), (5, 7)],
+                                       gates.RY, gates.CZ,
+                                       thetas[1]))
+    assert largec.depth == targetc.depth
+    np.testing.assert_allclose(largec(), targetc())
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_gate_generator(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

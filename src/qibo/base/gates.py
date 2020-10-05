@@ -1383,7 +1383,7 @@ class Unitary(ParametrizedGate):
         return len(self.target_qubits)
 
     def _new_args(self, *q) -> "Gate":
-        args = self.init_args[0]
+        args = [self.init_args[0]]
         args.extend(q)
         return args
 
