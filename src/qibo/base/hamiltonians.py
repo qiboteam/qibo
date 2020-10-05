@@ -543,9 +543,22 @@ class TrotterHamiltonian(Hamiltonian):
 
     @staticmethod
     def _construct_terms(terms):
+        """Helper method for `from_symbolic`.
+
+        Constructs the term dictionary by using the same
+        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        have equal matrix representation. This is done for efficiency during
+        the exponentiation of terms.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            terms (dict): Dictionary that maps tuples of targets to the
+                          Hamiltonian term that acts on these on targets.
+        """
         from qibo.hamiltonians import Hamiltonian
-        # Avoid creating duplicate ``Hamiltonian`` objects for terms
-        # to take better advantage of caching and increase performance
         unique_matrices = []
         hterms = {}
         for targets, matrix in terms.items():
