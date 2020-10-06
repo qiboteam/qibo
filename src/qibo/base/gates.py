@@ -247,6 +247,14 @@ class Gate(object):
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
+    def on_qubits(self, *q) -> "Gate":
+        """Creates the same gate targeting different qubits.
+
+        Args:
+            q (int): Qubit index (or indeces) that the new gate should act on.
+        """
+        return self.__class__(*q, **self.init_kwargs)
+
     def _dagger(self) -> "Gate":
         """Helper method for :meth:`qibo.base.gates.Gate.dagger`."""
         return self.__class__(*self.init_args, **self.init_kwargs)
@@ -1365,6 +1373,11 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
+    def on_qubits(self, *q) -> "Gate":
+        args = [self.init_args[0]]
+        args.extend(q)
+        return self.__class__(*args, **self.init_kwargs)
+
     def _dagger(self) -> "Gate": # pragma: no cover
         """"""
         # abstract method
@@ -1612,6 +1625,11 @@ class GeneralChannel(Gate):
                                         " acting on {} qubits."
                                         "".format(shape, len(qubits)))
 
+    def on_qubits(self, *q): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
+                                         "for the `GeneralChannel` gate.")
+
     @property
     def unitary(self): # pragma: no cover
         # future TODO
@@ -1638,6 +1656,10 @@ class Flatten(Gate):
         self.init_args = [coefficients]
         self.is_special_gate = True
 
+    def on_qubits(self, *q):
+        raise_error(NotImplementedError,
+                    "Cannot use `Flatten` gate on subroutine.")
+
 
 class CallbackGate(Gate):
     """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
@@ -1654,6 +1676,10 @@ class CallbackGate(Gate):
         self.callback = callback
         self.init_args = [callback]
         self.is_special_gate = True
+
+    def on_qubits(self, *q):
+        raise_error(NotImplementedError,
+                    "Cannot use `CallbackGate` on subroutine.")
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):

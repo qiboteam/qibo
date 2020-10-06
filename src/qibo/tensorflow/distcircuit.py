@@ -74,6 +74,12 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise_error(ValueError, "Attempting to add gate with preset number of "
                                     "qubits in distributed circuit.")
 
+    def on_qubits(self, *q):
+        if self.queues.queues:
+            raise_error(RuntimeError, "Cannot use distributed circuit as a "
+                                      "subroutine after it was executed.")
+        return super(TensorflowDistributedCircuit, self).on_qubits(*q)
+
     def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
         if not deep:
             raise_error(ValueError, "Non-deep copy is not allowed for distributed "

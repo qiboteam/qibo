@@ -138,6 +138,35 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
+    def on_qubits(self, *q) -> Iterable[gates.Gate]:
+        """Generator of gates contained in the circuit acting on specified qubits.
+
+        Useful for adding a circuit as a subroutine in a larger circuit.
+
+        Args:
+            q (int): Qubit ids that the gates should act.
+
+        Example:
+            ::
+
+                from qibo import gates, models
+                # create small circuit on 4 qubits
+                smallc = models.Circuit(4)
+                smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
+                smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+                # create large circuit on 8 qubits
+                largec = models.Circuit(8)
+                largec.add((gates.RY(i, theta=0.1) for i in range(8)))
+                # add the small circuit to the even qubits of the large one
+                largec.add(smallc.on_qubits(*range(0, 8, 2)))
+        """
+        if len(q) != self.nqubits:
+            raise_error(ValueError, "Cannot return gates on {} qubits because "
+                                    "the circuit contains {} qubits."
+                                    "".format(len(q), self.nqubits))
+        for gate in self.queue:
+            yield gate.on_qubits(*(q[i] for i in gate.qubits))
+
     def copy(self, deep: bool = False) -> "BaseCircuit":
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
@@ -217,9 +246,8 @@ class BaseCircuit(object):
         Example:
             ::
 
-                from qibo.models import Circuit
-                from qibo import gates
-                c = Circuit(2)
+                from qibo import models, gates
+                c = models.Circuit(2)
                 c.add([gates.H(0), gates.H(1)])
                 c.add(gates.CNOT(0, 1))
                 c.add([gates.Y(0), gates.Y(1)])
