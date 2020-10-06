@@ -20,9 +20,11 @@ class PDFModel(object):
         layers (int): the number of layers for the ansatz.
         nqubits (int): the circuit size.
         multi_output (boolean): default false, allocates a multi-output model per PDF flavour.
+        fuse (boolean): fuse gates.
+        meansure_qubits (list): list of qubits for measurement.
     """
 
-    def __init__(self, ansatz, layers, nqubits, multi_output=False, measure_qubits=None):
+    def __init__(self, ansatz, layers, nqubits, multi_output=False, fuse=False, measure_qubits=None):
         if measure_qubits is None:
             self.measure_qubits = nqubits
         else:
@@ -37,14 +39,15 @@ class PDFModel(object):
                 nqubits, z_qubit=q) for q in range(self.measure_qubits)]
         else:
             self.hamiltonian = [qcpdf_hamiltonian(nqubits)]
+        if fuse:
+            self.circuit = self.circuit.fuse()
         self.multi_output = multi_output
         self.layers = layers
         self.nqubits = nqubits
 
-    def _model(self, hamiltonian):
+    def _model(self, state, hamiltonian):
         """Internal function for the evaluation of PDFs."""
-        final_state = self.circuit()
-        z = hamiltonian.expectation(final_state)
+        z = hamiltonian.expectation(state)
         y = (1 - z) / (1 + z)
         return y
 
@@ -65,8 +68,9 @@ class PDFModel(object):
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
             self.circuit.set_parameters(params)
+            state = self.circuit()
             for fl, hamiltonian in enumerate(self.hamiltonian):
-                pdf[i, fl] = self._model(hamiltonian)
+                pdf[i, fl] = self._model(state, hamiltonian)
         return pdf
 
 
