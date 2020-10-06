@@ -609,10 +609,15 @@ class TrotterHamiltonian(Hamiltonian):
     def is_compatible(self, o):
         """Checks if a ``TrotterHamiltonian`` has the same part structure.
 
-        ``TrotterHamiltonian``s with the same part structure can be add.
+        By part structure we mean that the target keys of the dictionaries
+        contained in the ``self.parts`` list are the same for both Hamiltonians.
+        Two :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects can be
+        added only when they are compatible (have the same part structure).
+        When using Trotter decomposition to simulate adiabatic evolution then
+        ``h0`` and ``h1`` should be compatible.
 
         Args:
-            o: The second Hamiltonian to check.
+            o: The Hamiltonian to check compatibility with.
 
         Returns:
             ``True`` if ``o`` has the same structure as ``self`` otherwise
@@ -630,9 +635,18 @@ class TrotterHamiltonian(Hamiltonian):
     def make_compatible(self, o):
         """Makes given ``TrotterHamiltonian`` compatible to the current one.
 
+        See :meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible` for
+        more details on how compatibility is defined in this context.
+        The current method will be used automatically by
+        :class:`qibo.evolution.AdiabaticEvolution` to make the ``h0`` and ``h1``
+        Hamiltonians compatible if they are not.
+        We note that in some applications making the Hamiltonians compatible
+        manually instead of relying in this method may take better advantage of
+        caching and lead to better execution performance.
+
         Args:
             o: The ``TrotterHamiltonian`` to make compatible to the current.
-                Should be non-interacting (contain only one-qubit terms).
+               Should be non-interacting (contain only one-qubit terms).
 
         Returns:
             A new :class:`qibo.base.hamiltonians.TrotterHamiltonian` object
