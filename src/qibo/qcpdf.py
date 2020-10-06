@@ -57,7 +57,6 @@ class PDFModel(object):
         Args:
             parameters: the list of parameters for the gates.
             x (np.array): a numpy array with the points in x to be evaluated.
-            force_zero (boolean): default false, forces PDF to zero when x=1.
 
         Returns:
             A numpy array with the PDF values.
@@ -69,8 +68,8 @@ class PDFModel(object):
             params = self.rotation(parameters, x_value)
             self.circuit.set_parameters(params)
             state = self.circuit()
-            for fl, hamiltonian in enumerate(self.hamiltonian):
-                pdf[i, fl] = self._model(state, hamiltonian)
+            for flavour, flavour_hamiltonian in enumerate(self.hamiltonian):
+                pdf[i, flavour] = self._model(state, flavour_hamiltonian)
         return pdf
 
 
