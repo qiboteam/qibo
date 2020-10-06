@@ -941,7 +941,17 @@ Note that ``h0`` and ``h1`` should have the same type, either both
 :class:`qibo.base.hamiltonians.TrotterHamiltonian`. When Trotter evolution is
 used, it is also possible to execute on multiple devices by passing an
 ``accelerators`` dictionary in the creation of the
-:class:`qibo.evolution.AdiabaticEvolution` model.
+:class:`qibo.evolution.AdiabaticEvolution` model. In addition, when
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used, then ``h0`` and
+``h1`` should have the same part structure, otherwise it will not be possible
+to add them in order to create the total Hamiltonian.
+If the given Hamiltonians do not have the same part structure and ``h0``
+consists only of one-body terms then Qibo will use an automatic algorithm
+(:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`)
+to rearrange the terms of ``h0`` so that it matches the part structure of ``h1``.
+It is important to note that in some applications making ``h0`` and ``h1``
+compatible manually may take better advantage of caching and lead to better
+execution performance compared to using the automatic functionality.
 
 
 Optimizing the scheduling function
@@ -1060,3 +1070,17 @@ constructed as:
 
 Defining Hamiltonians from symbols is usually a simple process as the symbolic
 form is very close to the form of the Hamiltonian on "paper".
+
+As noted in the :ref:`How to simulate adiabatic time evolution? <adevol-example>`,
+when using Trotterized Hamiltonians to simulate adiabatic evolution, then ``h0``
+and ``h1`` should have the same part structure (be compatible) in order to add
+them. This is usually not true when constructing Hamiltonians using symbols.
+If the constructed Hamiltonians are not compatible but ``h0`` consists of
+one-body terms only (which is the case in most adiabatic evolution applications)
+then Qibo will use an automatic algorithm
+(:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`) to make it
+compatible to ``h1``. Depending on the application, using this algorithm may
+take less advantage of caching compared to making the Hamiltonians  compatible
+manually and thus lead to slightly worse execution performance.
+Making the Hamiltonians compatible manually is usually a harder process than
+constructing them using their symbolic form.

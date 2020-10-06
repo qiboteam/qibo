@@ -411,6 +411,22 @@ def test_trotter_hamiltonian_make_compatible(nqubits):
     assert not h1.is_compatible(h2)
 
 
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_trotter_hamiltonian_make_compatible_repeating(nqubits):
+    """Check ``make_compatible`` when first target is repeated in parts."""
+    h0target = X(nqubits)
+    h0 = X(nqubits, trotter=True)
+    term = TFIM(2, numpy=True)
+    parts = [{(0, i): term} for i in range(1, nqubits)]
+    parts.extend(({(i, 0): term} for i in range(1, nqubits)))
+    h1 = TrotterHamiltonian(*parts)
+
+    h0c = h1.make_compatible(h0)
+    assert not h1.is_compatible(h0)
+    assert h1.is_compatible(h0c)
+    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms
@@ -487,6 +503,31 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
     else:
         full_ham = Hamiltonian.from_symbolic(-symham, symmap)
         final_matrix = full_ham.matrix
+    np.testing.assert_allclose(final_matrix, target_matrix)
+
+
+@pytest.mark.parametrize("trotter", [False, True])
+def test_from_symbolic_with_power(trotter):
+    """Check ``from_symbolic`` when the expression contains powers."""
+    import sympy
+    z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
+    symham =  z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + + 1
+    matrix = utils.random_numpy_hermitian(1)
+    symmap = {x: (i, matrix) for i, x in enumerate(z)}
+    if trotter:
+        ham = TrotterHamiltonian.from_symbolic(symham, symmap)
+        final_matrix = ham.dense.matrix
+    else:
+        ham = Hamiltonian.from_symbolic(symham, symmap)
+        final_matrix = ham.matrix
+
+    matrix2 = matrix.dot(matrix)
+    eye = np.eye(2, dtype=matrix.dtype)
+    target_matrix = np.kron(np.kron(matrix2, eye), eye)
+    target_matrix -= np.kron(np.kron(eye, matrix2), eye)
+    target_matrix += 3 * np.kron(np.kron(eye, matrix), eye)
+    target_matrix -= 2 * np.kron(np.kron(matrix, eye), matrix)
+    target_matrix += np.eye(8, dtype=matrix.dtype)
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
@@ -613,3 +654,7 @@ def test_symbolic_hamiltonian_errors():
     # Missing symbol
     with pytest.raises(ValueError):
         sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X)})
+    # Factor that cannot be parsed
+    ham = a * b + sympy.cos(a) * b
+    with pytest.raises(ValueError):
+        sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})
