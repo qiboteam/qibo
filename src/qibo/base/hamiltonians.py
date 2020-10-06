@@ -254,42 +254,43 @@ class _SymbolicHamiltonian:
         self.symbolic = self.sympy.expand(hamiltonian)
         self.map = symbol_map
 
+        term_dict = self.symbolic.as_coefficients_dict()
         self.constant = 0
+        if 1 in term_dict:
+            self.constant = self.matrices.dtype(term_dict.pop(1))
         self.terms = dict()
         target_ids = set()
-        for term in self.symbolic.args:
-            if term.args:
-                expression = term.args
-            else:
-                expression = (term,)
-
-            symbols = [x for x in expression if x.is_symbol]
-            numbers = [x for x in expression if not x.is_symbol]
-            if numbers:
-                assert len(numbers) == 1
-                const = self.matrices.dtype(numbers[0])
-            else:
-                assert symbols
-                const = 1
-            if symbols:
-                for s in symbols:
-                    if s not in symbol_map:
-                        raise_error(ValueError,
-                                    "Symbolic Hamiltonian contains symbol {} "
-                                    "which does not exist in the symbol map."
-                                    "".format(s))
-                n = len(symbols)
-                targets = tuple(symbol_map[s][0] for s in symbols)
-                target_ids |= set(targets)
-                matrices = (const,) + tuple(symbol_map[s][1] for s in symbols)
-                if n in self.terms:
-                    self.terms[n][targets] = matrices
+        for term, coeff in term_dict.items():
+            targets, matrices = [], [self.matrices.dtype(coeff)]
+            for factor in term.as_ordered_factors():
+                if factor.is_symbol:
+                    self._check_symbolmap(factor)
+                    targets.append(self.map[factor][0])
+                    matrices.append(self.map[factor][1])
+                elif isinstance(factor, self.sympy.Pow):
+                    base, pow = factor.args
+                    assert isinstance(pow, self.sympy.Integer)
+                    self._check_symbolmap(base)
+                    targets.append(self.map[base][0])
+                    matrix = self.map[base][1]
+                    for _ in range(int(pow) - 1):
+                        matrix = matrix.dot(matrix)
+                    matrices.append(matrix)
                 else:
-                    self.terms[n] = {targets: matrices}
+                    raise_error(ValueError, f"Cannot parse factor {factor}.")
+            target_ids |= set(targets)
+            targets, matrices = tuple(targets), tuple(matrices)
+            if targets in self.terms:
+                self.terms[targets] += matrices
             else:
-                self.constant += const
-
+                self.terms[targets] = matrices
         self.nqubits = max(target_ids) + 1
+
+    def _check_symbolmap(self, s):
+        """Checks if symbol exists in the given symbol map."""
+        if s not in self.map:
+            raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
+                                    "which does not exist in the symbol map.")
 
     @staticmethod
     def _multikron(matrix_list):
@@ -314,12 +315,15 @@ class _SymbolicHamiltonian:
             the given symbolic form. Here ``nqubits`` is the total number of
             qubits that the Hamiltonian acts on.
         """
-        for group in self.terms.values():
-            for targets, matrices in group.items():
-                matrix_list = self.nqubits * [self.matrices.I]
-                for t, m in zip(targets, matrices[1:]):
+        for targets, matrices in self.terms.items():
+            matrix_list = self.nqubits * [self.matrices.I]
+            n = len(targets)
+            total = 0
+            for i in range(0, len(matrices), n + 1):
+                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
                     matrix_list[t] = m
-                yield matrices[0] * self._multikron(matrix_list)
+                total += matrices[i] * self._multikron(matrix_list)
+            yield total
 
     def partial_matrices(self):
         """Generator of matrices for each symbolic Hamiltonian term.
@@ -329,10 +333,13 @@ class _SymbolicHamiltonian:
             in the given symbolic form. Here ``ntargets`` is the number of
             qubits that the corresponding term acts on.
         """
-        for group in self.terms.values():
-            for targets, matrices in group.items():
-                matrix = matrices[0] * self._multikron(matrices[1:])
-                yield targets, matrix
+        for targets, matrices in self.terms.items():
+            n = len(targets)
+            matrix = 0
+            for i in range(0, len(matrices), n + 1):
+                matrix += matrices[i] * self._multikron(
+                  matrices[i + 1: i + n + 1])
+            yield targets, matrix
 
     def dense_matrix(self):
         """Creates the full Hamiltonian matrix.
@@ -375,7 +382,7 @@ class _SymbolicHamiltonian:
                     # swap target order
                     # the matrix has to be recalculated as well!
                     t1, t2 = t2, t1
-                    c, m1, m2 = self.terms[2][targets]
+                    c, m1, m2 = self.terms[targets]
                     matrix = c * np.kron(m2, m1)
                 two_qubit[(t1, t2)] = matrix
                 first_targets[t1] = (t1, t2)
@@ -404,7 +411,7 @@ class _SymbolicHamiltonian:
             constant (float): The overall constant term of the Hamiltonian.
         """
         terms = {t: m for t, m in self.partial_matrices()}
-        if max(self.terms.keys()) == 2 and 1 in self.terms:
+        if set(len(t) for t in terms.keys()) == {1, 2}:
             terms = self._merge_one_qubit(terms)
         return terms, self.constant
 
@@ -452,7 +459,8 @@ class TrotterHamiltonian(Hamiltonian):
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
-        targets_set = set()
+        self.term_sets = {}
+        self.targets_map = {}
         for part in parts:
             if not isinstance(part, dict):
                 raise_error(TypeError, "``TrotterHamiltonian`` part should be "
@@ -467,11 +475,14 @@ class TrotterHamiltonian(Hamiltonian):
                                             "qubits."
                                             "".format(targets, term.nqubits))
 
-                if targets in targets_set:
+                if targets in self.targets_map:
                     raise_error(ValueError, "Targets {} are given in more than "
                                             "one term.".format(targets))
-                targets_set.add(targets)
-                if term not in self.expgate_sets:
+                self.targets_map[targets] = term
+                if term in self.term_sets:
+                    self.term_sets[term].add(targets)
+                else:
+                    self.term_sets[term] = {targets}
                     self.expgate_sets[term] = set()
 
                 if self.dtype is None:
@@ -481,7 +492,8 @@ class TrotterHamiltonian(Hamiltonian):
                                             "were given.".format(
                                                 term.matrix.dtype, self.dtype))
         self.parts = parts
-        self.nqubits = len({t for targets in targets_set for t in targets})
+        self.nqubits = len({t for targets in self.targets_map.keys()
+                            for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
         # Function that creates the ground state of this Hamiltonian
         # can be ``None``
@@ -524,12 +536,43 @@ class TrotterHamiltonian(Hamiltonian):
             A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.hamiltonians import Hamiltonian
         terms, constant = _SymbolicHamiltonian(
           symbolic_hamiltonian, symbol_map).trotter_terms()
-        terms = {k: Hamiltonian(len(k), v, numpy=True)
-                 for k, v in terms.items()}
-        return cls.from_dictionary(terms, ground_state=ground_state) + constant
+        hterms = cls._construct_terms(terms)
+        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
+
+    @staticmethod
+    def _construct_terms(terms):
+        """Helper method for `from_symbolic`.
+
+        Constructs the term dictionary by using the same
+        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        have equal matrix representation. This is done for efficiency during
+        the exponentiation of terms.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            terms (dict): Dictionary that maps tuples of targets to the
+                          Hamiltonian term that acts on these on targets.
+        """
+        from qibo.hamiltonians import Hamiltonian
+        unique_matrices = []
+        hterms = {}
+        for targets, matrix in terms.items():
+            flag = True
+            for m, h in unique_matrices:
+                if np.array_equal(matrix, m):
+                    ham = h
+                    flag = False
+                    break
+            if flag:
+                ham = Hamiltonian(len(targets), matrix, numpy=True)
+                unique_matrices.append((matrix, ham))
+            hterms[targets] = ham
+        return hterms
 
     @staticmethod
     def _split_terms(terms):
@@ -566,10 +609,15 @@ class TrotterHamiltonian(Hamiltonian):
     def is_compatible(self, o):
         """Checks if a ``TrotterHamiltonian`` has the same part structure.
 
-        ``TrotterHamiltonian``s with the same part structure can be add.
+        By part structure we mean that the target keys of the dictionaries
+        contained in the ``self.parts`` list are the same for both Hamiltonians.
+        Two :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects can be
+        added only when they are compatible (have the same part structure).
+        When using Trotter decomposition to simulate adiabatic evolution then
+        ``h0`` and ``h1`` should be compatible.
 
         Args:
-            o: The second Hamiltonian to check.
+            o: The Hamiltonian to check compatibility with.
 
         Returns:
             ``True`` if ``o`` has the same structure as ``self`` otherwise
@@ -587,9 +635,18 @@ class TrotterHamiltonian(Hamiltonian):
     def make_compatible(self, o):
         """Makes given ``TrotterHamiltonian`` compatible to the current one.
 
+        See :meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible` for
+        more details on how compatibility is defined in this context.
+        The current method will be used automatically by
+        :class:`qibo.evolution.AdiabaticEvolution` to make the ``h0`` and ``h1``
+        Hamiltonians compatible if they are not.
+        We note that in some applications making the Hamiltonians compatible
+        manually instead of relying in this method may take better advantage of
+        caching and lead to better execution performance.
+
         Args:
             o: The ``TrotterHamiltonian`` to make compatible to the current.
-                Should be non-interacting (contain only one-qubit terms).
+               Should be non-interacting (contain only one-qubit terms).
 
         Returns:
             A new :class:`qibo.base.hamiltonians.TrotterHamiltonian` object
@@ -601,39 +658,48 @@ class TrotterHamiltonian(Hamiltonian):
                             "compatible but {} was given.".format(type(o)))
         if self.is_compatible(o):
             return o
-
-        oterms = {}
-        for part in o.parts:
-            for t, m in part.items():
-                if len(t) > 1:
-                    raise_error(NotImplementedError,
-                                "Only non-interacting Hamiltonians can be "
-                                "transformed using the ``make_compatible`` "
-                                "method.")
-                oterms[t[0]] = m
-
+        for targets in o.targets_map.keys():
+            if len(targets) > 1:
+                raise_error(NotImplementedError,
+                            "Only non-interacting Hamiltonians can be "
+                            "transformed using the `make_compatible` "
+                            "method but the given Hamiltonian contains "
+                            "a {} qubit term.".format(len(targets)))
         normalizer = {}
-        for part in self.parts:
-            for targets in part.keys():
-                if targets[0] in normalizer:
-                    normalizer[targets[0]] += 1
-                else:
-                    normalizer[targets[0]] = 1
-        if set(normalizer.keys()) != set(oterms.keys()):
+        for targets in self.targets_map.keys():
+            idx = (targets[0],)
+            if idx in normalizer:
+                normalizer[idx] += 1
+            else:
+                normalizer[idx] = 1
+        if set(normalizer.keys()) != set(o.targets_map.keys()):
             raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
                                     "be made compatible.")
 
-        new_parts = []
-        for part in self.parts:
-            new_parts.append(dict())
-            for targets in part.keys():
-                if targets[0] in oterms:
-                    n = len(targets)
-                    h = oterms[targets[0]]
-                    m = h.matrix
-                    eye = np.eye(2 ** (n - 1), dtype=m.dtype)
-                    m = np.kron(m, eye) / normalizer[targets[0]]
-                    new_parts[-1][targets] = h.__class__(n, m, numpy=True)
+        new_terms = {}
+        for target_set in self.term_sets.values():
+            hams = []
+            for targets in target_set:
+                idx = (targets[0],)
+                assert idx in o.targets_map
+                n = len(targets)
+                h = o.targets_map[idx]
+                m = h.matrix
+                eye = np.eye(2 ** (n - 1), dtype=m.dtype)
+                m = np.kron(m, eye) / normalizer[idx]
+                flag = True
+                for ham in hams:
+                    if np.array_equal(m, ham.matrix):
+                        new_terms[targets] = ham
+                        flag = False
+                        break
+                if flag:
+                    newham = h.__class__(n, m, numpy=True)
+                    new_terms[targets] = newham
+                    hams.append(newham)
+
+        new_parts = [{t: new_terms[t] for t in part.keys()}
+                     for part in self.parts]
         return self.__class__(*new_parts, ground_state=o.ground_state_func)
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
