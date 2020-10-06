@@ -804,7 +804,7 @@ def ansatz_w4(layers, qubits=1):
         return p
 
     nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
-    return circuit.fuse(), rotation, nparams
+    return circuit, rotation, nparams
 
 
 def ansatz_w5(layers, qubits=1, tangling=True):
