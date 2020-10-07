@@ -564,16 +564,18 @@ to train them.
 How to perform noisy simulation?
 --------------------------------
 
-Qibo can perform noisy simulation using density matrices. ``Circuit`` objects can
-evolve density matrices in a similar manner to state vectors. In order to use
-density matrices the user should execute the circuit passing a density matrix as
-the initial state. For example
+Qibo can perform noisy simulation using density matrices.
+:class:`qibo.base.circuit.BaseCircuit` objects can evolve density matrices
+similarly to state vectors.
+In order to use density matrices the user should execute the circuit passing a
+density matrix as the initial state. For example
 
 .. code-block:: python
 
-    import qibo
+    import numpy as np
     # switch backend to "matmuleinsum" or "defaulteinsum"
     qibo.set_backend("matmuleinsum")
+    import qibo
     from qibo import models, gates
 
     # Define circuit
@@ -588,7 +590,7 @@ the initial state. For example
 
     # Call circuit on the density matrix
     final_rho = c(initial_rho)
-    # final_rho will be tf.eye(4) / 4 which corresponds to |++><++|
+    # final_rho will be tf.ones(4) / 4 which corresponds to |++><++|
 
 will perform the transformation
 
@@ -596,14 +598,16 @@ will perform the transformation
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
 
 Note that the calculation backend was switched to ``"matmuleinsum"`` because the
-default ``"custom"`` backend does not support density matrices.
+default ``"custom"`` backend does not support density matrix simulation yet.
 
 The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
-If this or any other channel is used in a ``Circuit``, then the execution will automatically
-switch to density matrices. For example
+If this or any other channel is used in a ``Circuit``, then the execution
+will automatically switch to density matrices. For example
 
 .. code-block:: python
 
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo import models, gates
 
     c = models.Circuit(2) # starts with state |00>
@@ -619,12 +623,13 @@ will perform the transformation
     \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
     \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
-Note that ``Circuit`` will use state vectors until the first channel is found and will
-switch to density matrices for the rest of the simulation. Measurements and
-callbacks can be used exactly as in the pure state vector case.
+Note that :class:`qibo.base.circuit.BaseCircuit` will use state vectors until
+the first channel is found and will switch to density matrices for the rest of
+the simulation. Measurements and callbacks can be used exactly as in the case
+of state vector simulation.
 
-In practical applications noise typically occurs after every gate. For this reason,
-:class:`qibo.base.circuit.BaseCircuit` provides a ``.with_noise()`` method
+In practical applications noise typically occurs after every gate.
+Qibo provides the :meth:`qibo.base.circuit.BaseCircuit.with_noise()` method
 which automatically creates a new circuit that contains a noise channel after
 every normal gate. The user can control the probabilities of the noise channel
 using a noise map, which is a dictionary that maps qubits to the corresponding
@@ -634,10 +639,11 @@ For example, the following script
 
 .. code-block:: python
 
-      from qibo.models import Circuit
-      from qibo import gates
+      import qibo
+      qibo.set_backend("matmuleinsum")
+      from qibo import models, gates
 
-      c = Circuit(2)
+      c = models.Circuit(2)
       c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
       # Define a noise map that maps qubit IDs to noise probabilities
@@ -648,7 +654,7 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
 .. code-block:: python
 
-      noisy_c2 = Circuit(2)
+      noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
       noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
@@ -659,9 +665,8 @@ will create a new circuit ``noisy_c`` that is equivalent to:
       noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
 
-Note however that the circuit ``noisy_c`` that was created using the
-``with_noise`` method uses the gate objects of the original circuit ``c``
-(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as
+Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
+(it is not a deep copy), while in ``noisy_c2`` each gate was created as
 a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
@@ -670,16 +675,16 @@ That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
 Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
-which allows the user to explicitly specify the noise probabilities.
-before measurement gates. These may be different from the typical noise probabilities
-depending on the experimental realization of measurements. For example:
+which allows the user to explicitly specify the probabilities of the noise
+channels that applied before measurement gates. For example:
 
 .. code-block:: python
 
-      from qibo.models import Circuit
-      from qibo import gates
+      import qibo
+      qibo.set_backend("matmuleinsum")
+      from qibo import models, gates
 
-      c = Circuit(2)
+      c = models.Circuit(2)
       c.add([gates.H(0), gates.H(1)])
       c.add(gates.M(0))
 
@@ -692,7 +697,7 @@ is equivalent to the following:
 
 .. code-block:: python
 
-      noisy_c = Circuit(2)
+      noisy_c = models.Circuit(2)
       noisy_c.add(gates.H(0))
       noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
@@ -703,10 +708,9 @@ is equivalent to the following:
 
 Note that ``measurement_noise`` does not affect qubits that are not measured
 and the default ``noise_map`` will be used for those.
-
-Similarly to ``noise_map``, ``measurement_noise`` can either be either a
-dictionary that maps each qubit to the corresponding probability triplet or
-a tuple if the same triplet shall be used on all measured qubits.
+Similarly to ``noise_map``, ``measurement_noise`` can be either a dictionary
+that maps each qubit to the corresponding probability triplet or a tuple
+if the same triplet shall be used on all measured qubits.
 
 
 .. _timeevol-example:
