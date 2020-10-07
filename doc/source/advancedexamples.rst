@@ -502,63 +502,75 @@ As a deep learning framework, Tensorflow supports
 `automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
 This can be used to optimize the parameters of variational circuits. For example
 the following script optimizes the parameters of two rotations so that the circuit
-output matches a target state, using the fidelity as figure of merit.
+output matches a target state using the fidelity as the corresponding loss
+function.
 
 .. code-block:: python
 
-    import tensorflow as tf
     # switch backend to "matmuleinsum" or "defaulteinsum"
     import qibo
     qibo.set_backend("matmuleinsum")
-    from qibo.models import Circuit
-    from qibo import gates
+    import tensorflow as tf
+    from qibo import gates, models
 
-    nepochs = 100
-    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    # Optimization parameters
+    nepochs = 1000
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    # Define circuit ansatz
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    c = models.Circuit(2)
+    c.add(gates.RX(0, params[0]))
+    c.add(gates.RY(1, params[1]))
 
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
-            c = Circuit(2)
-            c.add(RX(0, params[0]))
-            c.add(RY(0, params[1]))
-            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            c.set_parameters(params)
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
-
         grads = tape.gradient(loss, params)
-        optimizer.apply_gradients(zip(grads, params))
+        optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
-the calculated gradients will be ``None``. Also, a backend that uses tensorflow
-primitives gates (either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be
-used because currently the default ``"custom"`` backend does not support automatic
-differentiation.
+Note that a backend that uses tensorflow primitives gates
+(either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be used because
+the default ``"custom"`` backend does not support automatic differentiation.
 
-The optimization procedure can also be compiled as follows:
+The optimization procedure may also be compiled, however in this case it is not
+possible to use :meth:`qibo.base.circuit.BaseCircuit.set_parameters` as the
+circuit needs to be defined inside the compiled ``tf.GradientTape()``.
+For example:
 
 .. code-block:: python
 
-    nepochs = 100
-    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    import qibo
+    qibo.set_backend("matmuleinsum")
+    import tensorflow as tf
+    from qibo import gates, models
+
+    nepochs = 1000
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+
 
     @tf.function
     def optimize(params):
         with tf.GradientTape() as tape:
-            c = Circuit(2)
-            c.add(RX(0, params[0]))
-            c.add(RY(0, params[1]))
-            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            c = models.Circuit(2)
+            c.add(gates.RX(0, theta=params[0]))
+            c.add(gates.RY(1, theta=params[1]))
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
-
         grads = tape.gradient(loss, params)
-        optimizer.apply_gradients(zip(grads, params))
+        optimizer.apply_gradients(zip([grads], [params]))
+
 
     for _ in range(nepochs):
         optimize(params)
+
 
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
@@ -959,6 +971,7 @@ pre-coded Hamiltonians this can be done simply as:
 
     from qibo import hamiltonians, models
 
+    nqubits = 4
     # Define ``TrotterHamiltonian``s
     h0 = hamiltonians.X(nqubits, trotter=True)
     h1 = hamiltonians.TFIM(nqubits, h=0, trotter=True)
