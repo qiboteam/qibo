@@ -739,19 +739,23 @@ unitary evolution using the full state vector. For example:
 
 
 When studying dynamics people are usually interested not only in the final state
-vector but also observing how physical quantities change during the time
+vector but also in observing how physical quantities change during the time
 evolution. This is possible using callbacks. For example, in the above case we
 can track how <X> changes as follows:
 
 .. code-block::  python
 
-    from qibo import callbacks
+    import numpy as np
+    from qibo import hamiltonians, models, callbacks
+
+    nqubits = 4
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
     observable = callbacks.Energy(hamiltonians.X(nqubits))
     # Create evolution object using the above callback and a time step of dt=1e-3
     evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
                                    callbacks=[observable])
     # Evolve for total time t=1
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
     print(observable[:])
@@ -778,6 +782,7 @@ a :class:`qibo.base.hamiltonians.Hamiltonian` in the
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
     evolve = models.StateEvolution(ham, dt=1e-3)
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
 
@@ -786,6 +791,7 @@ exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. The solvers that are
 currently implemented are the default exponential solver (``"exp"``) and two
 Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
+For more information we refer to the :ref:`Solvers <Solvers>` section.
 
 
 Using Trotter decomposition
