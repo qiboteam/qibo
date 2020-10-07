@@ -900,8 +900,8 @@ Here is an example of adiabatic evolution simulation:
     # Define the interpolation scheduling
     s = lambda t: t
     # Define evolution model
-    evolve = models.AdiabaticEvolution(h0, h1, s, solver="rk4")
-    # Evolve using the Runge-Kutta solver to get the final state
+    evolve = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # Get the final state of the evolution
     final_state = evolve(final_time=T)
 
 
@@ -922,13 +922,19 @@ similar to other callbacks:
 
 .. code-block::  python
 
-    # define a callback for calculating the ground state energy
+    import numpy as np
+    from qibo import hamiltonians, models, callbacks
+
+    nqubits = 4
+    h0 = hamiltonians.X(nqubits)
+    h1 = hamiltonians.TFIM(nqubits, h=0)
+
     ground = callbacks.Gap(mode=0)
     # define a callback for calculating the gap
     gap = callbacks.Gap()
     # define and execute the ``AdiabaticEvolution`` model
-    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
-                                   callbacks=[gap, ground])
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
+                                          callbacks=[gap, ground])
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
     print(gap[:])
@@ -941,31 +947,40 @@ optional argument is a vector of free parameters that can be optimized. The
 function should, by definition, satisfy the properties s(0, p) = 0 and
 s(1, p) = 1 for any p, otherwise errors will be raised.
 
-The state evolution functionality described in the previous example can also be
+All state evolution functionality described in the previous example can also be
 used for simulating adiabatic evolution. The solver can be specified during the
 initialization of the :class:`qibo.models.AdiabaticEvolution` model and a
 Trotter decomposition may be used with the exponential solver. The Trotter
 decomposition will be used automatically if ``h0`` and ``h1`` are defined
-using the :class:`qibo.base.hamiltonians.TrotterHamiltonian` object. For
-pre-coded Hamiltonians this can be done simply as
+using as :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects. For
+pre-coded Hamiltonians this can be done simply as:
 
 .. code-block::  python
 
+    from qibo import hamiltonians, models
+
+    # Define ``TrotterHamiltonian``s
     h0 = hamiltonians.X(nqubits, trotter=True)
     h1 = hamiltonians.TFIM(nqubits, h=0, trotter=True)
+    # Perform adiabatic evolution using the Trotter decomposition
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
+    final_state = evolution(final_time=1.0)
 
+
+When Trotter evolution is used, it is also possible to execute on multiple
+devices by passing an ``accelerators`` dictionary in the creation of the
+:class:`qibo.evolution.AdiabaticEvolution` model.
 
 Note that ``h0`` and ``h1`` should have the same type, either both
 :class:`qibo.base.hamiltonians.Hamiltonian` or both
-:class:`qibo.base.hamiltonians.TrotterHamiltonian`. When Trotter evolution is
-used, it is also possible to execute on multiple devices by passing an
-``accelerators`` dictionary in the creation of the
-:class:`qibo.evolution.AdiabaticEvolution` model. In addition, when
-:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used, then ``h0`` and
-``h1`` should have the same part structure, otherwise it will not be possible
-to add them in order to create the total Hamiltonian.
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+When :class:`qibo.base.hamiltonians.TrotterHamiltonian` is used, then ``h0`` and
+``h1`` should also have the same part structure, otherwise it will not be
+possible to add them in order to create the total Hamiltonian. For more
+information on this we refer to
+:meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible`.
 If the given Hamiltonians do not have the same part structure and ``h0``
-consists only of one-body terms then Qibo will use an automatic algorithm
+consists of one-body terms only then Qibo will use an automatic algorithm
 (:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`)
 to rearrange the terms of ``h0`` so that it matches the part structure of ``h1``.
 It is important to note that in some applications making ``h0`` and ``h1``
@@ -985,6 +1000,9 @@ done as follows:
 
 .. code-block::  python
 
+    import numpy as np
+    from qibo import hamiltonians, models
+
     # Define Hamiltonians
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
@@ -1000,8 +1018,9 @@ done as follows:
 
 Note that the ``minimize`` method optimizes both the free parameters ``p`` of
 the scheduling function as well as the total evolution time. The initial guess
-for the total evolution time should be the last value of the given
-``initial_guess`` array.
+for the total evolution time is the last value of the given ``initial_guess``
+array. For a list of the available optimizers we refer to
+:ref:`Optimizers <Optimizers>`.
 
 
 .. _symbolicham-example:
@@ -1014,7 +1033,8 @@ define Hamiltonians based on :class:`qibo.base.hamiltonians.Hamiltonian`, or
 :class:`qibo.base.hamiltonians.TrotterHamiltonian` when the Trotter
 decomposition is to be used. Qibo provides pre-coded Hamiltonians for some
 common physics models, such as the transverse field Ising model (TFIM) and the
-Heisenberg model (see :ref:`Hamiltonians <Hamiltonians>` for a complete list).
+Heisenberg model (see :ref:`Hamiltonians <Hamiltonians>` for a complete list
+of the pre-coded models).
 In order to explore other problems the user needs to define the Hamiltonian
 objects from scratch.
 
@@ -1046,13 +1066,15 @@ Although it is possible to generalize the above construction to arbitrary number
 of qubits this procedure may be more complex for other Hamiltonians. Moreover
 constructing the full matrix does not scale well with increasing the number of
 qubits. This makes the use of :class:`qibo.base.hamiltonians.TrotterHamiltonian`
-preferrable as the qubit number increases, however these Hamiltonians are harder
-to construct.
+preferrable as the qubit number increases, as these Hamiltonians are not based
+in the full matrix representation. On the other hand a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is more complicated to
+construct for an arbitrary Hamiltonian.
 
-To simplify the construction of arbitrary Hamiltonians, Qibo provides the
+To simplify the construction of Hamiltonians, Qibo provides the
 :meth:`qibo.base.hamiltonians.Hamiltonian.from_symbolic` and
 :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods which
-allow the user to construct Hamiltonian objects just by writing their symbolic
+allow the user to construct Hamiltonian objects by writing their symbolic
 form using ``sympy`` symbols. For example, the TFIM on four qubits could be
 constructed as:
 
@@ -1088,18 +1110,19 @@ constructed as:
 
 
 Defining Hamiltonians from symbols is usually a simple process as the symbolic
-form is very close to the form of the Hamiltonian on "paper".
+form is very close to the form of the Hamiltonian on paper. Note that in the
+case of :class:`qibo.base.hamiltonians.TrotterHamiltonian`, Qibo handles
+automatically the Trotter decomposition by splitting to the appropriate terms.
 
 As noted in the :ref:`How to simulate adiabatic time evolution? <adevol-example>`,
-when using Trotterized Hamiltonians to simulate adiabatic evolution, then ``h0``
-and ``h1`` should have the same part structure (be compatible) in order to add
-them. This is usually not true when constructing Hamiltonians using symbols.
-If the constructed Hamiltonians are not compatible but ``h0`` consists of
-one-body terms only (which is the case in most adiabatic evolution applications)
-then Qibo will use an automatic algorithm
+when using Trotter decomposition to simulate adiabatic evolution, then ``h0``
+and ``h1`` should be compatible in order to add them.
+This is usually not true when constructing Hamiltonians using symbols.
+However, if the constructed Hamiltonians are not compatible but ``h0`` consists
+of one-body terms only (which is the case in most adiabatic evolution
+applications) then Qibo will use an automatic algorithm
 (:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`) to make it
-compatible to ``h1``. Depending on the application, using this algorithm may
-take less advantage of caching compared to making the Hamiltonians  compatible
-manually and thus lead to slightly worse execution performance.
-Making the Hamiltonians compatible manually is usually a harder process than
-constructing them using their symbolic form.
+compatible to ``h1``. We note that in some applications, making the Hamiltonians
+compatible  manually instead of relying on the automatic functionality,
+may take better advantage of caching compared and lead to better execution
+performance.
