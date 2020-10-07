@@ -17,11 +17,11 @@ Some of the key features of Qibo are:
 
 Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
 
-- [Installation](https://qibo.readthedocs.io/en/latest/installation.html)
+- [Installation](https://qibo.readthedocs.io/en/stable/installation.html)
 - [Documentation](https://qibo.readthedocs.io/)
-- [Components](https://qibo.readthedocs.io/en/latest/qibo.html)
-- [Examples](https://qibo.readthedocs.io/en/latest/examples.html)
-- [Benchmarks](https://qibo.readthedocs.io/en/latest/benchmarks.html)
+- [Components](https://qibo.readthedocs.io/en/stable/qibo.html)
+- [Examples](https://qibo.readthedocs.io/en/stable/examples.html)
+- [Benchmarks](https://qibo.readthedocs.io/en/stable/benchmarks.html)
 
 ## Minimum Working Examples
 

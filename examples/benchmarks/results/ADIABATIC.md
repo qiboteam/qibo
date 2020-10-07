@@ -3,7 +3,7 @@
 We use Qibo to simulate adiabatic evolution under the transverse field Ising
 Hamiltonians using linear scaling `s(t) = t`. We simulate for a total time
 of T=1 using double precision (`complex128`) and different
-[solvers](https://qibo.readthedocs.io/en/latest/qibo.html#solvers)
+[solvers](https://qibo.readthedocs.io/en/stable/qibo.html#solvers)
 on CPU and GPU. In the first section we provide the scaling of execution time
 as a function of the number of qubits in the system and in the second section
 as a function of the time step `dt` used to discretize and integrate in time.
@@ -35,11 +35,11 @@ as a function of the time step `dt` used to discretize and integrate in time.
 25 | 9.48782 | 63.56629 | 98.07511 |         |         |         |         | 5402.67001 | 5607.38338
 26 | 18.90535 | 115.46439 | 202.28142 |         |         |         |         | 11297.93766 | 11523.4246
 27 | 38.76025 | 219.39538 | 419.13751 |         |         |         |         | 22595.86618 | 23790.17723
-28 | 79.88714 | 429.85937 | 869.88294 |         |         |         |         |         |        
-29 | 164.25789 | 856.78085 | 1800.57866 |         |         |         |         |         |        
-30 | 2783.62451 (2x) | 1690.57241 | 3702.52683 |         |         |         |         |         |        
-31 | 8146.88747 (4x) | 3390.6916 | 7608.61619 |         |         |         |         |         |        
-32 | 16593.04995 (8x) | 6052.76292 | 15745.90306 |         |         |         |         |         |       
+28 | 79.88714 | 429.85937 | 869.88294 |         |         |         |         |         |
+29 | 164.25789 | 856.78085 | 1800.57866 |         |         |         |         |         |
+30 | 2783.62451 (2x) | 1690.57241 | 3702.52683 |         |         |         |         |         |
+31 | 8146.88747 (4x) | 3390.6916 | 7608.61619 |         |         |         |         |         |
+32 | 16593.04995 (8x) | 6052.76292 | 15745.90306 |         |         |         |         |         |
 
 ![adiabatic-nqubits](../images/adiabatic_evolution.png)
 
