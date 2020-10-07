@@ -474,14 +474,20 @@ executing or optimizing by passing the ``initial_state`` argument.
 The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>` section.
-As explained there, solvers will fall back to traditional Qibo circuits when a
-:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
-:class:`qibo.base.hamiltonians.Hamiltonian`. In this case it is also possible
-to execute the QAOA circuit on multiple devices, by passing an ``accelerators``
-dictionary when defining the model. For example the previous example would
-have to be modified as:
+When a :class:`qibo.base.hamiltonians.Hamiltonian` is used then solvers will
+exponentiate it using its full matrix. Alternatively, if a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used then solvers
+will fall back to traditional Qibo circuits that perform Trotter steps. For
+more information on how the Trotter decomposition is implemented in Qibo we
+refer to the :ref:`Using Trotter decomposition <trotterdecomp-example>` example.
+
+When Trotter decomposition is used, it is possible to execute the QAOA circuit
+on multiple devices, by passing an ``accelerators`` dictionary when defining
+the model. For example the previous example would have to be modified as:
 
 .. code-block:: python
+
+    from qibo import models, hamiltonians
 
     hamiltonian = hamiltonians.XXZ(6, trotter=True)
     qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
@@ -794,57 +800,59 @@ Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
 For more information we refer to the :ref:`Solvers <Solvers>` section.
 
 
+.. _trotterdecomp-example:
+
 Using Trotter decomposition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Trotter decomposition provides a way to represent the unitary evolution of
-quantum states as a sequence of two qubit unitaries. This allows to represent
+quantum states as a sequence of local unitaries. This allows to represent
 the physical process of time evolution as a quantum circuit. Qibo provides
-functionality to perform this transformation if the underlying Hamiltonian is
-defined as a sum of commuting parts that consist of terms that can be
-exponentiated efficiently. Such Hamiltonian can be implemented in Qibo using
-the :class:`qibo.base.hamiltonians.TrotterHamiltonian`, which is based in Sec.
-4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_. Bellow is an
-example of how to use this object in practice:
+functionality to perform this transformation automatically, if the underlying
+Hamiltonian object is defined as a sum of commuting parts that consist of terms
+that can be exponentiated efficiently.
+Such Hamiltonian can be implemented in Qibo using
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+The implementation of Trotter decmoposition is based in Sec.
+4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+Below is an example of how to use this object in practice:
 
 .. code-block::  python
 
-    import numpy as np
-    from qibo import hamiltonians, matrices
+    from qibo import hamiltonians
 
-    # Create a two-qubit term for the cirtical TFIM model
-    matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
-    term = hamiltonians.Hamiltonian(2, matrix)
-    # define the even and odd parts of the total Hamiltonian for 5 qubits
-    # periodic boundary conditions are assumed
-    even = {(0, 1): term, (2, 3): term, (4, 0): term}
-    odd = {(1, 2): term, (3, 4): term}
-    # create the ``TrotterHamiltonian`` using these terms
-    ham = hamiltonians.TrotterHamiltonian(even, odd)
-
-    # alternatively one can use the ``from_twoqubit_term`` convenience method
-    # which works for translationally invariant Hamiltonians
-    ham = hamiltonians.TrotterHamiltonian.from_twoqubit_term(nqubits=5, term=term)
-
-    # or one can use the pre-coded TFIM model enabling the ``trotter`` flag
+    # Define TFIM model as a ``TrotterHamiltonian``
     ham = hamiltonians.TFIM(nqubits=5, trotter=True)
-
-    # once the Hamiltonian is created we can get the Trotter circuit that
-    # implements a single time step ``dt``
+    # This object can be used to create the circuit that
+    # implements a single Trotter time step ``dt``
     circuit = ham.circuit(dt=1e-2)
+
 
 This is a standard :class:`qibo.tensorflow.circuit.TensorflowCircuit` that
 contains :class:`qibo.base.gates.Unitary` gates corresponding to the
 exponentials of the Trotter decomposition and can be executed on any state.
 
+Note that in the transverse field Ising model (TFIM) that was used in this
+example is among the pre-coded Hamiltonians in Qibo and could be created as
+a :class:`qibo.base.hamiltonians.TrotterHamiltonian` simply using the
+``trotter`` flag. Defining custom Hamiltonians can be more complicated, however
+Qibo simplifies this process by providing the option to define Hamiltonians
+symbolically through the use of ``sympy``. For more information on this we
+refer to the
+:ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+example.
+
 A :class:`qibo.base.hamiltonians.TrotterHamiltonian` can also be used to
 simulate time evolution. This can be done by passing the Hamiltonian to a
 :class:`qibo.evolution.StateEvolution` model and using the exponential solver.
-Qibo automatically finds that this Hamiltonian can be Trotterized and uses this
-to perform the evolution. For example:
+Qibo automatically finds that this Hamiltonian is a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` object
+and uses the Trotter decomposition to perform the evolution.
+For example:
 
 .. code-block::  python
 
+    import numpy as np
     from qibo import models, hamiltonians
 
     nqubits = 5
@@ -862,10 +870,11 @@ repeatedly to the given initial state T / dt = 1000 times to obtain the
 final state of the evolution.
 
 Since Trotter evolution is based on Qibo circuits, it also supports distributed
-execution on multiple devices. This can be enabled by passing an
+execution on multiple devices (GPUs). This can be enabled by passing an
 ``accelerators`` dictionary when defining the
-:class:`qibo.evolution.StateEvolution` model. Check the
-:ref:`How to select hardware devices? <gpu-examples>` example for more details.
+:class:`qibo.evolution.StateEvolution` model. We refer to the
+:ref:`How to select hardware devices? <gpu-examples>` example for more details
+on how the ``accelerators`` dictionary can be used.
 
 
 How to simulate adiabatic time evolution?
