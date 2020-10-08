@@ -161,6 +161,10 @@ class I(TensorflowGate, base_gates.I):
         return state
 
 
+class Collapse(TensorflowGate, base_gates.Collapse):
+    pass
+
+
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 

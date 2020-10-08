@@ -481,6 +481,34 @@ class I(Gate):
         self.init_args = q
 
 
+class Collapse(Gate):
+
+    def __init__(self, q, result=0):
+        super(Collapse, self).__init__()
+        self.name = "collapse"
+        self.target_qubits = (q,)
+        self._result = None
+
+        self.init_args = [q]
+        self.init_kwargs = {"result": result}
+        self.result = result
+
+    @property
+    def result(self):
+        return self._result
+
+    @result.setter
+    def result(self, r):
+        if r not in {0, 1}:
+            raise_error(ValueError)
+        self._result = r
+        self.init_kwargs = {"result": r}
+
+    def controlled_by(self, *q): # pragma: no cover
+        """"""
+        raise_error(NotImplementedError, "Collapse gates cannot be controlled.")
+
+
 class M(Gate):
     """The Measure Z gate.
 
