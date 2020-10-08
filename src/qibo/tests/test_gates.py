@@ -1282,8 +1282,9 @@ def test_variational_layer_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("target", [0, 2])
 @pytest.mark.parametrize("result", [0, 1])
-def test_collapse_gate(backend, result):
+def test_collapse_gate(backend, target, result):
     if backend == "custom":
         pytest.skip("Collapse not implemented for custom backend")
 
@@ -1291,14 +1292,17 @@ def test_collapse_gate(backend, result):
     qibo.set_backend(backend)
 
     c = Circuit(4)
-    c.add(gates.Collapse(0, result))
+    c.add(gates.Collapse(target, result=result))
     initial_state = utils.random_numpy_state(4)
     final_state = c(np.copy(initial_state)).numpy()
 
     target_state = np.copy(initial_state).reshape(4 * (2,))
-    measured_state = np.copy(target_state[result])
+    slicer = 4 * [slice(None)]
+    slicer[target] = result
+    measured_state = np.copy(target_state[tuple(slicer)])
     norm = (np.abs(measured_state) ** 2).sum()
-    target_state[1 - result] = np.zeros(3 * (2,))
+    slicer[target] = 1 - result
+    target_state[tuple(slicer)] = np.zeros(3 * (2,))
     target_state = target_state.ravel() / np.sqrt(norm)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)

@@ -178,12 +178,16 @@ class Z(TensorflowGate, base_gates.Z):
 
 class Collapse(TensorflowGate, base_gates.Collapse):
 
-    def __init__(self, q: int, result: int = 0):
-        base_gates.Collapse.__init__(self, q, result)
+    def __init__(self, *q: int, result: List[int] = None):
+        base_gates.Collapse.__init__(self, *q, result=result)
         TensorflowGate.__init__(self)
+        self.order = None
+        self.ids = None
 
     def _prepare(self):
-        pass
+        self.order = list(self.sorted_qubits)
+        self.order.extend((q for q in range(self.nqubits)
+                           if q not in self.sorted_qubits))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         if is_density_matrix:
@@ -194,19 +198,16 @@ class Collapse(TensorflowGate, base_gates.Collapse):
             #else:
             self.nqubits = len(tuple(state.shape))
 
-        q = self.target_qubits[0]
-        order = [q]
-        order.extend(range(q))
-        order.extend(range(q + 1, self.nqubits))
-
-        substate = tf.expand_dims(tf.transpose(state, order)[self.result],
-                                  axis=q)
+        substate = tf.gather_nd(tf.transpose(state, self.order), self.result)
         norm = tf.reduce_sum(tf.square(tf.abs(substate)))
-        if self.result:
-            state = tf.concat([tf.zeros_like(substate), substate], axis=q)
-        else:
-            state = tf.concat([substate, tf.zeros_like(substate)], axis=q)
-        return state / tf.cast(tf.sqrt(norm), dtype=state.dtype)
+        state = substate / tf.cast(tf.sqrt(norm), dtype=state.dtype)
+        for q, r in zip(self.sorted_qubits, self.result):
+            state = tf.expand_dims(state, axis=q)
+            if r:
+                state = tf.concat([tf.zeros_like(state), state], axis=q)
+            else:
+                state = tf.concat([state, tf.zeros_like(state)], axis=q)
+        return state
 
 
 class RX(TensorflowGate, base_gates.RX):

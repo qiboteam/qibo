@@ -483,14 +483,19 @@ class I(Gate):
 
 class Collapse(Gate):
 
-    def __init__(self, q, result=0):
+    def __init__(self, *q, result=None):
         super(Collapse, self).__init__()
+        if result is None:
+            result = len(q) * [0]
+        elif isinstance(result, int):
+            result = len(q) * [result]
         self.name = "collapse"
-        self.target_qubits = (q,)
+        self.target_qubits = tuple(q)
         self._result = None
 
-        self.init_args = [q]
+        self.init_args = q
         self.init_kwargs = {"result": result}
+        self.sorted_qubits = sorted(q)
         self.result = result
 
     @property
@@ -498,11 +503,20 @@ class Collapse(Gate):
         return self._result
 
     @result.setter
-    def result(self, r):
-        if r not in {0, 1}:
-            raise_error(ValueError)
-        self._result = r
-        self.init_kwargs = {"result": r}
+    def result(self, res):
+        if len(self.target_qubits) != len(res):
+            raise_error(ValueError, "Collapse gate was created on {} qubits "
+                                    "but {} result values were given."
+                                    "".format(len(self.target_qubits), len(res)))
+        resdict = {}
+        for q, r in zip(self.target_qubits, res):
+            if r not in {0, 1}:
+                raise_error(ValueError, "Result values should be 0 or 1 but "
+                                        "{} was given.".format(r))
+            resdict[q] = r
+
+        self._result = [resdict[q] for q in self.sorted_qubits]
+        self.init_kwargs = {"result": res}
 
     def controlled_by(self, *q): # pragma: no cover
         """"""
