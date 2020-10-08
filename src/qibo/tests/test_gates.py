@@ -1285,9 +1285,6 @@ def test_variational_layer_dagger(backend, nqubits):
 @pytest.mark.parametrize("target", [0, 2])
 @pytest.mark.parametrize("result", [0, 1])
 def test_collapse_gate(backend, target, result):
-    if backend == "custom":
-        pytest.skip("Collapse not implemented for custom backend")
-
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
