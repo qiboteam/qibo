@@ -608,13 +608,13 @@ def test_from_symbolic_application_hamiltonian():
     np.testing.assert_allclose(tham.dense.matrix, fham.matrix)
     # Check that no one-qubit terms exist in the Trotter Hamiltonian
     # (this means that merging was successful)
-    pairs = set()
+    first_targets = set()
     for part in tham.parts:
         for targets, term in part.items():
-            pairs.add(targets)
+            first_targets.add(targets[0])
             assert len(targets) == 2
             assert term.nqubits == 2
-    assert pairs == {(1, 0), (0, 2), (2, 1), (3, 2)}
+    assert first_targets == set(range(4))
     # Check making an ``X`` Hamiltonian compatible with ``tham``
     xham = X(nqubits=4, trotter=True)
     cxham = tham.make_compatible(xham)
