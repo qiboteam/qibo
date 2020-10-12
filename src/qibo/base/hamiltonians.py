@@ -732,10 +732,6 @@ class TrotterHamiltonian(Hamiltonian):
                             "a {} qubit term.".format(len(targets)))
             normalizer[targets[0]] = 0
 
-        #if set(normalizer.keys()) != set(o.targets_map.keys()):
-        #    raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
-        #                            "be made compatible.")
-
         term_matrices = {}
         for targets in self.targets_map.keys():
             mats = []
@@ -746,6 +742,11 @@ class TrotterHamiltonian(Hamiltonian):
                 else:
                     mats.append(None)
             term_matrices[targets] = tuple(mats)
+
+        for v in normalizer.values():
+            if v == 0:
+                raise_error(ValueError, "Given non-interacting Hamiltonian "
+                                        "cannot be made compatible.")
 
         new_terms = {}
         for targets, matrices in term_matrices.items():
