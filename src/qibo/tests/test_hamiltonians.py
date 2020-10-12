@@ -601,7 +601,7 @@ def test_from_symbolic_application_hamiltonian():
     z1, z2, z3, z4 = sympy.symbols("z1 z2 z3 z4")
     symmap = {z: (i, matrices.Z) for i, z in enumerate([z1, z2, z3, z4])}
     symham = (z1 * z2 - 0.5 * z1 * z3 + 2 * z2 * z3 + 0.35 * z2
-              + 0.25 * z3 * z4 + 0.5 * z3 + z4)
+              + 0.25 * z3 * z4 + 0.5 * z3 + z4 - z1)
     # Check that Trotter dense matrix agrees will full Hamiltonian matrix
     fham = Hamiltonian.from_symbolic(symham, symmap)
     tham = TrotterHamiltonian.from_symbolic(symham, symmap)
