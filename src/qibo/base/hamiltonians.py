@@ -356,8 +356,28 @@ class _SymbolicHamiltonian:
         return matrix + self.constant * eye
 
     def _reduce_pairs(self, pair_sets, pair_map, free_targets):
-        """Helper method for `_merge_one_qubit`."""
+        """Helper method for ``_merge_one_qubit``.
+
+        Finds the one and two qubit term merge map using an recursive procedure.
+
+        Args:
+            pair_sets (dict): Dictionary that maps each qubit id to a set of
+                pairs that contain this qubit.
+            pair_map (dict): Map from qubit id to the pair that this qubit will
+                be merged with.
+            free_targets (set): Set of qubit ids that are still not mapped to
+                a pair in the ``pair_map``.
+
+        Returns:
+            pair_map (dict): The final map from qubit ids to pairs once the
+                recursion finishes. If the returned map is ``None`` then the
+                procedure failed and the merging is aborted.
+        """
         def assign_target(target):
+            """Assigns a pair to a qubit.
+
+            This moves ``target`` from ``free_targets`` to ``pair_map``.
+            """
             pair = pair_sets[target].pop()
             pair_map[target] = pair
             pair_sets.pop(target)
@@ -365,24 +385,28 @@ class _SymbolicHamiltonian:
             if target2 in pair_sets:
                 pair_sets[target2].remove(pair)
 
+        # Assign pairs to qubits that have a single available pair
         flag = True
         for target in set(free_targets):
+            if target not in pair_sets:
+                return None
             if len(pair_sets[target]) == 1:
                 if not pair_sets[target]:
                     return None
                 assign_target(target)
                 free_targets.remove(target)
                 flag = False
-
+        # If all qubits were mapped to pairs return the result
         if not free_targets:
             return pair_map
-
+        # If no qubits with a single available pair were found above, then
+        # assign a pair randomly (not sure about this step!)
         if flag:
             target = free_targets.pop()
             if not pair_sets[target]:
                 return None
             assign_target(target)
-
+        # Recurse
         return self._reduce_pairs(pair_sets, pair_map, free_targets)
 
     def _merge_one_qubit(self, terms):
@@ -414,16 +438,11 @@ class _SymbolicHamiltonian:
                         pair_sets[t] = {targets}
 
         free_targets = set(one_qubit.keys())
-        abort_message = "Aborting merge of one and two-qubit terms during " \
-                        "TrotterHamiltonian creation because the two-qubit " \
-                        "terms are not sufficiently many."
-        if free_targets - set(pair_sets.keys()):
-            log.info(abort_message)
-            return terms
-
         pair_map = self._reduce_pairs(pair_sets, dict(), free_targets)
         if pair_map is None:
-            log.info(abort_message)
+            log.info("Aborting merge of one and two-qubit terms during "
+                     "TrotterHamiltonian creation because the two-qubit "
+                     "terms are not sufficiently many.")
             return terms
 
         merged = dict()
