@@ -355,6 +355,36 @@ class _SymbolicHamiltonian:
         eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
 
+    def _reduce_pairs(self, pair_sets, pair_map, free_targets):
+        """Helper method for `_merge_one_qubit`."""
+        def assign_target(target):
+            pair = pair_sets[target].pop()
+            pair_map[target] = pair
+            pair_sets.pop(target)
+            target2 = pair[1] if pair[0] == target else pair[0]
+            if target2 in pair_sets:
+                pair_sets[target2].remove(pair)
+
+        flag = True
+        for target in set(free_targets):
+            if len(pair_sets[target]) == 1:
+                if not pair_sets[target]:
+                    return None
+                assign_target(target)
+                free_targets.remove(target)
+                flag = False
+
+        if not free_targets:
+            return pair_map
+
+        if flag:
+            target = free_targets.pop()
+            if not pair_sets[target]:
+                return None
+            assign_target(target)
+
+        return self._reduce_pairs(pair_sets, pair_map, free_targets)
+
     def _merge_one_qubit(self, terms):
         """Merges one-qubit matrices to the two-qubit terms for efficiency.
 
@@ -370,45 +400,44 @@ class _SymbolicHamiltonian:
             The given ``terms`` dictionary updated so that one-qubit terms
             are merged to two-qubit ones.
         """
-        # Split terms to one and two-qubit
-        # Keep track of the first target in two-qubit terms
-        one_qubit, two_qubit, first_targets = dict(), set(), dict()
+        one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
         for targets, matrix in terms.items():
             assert len(targets) in {1, 2}
             if len(targets) == 1:
                 one_qubit[targets[0]] = matrix
             else:
-                two_qubit.add(targets)
+                two_qubit[targets] = matrix
                 for t in targets:
-                    if t in first_targets:
-                        first_targets[t].add(targets)
+                    if t in pair_sets:
+                        pair_sets[t].add(targets)
                     else:
-                        first_targets[t] = {targets}
+                        pair_sets[t] = {targets}
 
-        nterms = collections.Counter({k: len(v) for k, v in first_targets.items()})
+        free_targets = set(one_qubit.keys())
+        abort_message = "Aborting merge of one and two-qubit terms during " \
+                        "TrotterHamiltonian creation because the two-qubit " \
+                        "terms are not sufficiently many."
+        if free_targets - set(pair_sets.keys()):
+            log.info(abort_message)
+            return terms
+
+        pair_map = self._reduce_pairs(pair_sets, dict(), free_targets)
+        if pair_map is None:
+            log.info(abort_message)
+            return terms
+
         merged = dict()
-        for t, _ in nterms.most_common()[::-1]:
-            flag = True
-            for pair in first_targets[t]:
-                if pair in two_qubit:
-                    flag = False
-                    break
-            if flag:
-                log.info("Aborting merge of one and two-qubit terms during "
-                         "TrotterHamiltonian creation because the two-qubit "
-                         "terms are not sufficiently many.")
-                return terms
-
-            two_qubit.remove(pair)
-            if t != pair[0]:
-                c, m1, m2 = self.terms[pair]
-                matrix = c * np.kron(m2, m1)
-            else:
+        for target, pair in pair_map.items():
+            two_qubit.pop(pair)
+            if target == pair[0]:
                 matrix = terms[pair]
+            else:
+                c, m1, m2 = self.terms[pair]
+                pair = (pair[1], pair[0])
+                matrix = c * np.kron(m2, m1)
             eye = np.eye(2, dtype=matrix.dtype)
-            merged[pair] = np.kron(one_qubit[t], eye) + matrix
-
-        merged.update({pair: terms[pair] for pair in two_qubit})
+            merged[pair] = np.kron(one_qubit[target], eye) + matrix
+        merged.update(two_qubit)
         return merged
 
     def trotter_terms(self):
