@@ -195,6 +195,7 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
 
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(4, None), (5, None), (8, None),
@@ -218,6 +219,7 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
 
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
 @pytest.mark.parametrize("ntargets", [1, 2])
@@ -234,6 +236,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
         cirq_gate = [(cirq.MatrixGate(matrix).controlled(len(activeq) - ntargets), activeq)]
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
+
 
 @pytest.mark.parametrize(("backend", "accelerators"),
                          [("custom", None), ("custom", {"/GPU:0": 4}),
