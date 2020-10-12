@@ -3,6 +3,7 @@ import pytest
 from qibo.hamiltonians import Hamiltonian, TrotterHamiltonian
 from qibo.hamiltonians import XXZ, TFIM, X, Y, Z
 from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
+from qibo import matrices
 from qibo.tests import utils
 
 
@@ -456,6 +457,25 @@ def test_trotter_hamiltonian_make_compatible_repeating(nqubits):
     np.testing.assert_allclose(h0c.matrix, h0target.matrix)
 
 
+def test_trotter_hamiltonian_make_compatible_onequbit_terms():
+    """Check ``make_compatible`` when the two-qubit Hamiltonian has one-qubit terms."""
+    term1 = Hamiltonian(1, matrices.Z, numpy=True)
+    term2 = Hamiltonian(2, np.kron(matrices.Z, matrices.Z), numpy=True)
+    terms = {(0, 1): term2,
+             (0, 2): -0.5 * term2,
+             (1, 2): 2 * term2,
+             (1,): 0.35 * term1,
+             (2, 3): 0.25 * term2,
+             (2,): 0.5 * term1,
+             (3,): term1}
+    tham = TrotterHamiltonian.from_dictionary(terms) + 1.5
+    xham = X(nqubits=4, trotter=True)
+    cxham = tham.make_compatible(xham)
+    assert not tham.is_compatible(xham)
+    assert tham.is_compatible(cxham)
+    np.testing.assert_allclose(xham.dense.matrix, cxham.dense.matrix)
+
+
 def test_trotter_hamiltonian_initialization_errors():
     """Test errors in initialization of ``TrotterHamiltonian``."""
     # Wrong type of terms
@@ -518,7 +538,6 @@ def test_trotter_hamiltonian_operation_errors():
 def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
     """Check creating TFIM Hamiltonian using sympy."""
     import sympy
-    from qibo import matrices
     h = 0.5
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
@@ -542,7 +561,6 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
 def test_symbolic_hamiltonian_reduce_pairs():
     """Test ``reduce_pairs`` ``None`` returns."""
     import sympy
-    from qibo import matrices
     from qibo.hamiltonians import _SymbolicHamiltonian
     z0, z1 = sympy.symbols("z0 z1")
     symham = z0 * z1
@@ -577,12 +595,39 @@ def test_from_symbolic_with_power(trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
+def test_from_symbolic_application_hamiltonian():
+    """Check ``from_symbolic`` for a specific four-qubit Hamiltonian."""
+    import sympy
+    z1, z2, z3, z4 = sympy.symbols("z1 z2 z3 z4")
+    symmap = {z: (i, matrices.Z) for i, z in enumerate([z1, z2, z3, z4])}
+    symham = (z1 * z2 - 0.5 * z1 * z3 + 2 * z2 * z3 + 0.35 * z2
+              + 0.25 * z3 * z4 + 0.5 * z3 + z4)
+    # Check that Trotter dense matrix agrees will full Hamiltonian matrix
+    fham = Hamiltonian.from_symbolic(symham, symmap)
+    tham = TrotterHamiltonian.from_symbolic(symham, symmap)
+    np.testing.assert_allclose(tham.dense.matrix, fham.matrix)
+    # Check that no one-qubit terms exist in the Trotter Hamiltonian
+    # (this means that merging was successful)
+    pairs = set()
+    for part in tham.parts:
+        for targets, term in part.items():
+            pairs.add(targets)
+            assert len(targets) == 2
+            assert term.nqubits == 2
+    assert pairs == {(1, 0), (0, 2), (2, 1), (3, 2)}
+    # Check making an ``X`` Hamiltonian compatible with ``tham``
+    xham = X(nqubits=4, trotter=True)
+    cxham = tham.make_compatible(xham)
+    assert not tham.is_compatible(xham)
+    assert tham.is_compatible(cxham)
+    np.testing.assert_allclose(xham.dense.matrix, cxham.dense.matrix)
+
+
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("trotter", [False, True])
 def test_x_hamiltonian_from_symbols(nqubits, trotter):
     """Check creating sum(X) Hamiltonian using sympy."""
     import sympy
-    from qibo import matrices
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
     symham =  -sum(x_symbols)
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
@@ -601,7 +646,6 @@ def test_x_hamiltonian_from_symbols(nqubits, trotter):
 def test_three_qubit_term_hamiltonian_from_symbols(trotter):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
     import sympy
-    from qibo import matrices
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
     y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(4))))
@@ -643,7 +687,6 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
 def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     """Check that ``_merge_one_qubit`` works both when two-qubit are sufficient and no."""
     import sympy
-    from qibo import matrices
     from qibo.hamiltonians import _SymbolicHamiltonian
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
@@ -679,7 +722,6 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
 def test_symbolic_hamiltonian_errors():
     """Check errors raised by `_SymbolicHamiltonian`."""
     import sympy
-    from qibo import matrices
     from qibo.hamiltonians import _SymbolicHamiltonian
     a, b = sympy.symbols("a b")
     ham = a * b
