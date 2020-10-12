@@ -387,6 +387,21 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     qibo.set_backend(original_backend)
 
 
+def test_trotter_hamiltonian_make_compatible_simple():
+    """Test ``make_compatible`` on a simple 3-qubit example."""
+    h0target = X(3)
+    h0 = X(3, trotter=True)
+    term1 = Y(1, numpy=True)
+    term2 = TFIM(2, numpy=True)
+    parts = [{(0, 1): term2, (1, 2): term2, (0, 2): term2, (2,): term1}]
+    h1 = TrotterHamiltonian(*parts)
+
+    h0c = h1.make_compatible(h0)
+    assert not h1.is_compatible(h0)
+    assert h1.is_compatible(h0c)
+    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+
+
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_trotter_hamiltonian_make_compatible(nqubits):
     """Test that ``make_compatible`` method works for ``X`` Hamiltonian."""

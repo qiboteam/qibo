@@ -516,6 +516,7 @@ class TrotterHamiltonian(Hamiltonian):
 
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
+        self.term_class = None
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
@@ -545,6 +546,8 @@ class TrotterHamiltonian(Hamiltonian):
                     self.term_sets[term] = {targets}
                     self.expgate_sets[term] = set()
 
+                if self.term_class is None:
+                    self.term_class = term.__class__
                 if self.dtype is None:
                     self.dtype = term.matrix.dtype
                 elif term.matrix.dtype != self.dtype:
@@ -718,6 +721,8 @@ class TrotterHamiltonian(Hamiltonian):
                             "compatible but {} was given.".format(type(o)))
         if self.is_compatible(o):
             return o
+
+        normalizer = {}
         for targets in o.targets_map.keys():
             if len(targets) > 1:
                 raise_error(NotImplementedError,
@@ -725,38 +730,33 @@ class TrotterHamiltonian(Hamiltonian):
                             "transformed using the `make_compatible` "
                             "method but the given Hamiltonian contains "
                             "a {} qubit term.".format(len(targets)))
-        normalizer = {}
+            normalizer[targets[0]] = 0
+
+        #if set(normalizer.keys()) != set(o.targets_map.keys()):
+        #    raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
+        #                            "be made compatible.")
+
+        term_matrices = {}
         for targets in self.targets_map.keys():
-            idx = (targets[0],)
-            if idx in normalizer:
-                normalizer[idx] += 1
-            else:
-                normalizer[idx] = 1
-        if set(normalizer.keys()) != set(o.targets_map.keys()):
-            raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
-                                    "be made compatible.")
+            mats = []
+            for target in targets:
+                if target in normalizer:
+                    normalizer[target] += 1
+                    mats.append(o.targets_map[(target,)].matrix)
+                else:
+                    mats.append(None)
+            term_matrices[targets] = tuple(mats)
 
         new_terms = {}
-        for target_set in self.term_sets.values():
-            hams = []
-            for targets in target_set:
-                idx = (targets[0],)
-                assert idx in o.targets_map
-                n = len(targets)
-                h = o.targets_map[idx]
-                m = h.matrix
-                eye = np.eye(2 ** (n - 1), dtype=m.dtype)
-                m = np.kron(m, eye) / normalizer[idx]
-                flag = True
-                for ham in hams:
-                    if np.array_equal(m, ham.matrix):
-                        new_terms[targets] = ham
-                        flag = False
-                        break
-                if flag:
-                    newham = h.__class__(n, m, numpy=True)
-                    new_terms[targets] = newham
-                    hams.append(newham)
+        for targets, matrices in term_matrices.items():
+            n = len(targets)
+            s = np.zeros(2 * (2 ** n,), dtype=self.dtype)
+            for i, (t, m) in enumerate(zip(targets, matrices)):
+                matlist = n * [np.eye(2, dtype=self.dtype)]
+                if m is not None:
+                    matlist[i] = m / normalizer[t]
+                    s += _SymbolicHamiltonian._multikron(matlist)
+            new_terms[targets] = self.term_class(n, s, numpy=True)
 
         new_parts = [{t: new_terms[t] for t in part.keys()}
                      for part in self.parts]
