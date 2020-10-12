@@ -402,6 +402,20 @@ def test_trotter_hamiltonian_make_compatible_simple():
     np.testing.assert_allclose(h0c.matrix, h0target.matrix)
 
 
+def test_trotter_hamiltonian_make_compatible_redundant():
+    """Test ``make_compatible`` with redudant two-qubit terms."""
+    h0 = X(2, trotter=True)
+    target_matrix = h0.dense.matrix.numpy()
+    target_matrix = np.kron(target_matrix, np.eye(2, dtype=target_matrix.dtype))
+    parts = [{(0, 1, 2): TFIM(3, numpy=True)}]
+    h1 = TrotterHamiltonian(*parts)
+
+    h0c = h1.make_compatible(h0)
+    assert not h1.is_compatible(h0)
+    assert h1.is_compatible(h0c)
+    np.testing.assert_allclose(h0c.matrix, target_matrix)
+
+
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_trotter_hamiltonian_make_compatible(nqubits):
     """Test that ``make_compatible`` method works for ``X`` Hamiltonian."""
@@ -457,6 +471,10 @@ def test_trotter_hamiltonian_initialization_errors():
     h = TFIM(nqubits=2, numpy=True)
     with pytest.raises(ValueError):
         ham = TrotterHamiltonian({(0, 1): h}, {(0, 1): h})
+    # Different term Hamiltonian types
+    h2 = TFIM(nqubits=2, numpy=False)
+    with pytest.raises(TypeError):
+        ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
     # Different term matrix types
     h2 = Hamiltonian(2, np.eye(4, dtype=np.float32), numpy=True)
     with pytest.raises(TypeError):
@@ -519,6 +537,19 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
         full_ham = Hamiltonian.from_symbolic(-symham, symmap)
         final_matrix = full_ham.matrix
     np.testing.assert_allclose(final_matrix, target_matrix)
+
+
+def test_symbolic_hamiltonian_reduce_pairs():
+    """Test ``reduce_pairs`` ``None`` returns."""
+    import sympy
+    from qibo import matrices
+    from qibo.hamiltonians import _SymbolicHamiltonian
+    z0, z1 = sympy.symbols("z0 z1")
+    symham = z0 * z1
+    symmap = {z0: (0, matrices.Z), z1: (1, matrices.Z)}
+    ham = _SymbolicHamiltonian(symham, symmap)
+    pair_map = ham._reduce_pairs({0: {(0, 1)}, 1: {(0, 1)}}, {}, {0, 1})
+    assert pair_map is None
 
 
 @pytest.mark.parametrize("trotter", [False, True])

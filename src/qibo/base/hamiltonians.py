@@ -548,12 +548,16 @@ class TrotterHamiltonian(Hamiltonian):
 
                 if self.term_class is None:
                     self.term_class = term.__class__
+                elif term.__class__ != self.term_class:
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term, self.term_class))
                 if self.dtype is None:
                     self.dtype = term.matrix.dtype
                 elif term.matrix.dtype != self.dtype:
-                    raise_error(TypeError, "Terms of different types {} and {} "
-                                            "were given.".format(
-                                                term.matrix.dtype, self.dtype))
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term.matrix.dtype, self.dtype))
         self.parts = parts
         self.nqubits = len({t for targets in self.targets_map.keys()
                             for t in targets})
