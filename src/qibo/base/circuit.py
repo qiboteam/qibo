@@ -40,15 +40,19 @@ class _Queue(list):
         super(_Queue, self).__init__(self)
         self.nqubits = nqubits
         self.moments = [nqubits * [None]]
+        self.moment_index = nqubits * [0]
 
     def append(self, gate: gates.ParametrizedGate):
         super(_Queue, self).append(gate)
+        # Calculate moment index for this gate
+        if gate.qubits:
+            idx = max(self.moment_index[q] for q in gate.qubits)
         for q in gate.qubits:
-            if self.moments[-1][q] is not None:
+            if idx >= len(self.moments):
                 # Add a moment
                 self.moments.append(len(self.moments[-1]) * [None])
-        for q in gate.qubits:
-            self.moments[-1][q] = gate
+            self.moments[idx][q] = gate
+            self.moment_index[q] = idx + 1
 
 
 class BaseCircuit(object):
