@@ -251,7 +251,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
 
-    auto ZeroState = [&](int64 g, int64 h) {
+    auto GetIndex = [&](int64 g, int64 h) {
       int64 i = g;
       for (auto iq = 0; iq < ntargets; iq++) {
         const auto n = nqubits - qubits[iq] - 1;
@@ -259,20 +259,36 @@ struct CollapseStateFunctor<CPUDevice, T> {
         i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
         i += ((int)(h >> iq) % 2) * k;
       }
-      state[i] = 0;
+      return i;
     };
 
-    auto DoWork = [&](int64 t, int64 w) {
+    auto CalcNorm = [&] (const T x) {
+      return x.real() * x.real() + x.imag() * x.imag();
+    };
+
+    auto norm = state[0].real();
+    norm = 0;
+    auto ZeroState = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g++) {
         for (auto h = 0; h < result[0]; h++) {
-          ZeroState(g, h);
+          state[GetIndex(g, h)] = 0;
         }
+        norm += CalcNorm(state[GetIndex(g, result[0])]);
         for (auto h = result[0] + 1; h < nsubstates; h++) {
-          ZeroState(g, h);
+          state[GetIndex(g, h)] = 0;
         }
       }
     };
-    thread_pool->ParallelFor(nstates, p, DoWork);
+    thread_pool->ParallelFor(nstates, p, ZeroState);
+
+    norm = std::sqrt(norm);
+    auto NormalizeState = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g++) {
+        auto i = GetIndex(g, result[0]);
+        state[i] = T(state[i].real() / norm, state[i].imag() / norm);
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, NormalizeState);
   }
 };
 
