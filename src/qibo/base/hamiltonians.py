@@ -1,3 +1,4 @@
+import collections
 import itertools
 import numpy as np
 from qibo import gates
@@ -354,6 +355,56 @@ class _SymbolicHamiltonian:
         eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
 
+    def _reduce_pairs(self, pair_sets, pair_map, free_targets):
+        """Helper method for ``_merge_one_qubit``.
+
+        Finds the one and two qubit term merge map using an recursive procedure.
+
+        Args:
+            pair_sets (dict): Dictionary that maps each qubit id to a set of
+                pairs that contain this qubit.
+            pair_map (dict): Map from qubit id to the pair that this qubit will
+                be merged with.
+            free_targets (set): Set of qubit ids that are still not mapped to
+                a pair in the ``pair_map``.
+
+        Returns:
+            pair_map (dict): The final map from qubit ids to pairs once the
+                recursion finishes. If the returned map is ``None`` then the
+                procedure failed and the merging is aborted.
+        """
+        def assign_target(target):
+            """Assigns a pair to a qubit.
+
+            This moves ``target`` from ``free_targets`` to ``pair_map``.
+            """
+            pair = pair_sets[target].pop()
+            pair_map[target] = pair
+            pair_sets.pop(target)
+            target2 = pair[1] if pair[0] == target else pair[0]
+            if target2 in pair_sets:
+                pair_sets[target2].remove(pair)
+
+        # Assign pairs to qubits that have a single available pair
+        flag = True
+        for target in set(free_targets):
+            if target not in pair_sets or not pair_sets[target]:
+                return None
+            if len(pair_sets[target]) == 1:
+                assign_target(target)
+                free_targets.remove(target)
+                flag = False
+        # If all qubits were mapped to pairs return the result
+        if not free_targets:
+            return pair_map
+        # If no qubits with a single available pair were found above, then
+        # assign a pair randomly (not sure about this step!)
+        if flag:
+            target = free_targets.pop()
+            assign_target(target)
+        # Recurse
+        return self._reduce_pairs(pair_sets, pair_map, free_targets)
+
     def _merge_one_qubit(self, terms):
         """Merges one-qubit matrices to the two-qubit terms for efficiency.
 
@@ -369,34 +420,39 @@ class _SymbolicHamiltonian:
             The given ``terms`` dictionary updated so that one-qubit terms
             are merged to two-qubit ones.
         """
-        # Split terms to one and two-qubit
-        # Keep track of the first target in two-qubit terms
-        one_qubit, two_qubit, first_targets = dict(), dict(), dict()
+        one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
         for targets, matrix in terms.items():
             assert len(targets) in {1, 2}
             if len(targets) == 1:
-                one_qubit[targets] = matrix
+                one_qubit[targets[0]] = matrix
             else:
-                t1, t2 = targets
-                if t1 in first_targets and t2 not in first_targets:
-                    # swap target order
-                    # the matrix has to be recalculated as well!
-                    t1, t2 = t2, t1
-                    c, m1, m2 = self.terms[targets]
-                    matrix = c * np.kron(m2, m1)
-                two_qubit[(t1, t2)] = matrix
-                first_targets[t1] = (t1, t2)
+                two_qubit[targets] = matrix
+                for t in targets:
+                    if t in pair_sets:
+                        pair_sets[t].add(targets)
+                    else:
+                        pair_sets[t] = {targets}
 
-        merged = dict(two_qubit)
-        for (t,), m in one_qubit.items():
-            if t not in first_targets:
-                log.info("Aborting merge of one and two-qubit terms during "
-                         "TrotterHamiltonian creation because the two-qubit "
-                         "terms are not sufficiently many.")
-                return terms
-            pair = first_targets[t]
-            eye = np.eye(2, dtype=m.dtype)
-            merged[pair] = np.kron(m, eye) + two_qubit[pair]
+        free_targets = set(one_qubit.keys())
+        pair_map = self._reduce_pairs(pair_sets, dict(), free_targets)
+        if pair_map is None:
+            log.info("Aborting merge of one and two-qubit terms during "
+                     "TrotterHamiltonian creation because the two-qubit "
+                     "terms are not sufficiently many.")
+            return terms
+
+        merged = dict()
+        for target, pair in pair_map.items():
+            two_qubit.pop(pair)
+            if target == pair[0]:
+                matrix = terms[pair]
+            else:
+                c, m1, m2 = self.terms[pair]
+                pair = (pair[1], pair[0])
+                matrix = c * np.kron(m2, m1)
+            eye = np.eye(2, dtype=matrix.dtype)
+            merged[pair] = np.kron(one_qubit[target], eye) + matrix
+        merged.update(two_qubit)
         return merged
 
     def trotter_terms(self):
@@ -456,6 +512,7 @@ class TrotterHamiltonian(Hamiltonian):
 
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
+        self.term_class = None
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
@@ -485,12 +542,18 @@ class TrotterHamiltonian(Hamiltonian):
                     self.term_sets[term] = {targets}
                     self.expgate_sets[term] = set()
 
+                if self.term_class is None:
+                    self.term_class = term.__class__
+                elif term.__class__ != self.term_class:
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term, self.term_class))
                 if self.dtype is None:
                     self.dtype = term.matrix.dtype
                 elif term.matrix.dtype != self.dtype:
-                    raise_error(TypeError, "Terms of different types {} and {} "
-                                            "were given.".format(
-                                                term.matrix.dtype, self.dtype))
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term.matrix.dtype, self.dtype))
         self.parts = parts
         self.nqubits = len({t for targets in self.targets_map.keys()
                             for t in targets})
@@ -658,6 +721,8 @@ class TrotterHamiltonian(Hamiltonian):
                             "compatible but {} was given.".format(type(o)))
         if self.is_compatible(o):
             return o
+
+        normalizer = {}
         for targets in o.targets_map.keys():
             if len(targets) > 1:
                 raise_error(NotImplementedError,
@@ -665,38 +730,34 @@ class TrotterHamiltonian(Hamiltonian):
                             "transformed using the `make_compatible` "
                             "method but the given Hamiltonian contains "
                             "a {} qubit term.".format(len(targets)))
-        normalizer = {}
+            normalizer[targets[0]] = 0
+
+        term_matrices = {}
         for targets in self.targets_map.keys():
-            idx = (targets[0],)
-            if idx in normalizer:
-                normalizer[idx] += 1
-            else:
-                normalizer[idx] = 1
-        if set(normalizer.keys()) != set(o.targets_map.keys()):
-            raise_error(ValueError, "Given non-interacting Hamiltonian cannot "
-                                    "be made compatible.")
+            mats = []
+            for target in targets:
+                if target in normalizer:
+                    normalizer[target] += 1
+                    mats.append(o.targets_map[(target,)].matrix)
+                else:
+                    mats.append(None)
+            term_matrices[targets] = tuple(mats)
+
+        for v in normalizer.values():
+            if v == 0:
+                raise_error(ValueError, "Given non-interacting Hamiltonian "
+                                        "cannot be made compatible.")
 
         new_terms = {}
-        for target_set in self.term_sets.values():
-            hams = []
-            for targets in target_set:
-                idx = (targets[0],)
-                assert idx in o.targets_map
-                n = len(targets)
-                h = o.targets_map[idx]
-                m = h.matrix
-                eye = np.eye(2 ** (n - 1), dtype=m.dtype)
-                m = np.kron(m, eye) / normalizer[idx]
-                flag = True
-                for ham in hams:
-                    if np.array_equal(m, ham.matrix):
-                        new_terms[targets] = ham
-                        flag = False
-                        break
-                if flag:
-                    newham = h.__class__(n, m, numpy=True)
-                    new_terms[targets] = newham
-                    hams.append(newham)
+        for targets, matrices in term_matrices.items():
+            n = len(targets)
+            s = np.zeros(2 * (2 ** n,), dtype=self.dtype)
+            for i, (t, m) in enumerate(zip(targets, matrices)):
+                matlist = n * [np.eye(2, dtype=self.dtype)]
+                if m is not None:
+                    matlist[i] = m / normalizer[t]
+                    s += _SymbolicHamiltonian._multikron(matlist)
+            new_terms[targets] = self.term_class(n, s, numpy=True)
 
         new_parts = [{t: new_terms[t] for t in part.keys()}
                      for part in self.parts]
