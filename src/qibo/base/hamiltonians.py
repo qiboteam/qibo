@@ -388,11 +388,9 @@ class _SymbolicHamiltonian:
         # Assign pairs to qubits that have a single available pair
         flag = True
         for target in set(free_targets):
-            if target not in pair_sets:
+            if target not in pair_sets or not pair_sets[target]:
                 return None
             if len(pair_sets[target]) == 1:
-                if not pair_sets[target]:
-                    return None
                 assign_target(target)
                 free_targets.remove(target)
                 flag = False

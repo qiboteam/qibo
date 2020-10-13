@@ -558,18 +558,6 @@ def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-def test_symbolic_hamiltonian_reduce_pairs():
-    """Test ``reduce_pairs`` ``None`` returns."""
-    import sympy
-    from qibo.hamiltonians import _SymbolicHamiltonian
-    z0, z1 = sympy.symbols("z0 z1")
-    symham = z0 * z1
-    symmap = {z0: (0, matrices.Z), z1: (1, matrices.Z)}
-    ham = _SymbolicHamiltonian(symham, symmap)
-    pair_map = ham._reduce_pairs({0: {(0, 1)}, 1: {(0, 1)}}, {}, {0, 1})
-    assert pair_map is None
-
-
 @pytest.mark.parametrize("trotter", [False, True])
 def test_from_symbolic_with_power(trotter):
     """Check ``from_symbolic`` when the expression contains powers."""
