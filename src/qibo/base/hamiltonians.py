@@ -401,8 +401,6 @@ class _SymbolicHamiltonian:
         # assign a pair randomly (not sure about this step!)
         if flag:
             target = free_targets.pop()
-            if not pair_sets[target]:
-                return None
             assign_target(target)
         # Recurse
         return self._reduce_pairs(pair_sets, pair_map, free_targets)
