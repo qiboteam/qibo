@@ -40,6 +40,7 @@ REGISTER_OP("CollapseState")            \
     .Attr("T: {complex64, complex128}") \
     .Input("state: T")                  \
     .Input("qubits: int32")             \
+    .Input("result: int64")             \
     .Attr("nqubits: int")               \
     .Output("out: T")                   \
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);

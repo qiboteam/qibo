@@ -298,8 +298,10 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
 
 
 @pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [0], [1]), (2, [1], [1])])
+                         [(2, [0], [1]), (2, [1], [0]),
+                          (4, [3, 1], [1, 0])])
 def test_collapse_state(nqubits, targets, results):
+    """Check ``collapse_state`` kernel."""
     state = utils.random_tensorflow_complex((2 ** nqubits,), dtype=tf.float64)
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
@@ -311,7 +313,9 @@ def test_collapse_state(nqubits, targets, results):
     #norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel()# / np.sqrt(norm)
 
-    state = op.collapse_state(state, targets, nqubits)
+    b2d = 2 ** np.arange(len(results))
+    result = np.array(results).dot(b2d)
+    state = op.collapse_state(state, targets, result, nqubits)
     np.testing.assert_allclose(state, target_state)
 
 

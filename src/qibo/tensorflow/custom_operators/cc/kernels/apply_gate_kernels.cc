@@ -233,7 +233,8 @@ struct ApplySwapFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
 template <typename T>
 struct CollapseStateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  int nqubits, int ntargets, const int32* qubits) const {
+                  int nqubits, int ntargets, const int32* qubits,
+                  const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
     int64 nsubstates = (int64)1 << ntargets;
 
@@ -250,17 +251,24 @@ struct CollapseStateFunctor<CPUDevice, T> {
     const ThreadPool::SchedulingParams p(
         ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
 
+    auto ZeroState = [&](int64 g, int64 h) {
+      int64 i = g;
+      for (auto iq = 0; iq < ntargets; iq++) {
+        const auto n = nqubits - qubits[iq] - 1;
+        int64 k = (int64)1 << n;
+        i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+        i += ((int)(h >> iq) % 2) * k;
+      }
+      state[i] = 0;
+    };
+
     auto DoWork = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g++) {
-        for (auto h = 0; h < nsubstates - 1; h++) {
-          int64 i = g;
-          for (auto iq = 0; iq < ntargets; iq++) {
-            const auto n = nqubits - qubits[iq] - 1;
-            int64 k = (int64)1 << n;
-            i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
-            i += ((int)(h >> iq) % 2) * k;
-          }
-          state[i] = 0;
+        for (auto h = 0; h < result[0]; h++) {
+          ZeroState(g, h);
+        }
+        for (auto h = result[0] + 1; h < nsubstates; h++) {
+          ZeroState(g, h);
         }
       }
     };
@@ -357,10 +365,12 @@ class CollapseStateOp : public OpKernel {
     // grab the input tensor
     Tensor state = context->input(0);
     const Tensor& qubits = context->input(1);
+    const Tensor& result = context->input(2);
     // call the implementation
     CollapseStateFunctor<Device, T>()(
       context, context->eigen_device<Device>(), state.flat<T>().data(),
-      nqubits_, qubits.flat<int32>().size(), qubits.flat<int32>().data());
+      nqubits_, qubits.flat<int32>().size(), qubits.flat<int32>().data(),
+      result.flat<int64>().data());
 
     context->set_output(0, state);
   }
