@@ -254,7 +254,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
     auto GetIndex = [&](int64 g, int64 h) {
       int64 i = g;
       for (auto iq = 0; iq < ntargets; iq++) {
-        const auto n = nqubits - qubits[iq] - 1;
+        const auto n = qubits[iq];
         int64 k = (int64)1 << n;
         i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
         i += ((int)(h >> iq) % 2) * k;

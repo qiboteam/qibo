@@ -517,6 +517,8 @@ class Collapse(Gate):
 
         self._result = [resdict[q] for q in self.sorted_qubits]
         self.init_kwargs = {"result": res}
+        if self._nqubits is not None:
+            self._prepare()
 
     def controlled_by(self, *q): # pragma: no cover
         """"""

@@ -166,23 +166,17 @@ class Collapse(TensorflowGate, base_gates.Collapse):
     def __init__(self, *q: int, result: List[int] = None):
         base_gates.Collapse.__init__(self, *q, result=result)
         TensorflowGate.__init__(self)
-        self.order = None
-        self.ids = None
+        self.result_tensor = None
 
     def _prepare(self):
-        self.order = list(self.sorted_qubits)
-        self.order.extend((q for q in range(self.nqubits)
-                           if q not in self.sorted_qubits))
+        n = len(self.result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
+        self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
-        # TODO: Write custom operator for this
-        # Use Tensorflow primitives temporarily
-        from qibo.tensorflow.gates import Collapse
         TensorflowGate.__call__(self, state, is_density_matrix)
-        original_shape = state.shape
-        state = tf.reshape(state, self.nqubits * (2,))
-        state = Collapse.__call__(self, state, is_density_matrix)
-        return tf.reshape(state, original_shape)
+        return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
+                                 self.nqubits)
 
 
 class M(TensorflowGate, base_gates.M):

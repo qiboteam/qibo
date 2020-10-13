@@ -1286,7 +1286,8 @@ def test_variational_layer_dagger(backend, nqubits):
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits,targets,results",
                          [(2, [0], [1]), (2, [1], [0]),
-                          (3, [1], [0]), (4, [1, 3], [0, 1])])
+                          (3, [1], [0]), (4, [1, 3], [0, 1]),
+                          (5, [0, 3, 4], [1, 1, 0])])
 def test_collapse_gate(backend, nqubits, targets, results):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
