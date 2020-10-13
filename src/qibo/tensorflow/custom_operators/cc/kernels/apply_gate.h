@@ -112,6 +112,12 @@ struct ApplyFsimFunctor : BaseTwoQubitGateFunctor<Device, T> {};
 template <typename Device, typename T>
 struct ApplySwapFunctor : BaseTwoQubitGateFunctor<Device, T> {};
 
+template <typename Device, typename T>
+struct CollapseStateFunctor {
+  void operator()(const OpKernelContext* context, const Device& d, T* state,
+                  int nqubits, int ntargets, const int32* qubits) const;
+};
+
 }  // namespace functor
 
 }  // namespace tensorflow

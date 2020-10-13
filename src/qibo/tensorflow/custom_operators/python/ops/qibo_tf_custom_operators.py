@@ -61,3 +61,5 @@ apply_z_pow = custom_module.apply_z_pow
 apply_fsim = custom_module.apply_fsim
 
 apply_swap = custom_module.apply_swap
+
+collapse_state = custom_module.collapse_state

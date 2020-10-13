@@ -1298,7 +1298,7 @@ def test_collapse_gate(backend, nqubits, targets, results):
 
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
-      slicer[t] = r
+        slicer[t] = r
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
     target_state = np.zeros_like(initial_state)
