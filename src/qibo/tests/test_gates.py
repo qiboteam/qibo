@@ -303,6 +303,7 @@ def test_controlled_u2(backend):
     # for coverage
     gate = gates.CU2(0, 1, phi, lam)
     assert gate.parameter == (phi, lam)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -328,6 +329,7 @@ def test_controlled_u3(backend):
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
     assert gate.parameter == (theta, phi, lam)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

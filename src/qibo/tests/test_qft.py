@@ -34,7 +34,7 @@ def test_qft_sanity():
     """Check QFT circuit size and depth."""
     c = models.QFT(4)
     assert c.size == 4
-    assert c.depth == 9
+    assert c.depth == 8
     assert c.ngates == 12
 
 

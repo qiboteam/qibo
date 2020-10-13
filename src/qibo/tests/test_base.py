@@ -345,6 +345,7 @@ def test_set_backend(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     from qibo import gates
+    assert qibo.get_backend() == backend
     if backend == "custom":
         from qibo.tensorflow import cgates as custom_gates
         assert isinstance(gates.H(0), custom_gates.TensorflowGate)

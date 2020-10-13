@@ -38,7 +38,8 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None) -> np.ndarray:
     for gate, targets in cirq_gates:
         c.append(gate(*[q[i] for i in targets]))
     result = cirq.Simulator().simulate(c, initial_state=initial_state)
-    return result.final_state
+    depth = len(cirq.Circuit(c.all_operations()))
+    return result.final_state, depth - 1
 
 
 def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
@@ -52,7 +53,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         atol: Absolute tolerance in state vector comparsion.
     """
     initial_state = utils.random_numpy_state(nqubits)
-    target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+    target_state, target_depth = execute_cirq(cirq_gates, nqubits,
+                                              np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
 
     if isinstance(qibo_gate, native_gates.TensorflowGate) and accelerators:
@@ -63,7 +65,8 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         c = models.Circuit(nqubits, accelerators)
         c.add(qibo_gate)
         final_state = c(np.copy(initial_state)).numpy()
-        np.testing.assert_allclose(target_state, final_state, atol=atol)
+        assert c.depth == target_depth
+        np.testing.assert_allclose(final_state, target_state, atol=atol)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -192,6 +195,7 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
 
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(4, None), (5, None), (8, None),
@@ -215,6 +219,7 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
 
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
 @pytest.mark.parametrize("ntargets", [1, 2])
@@ -232,6 +237,7 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
         assert_gates_equivalent(qibo_gate, cirq_gate, nqubits, ndevices)
     qibo.set_backend(original_backend)
 
+
 @pytest.mark.parametrize(("backend", "accelerators"),
                          [("custom", None), ("custom", {"/GPU:0": 4}),
                           ("defaulteinsum", None), ("matmuleinsum", None)])
@@ -243,6 +249,6 @@ def test_qft(backend, nqubits, accelerators):
     c = models.QFT(nqubits, accelerators=accelerators)
     final_state = c(np.copy(initial_state)).numpy()
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]
-    target_state = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
+    target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=1e-6)
     qibo.set_backend(original_backend)

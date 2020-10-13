@@ -97,21 +97,19 @@ if BACKEND_NAME == "tensorflow":
             warnings.warn("Backend should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if backend == 'custom':
-            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'custom'
             BACKEND['EINSUM'] = None
         elif backend == 'defaulteinsum':
             from qibo.tensorflow import einsum
-            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.DefaultEinsum()
         elif backend == 'matmuleinsum':
             from qibo.tensorflow import einsum
-            BACKEND['NAME'] = backend
             BACKEND['GATES'] = 'native'
             BACKEND['EINSUM'] = einsum.MatmulEinsum()
         else:
             raise_error(RuntimeError, f"Gate backend '{backend}' not supported.")
+        BACKEND['STRING'] = backend
 
     def get_backend():
         """Get backend used to implement gates.
