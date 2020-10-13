@@ -1284,24 +1284,26 @@ def test_variational_layer_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("target", [0, 2])
-@pytest.mark.parametrize("result", [0, 1])
-def test_collapse_gate(backend, target, result):
+@pytest.mark.parametrize("nqubits,targets,results",
+                         [(2, [0], [1]), (2, [1], [0]),
+                          (3, [1], [0]), (4, [1, 3], [0, 1])])
+def test_collapse_gate(backend, nqubits, targets, results):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
-    c = Circuit(4)
-    c.add(gates.Collapse(target, result=result))
-    initial_state = utils.random_numpy_state(4)
+    c = Circuit(nqubits)
+    c.add(gates.Collapse(*targets, result=results))
+    initial_state = utils.random_numpy_state(nqubits)
     final_state = c(np.copy(initial_state)).numpy()
 
-    target_state = np.copy(initial_state).reshape(4 * (2,))
-    slicer = 4 * [slice(None)]
-    slicer[target] = result
-    measured_state = np.copy(target_state[tuple(slicer)])
-    norm = (np.abs(measured_state) ** 2).sum()
-    slicer[target] = 1 - result
-    target_state[tuple(slicer)] = np.zeros(3 * (2,))
+    slicer = nqubits * [slice(None)]
+    for t, r in zip(targets, results):
+      slicer[t] = r
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
