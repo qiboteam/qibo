@@ -14,7 +14,7 @@ The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum 
 
 A graphical depiction of a quantum encoder can be seen in the following figure. In a quantum encoder the information contained in some of the input qubits must be discarded after the initial encoding. Then, fresh qubits (here initialized to the |0> state, but one may consider any other easy-to-construct reference state) are prepared and used to implement the final decoding, which is finally compared to the initial state.
 
-<img src="images/autoencoder.png" width="60%">
+![autoencoder](images/autoencoder.png)
 
 In the following, however, we present the EF-QAE. A schematic diagram of the EF-QAE can be seen in the next figure. The algorithm can be initialized with a set of initial states, a feature vector **x**, and a shallow sequence of quantum gates U. In this scheme, we define a unitary U(**θ**, **x**) acting on the initial state, where **x** is a feature vector that characterizes the set of input states. For instance, as we will see, **x** may be the transverse field λ of the 1D Ising spin chain. Once the trial state is prepared, measurements are performed to evaluate the cost function C(**θ**). This result is then fed into the classical optimizer, where the parameters **θ** are adjusted in a quantum-classical loop until the cost function converges to a value close to 0. When the loop terminates, U(**θ**<sub>opt</sub>, **x**) prepares compressed states of a particular model.
 
@@ -24,12 +24,11 @@ A figure of merit for the wrong answer when training is simply the total amount 
 
 To implement the quantum autoencoder model on a quantum computer we must define the form of the parametrized unitary, decomposing it into a quantum circuit suitable for optimization. This can be done using a similar structure to that in the following figure.
 
-
-<img src="images/ansatz.png" width="70%">
+![ansatz](images/ansatz.png)
 
 We now encode the feature vector **x** into each of the single R<sub>y</sub> qubit rotations by using a linear function as
 
-<img src="images/Ry.png" width="30%">
+![Ry](images/Ry.png)
 
 where *i*,*j* simply indicates a component of the vector, and **θ** are the parameters adjusted in the optimization loop.
 
@@ -56,11 +55,11 @@ The EF-QAE can be verified on simulations. In the following, we benchmark both t
 
 In the following figure, we show the cost function value as a function of the number of optimization steps. The EF-QAE* is simply the EF-QAE initialized with the optimal parameters of QAE. This way, the EF-QAE* will always improve the QAE performance. As can be seen, the EF-QAE achieves twice the compression of the QAE using the same quantum resources. Notice, however, that the EF-QAE contains twice as many variational parameters, and therefore, the increase in performance is at the expense of additional classical optimization.
 
-<img src="images/cost_ising.png" width="60%">
+![cost_ising](images/cost_ising.png)
 
 Now, we can play around with the code and assess both EF-QAE and QAE with the optimal parameters against two test ground states of the Ising model, specifically, with λ=0.60 and λ=0.75. This can be done by applying U<sup>†</sup>(**θ**<sub>opt</sub>, **x**) to the compressed test state, initializing two qubits to |00>. The results are shown in the following figure. Here, we show a density matrix visualization of the input, trash, and output state. The EF-QAE achieves better compression to the |00> trash state, and therefore, higher fidelity on the output state. As we change the values of the transverse field, we note that the compression differs. Both cases considered, however, the performance of the EF-QAE is preferable.
 
-<img src="images/space_ising.png" width="90%">
+![space_ising](images/space_ising.png)
 
 ### Handwritten digits
 
@@ -70,8 +69,8 @@ The EF-QAE and QAE are optimized over a training set of handwritten digits obtai
 
 In the following figure, we show the cost function value as a function of the number of optimization steps. Recall that EF-QAE* is simply the EF-QAE initialized with the optimal parameters of QAE. The behavior is similar to the one observed in the case of the Ising model, where the EF-QAE achieves three times the compression of the QAE using the same quantum resources.
 
-<img src="images/handwritten_cost.png" width="60%">
+![handwritten_cost](images/handwritten_cost.png)
 
 Once again, to gain insight into the compression process, we assess both EF-QAE and QAE with the optimal parameters against two handwritten test digits corresponding to **0** and **1**. The results are shown in the following figure. Here, we plot the output digit of the EF-QAE and QAE. Once more, since EF-QAE achieves better compression to the |00> trash state, we obtain higher fidelity on the output state. Remarkably, in both cases, the performance of the EF-QAE is improved with respect to the QAE.
 
-<img src="images/handwritten_output.png" width="40%">
+![handwritten_output](images/handwritten_output.png)
