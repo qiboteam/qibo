@@ -226,14 +226,13 @@ def main(layers, autoencoder, example):
             initial_params = np.random.uniform(0, 2*np.pi, nparams)
         
             result = minimize(cost_function_EF_QAE_Digits, initial_params,
-                              args=(count), method='BFGS', options={'maxiter': 5.0e4})
-            
+                              args=(count), method='BFGS', options={'maxiter': 5.0e4})           
             
         else:
             sys.exit("You have to introduce a value of 0 or 1 in the autoencoder argument.")
             
     else:
-        sys.exit("You can have to introduce a value of 0 or 1 in the example argument.")
+        sys.exit("You have to introduce a value of 0 or 1 in the example argument.")
         
     print('Final parameters: ', result.x)
     print('Final cost function: ', result.fun)
