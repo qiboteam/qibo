@@ -3,6 +3,7 @@ import numpy as np
 from qibo import matrices, K
 from qibo.config import BACKEND_NAME, DTYPES, raise_error
 from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
+from qibo.base.hamiltonians import _SymbolicHamiltonian
 if BACKEND_NAME == "tensorflow":
     from qibo.tensorflow import hamiltonians
     from qibo.tensorflow.hamiltonians import TensorflowTrotterHamiltonian as TrotterHamiltonian
@@ -30,26 +31,17 @@ class Hamiltonian(BaseHamiltonian):
         else:
             return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
 
-
-def _multikron(matrix_list):
-    """Calculates Kronecker product of a list of matrices.
-
-    Args:
-        matrices (list): List of matrices as ``np.ndarray``s.
-
-    Returns:
-        ``np.ndarray`` of the Kronecker product of all ``matrices``.
-    """
-    h = 1
-    for m in matrix_list:
-        h = np.kron(h, m)
-    return h
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
+        """See :class:`qibo.base.hamiltonians.Hamiltonian` for docs."""
+        ham = _SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
+        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
 
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(_multikron((matrix if condition(i, j) else matrices.I
-                        for j in range(nqubits)))
+    h = sum(_SymbolicHamiltonian._multikron(
+      (matrix if condition(i, j) else matrices.I for j in range(nqubits)))
             for i in range(nqubits))
     return h
 
@@ -81,7 +73,9 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         hy = np.kron(matrices.Y, matrices.Y)
         hz = np.kron(matrices.Z, matrices.Z)
         term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+        terms = {(i, i + 1): term for i in range(nqubits - 1)}
+        terms[(nqubits - 1, 0)] = term
+        return TrotterHamiltonian.from_dictionary(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -94,15 +88,14 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
 def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
                   ground_state=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
-    if trotter:
-        term_matrix = -np.kron(matrix, matrices.I)
-        term = Hamiltonian(2, term_matrix, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(
-            nqubits, term, ground_state=ground_state)
+    if not trotter:
+        condition = lambda i, j: i == j % nqubits
+        ham = -_build_spin_model(nqubits, matrix, condition)
+        return Hamiltonian(nqubits, ham, numpy=numpy)
 
-    condition = lambda i, j: i == j % nqubits
-    ham = -_build_spin_model(nqubits, matrix, condition)
-    return Hamiltonian(nqubits, ham, numpy=numpy)
+    term = Hamiltonian(1, -matrix, numpy=True)
+    terms = {(i,): term for i in range(nqubits)}
+    return TrotterHamiltonian.from_dictionary(terms, ground_state=ground_state)
 
 
 def X(nqubits, numpy=False, trotter=False):
@@ -183,7 +176,9 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         term_matrix = -np.kron(matrices.Z, matrices.Z)
         term_matrix -= h * np.kron(matrices.X, matrices.I)
         term = Hamiltonian(2, term_matrix, numpy=True)
-        return TrotterHamiltonian.from_twoqubit_term(nqubits, term)
+        terms = {(i, i + 1): term for i in range(nqubits - 1)}
+        terms[(nqubits - 1, 0)] = term
+        return TrotterHamiltonian.from_dictionary(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)

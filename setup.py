@@ -80,7 +80,7 @@ setup(
     install_requires=requirements,
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables"],
-        "tests": ["cirq"],
+        "tests": ["cirq", "ply"],
     },
     python_requires=">=3.6.0",
     long_description=long_description,

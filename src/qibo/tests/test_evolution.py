@@ -232,6 +232,8 @@ def test_rk4_evolution(solver, trotter, dt=1e-3):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3, trotter=trotter)
     h1 = hamiltonians.TFIM(3, trotter=trotter)
+    if trotter:
+        h0 = h1.make_compatible(h0)
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t

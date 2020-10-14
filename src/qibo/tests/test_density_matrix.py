@@ -82,7 +82,7 @@ def test_rygate_application_twoqubit(backend):
 
 
 @pytest.mark.parametrize("backend", ["matmuleinsum"])
-def test_czpowgate_application_twoqubit(backend):
+def test_cu1gate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -90,7 +90,7 @@ def test_czpowgate_application_twoqubit(backend):
     nqubits = 3
     initial_rho = random_density_matrix(nqubits)
 
-    gate = gates.CZPow(0, 1, theta=theta)
+    gate = gates.CU1(0, 1, theta=theta)
     final_rho = gate(initial_rho.reshape(2 * nqubits * (2,)),
                      is_density_matrix=True).numpy().reshape(initial_rho.shape)
 
@@ -154,7 +154,7 @@ def test_circuit(backend):
 
     c = models.Circuit(3)
     c.add(gates.X(2))
-    c.add(gates.CZPow(0, 1, theta=theta))
+    c.add(gates.CU1(0, 1, theta=theta))
     final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
 
     m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
@@ -370,7 +370,8 @@ def test_circuit_with_noise_gates():
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     noisy_c = c.with_noise((0.1, 0.2, 0.3))
 
-    assert noisy_c.depth == 9
+    assert noisy_c.depth == 5
+    assert noisy_c.ngates == 9
     from qibo.tensorflow import gates as native_gates
     for i in [1, 2, 4, 5, 7, 8]:
         assert isinstance(noisy_c.queue[i], native_gates.NoiseChannel)

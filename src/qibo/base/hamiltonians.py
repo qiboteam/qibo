@@ -1,9 +1,11 @@
+import collections
 import itertools
+import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 
 
-class Hamiltonian(object):
+class Hamiltonian:
     """Abstract Hamiltonian operator using full matrix representation.
 
     Args:
@@ -37,6 +39,30 @@ class Hamiltonian(object):
         self._eigenvalues = None
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
+
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):  # pragma: no cover
+        """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
+
+        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        example for more details.
+
+        Args:
+            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
+                with symbols.
+            symbol_map (dict): Dictionary that maps each symbol that appears in
+                the Hamiltonian to a pair of (target, matrix).
+            numpy (bool): If ``True`` the Hamiltonian is created using numpy as
+                the calculation backend, otherwise TensorFlow is used.
+                Default option is ``numpy = False``.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.Hamiltonian` object that
+            implements the given symbolic Hamiltonian.
+        """
+        # this method is defined for docs only.
+        # It is properly implemented in `qibo.hamiltonians.Hamiltonian`.
+        raise_error(NotImplementedError)
 
     def _calculate_exp(self, a): # pragma: no cover
         # abstract method
@@ -187,6 +213,265 @@ class Hamiltonian(object):
                                              "implemented.".format(type(o)))
 
 
+class _SymbolicHamiltonian:
+    """Parses symbolic Hamiltonians defined using ``sympy``.
+
+    This class should not be used by users.
+    It is used internally to help creating
+    :class:`qibo.base.hamiltonians.Hamiltonian` and
+    :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects for Hamiltonians
+    defined using symbols. For more information we refer to the
+    :meth:`qibo.base.hamiltonians.Hamiltonian.from_symbolic`
+    and :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
+
+    Args:
+        symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written with
+            symbols.
+        symbol_map (dict): Dictionary that maps each symbol to a pair of
+            (target, matrix).
+    """
+    import sympy
+    from qibo import matrices
+
+    def __init__(self, hamiltonian, symbol_map):
+        if not issubclass(hamiltonian.__class__, self.sympy.Expr):
+            raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
+                                   "expression but is {}."
+                                   "".format(type(hamiltonian)))
+        if not isinstance(symbol_map, dict):
+            raise_error(TypeError, "Symbol map must be a dictionary but is "
+                                   "{}.".format(type(symbol_map)))
+        for k, v in symbol_map.items():
+            if not isinstance(k, self.sympy.Symbol):
+                raise_error(TypeError, "Symbol map keys must be `sympy.Symbol` "
+                                       "but {} was found.".format(type(k)))
+            if not isinstance(v, tuple):
+                raise_error(TypeError, "Symbol map values must be tuples but "
+                                       "{} was found.".format(type(v)))
+            if len(v) != 2:
+                raise_error(ValueError, "Symbol map values must be tuples of "
+                                        "length 2 but length {} was found."
+                                        "".format(len(v)))
+        self.symbolic = self.sympy.expand(hamiltonian)
+        self.map = symbol_map
+
+        term_dict = self.symbolic.as_coefficients_dict()
+        self.constant = 0
+        if 1 in term_dict:
+            self.constant = self.matrices.dtype(term_dict.pop(1))
+        self.terms = dict()
+        target_ids = set()
+        for term, coeff in term_dict.items():
+            targets, matrices = [], [self.matrices.dtype(coeff)]
+            for factor in term.as_ordered_factors():
+                if factor.is_symbol:
+                    self._check_symbolmap(factor)
+                    targets.append(self.map[factor][0])
+                    matrices.append(self.map[factor][1])
+                elif isinstance(factor, self.sympy.Pow):
+                    base, pow = factor.args
+                    assert isinstance(pow, self.sympy.Integer)
+                    self._check_symbolmap(base)
+                    targets.append(self.map[base][0])
+                    matrix = self.map[base][1]
+                    for _ in range(int(pow) - 1):
+                        matrix = matrix.dot(matrix)
+                    matrices.append(matrix)
+                else:
+                    raise_error(ValueError, f"Cannot parse factor {factor}.")
+            target_ids |= set(targets)
+            targets, matrices = tuple(targets), tuple(matrices)
+            if targets in self.terms:
+                self.terms[targets] += matrices
+            else:
+                self.terms[targets] = matrices
+        self.nqubits = max(target_ids) + 1
+
+    def _check_symbolmap(self, s):
+        """Checks if symbol exists in the given symbol map."""
+        if s not in self.map:
+            raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
+                                    "which does not exist in the symbol map.")
+
+    @staticmethod
+    def _multikron(matrix_list):
+        """Calculates Kronecker product of a list of matrices.
+
+        Args:
+            matrices (list): List of matrices as ``np.ndarray``s.
+
+        Returns:
+            ``np.ndarray`` of the Kronecker product of all ``matrices``.
+        """
+        h = 1
+        for m in matrix_list:
+            h = np.kron(h, m)
+        return h
+
+    def full_matrices(self):
+        """Generator of matrices for each symbolic Hamiltonian term.
+
+        Returns:
+            Matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term in
+            the given symbolic form. Here ``nqubits`` is the total number of
+            qubits that the Hamiltonian acts on.
+        """
+        for targets, matrices in self.terms.items():
+            matrix_list = self.nqubits * [self.matrices.I]
+            n = len(targets)
+            total = 0
+            for i in range(0, len(matrices), n + 1):
+                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
+                    matrix_list[t] = m
+                total += matrices[i] * self._multikron(matrix_list)
+            yield total
+
+    def partial_matrices(self):
+        """Generator of matrices for each symbolic Hamiltonian term.
+
+        Returns:
+            Matrices of shape ``(2 ** ntargets, 2 ** ntargets)`` for each term
+            in the given symbolic form. Here ``ntargets`` is the number of
+            qubits that the corresponding term acts on.
+        """
+        for targets, matrices in self.terms.items():
+            n = len(targets)
+            matrix = 0
+            for i in range(0, len(matrices), n + 1):
+                matrix += matrices[i] * self._multikron(
+                  matrices[i + 1: i + n + 1])
+            yield targets, matrix
+
+    def dense_matrix(self):
+        """Creates the full Hamiltonian matrix.
+
+        Useful for creating :class:`qibo.base.hamiltonians.Hamiltonian`
+        object equivalent to the given symbolic Hamiltonian.
+
+        Returns:
+            Full Hamiltonian matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+        """
+        matrix = sum(self.full_matrices())
+        eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
+        return matrix + self.constant * eye
+
+    def _reduce_pairs(self, pair_sets, pair_map, free_targets):
+        """Helper method for ``_merge_one_qubit``.
+
+        Finds the one and two qubit term merge map using an recursive procedure.
+
+        Args:
+            pair_sets (dict): Dictionary that maps each qubit id to a set of
+                pairs that contain this qubit.
+            pair_map (dict): Map from qubit id to the pair that this qubit will
+                be merged with.
+            free_targets (set): Set of qubit ids that are still not mapped to
+                a pair in the ``pair_map``.
+
+        Returns:
+            pair_map (dict): The final map from qubit ids to pairs once the
+                recursion finishes. If the returned map is ``None`` then the
+                procedure failed and the merging is aborted.
+        """
+        def assign_target(target):
+            """Assigns a pair to a qubit.
+
+            This moves ``target`` from ``free_targets`` to ``pair_map``.
+            """
+            pair = pair_sets[target].pop()
+            pair_map[target] = pair
+            pair_sets.pop(target)
+            target2 = pair[1] if pair[0] == target else pair[0]
+            if target2 in pair_sets:
+                pair_sets[target2].remove(pair)
+
+        # Assign pairs to qubits that have a single available pair
+        flag = True
+        for target in set(free_targets):
+            if target not in pair_sets or not pair_sets[target]:
+                return None
+            if len(pair_sets[target]) == 1:
+                assign_target(target)
+                free_targets.remove(target)
+                flag = False
+        # If all qubits were mapped to pairs return the result
+        if not free_targets:
+            return pair_map
+        # If no qubits with a single available pair were found above, then
+        # assign a pair randomly (not sure about this step!)
+        if flag:
+            target = free_targets.pop()
+            assign_target(target)
+        # Recurse
+        return self._reduce_pairs(pair_sets, pair_map, free_targets)
+
+    def _merge_one_qubit(self, terms):
+        """Merges one-qubit matrices to the two-qubit terms for efficiency.
+
+        This works for Hamiltonians with one and two qubit terms only.
+        The two qubit terms should be sufficiently many so that every
+        qubit appears as the first target at least once.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            The given ``terms`` dictionary updated so that one-qubit terms
+            are merged to two-qubit ones.
+        """
+        one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
+        for targets, matrix in terms.items():
+            assert len(targets) in {1, 2}
+            if len(targets) == 1:
+                one_qubit[targets[0]] = matrix
+            else:
+                two_qubit[targets] = matrix
+                for t in targets:
+                    if t in pair_sets:
+                        pair_sets[t].add(targets)
+                    else:
+                        pair_sets[t] = {targets}
+
+        free_targets = set(one_qubit.keys())
+        pair_map = self._reduce_pairs(pair_sets, dict(), free_targets)
+        if pair_map is None:
+            log.info("Aborting merge of one and two-qubit terms during "
+                     "TrotterHamiltonian creation because the two-qubit "
+                     "terms are not sufficiently many.")
+            return terms
+
+        merged = dict()
+        for target, pair in pair_map.items():
+            two_qubit.pop(pair)
+            if target == pair[0]:
+                matrix = terms[pair]
+            else:
+                c, m1, m2 = self.terms[pair]
+                pair = (pair[1], pair[0])
+                matrix = c * np.kron(m2, m1)
+            eye = np.eye(2, dtype=matrix.dtype)
+            merged[pair] = np.kron(one_qubit[target], eye) + matrix
+        merged.update(two_qubit)
+        return merged
+
+    def trotter_terms(self):
+        """Creates a dictionary of targets and matrices.
+
+        Useful for creating :class:`qibo.base.hamiltonians.TrotterHamiltonian`
+        objects.
+
+        Returns:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+            constant (float): The overall constant term of the Hamiltonian.
+        """
+        terms = {t: m for t, m in self.partial_matrices()}
+        if set(len(t) for t in terms.keys()) == {1, 2}:
+            terms = self._merge_one_qubit(terms)
+        return terms, self.constant
+
+
 class TrotterHamiltonian(Hamiltonian):
     """Hamiltonian operator used for Trotterized time evolution.
 
@@ -227,10 +512,12 @@ class TrotterHamiltonian(Hamiltonian):
 
     def __init__(self, *parts, ground_state=None):
         self.dtype = None
+        self.term_class = None
         # maps each distinct ``Hamiltonian`` term to the set of gates that
         # are associated with it
         self.expgate_sets = {}
-        targets_set = set()
+        self.term_sets = {}
+        self.targets_map = {}
         for part in parts:
             if not isinstance(part, dict):
                 raise_error(TypeError, "``TrotterHamiltonian`` part should be "
@@ -245,21 +532,31 @@ class TrotterHamiltonian(Hamiltonian):
                                             "qubits."
                                             "".format(targets, term.nqubits))
 
-                if targets in targets_set:
+                if targets in self.targets_map:
                     raise_error(ValueError, "Targets {} are given in more than "
                                             "one term.".format(targets))
-                targets_set.add(targets)
-                if term not in self.expgate_sets:
+                self.targets_map[targets] = term
+                if term in self.term_sets:
+                    self.term_sets[term].add(targets)
+                else:
+                    self.term_sets[term] = {targets}
                     self.expgate_sets[term] = set()
 
+                if self.term_class is None:
+                    self.term_class = term.__class__
+                elif term.__class__ != self.term_class:
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term, self.term_class))
                 if self.dtype is None:
                     self.dtype = term.matrix.dtype
                 elif term.matrix.dtype != self.dtype:
-                    raise_error(TypeError, "Terms of different types {} and {} "
-                                            "were given.".format(
-                                                term.matrix.dtype, self.dtype))
+                    raise_error(TypeError,
+                                "Terms of different types {} and {} were "
+                                "given.".format(term.matrix.dtype, self.dtype))
         self.parts = parts
-        self.nqubits = len({t for targets in targets_set for t in targets})
+        self.nqubits = len({t for targets in self.targets_map.keys()
+                            for t in targets})
         self.nterms = sum(len(part) for part in self.parts)
         # Function that creates the ground state of this Hamiltonian
         # can be ``None``
@@ -277,34 +574,194 @@ class TrotterHamiltonian(Hamiltonian):
         self._exp = {"a": None, "result": None}
 
     @classmethod
-    def from_twoqubit_term(cls, nqubits, term, ground_state=None):
-        """:class:`qibo.base.hamiltonians.TrotterHamiltonian` for
-        translationally invariant models.
+    def from_dictionary(cls, terms, ground_state=None):
+        parts = cls._split_terms(terms)
+        return cls(*parts, ground_state=ground_state)
 
-        It is assumed that the system has periodic boundary conditions and the
-        local term acts on exactly two qubits.
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+        """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
+
+        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        example for more details.
 
         Args:
-            nqubits (int): Number of qubits in the system.
-            term (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
-                object representing the local operator. The total Hamiltonian
-                is sum of this term acting on each of the qubits.
+            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
+                with symbols.
+            symbol_map (dict): Dictionary that maps each symbol that appears in
+                the Hamiltonian to a pair of (target, matrix).
             ground_state (Callable): Optional callable with no arguments that
                 returns the ground state of this ``TrotterHamiltonian``.
-                See ``__init__`` documentation for more details.
+                See :class:`qibo.base.hamiltonians.TrotterHamiltonian` for more
+                details.
+
+        Returns:
+            A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
+            implements the given symbolic Hamiltonian.
         """
-        if not isinstance(nqubits, int) or nqubits < 1:
-            raise_error(ValueError, "nqubits must be a positive integer but is "
-                                    "{}".format(nqubits))
-        if term.nqubits != 2:
-            raise_error(ValueError, "Term in translationally invariant local "
-                                    "Hamiltonians should act on two qubits "
-                                    "but acts on {}.".format(term.nqubits))
-        even_terms = {(2 * i, (2 * i + 1) % nqubits): term
-                       for i in range(nqubits // 2 + nqubits % 2)}
-        odd_terms = {(2 * i + 1, (2 * i + 2) % nqubits): term
-                     for i in range(nqubits // 2)}
-        return cls(even_terms, odd_terms, ground_state=ground_state)
+        terms, constant = _SymbolicHamiltonian(
+          symbolic_hamiltonian, symbol_map).trotter_terms()
+        hterms = cls._construct_terms(terms)
+        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
+
+    @staticmethod
+    def _construct_terms(terms):
+        """Helper method for `from_symbolic`.
+
+        Constructs the term dictionary by using the same
+        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        have equal matrix representation. This is done for efficiency during
+        the exponentiation of terms.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            terms (dict): Dictionary that maps tuples of targets to the
+                          Hamiltonian term that acts on these on targets.
+        """
+        from qibo.hamiltonians import Hamiltonian
+        unique_matrices = []
+        hterms = {}
+        for targets, matrix in terms.items():
+            flag = True
+            for m, h in unique_matrices:
+                if np.array_equal(matrix, m):
+                    ham = h
+                    flag = False
+                    break
+            if flag:
+                ham = Hamiltonian(len(targets), matrix, numpy=True)
+                unique_matrices.append((matrix, ham))
+            hterms[targets] = ham
+        return hterms
+
+    @staticmethod
+    def _split_terms(terms):
+        """Splits a dictionary of terms to multiple parts.
+
+        Each qubit should not appear in more that one terms in each
+        part to ensure commutation relations in the definition of
+        :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            List of dictionary parts to be used for the creation of a
+            ``TrotterHamiltonian``. The parts are such that no qubit appears
+            twice in each part.
+        """
+        groups, singles = [set()], [set()]
+        for targets in terms.keys():
+            flag = True
+            t = set(targets)
+            for g, s in zip(groups, singles):
+                if not t & s:
+                    s |= t
+                    g.add(targets)
+                    flag = False
+                    break
+            if flag:
+                groups.append({targets})
+                singles.append(t)
+        return [{k: terms[k] for k in g} for g in groups]
+
+    def is_compatible(self, o):
+        """Checks if a ``TrotterHamiltonian`` has the same part structure.
+
+        By part structure we mean that the target keys of the dictionaries
+        contained in the ``self.parts`` list are the same for both Hamiltonians.
+        Two :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects can be
+        added only when they are compatible (have the same part structure).
+        When using Trotter decomposition to simulate adiabatic evolution then
+        ``h0`` and ``h1`` should be compatible.
+
+        Args:
+            o: The Hamiltonian to check compatibility with.
+
+        Returns:
+            ``True`` if ``o`` has the same structure as ``self`` otherwise
+            ``False``.
+        """
+        if isinstance(o, self.__class__):
+            if len(self.parts) != len(o.parts):
+                return False
+            for part1, part2 in zip(self.parts, o.parts):
+                if set(part1.keys()) != set(part2.keys()):
+                    return False
+            return True
+        return False
+
+    def make_compatible(self, o):
+        """Makes given ``TrotterHamiltonian`` compatible to the current one.
+
+        See :meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible` for
+        more details on how compatibility is defined in this context.
+        The current method will be used automatically by
+        :class:`qibo.evolution.AdiabaticEvolution` to make the ``h0`` and ``h1``
+        Hamiltonians compatible if they are not.
+        We note that in some applications making the Hamiltonians compatible
+        manually instead of relying in this method may take better advantage of
+        caching and lead to better execution performance.
+
+        Args:
+            o: The ``TrotterHamiltonian`` to make compatible to the current.
+               Should be non-interacting (contain only one-qubit terms).
+
+        Returns:
+            A new :class:`qibo.base.hamiltonians.TrotterHamiltonian` object
+            that is equivalent to ``o`` but has the same part structure as
+            ``self``.
+        """
+        if not isinstance(o, self.__class__):
+            raise TypeError("Only ``TrotterHamiltonians`` can be made "
+                            "compatible but {} was given.".format(type(o)))
+        if self.is_compatible(o):
+            return o
+
+        normalizer = {}
+        for targets in o.targets_map.keys():
+            if len(targets) > 1:
+                raise_error(NotImplementedError,
+                            "Only non-interacting Hamiltonians can be "
+                            "transformed using the `make_compatible` "
+                            "method but the given Hamiltonian contains "
+                            "a {} qubit term.".format(len(targets)))
+            normalizer[targets[0]] = 0
+
+        term_matrices = {}
+        for targets in self.targets_map.keys():
+            mats = []
+            for target in targets:
+                if target in normalizer:
+                    normalizer[target] += 1
+                    mats.append(o.targets_map[(target,)].matrix)
+                else:
+                    mats.append(None)
+            term_matrices[targets] = tuple(mats)
+
+        for v in normalizer.values():
+            if v == 0:
+                raise_error(ValueError, "Given non-interacting Hamiltonian "
+                                        "cannot be made compatible.")
+
+        new_terms = {}
+        for targets, matrices in term_matrices.items():
+            n = len(targets)
+            s = np.zeros(2 * (2 ** n,), dtype=self.dtype)
+            for i, (t, m) in enumerate(zip(targets, matrices)):
+                matlist = n * [np.eye(2, dtype=self.dtype)]
+                if m is not None:
+                    matlist[i] = m / normalizer[t]
+                    s += _SymbolicHamiltonian._multikron(matlist)
+            new_terms[targets] = self.term_class(n, s, numpy=True)
+
+        new_parts = [{t: new_terms[t] for t in part.keys()}
+                     for part in self.parts]
+        return self.__class__(*new_parts, ground_state=o.ground_state_func)
 
     def _calculate_dense_matrix(self, a): # pragma: no cover
         # abstract method

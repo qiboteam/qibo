@@ -1,7 +1,7 @@
+import sympy
 import numpy as np
 from qibo import matrices, hamiltonians
 import matplotlib.pyplot as plt
-import collections
 
 
 def read_file(file_name, instance):
@@ -39,151 +39,39 @@ def times(qubits, clauses):
     return times
 
 
-def h(qubits, n, matrix):
-    """Apply a matrix to a single qubit in the register.
-    Args:
-        qubits (int): # of total qubits in the instance.
-        n (int): qubit position to apply matrix.
-        matrix (np.array): 2x2 matrix to apply to a qubit.
-
-    Returns:
-        h (np.array): 2**qubits x 2**qubits hamiltonian.
-    """
-    a = np.eye(2 ** n, dtype=matrix.dtype)
-    b = np.eye(2 ** (qubits - n - 1), dtype=matrix.dtype)
-    return np.kron(np.kron(a, matrix), b)
-
-
-def z(qubits, n):
-    """Apply matrix [[0, 0], [0, 1]] to qubit n.
-    Args:
-        qubits (int): # of total qubits in the instance.
-        n (int): qubit position to apply matrix.
-        matrix (np.array): 2x2 matrix to apply to a qubit.
-
-    Returns:
-        h (np.array): 2**qubits x 2**qubits hamiltonian.
-    """
-    matrix = 0.5*(matrices.I-matrices.Z)
-    return h(qubits, n, matrix)
-
-
-def x(qubits, n):
-    """Apply matrix [[0, 1], [1, 0]] to qubit n.
-    Args:
-        qubits (int): # of total qubits in the instance.
-        n (int): qubit position to apply matrix.
-        matrix (np.array): 2x2 matrix to apply to a qubit.
-
-    Returns:
-        h (np.array): 2**qubits x 2**qubits hamiltonian..
-    """
-    matrix = matrices.X
-    return h(qubits, n, matrix)
-
-
-def h_c(qubits, clause):
-    """Hamiltonian with ground state that satisfies an Exact Cover clause.
-    Args:
-        qubits (int): # of total qubits in the instance.
-        clause (list): Exact Cover clause.
-
-    Returns:
-        h_c (np.array): 2**qubits x 2**qubits hamiltonian that satisfies clause.
-    """
-    h_c = 0
-    for i in clause:
-        h_c += z(qubits, i-1)
-    h_c -= np.eye(2**qubits)
-    return h_c**2
-
-
-def h_p(qubits, clauses):
+def h_problem(qubits, clauses):
     """Hamiltonian that satisfies all Exact Cover clauses.
     Args:
         qubits (int): # of total qubits in the instance.
         clauses (list): clauses for an Exact Cover instance.
 
-    Return:
-        h_p (np.array): 2**qubits x 2**qubits problem Hamiltonian.
+    Returns:
+        sham (sympy.Expr): Symbolic form of the problem Hamiltonian.
+        smap (dict): Dictionary that maps the symbols that appear in the
+            Hamiltonian to the corresponding matrices and target qubits.
     """
-    h_p = 0
-    for clause in clauses:
-        h_p += h_c(qubits, clause)
-    return h_p
+    z = sympy.symbols(" ".join((f"z{i}" for i in range(qubits))))
+    z_matrix = (matrices.I - matrices.Z) / 2.0
+    smap = {s: (i, z_matrix) for i, s in enumerate(z)}
+    sham = sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
+    return sham, smap
 
 
-def h0(qubits, times):
+def h_initial(qubits, times):
     """Initial hamiltonian for adiabatic evolution.
     Args:
         qubits (int): # of total qubits in the instance.
         times (list): number of times a qubit apears in all clauses.
 
-    Return:
-        h0 (np.array): 2**qubits x 2**qubits initial Hamiltonian.
-    """
-    h0 = 0
-    for i in range(qubits):
-        h0 += times[i]*0.5*(np.eye(2**qubits)-x(qubits, i))
-    return h0
-
-
-def h_ct():
-    """Generate the 2 qubit Hamiltonian for Trotter evolution, equivalent to the clause Hamiltonian.
     Returns:
-        h_ct (Hamiltonian): 4 x 4 Hamiltonian used as a base for the problem Hamiltonian.
+        sham (sympy.Expr): Symbolic form of the easy Hamiltonian.
+        smap (dict): Dictionary that maps the symbols that appear in the
+            Hamiltonian to the corresponding matrices and target qubits.
     """
-    m1 = 0.5 * (np.kron(matrices.Z, matrices.Z) - np.kron(matrices.Z, matrices.I))
-    return hamiltonians.Hamiltonian(2, m1, numpy=True)
-
-
-def h0t():
-    """Generate the 2 qubit Hamiltonian for Trotter evolution, equivalent to the intial Hamiltonian.
-    Returns:
-        h0t (Hamiltonian): 4 x 4 Hamiltonian used as a base for the initial Hamiltonian.
-    """
-    m0 = 0.5 * np.kron(matrices.I - matrices.X, matrices.I)
-    return hamiltonians.Hamiltonian(2, m0, numpy=True)
-
-
-def trotter_dict(clauses):
-    """Create the dicitonaries needed to create the Hamiltonians for an Exact Cover problem. The dictionaries
-        must only contain commuting terms.
-    Args:
-        clauses (list): clauses for an Exact Cover instance.
-
-    Returns:
-        parts0 (tuple(dict)): corresponding pair of qubits and initial Hamiltonian applied to them.
-        parts1 (tuple(dict)): corresponding pair of qubits and clause Hamiltonian applied to them.
-    """
-    # Count the number of times a pair (i, j) appears in the clauses in order to properly normalize
-    pairs = collections.Counter()
-    for q0, q1, q2 in clauses:
-        pairs[(q0 - 1, q1 - 1)] += 1
-        pairs[(q1 - 1, q2 - 1)] += 1
-        pairs[(q2 - 1, q0 - 1)] += 1
-    # Separate dictionaries to commuting parts
-    multi_pairs, multi_sets = [], []
-    for pair, n in pairs.items():
-        pair_set = set(pair)
-        not_added = True
-        for p, s in zip(multi_pairs, multi_sets):
-            if not pair_set & s:
-                p[pair] = n
-                s |= pair_set
-                not_added = False
-                break
-        if not_added:
-            multi_pairs.append({pair: n})
-            multi_sets.append(set(pair))
-    # Define TrotterHamiltonian with proper normalization
-    h0 = h0t()
-    h1 = h_ct()
-    parts0 = ({pair: h0 if n == 1 else n * h0 for pair, n in p.items()}
-              for p in multi_pairs)
-    parts1 = ({pair: h1 if n == 1 else n * h1 for pair, n in p.items()}
-              for p in multi_pairs)
-    return parts0, parts1
+    x = sympy.symbols(" ".join((f"x{i}" for i in range(qubits))))
+    smap = {s: (i, matrices.X) for i, s in enumerate(x)}
+    sham = sum(0.5 * times[i] * (1 - s) for i, s in enumerate(x))
+    return sham, smap
 
 
 def spolynomial(t, params):

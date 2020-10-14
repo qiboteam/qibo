@@ -3,7 +3,7 @@
 A core point in Qibo is the support of different hardware configurations
 despite its simple installation procedure. The user can easily switch between
 CPU and GPU as described in
-[How to select hardware devices?](https://qibo.readthedocs.io/en/latest/advancedexamples.html#how-to-select-hardware-devices).
+[How to select hardware devices?](https://qibo.readthedocs.io/en/stable/advancedexamples.html#how-to-select-hardware-devices).
 A question that arises is how to determine the optimal device configuration for
 the circuit one would like to simulate.
 While the answer to this question depends both on the circuit specifics

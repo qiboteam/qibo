@@ -166,6 +166,10 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 .. code-block::  python
 
     from qibo import models, gates, callbacks
+
+    # create entropy callback where qubit 0 is the first subsystem
+    entropy = callbacks.EntanglementEntropy([0])
+
     # initialize circuit with 2 qubits and add gates
     c = models.Circuit(2) # state is |00> (entropy = 0)
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
@@ -174,8 +178,6 @@ and the :class:`qibo.base.gates.CallbackGate` gate. For example:
     c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
     c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
 
-    # create entropy callback where qubit 0 is the first subsystem
-    entropy = callbacks.EntanglementEntropy([0])
     # execute the circuit using the callback
     final_state = c()
 
@@ -203,6 +205,7 @@ For example
 .. code-block::  python
 
     import numpy as np
+    from qibo import callbacks
     # create a singlet state vector
     state = np.zeros(4)
     state[0], state[3] = 1 / np.sqrt(2), 1 / np.sqrt(2)
@@ -227,7 +230,7 @@ such gates are added in a circuit their parameters can be updated using the
     from qibo.models import Circuit
     from qibo import gates
     # create a circuit with all parameters set to 0.
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     c.add(gates.RX(0, theta=0))
     c.add(gates.RY(1, theta=0))
     c.add(gates.CZ(1, 2))
@@ -246,14 +249,14 @@ the circuit. For example:
 
 .. code-block::  python
 
-    c = Circuit(3, accelerators)
+    c = Circuit(3)
     g0 = gates.RX(0, theta=0)
     g1 = gates.RY(1, theta=0)
     g2 = gates.fSim(0, 2, theta=0, phi=0)
     c.add([g0, g1, gates.CZ(1, 2), g2, gates.H(2)])
 
     # set new values to the circuit's parameters using a dictionary
-    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)]
+    params = {g0: 0.123, g1: 0.456, g2: (0.789, 0.321)}
     c.set_parameters(params)
     # equivalently the parameter's can be update with a list as
     params = [0.123, 0.456, (0.789, 0.321)]
@@ -268,7 +271,7 @@ keys should be all the parametrized gates in the circuit.
 
 The following gates support parameter setting:
 
-* ``RX``, ``RY``, ``RZ``, ``ZPow``, ``CZPow``: Accept a single ``theta`` parameter.
+* ``RX``, ``RY``, ``RZ``, ``U1``, ``CU1``: Accept a single ``theta`` parameter.
 * :class:`qibo.base.gates.fSim`: Accepts a tuple of two parameters ``(theta, phi)``.
 * :class:`qibo.base.gates.GeneralizedfSim`: Accepts a tuple of two parameters
   ``(unitary, phi)``. Here ``unitary`` should be a unitary matrix given as an
@@ -281,8 +284,13 @@ The following gates support parameter setting:
 
 .. code-block:: python
 
-    c = Circuit(5)
-    pairs = list((i, i + 1) for i in range(0, 4, 2))
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    nqubits = 5
+    c = Circuit(nqubits)
+    pairs = [(i, i + 1) for i in range(0, 4, 2)]
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  params=np.zeros(5)))
@@ -298,6 +306,59 @@ a flat list.
 
 Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
 recreating a new circuit with new parameter values.
+
+
+How to invert a circuit?
+------------------------
+
+Many quantum algorithms require using a specific subroutine and its inverse
+in the same circuit. Qibo simplifies this implementation via the
+:meth:`qibo.base.circuit.BaseCircuit.invert` method. This method produces
+the inverse of a circuit by taking the dagger of all gates in reverse order. It
+can be used with circuit addition to simplify the construction of algorithms,
+for example:
+
+.. code-block:: python
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    # Create a subroutine
+    subroutine = Circuit(6)
+    subroutine.add([gates.RX(i, theta=0.1) for i in range(5)])
+    subroutine.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
+
+    # Create the middle part of the circuit
+    middle = Circuit(6)
+    middle.add([gates.CU2(i, i + 1, phi=0.1, lam=0.2) for i in range(0, 5, 2)])
+
+    # Create the total circuit as subroutine + middle + subroutine^{-1}
+    circuit = subroutine + middle + subroutine.invert()
+
+
+Note that circuit addition works only between circuits that act on the same number
+of qubits. It is often useful to add subroutines only on a subset of qubits of the
+large circuit. This is possible using the :meth:`qibo.base.circuit.BaseCircuit.on_qubits`
+method. For example:
+
+.. code-block:: python
+
+    from qibo import models, gates
+
+    # Create a small circuit of 4 qubits
+    smallc = models.Circuit(4)
+    smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
+    smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+
+    # Create a large circuit on 8 qubits
+    largec = models.Circuit(8)
+    # Add the small circuit on even qubits
+    largec.add(smallc.on_qubits(*range(0, 8, 2)))
+    # Add a QFT on odd qubits
+    largec.add(models.QFT(4).on_qubits(*range(1, 8, 2)))
+    # Add an inverse QFT on first 6 qubits
+    largec.add(models.QFT(6).invert().on_qubits(*range(6)))
+
 
 .. _vqe-example:
 
@@ -328,7 +389,6 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
         circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
         circuit.add(gates.CZ(0, nqubits-1))
     circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
-    return circuit
 
     # Create XXZ Hamiltonian
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
@@ -338,7 +398,7 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    best, params = vqe.minimize(initial_parameters, method='BFGS')
+    best, params = vqe.minimize(initial_parameters, method='BFGS', compile=False)
 
 
 For more information on the available options of the ``vqe.minimize`` call we
@@ -348,7 +408,7 @@ has to use a backend based on tensorflow primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
 To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
-for more details.
+section for more details.
 
 A useful gate for defining the ansatz of the VQE is :class:`qibo.base.gates.VariationalLayer`.
 This optimizes performance by fusing the layer of one-qubit parametrized gates with
@@ -359,7 +419,7 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
 .. code-block:: python
 
     circuit = models.Circuit(nqubits)
-    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
     theta = np.zeros(nqubits)
     for l in range(nlayers):
         circuit.add(gates.VariationalLayer(range(nqubits), pairs,
@@ -368,7 +428,6 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
-    return circuit
 
 
 .. _qaoa-example:
@@ -395,7 +454,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
     qaoa = models.QAOA(hamiltonian)
 
     # Optimize starting from a random guess for the variational parameters
-    initial_parameters = 0.01 * np.random.uniform(4)
+    initial_parameters = 0.01 * np.random.uniform(0,1,4)
     best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
 
 In the above example the initial guess for parameters has length four and
@@ -414,15 +473,21 @@ executing or optimizing by passing the ``initial_state`` argument.
 
 The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
-:ref:`How to simulate time evolution? <timeevol-example>`.
-As explained there, solvers will fall back to traditional Qibo circuits when a
-:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used instead of a
-:class:`qibo.base.hamiltonians.Hamiltonian`. In this case it is also possible
-to execute the QAOA circuit on multiple devices, by passing an ``accelerators``
-dictionary when defining the model. For example the previous example would
-have to be modified as:
+:ref:`How to simulate time evolution? <timeevol-example>` section.
+When a :class:`qibo.base.hamiltonians.Hamiltonian` is used then solvers will
+exponentiate it using its full matrix. Alternatively, if a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is used then solvers
+will fall back to traditional Qibo circuits that perform Trotter steps. For
+more information on how the Trotter decomposition is implemented in Qibo we
+refer to the :ref:`Using Trotter decomposition <trotterdecomp-example>` example.
+
+When Trotter decomposition is used, it is possible to execute the QAOA circuit
+on multiple devices, by passing an ``accelerators`` dictionary when defining
+the model. For example the previous example would have to be modified as:
 
 .. code-block:: python
+
+    from qibo import models, hamiltonians
 
     hamiltonian = hamiltonians.XXZ(6, trotter=True)
     qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
@@ -437,63 +502,75 @@ As a deep learning framework, Tensorflow supports
 `automatic differentiation <https://www.tensorflow.org/tutorials/customization/autodiff>`_.
 This can be used to optimize the parameters of variational circuits. For example
 the following script optimizes the parameters of two rotations so that the circuit
-output matches a target state, using the fidelity as figure of merit.
+output matches a target state using the fidelity as the corresponding loss
+function.
 
 .. code-block:: python
 
-    import tensorflow as tf
     # switch backend to "matmuleinsum" or "defaulteinsum"
     import qibo
     qibo.set_backend("matmuleinsum")
-    from qibo.models import Circuit
-    from qibo import gates
+    import tensorflow as tf
+    from qibo import gates, models
 
-    nepochs = 100
-    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    # Optimization parameters
+    nepochs = 1000
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+
+    # Define circuit ansatz
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+    c = models.Circuit(2)
+    c.add(gates.RX(0, params[0]))
+    c.add(gates.RY(1, params[1]))
 
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
-            c = Circuit(2)
-            c.add(RX(0, params[0]))
-            c.add(RY(0, params[1]))
-            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            c.set_parameters(params)
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
-
         grads = tape.gradient(loss, params)
-        optimizer.apply_gradients(zip(grads, params))
+        optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that the circuit has to be defined inside the ``tf.GradientTape()`` otherwise
-the calculated gradients will be ``None``. Also, a backend that uses tensorflow
-primitives gates (either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be
-used because currently the default ``"custom"`` backend does not support automatic
-differentiation.
+Note that a backend that uses tensorflow primitives gates
+(either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be used because
+the default ``"custom"`` backend does not support automatic differentiation.
 
-The optimization procedure can also be compiled as follows:
+The optimization procedure may also be compiled, however in this case it is not
+possible to use :meth:`qibo.base.circuit.BaseCircuit.set_parameters` as the
+circuit needs to be defined inside the compiled ``tf.GradientTape()``.
+For example:
 
 .. code-block:: python
 
-    nepochs = 100
-    params = tf.Variable(np.zeros(2), dtype=tf.float64)
+    import qibo
+    qibo.set_backend("matmuleinsum")
+    import tensorflow as tf
+    from qibo import gates, models
+
+    nepochs = 1000
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
+    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
+
 
     @tf.function
     def optimize(params):
         with tf.GradientTape() as tape:
-            c = Circuit(2)
-            c.add(RX(0, params[0]))
-            c.add(RY(0, params[1]))
-            fidelity = tf.math.real(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            c = models.Circuit(2)
+            c.add(gates.RX(0, theta=params[0]))
+            c.add(gates.RY(1, theta=params[1]))
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
             loss = 1 - fidelity
-
         grads = tape.gradient(loss, params)
-        optimizer.apply_gradients(zip(grads, params))
+        optimizer.apply_gradients(zip([grads], [params]))
+
 
     for _ in range(nepochs):
         optimize(params)
+
 
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
@@ -505,16 +582,18 @@ to train them.
 How to perform noisy simulation?
 --------------------------------
 
-Qibo can perform noisy simulation using density matrices. ``Circuit`` objects can
-evolve density matrices in a similar manner to state vectors. In order to use
-density matrices the user should execute the circuit passing a density matrix as
-the initial state. For example
+Qibo can perform noisy simulation using density matrices.
+:class:`qibo.base.circuit.BaseCircuit` objects can evolve density matrices
+similarly to state vectors.
+In order to use density matrices the user should execute the circuit passing a
+density matrix as the initial state. For example
 
 .. code-block:: python
 
-    import qibo
+    import numpy as np
     # switch backend to "matmuleinsum" or "defaulteinsum"
     qibo.set_backend("matmuleinsum")
+    import qibo
     from qibo import models, gates
 
     # Define circuit
@@ -529,7 +608,7 @@ the initial state. For example
 
     # Call circuit on the density matrix
     final_rho = c(initial_rho)
-    # final_rho will be tf.eye(4) / 4 which corresponds to |++><++|
+    # final_rho will be tf.ones(4) / 4 which corresponds to |++><++|
 
 will perform the transformation
 
@@ -537,14 +616,16 @@ will perform the transformation
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
 
 Note that the calculation backend was switched to ``"matmuleinsum"`` because the
-default ``"custom"`` backend does not support density matrices.
+default ``"custom"`` backend does not support density matrix simulation yet.
 
 The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
-If this or any other channel is used in a ``Circuit``, then the execution will automatically
-switch to density matrices. For example
+If this or any other channel is used in a ``Circuit``, then the execution
+will automatically switch to density matrices. For example
 
 .. code-block:: python
 
+    import qibo
+    qibo.set_backend("matmuleinsum")
     from qibo import models, gates
 
     c = models.Circuit(2) # starts with state |00>
@@ -560,12 +641,13 @@ will perform the transformation
     \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
     \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
-Note that ``Circuit`` will use state vectors until the first channel is found and will
-switch to density matrices for the rest of the simulation. Measurements and
-callbacks can be used exactly as in the pure state vector case.
+Note that :class:`qibo.base.circuit.BaseCircuit` will use state vectors until
+the first channel is found and will switch to density matrices for the rest of
+the simulation. Measurements and callbacks can be used exactly as in the case
+of state vector simulation.
 
-In practical applications noise typically occurs after every gate. For this reason,
-:class:`qibo.base.circuit.BaseCircuit` provides a ``.with_noise()`` method
+In practical applications noise typically occurs after every gate.
+Qibo provides the :meth:`qibo.base.circuit.BaseCircuit.with_noise()` method
 which automatically creates a new circuit that contains a noise channel after
 every normal gate. The user can control the probabilities of the noise channel
 using a noise map, which is a dictionary that maps qubits to the corresponding
@@ -575,10 +657,11 @@ For example, the following script
 
 .. code-block:: python
 
-      from qibo.models import Circuit
-      from qibo import gates
+      import qibo
+      qibo.set_backend("matmuleinsum")
+      from qibo import models, gates
 
-      c = Circuit(2)
+      c = models.Circuit(2)
       c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
 
       # Define a noise map that maps qubit IDs to noise probabilities
@@ -589,7 +672,7 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
 .. code-block:: python
 
-      noisy_c2 = Circuit(2)
+      noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
       noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
@@ -600,9 +683,8 @@ will create a new circuit ``noisy_c`` that is equivalent to:
       noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
 
-Note however that the circuit ``noisy_c`` that was created using the
-``with_noise`` method uses the gate objects of the original circuit ``c``
-(it is not a deep copy), unlike ``noisy_c2`` where each gate was created as
+Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
+(it is not a deep copy), while in ``noisy_c2`` each gate was created as
 a new object.
 
 The user may use a single tuple instead of a dictionary as the noise map
@@ -611,16 +693,16 @@ That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
 Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
-which allows the user to explicitly specify the noise probabilities.
-before measurement gates. These may be different from the typical noise probabilities
-depending on the experimental realization of measurements. For example:
+which allows the user to explicitly specify the probabilities of the noise
+channels that applied before measurement gates. For example:
 
 .. code-block:: python
 
-      from qibo.models import Circuit
-      from qibo import gates
+      import qibo
+      qibo.set_backend("matmuleinsum")
+      from qibo import models, gates
 
-      c = Circuit(2)
+      c = models.Circuit(2)
       c.add([gates.H(0), gates.H(1)])
       c.add(gates.M(0))
 
@@ -633,7 +715,7 @@ is equivalent to the following:
 
 .. code-block:: python
 
-      noisy_c = Circuit(2)
+      noisy_c = models.Circuit(2)
       noisy_c.add(gates.H(0))
       noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
@@ -644,10 +726,9 @@ is equivalent to the following:
 
 Note that ``measurement_noise`` does not affect qubits that are not measured
 and the default ``noise_map`` will be used for those.
-
-Similarly to ``noise_map``, ``measurement_noise`` can either be either a
-dictionary that maps each qubit to the corresponding probability triplet or
-a tuple if the same triplet shall be used on all measured qubits.
+Similarly to ``noise_map``, ``measurement_noise`` can be either a dictionary
+that maps each qubit to the corresponding probability triplet or a tuple
+if the same triplet shall be used on all measured qubits.
 
 
 .. _timeevol-example:
@@ -676,19 +757,23 @@ unitary evolution using the full state vector. For example:
 
 
 When studying dynamics people are usually interested not only in the final state
-vector but also observing how physical quantities change during the time
+vector but also in observing how physical quantities change during the time
 evolution. This is possible using callbacks. For example, in the above case we
 can track how <X> changes as follows:
 
 .. code-block::  python
 
-    from qibo import callbacks
+    import numpy as np
+    from qibo import hamiltonians, models, callbacks
+
+    nqubits = 4
     # Define a callback that calculates the energy (expectation value) of the X Hamiltonian
     observable = callbacks.Energy(hamiltonians.X(nqubits))
     # Create evolution object using the above callback and a time step of dt=1e-3
     evolve = models.StateEvolution(hamiltonians.Z(nqubits), dt=1e-3,
                                    callbacks=[observable])
     # Evolve for total time t=1
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
     print(observable[:])
@@ -715,6 +800,7 @@ a :class:`qibo.base.hamiltonians.Hamiltonian` in the
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
     # and pass it to the evolution model
     evolve = models.StateEvolution(ham, dt=1e-3)
+    initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
 
@@ -723,59 +809,62 @@ exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. The solvers that are
 currently implemented are the default exponential solver (``"exp"``) and two
 Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
+For more information we refer to the :ref:`Solvers <Solvers>` section.
 
+
+.. _trotterdecomp-example:
 
 Using Trotter decomposition
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Trotter decomposition provides a way to represent the unitary evolution of
-quantum states as a sequence of two qubit unitaries. This allows to represent
+quantum states as a sequence of local unitaries. This allows to represent
 the physical process of time evolution as a quantum circuit. Qibo provides
-functionality to perform this transformation if the underlying Hamiltonian is
-defined as a sum of commuting parts that consist of terms that can be
-exponentiated efficiently. Such Hamiltonian can be implemented in Qibo using
-the :class:`qibo.base.hamiltonians.TrotterHamiltonian`, which is based in Sec.
-4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_. Bellow is an
-example of how to use this object in practice:
+functionality to perform this transformation automatically, if the underlying
+Hamiltonian object is defined as a sum of commuting parts that consist of terms
+that can be exponentiated efficiently.
+Such Hamiltonian can be implemented in Qibo using
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+The implementation of Trotter decmoposition is based in Sec.
+4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+Below is an example of how to use this object in practice:
 
 .. code-block::  python
 
-    import numpy as np
-    from qibo import hamiltonians, matrices
+    from qibo import hamiltonians
 
-    # Create a two-qubit term for the cirtical TFIM model
-    matrix = -np.kron(matrices.Z, matrices.Z) - np.kron(matrices.X, matrices.I)
-    term = hamiltonians.Hamiltonian(2, matrix)
-    # define the even and odd parts of the total Hamiltonian for 5 qubits
-    # periodic boundary conditions are assumed
-    even = {(0, 1): term, (2, 3): term, (4, 0): term}
-    odd = {(1, 2): term, (3, 4): term}
-    # create the ``TrotterHamiltonian`` using these terms
-    ham = hamiltonians.TrotterHamiltonian(even, odd)
-
-    # alternatively one can use the ``from_twoqubit_term`` convenience method
-    # which works for translationally invariant Hamiltonians
-    ham = hamiltonians.TrotterHamiltonian.from_twoqubit_term(nqubits=5, term=term)
-
-    # or one can use the pre-coded TFIM model enabling the ``trotter`` flag
+    # Define TFIM model as a ``TrotterHamiltonian``
     ham = hamiltonians.TFIM(nqubits=5, trotter=True)
-
-    # once the Hamiltonian is created we can get the Trotter circuit that
-    # implements a single time step ``dt``
+    # This object can be used to create the circuit that
+    # implements a single Trotter time step ``dt``
     circuit = ham.circuit(dt=1e-2)
+
 
 This is a standard :class:`qibo.tensorflow.circuit.TensorflowCircuit` that
 contains :class:`qibo.base.gates.Unitary` gates corresponding to the
 exponentials of the Trotter decomposition and can be executed on any state.
 
+Note that in the transverse field Ising model (TFIM) that was used in this
+example is among the pre-coded Hamiltonians in Qibo and could be created as
+a :class:`qibo.base.hamiltonians.TrotterHamiltonian` simply using the
+``trotter`` flag. Defining custom Hamiltonians can be more complicated, however
+Qibo simplifies this process by providing the option to define Hamiltonians
+symbolically through the use of ``sympy``. For more information on this we
+refer to the
+:ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+example.
+
 A :class:`qibo.base.hamiltonians.TrotterHamiltonian` can also be used to
 simulate time evolution. This can be done by passing the Hamiltonian to a
 :class:`qibo.evolution.StateEvolution` model and using the exponential solver.
-Qibo automatically finds that this Hamiltonian can be Trotterized and uses this
-to perform the evolution. For example:
+Qibo automatically finds that this Hamiltonian is a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` object
+and uses the Trotter decomposition to perform the evolution.
+For example:
 
 .. code-block::  python
 
+    import numpy as np
     from qibo import models, hamiltonians
 
     nqubits = 5
@@ -793,10 +882,11 @@ repeatedly to the given initial state T / dt = 1000 times to obtain the
 final state of the evolution.
 
 Since Trotter evolution is based on Qibo circuits, it also supports distributed
-execution on multiple devices. This can be enabled by passing an
+execution on multiple devices (GPUs). This can be enabled by passing an
 ``accelerators`` dictionary when defining the
-:class:`qibo.evolution.StateEvolution` model. Check the
-:ref:`How to select hardware devices? <gpu-examples>` example for more details.
+:class:`qibo.evolution.StateEvolution` model. We refer to the
+:ref:`How to select hardware devices? <gpu-examples>` example for more details
+on how the ``accelerators`` dictionary can be used.
 
 
 How to simulate adiabatic time evolution?
@@ -822,8 +912,8 @@ Here is an example of adiabatic evolution simulation:
     # Define the interpolation scheduling
     s = lambda t: t
     # Define evolution model
-    evolve = models.AdiabaticEvolution(h0, h1, s, solver="rk4")
-    # Evolve using the Runge-Kutta solver to get the final state
+    evolve = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # Get the final state of the evolution
     final_state = evolve(final_time=T)
 
 
@@ -844,13 +934,19 @@ similar to other callbacks:
 
 .. code-block::  python
 
-    # define a callback for calculating the ground state energy
+    import numpy as np
+    from qibo import hamiltonians, models, callbacks
+
+    nqubits = 4
+    h0 = hamiltonians.X(nqubits)
+    h1 = hamiltonians.TFIM(nqubits, h=0)
+
     ground = callbacks.Gap(mode=0)
     # define a callback for calculating the gap
     gap = callbacks.Gap()
     # define and execute the ``AdiabaticEvolution`` model
-    evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
-                                   callbacks=[gap, ground])
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
+                                          callbacks=[gap, ground])
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
     print(gap[:])
@@ -863,26 +959,46 @@ optional argument is a vector of free parameters that can be optimized. The
 function should, by definition, satisfy the properties s(0, p) = 0 and
 s(1, p) = 1 for any p, otherwise errors will be raised.
 
-The state evolution functionality described in the previous example can also be
+All state evolution functionality described in the previous example can also be
 used for simulating adiabatic evolution. The solver can be specified during the
 initialization of the :class:`qibo.models.AdiabaticEvolution` model and a
 Trotter decomposition may be used with the exponential solver. The Trotter
 decomposition will be used automatically if ``h0`` and ``h1`` are defined
-using the :class:`qibo.base.hamiltonians.TrotterHamiltonian` object. For
-pre-coded Hamiltonians this can be done simply as
+using as :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects. For
+pre-coded Hamiltonians this can be done simply as:
 
 .. code-block::  python
 
+    from qibo import hamiltonians, models
+
+    nqubits = 4
+    # Define ``TrotterHamiltonian``s
     h0 = hamiltonians.X(nqubits, trotter=True)
     h1 = hamiltonians.TFIM(nqubits, h=0, trotter=True)
+    # Perform adiabatic evolution using the Trotter decomposition
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
+    final_state = evolution(final_time=1.0)
 
+
+When Trotter evolution is used, it is also possible to execute on multiple
+devices by passing an ``accelerators`` dictionary in the creation of the
+:class:`qibo.evolution.AdiabaticEvolution` model.
 
 Note that ``h0`` and ``h1`` should have the same type, either both
 :class:`qibo.base.hamiltonians.Hamiltonian` or both
-:class:`qibo.base.hamiltonians.TrotterHamiltonian`. When Trotter evolution is
-used, it is also possible to execute on multiple devices by passing an
-``accelerators`` dictionary in the creation of the
-:class:`qibo.evolution.AdiabaticEvolution` model.
+:class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+When :class:`qibo.base.hamiltonians.TrotterHamiltonian` is used, then ``h0`` and
+``h1`` should also have the same part structure, otherwise it will not be
+possible to add them in order to create the total Hamiltonian. For more
+information on this we refer to
+:meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible`.
+If the given Hamiltonians do not have the same part structure and ``h0``
+consists of one-body terms only then Qibo will use an automatic algorithm
+(:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`)
+to rearrange the terms of ``h0`` so that it matches the part structure of ``h1``.
+It is important to note that in some applications making ``h0`` and ``h1``
+compatible manually may take better advantage of caching and lead to better
+execution performance compared to using the automatic functionality.
 
 
 Optimizing the scheduling function
@@ -896,6 +1012,9 @@ described in the :ref:`How to write a VQE? <vqe-example>` example and can be
 done as follows:
 
 .. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, models
 
     # Define Hamiltonians
     h0 = hamiltonians.X(3)
@@ -912,5 +1031,111 @@ done as follows:
 
 Note that the ``minimize`` method optimizes both the free parameters ``p`` of
 the scheduling function as well as the total evolution time. The initial guess
-for the total evolution time should be the last value of the given
-``initial_guess`` array.
+for the total evolution time is the last value of the given ``initial_guess``
+array. For a list of the available optimizers we refer to
+:ref:`Optimizers <Optimizers>`.
+
+
+.. _symbolicham-example:
+
+How to define custom Hamiltonians using symbols?
+------------------------------------------------
+
+In order to use the VQE, QAOA and time evolution models in Qibo the user has to
+define Hamiltonians based on :class:`qibo.base.hamiltonians.Hamiltonian`, or
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` when the Trotter
+decomposition is to be used. Qibo provides pre-coded Hamiltonians for some
+common physics models, such as the transverse field Ising model (TFIM) and the
+Heisenberg model (see :ref:`Hamiltonians <Hamiltonians>` for a complete list
+of the pre-coded models).
+In order to explore other problems the user needs to define the Hamiltonian
+objects from scratch.
+
+A standard way to define Hamiltonians is through their full matrix
+representation. For example the following code generates the TFIM Hamiltonian
+with periodic boundary conditions for four qubits by constructing the
+corresponding 16x16 matrix:
+
+.. code-block::  python
+
+    import numpy as np
+    from qibo import hamiltonians, matrices
+
+    # ZZ terms
+    matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.Z), np.kron(matrices.Z, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.Z, matrices.Z))
+    matrix += np.kron(np.kron(matrices.Z, matrices.I), np.kron(matrices.I, matrices.Ζ))
+    # X terms
+    matrix += np.kron(np.kron(matrices.X, matrices.I), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.X), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.Ι))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
+    # Create Hamiltonian object
+    ham = hamiltonians.Hamiltonian(4, matrix)
+
+
+Although it is possible to generalize the above construction to arbitrary number
+of qubits this procedure may be more complex for other Hamiltonians. Moreover
+constructing the full matrix does not scale well with increasing the number of
+qubits. This makes the use of :class:`qibo.base.hamiltonians.TrotterHamiltonian`
+preferrable as the qubit number increases, as these Hamiltonians are not based
+in the full matrix representation. On the other hand a
+:class:`qibo.base.hamiltonians.TrotterHamiltonian` is more complicated to
+construct for an arbitrary Hamiltonian.
+
+To simplify the construction of Hamiltonians, Qibo provides the
+:meth:`qibo.base.hamiltonians.Hamiltonian.from_symbolic` and
+:meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods which
+allow the user to construct Hamiltonian objects by writing their symbolic
+form using ``sympy`` symbols. For example, the TFIM on four qubits could be
+constructed as:
+
+.. code-block::  python
+
+    import sympy
+    import numpy as np
+    from qibo import hamiltonians, matrices
+
+    # Define symbols for X and Z operators
+    Z = sympy.symbols("Z0 Z1 Z2 Z3")
+    X = sympy.symbols("X0 X1 X2 X3")
+
+    # Define Hamiltonian using these symbols
+    # ZZ terms
+    symbolic_ham = sum(Z[i] * Z[i + 1] for i in range(3))
+    # periodic boundary condition term
+    symbolic_ham += Z[0] * Z[-1]
+    # X terms
+    symbolic_ham += sum(X)
+
+    # Define a map from symbols to actual matrices
+    symbol_map = {s: (i, matrices.X) for i, s in enumerate(X)}
+    symbol_map.update({s: (i, matrices.Z) for i, s in enumerate(Z)})
+
+    # Define a dense Hamiltonian
+    ham = hamiltonians.Hamiltonian.from_symbolic(symbolic_ham, symbol_map)
+    # This Hamiltonian automatically constructs the full matrix which can be
+    # accessed as ``ham.matrix``.
+
+    # Define a more memory-friendly Trotter Hamiltonian
+    trotter_ham = hamiltonians.TrotterHamiltonian.from_symbolic(symbolic_ham, symbol_map)
+
+
+Defining Hamiltonians from symbols is usually a simple process as the symbolic
+form is very close to the form of the Hamiltonian on paper. Note that in the
+case of :class:`qibo.base.hamiltonians.TrotterHamiltonian`, Qibo handles
+automatically the Trotter decomposition by splitting to the appropriate terms.
+
+As noted in the :ref:`How to simulate adiabatic time evolution? <adevol-example>`,
+when using Trotter decomposition to simulate adiabatic evolution, then ``h0``
+and ``h1`` should be compatible in order to add them.
+This is usually not true when constructing Hamiltonians using symbols.
+However, if the constructed Hamiltonians are not compatible but ``h0`` consists
+of one-body terms only (which is the case in most adiabatic evolution
+applications) then Qibo will use an automatic algorithm
+(:meth:`qibo.base.hamiltonians.TrotterHamiltonian.make_compatible`) to make it
+compatible to ``h1``. We note that in some applications, making the Hamiltonians
+compatible  manually instead of relying on the automatic functionality,
+may take better advantage of caching compared and lead to better execution
+performance.

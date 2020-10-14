@@ -10,7 +10,7 @@ NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
 
-class _ParametrizedGates:
+class _ParametrizedGates(list):
     """Simple data structure for keeping track of parametrized gates.
 
     Useful for the ``circuit.set_parameters()`` method.
@@ -19,20 +19,40 @@ class _ParametrizedGates:
     """
 
     def __init__(self):
-        self.list = []
+        super(_ParametrizedGates, self).__init__(self)
         self.set = set()
         self.nparams = 0
 
     def append(self, gate: gates.ParametrizedGate):
-        self.list.append(gate)
+        super(_ParametrizedGates, self).append(gate)
         self.set.add(gate)
         self.nparams += gate.nparams
 
-    def __len__(self):
-        return len(self.list)
 
-    def __iter__(self):
-        return iter(self.list)
+class _Queue(list):
+    """List that holds the queue of gates of a circuit.
+
+    In addition to the queue, it holds a list of gate moments, where each gate
+    is placed in the earliest possible position depending for the qubits it acts.
+    """
+
+    def __init__(self, nqubits):
+        super(_Queue, self).__init__(self)
+        self.nqubits = nqubits
+        self.moments = [nqubits * [None]]
+        self.moment_index = nqubits * [0]
+
+    def append(self, gate: gates.ParametrizedGate):
+        super(_Queue, self).append(gate)
+        # Calculate moment index for this gate
+        if gate.qubits:
+            idx = max(self.moment_index[q] for q in gate.qubits)
+        for q in gate.qubits:
+            if idx >= len(self.moments):
+                # Add a moment
+                self.moments.append(len(self.moments[-1]) * [None])
+            self.moments[idx][q] = gate
+            self.moment_index[q] = idx + 1
 
 
 class BaseCircuit(object):
@@ -65,7 +85,7 @@ class BaseCircuit(object):
             raise_error(ValueError, 'nqubits must be > 0')
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
-        self.queue = []
+        self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         # Flag to keep track if the circuit was executed
@@ -122,6 +142,35 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
         return newcircuit
 
+    def on_qubits(self, *q) -> Iterable[gates.Gate]:
+        """Generator of gates contained in the circuit acting on specified qubits.
+
+        Useful for adding a circuit as a subroutine in a larger circuit.
+
+        Args:
+            q (int): Qubit ids that the gates should act.
+
+        Example:
+            ::
+
+                from qibo import gates, models
+                # create small circuit on 4 qubits
+                smallc = models.Circuit(4)
+                smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
+                smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+                # create large circuit on 8 qubits
+                largec = models.Circuit(8)
+                largec.add((gates.RY(i, theta=0.1) for i in range(8)))
+                # add the small circuit to the even qubits of the large one
+                largec.add(smallc.on_qubits(*range(0, 8, 2)))
+        """
+        if len(q) != self.nqubits:
+            raise_error(ValueError, "Cannot return gates on {} qubits because "
+                                    "the circuit contains {} qubits."
+                                    "".format(len(q), self.nqubits))
+        for gate in self.queue:
+            yield gate.on_qubits(*(q[i] for i in gate.qubits))
+
     def copy(self, deep: bool = False) -> "BaseCircuit":
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
@@ -133,9 +182,9 @@ class BaseCircuit(object):
         Returns:
             The copied circuit object.
         """
+        import copy
         new_circuit = self.__class__(**self._init_kwargs)
         if deep:
-            import copy
             for gate in self.queue:
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
@@ -147,10 +196,28 @@ class BaseCircuit(object):
                 raise_error(NotImplementedError, "Cannot create deep copy of fused "
                                                  "circuit.")
         else:
-            new_circuit.queue = list(self.queue)
+            new_circuit.queue = copy.copy(self.queue)
             new_circuit.parametrized_gates = list(self.parametrized_gates)
             new_circuit.measurement_gate = self.measurement_gate
             new_circuit.fusion_groups = list(self.fusion_groups)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def invert(self) -> "BaseCircuit":
+        """Creates a new ``Circuit`` that is the inverse of the original.
+
+        Inversion is obtained by taking the dagger of all gates in reverse order.
+        If the original circuit contains measurement gates, these are included
+        in the inverted circuit.
+
+        Returns:
+            The circuit inverse.
+        """
+        import copy
+        new_circuit = self.__class__(**self._init_kwargs)
+        for gate in self.queue[::-1]:
+            new_circuit.add(gate.dagger())
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
@@ -183,9 +250,8 @@ class BaseCircuit(object):
         Example:
             ::
 
-                from qibo.models import Circuit
-                from qibo import gates
-                c = Circuit(2)
+                from qibo import models, gates
+                c = models.Circuit(2)
                 c.add([gates.H(0), gates.H(1)])
                 c.add(gates.CNOT(0, 1))
                 c.add([gates.Y(0), gates.Y(1)])
@@ -422,9 +488,14 @@ class BaseCircuit(object):
         return self.nqubits
 
     @property
-    def depth(self) -> int:
+    def ngates(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
+
+    @property
+    def depth(self) -> int:
+        """Circuit depth if each gate is placed at the earliest possible position."""
+        return len(self.queue.moments)
 
     @property
     def gate_types(self) -> collections.Counter:
@@ -465,9 +536,14 @@ class BaseCircuit(object):
             for i, gate in enumerate(self.parametrized_gates):
                 gate.parameter = parameters[i]
         elif n == self.parametrized_gates.nparams:
+            import numpy as np
+            parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i + k: i + k + gate.nparams]
+                if gate.nparams == 1:
+                    gate.parameter = parameters[i + k]
+                else:
+                    gate.parameter = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
@@ -552,7 +628,6 @@ class BaseCircuit(object):
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
-    @property
     def summary(self) -> str:
         """Generates a summary of the circuit.
 
@@ -574,7 +649,8 @@ class BaseCircuit(object):
                 print(c.summary())
                 # Prints
                 '''
-                Circuit depth = 7
+                Circuit depth = 5
+                Total number of gates = 7
                 Number of qubits = 3
                 Most common gates:
                 h: 3
@@ -582,8 +658,9 @@ class BaseCircuit(object):
                 ccx: 1
                 '''
         """
-        logs = ["Circuit depth = {}".format(self.depth),
-                "Number of qubits = {}".format(self.nqubits),
+        logs = [f"Circuit depth = {self.depth}",
+                f"Total number of gates = {self.ngates}",
+                f"Number of qubits = {self.nqubits}",
                 "Most common gates:"]
         common_gates = self.gate_types.most_common()
         logs.extend("{}: {}".format(g, n) for g, n in common_gates)
@@ -637,10 +714,14 @@ class BaseCircuit(object):
                 raise_error(ValueError, "OpenQASM does not support multi-controlled gates.")
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
-            name = gate.name
             if gate.name in gates.PARAMETRIZED_GATES:
-                # TODO: Make sure that our parameter convention agrees with OpenQASM
-                name += f"({gate.parameter})"
+                if isinstance(gate.parameter, Iterable):
+                    params = (str(x) for x in gate.parameter)
+                    name = "{}({})".format(gate.name, ", ".join(params))
+                else:
+                    name = f"{gate.name}({gate.parameter})"
+            else:
+                name = gate.name
             code.append(f"{name} {qubits};")
 
         # Add measurements
@@ -682,15 +763,15 @@ class BaseCircuit(object):
         """
         kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(**kwargs)
-        for gate_name, qubits, param in gate_list:
+        for gate_name, qubits, params in gate_list:
             gate = getattr(gate_module, gate_name)
             if gate_name == "M":
-                circuit.add(gate(*qubits, register_name=param))
-            elif param is None:
+                circuit.add(gate(*qubits, register_name=params))
+            elif params is None:
                 circuit.add(gate(*qubits))
             else:
                 # assume parametrized gate
-                circuit.add(gate(*qubits, theta=param))
+                circuit.add(gate(*qubits, *params))
         return circuit
 
     @staticmethod
@@ -782,24 +863,30 @@ class BaseCircuit(object):
             else:
                 pieces = [x for x in re.split("[()]", command) if x]
                 if len(pieces) == 1:
-                    gatename, theta = pieces[0], None
+                    gatename, params = pieces[0], None
                     if gatename not in gates.QASM_GATES:
                         raise_error(ValueError, "QASM command {} is not recognized."
                                                 "".format(command))
                     if gatename in gates.PARAMETRIZED_GATES:
-                        raise_error(ValueError, "Missing theta parameter for QASM "
+                        raise_error(ValueError, "Missing parameters for QASM "
                                                 "gate {}.".format(gatename))
 
                 elif len(pieces) == 2:
-                    gatename, theta = pieces
+                    gatename, params = pieces
                     if gatename not in gates.PARAMETRIZED_GATES:
                         raise_error(ValueError, "Invalid QASM command {}."
                                                 "".format(command))
+                    params = params.replace(" ", "").split(",")
                     try:
-                        theta = float(theta)
+                        for i, p in enumerate(params):
+                            if 'pi' in p:
+                                import numpy as np
+                                s = p.replace('pi', str(np.pi)).split('*')
+                                p = np.prod([float(j) for j in s], axis=0)
+                            params[i] = float(p)
                     except ValueError:
-                        raise_error(ValueError, "Invalid value {} for theta parameter."
-                                                "".format(theta))
+                        raise_error(ValueError, "Invalid value {} for gate parameters."
+                                                "".format(params))
 
                 else:
                     raise_error(ValueError, "QASM command {} is not recognized."
@@ -814,7 +901,7 @@ class BaseCircuit(object):
                     qubit_list.append(qubits[qubit])
                 gate_list.append((gates.QASM_GATES[gatename],
                                   list(qubit_list),
-                                  theta))
+                                  params))
 
         # Create measurement gate qubit lists from registers
         for i, (gatename, register, _) in enumerate(gate_list):
