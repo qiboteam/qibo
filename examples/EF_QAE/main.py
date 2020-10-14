@@ -6,7 +6,6 @@ from qibo import hamiltonians, gates, models, matrices
 from qibo.hamiltonians import Hamiltonian
 from scipy.optimize import minimize
 from sklearn.datasets import load_digits
-import sys
 import argparse
 
 
@@ -26,32 +25,6 @@ def main(layers, autoencoder, example):
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
     
-    def ansatz_QAE(theta):
-        """Creates the variational quantum circuit for QAE.
-        Args:
-            theta (array or list): values of the parameters.
-
-        Returns:
-            Quantum circuit.
-        """
-        circuit = models.Circuit(nqubits)
-        index = 0
-        for l in range(layers):
-            for q in range(nqubits):
-                circuit.add(gates.RY(q, theta[index]))
-                index+=1
-            circuit.add(gates.CZ(5, 4)); circuit.add(gates.CZ(5, 3))
-            circuit.add(gates.CZ(5, 1)); circuit.add(gates.CZ(4, 2)); circuit.add(gates.CZ(4, 0))
-            for q in range(nqubits):
-                circuit.add(gates.RY(q, theta[index]))
-                index+=1
-            circuit.add(gates.CZ(5, 4)); circuit.add(gates.CZ(5, 2))
-            circuit.add(gates.CZ(4, 3)); circuit.add(gates.CZ(5, 0)); circuit.add(gates.CZ(4, 1))
-        for q in range(nqubits-compress, nqubits, 1):
-            circuit.add(gates.RY(q, theta[index]))
-            index+=1
-        return circuit
-    
     def ansatz_EF_QAE(theta, x):
         """Creates the variational quantum circuit for EF-QAE.
         Args:
@@ -67,13 +40,19 @@ def main(layers, autoencoder, example):
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
                 index+=2
-            circuit.add(gates.CZ(5, 4)); circuit.add(gates.CZ(5, 3))
-            circuit.add(gates.CZ(5, 1)); circuit.add(gates.CZ(4, 2)); circuit.add(gates.CZ(4, 0))
+            circuit.add(gates.CZ(5, 4))
+            circuit.add(gates.CZ(5, 3))
+            circuit.add(gates.CZ(5, 1))
+            circuit.add(gates.CZ(4, 2))
+            circuit.add(gates.CZ(4, 0))
             for q in range(nqubits):
                 circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
                 index+=2
-            circuit.add(gates.CZ(5, 4)); circuit.add(gates.CZ(5, 2))
-            circuit.add(gates.CZ(4, 3)); circuit.add(gates.CZ(5, 0)); circuit.add(gates.CZ(4, 1))
+            circuit.add(gates.CZ(5, 4))
+            circuit.add(gates.CZ(5, 2))
+            circuit.add(gates.CZ(4, 3))
+            circuit.add(gates.CZ(5, 0))
+            circuit.add(gates.CZ(4, 1))
         for q in range(nqubits-compress, nqubits, 1):
             circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
             index+=2
@@ -101,10 +80,30 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """        
+                """
+                circuit = models.Circuit(nqubits)
+                for l in range(layers):
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 3))
+                    circuit.add(gates.CZ(5, 1))
+                    circuit.add(gates.CZ(4, 2))
+                    circuit.add(gates.CZ(4, 0))
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 2))
+                    circuit.add(gates.CZ(4, 3))
+                    circuit.add(gates.CZ(5, 0))
+                    circuit.add(gates.CZ(4, 1))
+                for q in range(nqubits-compress, nqubits, 1):
+                    circuit.add(gates.RY(q, theta=0))
+                    
                 cost = 0
+                circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(ising_groundstates)):
-                    final_state = ansatz_QAE(params).execute(np.copy(ising_groundstates[i]))
+                    final_state = circuit.execute(np.copy(ising_groundstates[i]))
                     cost += encoder.expectation(final_state).numpy().real
                     
                 cost_function_steps.append(cost/len(ising_groundstates)) # save cost function value after each step
@@ -152,7 +151,7 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
             
         else:
-            sys.exit("You have to introduce a value of 0 or 1 in the autoencoder argument.")
+            raise("You have to introduce a value of 0 or 1 in the autoencoder argument.")
 
     if example == 1:
         digits = load_digits()
@@ -173,12 +172,32 @@ def main(layers, autoencoder, example):
                 Returns:
                     Value of the cost function.
                 """        
+                circuit = models.Circuit(nqubits)
+                for l in range(layers):
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 3))
+                    circuit.add(gates.CZ(5, 1))
+                    circuit.add(gates.CZ(4, 2))
+                    circuit.add(gates.CZ(4, 0))
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 2))
+                    circuit.add(gates.CZ(4, 3))
+                    circuit.add(gates.CZ(5, 0))
+                    circuit.add(gates.CZ(4, 1))
+                for q in range(nqubits-compress, nqubits, 1):
+                    circuit.add(gates.RY(q, theta=0))
+                    
                 cost = 0
+                circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(vector_0)):
-                    final_state = ansatz_QAE(params).execute(np.copy(vector_0[i]))
+                    final_state = circuit.execute(np.copy(vector_0[i]))
                     cost += encoder.expectation(final_state).numpy().real
                 for i in range(len(vector_1)):
-                    final_state = ansatz_QAE(params).execute(np.copy(vector_1[i]))
+                    final_state = circuit.execute(np.copy(vector_1[i]))
                     cost += encoder.expectation(final_state).numpy().real
                     
                 cost_function_steps.append(cost/(len(vector_0)+len(vector_1))) # save cost function value after each step
@@ -229,18 +248,18 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})           
             
         else:
-            sys.exit("You have to introduce a value of 0 or 1 in the autoencoder argument.")
+            raise("You have to introduce a value of 0 or 1 in the autoencoder argument.")
             
     else:
-        sys.exit("You have to introduce a value of 0 or 1 in the example argument.")
+        raise("You have to introduce a value of 0 or 1 in the example argument.")
         
     print('Final parameters: ', result.x)
     print('Final cost function: ', result.fun)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--layers", default=3, type=int)
-    parser.add_argument("--autoencoder", default=0, type=int)
-    parser.add_argument("--example", default=0, type=int)
+    parser.add_argument("--layers", default=3, type=int, help='(int): number of ansatz layers')
+    parser.add_argument("--autoencoder", default=1, type=int, help='(int): 0 to run the EF-QAE or 1 to run the QAE')
+    parser.add_argument("--example", default=1, type=int, help='0 to run Ising model example or 1 to run the Handwritten digits example')
     args = parser.parse_args()
     main(**vars(args))
