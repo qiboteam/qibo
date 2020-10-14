@@ -482,6 +482,15 @@ class I(Gate):
 
 
 class Collapse(Gate):
+    """Gate that collapses the state vector according to a measurement.
+
+    Args:
+        *q (int): the qubit id numbers that were measured.
+        result (int/list): measured result for each qubit. Should be 0 or 1.
+            If a ``list`` is given, it should have the same length as the
+            number of qubits measured. If an ``int`` is given, the same
+            result is used for all qubits measured.
+    """
 
     def __init__(self, *q, result=None):
         super(Collapse, self).__init__()
@@ -500,10 +509,17 @@ class Collapse(Gate):
 
     @property
     def result(self):
+        """Returns the result list in proper order after sorting the qubits."""
         return self._result
+
+    @staticmethod
+    def _result_to_list(res): # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
 
     @result.setter
     def result(self, res):
+        res = self._result_to_list(res)
         if len(self.target_qubits) != len(res):
             raise_error(ValueError, "Collapse gate was created on {} qubits "
                                     "but {} result values were given."
