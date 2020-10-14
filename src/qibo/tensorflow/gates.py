@@ -195,12 +195,11 @@ class Collapse(TensorflowGate, base_gates.Collapse):
                            if q not in self.sorted_qubits))
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
-        if is_density_matrix:
-            raise_error(NotImplementedError)
+        if is_density_matrix: # pragma: no cover
+            # case not implemented yet
+            raise_error(NotImplementedError,
+                        "Collapse gate is not implemented for density matrices.")
         if self._nqubits is None:
-            #if is_density_matrix:
-            # self.nqubits = len(tuple(state.shape)) // 2
-            #else:
             self.nqubits = len(tuple(state.shape))
 
         substate = tf.gather_nd(tf.transpose(state, self.order), self.result)

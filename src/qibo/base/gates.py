@@ -494,9 +494,7 @@ class Collapse(Gate):
 
     def __init__(self, *q, result=0):
         super(Collapse, self).__init__()
-        if result is None:
-            result = len(q) * [0]
-        elif isinstance(result, int):
+        if isinstance(result, int):
             result = len(q) * [result]
         self.name = "collapse"
         self.target_qubits = tuple(q)

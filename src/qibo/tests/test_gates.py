@@ -1337,3 +1337,16 @@ def test_collapse_after_measurement(backend):
     target_state = ct()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
+
+
+def test_collapse_gate_errors():
+    # pass wrong result length
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 1, 0])
+    # pass wrong result values
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 2])
+    # change result after creation
+    gate = gates.Collapse(2, 0, result=[0, 0])
+    gate.nqubits = 4
+    gate.result = np.ones(2, dtype=np.int)
