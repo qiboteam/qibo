@@ -14,7 +14,11 @@ The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum 
 
 A graphical depiction of a quantum encoder can be seen in the following figure. In a quantum encoder the information contained in some of the input qubits must be discarded after the initial encoding. Then, fresh qubits (here initialized to the |0> state, but one may consider any other easy-to-construct reference state) are prepared and used to implement the final decoding, which is finally compared to the initial state.
 
-![autoencoder](images/autoencoder.png | width=100)
+![autoencoder](images/autoencoder.png){
+  width: 70%;
+  border: none;
+  background: none;
+}
 
 In the following, however, we present the EF-QAE. A schematic diagram of the EF-QAE can be seen in the next figure. The algorithm can be initialized with a set of initial states, a feature vector **x**, and a shallow sequence of quantum gates U. In this scheme, we define a unitary U(**θ**, **x**) acting on the initial state, where **x** is a feature vector that characterizes the set of input states. For instance, as we will see, **x** may be the transverse field λ of the 1D Ising spin chain. Once the trial state is prepared, measurements are performed to evaluate the cost function C(**θ**). This result is then fed into the classical optimizer, where the parameters **θ** are adjusted in a quantum-classical loop until the cost function converges to a value close to 0. When the loop terminates, U(**θ**<sub>opt</sub>, **x**) prepares compressed states of a particular model.
 
