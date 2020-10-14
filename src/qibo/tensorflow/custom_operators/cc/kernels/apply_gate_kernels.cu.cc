@@ -517,6 +517,51 @@ struct ApplySwapFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
   }
 };
 
+template <typename T>
+__global__ void CollapseStateKernel(T* state, const int* qubits,
+                                    long result, long nsubstates) {
+  auto GetIndex = [&](long g, long h) {
+    long i = g;
+    for (auto iq = 0; iq < ntargets; iq++) {
+      const auto n = qubits[iq];
+      long k = (long)1 << n;
+      i = ((long)((long)i >> n) << (n + 1)) + (i & (k - 1));
+      i += ((long)((int)(h >> iq) % 2) * k);
+    }
+    return i;
+  };
+
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  for (auto h = 0; h < result; h++) {
+    state[GetIndex(g, h)] = 0;
+  }
+  //norm += CalcNorm(state[GetIndex(g, result)]);
+  for (auto h = result + 1; h < nsubstates; h++) {
+    state[GetIndex(g, h)] = 0;
+  }
+}
+
+// Collapse state gate
+template <typename T>
+struct CollapseStateFunctor<GPUDevice, T> {
+  void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
+                  int nqubits, int ntargets, const int32* qubits,
+                  const int64* result) const {
+    int64 nstates = (int64)1 << (nqubits - ntargets);
+    int64 nsubstates = (int64)1 << ntargets;
+
+    int blockSize = DEFAULT_BLOCK_SIZE;
+    int numBlocks = (nstates + blockSize - 1) / blockSize;
+    if (nstates < blockSize) {
+      numBlocks = 1;
+      blockSize = nstates;
+    }
+
+    CollapseStateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
+        state, qubits, result[0], nsubstates);
+  }
+};
+
 // Explicitly instantiate functors for the types of OpKernels registered.
 #define REGISTER_TEMPLATE(FUNCTOR)               \
   template struct FUNCTOR<GPUDevice, complex64>; \
@@ -532,6 +577,7 @@ REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyFsimFunctor);
 REGISTER_TEMPLATE(ApplySwapFunctor);
+REGISTER_TEMPLATE(CollapseStateFunctor);
 }  // end namespace functor
 }  // end namespace tensorflow
 #endif  // GOOGLE_CUDA
