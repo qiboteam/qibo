@@ -260,6 +260,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--layers", default=3, type=int, help='(int): number of ansatz layers')
     parser.add_argument("--autoencoder", default=1, type=int, help='(int): 0 to run the EF-QAE or 1 to run the QAE')
-    parser.add_argument("--example", default=1, type=int, help='0 to run Ising model example or 1 to run the Handwritten digits example')
+    parser.add_argument("--example", default=1, type=int, help='(int): 0 to run Ising model example or 1 to run the Handwritten digits example')
     args = parser.parse_args()
     main(**vars(args))
