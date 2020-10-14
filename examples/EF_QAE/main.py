@@ -102,7 +102,7 @@ def main(layers, autoencoder, example):
             result = minimize(cost_function_QAE_Ising, initial_params,
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
             
-        if autoencoder == 0:
+        elif autoencoder == 0:
             circuit = models.Circuit(nqubits)
             for l in range(layers):
                 for q in range(nqubits):
@@ -156,7 +156,7 @@ def main(layers, autoencoder, example):
         else:
             raise ValueError("You have to introduce a value of 0 or 1 in the autoencoder argument.")
 
-    if example == 1:
+    elif example == 1:
         digits = load_digits()
         vector_0 = []
         vector_1 = []
@@ -217,7 +217,7 @@ def main(layers, autoencoder, example):
             result = minimize(cost_function_QAE_Digits, initial_params,
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
 
-        if autoencoder == 0:
+        elif autoencoder == 0:
             circuit = models.Circuit(nqubits)
             for l in range(layers):
                 for q in range(nqubits):
@@ -281,6 +281,7 @@ def main(layers, autoencoder, example):
         
     print('Final parameters: ', result.x)
     print('Final cost function: ', result.fun)
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
