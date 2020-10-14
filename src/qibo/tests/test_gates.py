@@ -1285,9 +1285,10 @@ def test_variational_layer_dagger(backend, nqubits):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [0], [1]), (2, [1], [0]),
-                          (3, [1], [0]), (4, [1, 3], [0, 1]),
-                          (5, [0, 3, 4], [1, 1, 0])])
+                         [(2, [0], 1), (2, [1], [0]),
+                          (3, [1], 0), (4, [1, 3], [0, 1]),
+                          (5, [0, 3, 4], [1, 1, 0]),
+                          (6, [1, 3], np.ones(2, dtype=np.int))])
 def test_collapse_gate(backend, nqubits, targets, results):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -1297,6 +1298,8 @@ def test_collapse_gate(backend, nqubits, targets, results):
     initial_state = utils.random_numpy_state(nqubits)
     final_state = c(np.copy(initial_state)).numpy()
 
+    if isinstance(results, int):
+        results = nqubits * [results]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
         slicer[t] = r
@@ -1306,5 +1309,31 @@ def test_collapse_gate(backend, nqubits, targets, results):
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_after_measurement(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    qubits = [0, 2, 3]
+
+    c1 = Circuit(5)
+    c1.add((gates.H(i) for i in range(5)))
+    c1.add(gates.M(*qubits))
+    result = c1(nshots=1)
+    c2 = Circuit(5)
+    bitstring = result.samples(binary=True)[0]
+    c2.add(gates.Collapse(*qubits, result=bitstring))
+    c2.add((gates.H(i) for i in range(5)))
+    final_state = c2(initial_state=c1.final_state)
+
+    ct = Circuit(5)
+    for i, r in zip(qubits, bitstring.numpy()):
+        if r:
+            ct.add(gates.X(i))
+    ct.add((gates.H(i) for i in qubits))
+    target_state = ct()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)

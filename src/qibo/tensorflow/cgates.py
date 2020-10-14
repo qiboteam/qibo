@@ -168,6 +168,14 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         TensorflowGate.__init__(self)
         self.result_tensor = None
 
+    @staticmethod
+    def _result_to_list(res):
+        if isinstance(res, np.ndarray):
+            return list(res.astype(np.int))
+        if isinstance(res, tf.Tensor):
+            return list(res.numpy().astype(np.int))
+        return list(res)
+
     def _prepare(self):
         n = len(self.result)
         result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))

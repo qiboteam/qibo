@@ -492,7 +492,7 @@ class Collapse(Gate):
             result is used for all qubits measured.
     """
 
-    def __init__(self, *q, result=None):
+    def __init__(self, *q, result=0):
         super(Collapse, self).__init__()
         if result is None:
             result = len(q) * [0]

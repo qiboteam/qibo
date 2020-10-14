@@ -184,6 +184,11 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         self.order = None
         self.ids = None
 
+    @staticmethod
+    def _result_to_list(res):
+        from qibo.tensorflow.cgates import Collapse
+        return Collapse._result_to_list(res)
+
     def _prepare(self):
         self.order = list(self.sorted_qubits)
         self.order.extend((q for q in range(self.nqubits)
