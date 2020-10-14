@@ -1284,19 +1284,30 @@ def test_variational_layer_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [0], 1), (2, [1], [0]),
-                          (3, [1], 0), (4, [1, 3], [0, 1]),
-                          (5, [0, 3, 4], [1, 1, 0]),
-                          (6, [1, 3], np.ones(2, dtype=np.int))])
-def test_collapse_gate(backend, nqubits, targets, results):
+@pytest.mark.parametrize("nqubits,targets,results,oncircuit",
+                         [(2, [1], [0], False),
+                          (3, [1], 0, True),
+                          (4, [1, 3], [0, 1], True),
+                          (5, [0, 3, 4], [1, 1, 0], False),
+                          (6, [1, 3], np.ones(2, dtype=np.int), True)])
+def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
-    c = Circuit(nqubits)
-    c.add(gates.Collapse(*targets, result=results))
     initial_state = utils.random_numpy_state(nqubits)
-    final_state = c(np.copy(initial_state)).numpy()
+    if oncircuit:
+        c = Circuit(nqubits)
+        c.add(gates.Collapse(*targets, result=results))
+        final_state = c(np.copy(initial_state)).numpy()
+    else:
+        collapse = gates.Collapse(*targets, result=results)
+        if backend == "custom":
+            final_state = collapse(np.copy(initial_state)).numpy()
+        else:
+            original_shape = initial_state.shape
+            new_shape = nqubits * (2,)
+            final_state = collapse(np.copy(initial_state).reshape(new_shape))
+            final_state = final_state.numpy().reshape(original_shape)
 
     if isinstance(results, int):
         results = nqubits * [results]

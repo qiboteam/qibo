@@ -257,7 +257,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
         const auto n = qubits[iq];
         int64 k = (int64)1 << n;
         i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
-        i += ((int)(h >> iq) % 2) * k;
+        i += ((int64)((int)(h >> iq) % 2) * k);
       }
       return i;
     };
