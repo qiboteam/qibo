@@ -519,28 +519,28 @@ struct ApplySwapFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
 
 
 template <typename T>
-__device__ void zero_state(T& state) {
-  state = T(0, 0);
-}
-
-template <typename T>
 __global__ void CollapseStateKernel(T* state, const int* qubits,
                                     long result, long nsubstates,
                                     int ntargets) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
 
-    zero_state(state[i]);
-  }
-  //norm += CalcNorm(state[GetIndex(g, result)]);
-  for (auto h = result + 1; h < nsubstates; h++) {
+  auto GetIndex = [&](long g, long h) {
     long i = g;
     for (auto iq = 0; iq < ntargets; iq++) {
       const auto n = qubits[iq];
       long k = (long)1 << n;
-      i = ((long)((long)i >> n) << (n + 1)) + (i & (k - 1));
+      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
       i += ((long)((int)(h >> iq) % 2) * k);
     }
-    zero_state(state[i]);
+    return i;
+  };
+
+  for (auto h = 0; h < result; h++) {
+    state[GetIndex(g, h)] = T(0, 0);
+  }
+  //norm += CalcNorm(state[GetIndex(g, result)]);
+  for (auto h = result + 1; h < nsubstates; h++) {
+    state[GetIndex(g, h)] = T(0, 0);
   }
 }
 
