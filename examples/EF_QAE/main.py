@@ -54,6 +54,25 @@ def main(layers, autoencoder, example):
             ising_groundstates.append(ising_ham.eigenvectors()[0])
             
         if autoencoder == 1:
+            circuit = models.Circuit(nqubits)
+            for l in range(layers):
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 3))
+                circuit.add(gates.CZ(5, 1))
+                circuit.add(gates.CZ(4, 2))
+                circuit.add(gates.CZ(4, 0))
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 2))
+                circuit.add(gates.CZ(4, 3))
+                circuit.add(gates.CZ(5, 0))
+                circuit.add(gates.CZ(4, 1))
+            for q in range(nqubits-compress, nqubits, 1):
+                circuit.add(gates.RY(q, theta=0))
+                
             def cost_function_QAE_Ising(params, count):
                 """Evaluates the cost function to be minimized for the QAE and Ising model.
         
@@ -62,26 +81,7 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """
-                circuit = models.Circuit(nqubits)
-                for l in range(layers):
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 3))
-                    circuit.add(gates.CZ(5, 1))
-                    circuit.add(gates.CZ(4, 2))
-                    circuit.add(gates.CZ(4, 0))
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 2))
-                    circuit.add(gates.CZ(4, 3))
-                    circuit.add(gates.CZ(5, 0))
-                    circuit.add(gates.CZ(4, 1))
-                for q in range(nqubits-compress, nqubits, 1):
-                    circuit.add(gates.RY(q, theta=0))
-                    
+                """                    
                 cost = 0
                 circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(ising_groundstates)):
@@ -103,6 +103,25 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
             
         if autoencoder == 0:
+            circuit = models.Circuit(nqubits)
+            for l in range(layers):
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 3))
+                circuit.add(gates.CZ(5, 1))
+                circuit.add(gates.CZ(4, 2))
+                circuit.add(gates.CZ(4, 0))
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 2))
+                circuit.add(gates.CZ(4, 3))
+                circuit.add(gates.CZ(5, 0))
+                circuit.add(gates.CZ(4, 1))
+            for q in range(nqubits-compress, nqubits, 1):
+                circuit.add(gates.RY(q, theta=0))
+                
             def cost_function_EF_QAE_Ising(params, count):
                 """Evaluates the cost function to be minimized for the EF-QAE and Ising model.
         
@@ -111,26 +130,7 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """                                                
-                circuit = models.Circuit(nqubits)
-                for l in range(layers):
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 3))
-                    circuit.add(gates.CZ(5, 1))
-                    circuit.add(gates.CZ(4, 2))
-                    circuit.add(gates.CZ(4, 0))
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 2))
-                    circuit.add(gates.CZ(4, 3))
-                    circuit.add(gates.CZ(5, 0))
-                    circuit.add(gates.CZ(4, 1))
-                for q in range(nqubits-compress, nqubits, 1):
-                    circuit.add(gates.RY(q, theta=0))
-                    
+                """                                                               
                 cost = 0
                 for i in range(len(ising_groundstates)):
                     newparams = rotate(params, lambdas[i])
@@ -166,6 +166,25 @@ def main(layers, autoencoder, example):
             vector_1.append(np.array(digits.data[value])/np.linalg.norm(np.array(digits.data[value])))
         
         if autoencoder == 1:
+            circuit = models.Circuit(nqubits)
+            for l in range(layers):
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 3))
+                circuit.add(gates.CZ(5, 1))
+                circuit.add(gates.CZ(4, 2))
+                circuit.add(gates.CZ(4, 0))
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 2))
+                circuit.add(gates.CZ(4, 3))
+                circuit.add(gates.CZ(5, 0))
+                circuit.add(gates.CZ(4, 1))
+            for q in range(nqubits-compress, nqubits, 1):
+                circuit.add(gates.RY(q, theta=0))
+                
             def cost_function_QAE_Digits(params, count):
                 """Evaluates the cost function to be minimized for the QAE and Handwritten digits.
         
@@ -174,26 +193,7 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """        
-                circuit = models.Circuit(nqubits)
-                for l in range(layers):
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 3))
-                    circuit.add(gates.CZ(5, 1))
-                    circuit.add(gates.CZ(4, 2))
-                    circuit.add(gates.CZ(4, 0))
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 2))
-                    circuit.add(gates.CZ(4, 3))
-                    circuit.add(gates.CZ(5, 0))
-                    circuit.add(gates.CZ(4, 1))
-                for q in range(nqubits-compress, nqubits, 1):
-                    circuit.add(gates.RY(q, theta=0))
-                    
+                """                                            
                 cost = 0
                 circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(vector_0)):
@@ -218,6 +218,25 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
 
         if autoencoder == 0:
+            circuit = models.Circuit(nqubits)
+            for l in range(layers):
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 3))
+                circuit.add(gates.CZ(5, 1))
+                circuit.add(gates.CZ(4, 2))
+                circuit.add(gates.CZ(4, 0))
+                for q in range(nqubits):
+                    circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.CZ(5, 4))
+                circuit.add(gates.CZ(5, 2))
+                circuit.add(gates.CZ(4, 3))
+                circuit.add(gates.CZ(5, 0))
+                circuit.add(gates.CZ(4, 1))
+            for q in range(nqubits-compress, nqubits, 1):
+                circuit.add(gates.RY(q, theta=0))
+                
             def cost_function_EF_QAE_Digits(params, count):
                 """Evaluates the cost function to be minimized for the EF-QAE and Handwritten digits.
         
@@ -226,26 +245,7 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """
-                circuit = models.Circuit(nqubits)
-                for l in range(layers):
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 3))
-                    circuit.add(gates.CZ(5, 1))
-                    circuit.add(gates.CZ(4, 2))
-                    circuit.add(gates.CZ(4, 0))
-                    for q in range(nqubits):
-                        circuit.add(gates.RY(q, theta=0))
-                    circuit.add(gates.CZ(5, 4))
-                    circuit.add(gates.CZ(5, 2))
-                    circuit.add(gates.CZ(4, 3))
-                    circuit.add(gates.CZ(5, 0))
-                    circuit.add(gates.CZ(4, 1))
-                for q in range(nqubits-compress, nqubits, 1):
-                    circuit.add(gates.RY(q, theta=0))
-                    
+                """                                    
                 cost = 0
                 newparams = rotate(params, 1)
                 circuit.set_parameters(newparams)
