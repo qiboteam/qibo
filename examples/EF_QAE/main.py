@@ -154,7 +154,7 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})
             
         else:
-            raise("You have to introduce a value of 0 or 1 in the autoencoder argument.")
+            raise ValueError("You have to introduce a value of 0 or 1 in the autoencoder argument.")
 
     if example == 1:
         digits = load_digits()
@@ -274,10 +274,10 @@ def main(layers, autoencoder, example):
                               args=(count), method='BFGS', options={'maxiter': 5.0e4})           
             
         else:
-            raise("You have to introduce a value of 0 or 1 in the autoencoder argument.")
+            raise ValueError("You have to introduce a value of 0 or 1 in the autoencoder argument.")
             
     else:
-        raise("You have to introduce a value of 0 or 1 in the example argument.")
+        raise ValueError("You have to introduce a value of 0 or 1 in the example argument.")
         
     print('Final parameters: ', result.x)
     print('Final cost function: ', result.fun)
