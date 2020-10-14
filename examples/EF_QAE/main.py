@@ -25,38 +25,20 @@ def main(layers, autoencoder, example):
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)
     
-    def ansatz_EF_QAE(theta, x):
-        """Creates the variational quantum circuit for EF-QAE.
-        Args:
-            theta (array or list): values of the parameters.
-            x (float): value of the input feature
-
-        Returns:
-            Quantum circuit.
-        """
-        circuit = models.Circuit(nqubits)
+    def rotate(theta, x):
+        new_theta = []
         index = 0
         for l in range(layers):
             for q in range(nqubits):
-                circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
-                index+=2
-            circuit.add(gates.CZ(5, 4))
-            circuit.add(gates.CZ(5, 3))
-            circuit.add(gates.CZ(5, 1))
-            circuit.add(gates.CZ(4, 2))
-            circuit.add(gates.CZ(4, 0))
+               new_theta.append(theta[index]*x + theta[index+1])
+               index += 2
             for q in range(nqubits):
-                circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
-                index+=2
-            circuit.add(gates.CZ(5, 4))
-            circuit.add(gates.CZ(5, 2))
-            circuit.add(gates.CZ(4, 3))
-            circuit.add(gates.CZ(5, 0))
-            circuit.add(gates.CZ(4, 1))
+               new_theta.append(theta[index]*x + theta[index+1])
+               index += 2
         for q in range(nqubits-compress, nqubits, 1):
-            circuit.add(gates.RY(q, theta[index]*x + theta[index+1]))
-            index+=2
-        return circuit
+            new_theta.append(theta[index]*x + theta[index+1])
+            index += 2
+        return new_theta
 
     cost_function_steps = []
     nqubits = 6
@@ -129,10 +111,31 @@ def main(layers, autoencoder, example):
         
                 Returns:
                     Value of the cost function.
-                """
+                """                                                
+                circuit = models.Circuit(nqubits)
+                for l in range(layers):
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 3))
+                    circuit.add(gates.CZ(5, 1))
+                    circuit.add(gates.CZ(4, 2))
+                    circuit.add(gates.CZ(4, 0))
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 2))
+                    circuit.add(gates.CZ(4, 3))
+                    circuit.add(gates.CZ(5, 0))
+                    circuit.add(gates.CZ(4, 1))
+                for q in range(nqubits-compress, nqubits, 1):
+                    circuit.add(gates.RY(q, theta=0))
+                    
                 cost = 0
                 for i in range(len(ising_groundstates)):
-                    final_state = ansatz_EF_QAE(params, lambdas[i]).execute(np.copy(ising_groundstates[i]))
+                    newparams = rotate(params, lambdas[i])
+                    circuit.set_parameters(newparams)
+                    final_state = circuit.execute(np.copy(ising_groundstates[i]))
                     cost += encoder.expectation(final_state).numpy().real
                     
                 cost_function_steps.append(cost/len(ising_groundstates)) # save cost function value after each step
@@ -224,12 +227,35 @@ def main(layers, autoencoder, example):
                 Returns:
                     Value of the cost function.
                 """
+                circuit = models.Circuit(nqubits)
+                for l in range(layers):
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 3))
+                    circuit.add(gates.CZ(5, 1))
+                    circuit.add(gates.CZ(4, 2))
+                    circuit.add(gates.CZ(4, 0))
+                    for q in range(nqubits):
+                        circuit.add(gates.RY(q, theta=0))
+                    circuit.add(gates.CZ(5, 4))
+                    circuit.add(gates.CZ(5, 2))
+                    circuit.add(gates.CZ(4, 3))
+                    circuit.add(gates.CZ(5, 0))
+                    circuit.add(gates.CZ(4, 1))
+                for q in range(nqubits-compress, nqubits, 1):
+                    circuit.add(gates.RY(q, theta=0))
+                    
                 cost = 0
+                newparams = rotate(params, 1)
+                circuit.set_parameters(newparams)
                 for i in range(len(vector_0)):
-                    final_state = ansatz_EF_QAE(params, 1).execute(np.copy(vector_0[i]))
+                    final_state = circuit.execute(np.copy(vector_0[i]))
                     cost += encoder.expectation(final_state).numpy().real
+                newparams = rotate(params, 2)
+                circuit.set_parameters(newparams)
                 for i in range(len(vector_1)):
-                    final_state = ansatz_EF_QAE(params, 2).execute(np.copy(vector_1[i]))
+                    final_state = circuit.execute(np.copy(vector_1[i]))
                     cost += encoder.expectation(final_state).numpy().real
                     
                 cost_function_steps.append(cost/(len(vector_0)+len(vector_1))) # save cost function value after each step
@@ -259,7 +285,7 @@ def main(layers, autoencoder, example):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--layers", default=3, type=int, help='(int): number of ansatz layers')
-    parser.add_argument("--autoencoder", default=1, type=int, help='(int): 0 to run the EF-QAE or 1 to run the QAE')
-    parser.add_argument("--example", default=1, type=int, help='(int): 0 to run Ising model example or 1 to run the Handwritten digits example')
+    parser.add_argument("--autoencoder", default=0, type=int, help='(int): 0 to run the EF-QAE or 1 to run the QAE')
+    parser.add_argument("--example", default=0, type=int, help='(int): 0 to run Ising model example or 1 to run the Handwritten digits example')
     args = parser.parse_args()
     main(**vars(args))
