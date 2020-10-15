@@ -10,7 +10,7 @@ Remarkably, EF-QAE achieves better compression than the standard [quantum autoen
 
 ## Implementing the solution
 
-The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum autoencoders with enhanced data encoding"](https://arxiv.org/abs/2010.?????). A tutorial based on the standard QAE can be found at [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder).
+The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum autoencoders with enhanced data encoding"](https://arxiv.org/abs/2010.06599). A tutorial based on the standard QAE can be found at [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder).
 
 A graphical depiction of a quantum encoder can be seen in the following figure. In a quantum encoder the information contained in some of the input qubits must be discarded after the initial encoding. Then, fresh qubits (here initialized to the |0> state, but one may consider any other easy-to-construct reference state) are prepared and used to implement the final decoding, which is finally compared to the initial state.
 
@@ -51,7 +51,7 @@ python main.py --layers 3 --autoencoder 0 --example 0
 
 ### Ising model
 
-The EF-QAE can be verified on simulations. In the following, we benchmark both the EF-QAE and the standard QAE in the case of a paradigmatic quantum spin chain with 6 qubits, the transverse field Ising model. The EF-QAE and QAE are optimized over a training set of ground states of the Ising model. Specifically, we have considered N=20 equispaced ground states in between λ=0.5 and λ=1.0, with initial random parameters. We have considered the above variational quantum circuit with 3 layers, and therefore, the resulting compressed state contains 4 qubits. Note that the feature vector **x** for the EF-QAE is simply a scalar that takes the value of the transverse field λ.
+The EF-QAE can be verified on simulations. In the following, we benchmark both the EF-QAE and the standard QAE in the case of a paradigmatic quantum spin chain with 6 qubits, the transverse field Ising model. The EF-QAE and QAE are optimized over a training set of ground states of the Ising model. Specifically, we have considered N=20 equispaced ground states in between (a) λ=0.5 and (b) λ=1.0, with initial random parameters. We have considered the above variational quantum circuit with 3 layers, and therefore, the resulting compressed state contains 4 qubits. Note that the feature vector **x** for the EF-QAE is simply a scalar that takes the value of the transverse field λ.
 
 In the following figure, we show the cost function value as a function of the number of optimization steps. The EF-QAE* is simply the EF-QAE initialized with the optimal parameters of QAE. This way, the EF-QAE* will always improve the QAE performance. As can be seen, the EF-QAE achieves twice the compression of the QAE using the same quantum resources. Notice, however, that the EF-QAE contains twice as many variational parameters, and therefore, the increase in performance is at the expense of additional classical optimization.
 
