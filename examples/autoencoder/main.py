@@ -8,6 +8,20 @@ import argparse
 
 
 def main(nqubits, layers, compress, lambdas):
+    
+    def encoder_hamiltonian_simple(nqubits, ncompress):
+        """Creates the encoding Hamiltonian.
+        Args:
+            nqubits (int): total number of qubits.
+            ncompress (int): number of discarded/trash qubits.
+
+        Returns:
+            Encoding Hamiltonian.
+        """
+        m0 = hamiltonians.Z(ncompress, numpy=True).matrix
+        m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
+        ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
+        return 0.5 * (ham + ncompress)
 
     def cost_function(params, count):
         """Evaluates the cost function to be minimized.
@@ -46,7 +60,7 @@ def main(nqubits, layers, compress, lambdas):
 
     nparams = 2 * nqubits * layers + nqubits
     initial_params = np.random.uniform(0, 2*np.pi, nparams)
-    encoder = 0.5 * (compress + hamiltonians.Z(nqubits))
+    encoder = encoder_hamiltonian_simple(nqubits, compress)
 
     ising_groundstates = []
     for lamb in lambdas:
