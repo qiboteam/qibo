@@ -520,9 +520,10 @@ struct ApplySwapFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
 
 template <typename T>
 __global__ void CollapseStateKernel(T* state, const int* qubits,
-                                    long result, long nsubstates,
+                                    const int64* results, long nsubstates,
                                     int ntargets) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  const long result = results[0];
 
   auto GetIndex = [&](long g, long h) {
     long i = g;
@@ -561,7 +562,7 @@ struct CollapseStateFunctor<GPUDevice, T> {
     }
 
     CollapseStateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
-        state, qubits, result[0], nsubstates, ntargets);
+        state, qubits, result, nsubstates, ntargets);
   }
 };
 

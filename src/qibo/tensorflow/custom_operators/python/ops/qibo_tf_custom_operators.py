@@ -4,6 +4,8 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
+from qibo import config
+
 
 if tf.config.list_physical_devices("GPU"): # pragma: no cover
     # case not covered by GitHub workflows because it requires GPU
@@ -62,4 +64,11 @@ apply_fsim = custom_module.apply_fsim
 
 apply_swap = custom_module.apply_swap
 
-collapse_state = custom_module.collapse_state
+
+def collapse_state(state, qubits, result, nqubits):
+    if "GPU" in qibo.get_device():
+        state = custom_module.collapse_state(state, qubits, result, nqubits)
+        norm = tf.reduce_sum(tf.square(tf.abs(state)))
+        return state / norm
+    else:
+        return custom_module.collapse_state(state, qubits, result, nqubits)
