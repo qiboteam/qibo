@@ -2,9 +2,9 @@
 import numpy as np
 import tensorflow as tf
 import numpy as np
+import qibo
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
-from qibo import config
 
 
 if tf.config.list_physical_devices("GPU"): # pragma: no cover
@@ -68,7 +68,7 @@ apply_swap = custom_module.apply_swap
 def collapse_state(state, qubits, result, nqubits):
     if "GPU" in qibo.get_device():
         state = custom_module.collapse_state(state, qubits, result, nqubits)
-        norm = tf.reduce_sum(tf.square(tf.abs(state)))
-        return state / norm
+        norm = tf.reduce_sum(tf.math.square(tf.abs(state)))
+        return state / tf.math.sqrt(norm)
     else:
         return custom_module.collapse_state(state, qubits, result, nqubits)
