@@ -69,6 +69,6 @@ def collapse_state(state, qubits, result, nqubits):
     if "GPU" in qibo.get_device():
         state = custom_module.collapse_state(state, qubits, result, nqubits)
         norm = tf.reduce_sum(tf.math.square(tf.abs(state)))
-        return state / tf.math.sqrt(norm)
+        return state / tf.cast(tf.math.sqrt(norm), dtype=state.dtype)
     else:
         return custom_module.collapse_state(state, qubits, result, nqubits)
