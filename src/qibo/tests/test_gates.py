@@ -1346,7 +1346,7 @@ def test_collapse_after_measurement(backend):
             ct.add(gates.X(i))
     ct.add((gates.H(i) for i in qubits))
     target_state = ct()
-    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(final_state, target_state, atol=1e-15)
     qibo.set_backend(original_backend)
 
 
