@@ -163,7 +163,7 @@ class I(TensorflowGate, base_gates.I):
 
 class Collapse(TensorflowGate, base_gates.Collapse):
 
-    def __init__(self, *q: int, result: List[int] = None):
+    def __init__(self, *q: int, result: List[int] = 0):
         base_gates.Collapse.__init__(self, *q, result=result)
         TensorflowGate.__init__(self)
         self.result_tensor = None

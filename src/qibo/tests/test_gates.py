@@ -1324,6 +1324,32 @@ def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
+@pytest.mark.parametrize("nqubits,targets", [(5, [0, 1]), (6, [3, 5])])
+def test_collapse_gate(backend, accelerators, nqubits, targets):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(nqubits)
+    c = Circuit(nqubits, accelerators)
+    thetas = np.random.random(nqubits)
+    c.add((gates.RY(i, theta=t) for i, t in enumerate(thetas)))
+    c.add(gates.Collapse(*targets))
+    final_state = c(np.copy(initial_state)).numpy()
+
+    slicer = nqubits * [slice(None)]
+    for t in targets:
+        slicer[t] = 0
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_collapse_after_measurement(backend):
     original_backend = qibo.get_backend()
