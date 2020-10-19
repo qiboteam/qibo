@@ -262,33 +262,17 @@ struct CollapseStateFunctor<CPUDevice, T> {
       return i;
     };
 
-    auto CalcNorm = [&] (const T x) {
-      return x.real() * x.real() + x.imag() * x.imag();
-    };
-
-    auto norm = state[0].real();
-    norm = 0;
     auto ZeroState = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g++) {
         for (auto h = 0; h < result[0]; h++) {
           state[GetIndex(g, h)] = 0;
         }
-        norm += CalcNorm(state[GetIndex(g, result[0])]);
         for (auto h = result[0] + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
       }
     };
     thread_pool->ParallelFor(nstates, p, ZeroState);
-
-    norm = std::sqrt(norm);
-    auto NormalizeState = [&](int64 t, int64 w) {
-      for (auto g = t; g < w; g++) {
-        auto i = GetIndex(g, result[0]);
-        state[i] = T(state[i].real() / norm, state[i].imag() / norm);
-      }
-    };
-    thread_pool->ParallelFor(nstates, p, NormalizeState);
   }
 };
 
