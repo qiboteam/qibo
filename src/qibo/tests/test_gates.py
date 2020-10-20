@@ -1324,16 +1324,13 @@ def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-@pytest.mark.parametrize("nqubits,targets", [(5, [0, 1]), (6, [3, 5])])
-def test_collapse_gate(backend, accelerators, nqubits, targets):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
+@pytest.mark.parametrize("accelerators",
+                         [None, {"/GPU:0": 1, "/GPU:1": 1},
+                          {"GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}])
+@pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
+def test_collapse_gate_distributed(accelerators, nqubits, targets):
     initial_state = utils.random_numpy_state(nqubits)
     c = Circuit(nqubits, accelerators)
-    thetas = np.random.random(nqubits)
-    c.add((gates.RY(i, theta=t) for i, t in enumerate(thetas)))
     c.add(gates.Collapse(*targets))
     final_state = c(np.copy(initial_state)).numpy()
 
@@ -1347,7 +1344,6 @@ def test_collapse_gate(backend, accelerators, nqubits, targets):
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
