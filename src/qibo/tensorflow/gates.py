@@ -461,7 +461,6 @@ class TensorflowChannel(TensorflowGate):
 
     def __init__(self):
         super(TensorflowChannel, self).__init__()
-        self.gates = []
 
     def _prepare(self):
         pass
@@ -493,8 +492,6 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
         base_gates.NoiseChannel.__init__(self, q, px, py, pz)
         TensorflowChannel.__init__(self)
-        classes = (X, Y, Z)
-        self.gates = [cl(q) for p, cl in zip(self.p, classes) if p > 0]
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
@@ -508,7 +505,6 @@ class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
     def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
         base_gates.GeneralChannel.__init__(self, A)
         TensorflowChannel.__init__(self)
-        self.gates = [Unitary(m, *list(q)) for q, m in A]
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)

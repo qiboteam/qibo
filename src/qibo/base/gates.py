@@ -1534,7 +1534,7 @@ class VariationalLayer(ParametrizedGate):
 
 
 class NoiseChannel(Gate):
-    """Probabilistic noise channel.
+    """Probabilistic noise channel implemented using density matrices.
 
     Implements the following evolution
 
@@ -1558,6 +1558,10 @@ class NoiseChannel(Gate):
         self.p = (px, py, pz)
         self.total_p = sum(self.p)
 
+        classes = ("X", "Y", "Z")
+        self.gates = [getattr(self.module, g)(q)
+                      for p, g in zip(self.p, classes) if p > 0]
+
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
 
@@ -1570,6 +1574,27 @@ class NoiseChannel(Gate):
     def controlled_by(self, *q):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+
+
+class MonteCarloNoiseChannel(NoiseChannel):
+    """Probabilistic noise channel implemented via Monte Carlo.
+
+    Has the same effect as :class:`qibo.base.gates.NoiseChannel` but is
+    implemented by repeated execution of the circuit and Monte Carlo sampling
+    instead of density matrices.
+    Can be used to simulate phase flip and bit flip errors.
+
+    Args:
+        q (int): Qubit id that the noise acts on.
+        px (float): Bit flip (X) error probability.
+        py (float): Y-error probability.
+        pz (float): Phase flip (Z) error probability.
+    """
+
+    def __init__(self, q, px=0, py=0, pz=0):
+        super(MCNoiseChannel, self).__init__(q, px, py, pz)
+        self.name = "MCNoiseChannel"
+        self.is_channel = False
 
 
 class GeneralChannel(Gate):
@@ -1617,6 +1642,7 @@ class GeneralChannel(Gate):
         self.init_args = [A]
 
         # Check that given operators have the proper shape
+        self.gates = []
         for qubits, matrix in A:
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
@@ -1624,6 +1650,7 @@ class GeneralChannel(Gate):
                 raise_error(ValueError, "Invalid Krauss operator shape {} for "
                                         " acting on {} qubits."
                                         "".format(shape, len(qubits)))
+            self.gates.append(self.module.Unitary(matrix, *list(qubits)))
 
     def on_qubits(self, *q): # pragma: no cover
         # future TODO
