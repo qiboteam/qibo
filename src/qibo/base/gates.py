@@ -1589,12 +1589,15 @@ class MonteCarloNoiseChannel(NoiseChannel):
         px (float): Bit flip (X) error probability.
         py (float): Y-error probability.
         pz (float): Phase flip (Z) error probability.
+        seed (int): Seed for numpy random generator used for sampling.
     """
+    # TODO: Implement this for native Tensorflow backends
 
-    def __init__(self, q, px=0, py=0, pz=0):
-        super(MCNoiseChannel, self).__init__(q, px, py, pz)
-        self.name = "MCNoiseChannel"
+    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+        super(MonteCarloNoiseChannel, self).__init__(q, px, py, pz)
+        self.name = "MonteCarloNoiseChannel"
         self.is_channel = False
+        self.seed = seed
 
 
 class GeneralChannel(Gate):

@@ -677,6 +677,29 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         return state
 
 
+class MonteCarloNoiseChannel(TensorflowGate, base_gates.MonteCarloNoiseChannel):
+
+    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+        base_gates.MonteCarloNoiseChannel.__init__(self, q, px, py, pz, seed)
+        TensorflowGate.__init__(self)
+        if seed is not None:
+            np.random.seed(seed)
+
+    @base_gates.Gate.nqubits.setter
+    def nqubits(self, n: int):
+        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
+        for gate in self.gates:
+            gate.nqubits = n
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
+                 ) -> tf.Tensor:
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        for p, gate in zip(self.p, self.gates):
+            if np.random.random() < p:
+                state = gate(state)
+        return state
+
+
 # Density matrices are not supported by custom operators yet so channels fall
 # back to native tensorflow gates
 class TensorflowChannel(TensorflowGate):

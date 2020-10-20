@@ -1281,3 +1281,31 @@ def test_variational_layer_dagger(backend, nqubits):
     final_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
+
+
+# TODO: Test distributed circuits and native backends
+@pytest.mark.parametrize("backend", ["custom"])
+def test_monte_carlo_noise_channel(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    thetas = np.random.random(4)
+    probs = np.random.random([4, 3])
+    gatelist = [gates.X, gates.Y, gates.Z]
+
+    c = Circuit(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    c.add((gates.MonteCarloNoiseChannel(i, px, py, pz, seed=123)
+           for i, (px, py, pz) in enumerate(probs)))
+    final_state = c().numpy()
+
+    noiseless_c = Circuit(4)
+    noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    np.random.seed(123)
+    for i, ps in enumerate(probs):
+        for p, gate in zip(ps, gatelist):
+            if np.random.random() < p:
+                noiseless_c.add(gate(i))
+    target_state = noiseless_c().numpy()
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
