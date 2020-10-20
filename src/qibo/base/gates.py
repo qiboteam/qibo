@@ -504,6 +504,9 @@ class Collapse(Gate):
         self.init_kwargs = {"result": result}
         self.sorted_qubits = sorted(q)
         self.result = result
+        # Flag that is turned ``False`` automatically if this gate is used in a
+        # ``TensorflowDistributedCircuit`` in order to skip the normalization.
+        self.normalize = True
 
     @property
     def result(self):

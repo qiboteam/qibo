@@ -184,7 +184,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
         TensorflowGate.__call__(self, state, is_density_matrix)
         return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
-                                 self.nqubits)
+                                 self.nqubits, self.normalize)
 
 
 class M(TensorflowGate, base_gates.M):
