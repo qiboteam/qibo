@@ -169,14 +169,14 @@ def ansatz_0(layers, qubits=1, tangling=True):
 
 def ansatz_1(layers, qubits=1):
     """
-    3 parameters per layer and qubit: U3(a, b, c)Ry(x)
+    3 parameters per layer and qubit: Ry(x)U3(a, b, c)
     """
     circuit = models.Circuit(qubits)
     for _ in range(layers - 1):
         for q in range(qubits):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
         if qubits > 1:
@@ -186,13 +186,11 @@ def ansatz_1(layers, qubits=1):
             for q in range(1, qubits + 1, 2):
                 circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
-
     for q in range(qubits):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
-
+        circuit.add(gates.RY(q, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
@@ -227,45 +225,61 @@ def ansatz_1(layers, qubits=1):
     return circuit, rotation, nparams
 
 
-def ansatz_2(layers, qubits=1, tangling=True):
+def ansatz_2(layers, qubits=1):
     """
-    3 parameters per layer and qubit: U3(a, b, c) Ry(log x)
+    3 parameters per layer and qubit:  Ry(log x)U3(a, b, c)
     """
     circuit = models.Circuit(qubits)
     for _ in range(layers - 1):
         for q in range(qubits):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        if tangling: entangler(circuit)
+
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(qubits):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for _ in range(layers-1):
+        for _ in range(layers - 1):
             for _ in range(qubits):
-                p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = maplog_to(x)
                 i += 4
-                j += 1
+                j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
 
         for _ in range(qubits):
-            p[i: i + 3] = theta[3 * j: 3 * j + 3]
-            p[i + 3] = -np.pi / 2 * np.log(x)
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = maplog_to(x)
             i += 4
-            j += 1
+            j += 3
         return p
 
-    nparams = 3 * layers * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
@@ -277,17 +291,22 @@ def ansatz_3(layers, qubits=1, tangling=True):
     circuit = models.Circuit(qubits)
     for _ in range(layers - 1):
         for q in range(qubits):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(qubits):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
 
     def rotation(theta, x):
@@ -296,41 +315,56 @@ def ansatz_3(layers, qubits=1, tangling=True):
         j = 0
         for _ in range(layers - 1):
             for _ in range(qubits):
-                p[i: i + 3] = theta[3 * j: 3 * j + 3]
-                p[i + 3] = map_to(x) + maplog_to(x)
+                p[i: i + 3] = theta[j: j + 3]
+                p[i + 3] = .5 * (maplog_to(x) + map_to(x))
                 i += 4
-                j += 1
+                j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
 
         for _ in range(qubits):
-            p[i: i + 3] = theta[3 * j: 3 * j + 3]
-            p[i + 3] = map_to(x) + maplog_to(x)
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = .5 * (maplog_to(x) + map_to(x))
             i += 4
-            j += 1
+            j += 3
         return p
 
-    nparams = 3 * layers * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
 
-def ansatz_4(layers, qubits=1, tangling=True):
+def ansatz_4(layers, qubits=1):
     """
-    3 parameters per layer and qubit: U3(a, b, c) Ry(pi x)
+    3 parameters per layer and qubit: U3(a, b, c) Ry(x) || U3(a, b, c) Ry(log x)
     """
     circuit = models.Circuit(qubits)
     for _ in range(layers - 1):
         for q in range(qubits):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(qubits):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
 
     def rotation(theta, x):
@@ -340,32 +374,41 @@ def ansatz_4(layers, qubits=1, tangling=True):
         for l in range(layers - 1):
             if l % 2 == 0:
                 for q in range(qubits):
-                    p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                    p[i: i + 3] = theta[j: j + 3]
                     p[i + 3] = map_to(x)
                     i += 4
-                    j += 1
+                    j += 3
             else:
                 for q in range(qubits):
-                    p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                    p[i: i + 3] = theta[j: j + 3]
                     p[i + 3] = maplog_to(x)
                     i += 4
+                    j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
                     j += 1
-
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
         if layers % 2 == 0:
             for q in range(qubits):
-                p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
                 i += 4
-                j += 1
+                j += 3
         else:
             for q in range(qubits):
-                p[i: i + 3] = theta[3 * j: 3 * j + 3]
+                p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = maplog_to(x)
                 i += 4
-                j += 1
+                j += 3
         return p
 
-    nparams = 3 * layers * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
@@ -377,19 +420,24 @@ def ansatz_5(layers, qubits=1, tangling=True):
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
         for q in range(qubits):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RX(q, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
 
     for q in range(qubits):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RX(q, theta=0))
 
@@ -397,22 +445,38 @@ def ansatz_5(layers, qubits=1, tangling=True):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
-            for q in range(qubits):
+        for _ in range(layers - 1):
+            for _ in range(qubits):
                 p[i: i + 3] = theta[j: j + 3]
-                p[i + 3] = map_to(x)
-                p[i + 4] = maplog_to(x)
+                p[i + 3] = maplog_to(x)
+                p[i + 4] = map_to(x)
                 i += 5
                 j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
 
+        for _ in range(qubits):
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = maplog_to(x)
+            p[i + 4] = map_to(x)
+            i += 5
+            j += 3
         return p
 
-    nparams = 3 * layers * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
 
-def ansatz_6(layers, qubits=2, tangling=True):
+def ansatz_6(layers, qubits=2):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -422,34 +486,39 @@ def ansatz_6(layers, qubits=2, tangling=True):
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
         for q in range(0, qubits, 2):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
 
-            circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(0, qubits, 2):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
 
-        circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
+        for l in range(layers - 1):
             for q in range(0, qubits, 2):
                 p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
@@ -460,13 +529,35 @@ def ansatz_6(layers, qubits=2, tangling=True):
                 p[i + 3] = maplog_to(x)
                 i += 4
                 j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+
+        for q in range(0, qubits, 2):
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = map_to(x)
+            i += 4
+            j += 3
+
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = maplog_to(x)
+            i += 4
+            j += 3
+
         return p
 
-    nparams = 6 * (layers) * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
     return circuit, rotation, nparams
 
 
-def ansatz_7(layers, qubits=2, tangling=True):
+def ansatz_7(layers, qubits=2):
     assert qubits % 2 == 0
     """
      3 parameters per layer and qubit:
@@ -476,35 +567,39 @@ def ansatz_7(layers, qubits=2, tangling=True):
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
         for q in range(0, qubits, 2):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
 
-            circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
-            circuit.add(gates.RX(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
 
-        if tangling: entangler(circuit)
-
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(0, qubits, 2):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
 
-        circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RX(q + 1, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
+        for l in range(layers - 1):
             for q in range(0, qubits, 2):
                 p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
@@ -515,10 +610,31 @@ def ansatz_7(layers, qubits=2, tangling=True):
                 p[i + 3] = maplog_to(x)
                 i += 4
                 j += 3
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+
+        for q in range(0, qubits, 2):
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = map_to(x)
+            i += 4
+            j += 3
+
+            p[i: i + 3] = theta[j: j + 3]
+            p[i + 3] = maplog_to(x)
+            i += 4
+            j += 3
 
         return p
 
-    nparams = 6 * layers * qubits
+    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
@@ -533,46 +649,51 @@ def ansatz_8(layers, qubits=2, tangling=True):
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
         for q in range(0, qubits, 2):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
-            circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
 
-            circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
-            circuit.add(gates.RZ(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(0, qubits, 2):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
-        circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
 
-        circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
-        circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
+        for l in range(layers - 1):
             for q in range(0, qubits, 2):
                 p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
@@ -581,13 +702,23 @@ def ansatz_8(layers, qubits=2, tangling=True):
                 j += 6
 
                 p[i: i + 3] = theta[j: j + 3]
-                p[i + 3] = map_to(x)
+                p[i + 3] = maplog_to(x)
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
         return p
 
-    nparams = 6 * layers * qubits
+    nparams = 6 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
@@ -602,46 +733,51 @@ def ansatz_9(layers, qubits=2, tangling=True):
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
         for q in range(0, qubits, 2):
-            circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
-            circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
 
-            circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RX(q + 1, theta=0))
-            circuit.add(gates.RZ(q + 1, theta=0))
             circuit.add(gates.RY(q + 1, theta=0))
             circuit.add(gates.RZ(q + 1, theta=0))
+            circuit.add(gates.RY(q + 1, theta=0))
 
-        if tangling: entangler(circuit)
+        if qubits > 1:
+            for q in range(0, qubits, 2):
+                circuit.add(gates.CZPow(q, q + 1, theta=0))
+        if qubits > 2:
+            for q in range(1, qubits + 1, 2):
+                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
     for q in range(0, qubits, 2):
-        circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
-        circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))
+        circuit.add(gates.RY(q, theta=0))
 
-        circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RX(q + 1, theta=0))
-        circuit.add(gates.RZ(q + 1, theta=0))
         circuit.add(gates.RY(q + 1, theta=0))
         circuit.add(gates.RZ(q + 1, theta=0))
+        circuit.add(gates.RY(q + 1, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
-        for l in range(layers):
+        for l in range(layers - 1):
             for q in range(0, qubits, 2):
                 p[i: i + 3] = theta[j: j + 3]
                 p[i + 3] = map_to(x)
@@ -650,13 +786,23 @@ def ansatz_9(layers, qubits=2, tangling=True):
                 j += 6
 
                 p[i: i + 3] = theta[j: j + 3]
-                p[i + 3] = map_to(x)
+                p[i + 3] = maplog_to(x)
                 p[i + 4: i + 7] = theta[j + 3: j + 6]
                 i += 7
                 j += 6
+            if qubits > 1:
+                for q in range(0, qubits, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
+            if qubits > 2:
+                for q in range(1, qubits + 1, 2):
+                    p[i] = theta[j]
+                    i += 1
+                    j += 1
         return p
 
-    nparams = 6 * layers * qubits
+    nparams = 6 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
