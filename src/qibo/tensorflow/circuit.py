@@ -85,8 +85,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Determines if we are using Tensorflow native or custom gates."""
         return BACKEND['GATES'] != 'custom'
 
-    def _execute(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> OutputType:
+    def _execute(self, initial_state: Optional[InitStateType] = None
+                 ) -> tf.Tensor:
         """Performs ``circuit.execute`` on specified device."""
         self.using_density_matrix = False
         state = self.get_initial_state(initial_state)
@@ -108,12 +108,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
             state = tf.reshape(state, shape)
 
         self._final_state = state
-        if self.measurement_gate is None or nshots is None:
-            return self._final_state
+        return state
 
+    def _measure(self, state: tf.Tensor, nshots: int
+                 ) -> measurements.CircuitResult:
+        """Performs measurements for ``circuit.execute``."""
         samples = self.measurement_gate(state, nshots, samples_only=True,
                                         is_density_matrix=self.using_density_matrix)
-
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
@@ -149,7 +150,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
         device = DEVICES['DEFAULT']
         try:
             with tf.device(device):
-                return self._execute(initial_state=initial_state, nshots=nshots)
+                state = self._execute(initial_state=initial_state)
+                if self.measurement_gate is None or nshots is None:
+                    return state
+                return self._measure(state, nshots)
         except oom_error:
             raise_error(RuntimeError, f"State does not fit in {device} memory."
                                        "Please switch the execution device to a "
