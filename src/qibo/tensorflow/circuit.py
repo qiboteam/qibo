@@ -110,6 +110,20 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self._final_state = state
         return state
 
+    def _device_execute(self, initial_state: Optional[InitStateType] = None
+                        ) -> tf.Tensor:
+        """Executes circuit on the specified device and checks for OOM errors."""
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        device = DEVICES['DEFAULT']
+        try:
+            with tf.device(device):
+                state = self._execute(initial_state=initial_state)
+        except oom_error:
+            raise_error(RuntimeError, f"State does not fit in {device} memory."
+                                       "Please switch the execution device to a "
+                                       "different one using ``qibo.set_device``.")
+        return state
+
     def _measure(self, state: tf.Tensor, nshots: int
                  ) -> measurements.CircuitResult:
         """Performs measurements for ``circuit.execute``."""
@@ -146,18 +160,32 @@ class TensorflowCircuit(circuit.BaseCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
-        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
-        device = DEVICES['DEFAULT']
-        try:
-            with tf.device(device):
-                state = self._execute(initial_state=initial_state)
-                if self.measurement_gate is None or nshots is None:
-                    return state
-                return self._measure(state, nshots)
-        except oom_error:
-            raise_error(RuntimeError, f"State does not fit in {device} memory."
-                                       "Please switch the execution device to a "
-                                       "different one using ``qibo.set_device``.")
+        state = self._device_execute(initial_state)
+        if self.measurement_gate is None or nshots is None:
+            return state
+        return self._measure(state, nshots)
+
+    def repeated_execute(self, initial_state: Optional[InitStateType] = None,
+                         nshots: Optional[int] = None) -> OutputType:
+        if nshots is None:
+            raise_error(ValueError)
+        if self.measurement_gate is None:
+            raise_error(ValueError)
+        if self.using_density_matrix:
+            raise_error(ValueError)
+
+        samples = []
+        for _ in range(nshots):
+            state = self._device_execute(initial_state)
+            samples.append(self.measurement_gate(
+                state, nshots=1, samples_only=True))
+
+        samples = tf.concat(samples, axis=0)
+        # FIXME: This measurement result cannot point to any state!
+        self.measurement_gate_result = measurements.GateResult(
+            self.measurement_gate.qubits, state, decimal_samples=samples)
+        return measurements.CircuitResult(
+            self.measurement_tuples, self.measurement_gate_result)
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
