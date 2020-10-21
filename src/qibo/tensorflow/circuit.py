@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
+import joblib
 from qibo.base import circuit
 from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
@@ -165,38 +166,52 @@ class TensorflowCircuit(circuit.BaseCircuit):
             return state
         return self._measure(state, nshots)
 
-    def repeated_execute(self, initial_state: Optional[InitStateType] = None,
-                         nreps: Optional[int] = None,
-                         nshots: Optional[int] = None) -> OutputType:
-        if nreps is None:
-            if nshots is None:
-                raise_error(ValueError)
-            nreps = nshots
+    def __call__(self, initial_state: Optional[InitStateType] = None,
+                 nshots: Optional[int] = None) -> OutputType:
+        """Equivalent to ``circuit.execute``."""
+        return self.execute(initial_state=initial_state, nshots=nshots)
 
+    def _repeated_execute(self, initial_state: Optional[InitStateType] = None,
+                          nreps: Optional[int] = None) -> tf.Tensor:
         results = []
         for _ in range(nreps):
             state = self._device_execute(initial_state)
-            if nshots is not None and self.measurement_gate is not None:
+            if self.measurement_gate is not None:
                 results.append(self.measurement_gate(
                     state, nshots=1, samples_only=True))
                 del(state)
             else:
                 # FIXME: ``tf.identity`` may not work with custom operators
                 results.append(tf.identity(state))
+        return tf.stack(results, axis=0)
 
-        results = tf.stack(results, axis=0)
-        if nshots is None or self.measurement_gate is None:
+    def repeated_execute(self, initial_state: Optional[InitStateType] = None,
+                         nreps: Optional[int] = None) -> OutputType:
+        if isinstance(nreps, int):
+            results = self._repeated_execute(initial_state, nreps)
+        elif isinstance(nreps, list):
+            circuits = [self.copy(deep=False) for _ in nreps]
+            pool = joblib.Parallel(n_jobs=len(nreps), prefer="threads")
+            results = pool(joblib.delayed(c._repeated_execute)(initial_state, n)
+                           for c, n in zip(circuits, nreps))
+            results = tf.concat(results, axis=0)
+        elif isinstance(nreps, dict):
+            circuits = [(self.copy(device=device), n)
+                        for device, n in nreps.items()]
+            pool = joblib.Parallel(n_jobs=len(nreps), prefer="threads")
+            results = pool(joblib.delayed(c._repeated_execute)(initial_state, n)
+                           for c, n in circuits)
+            results = tf.concat(results, axis=0)
+        else:
+            raise_error(TypeError)
+
+        if self.measurement_gate is None:
             return results
-        # FIXME: This measurement result cannot point to any state!
+        # FIXME: Measurement result pointing to ``None`` state?
         self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, state, decimal_samples=samples)
+            self.measurement_gate.qubits, None, decimal_samples=results)
         return measurements.CircuitResult(
             self.measurement_tuples, self.measurement_gate_result)
-
-    def __call__(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> OutputType:
-        """Equivalent to ``circuit.execute``."""
-        return self.execute(initial_state=initial_state, nshots=nshots)
 
     @property
     def final_state(self) -> tf.Tensor:
