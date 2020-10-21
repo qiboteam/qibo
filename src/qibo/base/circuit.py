@@ -171,22 +171,32 @@ class BaseCircuit(object):
         for gate in self.queue:
             yield gate.on_qubits(*(q[i] for i in gate.qubits))
 
-    def copy(self, deep: bool = False) -> "BaseCircuit":
+    def copy(self, deep: bool = False, device: Optional[str] = None
+             ) -> "BaseCircuit":
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
         Args:
             deep (bool): If ``True`` copies of the  gate objects will be created
                 for the new circuit. If ``False``, the same gate objects of
                 ``circuit`` will be used.
+            device (str): If given the gates of the new circuit copy will be
+                created in this device. Note that this will set ``deep`` to
+                ``True`` automatically.
 
         Returns:
             The copied circuit object.
         """
         import copy
+        if device is not None:
+            deep = True
+
         new_circuit = self.__class__(**self._init_kwargs)
         if deep:
             for gate in self.queue:
                 new_gate = copy.copy(gate)
+                if device is not None and device != new_gate.device:
+                    new_gate.device = device
+                    new_gate.nqubits = self.nqubits
                 new_circuit.queue.append(new_gate)
                 if isinstance(gate, gates.ParametrizedGate):
                     new_circuit.parametrized_gates.append(new_gate)

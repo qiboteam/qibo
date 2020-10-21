@@ -418,7 +418,7 @@ def test_circuit_repeated_execute_with_noise_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     thetas = np.random.random(4)
-    prob = 0.2
+    prob = 0.5
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.add((gates.MonteCarloNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)

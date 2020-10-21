@@ -689,6 +689,7 @@ class MonteCarloNoiseChannel(TensorflowGate, base_gates.MonteCarloNoiseChannel):
     def nqubits(self, n: int):
         base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         for gate in self.gates:
+            gate.device = self.device
             gate.nqubits = n
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
