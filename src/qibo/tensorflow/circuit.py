@@ -166,21 +166,27 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return self._measure(state, nshots)
 
     def repeated_execute(self, initial_state: Optional[InitStateType] = None,
+                         nreps: Optional[int] = None,
                          nshots: Optional[int] = None) -> OutputType:
-        if nshots is None:
-            raise_error(ValueError)
-        if self.measurement_gate is None:
-            raise_error(ValueError)
-        if self.using_density_matrix:
-            raise_error(ValueError)
+        if nreps is None:
+            if nshots is None:
+                raise_error(ValueError)
+            nreps = nshots
 
-        samples = []
-        for _ in range(nshots):
+        results = []
+        for _ in range(nreps):
             state = self._device_execute(initial_state)
-            samples.append(self.measurement_gate(
-                state, nshots=1, samples_only=True))
+            if nshots is not None and self.measurement_gate is not None:
+                results.append(self.measurement_gate(
+                    state, nshots=1, samples_only=True))
+                del(state)
+            else:
+                # FIXME: ``tf.identity`` may not work with custom operators
+                results.append(tf.identity(state))
 
-        samples = tf.concat(samples, axis=0)
+        results = tf.stack(results, axis=0)
+        if nshots is None or self.measurement_gate is None:
+            return results
         # FIXME: This measurement result cannot point to any state!
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)

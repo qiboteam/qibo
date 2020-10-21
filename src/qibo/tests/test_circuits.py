@@ -399,6 +399,47 @@ def test_circuit_gate_generator_errors(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+# TODO: Add accelerators to this test
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_repeated_execute(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = Circuit(4)
+    thetas = np.random.random(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    target_state = np.array(20 * [c().numpy()])
+    final_state = c.repeated_execute(nreps=20)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+# TODO: Add accelerators to this test
+@pytest.mark.parametrize("backend", ["custom"])
+def test_circuit_repeated_execute_with_noise_channel(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    thetas = np.random.random(4)
+    prob = 0.2
+    c = Circuit(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    c.add((gates.MonteCarloNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)
+           for i in range(4)))
+    final_state = c.repeated_execute(nreps=20)
+
+    np.random.seed(1234)
+    target_state = []
+    for _ in range(20):
+        noiseless_c = Circuit(4)
+        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+        for i in range(4):
+            for gate in [gates.X, gates.Y, gates.Z]:
+                if np.random.random() < prob:
+                    noiseless_c.add(gate(i))
+        target_state.append(noiseless_c().numpy())
+    target_state = np.stack(target_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.linux
 @pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_memory_error(accelerators):
