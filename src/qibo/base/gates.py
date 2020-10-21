@@ -154,9 +154,6 @@ class Gate(object):
         or during `__call__` if the gate is called directly on a state.
         The user is not supposed to set `nqubits` by hand.
         """
-        if self._nqubits is not None:
-            raise_error(RuntimeError, "The number of qubits for this gates is already "
-                                      "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
         self._calculate_qubits_tensor()
