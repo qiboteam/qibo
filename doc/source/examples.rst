@@ -180,14 +180,17 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-The measurement gate is only used to sample the measured bitstrings and does not
-have  any effect on the state vector. If the user wishes to access the full
-state vector of a circuit that was measured, this is possible using the
+If the user wishes to access the full state vector of a circuit that was
+measured, this is possible using the
 :py:attr:`qibo.base.circuit.BaseCircuit.final_state` property of circuits.
-There reasons that measurement gates do not affect the state are first that
-when more than one measurement shots are used, then the final collapsed state
-is not uniquely defined and second that the user may wish to resample the final
-state vector to obtain more shots, without having to re-execute the simulation.
+Note that the state vector accessed this way corresponds to the state as if no
+measurements occurred, that is the state is not collapsed during the measurement.
+This is because measurement gates are only used to sample bitstrings and do not
+have  any effect on the state vector. There are two reasons for this choice.
+First, when more than one measurement shots are used the final collapsed state
+is not uniquely defined as it would be different for each measurement result.
+Second the user may wish to re-sample the final state vector in order to
+obtain more measurement shots without having to re-execute the full simulation.
 
 For applications that require the state vector to be collapsed according to a
 single-shot measurement, Qibo provides the :class:`qibo.base.gates.Collapse`
