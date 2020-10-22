@@ -263,25 +263,33 @@ struct CollapseStateFunctor<CPUDevice, T> {
       return i;
     };
 
-    //typename TTypes<double>::UnalignedVec norms;
-    //norms.setZero();
-    Eigen::VectorXf norms(ncores);
-    norms.setZero();
-    for (int i = 0; i < ncores; i++) {
-      std::cout << i << "," << norms[i] << " ";
-    }
-    std::cout << std::endl;
+    auto AbsSquare = [&](T& x) {
+      return x.real() * x.real() + x.imag() * x.imag();
+    };
+
+    // Calculate true norm for comparison
     double tnorm = 0;
     for (auto g = 0; g < nstates; g++) {
-      auto i = GetIndex(g, res);
-      norms[((int)g % ncores)] += state[i].real();
-      tnorm += state[i].real();
+      tnorm += AbsSquare(state[GetIndex(g, res)]);
     }
-    for (int i = 0; i < ncores; i++) {
+
+    //typename TTypes<double>::UnalignedVec norms;
+    //norms.setZero();
+    Eigen::VectorXf norms(ncores + 1);
+    norms.setZero();
+    auto CalculateNorm = [&](int64 t, int64 w) {
+      int n = ((int) t / nreps);
+      for (auto g = t; g < w; g++) {
+        norms[n] += AbsSquare(state[GetIndex(g, res)]);
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, CalculateNorm);
+
+    for (int i = 0; i < ncores + 1; i++) {
       std::cout << norms[i] << " ";
     }
     std::cout << "\nCalculated norm: " << norms.sum() << std::endl;
-    std::cout << "Total norm: " << tnorm << std::endl;
+    std::cout << "True norm: " << tnorm << std::endl;
 
     auto ZeroState = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g++) {
