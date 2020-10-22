@@ -237,6 +237,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
                   const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
     int64 nsubstates = (int64)1 << ntargets;
+    const int64 res = result[0];
 
     // Set multi-threading
     auto thread_pool =
@@ -262,12 +263,32 @@ struct CollapseStateFunctor<CPUDevice, T> {
       return i;
     };
 
+    //typename TTypes<double>::UnalignedVec norms;
+    //norms.setZero();
+    Eigen::VectorXf norms(ncores);
+    norms.setZero();
+    for (int i = 0; i < ncores; i++) {
+      std::cout << i << "," << norms[i] << " ";
+    }
+    std::cout << std::endl;
+    double tnorm = 0;
+    for (auto g = 0; g < nstates; g++) {
+      auto i = GetIndex(g, res);
+      norms[((int)g % ncores)] += state[i].real();
+      tnorm += state[i].real();
+    }
+    for (int i = 0; i < ncores; i++) {
+      std::cout << norms[i] << " ";
+    }
+    std::cout << "\nCalculated norm: " << norms.sum() << std::endl;
+    std::cout << "Total norm: " << tnorm << std::endl;
+
     auto ZeroState = [&](int64 t, int64 w) {
       for (auto g = t; g < w; g++) {
-        for (auto h = 0; h < result[0]; h++) {
+        for (auto h = 0; h < res; h++) {
           state[GetIndex(g, h)] = 0;
         }
-        for (auto h = result[0] + 1; h < nsubstates; h++) {
+        for (auto h = res + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
       }
