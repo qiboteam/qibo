@@ -115,8 +115,8 @@ struct ApplySwapFunctor : BaseTwoQubitGateFunctor<Device, T> {};
 template <typename Device, typename T>
 struct CollapseStateFunctor {
   void operator()(const OpKernelContext* context, const Device& d, T* state,
-                  int nqubits, int ntargets, const int32* qubits,
-                  const int64* result) const;
+                  int nqubits, bool normalize, int ntargets,
+                  const int32* qubits, const int64* result) const;
 };
 
 }  // namespace functor

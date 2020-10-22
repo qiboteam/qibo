@@ -42,6 +42,7 @@ REGISTER_OP("CollapseState")            \
     .Input("qubits: int32")             \
     .Input("result: int64")             \
     .Attr("nqubits: int")               \
+    .Attr("normalize: bool")            \
     .Output("out: T")                   \
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 

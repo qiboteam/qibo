@@ -233,8 +233,8 @@ struct ApplySwapFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
 template <typename T>
 struct CollapseStateFunctor<CPUDevice, T> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
-                  int nqubits, int ntargets, const int32* qubits,
-                  const int64* result) const {
+                  int nqubits, bool normalize, int ntargets,
+                  const int32* qubits, const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
     int64 nsubstates = (int64)1 << ntargets;
     const int64 res = result[0];
@@ -291,12 +291,14 @@ struct CollapseStateFunctor<CPUDevice, T> {
       x = T(x.real() / norm, x.imag() / norm);
     };
 
-    auto NormalizeState = [&](int64 t, int64 w) {
-      for (auto g = t; g < w; g++) {
-        NormalizeComponent(state[GetIndex(g, res)]);
-      }
-    };
-    thread_pool->ParallelFor(nstates, p, NormalizeState);
+    if (normalize) {
+      auto NormalizeState = [&](int64 t, int64 w) {
+        for (auto g = t; g < w; g++) {
+          NormalizeComponent(state[GetIndex(g, res)]);
+        }
+      };
+      thread_pool->ParallelFor(nstates, p, NormalizeState);
+    }
   }
 };
 
@@ -383,6 +385,7 @@ class CollapseStateOp : public OpKernel {
  public:
   explicit CollapseStateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("normalize", &normalize_));
   }
 
   void Compute(OpKernelContext* context) override {
@@ -393,14 +396,15 @@ class CollapseStateOp : public OpKernel {
     // call the implementation
     CollapseStateFunctor<Device, T>()(
       context, context->eigen_device<Device>(), state.flat<T>().data(),
-      nqubits_, qubits.flat<int32>().size(), qubits.flat<int32>().data(),
-      result.flat<int64>().data());
+      nqubits_, normalize_, qubits.flat<int32>().size(),
+      qubits.flat<int32>().data(), result.flat<int64>().data());
 
     context->set_output(0, state);
   }
 
  private:
    int nqubits_;
+   bool normalize_;
 };
 
 
