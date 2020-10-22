@@ -267,41 +267,36 @@ struct CollapseStateFunctor<CPUDevice, T> {
       return x.real() * x.real() + x.imag() * x.imag();
     };
 
-    // Calculate true norm for comparison
-    double tnorm = 0;
-    for (auto g = 0; g < nstates; g++) {
-      tnorm += AbsSquare(state[GetIndex(g, res)]);
-    }
-
-    //typename TTypes<double>::UnalignedVec norms;
-    //norms.setZero();
     Eigen::VectorXf norms(ncores + 1);
     norms.setZero();
-    auto CalculateNorm = [&](int64 t, int64 w) {
-      int n = ((int) t / nreps);
-      for (auto g = t; g < w; g++) {
-        norms[n] += AbsSquare(state[GetIndex(g, res)]);
-      }
-    };
-    thread_pool->ParallelFor(nstates, p, CalculateNorm);
-
-    for (int i = 0; i < ncores + 1; i++) {
-      std::cout << norms[i] << " ";
-    }
-    std::cout << "\nCalculated norm: " << norms.sum() << std::endl;
-    std::cout << "True norm: " << tnorm << std::endl;
-
     auto ZeroState = [&](int64 t, int64 w) {
+      int n = 0;
+      if (nreps > 0) {
+        n = ((int) t / nreps);
+      }
       for (auto g = t; g < w; g++) {
         for (auto h = 0; h < res; h++) {
           state[GetIndex(g, h)] = 0;
         }
+        norms[n] += AbsSquare(state[GetIndex(g, res)]);
         for (auto h = res + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
       }
     };
     thread_pool->ParallelFor(nstates, p, ZeroState);
+
+    auto norm = std::sqrt(norms.sum());
+    auto NormalizeComponent = [&](T& x) {
+      x = T(x.real() / norm, x.imag() / norm);
+    };
+
+    auto NormalizeState = [&](int64 t, int64 w) {
+      for (auto g = t; g < w; g++) {
+        NormalizeComponent(state[GetIndex(g, res)]);
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, NormalizeState);
   }
 };
 
