@@ -30,7 +30,7 @@ jobs:
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
     - name: Test examples
-      if: startsWith(matrix.os, 'ubuntu')
+      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
       run: |
         pytest examples/
     - name: Upload coverage to Codecov
