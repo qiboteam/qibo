@@ -34,6 +34,7 @@ jobs:
       run: |
         pytest examples/
     - name: Upload coverage to Codecov
+      if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
