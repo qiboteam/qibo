@@ -26,9 +26,12 @@ jobs:
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
-    - name: Test with pytest
+    - name: Test with pytest core
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
+    - name: Test examples
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
         pytest examples/
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
