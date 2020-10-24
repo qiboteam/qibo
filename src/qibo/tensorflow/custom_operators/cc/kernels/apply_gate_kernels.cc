@@ -267,8 +267,14 @@ struct CollapseStateFunctor<CPUDevice, T> {
       return x.real() * x.real() + x.imag() * x.imag();
     };
 
-    Eigen::VectorXf norms(ncores + 1);
+    // Define vector that holds norms during parallel calculation
+    int nnorms = ncores + 1;
+    if (nreps > 0 && nstates / nreps > nnorms) {
+      nnorms = nstates / nreps;
+    }
+    Eigen::VectorXf norms(nnorms);
     norms.setZero();
+
     auto ZeroState = [&](int64 t, int64 w) {
       int n = 0;
       if (nreps > 0) {
@@ -286,12 +292,11 @@ struct CollapseStateFunctor<CPUDevice, T> {
     };
     thread_pool->ParallelFor(nstates, p, ZeroState);
 
-    auto norm = std::sqrt(norms.sum());
-    auto NormalizeComponent = [&](T& x) {
-      x = T(x.real() / norm, x.imag() / norm);
-    };
-
     if (normalize) {
+      auto norm = std::sqrt(norms.sum());
+      auto NormalizeComponent = [&](T& x) {
+        x = T(x.real() / norm, x.imag() / norm);
+      };
       auto NormalizeState = [&](int64 t, int64 w) {
         for (auto g = t; g < w; g++) {
           NormalizeComponent(state[GetIndex(g, res)]);
