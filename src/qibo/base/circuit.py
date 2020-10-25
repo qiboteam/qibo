@@ -100,6 +100,7 @@ class BaseCircuit(object):
 
         self._final_state = None
         self.using_density_matrix = False
+        self.repeated_execution = False
 
     def __add__(self, circuit) -> "BaseCircuit":
         """Add circuits.
@@ -435,6 +436,9 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
+        elif isinstance(gate, gates.MonteCarloNoiseChannel):
+            self.repeated_execution = True
+            self.queue.append(gate)
         else:
             self.queue.append(gate)
         if isinstance(gate, gates.ParametrizedGate):

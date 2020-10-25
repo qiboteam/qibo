@@ -407,8 +407,9 @@ def test_circuit_repeated_execute(backend):
     c = Circuit(4)
     thetas = np.random.random(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    c.repeated_execution = True
     target_state = np.array(20 * [c().numpy()])
-    final_state = c.repeated_execute(nreps=20)
+    final_state = c(nshots=20)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -423,7 +424,7 @@ def test_circuit_repeated_execute_with_noise_channel(backend):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.add((gates.MonteCarloNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)
            for i in range(4)))
-    final_state = c.repeated_execute(nreps=20)
+    final_state = c(nshots=20)
 
     np.random.seed(1234)
     target_state = []

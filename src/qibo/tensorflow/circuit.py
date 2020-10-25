@@ -125,15 +125,33 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                        "different one using ``qibo.set_device``.")
         return state
 
-    def _measure(self, state: tf.Tensor, nshots: int
-                 ) -> measurements.CircuitResult:
+    def _measurement_result(self, samples: tf.Tensor,
+                            state: Optional[tf.Tensor] = None
+                            ) -> measurements.CircuitResult:
         """Performs measurements for ``circuit.execute``."""
-        samples = self.measurement_gate(state, nshots, samples_only=True,
-                                        is_density_matrix=self.using_density_matrix)
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
             self.measurement_tuples, self.measurement_gate_result)
+
+    def _repeated_execute(self, nreps: int,
+                          initial_state: Optional[InitStateType] = None
+                          ) -> tf.Tensor:
+        results = []
+        for _ in range(nreps):
+            state = self._device_execute(initial_state)
+            if self.measurement_gate is not None:
+                results.append(self.measurement_gate(
+                    state, nshots=1, samples_only=True))
+                del(state)
+            else:
+                # FIXME: ``tf.identity`` may not work with custom operators
+                results.append(tf.identity(state))
+        results = tf.stack(results, axis=0)
+
+        if self.measurement_gate is None:
+            return results
+        return self._measurement_result(results)
 
     def execute(self, initial_state: Optional[InitStateType] = None,
                 nshots: Optional[int] = None) -> OutputType:
@@ -161,57 +179,22 @@ class TensorflowCircuit(circuit.BaseCircuit):
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
         """
+        if nshots is not None and self.repeated_execution:
+            self._final_state = None
+            return self._repeated_execute(nshots, initial_state)
+
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
             return state
-        return self._measure(state, nshots)
+
+        samples = self.measurement_gate(state, nshots, samples_only=True,
+                                        is_density_matrix=self.using_density_matrix)
+        return self._measurement_result(samples, state)
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Equivalent to ``circuit.execute``."""
         return self.execute(initial_state=initial_state, nshots=nshots)
-
-    def _repeated_execute(self, initial_state: Optional[InitStateType] = None,
-                          nreps: Optional[int] = None) -> tf.Tensor:
-        results = []
-        for _ in range(nreps):
-            state = self._device_execute(initial_state)
-            if self.measurement_gate is not None:
-                results.append(self.measurement_gate(
-                    state, nshots=1, samples_only=True))
-                del(state)
-            else:
-                # FIXME: ``tf.identity`` may not work with custom operators
-                results.append(tf.identity(state))
-        return tf.stack(results, axis=0)
-
-    def repeated_execute(self, initial_state: Optional[InitStateType] = None,
-                         nreps: Optional[int] = None) -> OutputType:
-        if isinstance(nreps, int):
-            results = self._repeated_execute(initial_state, nreps)
-        elif isinstance(nreps, list):
-            circuits = [self.copy(deep=False) for _ in nreps]
-            pool = joblib.Parallel(n_jobs=len(nreps), prefer="threads")
-            results = pool(joblib.delayed(c._repeated_execute)(initial_state, n)
-                           for c, n in zip(circuits, nreps))
-            results = tf.concat(results, axis=0)
-        elif isinstance(nreps, dict):
-            circuits = [(self.copy(device=device), n)
-                        for device, n in nreps.items()]
-            pool = joblib.Parallel(n_jobs=len(nreps), prefer="threads")
-            results = pool(joblib.delayed(c._repeated_execute)(initial_state, n)
-                           for c, n in circuits)
-            results = tf.concat(results, axis=0)
-        else:
-            raise_error(TypeError)
-
-        if self.measurement_gate is None:
-            return results
-        # FIXME: Measurement result pointing to ``None`` state?
-        self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, None, decimal_samples=results)
-        return measurements.CircuitResult(
-            self.measurement_tuples, self.measurement_gate_result)
 
     @property
     def final_state(self) -> tf.Tensor:
