@@ -677,10 +677,10 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         return state
 
 
-class MonteCarloNoiseChannel(TensorflowGate, base_gates.MonteCarloNoiseChannel):
+class ProbabilisticNoiseChannel(TensorflowGate, base_gates.ProbabilisticNoiseChannel):
 
     def __init__(self, q, px=0, py=0, pz=0, seed=None):
-        base_gates.MonteCarloNoiseChannel.__init__(self, q, px, py, pz, seed)
+        base_gates.ProbabilisticNoiseChannel.__init__(self, q, px, py, pz, seed)
         TensorflowGate.__init__(self)
         if seed is not None:
             np.random.seed(seed)

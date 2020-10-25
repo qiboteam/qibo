@@ -422,7 +422,7 @@ def test_circuit_repeated_execute_with_noise_channel(backend):
     prob = 0.5
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.MonteCarloNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)
+    c.add((gates.ProbabilisticNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)
            for i in range(4)))
     final_state = c(nshots=20)
 

@@ -436,7 +436,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-        elif isinstance(gate, gates.MonteCarloNoiseChannel):
+        elif isinstance(gate, gates.ProbabilisticNoiseChannel):
             self.repeated_execution = True
             self.queue.append(gate)
         else:

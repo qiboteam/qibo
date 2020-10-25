@@ -1576,8 +1576,8 @@ class NoiseChannel(Gate):
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
 
-class MonteCarloNoiseChannel(NoiseChannel):
-    """Probabilistic noise channel implemented via Monte Carlo.
+class ProbabilisticNoiseChannel(NoiseChannel):
+    """Probabilistic noise channel implemented via Monte Carlo sampling.
 
     Has the same effect as :class:`qibo.base.gates.NoiseChannel` but is
     implemented by repeated execution of the circuit and Monte Carlo sampling
@@ -1594,8 +1594,8 @@ class MonteCarloNoiseChannel(NoiseChannel):
     # TODO: Implement this for native Tensorflow backends
 
     def __init__(self, q, px=0, py=0, pz=0, seed=None):
-        super(MonteCarloNoiseChannel, self).__init__(q, px, py, pz)
-        self.name = "MonteCarloNoiseChannel"
+        super(ProbabilisticNoiseChannel, self).__init__(q, px, py, pz)
+        self.name = "ProbabilisticNoiseChannel"
         self.is_channel = False
         self.seed = seed
 
