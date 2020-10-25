@@ -14,6 +14,24 @@ namespace functor {
 
 using thread::ThreadPool;
 
+// Helper methods for complex numbers
+template <typename T>
+T cmult(T a, T b) {
+  return T(a.real() * b.real() - a.imag() * b.imag(),
+           a.real() * b.imag() + a.imag() * b.real());
+}
+
+template <typename T>
+T cadd(T a, T b) {
+  return T(a.real() + b.real(), a.imag() + b.imag());
+}
+
+template <typename T>
+double AbsSquare(T x) {
+  return x.real() * x.real() + x.imag() * x.imag();
+}
+
+
 template <typename T>
 struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
@@ -64,17 +82,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     }
   }
 };
-
-template <typename T>
-T cmult(T a, T b) {
-  return T(a.real() * b.real() - a.imag() * b.imag(),
-           a.real() * b.imag() + a.imag() * b.real());
-}
-
-template <typename T>
-T cadd(T a, T b) {
-  return T(a.real() + b.real(), a.imag() + b.imag());
-}
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
@@ -261,10 +268,6 @@ struct CollapseStateFunctor<CPUDevice, T> {
         i += ((int64)((int)(h >> iq) % 2) * k);
       }
       return i;
-    };
-
-    auto AbsSquare = [&](T& x) {
-      return x.real() * x.real() + x.imag() * x.imag();
     };
 
     // Define vector that holds norms during parallel calculation

@@ -549,8 +549,8 @@ __global__ void CollapseStateKernel(T* state, const int* qubits,
 template <typename T>
 struct CollapseStateFunctor<GPUDevice, T> {
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
-                  int nqubits, int ntargets, const int32* qubits,
-                  const int64* result) const {
+                  int nqubits, bool normalize, int ntargets,
+                  const int32* qubits, const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
     int64 nsubstates = (int64)1 << ntargets;
 
