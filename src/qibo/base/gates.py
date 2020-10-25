@@ -1557,13 +1557,21 @@ class NoiseChannel(Gate):
         self.target_qubits = (q,)
         self.p = (px, py, pz)
         self.total_p = sum(self.p)
-
-        classes = ("X", "Y", "Z")
-        self.gates = [getattr(self.module, g)(q)
-                      for p, g in zip(self.p, classes) if p > 0]
+        self.gates = tuple()
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
+
+    def _create_gates(self):
+        assert not self.gates
+        gatelist = []
+        for p, g in zip(self.p, ("X", "Y", "Z")):
+            if p > 0:
+                gate = getattr(self.module, g)(self.target_qubits[0])
+                gate.device = self.device
+                gate.nqubits = self.nqubits
+                gatelist.append(gate)
+        self.gates = tuple(gatelist)
 
     @property
     def unitary(self): # pragma: no cover
@@ -1643,17 +1651,26 @@ class GeneralChannel(Gate):
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
         self.init_args = [A]
+        self.gates = tuple()
+        self._check_shapes(False)
 
-        # Check that given operators have the proper shape
-        self.gates = []
-        for qubits, matrix in A:
+    def _check_shapes(self, create_gates: bool = False):
+        """Checks that given operators have the proper shape."""
+        gatelist = []
+        for qubits, matrix in self.init_args[0]:
             rank = 2 ** len(qubits)
             shape = tuple(matrix.shape)
             if shape != (rank, rank):
                 raise_error(ValueError, "Invalid Krauss operator shape {} for "
                                         " acting on {} qubits."
                                         "".format(shape, len(qubits)))
-            self.gates.append(self.module.Unitary(matrix, *list(qubits)))
+            if create_gates:
+                gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+        return tuple(gatelist)
+
+    def _create_gates(self):
+        assert not self.gates
+        self.gates = self._check_shapes(True)
 
     def on_qubits(self, *q): # pragma: no cover
         # future TODO

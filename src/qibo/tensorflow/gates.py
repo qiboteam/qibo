@@ -463,13 +463,7 @@ class TensorflowChannel(TensorflowGate):
         super(TensorflowChannel, self).__init__()
 
     def _prepare(self):
-        pass
-
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        for gate in self.gates:
-            gate.nqubits = n
+        self._create_gates()
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
                  ) -> tf.Tensor:
@@ -478,7 +472,6 @@ class TensorflowChannel(TensorflowGate):
                                     "matrices.")
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape)) // 2
-
         return self._krauss_sum(state)
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
