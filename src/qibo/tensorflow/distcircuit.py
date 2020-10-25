@@ -119,7 +119,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
-    def _device_execute(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
+    def _device_job(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
         for gate in gates:
             state = gate(state)
         return state
@@ -133,16 +133,16 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 Has shape ``(ndevices, ngates_i)`` where ``ngates_i`` is the
                 number of gates to be applied by accelerator ``i``.
         """
-        def _device_job(ids, device):
+        def device_job(ids, device):
             for i in ids:
                 with tf.device(device):
-                    piece = self._device_execute(state.pieces[i], queues[i])
+                    piece = self._device_job(state.pieces[i], queues[i])
                     state.pieces[i].assign(piece)
                     del(piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
-        pool(joblib.delayed(_device_job)(ids, device)
+        pool(joblib.delayed(device_job)(ids, device)
              for device, ids in self.queues.device_to_ids.items())
 
     def _swap(self, state: utils.DistributedState, global_qubit: int, local_qubit: int):
@@ -182,9 +182,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             # Redo all global SWAPs that happened so far
             self._revert_swaps(state, gate.swap_reset)
 
-    def _execute(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> OutputType:
-        """Performs ``circuit.execute``."""
+    def _execute(self, initial_state: Optional[InitStateType] = None
+                 ) -> utils.DistributedState:
+        """Performs all circuit gates on the state vector."""
         state = self.get_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
@@ -201,17 +201,27 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self._special_gate_execute(state, gate)
 
         self._final_state = state
-        if self.measurement_gate is None or nshots is None:
-            return state
+        return state
 
+    def _device_execute(self, initial_state: Optional[InitStateType] = None
+                        ) -> utils.DistributedState:
+        """Executes circuit and checks for OOM errors."""
+        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        try:
+            return self._execute(initial_state)
+        except oom_error:
+            raise_error(RuntimeError, "State does not fit in memory during distributed "
+                                      "execution. Please create a new circuit with "
+                                      "different device configuration and try again.")
+
+    def _sample_measurements(state: utils.DistributedState, nshots: int
+                             ) -> tf.Tensor:
+        """Generates measurement samples from the given state vector."""
         with tf.device(self.memory_device):
-            samples = self.measurement_gate(state.vector, nshots, samples_only=True,
-                                            is_density_matrix=self.using_density_matrix)
-            self.measurement_gate_result = measurements.GateResult(
-                self.measurement_gate.qubits, state, decimal_samples=samples)
-            result = measurements.CircuitResult(
-                self.measurement_tuples, self.measurement_gate_result)
-        return result
+            samples = self.measurement_gate(
+                state.vector, nshots, samples_only=True,
+                is_density_matrix=self.using_density_matrix)
+        return samples
 
     def execute(self, initial_state: Optional[InitStateType] = None,
                 nshots: Optional[int] = None) -> OutputType:
@@ -222,13 +232,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         ``tf.Tensor``. This avoids creating multiple copies of large states in
         the CPU memory.
         """
-        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
-        try:
-            return self._execute(initial_state=initial_state, nshots=nshots)
-        except oom_error:
-            raise_error(RuntimeError, "State does not fit in memory during distributed "
-                                      "execution. Please create a new circuit with "
-                                      "different device configuration and try again.")
+        return super(TensorflowDistributedCircuit, self).execute(
+            initial_state=initial_state, nshots=nshots)
 
     def get_initial_state(
           self, state: Optional[Union[InitStateType, str]] = None

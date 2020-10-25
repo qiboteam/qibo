@@ -399,12 +399,11 @@ def test_circuit_gate_generator_errors(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
-# TODO: Add accelerators to this test
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_repeated_execute(backend):
+@pytest.mark.parametrize("backend,accelerators", _DEVICE_BACKENDS)
+def test_circuit_repeated_execute(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    c = Circuit(4)
+    c = Circuit(4, accelerators=accelerators)
     thetas = np.random.random(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.repeated_execution = True

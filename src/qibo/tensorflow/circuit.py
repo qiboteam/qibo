@@ -88,7 +88,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> tf.Tensor:
-        """Performs ``circuit.execute`` on specified device."""
+        """Performs all circuit gates on the state vector."""
         self.using_density_matrix = False
         state = self.get_initial_state(initial_state)
 
@@ -125,10 +125,16 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                        "different one using ``qibo.set_device``.")
         return state
 
+    def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        """Generates measurement samples from the given state vector."""
+        return self.measurement_gate(
+            state, nshots, samples_only=True,
+            is_density_matrix=self.using_density_matrix)
+
     def _measurement_result(self, samples: tf.Tensor,
                             state: Optional[tf.Tensor] = None
                             ) -> measurements.CircuitResult:
-        """Performs measurements for ``circuit.execute``."""
+        """Creates the measurement result object using the sampled bitstrings."""
         self.measurement_gate_result = measurements.GateResult(
             self.measurement_gate.qubits, state, decimal_samples=samples)
         return measurements.CircuitResult(
@@ -141,11 +147,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         for _ in range(nreps):
             state = self._device_execute(initial_state)
             if self.measurement_gate is not None:
-                results.append(self.measurement_gate(
-                    state, nshots=1, samples_only=True))
+                results.append(self._sample_measurements(state, nshots=1))
                 del(state)
             else:
-                # FIXME: ``tf.identity`` may not work with custom operators
                 results.append(tf.identity(state))
         results = tf.stack(results, axis=0)
 
@@ -187,8 +191,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self.measurement_gate is None or nshots is None:
             return state
 
-        samples = self.measurement_gate(state, nshots, samples_only=True,
-                                        is_density_matrix=self.using_density_matrix)
+        samples = self._sample_measurements(state, nshots)
         return self._measurement_result(samples, state)
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
