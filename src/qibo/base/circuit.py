@@ -193,9 +193,10 @@ class BaseCircuit(object):
         new_circuit = self.__class__(**self._init_kwargs)
         if deep:
             for gate in self.queue:
-                #new_gate = copy.copy(gate)
-                new_gate = gate.__class__(*gate.init_args, **gate.init_kwargs)
-                new_circuit._set_nqubits(new_gate)
+                new_gate = copy.copy(gate)
+                if device is not None and device != new_gate.device:
+                    new_gate.device = device
+                    new_gate.nqubits = self.nqubits
                 new_circuit.queue.append(new_gate)
                 if isinstance(gate, gates.ParametrizedGate):
                     new_circuit.parametrized_gates.append(new_gate)
