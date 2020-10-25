@@ -190,9 +190,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if isinstance(nreps, int):
             results = self._repeated_execute(initial_state, nreps)
         elif isinstance(nreps, list):
-            circuits = [self.copy(deep=False) for _ in nreps]
+            circuits = [self.copy(deep=True) for _ in nreps]
             pool = joblib.Parallel(n_jobs=len(nreps), prefer="threads")
-            results = pool(joblib.delayed(c._repeated_execute)(initial_state, n)
+            results = pool(joblib.delayed(c._repeated_execute)(nreps=n)
                            for c, n in zip(circuits, nreps))
             results = tf.concat(results, axis=0)
         elif isinstance(nreps, dict):
