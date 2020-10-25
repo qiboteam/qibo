@@ -14,7 +14,8 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
+        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow",
+                      "ProbabilisticNoiseChannel"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:

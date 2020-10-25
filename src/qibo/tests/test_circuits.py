@@ -414,7 +414,7 @@ def test_circuit_repeated_execute(backend):
     qibo.set_backend(original_backend)
 
 # TODO: Add accelerators to this test
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_repeated_execute_with_noise_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
