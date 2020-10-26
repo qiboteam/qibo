@@ -53,6 +53,7 @@ class Gate(object):
         # Reference to copies of this gate that are casted in devices when
         # a distributed circuit is used
         self.device_gates = set()
+        self.original_gate = None
 
         config.ALLOW_SWITCHERS = False
 
