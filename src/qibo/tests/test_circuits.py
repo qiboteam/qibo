@@ -425,7 +425,6 @@ def test_circuit_repeated_execute_with_noise_channel(backend, accelerators):
         with pytest.raises(NotImplementedError):
             c.add((gates.ProbabilisticNoiseChannel(
                 i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))
-
     else:
         c.add((gates.ProbabilisticNoiseChannel(
             i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))

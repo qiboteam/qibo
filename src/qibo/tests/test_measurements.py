@@ -568,3 +568,30 @@ def test_copy_measurements(accelerators):
     assert rg1.keys() == rg2.keys()
     for k in rg1.keys():
         assert rg1[k] == rg2[k]
+
+
+def test_measurements_with_probabilistic_noise(accelerators=None):
+    import tensorflow as tf
+    thetas = np.random.random(5)
+    c = models.Circuit(5, accelerators)
+    c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
+    c.add((gates.ProbabilisticNoiseChannel(i, px=0.2, py=0.0, pz=0.2, seed=123)
+           for i in range(5)))
+    c.add(gates.M(*range(5)))
+    tf.random.set_seed(123)
+    result = c(nshots=20)
+
+    np.random.seed(123)
+    tf.random.set_seed(123)
+    target_samples = []
+    for _ in range(20):
+        noiseless_c = models.Circuit(5)
+        noiseless_c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
+        for i in range(5):
+            for gate in [gates.X, gates.Z]:
+                if np.random.random() < 0.2:
+                    noiseless_c.add(gate(i))
+        noiseless_c.add(gates.M(*range(5)))
+        target_samples.append(noiseless_c(nshots=1).samples())
+    target_samples = tf.concat(target_samples, axis=0)
+    np.testing.assert_allclose(result.samples(), target_samples)

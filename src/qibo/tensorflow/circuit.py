@@ -147,7 +147,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         for _ in range(nreps):
             state = self._device_execute(initial_state)
             if self.measurement_gate is not None:
-                results.append(self._sample_measurements(state, nshots=1))
+                results.append(self._sample_measurements(state, nshots=1)[0])
                 del(state)
             else:
                 results.append(tf.identity(state))

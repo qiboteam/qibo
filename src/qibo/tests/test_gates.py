@@ -1284,7 +1284,7 @@ def test_variational_layer_dagger(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_monte_carlo_noise_channel(backend):
+def test_probabilistic_noise_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
