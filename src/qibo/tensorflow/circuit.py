@@ -162,10 +162,19 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Propagates the state through the circuit applying the corresponding gates.
 
         In default usage the full final state vector or density matrix is returned.
-        If the circuit contains measurement gates and `nshots` is given, then
-        the final state is sampled and the samples are returned.
-        Circuit execution uses by default state vectors but switches automatically
-        to density matrices if
+        If the circuit contains measurement gates and ``nshots`` is given, then
+        the final state is sampled and the samples are returned. We refer to
+        the :ref:`How to perform measurements? <measurement-examples>` example
+        for more details on how to perform measurements in Qibo.
+
+        Circuit execution uses state vectors by default but switches
+        automatically to density matrices if a density matrix is given as
+        initial state or a channel is found a among the gates.
+        If the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate is found
+        then Qibo will perform noise simulation by repeating the circuit
+        execution ``nshots`` times instead of using density matrices.
+        For more details on how noise and density matrices are simulated
+        we refer to :ref:`How to perform noisy simulation? <noisy-example>`
 
         Args:
             initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
@@ -208,8 +217,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         executed more than once, only the last final state is returned.
         """
         if self._final_state is None:
-            raise_error(RuntimeError, "Cannot access final state before the circuit "
-                                      "is executed.")
+            raise_error(RuntimeError, "Cannot access final state before the "
+                                      "circuit is executed.")
         return self._final_state
 
     def _check_initial_shape(self, state: InitStateType):

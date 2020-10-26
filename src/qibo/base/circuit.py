@@ -682,7 +682,11 @@ class BaseCircuit(object):
 
     @abstractmethod
     def execute(self, *args): # pragma: no cover
-        """Executes the circuit. Exact implementation depends on the backend."""
+        """Executes the circuit. Exact implementation depends on the backend.
+
+        See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
+        detaisl.
+        """
         # abstract method
         raise_error(NotImplementedError)
 

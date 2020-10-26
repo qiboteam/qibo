@@ -579,10 +579,65 @@ and using the `Sequential model API <https://www.tensorflow.org/api_docs/python/
 to train them.
 
 
+.. _noisy-example:
+
 How to perform noisy simulation?
 --------------------------------
 
-Qibo can perform noisy simulation using density matrices.
+Qibo can perform noisy simulation with two different methods: by repeating the
+circuit execution multiple times and applying noise channels probabilistically
+or by using density density matrices.
+
+Using repeated execution
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+The :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate simulates
+X (bit-flips), Y and Z (phase-flip) errors in a probabilistic manner. The user
+specifies the probabilities `(px, py, pz)` of each error and the gate applies
+the corresponding gate with this probability in each circuit execution. Noise
+can thus be simulated by repeating the circuit execution multiple times. as:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo import models, gates
+
+    # Define circuit
+    c = models.Circuit(5)
+    c.add((gates.RX(i, theta=t) for i, t in enumerate(np.random.random())))
+    # Add noise channels to all qubits
+    c.add((gates.ProbabilisticNoiseChannel(i, px=0.2, py=0.0, pz=0.3)
+           for i in range(5)))
+    # Add measurement of all qubits
+    c.add(gates.M(*range(5)))
+
+    # Repeat execution 1000 times
+    result = c(nshots=1000)
+
+Note that the command ``c(nshots=1000)`` has a different behavior than what is
+described in :ref:`How to perform measurements? <measurement-examples>` when
+the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate is used.
+Normally ``c(nshots=1000)`` would execute the circuit once and would then
+sample 1000 bit-strings from the final state. When the noise channel is used
+the full circuit is executed 1000 times because the behavior of the noise
+channel is different each time.
+
+Executing a circuit with :class:`qibo.base.gates.ProbabilisticNoiseChannel`
+gates once is possible, however, since the channel acts probabilistically,
+the results of a single execution are random and not useful when not viewed as
+part of repeated executions.
+
+It is possible to use repeated execution with noise channels even without the
+presence of measurements. If ``c(nshots=1000)`` is called for a circuit that
+contains :class:`qibo.base.gates.ProbabilisticNoiseChannel` gates but no
+measurements then the circuit will be executed 1000 times and the final
+1000 state vectors will be returned. Note that this tensor has shape
+``(nshots, 2 ^ nqubits)`` and is usually to large to hold in memory, therefore
+this usage is not advised.
+
+Using density matrices
+^^^^^^^^^^^^^^^^^^^^^^
+
 :class:`qibo.base.circuit.BaseCircuit` objects can evolve density matrices
 similarly to state vectors.
 In order to use density matrices the user should execute the circuit passing a
@@ -645,6 +700,9 @@ Note that :class:`qibo.base.circuit.BaseCircuit` will use state vectors until
 the first channel is found and will switch to density matrices for the rest of
 the simulation. Measurements and callbacks can be used exactly as in the case
 of state vector simulation.
+
+Adding noise after every gate
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 In practical applications noise typically occurs after every gate.
 Qibo provides the :meth:`qibo.base.circuit.BaseCircuit.with_noise()` method
