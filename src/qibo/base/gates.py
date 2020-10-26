@@ -1534,7 +1534,31 @@ class VariationalLayer(ParametrizedGate):
                                 "``VariationalLayer``.")
 
 
-class NoiseChannel(Gate):
+class _AbstractChannel(Gate):
+    """Abstract class for channels.
+
+    All channels should inherit this class."""
+
+    def __init__(self):
+        super(_AbstractChannel, self).__init__()
+        self.is_channel = True
+
+    def _create_gates(self): # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
+
+    @property
+    def unitary(self): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "Unitary property not implemented for "
+                                         "channels.")
+
+    def controlled_by(self, *q):
+        """"""
+        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+
+
+class NoiseChannel(_AbstractChannel):
     """Probabilistic noise channel implemented using density matrices.
 
     Implements the following evolution
@@ -1554,7 +1578,6 @@ class NoiseChannel(Gate):
     def __init__(self, q, px=0, py=0, pz=0):
         super(NoiseChannel, self).__init__()
         self.name = "NoiseChannel"
-        self.is_channel = True
         self.target_qubits = (q,)
         self.p = (px, py, pz)
         self.total_p = sum(self.p)
@@ -1574,16 +1597,6 @@ class NoiseChannel(Gate):
                 gatelist.append(gate)
         self.gates = tuple(gatelist)
 
-    @property
-    def unitary(self): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "Unitary property not implemented for "
-                                         "channels.")
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
-
 
 class ProbabilisticNoiseChannel(NoiseChannel):
     """Probabilistic noise channel implemented via Monte Carlo sampling.
@@ -1600,7 +1613,6 @@ class ProbabilisticNoiseChannel(NoiseChannel):
         pz (float): Phase flip (Z) error probability.
         seed (int): Seed for numpy random generator used for sampling.
     """
-    # TODO: Implement this for native Tensorflow backends
 
     def __init__(self, q, px=0, py=0, pz=0, seed=None):
         super(ProbabilisticNoiseChannel, self).__init__(q, px, py, pz)
@@ -1609,7 +1621,7 @@ class ProbabilisticNoiseChannel(NoiseChannel):
         self.seed = seed
 
 
-class GeneralChannel(Gate):
+class GeneralChannel(_AbstractChannel):
     """General channel defined by arbitrary Krauss operators.
 
     Implements the following evolution
@@ -1677,16 +1689,6 @@ class GeneralChannel(Gate):
         # future TODO
         raise_error(NotImplementedError, "`on_qubits` method is not available "
                                          "for the `GeneralChannel` gate.")
-
-    @property
-    def unitary(self): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "Unitary property not implemented for "
-                                         "channels.")
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Channel cannot be controlled on qubits.")
 
 
 class Flatten(Gate):

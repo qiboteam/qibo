@@ -463,7 +463,8 @@ class TensorflowChannel(TensorflowGate):
         super(TensorflowChannel, self).__init__()
 
     def _prepare(self):
-        self._create_gates()
+        base_cls = getattr(base_gates, self.__class__.__name__)
+        base_cls._create_gates(self)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
                  ) -> tf.Tensor:
