@@ -412,32 +412,38 @@ def test_circuit_repeated_execute(backend, accelerators):
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
-# TODO: Add accelerators to this test
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_repeated_execute_with_noise_channel(backend):
+
+@pytest.mark.parametrize("backend,accelerators", _DEVICE_BACKENDS)
+def test_circuit_repeated_execute_with_noise_channel(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     thetas = np.random.random(4)
     prob = 0.5
-    c = Circuit(4)
+    c = Circuit(4, accelerators)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.ProbabilisticNoiseChannel(i, px=prob, py=prob, pz=prob, seed=1234)
-           for i in range(4)))
-    final_state = c(nshots=20)
+    if accelerators:
+        with pytest.raises(NotImplementedError):
+            c.add((gates.ProbabilisticNoiseChannel(
+                i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))
 
-    np.random.seed(1234)
-    target_state = []
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-        for i in range(4):
-            for gate in [gates.X, gates.Y, gates.Z]:
-                if np.random.random() < prob:
-                    noiseless_c.add(gate(i))
-        target_state.append(noiseless_c().numpy())
-    target_state = np.stack(target_state)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
+    else:
+        c.add((gates.ProbabilisticNoiseChannel(
+            i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))
+        final_state = c(nshots=20)
+
+        np.random.seed(1234)
+        target_state = []
+        for _ in range(20):
+            noiseless_c = Circuit(4)
+            noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+            for i in range(4):
+                for gate in [gates.X, gates.Y, gates.Z]:
+                    if np.random.random() < prob:
+                        noiseless_c.add(gate(i))
+            target_state.append(noiseless_c().numpy())
+        target_state = np.stack(target_state)
+        np.testing.assert_allclose(final_state, target_state)
+        qibo.set_backend(original_backend)
 
 
 @pytest.mark.linux

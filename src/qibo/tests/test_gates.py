@@ -1283,7 +1283,6 @@ def test_variational_layer_dagger(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-# TODO: Test distributed circuits and native backends
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_monte_carlo_noise_channel(backend):
     original_backend = qibo.get_backend()

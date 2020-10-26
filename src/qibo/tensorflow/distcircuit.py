@@ -105,10 +105,13 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         Also checks that there are sufficient qubits to use as global.
         """
         if not isinstance(gate, gate_module.TensorflowGate):
-            raise_error(NotImplementedError, "Distributed circuit does not support "
-                                             "native tensorflow gates.")
+            raise_error(NotImplementedError, "Distributed circuit does not "
+                                             "support native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):
             gate._prepare()
+        elif isinstance(gate, gates.ProbabilisticNoiseChannel):
+            raise_error(NotImplementedError, "Distributed circuit does not "
+                                             "noise channels.")
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
               not isinstance(gate, gates.M)):
             raise_error(ValueError, "Insufficient qubits to use for global in "
@@ -214,7 +217,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
 
-    def _sample_measurements(state: utils.DistributedState, nshots: int
+    def _sample_measurements(self, state: utils.DistributedState, nshots: int
                              ) -> tf.Tensor:
         """Generates measurement samples from the given state vector."""
         with tf.device(self.memory_device):

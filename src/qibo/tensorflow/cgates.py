@@ -683,11 +683,11 @@ class ProbabilisticNoiseChannel(TensorflowGate, base_gates.ProbabilisticNoiseCha
     def __init__(self, q, px=0, py=0, pz=0, seed=None):
         base_gates.ProbabilisticNoiseChannel.__init__(self, q, px, py, pz, seed)
         TensorflowGate.__init__(self)
-        if seed is not None:
-            np.random.seed(seed)
 
     def _prepare(self):
         self._create_gates()
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
