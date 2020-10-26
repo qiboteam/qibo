@@ -575,7 +575,7 @@ def test_measurements_with_probabilistic_noise(accelerators=None):
     thetas = np.random.random(5)
     c = models.Circuit(5, accelerators)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.ProbabilisticNoiseChannel(i, px=0.2, py=0.0, pz=0.2, seed=123)
+    c.add((gates.ProbabilisticNoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
            for i in range(5)))
     c.add(gates.M(*range(5)))
     tf.random.set_seed(123)
@@ -588,9 +588,10 @@ def test_measurements_with_probabilistic_noise(accelerators=None):
         noiseless_c = models.Circuit(5)
         noiseless_c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
         for i in range(5):
-            for gate in [gates.X, gates.Z]:
-                if np.random.random() < 0.2:
-                    noiseless_c.add(gate(i))
+            if np.random.random() < 0.2:
+                noiseless_c.add(gates.Y(i))
+            if np.random.random() < 0.4:
+                noiseless_c.add(gates.Z(i))
         noiseless_c.add(gates.M(*range(5)))
         target_samples.append(noiseless_c(nshots=1).samples())
     target_samples = tf.concat(target_samples, axis=0)

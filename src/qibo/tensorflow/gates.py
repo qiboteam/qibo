@@ -489,7 +489,7 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
 
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
-        for p, gate in zip(self.p, self.gates):
+        for p, gate in self.gates:
             new_state += p * gate(state, is_density_matrix=True)
         return (1 - self.total_p) * state + new_state
 

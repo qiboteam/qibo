@@ -418,16 +418,15 @@ def test_circuit_repeated_execute_with_noise_channel(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     thetas = np.random.random(4)
-    prob = 0.5
     c = Circuit(4, accelerators)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     if accelerators:
         with pytest.raises(NotImplementedError):
             c.add((gates.ProbabilisticNoiseChannel(
-                i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))
+                i, px=0.1, py=0.2, pz=0.3, seed=1234) for i in range(4)))
     else:
         c.add((gates.ProbabilisticNoiseChannel(
-            i, px=prob, py=prob, pz=prob, seed=1234) for i in range(4)))
+            i, px=0.1, py=0.2, pz=0.3, seed=1234) for i in range(4)))
         final_state = c(nshots=20)
 
         np.random.seed(1234)
@@ -436,13 +435,44 @@ def test_circuit_repeated_execute_with_noise_channel(backend, accelerators):
             noiseless_c = Circuit(4)
             noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
             for i in range(4):
-                for gate in [gates.X, gates.Y, gates.Z]:
-                    if np.random.random() < prob:
-                        noiseless_c.add(gate(i))
+                if np.random.random() < 0.1:
+                    noiseless_c.add(gates.X(i))
+                if np.random.random() < 0.2:
+                    noiseless_c.add(gates.Y(i))
+                if np.random.random() < 0.3:
+                    noiseless_c.add(gates.Z(i))
             target_state.append(noiseless_c().numpy())
         target_state = np.stack(target_state)
         np.testing.assert_allclose(final_state, target_state)
         qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_with_noise_probabilistic_channel(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    thetas = np.random.random(4)
+    c = Circuit(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    noisy_c = c.with_noise((0.2, 0.0, 0.1), probabilistic=True)
+    np.random.seed(1234)
+    final_state = noisy_c(nshots=20)
+
+    np.random.seed(1234)
+    target_state = []
+    for _ in range(20):
+        noiseless_c = Circuit(4)
+        for i, t in enumerate(thetas):
+            noiseless_c.add(gates.RY(i, theta=t))
+            for j in range(4):
+                if np.random.random() < 0.2:
+                    noiseless_c.add(gates.X(j))
+                if np.random.random() < 0.1:
+                    noiseless_c.add(gates.Z(j))
+        target_state.append(noiseless_c().numpy())
+    target_state = np.stack(target_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.linux

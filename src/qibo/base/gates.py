@@ -1594,7 +1594,7 @@ class NoiseChannel(_AbstractChannel):
                 gate = getattr(self.module, g)(self.target_qubits[0])
                 gate.device = self.device
                 gate.nqubits = self.nqubits
-                gatelist.append(gate)
+                gatelist.append((p, gate))
         self.gates = tuple(gatelist)
 
 

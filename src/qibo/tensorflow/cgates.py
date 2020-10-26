@@ -692,7 +692,7 @@ class ProbabilisticNoiseChannel(TensorflowGate, base_gates.ProbabilisticNoiseCha
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
         TensorflowGate.__call__(self, state, is_density_matrix)
-        for p, gate in zip(self.p, self.gates):
+        for p, gate in self.gates:
             if np.random.random() < p:
                 state = gate(state)
         return state

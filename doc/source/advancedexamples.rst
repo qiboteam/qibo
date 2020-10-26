@@ -750,6 +750,11 @@ In this case the same probabilities will be applied to all qubits.
 That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
+The user can also set ``probabilistic = True`` when calling ``.with_noise``
+in order to use the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate.
+This will simulate noise with repeated circuit execution in contrast to the
+default :class:`qibo.base.gates.NoiseChannel` which uses density matrices.
+
 Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
 which allows the user to explicitly specify the probabilities of the noise
 channels that applied before measurement gates. For example:
