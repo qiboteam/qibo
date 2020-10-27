@@ -52,12 +52,19 @@ def newtonian(loss, initial_parameters, method='Powell', options=None):
             optimized.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
-        method (str): Name of method supported by ``scipy.optimize.minimize``.
+        method (str): Name of method supported by ``scipy.optimize.minimize`` or "parallel_lbfgsb". The later uses  
+                ``optimparallel.minimize_parallel``, which is a parallel implementation of scipy's "l-bfgs-b" algorithm.
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
     """
-    from scipy.optimize import minimize
-    m = minimize(loss, initial_parameters, method=method, options=options)
+    if method != 'parallel_lbfgsb':
+        from scipy.optimize import minimize
+        m = minimize(loss, initial_parameters, method=method, options=options)
+        
+    else:
+        from optimparallel import minimize_parallel
+        m = minimize_parallel(loss, initial_parameters, options=options)
+
     return m.fun, m.x
 
 
