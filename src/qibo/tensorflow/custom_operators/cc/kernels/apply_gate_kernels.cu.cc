@@ -23,6 +23,12 @@ __device__ T cadd(T a, T b) {
 }
 
 template <typename T>
+__device__ double AbsSquare(T x) {
+  return x.real() * x.real() + x.imag() * x.imag();
+}
+
+
+template <typename T>
 struct BaseOneQubitGateFunctor<GPUDevice, T> {
   virtual void nocontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
                              T* state, const T* gate, long tk, int m) const {}
@@ -545,6 +551,81 @@ __global__ void CollapseStateKernel(T* state, const int* qubits,
   }
 }
 
+template <typename T>
+__global__ void CalculateCollapsedNormKernel(T* state, double* norms,
+                                             const int* qubits,
+                                             const int64* results,
+                                             long nstates, int ntargets) {
+  const auto tid = threadIdx.x;
+  const auto stride = blockDim.x;
+  const long result = results[0];
+
+  auto GetIndex = [&](long g, long h) {
+    long i = g;
+    for (auto iq = 0; iq < ntargets; iq++) {
+      const auto n = qubits[iq];
+      long k = (long)1 << n;
+      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+      i += ((long)((int)(h >> iq) % 2) * k);
+    }
+    return i;
+  };
+  for (auto g = tid; g < nstates; g += stride) {
+    norms[tid] += AbsSquare(state[GetIndex(g, result)]);
+  }
+}
+
+__global__ void VectorReductionKernel(double *g_idata, double *g_odata) {
+  extern __shared__ double sdata[DEFAULT_BLOCK_SIZE];
+  // each thread loads one element from global to shared mem
+  const auto tid = threadIdx.x;
+  sdata[tid] = g_idata[blockIdx.x * blockDim.x + threadIdx.x];
+  __syncthreads();
+  // do reduction in shared mem
+  for (auto s = blockDim.x / 2; s > 0; s >>= 1) {
+    if (tid < s) {
+      sdata[tid] += sdata[tid + s];
+    }
+    __syncthreads();
+  }
+  // write result for this block to global mem
+  if (tid == 0) {
+    g_odata[blockIdx.x] = sdata[0];
+  }
+}
+
+template <typename T>
+__global__ void NormalizeCollapsedStateKernel(T* state, double* norms,
+                                              const int* qubits,
+                                              const int64* results,
+                                              long nstates, int ntargets) {
+  const auto tid = threadIdx.x;
+  const auto stride = blockDim.x;
+  const long result = results[0];
+
+  auto GetIndex = [&](long g, long h) {
+    long i = g;
+    for (auto iq = 0; iq < ntargets; iq++) {
+      const auto n = qubits[iq];
+      long k = (long)1 << n;
+      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+      i += ((long)((int)(h >> iq) % 2) * k);
+    }
+    return i;
+  };
+  auto NormalizeComponent = [&](T& x) {
+    x = T(x.real() / std::sqrt(norms[0]), x.imag() / std::sqrt(norms[0]));
+  };
+  for (auto g = tid; g < nstates; g += stride) {
+    NormalizeComponent(state[GetIndex(g, result)]);
+  }
+}
+
+template <typename T>
+__global__ void DummyKernel(T* state, double* norms, long nstates) {
+  state[nstates - 1] = T(norms[0], 0);
+}
+
 // Collapse state gate
 template <typename T>
 struct CollapseStateFunctor<GPUDevice, T> {
@@ -563,6 +644,23 @@ struct CollapseStateFunctor<GPUDevice, T> {
 
     CollapseStateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
         state, qubits, result, nsubstates, ntargets);
+
+    if (normalize) {
+      double *norms, *red_norms;
+      cudaMalloc((void**)&norms, sizeof(double) * blockSize);
+      cudaMalloc((void**)&red_norms, sizeof(double) * blockSize);
+
+      CalculateCollapsedNormKernel<T><<<1, blockSize, 0, d.stream()>>>(
+        state, norms, qubits, result, nstates, ntargets);
+      VectorReductionKernel<<<1, blockSize, 0, d.stream()>>>(
+        norms, red_norms);
+      NormalizeCollapsedStateKernel<T><<<1, blockSize, 0, d.stream()>>>(
+        state, red_norms, qubits, result, nstates, ntargets);
+      //DummyKernel<T><<<1, 1, 0, d.stream()>>>(state, red_norms, 1 << nqubits);
+
+      cudaFree(norms);
+      cudaFree(red_norms);
+    }
   }
 };
 
