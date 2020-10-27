@@ -275,7 +275,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
     if (nreps > 0 && nstates / nreps > nnorms) {
       nnorms = nstates / nreps;
     }
-    Eigen::VectorXf norms(nnorms);
+    Eigen::VectorXd norms(nnorms);
     norms.setZero();
 
     auto ZeroState = [&](int64 t, int64 w) {
