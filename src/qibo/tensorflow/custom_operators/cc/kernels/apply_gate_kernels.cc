@@ -272,10 +272,6 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
     Eigen::Matrix<NormType, Eigen::Dynamic, 1> norms(nnorms);
     norms.setZero();
 
-    auto AbsSquare = [&](T x) {
-      return x.real() * x.real() + x.imag() * x.imag();
-    };
-
     auto ZeroState = [&](int64 t, int64 w) {
       int n = 0;
       if (nreps > 0) {
@@ -285,7 +281,8 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
         for (auto h = 0; h < res; h++) {
           state[GetIndex(g, h)] = 0;
         }
-        norms[n] += AbsSquare(state[GetIndex(g, res)]);
+        auto x = state[GetIndex(g, res)];
+        norms[n] += x.real() * x.real() + x.imag() * x.imag();
         for (auto h = res + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
