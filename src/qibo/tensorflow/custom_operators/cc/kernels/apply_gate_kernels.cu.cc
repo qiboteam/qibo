@@ -524,29 +524,30 @@ struct ApplySwapFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
 };
 
 
+// Methods for Collapse gate
+__device__ long GetIndex(long g, long h, const int* qubits, int ntargets) {
+  long i = g;
+  for (auto iq = 0; iq < ntargets; iq++) {
+    const auto n = qubits[iq];
+    long k = (long)1 << n;
+    i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+    i += ((long)((int)(h >> iq) % 2) * k);
+  }
+  return i;
+};
+
 template <typename T>
 __global__ void CollapseStateKernel(T* state, const int* qubits,
-                                    const int64* results, long nsubstates,
-                                    int ntargets) {
+                                    const int64* results, int ntargets) {
   const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   const long result = results[0];
-
-  auto GetIndex = [&](long g, long h) {
-    long i = g;
-    for (auto iq = 0; iq < ntargets; iq++) {
-      const auto n = qubits[iq];
-      long k = (long)1 << n;
-      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
-      i += ((long)((int)(h >> iq) % 2) * k);
-    }
-    return i;
-  };
+  const long nsubstates = (int64)1 << ntargets;
 
   for (auto h = 0; h < result; h++) {
-    state[GetIndex(g, h)] = T(0, 0);
+    state[GetIndex(g, h, qubits, ntargets)] = T(0, 0);
   }
   for (auto h = result + 1; h < nsubstates; h++) {
-    state[GetIndex(g, h)] = T(0, 0);
+    state[GetIndex(g, h, qubits, ntargets)] = T(0, 0);
   }
 }
 
@@ -559,18 +560,8 @@ __global__ void CalculateCollapsedNormKernel(T* state, double* norms,
   const auto stride = blockDim.x;
   const long result = results[0];
 
-  auto GetIndex = [&](long g, long h) {
-    long i = g;
-    for (auto iq = 0; iq < ntargets; iq++) {
-      const auto n = qubits[iq];
-      long k = (long)1 << n;
-      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
-      i += ((long)((int)(h >> iq) % 2) * k);
-    }
-    return i;
-  };
   for (auto g = tid; g < nstates; g += stride) {
-    norms[tid] += AbsSquare(state[GetIndex(g, result)]);
+    norms[tid] += AbsSquare(state[GetIndex(g, result, qubits, ntargets)]);
   }
 }
 
@@ -627,8 +618,6 @@ struct CollapseStateFunctor<GPUDevice, T> {
                   int nqubits, bool normalize, int ntargets,
                   const int32* qubits, const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
-    int64 nsubstates = (int64)1 << ntargets;
-
     int blockSize = DEFAULT_BLOCK_SIZE;
     int numBlocks = (nstates + blockSize - 1) / blockSize;
     if (nstates < blockSize) {
@@ -637,7 +626,7 @@ struct CollapseStateFunctor<GPUDevice, T> {
     }
 
     CollapseStateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
-        state, qubits, result, nsubstates, ntargets);
+        state, qubits, result, ntargets);
 
     if (normalize) {
       double *block_norms, *norms;
