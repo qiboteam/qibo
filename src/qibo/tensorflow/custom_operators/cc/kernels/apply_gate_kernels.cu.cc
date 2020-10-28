@@ -22,11 +22,6 @@ __device__ T cadd(T a, T b) {
   return T(a.real() + b.real(), a.imag() + b.imag());
 }
 
-template <typename T>
-__device__ double AbsSquare(T x) {
-  return x.real() * x.real() + x.imag() * x.imag();
-}
-
 
 template <typename T>
 struct BaseOneQubitGateFunctor<GPUDevice, T> {
@@ -551,8 +546,8 @@ __global__ void CollapseStateKernel(T* state, const int* qubits,
   }
 }
 
-template <typename T>
-__global__ void CalculateCollapsedNormKernel(T* state, double* norms,
+template <typename T, typename NormType>
+__global__ void CalculateCollapsedNormKernel(T* state, NormType* norms,
                                              const int* qubits,
                                              const int64* results,
                                              long nstates, int ntargets) {
@@ -561,11 +556,14 @@ __global__ void CalculateCollapsedNormKernel(T* state, double* norms,
   const long result = results[0];
 
   for (auto g = tid; g < nstates; g += stride) {
-    norms[tid] += AbsSquare(state[GetIndex(g, result, qubits, ntargets)]);
+    auto x = state[GetIndex(g, result, qubits, ntargets)];
+    norms[tid] += x.real() * x.real() + x.imag() * x.imag();
   }
 }
 
-__global__ void VectorReductionKernel(double *g_idata, double *g_odata) {
+
+template <typename NormType>
+__global__ void VectorReductionKernel(NormType *g_idata, NormType *g_odata) {
   extern __shared__ double sdata[DEFAULT_BLOCK_SIZE];
   // each thread loads one element from global to shared mem
   const auto tid = threadIdx.x;
@@ -584,8 +582,8 @@ __global__ void VectorReductionKernel(double *g_idata, double *g_odata) {
   }
 }
 
-template <typename T>
-__global__ void NormalizeCollapsedStateKernel(T* state, double* norms,
+template <typename T, typename NormType>
+__global__ void NormalizeCollapsedStateKernel(T* state, NormType* norms,
                                               const int* qubits,
                                               const int64* results,
                                               long nstates, int ntargets) {
@@ -593,21 +591,11 @@ __global__ void NormalizeCollapsedStateKernel(T* state, double* norms,
   const auto stride = blockDim.x;
   const long result = results[0];
 
-  auto GetIndex = [&](long g, long h) {
-    long i = g;
-    for (auto iq = 0; iq < ntargets; iq++) {
-      const auto n = qubits[iq];
-      long k = (long)1 << n;
-      i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
-      i += ((long)((int)(h >> iq) % 2) * k);
-    }
-    return i;
-  };
   auto NormalizeComponent = [&](T& x) {
     x = T(x.real() / std::sqrt(norms[0]), x.imag() / std::sqrt(norms[0]));
   };
   for (auto g = tid; g < nstates; g += stride) {
-    NormalizeComponent(state[GetIndex(g, result)]);
+    NormalizeComponent(state[GetIndex(g, result, qubits, ntargets)]);
   }
 }
 
@@ -629,18 +617,18 @@ struct CollapseStateFunctor<GPUDevice, T, NormType> {
         state, qubits, result, ntargets);
 
     if (normalize) {
-      double *block_norms, *norms;
-      cudaMalloc((void**)&block_norms, sizeof(double) * blockSize);
-      cudaMalloc((void**)&norms, sizeof(double) * blockSize);
+      NormType *block_norms, *norms;
+      cudaMalloc((void**)&block_norms, sizeof(NormType) * blockSize);
+      cudaMalloc((void**)&norms, sizeof(NormType) * blockSize);
 
-      CalculateCollapsedNormKernel<T><<<1, blockSize, 0, d.stream()>>>(
+      CalculateCollapsedNormKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
         state, block_norms, qubits, result, nstates, ntargets);
-      VectorReductionKernel<<<1, blockSize, 0, d.stream()>>>(
+      VectorReductionKernel<NormType><<<1, blockSize, 0, d.stream()>>>(
         block_norms, norms);
-      NormalizeCollapsedStateKernel<T><<<1, blockSize, 0, d.stream()>>>(
+      NormalizeCollapsedStateKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
         state, norms, qubits, result, nstates, ntargets);
 
-      // if I use ``cudaFree`` here the custom operator fails if it is used
+      // if we use ``cudaFree`` here the custom operator fails if it is used
       // twice in the same script
       //cudaFree(block_norms);
       //cudaFree(norms);
