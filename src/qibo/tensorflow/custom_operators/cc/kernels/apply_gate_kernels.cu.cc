@@ -545,7 +545,6 @@ __global__ void CollapseStateKernel(T* state, const int* qubits,
   for (auto h = 0; h < result; h++) {
     state[GetIndex(g, h)] = T(0, 0);
   }
-  //norm += CalcNorm(state[GetIndex(g, result)]);
   for (auto h = result + 1; h < nsubstates; h++) {
     state[GetIndex(g, h)] = T(0, 0);
   }
@@ -621,11 +620,6 @@ __global__ void NormalizeCollapsedStateKernel(T* state, double* norms,
   }
 }
 
-template <typename T>
-__global__ void DummyKernel(T* state, double* norms, long nstates) {
-  state[nstates - 1] = T(norms[0], 0);
-}
-
 // Collapse state gate
 template <typename T>
 struct CollapseStateFunctor<GPUDevice, T> {
@@ -646,20 +640,21 @@ struct CollapseStateFunctor<GPUDevice, T> {
         state, qubits, result, nsubstates, ntargets);
 
     if (normalize) {
-      double *norms, *red_norms;
+      double *block_norms, *norms;
+      cudaMalloc((void**)&block_norms, sizeof(double) * blockSize);
       cudaMalloc((void**)&norms, sizeof(double) * blockSize);
-      cudaMalloc((void**)&red_norms, sizeof(double) * blockSize);
 
       CalculateCollapsedNormKernel<T><<<1, blockSize, 0, d.stream()>>>(
-        state, norms, qubits, result, nstates, ntargets);
+        state, block_norms, qubits, result, nstates, ntargets);
       VectorReductionKernel<<<1, blockSize, 0, d.stream()>>>(
-        norms, red_norms);
+        block_norms, norms);
       NormalizeCollapsedStateKernel<T><<<1, blockSize, 0, d.stream()>>>(
-        state, red_norms, qubits, result, nstates, ntargets);
-      //DummyKernel<T><<<1, 1, 0, d.stream()>>>(state, red_norms, 1 << nqubits);
+        state, norms, qubits, result, nstates, ntargets);
 
-      cudaFree(norms);
-      cudaFree(red_norms);
+      // if I use ``cudaFree`` here the custom operator fails if it is used
+      // twice in the same script
+      //cudaFree(block_norms);
+      //cudaFree(norms);
     }
   }
 };
