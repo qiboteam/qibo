@@ -72,6 +72,34 @@ class PDFModel(object):
                 pdf[i, flavour] = self._model(state, flavour_hamiltonian)
         return pdf
 
+    def correlation(self, parameters, x):
+        """Predict PDF correlations from underlying circuit.
+        Args:
+            parameters: the list of parameters for the gates.
+            x (np.array): a numpy array with the points in x to be evaluated.
+
+        Returns:
+            A numpy array with the correlations values.
+        """
+        if len(parameters) != self.nparams:
+            raise_error(RuntimeError, 'Mismatch between number of parameters and model size.')
+        correlation = np.zeros(shape=(len(x), len(self.hamiltonian), len(self.hamiltonian)))
+        for i, x_value in enumerate(x):
+            params = self.rotation(parameters, x_value)
+            self.circuit.set_parameters(params)
+            state = self.circuit()
+            for flavour1 in range(len(self.hamiltonian)):
+                for flavour2 in range(flavour1 + 1):
+                    h1 = self.hamiltonian[flavour1].matrix
+                    h2 = self.hamiltonian[flavour2].matrix
+                    H = h1 @ h2
+                    hamiltonian = Hamiltonian(self.nqubits, H)
+
+                    correlation[i, flavour1, flavour2] = self._model(state, hamiltonian)
+
+        correlation = 0.5 * (correlation + np.transpose(correlation, axes=[0,2,1]))
+        return correlation
+
 
 def qcpdf_hamiltonian(nqubits, z_qubit=0):
     """Precomputes Hamiltonian.
