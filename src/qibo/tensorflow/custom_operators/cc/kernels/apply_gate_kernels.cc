@@ -269,8 +269,7 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
     if (nreps > 0 && nstates / nreps > nnorms) {
       nnorms = nstates / nreps;
     }
-    NormType normstorage[nnorms];
-    typename TTypes<NormType>::UnalignedVec norms(normstorage, nnorms);
+    Eigen::Matrix<NormType, Eigen::Dynamic, 1> norms(nnorms);
     norms.setZero();
 
     auto AbsSquare = [&](T x) {
@@ -286,7 +285,7 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
         for (auto h = 0; h < res; h++) {
           state[GetIndex(g, h)] = 0;
         }
-        norms(n) += AbsSquare(state[GetIndex(g, res)]);
+        norms[n] += AbsSquare(state[GetIndex(g, res)]);
         for (auto h = res + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
@@ -295,8 +294,7 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
     thread_pool->ParallelFor(nstates, p, ZeroState);
 
     if (normalize) {
-      const Eigen::Tensor<NormType, 0, 1, int> normsum = norms.sum();
-      auto norm = std::sqrt(normsum(0));
+      auto norm = std::sqrt(norms.sum());
       auto NormalizeComponent = [&](T& x) {
         x = T(x.real() / norm, x.imag() / norm);
       };
