@@ -27,12 +27,6 @@ T cadd(T a, T b) {
 }
 
 template <typename T>
-double AbsSquare(T x) {
-  return x.real() * x.real() + x.imag() * x.imag();
-}
-
-
-template <typename T>
 struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
 
@@ -237,8 +231,8 @@ struct ApplySwapFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
 };
 
 // Apply Collapse gate
-template <typename T>
-struct CollapseStateFunctor<CPUDevice, T> {
+template <typename T, typename NormType>
+struct CollapseStateFunctor<CPUDevice, T, NormType> {
   void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, bool normalize, int ntargets,
                   const int32* qubits, const int64* result) const {
@@ -275,8 +269,13 @@ struct CollapseStateFunctor<CPUDevice, T> {
     if (nreps > 0 && nstates / nreps > nnorms) {
       nnorms = nstates / nreps;
     }
-    Eigen::VectorXd norms(nnorms);
+    NormType normstorage[nnorms];
+    typename TTypes<NormType>::UnalignedVec norms(normstorage, nnorms);
     norms.setZero();
+
+    auto AbsSquare = [&](T x) {
+      return x.real() * x.real() + x.imag() * x.imag();
+    };
 
     auto ZeroState = [&](int64 t, int64 w) {
       int n = 0;
@@ -287,7 +286,7 @@ struct CollapseStateFunctor<CPUDevice, T> {
         for (auto h = 0; h < res; h++) {
           state[GetIndex(g, h)] = 0;
         }
-        norms[n] += AbsSquare(state[GetIndex(g, res)]);
+        norms(n) += AbsSquare(state[GetIndex(g, res)]);
         for (auto h = res + 1; h < nsubstates; h++) {
           state[GetIndex(g, h)] = 0;
         }
@@ -296,7 +295,8 @@ struct CollapseStateFunctor<CPUDevice, T> {
     thread_pool->ParallelFor(nstates, p, ZeroState);
 
     if (normalize) {
-      auto norm = std::sqrt(norms.sum());
+      const Eigen::Tensor<NormType, 0, 1, int> normsum = norms.sum();
+      auto norm = std::sqrt(normsum(0));
       auto NormalizeComponent = [&](T& x) {
         x = T(x.real() / norm, x.imag() / norm);
       };
@@ -388,7 +388,7 @@ class TwoQubitGateOp : public OpKernel {
   int target1_, target2_;
 };
 
-template <typename Device, typename T>
+template <typename Device, typename T, typename NormType>
 class CollapseStateOp : public OpKernel {
  public:
   explicit CollapseStateOp(OpKernelConstruction* context) : OpKernel(context) {
@@ -402,7 +402,7 @@ class CollapseStateOp : public OpKernel {
     const Tensor& qubits = context->input(1);
     const Tensor& result = context->input(2);
     // call the implementation
-    CollapseStateFunctor<Device, T>()(
+    CollapseStateFunctor<Device, T, NormType>()(
       context, context->eigen_device<Device>(), state.flat<T>().data(),
       nqubits_, normalize_, qubits.flat<int32>().size(),
       qubits.flat<int32>().data(), result.flat<int64>().data());
@@ -423,10 +423,10 @@ class CollapseStateOp : public OpKernel {
       OP<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
 
 // Register Collapse state CPU kernel.
-#define REGISTER_COLLAPSE_CPU(T)                                       \
+#define REGISTER_COLLAPSE_CPU(T, NT)                                   \
   REGISTER_KERNEL_BUILDER(                                             \
       Name("CollapseState").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
-      CollapseStateOp<CPUDevice, T>);
+      CollapseStateOp<CPUDevice, T, NT>);
 
 // Register one-qubit gate kernels.
 #if GOOGLE_CUDA
@@ -439,11 +439,11 @@ class CollapseStateOp : public OpKernel {
       OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
 
 // Register Collapse state GPU kernel.
-#define REGISTER_COLLAPSE_GPU(T)                                                 \
-  extern template struct CollapseStateFunctor<GPUDevice, T>;            \
+#define REGISTER_COLLAPSE_GPU(T, NT)                                    \
+  extern template struct CollapseStateFunctor<GPUDevice, T, NT>;        \
     REGISTER_KERNEL_BUILDER(                                            \
       Name("CollapseState").Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
-      CollapseStateOp<GPUDevice, T>);
+      CollapseStateOp<GPUDevice, T, NT>);
 
 #define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                   \
   REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);  \
@@ -458,11 +458,11 @@ class CollapseStateOp : public OpKernel {
   REGISTER_GPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);  \
   REGISTER_GPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
-#define REGISTER_COLLAPSE()          \
-  REGISTER_COLLAPSE_CPU(complex64);  \
-  REGISTER_COLLAPSE_CPU(complex128); \
-  REGISTER_COLLAPSE_GPU(complex64);  \
-  REGISTER_COLLAPSE_GPU(complex128);
+#define REGISTER_COLLAPSE()                   \
+  REGISTER_COLLAPSE_CPU(complex64, float);    \
+  REGISTER_COLLAPSE_CPU(complex128, double);  \
+  REGISTER_COLLAPSE_GPU(complex64, float);    \
+  REGISTER_COLLAPSE_GPU(complex128, double);
 
 #else
 
@@ -475,9 +475,9 @@ class CollapseStateOp : public OpKernel {
   REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX); \
   REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
-#define REGISTER_COLLAPSE()          \
-  REGISTER_COLLAPSE_CPU(complex64);  \
-  REGISTER_COLLAPSE_CPU(complex128);
+#define REGISTER_COLLAPSE()                    \
+  REGISTER_COLLAPSE_CPU(complex64, float);     \
+  REGISTER_COLLAPSE_CPU(complex128, double);
 
 #endif
 

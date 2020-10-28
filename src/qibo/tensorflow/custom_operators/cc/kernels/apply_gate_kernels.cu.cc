@@ -612,8 +612,8 @@ __global__ void NormalizeCollapsedStateKernel(T* state, double* norms,
 }
 
 // Collapse state gate
-template <typename T>
-struct CollapseStateFunctor<GPUDevice, T> {
+template <typename T, typename NormType>
+struct CollapseStateFunctor<GPUDevice, T, NormType> {
   void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
                   int nqubits, bool normalize, int ntargets,
                   const int32* qubits, const int64* result) const {
@@ -653,6 +653,7 @@ struct CollapseStateFunctor<GPUDevice, T> {
   template struct FUNCTOR<GPUDevice, complex64>; \
   template struct FUNCTOR<GPUDevice, complex128>;
 
+
 REGISTER_TEMPLATE(BaseOneQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyGateFunctor);
 REGISTER_TEMPLATE(ApplyXFunctor);
@@ -663,7 +664,8 @@ REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyFsimFunctor);
 REGISTER_TEMPLATE(ApplySwapFunctor);
-REGISTER_TEMPLATE(CollapseStateFunctor);
+template struct CollapseStateFunctor<GPUDevice, complex64, float>;
+template struct CollapseStateFunctor<GPUDevice, complex128, double>;
 }  // end namespace functor
 }  // end namespace tensorflow
 #endif  // GOOGLE_CUDA
