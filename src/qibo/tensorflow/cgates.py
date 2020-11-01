@@ -70,7 +70,8 @@ class TensorflowGate(base_gates.Gate):
             state (tf.Tensor): State vector with shape (2 ** nqubits,).
         """
         if is_density_matrix:
-            raise_error(NotImplementedError)
+            raise_error(NotImplementedError,
+                        "Custom gates do not work with density matrices.")
         if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 

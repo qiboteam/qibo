@@ -2,7 +2,8 @@ from qibo.config import BACKEND_NAME, raise_error
 if BACKEND_NAME != "tensorflow": # pragma: no cover
     # case not tested because backend is preset to TensorFlow
     raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
-from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
+from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
+from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
@@ -16,9 +17,16 @@ class Circuit(DistributedCircuit):
 
     def __new__(cls, nqubits: int,
                 accelerators: Optional[Dict[str, int]] = None,
-                memory_device: str = "/CPU:0"):
+                memory_device: str = "/CPU:0",
+                density_matrix: bool = False):
+        if density_matrix:
+            if accelerators is not None:
+                raise_error(NotImplementedError,
+                            "Distributed circuits are not implemented for "
+                            "density matrices.")
+            return DensityMatrixCircuit(nqubits)
         if accelerators is None:
-            return SimpleCircuit(nqubits)
+            return StateCircuit(nqubits)
         else:
             return DistributedCircuit(nqubits, accelerators, memory_device)
 
@@ -27,7 +35,7 @@ class Circuit(DistributedCircuit):
                   accelerators: Optional[Dict[str, int]] = None,
                   memory_device: str = "/CPU:0"):
       if accelerators is None:
-          return SimpleCircuit.from_qasm(qasm_code)
+          return StateCircuit.from_qasm(qasm_code)
       else:
           return DistributedCircuit.from_qasm(qasm_code,
                                               accelerators=accelerators,
@@ -339,7 +347,7 @@ class QAOA(object):
             state = self.K.ones(n, dtype=dtype)
             norm = self.K.cast(2 ** float(self.nqubits / 2.0), dtype=dtype)
             return state / norm
-        return SimpleCircuit._cast_initial_state(self, state)
+        return StateCircuit._cast_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell', options=None):
         """Optimizes the variational parameters of the QAOA.

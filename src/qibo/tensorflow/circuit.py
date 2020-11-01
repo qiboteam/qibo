@@ -275,6 +275,11 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
         self._final_state = state
         return state
 
+    def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        """Generates measurement samples from the given state vector."""
+        return self.measurement_gate(state, nshots, samples_only=True,
+                                     is_density_matrix=True)
+
     def _check_initial_shape(self, state: InitStateType):
         """Checks shape of given initial state."""
         if not isinstance(state, (np.ndarray, tf.Tensor)):
