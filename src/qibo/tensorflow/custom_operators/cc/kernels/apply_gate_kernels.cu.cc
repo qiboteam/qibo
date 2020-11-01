@@ -587,16 +587,11 @@ __global__ void NormalizeCollapsedStateKernel(T* state, NormType* norms,
                                               const int* qubits,
                                               const int64* results,
                                               long nstates, int ntargets) {
-  const auto tid = threadIdx.x;
-  const auto stride = blockDim.x;
-  const long result = results[0];
-
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
   auto NormalizeComponent = [&](T& x) {
     x = T(x.real() / norms[0], x.imag() / norms[0]);
   };
-  for (auto g = tid; g < nstates; g += stride) {
-    NormalizeComponent(state[GetIndex(g, result, qubits, ntargets)]);
-  }
+  NormalizeComponent(state[GetIndex(g, results[0], qubits, ntargets)]);
 }
 
 // Collapse state gate
@@ -625,7 +620,7 @@ struct CollapseStateFunctor<GPUDevice, T, NormType> {
         state, block_norms, qubits, result, nstates, ntargets);
       VectorReductionKernel<NormType><<<1, blockSize, 0, d.stream()>>>(
         block_norms, norms);
-      NormalizeCollapsedStateKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
+      NormalizeCollapsedStateKernel<T, NormType><<<numBlocks, blockSize, 0, d.stream()>>>(
         state, norms, qubits, result, nstates, ntargets);
 
       // if we use ``cudaFree`` here the custom operator fails if it is used
