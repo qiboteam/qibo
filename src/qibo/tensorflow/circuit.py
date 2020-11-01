@@ -234,6 +234,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
 class TensorflowDensityMatrixCircuit(TensorflowCircuit):
 
+    def _add(self, gate):
+        gate.on_density_matrix = True
+        super(TensorflowDensityMatrixCircuit, self)._add(gate)
+
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:

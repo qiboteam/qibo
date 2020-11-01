@@ -18,7 +18,8 @@ def test_xgate_application_onequbit(backend):
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(1)
     gate = gates.X(0)
-    final_rho = gate(initial_rho, is_density_matrix=True).numpy()
+    gate.on_density_matrix = True
+    final_rho = gate(initial_rho).numpy()
 
     pauliX = np.array([[0, 1], [1, 0]])
     target_rho = pauliX.dot(initial_rho).dot(pauliX)
@@ -34,8 +35,8 @@ def test_hgate_application_twoqubit(backend):
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(2)
     gate = gates.H(1)
-    final_rho = gate(initial_rho.reshape(4 * (2,)), is_density_matrix=True
-                     ).numpy().reshape((4, 4))
+    gate.on_density_matrix = True
+    final_rho = gate(initial_rho.reshape(4 * (2,))).numpy().reshape((4, 4))
 
     matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     matrix = np.kron(np.eye(2), matrix)
@@ -55,7 +56,8 @@ def test_rygate_application_twoqubit(backend):
 
     gate = gates.RY(0, theta=theta)
     gate.nqubits = 1
-    final_rho = gate(initial_rho, is_density_matrix=True).numpy()
+    gate.on_density_matrix = True
+    final_rho = gate(initial_rho).numpy()
 
     phase = np.exp(1j * theta / 2.0)
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
@@ -75,8 +77,9 @@ def test_cu1gate_application_twoqubit(backend):
     initial_rho = random_density_matrix(nqubits)
 
     gate = gates.CU1(0, 1, theta=theta)
-    final_rho = gate(initial_rho.reshape(2 * nqubits * (2,)),
-                     is_density_matrix=True).numpy().reshape(initial_rho.shape)
+    gate.on_density_matrix = True
+    final_rho = initial_rho.reshape(2 * nqubits * (2,))
+    final_rho = gate(final_rho).numpy().reshape(initial_rho.shape)
 
     matrix = np.eye(4, dtype=np.complex128)
     matrix[3, 3] = np.exp(1j * theta)
@@ -94,7 +97,8 @@ def test_flatten_density_matrix():
     target_rho = random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
-    final_rho = gate(initial_rho, is_density_matrix=True).numpy().reshape((8, 8))
+    gate.on_density_matrix = True
+    final_rho = gate(initial_rho).numpy().reshape((8, 8))
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
@@ -305,18 +309,6 @@ def test_general_channel(backend):
     qibo.set_backend(original_backend)
 
 
-def test_tensorflow_channel_errors():
-    import tensorflow as tf
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
-    gate = gates.NoiseChannel(0, 0.1, 0.2, 0.3)
-    state = tf.cast(np.random.random(4 * (2,)), dtype=tf.complex128)
-    with pytest.raises(ValueError):
-        state = gate(state, is_density_matrix=False)
-    state = gate(state)
-    qibo.set_backend(original_backend)
-
-
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     original_backend = qibo.get_backend()
@@ -474,7 +466,9 @@ def test_density_matrix_measurement():
     state = np.zeros(4)
     state[2] = 1
     rho = np.outer(state, state.conj())
-    result = gates.M(0, 1)(rho, nshots=100, is_density_matrix=True)
+    mgate = gates.M(0, 1)
+    mgate.on_density_matrix = True
+    result = mgate(rho, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
