@@ -23,6 +23,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
         super(TensorflowCircuit, self).__init__(nqubits)
         self._compiled_execute = None
         self.check_initial_state_shape = True
+        self.shapes = {
+            'TENSOR': self.nqubits * (2,),
+            'FLAT': (2 ** self.nqubits,)
+        }
+        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
+                                         dtype=DTYPES.get('DTYPEINT'))
 
     def _set_nqubits(self, gate):
         if gate._nqubits is None:
@@ -78,7 +84,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Performs all circuit gates on the state vector."""
         state = self.get_initial_state(initial_state)
         if self.using_tfgates:
-            state = tf.reshape(state, self.nqubits * (2,))
+            state = tf.reshape(state, self.shapes.get('TENSOR'))
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -88,8 +94,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 callback.extend(results)
 
         if self.using_tfgates:
-            shape = tf.cast((2 ** self.nqubits,), dtype=DTYPES.get('DTYPEINT'))
-            state = tf.reshape(state, shape)
+            state = tf.reshape(state, self.shapes.get('TF_FLAT'))
 
         self._final_state = state
         return state
@@ -203,7 +208,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise_error(TypeError, "Initial state type {} is not recognized."
                                     "".format(type(state)))
         shape = tuple(state.shape)
-        if shape != (2 ** self.nqubits,):
+        if shape != self.shapes.get('FLAT'):
             raise_error(ValueError, "Invalid initial state shape {} for "
                                     "circuit with {} qubits."
                                     "".format(shape, self.nqubits))
@@ -218,7 +223,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        zeros = tf.zeros(2 ** self.nqubits, dtype=DTYPES.get('DTYPECPX'))
+        zeros = tf.zeros(self.shapes.get('TF_FLAT'), dtype=DTYPES.get('DTYPECPX'))
         state = op.initial_state(zeros)
         return state
 
@@ -234,68 +239,15 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
 class TensorflowDensityMatrixCircuit(TensorflowCircuit):
 
+    def __init__(self, nqubits):
+        super(TensorflowDensityMatrixCircuit, self).__init__(nqubits)
+        self.shapes = {
+            'TENSOR': 2 * self.nqubits * (2,),
+            'FLAT': 2 * (2 ** self.nqubits,)
+        }
+        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
+                                         dtype=DTYPES.get('DTYPEINT'))
+
     def _add(self, gate):
         gate.on_density_matrix = True
         super(TensorflowDensityMatrixCircuit, self)._add(gate)
-
-    def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
-        """Simulates the circuit gates in eager mode."""
-        for gate in self.queue:
-            state = gate(state)
-        return state
-
-    def _execute_for_compile(self, state):
-        from qibo import gates
-        callback_results = {gate.callback: [] for gate in self.queue
-                            if hasattr(gate, "callback")}
-        for gate in self.queue:
-            if isinstance(gate, gates.CallbackGate): # pragma: no cover
-                # compilation may be deprecated and is not sufficiently tested
-                value = gate.callback(state)
-                callback_results[gate.callback].append(value)
-            else:
-                state = gate(state)
-        return state, callback_results
-
-    def _execute(self, initial_state: Optional[InitStateType] = None
-                 ) -> tf.Tensor:
-        """Performs all circuit gates on the state vector."""
-        state = self.get_initial_state(initial_state)
-        if self.using_tfgates:
-            state = tf.reshape(state, 2 * self.nqubits * (2,))
-
-        if self._compiled_execute is None:
-            state = self._eager_execute(state)
-        else:
-            state, callback_results = self._compiled_execute(state)
-            for callback, results in callback_results.items():
-                callback.extend(results)
-
-        if self.using_tfgates:
-            shape = tf.cast(2 * (2 ** self.nqubits,),
-                            dtype=DTYPES.get('DTYPEINT'))
-            state = tf.reshape(state, shape)
-
-        self._final_state = state
-        return state
-
-    def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
-        """Generates measurement samples from the given state vector."""
-        return self.measurement_gate(state, nshots, samples_only=True)
-
-    def _check_initial_shape(self, state: InitStateType):
-        """Checks shape of given initial state."""
-        if not isinstance(state, (np.ndarray, tf.Tensor)):
-            raise_error(TypeError, "Initial state type {} is not recognized."
-                                    "".format(type(state)))
-        shape = tuple(state.shape)
-        if 2 * (2 ** self.nqubits,) != shape:
-            raise_error(ValueError, "Invalid initial density matrix shape {} "
-                                    "for circuit with {} qubits."
-                                    "".format(shape, self.nqubits))
-
-    def _default_initial_state(self) -> tf.Tensor:
-        """Creates the |000...0> state for default initialization."""
-        zeros = tf.zeros(2 ** (2 * self.nqubits), dtype=DTYPES.get('DTYPECPX'))
-        state = op.initial_state(zeros)
-        return state
