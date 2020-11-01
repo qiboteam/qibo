@@ -578,7 +578,7 @@ __global__ void VectorReductionKernel(NormType *g_idata, NormType *g_odata) {
   }
   // write result for this block to global mem
   if (tid == 0) {
-    g_odata[blockIdx.x] = sdata[0];
+    g_odata[blockIdx.x] = std::sqrt(sdata[0]);
   }
 }
 
@@ -592,7 +592,7 @@ __global__ void NormalizeCollapsedStateKernel(T* state, NormType* norms,
   const long result = results[0];
 
   auto NormalizeComponent = [&](T& x) {
-    x = T(x.real() / std::sqrt(norms[0]), x.imag() / std::sqrt(norms[0]));
+    x = T(x.real() / norms[0], x.imag() / norms[0]);
   };
   for (auto g = tid; g < nstates; g += stride) {
     NormalizeComponent(state[GetIndex(g, result, qubits, ntargets)]);
@@ -619,7 +619,7 @@ struct CollapseStateFunctor<GPUDevice, T, NormType> {
     if (normalize) {
       NormType *block_norms, *norms;
       cudaMalloc((void**)&block_norms, sizeof(NormType) * blockSize);
-      cudaMalloc((void**)&norms, sizeof(NormType) * blockSize);
+      cudaMalloc((void**)&norms, sizeof(NormType));
 
       CalculateCollapsedNormKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
         state, block_norms, qubits, result, nstates, ntargets);
