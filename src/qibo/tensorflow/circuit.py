@@ -237,7 +237,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
-            state = gate(state, is_density_matrix=True)
+            state = gate(state)
         return state
 
     def _execute_for_compile(self, state):
@@ -247,10 +247,10 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
         for gate in self.queue:
             if isinstance(gate, gates.CallbackGate): # pragma: no cover
                 # compilation may be deprecated and is not sufficiently tested
-                value = gate.callback(state, is_density_matrix=True)
+                value = gate.callback(state)
                 callback_results[gate.callback].append(value)
             else:
-                state = gate(state, is_density_matrix=True)
+                state = gate(state)
         return state, callback_results
 
     def _execute(self, initial_state: Optional[InitStateType] = None
@@ -277,8 +277,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
 
     def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         """Generates measurement samples from the given state vector."""
-        return self.measurement_gate(state, nshots, samples_only=True,
-                                     is_density_matrix=True)
+        return self.measurement_gate(state, nshots, samples_only=True)
 
     def _check_initial_shape(self, state: InitStateType):
         """Checks shape of given initial state."""

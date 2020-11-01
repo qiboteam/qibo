@@ -66,19 +66,18 @@ class TensorflowGate(base_gates.Gate):
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
         self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
-            if is_density_matrix:
+            if self.on_density_matrix:
                 self.nqubits = len(tuple(state.shape)) // 2
             else:
                 self.nqubits = len(tuple(state.shape))
 
         if self.is_controlled_by:
-            return self._controlled_by_call(state, is_density_matrix)
+            return self._controlled_by_call(state)
 
-        if is_density_matrix:
+        if self.on_density_matrix:
             state = self.einsum(self.calculation_cache.right, state,
                                 tf.math.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
@@ -86,17 +85,16 @@ class TensorflowGate(base_gates.Gate):
 
         return self.einsum(self.calculation_cache.vector, state, self.matrix)
 
-    def _controlled_by_call(self, state: tf.Tensor,
-                            is_density_matrix: bool = False) -> tf.Tensor:
+    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
         """Gate __call__ method for `controlled_by` gates."""
         ncontrol = len(self.control_qubits)
         nactive = self.nqubits - ncontrol
 
-        transpose_order = self.control_cache.order(is_density_matrix)
-        reverse_transpose_order = self.control_cache.reverse(is_density_matrix)
+        transpose_order = self.control_cache.order(self.on_density_matrix)
+        reverse_transpose_order = self.control_cache.reverse(self.on_density_matrix)
 
         state = tf.transpose(state, transpose_order)
-        if is_density_matrix:
+        if self.on_density_matrix:
             state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
             updates01 = self.einsum(self.calculation_cache.right0,
@@ -408,7 +406,11 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                                              params, params2,
                                              name=name)
         TensorflowGate.__init__(self)
-        self.unitary_constructor = Unitary
+
+    def _unitary_constructor(self, matrix, *targets):
+        gate = Unitary(matrix, *targets)
+        gate.on_density_matrix = self.on_density_matrix
+        return gate
 
     @staticmethod
     def _tfkron(m1, m2):
@@ -441,16 +443,14 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                 additional_matrix = tf.matmul(
                     self.one_qubit_gate(q, theta=self.params2[q]).unitary,
                     additional_matrix)
-
         return matrices, additional_matrix
 
     def _prepare(self):
         self.cgates.VariationalLayer._prepare(self)
 
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
-                 ) -> tf.Tensor: # pragma: no cover
+    def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         # impractical case because VariationalLayer is not called by circuits
-        return self.cgates.VariationalLayer.__call__(self, state, is_density_matrix)
+        return self.cgates.VariationalLayer.__call__(self, state)
 
 
 class TensorflowChannel(TensorflowGate):
@@ -466,11 +466,7 @@ class TensorflowChannel(TensorflowGate):
         base_cls = getattr(base_gates, self.__class__.__name__)
         base_cls._create_gates(self)
 
-    def __call__(self, state: tf.Tensor, is_density_matrix: bool = True
-                 ) -> tf.Tensor:
-        if not is_density_matrix:
-            raise_error(ValueError, "Noise channel can only be applied to density "
-                                    "matrices.")
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape)) // 2
         return self._krauss_sum(state)
@@ -490,7 +486,7 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for p, gate in self.gates:
-            new_state += p * gate(state, is_density_matrix=True)
+            new_state += p * gate(state)
         return (1 - self.total_p) * state + new_state
 
 
@@ -503,5 +499,5 @@ class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
     def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for gate in self.gates:
-            new_state += gate(state, is_density_matrix=True)
+            new_state += gate(state)
         return new_state

@@ -33,6 +33,7 @@ class Gate(object):
         self.is_channel = False
         self.is_controlled_by = False
         self.is_special_gate = False
+        self.on_density_matrix = False
         # special gates are ``CallbackGate`` and ``Flatten``
 
         # args for creating gate
@@ -311,7 +312,7 @@ class Gate(object):
         # original gate
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def __call__(self, state, is_density_matrix): # pragma: no cover
+    def __call__(self, state): # pragma: no cover
         """Acts with the gate on a given state vector:
 
         Args:
@@ -1592,6 +1593,7 @@ class NoiseChannel(_AbstractChannel):
         for p, g in zip(self.p, ("X", "Y", "Z")):
             if p > 0:
                 gate = getattr(self.module, g)(self.target_qubits[0])
+                gate.on_density_matrix = self.is_channel
                 gate.device = self.device
                 gate.nqubits = self.nqubits
                 gatelist.append((p, gate))
@@ -1679,6 +1681,7 @@ class GeneralChannel(_AbstractChannel):
                                         "".format(shape, len(qubits)))
             if create_gates:
                 gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+                gatelist[-1].on_density_matrix = True
         return tuple(gatelist)
 
     def _create_gates(self):
