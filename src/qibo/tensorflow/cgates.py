@@ -69,6 +69,8 @@ class TensorflowGate(base_gates.Gate):
         Args:
             state (tf.Tensor): State vector with shape (2 ** nqubits,).
         """
+        if is_density_matrix:
+            raise_error(NotImplementedError)
         if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
@@ -212,7 +214,8 @@ class M(TensorflowGate, base_gates.M):
     def __call__(self, state: tf.Tensor, nshots: int,
                  samples_only: bool = False,
                  is_density_matrix: bool = False) -> tf.Tensor:
-        TensorflowGate.__call__(self, state, is_density_matrix)
+        if self._nqubits is None:
+            self.nqubits = int(np.log2(tuple(state.shape)[0]))
         probs_dim = tf.cast((2 ** len(self.target_qubits),),
                             dtype=DTYPES.get('DTYPEINT'))
         def sample():

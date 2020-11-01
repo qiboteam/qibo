@@ -2,7 +2,6 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-import joblib
 from qibo.base import circuit
 from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
@@ -42,11 +41,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
-            if gate.is_channel and not self.using_density_matrix:
-                # Switch from vector to density matrix
-                self.using_density_matrix = True
-                state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            state = gate(state, is_density_matrix=self.using_density_matrix)
+            state = gate(state)
         return state
 
     def _execute_for_compile(self, state):
@@ -54,20 +49,12 @@ class TensorflowCircuit(circuit.BaseCircuit):
         callback_results = {gate.callback: [] for gate in self.queue
                             if hasattr(gate, "callback")}
         for gate in self.queue:
-            if gate.is_channel and not self.using_density_matrix: # pragma: no cover
-                # compilation may be deprecated and is not sufficiently tested
-                # Switch from vector to density matrix
-                self.using_density_matrix = True
-                state = tf.tensordot(state, tf.math.conj(state), axes=0)
             if isinstance(gate, gates.CallbackGate): # pragma: no cover
                 # compilation may be deprecated and is not sufficiently tested
-                callback = gate.callback
-                value = callback(state,
-                                 is_density_matrix=self.using_density_matrix)
-                callback_results[callback].append(value)
+                value = gate.callback(state)
+                callback_results[gate.callback].append(value)
             else:
-                state = gate(state,
-                             is_density_matrix=self.using_density_matrix)
+                state = gate(state)
         return state, callback_results
 
     def compile(self):
@@ -89,12 +76,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> tf.Tensor:
         """Performs all circuit gates on the state vector."""
-        self.using_density_matrix = False
         state = self.get_initial_state(initial_state)
-
         if self.using_tfgates:
-            shape = (1 + self.using_density_matrix) * self.nqubits * (2,)
-            state = tf.reshape(state, shape)
+            state = tf.reshape(state, self.nqubits * (2,))
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -104,8 +88,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 callback.extend(results)
 
         if self.using_tfgates:
-            shape = tf.cast((1+self.using_density_matrix) * (2 ** self.nqubits,),
-                            dtype=DTYPES.get('DTYPEINT'))
+            shape = tf.cast((2 ** self.nqubits,), dtype=DTYPES.get('DTYPEINT'))
             state = tf.reshape(state, shape)
 
         self._final_state = state
@@ -127,9 +110,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         """Generates measurement samples from the given state vector."""
-        return self.measurement_gate(
-            state, nshots, samples_only=True,
-            is_density_matrix=self.using_density_matrix)
+        return self.measurement_gate(state, nshots, samples_only=True)
 
     def _measurement_result(self, samples: tf.Tensor,
                             state: Optional[tf.Tensor] = None
@@ -161,36 +142,31 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 nshots: Optional[int] = None) -> OutputType:
         """Propagates the state through the circuit applying the corresponding gates.
 
-        In default usage the full final state vector or density matrix is returned.
+        In default usage the full final state vector.
         If the circuit contains measurement gates and ``nshots`` is given, then
         the final state is sampled and the samples are returned. We refer to
         the :ref:`How to perform measurements? <measurement-examples>` example
         for more details on how to perform measurements in Qibo.
 
-        Circuit execution uses state vectors by default but switches
-        automatically to density matrices if a density matrix is given as
-        initial state or a channel is found a among the gates.
         If the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate is found
-        then Qibo will perform noise simulation by repeating the circuit
-        execution ``nshots`` times instead of using density matrices.
-        For more details on how noise and density matrices are simulated
+        Qibo will perform noise simulation by repeating the circuit
+        execution ``nshots`` times. For more details on how to simulate noise
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
 
         Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``
-                or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
-                A Tensorflow tensor with shape ``nqubits * (2,)`` (or ``2 * nqubits * (2,)`` for density matrices)
-                is also allowed as an initial state but must have the `dtype` of the circuit.
+            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
+                A Tensorflow tensor with shape ``nqubits * (2,)`` is also allowed
+                allowed as an initial state but must have the `dtype` of the circuit.
                 If ``initial_state`` is ``None`` the |000...0> state will be used.
             nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
-                If ``nshots`` None the measurement gates will be ignored.
+                If ``nshots`` is ``None`` the measurement gates will be ignored.
 
         Returns:
             If ``nshots`` is given and the circuit contains measurements
                 A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)`` or a density matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
+                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
         """
         if nshots is not None and self.repeated_execution:
             self._final_state = None
@@ -226,20 +202,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if not isinstance(state, (np.ndarray, tf.Tensor)):
             raise_error(TypeError, "Initial state type {} is not recognized."
                                     "".format(type(state)))
-
         shape = tuple(state.shape)
-        def shape_error():
+        if shape != (2 ** self.nqubits,):
             raise_error(ValueError, "Invalid initial state shape {} for "
                                     "circuit with {} qubits."
                                     "".format(shape, self.nqubits))
-        if len(shape) not in {1, 2}:
-            shape_error()
-        if len(shape) == 1 and 2 ** self.nqubits != shape[0]:
-            shape_error()
-        if len(shape) == 2:
-            if 2 * (2 ** self.nqubits,) != shape:
-                shape_error()
-            self.using_density_matrix = True
 
     def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
         if isinstance(state, tf.Tensor):
@@ -263,3 +230,64 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self.check_initial_state_shape:
             self._check_initial_shape(state)
         return self._cast_initial_state(state)
+
+
+class TensorflowDensityMatrixCircuit(TensorflowCircuit):
+
+    def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
+        """Simulates the circuit gates in eager mode."""
+        for gate in self.queue:
+            state = gate(state, is_density_matrix=True)
+        return state
+
+    def _execute_for_compile(self, state):
+        from qibo import gates
+        callback_results = {gate.callback: [] for gate in self.queue
+                            if hasattr(gate, "callback")}
+        for gate in self.queue:
+            if isinstance(gate, gates.CallbackGate): # pragma: no cover
+                # compilation may be deprecated and is not sufficiently tested
+                value = gate.callback(state, is_density_matrix=True)
+                callback_results[gate.callback].append(value)
+            else:
+                state = gate(state, is_density_matrix=True)
+        return state, callback_results
+
+    def _execute(self, initial_state: Optional[InitStateType] = None
+                 ) -> tf.Tensor:
+        """Performs all circuit gates on the state vector."""
+        state = self.get_initial_state(initial_state)
+        if self.using_tfgates:
+            state = tf.reshape(state, 2 * self.nqubits * (2,))
+
+        if self._compiled_execute is None:
+            state = self._eager_execute(state)
+        else:
+            state, callback_results = self._compiled_execute(state)
+            for callback, results in callback_results.items():
+                callback.extend(results)
+
+        if self.using_tfgates:
+            shape = tf.cast(2 * (2 ** self.nqubits,),
+                            dtype=DTYPES.get('DTYPEINT'))
+            state = tf.reshape(state, shape)
+
+        self._final_state = state
+        return state
+
+    def _check_initial_shape(self, state: InitStateType):
+        """Checks shape of given initial state."""
+        if not isinstance(state, (np.ndarray, tf.Tensor)):
+            raise_error(TypeError, "Initial state type {} is not recognized."
+                                    "".format(type(state)))
+        shape = tuple(state.shape)
+        if 2 * (2 ** self.nqubits,) != shape:
+            raise_error(ValueError, "Invalid initial density matrix shape {} "
+                                    "for circuit with {} qubits."
+                                    "".format(shape, self.nqubits))
+
+    def _default_initial_state(self) -> tf.Tensor:
+        """Creates the |000...0> state for default initialization."""
+        zeros = tf.zeros(2 ** (2 * self.nqubits), dtype=DTYPES.get('DTYPECPX'))
+        state = op.initial_state(zeros)
+        return state
