@@ -72,7 +72,7 @@ variable sets the python interpreter path.
 
       2. exporting the ``CUDA_PATH`` variable with the CUDA installation path containing the cuda compiler.
 
-      3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail.
+      3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail. You can locate it with ``whereis nvcc`` and eventually link/copy to your ``CUDA_PATH/bin`` folder.
 
       For example, TensorFlow 2.3 supports CUDA 10.1. After installing
       TensorFlow proceed with the NVCC 10.1 installation. On linux the
