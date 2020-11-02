@@ -29,6 +29,11 @@ class TensorflowGate(base_gates.Gate):
                         "mode.")
         self.gate_op = op.apply_gate
         self._density_matrix = False
+        self._active_call = "_state_vector_call"
+
+        self.qubits_tensor = None
+        self.qubits_tensor_dm = None
+        self.target_qubits_dm = None
 
     @property
     def density_matrix(self) -> bool:
@@ -36,7 +41,15 @@ class TensorflowGate(base_gates.Gate):
 
     @density_matrix.setter
     def density_matrix(self, x: bool):
+        if self.qubits_tensor is not None:
+            raise_error(RuntimeError,
+                        "Density matrix mode cannot be switched after "
+                        "preparing the gate for execution.")
         self._density_matrix = x
+        if x:
+            self._active_call = "_density_matrix_call"
+        else:
+            self._active_call = "_state_vector_call"
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
@@ -63,6 +76,10 @@ class TensorflowGate(base_gates.Gate):
         qubits = sorted(qubits)
         with tf.device(self.device):
             self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+            if self.density_matrix:
+                self.qubits_tensor_dm = self.qubits_tensor + self.nqubits
+                self.target_qubits_dm = tuple(x + self.nqubits
+                                              for x in self.target_qubits)
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.
@@ -78,6 +95,17 @@ class TensorflowGate(base_gates.Gate):
         if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
+    def _state_vector_call(self, state):
+        return self.gate_op(state, self.qubits_tensor, self.nqubits,
+                            *self.target_qubits)
+
+    def _density_matrix_call(self, state):
+        state = self.gate_op(state, self.qubits_tensor, self.nqubits,
+                             *self.target_qubits)
+        state = self.gate_op(state, self.qubits_tensor_dm, self.nqubits,
+                             *self.target_qubits_dm)
+        return state
+
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state.
 
@@ -85,8 +113,7 @@ class TensorflowGate(base_gates.Gate):
             state (tf.Tensor): State vector with shape (2 ** nqubits,).
         """
         self._set_nqubits(state)
-        return self.gate_op(state, self.qubits_tensor, self.nqubits,
-                            *self.target_qubits)
+        return getattr(self, self._active_call)(state)
 
 
 class MatrixGate(TensorflowGate):
@@ -101,16 +128,16 @@ class MatrixGate(TensorflowGate):
             self.matrix = tf.constant(self.construct_unitary(),
                                       dtype=DTYPES.get('DTYPECPX'))
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-       """Implements the `Gate` on a given state.
-
-       Args:
-           state (tf.Tensor): State vector with shape (2 ** nqubits,).
-       """
-       if self._nqubits is None:
-           self.nqubits = int(np.log2(tuple(state.shape)[0]))
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
        return self.gate_op(state, self.matrix, self.qubits_tensor, self.nqubits,
                            *self.target_qubits)
+
+    def _density_matrix_call(self, state):
+        state = self.gate_op(state, self.matrix, self.qubits_tensor, self.nqubits,
+                             *self.target_qubits)
+        state = self.gate_op(state, self.matrix, self.qubits_tensor_dm, self.nqubits,
+                             *self.target_qubits_dm)
+        return state
 
 
 class H(MatrixGate, base_gates.H):
@@ -176,6 +203,7 @@ class M(TensorflowGate, base_gates.M):
 
     def __init__(self, *q, register_name: Optional[str] = None):
         base_gates.M.__init__(self, *q, register_name=register_name)
+        self.qubits_tensor = None
         self._density_matrix = False
         self._traceout = None
 

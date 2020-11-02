@@ -41,7 +41,6 @@ class Gate(object):
 
         self._target_qubits = tuple()
         self._control_qubits = set()
-        self.qubits_tensor = None
 
         self._unitary = None
         self._nqubits = None

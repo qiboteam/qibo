@@ -7,11 +7,12 @@ from qibo.tests.utils import random_density_matrix
 # supported by custom gate kernels.
 
 
+_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
 _EINSUM_BACKENDS = ["defaulteinsum", "matmuleinsum"]
 _atol = 1e-8
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_xgate_application_onequbit(backend):
     """Check applying one qubit gate to one qubit density matrix."""
     original_backend = qibo.get_backend()

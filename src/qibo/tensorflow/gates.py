@@ -31,7 +31,7 @@ class TensorflowGate(base_gates.Gate):
         self.einsum = BACKEND.get('EINSUM')
         # Using density matrices or state vectors
         self._density_matrix = False
-        self._active_call = self._state_vector_call
+        self._active_call = "_state_vector_call"
 
     @property
     def density_matrix(self) -> bool:
@@ -41,9 +41,9 @@ class TensorflowGate(base_gates.Gate):
     def density_matrix(self, x: bool):
         self._density_matrix = x
         if x:
-            self._active_call = self._density_matrix_call
+            self._active_call = "_density_matrix_call"
         else:
-            self._active_call = self._state_vector_call
+            self._active_call = "_state_vector_call"
 
     def _prepare(self):
         matrix = self.construct_unitary()
@@ -144,7 +144,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the gate on a given state."""
-        return self._active_call(state)
+        return getattr(self, self._active_call)(state)
 
 
 class H(TensorflowGate, base_gates.H):
