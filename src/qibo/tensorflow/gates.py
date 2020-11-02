@@ -22,7 +22,6 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __init__(self):
-        self._density_matrix = False
         self.calculation_cache = None
         # For `controlled_by` gates (see `cache.ControlCache` for more details)
         self.control_cache = None
@@ -30,6 +29,9 @@ class TensorflowGate(base_gates.Gate):
         self.matrix = None
         # Einsum backend
         self.einsum = BACKEND.get('EINSUM')
+        # Using density matrices or state vectors
+        self._density_matrix = False
+        self._active_call = self._state_vector_call
 
     @property
     def density_matrix(self) -> bool:
@@ -38,6 +40,8 @@ class TensorflowGate(base_gates.Gate):
     @density_matrix.setter
     def density_matrix(self, x: bool):
         self._density_matrix = x
+        if x:
+            self._active_call = self._density_matrix_call
 
     def _prepare(self):
         matrix = self.construct_unitary()
@@ -75,35 +79,41 @@ class TensorflowGate(base_gates.Gate):
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
         self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        """Implements the `Gate` on a given state."""
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        """Implements the gate on a state vector."""
         if self._nqubits is None:
-            if self.density_matrix:
-                self.nqubits = len(tuple(state.shape)) // 2
-            else:
-                self.nqubits = len(tuple(state.shape))
+            self.nqubits = len(tuple(state.shape))
 
         if self.is_controlled_by:
-            return self._controlled_by_call(state)
+            ncontrol = len(self.control_qubits)
+            nactive = self.nqubits - ncontrol
+            state = tf.transpose(state, self.control_cache.order(False))
+            # Apply `einsum` only to the part of the state where all controls
+            # are active. This should be `state[-1]`
+            state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
+            updates = self.einsum(self.calculation_cache.vector, state[-1],
+                                  self.matrix)
+            # Concatenate the updated part of the state `updates` with the
+            # part of of the state that remained unaffected `state[:-1]`.
+            state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
+            state = tf.reshape(state, self.nqubits * (2,))
+            # Put qubit indices back to their proper places
+            state = tf.transpose(state, self.control_cache.reverse(False))
+        else:
+            einsum_str = self.calculation_cache.vector
+            state = self.einsum(einsum_str, state, self.matrix)
 
-        if self.density_matrix:
-            state = self.einsum(self.calculation_cache.right, state,
-                                tf.math.conj(self.matrix))
-            state = self.einsum(self.calculation_cache.left, state, self.matrix)
-            return state
+        return state
 
-        return self.einsum(self.calculation_cache.vector, state, self.matrix)
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        """Implements the gate on a density matrix."""
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // 2
 
-    def _controlled_by_call(self, state: tf.Tensor) -> tf.Tensor:
-        """Gate __call__ method for `controlled_by` gates."""
-        ncontrol = len(self.control_qubits)
-        nactive = self.nqubits - ncontrol
-
-        transpose_order = self.control_cache.order(self.density_matrix)
-        reverse_transpose_order = self.control_cache.reverse(self.density_matrix)
-
-        state = tf.transpose(state, transpose_order)
-        if self.density_matrix:
+        if self.is_controlled_by:
+            ncontrol = len(self.control_qubits)
+            nactive = self.nqubits - ncontrol
+            state = tf.transpose(state, self.control_cache.order(True))
             state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
             updates01 = self.einsum(self.calculation_cache.right0,
@@ -122,19 +132,17 @@ class TensorflowGate(base_gates.Gate):
             updates10 = tf.concat([updates10, updates11[tf.newaxis]], axis=0)
             state = tf.concat([updates01, updates10[tf.newaxis]], axis=0)
             state = tf.reshape(state, 2 * self.nqubits * (2,))
-
+            state = tf.transpose(state, self.control_cache.reverse(True))
         else:
-            # Apply `einsum` only to the part of the state where all controls
-            # are active. This should be `state[-1]`
-            state = tf.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            updates = self.einsum(self.calculation_cache.vector, state[-1],
-                                  self.matrix)
-            # Concatenate the updated part of the state `updates` with the
-            # part of of the state that remained unaffected `state[:-1]`.
-            state = tf.concat([state[:-1], updates[tf.newaxis]], axis=0)
-            state = tf.reshape(state, self.nqubits * (2,))
+            state = self.einsum(self.calculation_cache.right, state,
+                                tf.math.conj(self.matrix))
+            state = self.einsum(self.calculation_cache.left, state, self.matrix)
 
-        return tf.transpose(state, reverse_transpose_order)
+        return state
+
+    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+        """Implements the gate on a given state."""
+        return self._active_call(state)
 
 
 class H(TensorflowGate, base_gates.H):
