@@ -198,7 +198,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if isinstance(state, tf.Tensor):
             return state
         elif isinstance(state, np.ndarray):
-            return tf.cast(state, dtype=DTYPES.get('DTYPECPX'))
+            return tf.cast(state.astype(DTYPES.get('NPTYPECPX')),
+                           dtype=DTYPES.get('DTYPECPX'))
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
