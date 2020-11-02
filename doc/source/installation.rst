@@ -55,6 +55,10 @@ then proceed with the installation of requirements with:
 
       pip install -r requirements.txt
 
+Make sure your system has a GNU ``g++ >= 6`` compiler. Optionally, you can use
+the ``CXX`` environment variable to set then compiler path. Similarly, the
+``PYTHON`` environment variable sets the python interpreter path.
+
 .. note::
       If your system has a NVIDIA GPU, make sure TensorFlow is installed
       properly and runs on GPU, please refer to the `official
@@ -65,6 +69,8 @@ then proceed with the installation of requirements with:
       1. installing the NVCC compiler matching the TensorFlow CUDA version, see the `CUDA documentation <https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html>`_.
 
       2. exporting the ``CUDA_PATH`` variable with the CUDA installation path containing the cuda compiler.
+
+      3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail.
 
       For example, TensorFlow 2.3 supports CUDA 10.1. After installing
       TensorFlow proceed with the NVCC 10.1 installation. On linux the
