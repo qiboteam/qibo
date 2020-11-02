@@ -221,9 +221,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                              ) -> tf.Tensor:
         """Generates measurement samples from the given state vector."""
         with tf.device(self.memory_device):
-            samples = self.measurement_gate(
-                state.vector, nshots, samples_only=True,
-                is_density_matrix=self.using_density_matrix)
+            samples = self.measurement_gate(state.vector, nshots,
+                                            samples_only=True)
         return samples
 
     def execute(self, initial_state: Optional[InitStateType] = None,
