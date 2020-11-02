@@ -89,6 +89,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute`` on specified device."""
         self.using_density_matrix = False
+        self._final_state = None
         state = self.get_initial_state(initial_state)
 
         if self.using_tfgates:
