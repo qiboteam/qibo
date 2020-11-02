@@ -71,15 +71,28 @@ class TensorflowGate(base_gates.Gate):
 
     def _calculate_qubits_tensor(self) -> tf.Tensor:
         """Calculates ``qubits`` tensor required for applying gates using custom operators."""
-        qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
-        qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
-        qubits = sorted(qubits)
-        with tf.device(self.device):
-            self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
-            if self.density_matrix:
-                self.qubits_tensor_dm = self.qubits_tensor + self.nqubits
-                self.target_qubits_dm = tuple(x + self.nqubits
-                                              for x in self.target_qubits)
+        if self.density_matrix:
+            self.target_qubits_dm = tuple(np.array(self.target_qubits) +
+                                          self.nqubits)
+            self.control_qubits_dm = tuple(np.array(self.control_qubits) +
+                                           self.nqubits)
+            qubits = list(2 * self.nqubits - np.array(self.control_qubits) - 1)
+            qubits.extend(2 * self.nqubits - np.array(self.target_qubits) - 1)
+            qubits = sorted(qubits)
+            qubits_dm = list(2 * self.nqubits - np.array(self.control_qubits_dm) - 1)
+            qubits_dm.extend(2 * self.nqubits - np.array(self.target_qubits_dm) - 1)
+            qubits_dm = sorted(qubits_dm)
+            print(self.nqubits)
+            with tf.device(self.device):
+                self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+                self.qubits_tensor_dm = tf.convert_to_tensor(qubits_dm, dtype=tf.int32)
+
+        else:
+            qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
+            qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
+            qubits = sorted(qubits)
+            with tf.device(self.device):
+                self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
 
     def _prepare(self):
         """Prepares the gate for application to state vectors.
@@ -100,9 +113,9 @@ class TensorflowGate(base_gates.Gate):
                             *self.target_qubits)
 
     def _density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor, self.nqubits,
+        state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
                              *self.target_qubits)
-        state = self.gate_op(state, self.qubits_tensor_dm, self.nqubits,
+        state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits_dm)
         return state
 
@@ -129,14 +142,15 @@ class MatrixGate(TensorflowGate):
                                       dtype=DTYPES.get('DTYPECPX'))
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-       return self.gate_op(state, self.matrix, self.qubits_tensor, self.nqubits,
-                           *self.target_qubits)
+       return self.gate_op(state, self.matrix, self.qubits_tensor,
+                           self.nqubits, *self.target_qubits)
 
     def _density_matrix_call(self, state):
-        state = self.gate_op(state, self.matrix, self.qubits_tensor, self.nqubits,
-                             *self.target_qubits)
-        state = self.gate_op(state, self.matrix, self.qubits_tensor_dm, self.nqubits,
-                             *self.target_qubits_dm)
+        state = self.gate_op(state, self.matrix, self.qubits_tensor,
+                             2 * self.nqubits, *self.target_qubits)
+        adjmatrix = tf.math.conj(self.matrix)
+        state = self.gate_op(state, adjmatrix, self.qubits_tensor_dm,
+                             2 * self.nqubits, *self.target_qubits_dm)
         return state
 
 

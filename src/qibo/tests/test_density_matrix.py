@@ -20,7 +20,7 @@ def test_xgate_application_onequbit(backend):
     initial_rho = random_density_matrix(1)
     gate = gates.X(0)
     gate.density_matrix = True
-    final_rho = gate(initial_rho).numpy()
+    final_rho = gate(np.copy(initial_rho)).numpy()
 
     pauliX = np.array([[0, 1], [1, 0]])
     target_rho = pauliX.dot(initial_rho).dot(pauliX)
@@ -29,7 +29,7 @@ def test_xgate_application_onequbit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_hgate_application_twoqubit(backend):
     """Check applying one qubit gate to two qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -37,17 +37,26 @@ def test_hgate_application_twoqubit(backend):
     initial_rho = random_density_matrix(2)
     gate = gates.H(1)
     gate.density_matrix = True
-    final_rho = gate(initial_rho.reshape(4 * (2,))).numpy().reshape((4, 4))
+    if backend == "custom":
+        final_rho = np.copy(initial_rho)
+    else:
+        final_rho = np.copy(initial_rho).reshape(4 * (2,))
+    final_rho = gate(final_rho).numpy().reshape((4, 4))
 
     matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     matrix = np.kron(np.eye(2), matrix)
+    initial_rho = initial_rho.reshape((4, 4))
     target_rho = matrix.dot(initial_rho).dot(matrix)
 
+    #for i, (x, y) in enumerate(zip(final_rho.ravel(), target_rho.ravel())):
+    #    print(i, x, y)
+    print(final_rho.shape)
+    print(np.trace(final_rho))
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_rygate_application_twoqubit(backend):
     """Check applying non-hermitian one qubit gate to one qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -56,9 +65,9 @@ def test_rygate_application_twoqubit(backend):
     initial_rho = random_density_matrix(1)
 
     gate = gates.RY(0, theta=theta)
-    gate.nqubits = 1
     gate.density_matrix = True
-    final_rho = gate(initial_rho).numpy()
+    gate.nqubits = 1
+    final_rho = gate(np.copy(initial_rho)).numpy()
 
     phase = np.exp(1j * theta / 2.0)
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
@@ -68,7 +77,7 @@ def test_rygate_application_twoqubit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["matmuleinsum"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_cu1gate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -79,7 +88,10 @@ def test_cu1gate_application_twoqubit(backend):
 
     gate = gates.CU1(0, 1, theta=theta)
     gate.density_matrix = True
-    final_rho = initial_rho.reshape(2 * nqubits * (2,))
+    if backend == "custom":
+        final_rho = np.copy(initial_rho)
+    else:
+        final_rho = np.copy(initial_rho).reshape(2 * nqubits * (2,))
     final_rho = gate(final_rho).numpy().reshape(initial_rho.shape)
 
     matrix = np.eye(4, dtype=np.complex128)
@@ -91,10 +103,11 @@ def test_cu1gate_application_twoqubit(backend):
     qibo.set_backend(original_backend)
 
 
-def test_flatten_density_matrix():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_flatten_density_matrix(backend):
     """Check ``Flatten`` gate works with density matrices."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     target_rho = random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
@@ -104,9 +117,9 @@ def test_flatten_density_matrix():
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
-def test_circuit_compiled(backend):
-    """Check passing density matrix as initial state to a compiled circuit."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_dm(backend):
+    """Check passing density matrix as initial state to a circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
@@ -117,7 +130,7 @@ def test_circuit_compiled(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
+    final_rho = c(np.copy(initial_rho)).numpy().reshape(initial_rho.shape)
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -133,8 +146,8 @@ def test_circuit_compiled(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
-def test_circuit(backend):
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_dm2(backend):
     """Check passing density matrix as initial state to circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -144,7 +157,7 @@ def test_circuit(backend):
     c = models.Circuit(3, density_matrix=True)
     c.add(gates.X(2))
     c.add(gates.CU1(0, 1, theta=theta))
-    final_rho = c(initial_rho).numpy().reshape(initial_rho.shape)
+    final_rho = c(np.copy(initial_rho)).numpy().reshape(initial_rho.shape)
 
     m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
     m2 = np.eye(4, dtype=np.complex128)
@@ -157,7 +170,7 @@ def test_circuit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_simple(backend):
     """Check controlled_by method on gate."""
     original_backend = qibo.get_backend()
@@ -180,7 +193,7 @@ def test_controlled_by_simple(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
     original_backend = qibo.get_backend()
@@ -202,7 +215,7 @@ def test_controlled_by_no_effect(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_with_effect(backend):
     """Check controlled_by SWAP that should be applied."""
     original_backend = qibo.get_backend()
