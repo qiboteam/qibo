@@ -46,7 +46,6 @@ class Gate(object):
         self._unitary = None
         self._nqubits = None
         self._nstates = None
-        self.qubits_tensor = None
 
         # Cast gate matrices to the proper device
         self.device = config.get_device()

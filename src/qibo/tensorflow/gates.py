@@ -42,6 +42,8 @@ class TensorflowGate(base_gates.Gate):
         self._density_matrix = x
         if x:
             self._active_call = self._density_matrix_call
+        else:
+            self._active_call = self._state_vector_call
 
     def _prepare(self):
         matrix = self.construct_unitary()
