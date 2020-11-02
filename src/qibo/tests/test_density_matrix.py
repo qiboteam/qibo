@@ -18,7 +18,7 @@ def test_xgate_application_onequbit(backend):
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(1)
     gate = gates.X(0)
-    gate.on_density_matrix = True
+    gate.density_matrix = True
     final_rho = gate(initial_rho).numpy()
 
     pauliX = np.array([[0, 1], [1, 0]])
@@ -35,7 +35,7 @@ def test_hgate_application_twoqubit(backend):
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(2)
     gate = gates.H(1)
-    gate.on_density_matrix = True
+    gate.density_matrix = True
     final_rho = gate(initial_rho.reshape(4 * (2,))).numpy().reshape((4, 4))
 
     matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
@@ -56,7 +56,7 @@ def test_rygate_application_twoqubit(backend):
 
     gate = gates.RY(0, theta=theta)
     gate.nqubits = 1
-    gate.on_density_matrix = True
+    gate.density_matrix = True
     final_rho = gate(initial_rho).numpy()
 
     phase = np.exp(1j * theta / 2.0)
@@ -77,7 +77,7 @@ def test_cu1gate_application_twoqubit(backend):
     initial_rho = random_density_matrix(nqubits)
 
     gate = gates.CU1(0, 1, theta=theta)
-    gate.on_density_matrix = True
+    gate.density_matrix = True
     final_rho = initial_rho.reshape(2 * nqubits * (2,))
     final_rho = gate(final_rho).numpy().reshape(initial_rho.shape)
 
@@ -97,7 +97,7 @@ def test_flatten_density_matrix():
     target_rho = random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
-    gate.on_density_matrix = True
+    gate.density_matrix = True
     final_rho = gate(initial_rho).numpy().reshape((8, 8))
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
@@ -467,7 +467,7 @@ def test_density_matrix_measurement():
     state[2] = 1
     rho = np.outer(state, state.conj())
     mgate = gates.M(0, 1)
-    mgate.on_density_matrix = True
+    mgate.density_matrix = True
     result = mgate(rho, nshots=100)
 
     target_binary_samples = np.zeros((100, 2))

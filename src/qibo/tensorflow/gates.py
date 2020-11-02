@@ -22,6 +22,7 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __init__(self):
+        self._density_matrix = False
         self.calculation_cache = None
         # For `controlled_by` gates (see `cache.ControlCache` for more details)
         self.control_cache = None
@@ -29,6 +30,14 @@ class TensorflowGate(base_gates.Gate):
         self.matrix = None
         # Einsum backend
         self.einsum = BACKEND.get('EINSUM')
+
+    @property
+    def density_matrix(self) -> bool:
+        return self._density_matrix
+
+    @density_matrix.setter
+    def density_matrix(self, x: bool):
+        self._density_matrix = x
 
     def _prepare(self):
         matrix = self.construct_unitary()
@@ -69,7 +78,7 @@ class TensorflowGate(base_gates.Gate):
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the `Gate` on a given state."""
         if self._nqubits is None:
-            if self.on_density_matrix:
+            if self.density_matrix:
                 self.nqubits = len(tuple(state.shape)) // 2
             else:
                 self.nqubits = len(tuple(state.shape))
@@ -77,7 +86,7 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             return self._controlled_by_call(state)
 
-        if self.on_density_matrix:
+        if self.density_matrix:
             state = self.einsum(self.calculation_cache.right, state,
                                 tf.math.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
@@ -90,11 +99,11 @@ class TensorflowGate(base_gates.Gate):
         ncontrol = len(self.control_qubits)
         nactive = self.nqubits - ncontrol
 
-        transpose_order = self.control_cache.order(self.on_density_matrix)
-        reverse_transpose_order = self.control_cache.reverse(self.on_density_matrix)
+        transpose_order = self.control_cache.order(self.density_matrix)
+        reverse_transpose_order = self.control_cache.reverse(self.density_matrix)
 
         state = tf.transpose(state, transpose_order)
-        if self.on_density_matrix:
+        if self.density_matrix:
             state = tf.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
 
             updates01 = self.einsum(self.calculation_cache.right0,
@@ -409,7 +418,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
     def _unitary_constructor(self, matrix, *targets):
         gate = Unitary(matrix, *targets)
-        gate.on_density_matrix = self.on_density_matrix
+        gate.density_matrix = self.density_matrix
         return gate
 
     @staticmethod

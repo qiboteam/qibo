@@ -249,5 +249,5 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
                                          dtype=DTYPES.get('DTYPEINT'))
 
     def _add(self, gate):
-        gate.on_density_matrix = True
+        gate.density_matrix = True
         super(TensorflowDensityMatrixCircuit, self)._add(gate)
