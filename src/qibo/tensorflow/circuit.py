@@ -82,6 +82,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> tf.Tensor:
         """Performs all circuit gates on the state vector."""
+        self._final_state = None
         state = self.get_initial_state(initial_state)
         if self.using_tfgates:
             state = tf.reshape(state, self.shapes.get('TENSOR'))
@@ -122,7 +123,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                             ) -> measurements.CircuitResult:
         """Creates the measurement result object using the sampled bitstrings."""
         self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, state, decimal_samples=samples)
+            self.measurement_gate.qubits, decimal_samples=samples)
         return measurements.CircuitResult(
             self.measurement_tuples, self.measurement_gate_result)
 
@@ -217,7 +218,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if isinstance(state, tf.Tensor):
             return state
         elif isinstance(state, np.ndarray):
-            return tf.cast(state, dtype=DTYPES.get('DTYPECPX'))
+            return tf.cast(state.astype(DTYPES.get('NPTYPECPX')),
+                           dtype=DTYPES.get('DTYPECPX'))
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 

@@ -159,6 +159,21 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 op.swap_pieces(state.pieces[i], state.pieces[i + t],
                                local_eff, self.nlocal)
 
+    def _normalize(self, state: utils.DistributedState):
+        """Normalizes state by summing the norms of each state piece.
+
+        To be used after ``Collapse`` gates because normalization should be
+        applied collectively and not in each piece seperately.
+        The full calculation happens on CPU. (may not be efficient)
+        """
+        total_norm = 0
+        with tf.device(self.memory_device):
+            for piece in state.pieces:
+                total_norm += tf.reduce_sum(tf.math.square(tf.abs(piece)))
+            total_norm = tf.cast(tf.math.sqrt(total_norm), dtype=state.dtype)
+            for piece in state.pieces:
+                piece.assign(piece / total_norm)
+
     def _revert_swaps(self, state: utils.DistributedState, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
             if q1 not in self.queues.qubits.set:
@@ -188,6 +203,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> utils.DistributedState:
         """Performs all circuit gates on the state vector."""
+        self._final_state = None
         state = self.get_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
@@ -198,6 +214,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                 gate = next(special_gates)
                 if isinstance(gate, tuple): # SWAP global-local qubit
                     self._swap(state, *gate)
+                elif isinstance(gate, str): # Normalize state (after ``Collapse``)
+                    assert gate == "normalize"
+                    self._normalize(state)
                 else:
                     self._special_gate_execute(state, gate)
         for gate in special_gates: # pragma: no cover

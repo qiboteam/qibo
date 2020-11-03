@@ -199,6 +199,39 @@ class I(TensorflowGate, base_gates.I):
         return state
 
 
+class Collapse(TensorflowGate, base_gates.Collapse):
+
+    def __init__(self, *q: int, result: List[int] = 0):
+        base_gates.Collapse.__init__(self, *q, result=result)
+        TensorflowGate.__init__(self)
+        self.result_tensor = None
+
+    @staticmethod
+    def _result_to_list(res):
+        if isinstance(res, np.ndarray):
+            return list(res.astype(np.int))
+        if isinstance(res, tf.Tensor):
+            return list(res.numpy().astype(np.int))
+        return list(res)
+
+    def _prepare(self):
+        if self.density_matrix:
+            raise_error(NotImplementedError,
+                        "Collapse gate is not implemented for density matrices.")
+        n = len(self.result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
+        self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
+                                 self.nqubits, self.normalize)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
+        # this exception should always be catched in `_prepare`.
+        raise_error(NotImplementedError,
+                    "Collapse gate is not implemented for density matrices.")
+
+
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
@@ -275,7 +308,7 @@ class M(TensorflowGate, base_gates.M):
         if samples_only:
             return samples_dec
         return self.measurements.GateResult(
-            self.qubits, state, decimal_samples=samples_dec)
+            self.qubits, decimal_samples=samples_dec)
 
 
 class RX(MatrixGate, base_gates.RX):

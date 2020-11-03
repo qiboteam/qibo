@@ -480,6 +480,67 @@ class I(Gate):
         self.init_args = q
 
 
+class Collapse(Gate):
+    """Gate that collapses the state vector according to a measurement.
+
+    Args:
+        *q (int): the qubit id numbers that were measured.
+        result (int/list): measured result for each qubit. Should be 0 or 1.
+            If a ``list`` is given, it should have the same length as the
+            number of qubits measured. If an ``int`` is given, the same
+            result is used for all qubits measured.
+    """
+
+    def __init__(self, *q, result=0):
+        super(Collapse, self).__init__()
+        if isinstance(result, int):
+            result = len(q) * [result]
+        self.name = "collapse"
+        self.target_qubits = tuple(q)
+        self._result = None
+
+        self.init_args = q
+        self.init_kwargs = {"result": result}
+        self.sorted_qubits = sorted(q)
+        self.result = result
+        # Flag that is turned ``False`` automatically if this gate is used in a
+        # ``TensorflowDistributedCircuit`` in order to skip the normalization.
+        self.normalize = True
+
+    @property
+    def result(self):
+        """Returns the result list in proper order after sorting the qubits."""
+        return self._result
+
+    @staticmethod
+    def _result_to_list(res): # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
+
+    @result.setter
+    def result(self, res):
+        res = self._result_to_list(res)
+        if len(self.target_qubits) != len(res):
+            raise_error(ValueError, "Collapse gate was created on {} qubits "
+                                    "but {} result values were given."
+                                    "".format(len(self.target_qubits), len(res)))
+        resdict = {}
+        for q, r in zip(self.target_qubits, res):
+            if r not in {0, 1}:
+                raise_error(ValueError, "Result values should be 0 or 1 but "
+                                        "{} was given.".format(r))
+            resdict[q] = r
+
+        self._result = [resdict[q] for q in self.sorted_qubits]
+        self.init_kwargs = {"result": res}
+        if self._nqubits is not None:
+            self._prepare()
+
+    def controlled_by(self, *q): # pragma: no cover
+        """"""
+        raise_error(NotImplementedError, "Collapse gates cannot be controlled.")
+
+
 class M(Gate):
     """The Measure Z gate.
 

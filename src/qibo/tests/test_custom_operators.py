@@ -297,6 +297,33 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
     np.testing.assert_allclose(target_state.ravel(), state.numpy())
 
 
+@pytest.mark.parametrize("nqubits,targets,results",
+                         [(2, [0], [1]), (2, [1], [0]), (3, [1], [1]),
+                          (4, [1, 3], [1, 0]), (5, [1, 2, 4], [0, 1, 1]),
+                          (15, [4, 7], [0, 0]), (16, [8, 12, 15], [1, 0, 1])])
+@pytest.mark.parametrize("dtype", [tf.float32, tf.float64])
+def test_collapse_state(nqubits, targets, results, dtype):
+    """Check ``collapse_state`` kernel."""
+    atol = 1e-7 if dtype == tf.float32 else 1e-14
+    state = utils.random_tensorflow_complex((2 ** nqubits,), dtype=dtype)
+    slicer = nqubits * [slice(None)]
+    for t, r in zip(targets, results):
+        slicer[t] = r
+    slicer = tuple(slicer)
+    initial_state = state.numpy().reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+
+    qubits = sorted(nqubits - np.array(targets) - 1)
+    b2d = 2 ** np.arange(len(results) - 1, -1, -1)
+    result = np.array(results).dot(b2d)
+    state = op.collapse_state(state, qubits, result, nqubits)
+    print((np.abs(state.numpy()) ** 2).sum())
+    np.testing.assert_allclose(state, target_state, atol=atol)
+
+
 # this test fails when compiling due to in-place updates of the state
 @pytest.mark.parametrize("gate", ["h", "x", "z", "swap"])
 @pytest.mark.parametrize("compile", [False])

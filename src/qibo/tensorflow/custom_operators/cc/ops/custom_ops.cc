@@ -35,6 +35,18 @@ REGISTER_OP("SwapPieces")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 
+// Register op that collapses state vector according to measured bit string
+REGISTER_OP("CollapseState")            \
+    .Attr("T: {complex64, complex128}") \
+    .Input("state: T")                  \
+    .Input("qubits: int32")             \
+    .Input("result: int64")             \
+    .Attr("nqubits: int")               \
+    .Attr("normalize: bool")            \
+    .Output("out: T")                   \
+    .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
+
+
 // Register one-qubit gate op with gate matrix
 #define REGISTER_GATE1_OP(NAME)           \
   REGISTER_OP(NAME)                       \
