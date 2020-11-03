@@ -308,10 +308,15 @@ class BaseCircuit(object):
         return decomp_circuit
 
     def with_noise(self, noise_map: NoiseMapType,
-                   measurement_noise: Optional[NoiseMapType] = None,
-                   probabilistic: bool = False
+                   measurement_noise: Optional[NoiseMapType] = None
                    ) -> "BaseCircuit":
         """Creates a copy of the circuit with noise gates after each gate.
+
+        If the original circuit uses state vectors then the
+        :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be
+        used for noise simulation with repeated circuit execution.
+        In order to use density matrices the original circuit should be created
+        using the ``density_matrix`` flag set to ``True``.
 
         Args:
             noise_map (dict): Dictionary that maps qubit ids to noise
@@ -324,10 +329,6 @@ class BaseCircuit(object):
                 measured.
                 If ``None`` the default probabilities specified by ``noise_map``
                 will be used for all qubits.
-            probabilistic (bool): If ``True`` the
-                :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be
-                used for noise simulation with repeated circuit execution,
-                otherwise density matrices will be used.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
@@ -338,13 +339,14 @@ class BaseCircuit(object):
 
                 from qibo.models import Circuit
                 from qibo import gates
-                c = Circuit(2)
+                # use density matrices for noise simulation
+                c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
                 noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
                 noisy_c = c.with_noise(noise_map)
 
                 # ``noisy_c`` will be equivalent to the following circuit
-                c2 = Circuit(2)
+                c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
                 c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
                 c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
@@ -369,10 +371,14 @@ class BaseCircuit(object):
 
         # Generate noise gates
         noise_gates = []
-        channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel)
-        channel_cls = getattr(gate_module, channels[int(probabilistic)].__name__)
+        if self.density_matrix:
+            channel_name = "NoiseChannel"
+        else:
+            channel_name = "ProbabilisticNoiseChannel"
+        channel_base = getattr(gates, channel_name)
+        channel_cls = getattr(gate_module, channel_name)
         for gate in self.queue:
-            if isinstance(gate, channels):
+            if isinstance(gate, channel_base):
                 raise_error(ValueError, "`.with_noise` method is not available for "
                                         "circuits that already contain noise channels.")
             noise_gates.append([channel_cls(q, px=p[0], py=p[1], pz=p[2])
@@ -430,6 +436,11 @@ class BaseCircuit(object):
     def _add(self, gate: gates.Gate):
         if self.density_matrix:
             gate.density_matrix = True
+            if isinstance(gate, gates.ProbabilisticNoiseChannel):
+                raise_error(ValueError, "Cannot add the probabilistic noise "
+                                        "channel gate to a circuit that uses "
+                                        "density matrices. Please use a state "
+                                        "vector circuit.")
         else:
             if gate.is_channel:
                 raise_error(ValueError, "Cannot add channels on circuits that "

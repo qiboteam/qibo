@@ -454,7 +454,7 @@ def test_circuit_with_noise_probabilistic_channel(backend):
     thetas = np.random.random(4)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    noisy_c = c.with_noise((0.2, 0.0, 0.1), probabilistic=True)
+    noisy_c = c.with_noise((0.2, 0.0, 0.1))
     np.random.seed(1234)
     final_state = noisy_c(nshots=20)
 
