@@ -99,7 +99,7 @@ class BaseCircuit(object):
         self.fusion_groups = []
 
         self._final_state = None
-        self.using_density_matrix = False
+        self.density_matrix = False
         self.repeated_execution = False
 
     def __add__(self, circuit) -> "BaseCircuit":
@@ -428,6 +428,13 @@ class BaseCircuit(object):
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
     def _add(self, gate: gates.Gate):
+        if self.density_matrix:
+            gate.density_matrix = True
+        else:
+            if gate.is_channel:
+                raise_error(ValueError, "Cannot add channels on circuits that "
+                                        "use state vectors. Please switch to "
+                                        "density matrix circuit.")
         if self._final_state is not None:
             raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
                                       "executed.")

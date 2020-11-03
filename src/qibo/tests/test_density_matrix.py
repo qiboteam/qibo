@@ -280,7 +280,7 @@ def test_multiple_noise(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_reexecution(backend):
     """Test re-executing a circuit with `gates.NoiseChnanel`."""
     original_backend = qibo.get_backend()
@@ -322,8 +322,6 @@ def test_general_channel(backend):
 
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     c = models.Circuit(2, density_matrix=True)
     with pytest.raises(ValueError):
         c.add(gates.NoiseChannel(0, px=0.5).controlled_by(1))
@@ -334,39 +332,32 @@ def test_controlled_by_channel():
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
         gate = gates.GeneralChannel(config).controlled_by(1)
-    qibo.set_backend(original_backend)
 
 
 def test_krauss_operator_bad_shape():
     """Test that defining a Krauss operator with wrong shape raises error."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
         gate = gates.GeneralChannel([((0, 1), a1)])
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_gates():
     """Check that ``circuit.with_noise()`` adds the proper noise channels."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     c = models.Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
     noisy_c = c.with_noise((0.1, 0.2, 0.3))
 
     assert noisy_c.depth == 5
     assert noisy_c.ngates == 9
-    from qibo.tensorflow import gates as native_gates
     for i in [1, 2, 4, 5, 7, 8]:
-        assert isinstance(noisy_c.queue[i], native_gates.NoiseChannel)
-    qibo.set_backend(original_backend)
+        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
 
 
-def test_circuit_with_noise_execution():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_with_noise_execution(backend):
     """Check ``circuit.with_noise()`` execution."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     c = models.Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     noisy_c = c.with_noise((0.1, 0.2, 0.3))
@@ -385,10 +376,11 @@ def test_circuit_with_noise_execution():
     qibo.set_backend(original_backend)
 
 
-def test_circuit_with_noise_with_measurements():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_with_noise_with_measurements(backend):
     """Check ``circuit.with_noise() when using measurement noise."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     c = models.Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.M(0))
@@ -408,10 +400,11 @@ def test_circuit_with_noise_with_measurements():
     qibo.set_backend(original_backend)
 
 
-def test_circuit_with_noise_noise_map():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_circuit_with_noise_noise_map(backend):
     """Check ``circuit.with_noise() when giving noise map."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
                  2: (0.0, 0.0, 0.0)}
 
@@ -440,8 +433,6 @@ def test_circuit_with_noise_noise_map():
 
 def test_circuit_with_noise_noise_map_exceptions():
     """Check that proper exceptions are raised when noise map is invalid."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     c = models.Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     with pytest.raises(ValueError):
@@ -455,25 +446,22 @@ def test_circuit_with_noise_noise_map_exceptions():
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.1),
                                measurement_noise=(0.5, 0.0, 0.0))
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_exception():
     """Check that calling ``with_noise`` in a noisy circuit raises error."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
     c = models.Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
-    qibo.set_backend(original_backend)
 
 
-def test_density_matrix_measurement():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_density_matrix_measurement(backend):
     """Check measurement gate on density matrices."""
     from qibo.tests.test_measurements import assert_results
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     state = np.zeros(4)
     state[2] = 1
     rho = np.outer(state, state.conj())
@@ -491,7 +479,7 @@ def test_density_matrix_measurement():
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
     from qibo.tests.test_measurements import assert_results
@@ -531,10 +519,11 @@ def test_density_matrix_circuit_measurement(backend):
     qibo.set_backend(original_backend)
 
 
-def test_entanglement_entropy():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend(backend)
     rho = random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
     _, u = np.linalg.eigh(rho)
@@ -551,6 +540,5 @@ def test_entanglement_entropy():
     assert (eigvals >= 0).prod()
     mask = eigvals > 0
     target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
-
     np.testing.assert_allclose(final_ent, target_ent)
     qibo.set_backend(original_backend)

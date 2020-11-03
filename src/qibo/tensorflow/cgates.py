@@ -775,7 +775,6 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for p, gate in self.gates:
-            print(gate)
             new_state += p * gate(state)
             _ = gate(state) # reset to the original state vector
         return (1 - self.total_p) * state + new_state

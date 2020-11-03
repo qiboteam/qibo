@@ -243,13 +243,10 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
 
     def __init__(self, nqubits):
         super(TensorflowDensityMatrixCircuit, self).__init__(nqubits)
+        self.density_matrix = True
         self.shapes = {
             'TENSOR': 2 * self.nqubits * (2,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
         self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
                                          dtype=DTYPES.get('DTYPEINT'))
-
-    def _add(self, gate):
-        gate.density_matrix = True
-        super(TensorflowDensityMatrixCircuit, self)._add(gate)
