@@ -4,6 +4,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
+from qibo.config import get_device
 
 
 if tf.config.list_physical_devices("GPU"): # pragma: no cover
@@ -64,8 +65,4 @@ apply_fsim = custom_module.apply_fsim
 apply_swap = custom_module.apply_swap
 
 def collapse_state(state, qubits, result, nqubits, normalize=True):
-    state = custom_module.collapse_state(state, qubits, result, nqubits)
-    if normalize:
-        norm = tf.reduce_sum(tf.math.square(tf.abs(state)))
-        return state / tf.cast(tf.math.sqrt(norm), dtype=state.dtype)
-    return state
+    return custom_module.collapse_state(state, qubits, result, nqubits, normalize)
