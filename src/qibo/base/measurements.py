@@ -14,9 +14,6 @@ class GateResult:
 
     Args:
         qubits: Sorted tuple of qubit ids that the measurement gate acts on.
-        state: Reference to the tensor that holds the state that was sampled.
-            The state should have shape ``nqubits * (2,)`` if it is a state vector
-            or ``2 * nqubits * (2,)`` if it is a density matrix.
         decimal_samples: Tensor holding the measured samples in decimal
             representation. Has shape (nshots,).
         binary_samples: Tensor holding the measured samples in binary
@@ -26,11 +23,9 @@ class GateResult:
     """
 
     def __init__(self, qubits: Tuple[int],
-                 state: Optional[TensorType] = None,
                  decimal_samples: Optional[TensorType] = None,
                  binary_samples: Optional[TensorType] = None):
         self.qubits = qubits
-        self.sampled_state = state
 
         if decimal_samples is not None and binary_samples is not None:
             raise_error(ValueError, "Measurement result object cannot be created "

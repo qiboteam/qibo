@@ -242,7 +242,7 @@ class M(TensorflowGate, base_gates.M):
         if samples_only:
             return samples_dec
         return self.measurements.GateResult(
-            self.qubits, state, decimal_samples=samples_dec)
+            self.qubits, decimal_samples=samples_dec)
 
 
 class RX(MatrixGate, base_gates.RX):

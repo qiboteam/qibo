@@ -185,6 +185,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:
         """Performs ``circuit.execute``."""
+        self._final_state = None
         state = self.get_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
@@ -208,7 +209,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             samples = self.measurement_gate(state.vector, nshots, samples_only=True,
                                             is_density_matrix=self.using_density_matrix)
             self.measurement_gate_result = measurements.GateResult(
-                self.measurement_gate.qubits, state, decimal_samples=samples)
+                self.measurement_gate.qubits, decimal_samples=samples)
             result = measurements.CircuitResult(
                 self.measurement_tuples, self.measurement_gate_result)
         return result
