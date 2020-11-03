@@ -188,6 +188,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> utils.DistributedState:
         """Performs all circuit gates on the state vector."""
+        self._final_state = None
         state = self.get_initial_state(initial_state)
 
         special_gates = iter(self.queues.special_queue)
