@@ -47,11 +47,6 @@ def test_hgate_application_twoqubit(backend):
     matrix = np.kron(np.eye(2), matrix)
     initial_rho = initial_rho.reshape((4, 4))
     target_rho = matrix.dot(initial_rho).dot(matrix)
-
-    #for i, (x, y) in enumerate(zip(final_rho.ravel(), target_rho.ravel())):
-    #    print(i, x, y)
-    print(final_rho.shape)
-    print(np.trace(final_rho))
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
@@ -240,7 +235,7 @@ def test_controlled_with_effect(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_bitflip_noise(backend):
     """Test `gates.NoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()
@@ -260,26 +255,28 @@ def test_bitflip_noise(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
-def test_circuit_switch_to_density_matrix(backend):
-    """Test that using `gates.NoiseChnanel` switches vector to density matrix."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_multiple_noise(backend):
+    """Test `gates.NoiseChnanel` with multiple noise probabilities."""
+    from qibo import matrices
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.NoiseChannel(0, px=0.5))
-    c.add(gates.NoiseChannel(1, pz=0.3))
+    c.add(gates.NoiseChannel(0, px=0.5, pz=0.3))
+    c.add(gates.NoiseChannel(1, py=0.1, pz=0.3))
     final_rho = c().numpy()
 
     psi = np.ones(4) / 2
-    initial_rho = np.outer(psi, psi.conj())
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.NoiseChannel(0, px=0.5))
-    c.add(gates.NoiseChannel(1, pz=0.3))
-    target_rho = c(initial_rho).numpy()
-
-    np.testing.assert_allclose(final_rho, target_rho)
+    rho = np.outer(psi, psi.conj())
+    m1 = np.kron(matrices.X, matrices.I)
+    m2 = np.kron(matrices.Z, matrices.I)
+    rho = 0.2 * rho + 0.5 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
+    m1 = np.kron(matrices.I, matrices.Y)
+    m2 = np.kron(matrices.I, matrices.Z)
+    rho = 0.6 * rho + 0.1 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
+    np.testing.assert_allclose(final_rho, rho)
     qibo.set_backend(original_backend)
 
 

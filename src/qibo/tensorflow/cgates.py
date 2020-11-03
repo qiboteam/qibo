@@ -95,11 +95,11 @@ class TensorflowGate(base_gates.Gate):
         if self._nqubits is None:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
-    def _state_vector_call(self, state):
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.qubits_tensor, self.nqubits,
                             *self.target_qubits)
 
-    def _density_matrix_call(self, state):
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits)
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
@@ -132,7 +132,7 @@ class MatrixGate(TensorflowGate):
        return self.gate_op(state, self.matrix, self.qubits_tensor,
                            self.nqubits, *self.target_qubits)
 
-    def _density_matrix_call(self, state):
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
                              2 * self.nqubits, *self.target_qubits)
         adjmatrix = tf.math.conj(self.matrix)
@@ -172,6 +172,9 @@ class Y(TensorflowGate, base_gates.Y):
 
     def construct_unitary(self) -> np.ndarray:
         return np.array([[0, -1j], [1j, 0]], dtype=DTYPES.get('NPTYPECPX'))
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return -TensorflowGate._density_matrix_call(self, state)
 
 
 class Z(TensorflowGate, base_gates.Z):
@@ -739,23 +742,53 @@ class ProbabilisticNoiseChannel(TensorflowGate, base_gates.ProbabilisticNoiseCha
         return state
 
 
-# Density matrices are not supported by custom operators yet so channels fall
-# back to native tensorflow gates
 class TensorflowChannel(TensorflowGate):
+    """Base Tensorflow channel.
 
-    def __new__(cls, *args, **kwargs):
-        if BACKEND.get('GATES') == 'custom': # pragma: no cover
-            # future TODO
-            raise_error(NotImplementedError, "Density matrices are not supported by "
-                                      "custom operator gates.")
-        else:
-            from qibo.tensorflow import gates
-            return getattr(gates, cls.__name__)(*args, **kwargs)
+    All channels should inherit this class.
+    """
+
+    def __init__(self):
+        super(TensorflowChannel, self).__init__()
+
+    def _prepare(self):
+        if not self.density_matrix:
+            raise_error(ValueError, "Channels cannot be used with state vectors.")
+        base_cls = getattr(base_gates, self.__class__.__name__)
+        base_cls._create_gates(self)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Channels cannot be used with state vectors.")
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
+        """Loops over `self.gates` to calculate sum of Krauss operators."""
+        # abstract method
+        raise_error(NotImplementedError)
 
 
 class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
-    pass
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
+        TensorflowChannel.__init__(self)
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = tf.zeros_like(state)
+        for p, gate in self.gates:
+            print(gate)
+            new_state += p * gate(state)
+            _ = gate(state) # reset to the original state vector
+        return (1 - self.total_p) * state + new_state
 
 
-class GeneralChannel(TensorflowChannel, base_gates.NoiseChannel):
-    pass
+class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
+
+    def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
+        TensorflowChannel.__init__(self)
+        base_gates.GeneralChannel.__init__(self, A)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = tf.zeros_like(state)
+        for gate in self.gates:
+            new_state += gate(state)
+        return new_state
