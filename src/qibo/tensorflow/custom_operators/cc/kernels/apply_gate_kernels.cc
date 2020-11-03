@@ -14,6 +14,18 @@ namespace functor {
 
 using thread::ThreadPool;
 
+// Helper methods for complex numbers
+template <typename T>
+T cmult(T a, T b) {
+  return T(a.real() * b.real() - a.imag() * b.imag(),
+           a.real() * b.imag() + a.imag() * b.real());
+}
+
+template <typename T>
+T cadd(T a, T b) {
+  return T(a.real() + b.real(), a.imag() + b.imag());
+}
+
 template <typename T>
 struct BaseOneQubitGateFunctor<CPUDevice, T> {
   virtual void apply(T& state1, T& state2, const T* gate = NULL) const {}
@@ -64,17 +76,6 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     }
   }
 };
-
-template <typename T>
-T cmult(T a, T b) {
-  return T(a.real() * b.real() - a.imag() * b.imag(),
-           a.real() * b.imag() + a.imag() * b.real());
-}
-
-template <typename T>
-T cadd(T a, T b) {
-  return T(a.real() + b.real(), a.imag() + b.imag());
-}
 
 // Apply general one-qubit gate via gate matrix
 template <typename T>
@@ -229,6 +230,82 @@ struct ApplySwapFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
   }
 };
 
+// Apply Collapse gate
+template <typename T, typename NormType>
+struct CollapseStateFunctor<CPUDevice, T, NormType> {
+  void operator()(OpKernelContext* context, const CPUDevice& d, T* state,
+                  int nqubits, bool normalize, int ntargets,
+                  const int32* qubits, const int64* result) const {
+    int64 nstates = (int64)1 << (nqubits - ntargets);
+    int64 nsubstates = (int64)1 << ntargets;
+    const int64 res = result[0];
+
+    // Set multi-threading
+    auto thread_pool =
+        context->device()->tensorflow_cpu_worker_threads()->workers;
+    const int ncores = (int)thread_pool->NumThreads();
+    int64 nreps;
+    if (ncores > 1) {
+      nreps = (int64)nstates / ncores;
+    } else {
+      nreps = 1;
+    }
+    const ThreadPool::SchedulingParams p(
+        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
+
+    auto GetIndex = [&](int64 g, int64 h) {
+      int64 i = g;
+      for (auto iq = 0; iq < ntargets; iq++) {
+        const auto n = qubits[iq];
+        int64 k = (int64)1 << n;
+        i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+        i += ((int64)((int)(h >> iq) % 2) * k);
+      }
+      return i;
+    };
+
+    // Define vector that holds norms during parallel calculation
+    int nnorms = ncores + 1;
+    if (nreps > 0 && nstates / nreps > nnorms) {
+      nnorms = nstates / nreps;
+    }
+    Eigen::Matrix<NormType, Eigen::Dynamic, 1> norms(nnorms);
+    norms.setZero();
+
+    auto ZeroState = [&](int64 t, int64 w) {
+      int n = 0;
+      if (nreps > 0) {
+        n = ((int) t / nreps);
+      }
+      for (auto g = t; g < w; g++) {
+        for (auto h = 0; h < res; h++) {
+          state[GetIndex(g, h)] = 0;
+        }
+        auto x = state[GetIndex(g, res)];
+        norms[n] += x.real() * x.real() + x.imag() * x.imag();
+        for (auto h = res + 1; h < nsubstates; h++) {
+          state[GetIndex(g, h)] = 0;
+        }
+      }
+    };
+    thread_pool->ParallelFor(nstates, p, ZeroState);
+
+    if (normalize) {
+      auto norm = std::sqrt(norms.sum());
+      auto NormalizeComponent = [&](T& x) {
+        x = T(x.real() / norm, x.imag() / norm);
+      };
+      auto NormalizeState = [&](int64 t, int64 w) {
+        for (auto g = t; g < w; g++) {
+          NormalizeComponent(state[GetIndex(g, res)]);
+        }
+      };
+      thread_pool->ParallelFor(nstates, p, NormalizeState);
+    }
+  }
+};
+
+
 template <typename Device, typename T, typename F, bool UseMatrix>
 class OneQubitGateOp : public OpKernel {
  public:
@@ -306,11 +383,45 @@ class TwoQubitGateOp : public OpKernel {
   int target1_, target2_;
 };
 
+template <typename Device, typename T, typename NormType>
+class CollapseStateOp : public OpKernel {
+ public:
+  explicit CollapseStateOp(OpKernelConstruction* context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
+    OP_REQUIRES_OK(context, context->GetAttr("normalize", &normalize_));
+  }
+
+  void Compute(OpKernelContext* context) override {
+    // grab the input tensor
+    Tensor state = context->input(0);
+    const Tensor& qubits = context->input(1);
+    const Tensor& result = context->input(2);
+    // call the implementation
+    CollapseStateFunctor<Device, T, NormType>()(
+      context, context->eigen_device<Device>(), state.flat<T>().data(),
+      nqubits_, normalize_, qubits.flat<int32>().size(),
+      qubits.flat<int32>().data(), result.flat<int64>().data());
+
+    context->set_output(0, state);
+  }
+
+ private:
+   int nqubits_;
+   bool normalize_;
+};
+
+
 // Register the CPU kernels.
 #define REGISTER_CPU(T, NAME, OP, FUNCTOR, USEMATRIX)       \
   REGISTER_KERNEL_BUILDER(                                  \
       Name(NAME).Device(DEVICE_CPU).TypeConstraint<T>("T"), \
       OP<CPUDevice, T, FUNCTOR<CPUDevice, T>, USEMATRIX>);
+
+// Register Collapse state CPU kernel.
+#define REGISTER_COLLAPSE_CPU(T, NT)                                   \
+  REGISTER_KERNEL_BUILDER(                                             \
+      Name("CollapseState").Device(DEVICE_CPU).TypeConstraint<T>("T"), \
+      CollapseStateOp<CPUDevice, T, NT>);
 
 // Register one-qubit gate kernels.
 #if GOOGLE_CUDA
@@ -321,6 +432,13 @@ class TwoQubitGateOp : public OpKernel {
   REGISTER_KERNEL_BUILDER(                                  \
       Name(NAME).Device(DEVICE_GPU).TypeConstraint<T>("T"), \
       OP<GPUDevice, T, FUNCTOR<GPUDevice, T>, USEMATRIX>);
+
+// Register Collapse state GPU kernel.
+#define REGISTER_COLLAPSE_GPU(T, NT)                                    \
+  extern template struct CollapseStateFunctor<GPUDevice, T, NT>;        \
+    REGISTER_KERNEL_BUILDER(                                            \
+      Name("CollapseState").Device(DEVICE_GPU).TypeConstraint<T>("T"),  \
+      CollapseStateOp<GPUDevice, T, NT>);
 
 #define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                   \
   REGISTER_CPU(complex64, NAME, OneQubitGateOp, FUNCTOR, USEMATRIX);  \
@@ -335,6 +453,12 @@ class TwoQubitGateOp : public OpKernel {
   REGISTER_GPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);  \
   REGISTER_GPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
+#define REGISTER_COLLAPSE()                   \
+  REGISTER_COLLAPSE_CPU(complex64, float);    \
+  REGISTER_COLLAPSE_CPU(complex128, double);  \
+  REGISTER_COLLAPSE_GPU(complex64, float);    \
+  REGISTER_COLLAPSE_GPU(complex128, double);
+
 #else
 
 #define REGISTER_ONEQUBIT(NAME, FUNCTOR, USEMATRIX)                  \
@@ -346,6 +470,10 @@ class TwoQubitGateOp : public OpKernel {
   REGISTER_CPU(complex64, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX); \
   REGISTER_CPU(complex128, NAME, TwoQubitGateOp, FUNCTOR, USEMATRIX);
 
+#define REGISTER_COLLAPSE()                    \
+  REGISTER_COLLAPSE_CPU(complex64, float);     \
+  REGISTER_COLLAPSE_CPU(complex128, double);
+
 #endif
 
 REGISTER_ONEQUBIT("ApplyGate", ApplyGateFunctor, true);
@@ -356,5 +484,6 @@ REGISTER_ONEQUBIT("ApplyZ", ApplyZFunctor, false);
 REGISTER_TWOQUBIT("ApplyTwoQubitGate", ApplyTwoQubitGateFunctor, true);
 REGISTER_TWOQUBIT("ApplyFsim", ApplyFsimFunctor, true);
 REGISTER_TWOQUBIT("ApplySwap", ApplySwapFunctor, false);
+REGISTER_COLLAPSE();
 }  // namespace functor
 }  // namespace tensorflow
