@@ -554,6 +554,7 @@ __global__ void CalculateCollapsedNormKernel(T* state, NormType* norms,
   const auto tid = threadIdx.x;
   const auto stride = blockDim.x;
   const long result = results[0];
+  norms[tid] = 0;
 
   for (auto g = tid; g < nstates; g += stride) {
     auto x = state[GetIndex(g, result, qubits, ntargets)];
@@ -597,7 +598,7 @@ __global__ void NormalizeCollapsedStateKernel(T* state, NormType* norms,
 // Collapse state gate
 template <typename T, typename NormType>
 struct CollapseStateFunctor<GPUDevice, T, NormType> {
-  void operator()(const OpKernelContext* context, const GPUDevice& d, T* state,
+  void operator()(OpKernelContext* context, const GPUDevice& d, T* state,
                   int nqubits, bool normalize, int ntargets,
                   const int32* qubits, const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
@@ -612,9 +613,14 @@ struct CollapseStateFunctor<GPUDevice, T, NormType> {
         state, qubits, result, ntargets);
 
     if (normalize) {
-      NormType *block_norms, *norms;
-      cudaMalloc((void**)&block_norms, sizeof(NormType) * blockSize);
-      cudaMalloc((void**)&norms, sizeof(NormType));
+      // allocates support arrays on GPU
+      Tensor tensor_norms, tensor_block_norms;
+      TensorShape tensor_norms_shape{1}, tensor_block_norms_shape{blockSize};
+      const auto dtype = std::is_same<NormType, double>::value ? DT_DOUBLE : DT_FLOAT;
+      OP_REQUIRES_OK(context, context->allocate_temp(dtype, tensor_norms_shape, &tensor_norms));
+      OP_REQUIRES_OK(context, context->allocate_temp(dtype, tensor_block_norms_shape, &tensor_block_norms));
+      auto norms = tensor_norms.flat<NormType>().data();
+      auto block_norms = tensor_block_norms.flat<NormType>().data();
 
       CalculateCollapsedNormKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
         state, block_norms, qubits, result, nstates, ntargets);
@@ -622,11 +628,6 @@ struct CollapseStateFunctor<GPUDevice, T, NormType> {
         block_norms, norms);
       NormalizeCollapsedStateKernel<T, NormType><<<numBlocks, blockSize, 0, d.stream()>>>(
         state, norms, qubits, result, nstates, ntargets);
-
-      // if we use ``cudaFree`` here the custom operator fails if it is used
-      // twice in the same script
-      //cudaFree(block_norms);
-      //cudaFree(norms);
     }
   }
 };

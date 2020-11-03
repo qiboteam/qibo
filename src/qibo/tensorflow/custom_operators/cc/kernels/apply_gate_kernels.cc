@@ -233,7 +233,7 @@ struct ApplySwapFunctor<CPUDevice, T> : BaseTwoQubitGateFunctor<CPUDevice, T> {
 // Apply Collapse gate
 template <typename T, typename NormType>
 struct CollapseStateFunctor<CPUDevice, T, NormType> {
-  void operator()(const OpKernelContext* context, const CPUDevice& d, T* state,
+  void operator()(OpKernelContext* context, const CPUDevice& d, T* state,
                   int nqubits, bool normalize, int ntargets,
                   const int32* qubits, const int64* result) const {
     int64 nstates = (int64)1 << (nqubits - ntargets);
