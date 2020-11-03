@@ -15,31 +15,45 @@ class Circuit(DistributedCircuit):
     Creates both normal and distributed circuits.
     """
 
+    @classmethod
+    def _constructor(cls, *args, **kwargs):
+        if kwargs["density_matrix"]:
+            if kwargs["accelerators"] is not None:
+                raise_error(NotImplementedError,
+                            "Distributed circuits are not implemented for "
+                            "density matrices.")
+            circuit_cls = DensityMatrixCircuit
+            kwargs = {}
+        elif kwargs["accelerators"] is None:
+            circuit_cls = StateCircuit
+            kwargs = {}
+        else:
+            circuit_cls = DistributedCircuit
+            kwargs.pop("density_matrix")
+        return circuit_cls, args, kwargs
+
     def __new__(cls, nqubits: int,
                 accelerators: Optional[Dict[str, int]] = None,
                 memory_device: str = "/CPU:0",
                 density_matrix: bool = False):
-        if density_matrix:
-            if accelerators is not None:
-                raise_error(NotImplementedError,
-                            "Distributed circuits are not implemented for "
-                            "density matrices.")
-            return DensityMatrixCircuit(nqubits)
-        if accelerators is None:
-            return StateCircuit(nqubits)
-        else:
-            return DistributedCircuit(nqubits, accelerators, memory_device)
+        circuit_cls, args, kwargs = cls._constructor(
+                  nqubits, accelerators=accelerators,
+                  memory_device=memory_device,
+                  density_matrix=density_matrix
+                )
+        return circuit_cls(*args, **kwargs)
 
     @classmethod
     def from_qasm(cls, qasm_code: str,
                   accelerators: Optional[Dict[str, int]] = None,
-                  memory_device: str = "/CPU:0"):
-      if accelerators is None:
-          return StateCircuit.from_qasm(qasm_code)
-      else:
-          return DistributedCircuit.from_qasm(qasm_code,
-                                              accelerators=accelerators,
-                                              memory_device=memory_device)
+                  memory_device: str = "/CPU:0",
+                  density_matrix: bool = False):
+      circuit_cls, args, kwargs = cls._constructor(
+                qasm_code, accelerators=accelerators,
+                memory_device=memory_device,
+                density_matrix=density_matrix
+              )
+      return circuit_cls.from_qasm(*args, **kwargs)
 
 
 def QFT(nqubits: int, with_swaps: bool = True,
