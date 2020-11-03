@@ -161,6 +161,32 @@ class I(TensorflowGate, base_gates.I):
         return state
 
 
+class Collapse(TensorflowGate, base_gates.Collapse):
+
+    def __init__(self, *q: int, result: List[int] = 0):
+        base_gates.Collapse.__init__(self, *q, result=result)
+        TensorflowGate.__init__(self)
+        self.result_tensor = None
+
+    @staticmethod
+    def _result_to_list(res):
+        if isinstance(res, np.ndarray):
+            return list(res.astype(np.int))
+        if isinstance(res, tf.Tensor):
+            return list(res.numpy().astype(np.int))
+        return list(res)
+
+    def _prepare(self):
+        n = len(self.result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
+        self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
+
+    def __call__(self, state: tf.Tensor, is_density_matrix: bool = False):
+        TensorflowGate.__call__(self, state, is_density_matrix)
+        return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
+                                 self.nqubits, self.normalize)
+
+
 class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 

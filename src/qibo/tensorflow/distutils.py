@@ -288,6 +288,8 @@ class DistributedQueues(DistributedBase):
             then ``transform` should be used to obtain a compatible queue.
         """
         for gate in queue:
+            is_collapse = isinstance(gate, gates.Collapse)
+
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
                 self.special_queue.append(gate)
@@ -319,6 +321,10 @@ class DistributedQueues(DistributedBase):
                     # device otherwise device parallelization will break
                     devgate.device = device
                     devgate.nqubits = self.nlocal
+                    if is_collapse:
+                        # For ``Collapse`` gates we have to skip the
+                        # normalization step in each device
+                        devgate.normalize = False
 
                     for i in ids:
                         flag = True
@@ -335,6 +341,12 @@ class DistributedQueues(DistributedBase):
                             self.queues[-1][i].append(devgate)
                             if isinstance(gate, gates.ParametrizedGate):
                                 gate.device_gates.add(devgate)
+
+            if is_collapse:
+                # and normalize  the full state on CPU by adding a
+                # special gate
+                self.special_queue.append("normalize")
+                self.queues.append([])
 
 
 class DistributedState(DistributedBase):

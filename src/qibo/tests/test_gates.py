@@ -1281,3 +1281,105 @@ def test_variational_layer_dagger(backend, nqubits):
     final_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits,targets,results,oncircuit",
+                         [(2, [1], [0], False),
+                          (3, [1], 0, True),
+                          (4, [1, 3], [0, 1], True),
+                          (5, [0, 3, 4], [1, 1, 0], False),
+                          (6, [1, 3], np.ones(2, dtype=np.int), True)])
+def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(nqubits)
+    if oncircuit:
+        c = Circuit(nqubits)
+        c.add(gates.Collapse(*targets, result=results))
+        final_state = c(np.copy(initial_state)).numpy()
+    else:
+        collapse = gates.Collapse(*targets, result=results)
+        if backend == "custom":
+            final_state = collapse(np.copy(initial_state)).numpy()
+        else:
+            original_shape = initial_state.shape
+            new_shape = nqubits * (2,)
+            final_state = collapse(np.copy(initial_state).reshape(new_shape))
+            final_state = final_state.numpy().reshape(original_shape)
+
+    if isinstance(results, int):
+        results = nqubits * [results]
+    slicer = nqubits * [slice(None)]
+    for t, r in zip(targets, results):
+        slicer[t] = r
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("accelerators",
+                         [None, {"/GPU:0": 1, "/GPU:1": 1},
+                          {"GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}])
+@pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
+def test_collapse_gate_distributed(accelerators, nqubits, targets):
+    initial_state = utils.random_numpy_state(nqubits)
+    c = Circuit(nqubits, accelerators)
+    c.add(gates.Collapse(*targets))
+    final_state = c(np.copy(initial_state)).numpy()
+
+    slicer = nqubits * [slice(None)]
+    for t in targets:
+        slicer[t] = 0
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_after_measurement(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    qubits = [0, 2, 3]
+
+    c1 = Circuit(5)
+    c1.add((gates.H(i) for i in range(5)))
+    c1.add(gates.M(*qubits))
+    result = c1(nshots=1)
+    c2 = Circuit(5)
+    bitstring = result.samples(binary=True)[0]
+    c2.add(gates.Collapse(*qubits, result=bitstring))
+    c2.add((gates.H(i) for i in range(5)))
+    final_state = c2(initial_state=c1.final_state)
+
+    ct = Circuit(5)
+    for i, r in zip(qubits, bitstring.numpy()):
+        if r:
+            ct.add(gates.X(i))
+    ct.add((gates.H(i) for i in qubits))
+    target_state = ct()
+    np.testing.assert_allclose(final_state, target_state, atol=1e-15)
+    qibo.set_backend(original_backend)
+
+
+def test_collapse_gate_errors():
+    # pass wrong result length
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 1, 0])
+    # pass wrong result values
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 2])
+    # change result after creation
+    gate = gates.Collapse(2, 0, result=[0, 0])
+    gate.nqubits = 4
+    gate.result = np.ones(2, dtype=np.int)
