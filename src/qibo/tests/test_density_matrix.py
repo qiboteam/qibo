@@ -296,7 +296,7 @@ def test_circuit_reexecution(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _EINSUM_BACKENDS)
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_general_channel(backend):
     """Test `gates.GeneralChannel`."""
     original_backend = qibo.get_backend()

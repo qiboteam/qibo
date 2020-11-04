@@ -1593,6 +1593,52 @@ class VariationalLayer(ParametrizedGate):
                                 "``VariationalLayer``.")
 
 
+class Flatten(Gate):
+    """Passes an arbitrary state vector in the circuit.
+
+    Args:
+        coefficients (list): list of the target state vector components.
+            This can also be a tensor supported by the backend.
+    """
+
+    def __init__(self, coefficients):
+        super(Flatten, self).__init__()
+        self.name = "Flatten"
+        self.coefficients = coefficients
+        self.init_args = [coefficients]
+        self.is_special_gate = True
+
+    def on_qubits(self, *q):
+        raise_error(NotImplementedError,
+                    "Cannot use `Flatten` gate on subroutine.")
+
+
+class CallbackGate(Gate):
+    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
+
+    This gate performs the callback calulation without affecting the state vector.
+
+    Args:
+        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
+    """
+
+    def __init__(self, callback: "Callback"):
+        super(CallbackGate, self).__init__()
+        self.name = callback.__class__.__name__
+        self.callback = callback
+        self.init_args = [callback]
+        self.is_special_gate = True
+
+    def on_qubits(self, *q):
+        raise_error(NotImplementedError,
+                    "Cannot use `CallbackGate` on subroutine.")
+
+    @Gate.nqubits.setter
+    def nqubits(self, n: int):
+        Gate.nqubits.fset(self, n) # pylint: disable=no-member
+        self.callback.nqubits = n
+
+
 class _AbstractChannel(Gate):
     """Abstract class for channels.
 
@@ -1740,6 +1786,8 @@ class GeneralChannel(_AbstractChannel):
             if create_gates:
                 gatelist.append(self.module.Unitary(matrix, *list(qubits)))
                 gatelist[-1].density_matrix = True
+                gatelist[-1].device = self.device
+                gatelist[-1].nqubits = self.nqubits
         return tuple(gatelist)
 
     def _create_gates(self):
@@ -1750,49 +1798,3 @@ class GeneralChannel(_AbstractChannel):
         # future TODO
         raise_error(NotImplementedError, "`on_qubits` method is not available "
                                          "for the `GeneralChannel` gate.")
-
-
-class Flatten(Gate):
-    """Passes an arbitrary state vector in the circuit.
-
-    Args:
-        coefficients (list): list of the target state vector components.
-            This can also be a tensor supported by the backend.
-    """
-
-    def __init__(self, coefficients):
-        super(Flatten, self).__init__()
-        self.name = "Flatten"
-        self.coefficients = coefficients
-        self.init_args = [coefficients]
-        self.is_special_gate = True
-
-    def on_qubits(self, *q):
-        raise_error(NotImplementedError,
-                    "Cannot use `Flatten` gate on subroutine.")
-
-
-class CallbackGate(Gate):
-    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
-
-    This gate performs the callback calulation without affecting the state vector.
-
-    Args:
-        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
-    """
-
-    def __init__(self, callback: "Callback"):
-        super(CallbackGate, self).__init__()
-        self.name = callback.__class__.__name__
-        self.callback = callback
-        self.init_args = [callback]
-        self.is_special_gate = True
-
-    def on_qubits(self, *q):
-        raise_error(NotImplementedError,
-                    "Cannot use `CallbackGate` on subroutine.")
-
-    @Gate.nqubits.setter
-    def nqubits(self, n: int):
-        Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        self.callback.nqubits = n

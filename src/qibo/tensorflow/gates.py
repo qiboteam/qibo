@@ -522,7 +522,10 @@ class TensorflowChannel(TensorflowGate):
         base_cls = getattr(base_gates, self.__class__.__name__)
         base_cls._create_gates(self)
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Channels cannot be used on state vectors.")
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         if self._nqubits is None:
             self.nqubits = len(tuple(state.shape)) // 2
         return self._krauss_sum(state)

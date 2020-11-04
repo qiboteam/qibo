@@ -753,12 +753,12 @@ class TensorflowChannel(TensorflowGate):
 
     def _prepare(self):
         if not self.density_matrix:
-            raise_error(ValueError, "Channels cannot be used with state vectors.")
+            raise_error(ValueError, "Channels cannot be used on state vectors.")
         base_cls = getattr(base_gates, self.__class__.__name__)
         base_cls._create_gates(self)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "Channels cannot be used with state vectors.")
+        raise_error(ValueError, "Channels cannot be used on state vectors.")
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         """Loops over `self.gates` to calculate sum of Krauss operators."""
@@ -776,7 +776,7 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
         new_state = tf.zeros_like(state)
         for p, gate in self.gates:
             new_state += p * gate(state)
-            _ = gate(state) # reset to the original state vector
+            gate(state) # reset to the original state vector
         return (1 - self.total_p) * state + new_state
 
 
@@ -785,9 +785,31 @@ class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
     def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
         TensorflowChannel.__init__(self)
         base_gates.GeneralChannel.__init__(self, A)
+        self.dagger_gates = tuple()
+
+    @staticmethod
+    def _invert(gate):
+        """Creates invert gates of each Ak to reset to the original state."""
+        matrix = gate.parameter
+        if isinstance(matrix, np.ndarray):
+            inv_matrix = np.linalg.inv(matrix)
+        elif isinstance(matrix, tf.Tensor):
+            inv_matrix = np.linalg.inv(matrix)
+        inv_gate = Unitary(inv_matrix, *gate.target_qubits)
+        inv_gate.density_matrix = True
+        inv_gate.device = gate.device
+        inv_gate.nqubits = gate.nqubits
+        return inv_gate
+
+    def _prepare(self):
+        TensorflowChannel._prepare(self)
+        # create invert gates for resetting to the original state vector
+        self.inv_gates = tuple(self._invert(gate) for gate in self.gates)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
-        for gate in self.gates:
+        assert len(self.gates) == len(self.inv_gates)
+        for gate, inv_gate in zip(self.gates, self.inv_gates):
             new_state += gate(state)
+            inv_gate(state)
         return new_state
