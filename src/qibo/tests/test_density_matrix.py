@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import qibo
 from qibo import models, gates, callbacks
-from qibo.tests.utils import random_density_matrix
+from qibo.tests.utils import random_density_matrix, random_numpy_state
 # use native gates in this test because density matrices are not
 # supported by custom gate kernels.
 
@@ -13,25 +13,8 @@ _atol = 1e-8
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_xgate_application_onequbit(backend):
-    """Check applying one qubit gate to one qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = random_density_matrix(1)
-    gate = gates.X(0)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho)).numpy()
-
-    pauliX = np.array([[0, 1], [1, 0]])
-    target_rho = pauliX.dot(initial_rho).dot(pauliX)
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_hgate_application_twoqubit(backend):
-    """Check applying one qubit gate to two qubit density matrix."""
+    """Check applying H gate to two qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(2)
@@ -69,6 +52,59 @@ def test_rygate_application_twoqubit(backend):
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("gatename,gatekwargs",
+                         [("H", {}), ("X", {}), ("Y", {}), ("Z", {}), ("I", {}),
+                          ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
+                          ("RZ", {"theta": 0.123}), ("U1", {"theta": 0.123}),
+                          ("ZPow", {"theta": 0.123}),
+                          ("U2", {"phi": 0.123, "lam": 0.321}),
+                          ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123})])
+def test_one_qubit_gates(backend, gatename, gatekwargs):
+    """Check applying one qubit gates to one qubit density matrix."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = random_numpy_state(1)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    circuit = models.Circuit(1, density_matrix=True)
+    circuit.add(getattr(gates, gatename)(0, **gatekwargs))
+    final_rho = circuit(np.copy(initial_rho)).numpy()
+
+    circuit = models.Circuit(1)
+    circuit.add(getattr(gates, gatename)(0, **gatekwargs))
+    target_psi = circuit(np.copy(initial_psi)).numpy()
+    target_rho = np.outer(target_psi, target_psi.conj())
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("gatename,gatekwargs",
+                         [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
+                          ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
+                          ("CRZ", {"theta": 0.123}), ("CU1", {"theta": 0.123}),
+                          ("CZPow", {"theta": 0.123}),
+                          ("CU2", {"phi": 0.123, "lam": 0.321}),
+                          ("CU3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
+                          ("fSim", {"theta": 0.123, "phi": 0.543})])
+def test_two_qubit_gates(backend, gatename, gatekwargs):
+    """Check applying two qubit gates to two qubit density matrix."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = random_numpy_state(2)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    circuit = models.Circuit(2, density_matrix=True)
+    circuit.add(getattr(gates, gatename)(1, 0, **gatekwargs))
+    final_rho = circuit(np.copy(initial_rho)).numpy()
+
+    circuit = models.Circuit(2)
+    circuit.add(getattr(gates, gatename)(1, 0, **gatekwargs))
+    target_psi = circuit(np.copy(initial_psi)).numpy()
+    target_rho = np.outer(target_psi, target_psi.conj())
+    np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
 
@@ -136,30 +172,6 @@ def test_circuit_dm(backend):
     target_rho = m1.dot(initial_rho).dot(m1.T.conj())
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_circuit_dm2(backend):
-    """Check passing density matrix as initial state to circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    theta = 0.1234
-    initial_rho = random_density_matrix(3)
-
-    c = models.Circuit(3, density_matrix=True)
-    c.add(gates.X(2))
-    c.add(gates.CU1(0, 1, theta=theta))
-    final_rho = c(np.copy(initial_rho)).numpy().reshape(initial_rho.shape)
-
-    m1 = np.kron(np.eye(4), np.array([[0, 1], [1, 0]]))
-    m2 = np.eye(4, dtype=np.complex128)
-    m2[3, 3] = np.exp(1j * theta)
-    m2 = np.kron(m2, np.eye(2))
-    target_rho = m1.dot(initial_rho).dot(m1)
-    target_rho = m2.dot(target_rho).dot(m2.T.conj())
 
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
