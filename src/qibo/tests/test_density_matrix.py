@@ -105,6 +105,25 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_toffoli_gate(backend):
+    """Check applying Toffoli to three qubit density matrix."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = utils.random_numpy_state(3)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    circuit = models.Circuit(3, density_matrix=True)
+    circuit.add(gates.TOFFOLI(0, 2, 1))
+    final_rho = circuit(np.copy(initial_rho)).numpy()
+
+    circuit = models.Circuit(3)
+    circuit.add(gates.TOFFOLI(0, 2, 1))
+    target_psi = circuit(np.copy(initial_psi)).numpy()
+    target_rho = np.outer(target_psi, target_psi.conj())
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
 def test_unitary_gate(backend, nqubits):
     """Check applying `gates.Unitary` to density matrix."""
@@ -200,29 +219,6 @@ def test_circuit_dm(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_controlled_by_simple(backend):
-    """Check controlled_by method on gate."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    psi = np.zeros(4)
-    psi[0] = 1
-    initial_rho = np.outer(psi, psi.conj())
-
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.Y(1).controlled_by(0))
-    final_rho = c(np.copy(initial_rho)).numpy()
-
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.Y(1))
-    target_rho = c(np.copy(initial_rho)).numpy()
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
     original_backend = qibo.get_backend()
@@ -265,6 +261,28 @@ def test_controlled_with_effect(backend):
     c.add(gates.SWAP(1, 3))
     target_rho = c(np.copy(initial_rho)).numpy()
 
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_controlled_by_random(backend, nqubits):
+    """Check controlled_by method on gate."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = utils.random_numpy_state(nqubits)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add(gates.RX(1, theta=0.789).controlled_by(2))
+    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
+    final_rho = c(np.copy(initial_rho)).numpy()
+
+    c = models.Circuit(nqubits)
+    c.add(gates.RX(1, theta=0.789).controlled_by(2))
+    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
+    target_psi = c(np.copy(initial_psi)).numpy()
+    target_rho = np.outer(target_psi, target_psi.conj())
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 

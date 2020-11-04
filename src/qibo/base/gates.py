@@ -53,6 +53,10 @@ class Gate(object):
         self.device_gates = set()
         self.original_gate = None
 
+        # Using density matrices or state vectors
+        self._density_matrix = False
+        self._active_call = "_state_vector_call"
+
         config.ALLOW_SWITCHERS = False
 
     @property
@@ -125,6 +129,22 @@ class Gate(object):
         if common:
             raise_error(ValueError, "{} qubits are both targets and controls for "
                                     "gate {}.".format(common, self.name))
+
+    @property
+    def density_matrix(self) -> bool:
+        return self._density_matrix
+
+    @density_matrix.setter
+    def density_matrix(self, x: bool):
+        if self._nqubits is not None:
+            raise_error(RuntimeError,
+                        "Density matrix mode cannot be switched after "
+                        "preparing the gate for execution.")
+        self._density_matrix = x
+        if x:
+            self._active_call = "_density_matrix_call"
+        else:
+            self._active_call = "_state_vector_call"
 
     @property
     def nqubits(self) -> int:
@@ -309,8 +329,18 @@ class Gate(object):
         # original gate
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
+    def _state_vector_call(self, state): # pragma: no cover
+        """Acts with the gate on a given state vector."""
+        # abstract method
+        raise_error(NotImplementedError)
+
+    def _density_matrix_call(self, state): # pragma: no cover
+        """Acts with the gate on a given density matrix."""
+        # abstract method
+        raise_error(NotImplementedError)
+
     def __call__(self, state): # pragma: no cover
-        """Acts with the gate on a given state vector:
+        """Acts with the gate on a given state vector or density matrix.
 
         Args:
             state: Input state vector.

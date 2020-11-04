@@ -29,21 +29,6 @@ class TensorflowGate(base_gates.Gate):
         self.matrix = None
         # Einsum backend
         self.einsum = BACKEND.get('EINSUM')
-        # Using density matrices or state vectors
-        self._density_matrix = False
-        self._active_call = "_state_vector_call"
-
-    @property
-    def density_matrix(self) -> bool:
-        return self._density_matrix
-
-    @density_matrix.setter
-    def density_matrix(self, x: bool):
-        self._density_matrix = x
-        if x:
-            self._active_call = "_density_matrix_call"
-        else:
-            self._active_call = "_state_vector_call"
 
     def _prepare(self):
         matrix = self.construct_unitary()
@@ -73,6 +58,9 @@ class TensorflowGate(base_gates.Gate):
         """
         base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
         if self.is_controlled_by:
+            if self.density_matrix:
+                from qibo.tensorflow import einsum
+                self.einsum = einsum.DefaultEinsum()             
             self.control_cache = cache.ControlCache(self)
             nactive = n - len(self.control_qubits)
             targets = self.control_cache.targets

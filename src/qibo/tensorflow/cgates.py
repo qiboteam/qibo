@@ -35,22 +35,6 @@ class TensorflowGate(base_gates.Gate):
         self.qubits_tensor_dm = None
         self.target_qubits_dm = None
 
-    @property
-    def density_matrix(self) -> bool:
-        return self._density_matrix
-
-    @density_matrix.setter
-    def density_matrix(self, x: bool):
-        if self.qubits_tensor is not None:
-            raise_error(RuntimeError,
-                        "Density matrix mode cannot be switched after "
-                        "preparing the gate for execution.")
-        self._density_matrix = x
-        if x:
-            self._active_call = "_density_matrix_call"
-        else:
-            self._active_call = "_state_vector_call"
-
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
