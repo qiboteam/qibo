@@ -288,6 +288,24 @@ def test_controlled_by_random(backend, nqubits):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_density_matrix_circuit_initial_state(backend):
+    """Check that circuit transforms state vector initial state to density matrix."""
+    import tensorflow as tf
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = utils.random_numpy_state(3)
+    c = models.Circuit(3, density_matrix=True)
+    final_rho = c(np.copy(initial_psi))
+    target_rho = np.outer(initial_psi, initial_psi.conj())
+    np.testing.assert_allclose(final_rho, target_rho)
+
+    initial_psi = tf.cast(initial_psi, dtype=final_rho.dtype)
+    final_rho = c(initial_psi)
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_bitflip_noise(backend):
     """Test `gates.NoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()

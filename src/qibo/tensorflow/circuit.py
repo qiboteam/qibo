@@ -215,8 +215,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                     "".format(shape, self.nqubits))
 
     def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
-        if self.check_initial_state_shape:
-            self._check_initial_shape(state)
         if isinstance(state, tf.Tensor):
             return state
         elif isinstance(state, np.ndarray):
@@ -236,7 +234,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """"""
         if state is None:
             return self._default_initial_state()
-        return self._cast_initial_state(state)
+        state = self._cast_initial_state(state)
+        if self.check_initial_state_shape:
+            self._check_initial_shape(state)
+        return state
 
 
 class TensorflowDensityMatrixCircuit(TensorflowCircuit):
