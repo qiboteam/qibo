@@ -2,13 +2,9 @@ import numpy as np
 import pytest
 import qibo
 from qibo import models, gates, callbacks
-from qibo.tests.utils import random_density_matrix, random_numpy_state
-# use native gates in this test because density matrices are not
-# supported by custom gate kernels.
-
+from qibo.tests import utils
 
 _BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
-_EINSUM_BACKENDS = ["defaulteinsum", "matmuleinsum"]
 _atol = 1e-8
 
 
@@ -17,7 +13,7 @@ def test_hgate_application_twoqubit(backend):
     """Check applying H gate to two qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_rho = random_density_matrix(2)
+    initial_rho = utils.random_density_matrix(2)
     gate = gates.H(1)
     gate.density_matrix = True
     if backend == "custom":
@@ -40,7 +36,7 @@ def test_rygate_application_twoqubit(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    initial_rho = random_density_matrix(1)
+    initial_rho = utils.random_density_matrix(1)
 
     gate = gates.RY(0, theta=theta)
     gate.density_matrix = True
@@ -67,7 +63,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     """Check applying one qubit gates to one qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_psi = random_numpy_state(1)
+    initial_psi = utils.random_numpy_state(1)
     initial_rho = np.outer(initial_psi, initial_psi.conj())
     circuit = models.Circuit(1, density_matrix=True)
     circuit.add(getattr(gates, gatename)(0, **gatekwargs))
@@ -94,7 +90,7 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     """Check applying two qubit gates to two qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_psi = random_numpy_state(2)
+    initial_psi = utils.random_numpy_state(2)
     initial_rho = np.outer(initial_psi, initial_psi.conj())
     circuit = models.Circuit(2, density_matrix=True)
     circuit.add(getattr(gates, gatename)(1, 0, **gatekwargs))
@@ -109,13 +105,39 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [1, 2, 3])
+def test_unitary_gate(backend, nqubits):
+    """Check applying `gates.Unitary` to density matrix."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    shape = 2 * (2 ** nqubits,)
+    matrix = utils.random_numpy_complex(shape)
+    initial_psi = utils.random_numpy_state(nqubits)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    circuit = models.Circuit(nqubits, density_matrix=True)
+    if backend == "custom" and nqubits > 2:
+        with pytest.raises(NotImplementedError):
+            circuit.add(gates.Unitary(matrix, *range(nqubits)))
+    else:
+        circuit.add(gates.Unitary(matrix, *range(nqubits)))
+        final_rho = circuit(np.copy(initial_rho)).numpy()
+
+        circuit = models.Circuit(nqubits)
+        circuit.add(gates.Unitary(matrix, *range(nqubits)))
+        target_psi = circuit(np.copy(initial_psi)).numpy()
+        target_rho = np.outer(target_psi, target_psi.conj())
+        np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_cu1gate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
     nqubits = 3
-    initial_rho = random_density_matrix(nqubits)
+    initial_rho = utils.random_density_matrix(nqubits)
 
     gate = gates.CU1(0, 1, theta=theta)
     gate.density_matrix = True
@@ -139,7 +161,7 @@ def test_flatten_density_matrix(backend):
     """Check ``Flatten`` gate works with density matrices."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    target_rho = random_density_matrix(3)
+    target_rho = utils.random_density_matrix(3)
     initial_rho = np.zeros(6 * (2,))
     gate = gates.Flatten(target_rho)
     gate.density_matrix = True
@@ -154,7 +176,7 @@ def test_circuit_dm(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    initial_rho = random_density_matrix(3)
+    initial_rho = utils.random_density_matrix(3)
 
     c = models.Circuit(3, density_matrix=True)
     c.add(gates.H(0))
@@ -252,7 +274,7 @@ def test_bitflip_noise(backend):
     """Test `gates.NoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_rho = random_density_matrix(2)
+    initial_rho = utils.random_density_matrix(2)
 
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.NoiseChannel(1, px=0.3))
@@ -313,7 +335,7 @@ def test_general_channel(backend):
     """Test `gates.GeneralChannel`."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_rho = random_density_matrix(2)
+    initial_rho = utils.random_density_matrix(2)
 
     c = models.Circuit(2, density_matrix=True)
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
@@ -536,7 +558,7 @@ def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    rho = random_density_matrix(4)
+    rho = utils.random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
     _, u = np.linalg.eigh(rho)
     rho = u.dot(np.diag(5 * np.random.random(u.shape[0]))).dot(u.conj().T)
