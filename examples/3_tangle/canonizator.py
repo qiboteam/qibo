@@ -13,7 +13,7 @@ def ansatz(p=0):
       Returns:
         Qibo circuit implementing the variational ansatz.
     """
-    C = Circuit(3)
+    C = Circuit(3, density_matrix=p > 0)
     for i in range(3):
         C.add(gates.RZ(i, theta=0))
         C.add(gates.RY(i, theta=0))

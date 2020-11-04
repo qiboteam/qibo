@@ -215,6 +215,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                     "".format(shape, self.nqubits))
 
     def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+        if self.check_initial_state_shape:
+            self._check_initial_shape(state)
         if isinstance(state, tf.Tensor):
             return state
         elif isinstance(state, np.ndarray):
@@ -234,8 +236,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """"""
         if state is None:
             return self._default_initial_state()
-        if self.check_initial_state_shape:
-            self._check_initial_shape(state)
         return self._cast_initial_state(state)
 
 
@@ -246,7 +246,18 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
         self.density_matrix = True
         self.shapes = {
             'TENSOR': 2 * self.nqubits * (2,),
+            'VECTOR': (2 ** nqubits,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
         self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
                                          dtype=DTYPES.get('DTYPEINT'))
+
+    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+        # Allow using state vectors as initial states but transform them
+        # to the equivalent density matrix
+        if tuple(state.shape) == self.shapes['VECTOR']:
+            if isinstance(state, tf.Tensor):
+                state = tf.tensordot(state, tf.math.conj(state), axes=0)
+            elif isinstance(state, np.ndarray):
+                state = np.outer(state, state.conj())
+        return TensorflowCircuit._cast_initial_state(self, state)
