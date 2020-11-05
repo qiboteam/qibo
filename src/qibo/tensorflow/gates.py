@@ -60,7 +60,7 @@ class TensorflowGate(base_gates.Gate):
         if self.is_controlled_by:
             if self.density_matrix:
                 from qibo.tensorflow import einsum
-                self.einsum = einsum.DefaultEinsum()             
+                self.einsum = einsum.DefaultEinsum()
             self.control_cache = cache.ControlCache(self)
             nactive = n - len(self.control_qubits)
             targets = self.control_cache.targets
@@ -195,6 +195,9 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return Collapse._result_to_list(res)
 
     def _prepare(self):
+        if self.density_matrix:
+            raise_error(NotImplementedError,
+                        "Collapse gate is not implemented for density matrices.")
         self.order = list(self.sorted_qubits)
         self.order.extend((q for q in range(self.nqubits)
                            if q not in self.sorted_qubits))
@@ -507,8 +510,8 @@ class TensorflowChannel(TensorflowGate):
         super(TensorflowChannel, self).__init__()
 
     def _prepare(self):
-        base_cls = getattr(base_gates, self.__class__.__name__)
-        base_cls._create_gates(self)
+        from qibo.tensorflow import cgates
+        cgates.TensorflowChannel._prepare(self)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(ValueError, "Channels cannot be used on state vectors.")

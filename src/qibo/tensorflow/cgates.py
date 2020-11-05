@@ -213,8 +213,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
                                  self.nqubits, self.normalize)
 
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        # this exception should always be catched in `_prepare`.
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(NotImplementedError,
                     "Collapse gate is not implemented for density matrices.")
 

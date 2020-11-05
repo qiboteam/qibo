@@ -1677,6 +1677,7 @@ class _AbstractChannel(Gate):
     def __init__(self):
         super(_AbstractChannel, self).__init__()
         self.is_channel = True
+        self.density_matrix = True
 
     def _create_gates(self): # pragma: no cover
         # abstract method
@@ -1754,6 +1755,7 @@ class ProbabilisticNoiseChannel(NoiseChannel):
         super(ProbabilisticNoiseChannel, self).__init__(q, px, py, pz)
         self.name = "ProbabilisticNoiseChannel"
         self.is_channel = False
+        self.density_matrix = False
         self.seed = seed
 
 

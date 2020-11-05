@@ -367,25 +367,40 @@ def test_circuit_reexecution(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_general_channel(backend):
+@pytest.mark.parametrize("tfmatrices", [False, True])
+@pytest.mark.parametrize("oncircuit", [False, True])
+def test_general_channel(backend, tfmatrices, oncircuit):
     """Test `gates.GeneralChannel`."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(2)
 
-    c = models.Circuit(2, density_matrix=True)
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                  [0, 0, 0, 1], [0, 0, 1, 0]])
+    if tfmatrices:
+        import tensorflow as tf
+        from qibo.config import DTYPES
+        a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
+        a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
+
     gate = gates.GeneralChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
-    c.add(gate)
-    final_rho = c(np.copy(initial_rho)).numpy()
+    if oncircuit:
+        c = models.Circuit(2, density_matrix=True)
+        c.add(gate)
+        final_rho = c(np.copy(initial_rho)).numpy()
+    else:
+        if backend == "custom":
+            final_rho = gate(np.copy(initial_rho))
+        else:
+            final_rho = gate(np.copy(initial_rho).reshape(4 * (2,)))
+            final_rho = final_rho.numpy().reshape((4, 4))
 
-    m1 = np.kron(np.eye(2), a1)
-    m2 = a2
+    m1 = np.kron(np.eye(2), np.array(a1))
+    m2 = np.array(a2)
     target_rho = (m1.dot(initial_rho).dot(m1.conj().T) +
                   m2.dot(initial_rho).dot(m2.conj().T))
-
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
@@ -590,6 +605,16 @@ def test_density_matrix_circuit_measurement(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_gate(backend):
+    c = models.Circuit(4, density_matrix=True)
+    with pytest.raises(NotImplementedError):
+        c.add(gates.Collapse(0))
+    gate = gates.Collapse(0)
+    with pytest.raises(NotImplementedError):
+        gate._density_matrix_call(np.random.random((2, 2)))
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()
@@ -612,3 +637,35 @@ def test_entanglement_entropy(backend):
     target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
     np.testing.assert_allclose(final_ent, target_ent)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_density_matrix_gate_errors(backend):
+    """Check errors related to gates that act on density matrices."""
+    # Switch `gate.density_matrix` to `True` after setting `nqubits`
+    gate = gates.X(0)
+    gate.nqubits = 2
+    with pytest.raises(RuntimeError):
+        gate.density_matrix = True
+    # Attempt to use channels on state vectors
+    channel = gates.NoiseChannel(0, px=0.1, pz=0.2)
+    channel.density_matrix = False
+    with pytest.raises(ValueError):
+        channel.nqubits = 4
+    with pytest.raises(ValueError):
+        channel._state_vector_call(np.random.random(2))
+
+
+def test_density_matrix_circuit_errors():
+    """Check errors of circuits that simulate density matrices."""
+    # Attempt to distribute density matrix circuit
+    with pytest.raises(NotImplementedError):
+        c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
+    # Attempt to add channel to non-density matrix circuit
+    c = models.Circuit(5)
+    with pytest.raises(ValueError):
+        c.add(gates.NoiseChannel(2, px=0.2))
+    # Attempt to add probabilisitc noise channel to density matrix circuit
+    c = models.Circuit(5, density_matrix=True)
+    with pytest.raises(ValueError):
+        c.add(gates.ProbabilisticNoiseChannel(2, px=0.2))
