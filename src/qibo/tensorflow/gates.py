@@ -69,11 +69,13 @@ class TensorflowGate(base_gates.Gate):
             self.calculation_cache = self.einsum.create_cache(self.qubits, n)
         self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
+    def _set_nqubits(self, state: tf.Tensor):
+        """Sets ``gate.nqubits`` from state, if not already set."""
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // (1 + self.density_matrix)
+
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the gate on a state vector."""
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
-
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -97,9 +99,6 @@ class TensorflowGate(base_gates.Gate):
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the gate on a density matrix."""
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // 2
-
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -132,6 +131,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
         """Implements the gate on a given state."""
+        self._set_nqubits(state)
         return getattr(self, self._active_call)(state)
 
 
@@ -221,16 +221,12 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return state
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
         substate = tf.gather_nd(tf.transpose(state, self.order), self.result)
         norm = tf.reduce_sum(tf.square(tf.abs(substate)))
         state = substate / tf.cast(tf.sqrt(norm), dtype=state.dtype)
         return self._append_zeros(state, self.sorted_qubits, self.result)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // 2
         substate = tf.gather_nd(tf.transpose(state, self.order), self.dm_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = tf.linalg.trace(tf.reshape(substate, (n, n)))
@@ -533,13 +529,7 @@ class TensorflowChannel(TensorflowGate):
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(ValueError, "Channels cannot be used on state vectors.")
 
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape)) // 2
-        return self._krauss_sum(state)
-
-    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        """Loops over `self.gates` to calculate sum of Krauss operators."""
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
@@ -550,7 +540,7 @@ class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
         base_gates.NoiseChannel.__init__(self, q, px, py, pz)
         TensorflowChannel.__init__(self)
 
-    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for p, gate in self.gates:
             new_state += p * gate(state)
@@ -563,7 +553,7 @@ class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
         base_gates.GeneralChannel.__init__(self, A)
         TensorflowChannel.__init__(self)
 
-    def _krauss_sum(self, state: tf.Tensor) -> tf.Tensor:
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for gate in self.gates:
             new_state += gate(state)

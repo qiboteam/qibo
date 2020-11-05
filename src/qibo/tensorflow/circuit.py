@@ -203,17 +203,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _check_initial_shape(self, state: InitStateType):
-        """Checks shape of given initial state."""
-        if not isinstance(state, (np.ndarray, tf.Tensor)):
-            raise_error(TypeError, "Initial state type {} is not recognized."
-                                    "".format(type(state)))
-        shape = tuple(state.shape)
-        if shape != self.shapes.get('FLAT'):
-            raise_error(ValueError, "Invalid initial state shape {} for "
-                                    "circuit with {} qubits."
-                                    "".format(shape, self.nqubits))
-
     def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
         if isinstance(state, tf.Tensor):
             return state
@@ -236,7 +225,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
             return self._default_initial_state()
         state = self._cast_initial_state(state)
         if self.check_initial_state_shape:
-            self._check_initial_shape(state)
+            shape = tuple(state.shape)
+            if shape != self.shapes.get('FLAT'):
+                raise_error(ValueError, "Invalid initial state shape {} for "
+                                        "circuit with {} qubits."
+                                        "".format(shape, self.nqubits))
         return state
 
 
