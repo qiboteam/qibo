@@ -82,6 +82,23 @@ class GateResult:
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
+    def apply_bitflips(self, probability: Union[Dict[int, float], float],
+                       sprobs: Optional[TensorType] = None) -> "GateResult":
+        if isinstance(probability, float):
+            probs = len(self.qubits) * (probability,)
+        elif isinstance(probability, dict):
+            if set(self.qubits) != set(probability.keys()):
+                raise_error(KeyError,
+                            "Qubit in the bitflip probability map are "
+                            "different from the measured qubits.")
+            probs = tuple(probability[q] for q in self.qubits)
+        else:
+            raise_error(TypeError, "Measurement bitflip probability can be "
+                                   "a float or a dictionary but is {}."
+                                   "".format(type(probability)))
+        noisy = self._apply_bitflips(self.samples(), probs, sprobs)
+        return self.__class__(self.qubits, binary_samples=noisy)
+
     @staticmethod
     def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
         # abstract method
@@ -94,6 +111,12 @@ class GateResult:
 
     @staticmethod
     def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
+
+    @staticmethod
+    def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float],
+                        sprobs: Optional[TensorType] = None) -> TensorType: # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 

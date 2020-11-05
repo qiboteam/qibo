@@ -571,6 +571,7 @@ def test_copy_measurements(accelerators):
 
 
 def test_measurements_with_probabilistic_noise(accelerators=None):
+    """Check measurements when simulating noise with repeated execution."""
     import tensorflow as tf
     thetas = np.random.random(5)
     c = models.Circuit(5, accelerators)
@@ -596,3 +597,24 @@ def test_measurements_with_probabilistic_noise(accelerators=None):
         target_samples.append(noiseless_c(nshots=1).samples())
     target_samples = tf.concat(target_samples, axis=0)
     np.testing.assert_allclose(result.samples(), target_samples)
+
+
+@pytest.mark.parametrize("prob", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
+def test_post_measurement_bitflips(prob):
+    """Check applying bitflips to measurement samples."""
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    from qibo.tensorflow import measurements
+    qubits = tuple(range(4))
+    samples = np.random.randint(0, 2, (20, 4))
+    result = measurements.GateResult(qubits, binary_samples=samples)
+    tf.random.set_seed(123)
+    noisy_result = result.apply_bitflips(prob)
+
+    tf.random.set_seed(123)
+    if isinstance(prob, dict):
+        prob = np.array([prob[q] for q in qubits])
+    sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE')).numpy()
+    flipper = sprobs < prob
+    target_samples = (samples + flipper) % 2
+    np.testing.assert_allclose(noisy_result.samples(), target_samples)
