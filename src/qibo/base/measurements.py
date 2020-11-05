@@ -82,8 +82,19 @@ class GateResult:
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
-    def apply_bitflips(self, probability: Union[Dict[int, float], float],
-                       sprobs: Optional[TensorType] = None) -> "GateResult":
+    def apply_bitflips(self, probability: Union[Dict[int, float], float]
+                       ) -> "GateResult":
+        """Applies bitflip noise to the measured samples.
+
+        Args:
+            probability (dict): Dictionary that maps each measured qubit to the
+                probability that it is flipped. If a ``float`` is given the same
+                probability will be used for all qubits.
+
+        Returns:
+            A new :class:`qibo.base.measurements.GateResult` object that holds
+            the noisy samples.
+        """
         if isinstance(probability, float):
             probs = len(self.qubits) * (probability,)
         elif isinstance(probability, dict):
@@ -96,7 +107,7 @@ class GateResult:
             raise_error(TypeError, "Measurement bitflip probability can be "
                                    "a float or a dictionary but is {}."
                                    "".format(type(probability)))
-        noisy = self._apply_bitflips(self.samples(), probs, sprobs)
+        noisy = self._apply_bitflips(self.samples(), probs)
         return self.__class__(self.qubits, binary_samples=noisy)
 
     @staticmethod
@@ -115,8 +126,8 @@ class GateResult:
         raise_error(NotImplementedError)
 
     @staticmethod
-    def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float],
-                        sprobs: Optional[TensorType] = None) -> TensorType: # pragma: no cover
+    def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float]
+                        ) -> TensorType: # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
