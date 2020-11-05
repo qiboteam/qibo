@@ -14,6 +14,8 @@ OutputType = Union[tf.Tensor, measurements.CircuitResult]
 class TensorflowCircuit(circuit.BaseCircuit):
     """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
 
+    Performs simulation using state vectors.
+
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
@@ -234,6 +236,22 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
 
 class TensorflowDensityMatrixCircuit(TensorflowCircuit):
+    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+
+    Performs simulation using density matrices. Can be initialized using the
+    ``density_matrix=True`` flag:
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
+
+    Example:
+        ::
+
+            from qibo import models, gates
+            c = models.Circuit(2, density_matrix=True)
+            c.add(gates.H(0))
+            c.add(gates.NoiseChannel(1, px=0.2))
+    """
 
     def __init__(self, nqubits):
         super(TensorflowDensityMatrixCircuit, self).__init__(nqubits)
