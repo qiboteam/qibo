@@ -586,7 +586,7 @@ How to perform noisy simulation?
 
 Qibo can perform noisy simulation with two different methods: by repeating the
 circuit execution multiple times and applying noise channels probabilistically
-or by using density density matrices.
+or by using density matrices.
 
 Using repeated execution
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -635,34 +635,25 @@ measurements then the circuit will be executed 1000 times and the final
 ``(nshots, 2 ^ nqubits)`` and is usually to large to hold in memory, therefore
 this usage is not advised.
 
+
+.. _densitymatrix-example:
+
 Using density matrices
 ^^^^^^^^^^^^^^^^^^^^^^
 
-:class:`qibo.base.circuit.BaseCircuit` objects can evolve density matrices
-similarly to state vectors.
-In order to use density matrices the user should execute the circuit passing a
-density matrix as the initial state. For example
+Qibo circuits can evolve density matrices if they are initialized using the
+`density_matrix=True` flag, for example:
 
 .. code-block:: python
 
-    import numpy as np
-    # switch backend to "matmuleinsum" or "defaulteinsum"
-    qibo.set_backend("matmuleinsum")
-    import qibo
     from qibo import models, gates
 
     # Define circuit
-    c = models.Circuit(2)
+    c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-
-    # Define initial density matrix as `rho = |00><00|`
-    state = np.zeros(4)
-    state[0] = 1
-    initial_rho = np.outer(state, state.conj())
-
-    # Call circuit on the density matrix
-    final_rho = c(initial_rho)
+    # execute using the default initial state |00><00|
+    final_rho = c()
     # final_rho will be tf.ones(4) / 4 which corresponds to |++><++|
 
 will perform the transformation
@@ -670,36 +661,41 @@ will perform the transformation
 .. math::
     |00 \rangle \langle 00| \rightarrow (H_1 \otimes H_2)|00 \rangle \langle 00|(H_1 \otimes H_2)^\dagger = |++ \rangle \langle ++|
 
-Note that the calculation backend was switched to ``"matmuleinsum"`` because the
-default ``"custom"`` backend does not support density matrix simulation yet.
+Similarly to state vector circuit simulation, the user may specify a custom
+initial density matrix by passing the corresponding array when executing the
+circuit. If a state vector is passed as an initial state in a density matrix
+circuit, it will be transformed automatically to the equivalent density matrix.
 
-The user can simulate noise using :class:`qibo.base.gates.NoiseChannel`.
-If this or any other channel is used in a ``Circuit``, then the execution
-will automatically switch to density matrices. For example
+It is possible to use density matrices to simulate noise via the
+:class:`qibo.base.gates.NoiseChannel` gate. For example
 
 .. code-block:: python
 
-    import qibo
-    qibo.set_backend("matmuleinsum")
     from qibo import models, gates
 
-    c = models.Circuit(2) # starts with state |00>
-    c.add(gates.X(1)) # transforms |00> -> |01>
-    c.add(gates.NoiseChannel(0, px=0.3)) # transforms |01> -> (1 - px)|01><01| + px |11><11|
+    c = models.Circuit(2, density_matrix=True) # starts with state |00><00|
+    c.add(gates.X(1))
+    # transforms |00><00| -> |01><01|
+    c.add(gates.NoiseChannel(0, px=0.3))
+    # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
     final_state = c()
     # will return tf.Tensor(diag([0, 0.7, 0, 0.3]))
 
 will perform the transformation
 
 .. math::
-    |00\rangle & \rightarrow (I \otimes X)|00\rangle = |01\rangle
+    |00\rangle \langle 00|& \rightarrow (I \otimes X)|00\rangle \langle 00|(I \otimes X)
+    = |01\rangle \langle 01|
     \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
     \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
-Note that :class:`qibo.base.circuit.BaseCircuit` will use state vectors until
-the first channel is found and will switch to density matrices for the rest of
-the simulation. Measurements and callbacks can be used exactly as in the case
-of state vector simulation.
+All Qibo gates except the :class:`qibo.base.gates.ProbabilisticNoiseChannel`
+can be used with density matrices. Note that the two channels provided by Qibo
+(:class:`qibo.base.gates.NoiseChannel` and :class:`qibo.base.gates.GeneralChannel`)
+can only be used with density matrices and not state vectors.
+
+Measurements and callbacks can also be used with density matrices exactly as in
+the case of state vector simulation.
 
 Adding noise after every gate
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -715,8 +711,6 @@ For example, the following script
 
 .. code-block:: python
 
-      import qibo
-      qibo.set_backend("matmuleinsum")
       from qibo import models, gates
 
       c = models.Circuit(2)
@@ -750,48 +744,14 @@ In this case the same probabilities will be applied to all qubits.
 That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
-The user can also set ``probabilistic = True`` when calling ``.with_noise``
-in order to use the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate.
-This will simulate noise with repeated circuit execution in contrast to the
-default :class:`qibo.base.gates.NoiseChannel` which uses density matrices.
-
-Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
-which allows the user to explicitly specify the probabilities of the noise
-channels that applied before measurement gates. For example:
-
-.. code-block:: python
-
-      import qibo
-      qibo.set_backend("matmuleinsum")
-      from qibo import models, gates
-
-      c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1)])
-      c.add(gates.M(0))
-
-      # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-      measurement_noise = (0.4, 0.0, 0.0)
-      noisy_c = c.with_noise(noise_map, measurement_noise=measurement_noise)
-
-is equivalent to the following:
-
-.. code-block:: python
-
-      noisy_c = models.Circuit(2)
-      noisy_c.add(gates.H(0))
-      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.H(1))
-      noisy_c.add(gates.NoiseChannel(0, 0.4, 0.0, 0.0))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.M(0))
-
-Note that ``measurement_noise`` does not affect qubits that are not measured
-and the default ``noise_map`` will be used for those.
-Similarly to ``noise_map``, ``measurement_noise`` can be either a dictionary
-that maps each qubit to the corresponding probability triplet or a tuple
-if the same triplet shall be used on all measured qubits.
+If :meth:`qibo.base.circuit.BaseCircuit.with_noise()` is used in a circuit
+that uses state vectors for simulation, then
+:class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be used to
+simulate noise with repeated execution. If the user wishes to use density
+matrices instead, this is possible by initializing a
+:class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit` using the
+``density_matrix=True`` flag during initialization and call ``.with_noise``
+on this circuit.
 
 
 .. _timeevol-example:

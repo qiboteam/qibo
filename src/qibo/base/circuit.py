@@ -59,20 +59,20 @@ class BaseCircuit(object):
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
-    A specific backend (eg. Tensorflow) has to be used for performing
-    calculations (evolving the state vector).
-    All backend-based circuits should inherit `BaseCircuit`.
+    A specific backend has to be used for performing calculations.
+    All backend-based circuits should inherit ``BaseCircuit``.
+
+    Qibo provides the following circuits:
+    A state vector simulation circuit:
+    :class:`qibo.tensorflow.circuit.TensorflowCircuit`,
+    a density matrix simulation circuit:
+    :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+    and a circuit that distributes state vector simulation on multiple devices:
+    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`.
+    All circuits use Tensorflow as the computation backend.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
-
-    Example:
-        ::
-
-            from qibo.models import Circuit
-            from qibo import gates
-            c = Circuit(3) # initialized circuit with 3 qubits
-            c.add(gates.H(0)) # added Hadamard gate on qubit 0
     """
 
     __metaclass__ = ABCMeta

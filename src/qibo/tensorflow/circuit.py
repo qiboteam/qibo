@@ -16,6 +16,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     Performs simulation using state vectors.
 
+    Example:
+        ::
+
+            from qibo import models, gates
+            c = models.Circuit(3) # initialized circuit with 3 qubits
+            c.add(gates.H(0)) # added Hadamard gate on qubit 0
+
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
@@ -78,7 +85,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def using_tfgates(self) -> bool:
-        """Determines if we are using Tensorflow native or custom gates."""
+        """"""
         return BACKEND['GATES'] != 'custom'
 
     def _execute(self, initial_state: Optional[InitStateType] = None
@@ -239,10 +246,9 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
     """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
 
     Performs simulation using density matrices. Can be initialized using the
-    ``density_matrix=True`` flag:
-
-    Args:
-        nqubits (int): Total number of qubits in the circuit.
+    ``density_matrix=True`` flag and supports the use of channels.
+    For more information on the use of density matrices we refer to the
+    :ref:`Using density matrices? <densitymatrix-example>` example.
 
     Example:
         ::
@@ -251,6 +257,9 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             c = models.Circuit(2, density_matrix=True)
             c.add(gates.H(0))
             c.add(gates.NoiseChannel(1, px=0.2))
+
+    Args:
+        nqubits (int): Total number of qubits in the circuit.
     """
 
     def __init__(self, nqubits):

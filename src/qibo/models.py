@@ -10,10 +10,7 @@ from typing import Dict, Optional
 
 
 class Circuit(DistributedCircuit):
-    """Factory class for circuits.
-
-    Creates both normal and distributed circuits.
-    """
+    """"""
 
     @classmethod
     def _constructor(cls, *args, **kwargs):
