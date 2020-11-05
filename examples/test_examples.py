@@ -230,9 +230,9 @@ def test_ef_qae(layers, autoencoder, example):
     run_script(args)
 
 
-@pytest.mark.parametrize("N", [5, 15])
-@pytest.mark.parametrize("times", [10, 15])
-@pytest.mark.parametrize("A", [None, 5])
+@pytest.mark.parametrize("N", [15, 21])
+@pytest.mark.parametrize("times", [2, 10])
+@pytest.mark.parametrize("A", [None])
 @pytest.mark.parametrize("semiclassical", [True, False])
 @pytest.mark.parametrize("enhance", [True, False])
 def test_shor(N, times, A, semiclassical, enhance):
