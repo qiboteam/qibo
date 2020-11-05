@@ -605,13 +605,24 @@ def test_density_matrix_circuit_measurement(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_collapse_gate(backend):
-    c = models.Circuit(4, density_matrix=True)
-    with pytest.raises(NotImplementedError):
-        c.add(gates.Collapse(0))
-    gate = gates.Collapse(0)
-    with pytest.raises(NotImplementedError):
-        gate._density_matrix_call(np.random.random((2, 2)))
+@pytest.mark.parametrize("nqubits,targets,results",
+                         [(2, [1], [0]), (3, [1], 0), (4, [1, 3], [0, 1]),
+                          (5, [0, 3, 4], [1, 1, 0])])
+def test_collapse_gate(backend, nqubits, targets, results):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_psi = utils.random_numpy_state(nqubits)
+    initial_rho = np.outer(initial_psi, initial_psi.conj())
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add(gates.Collapse(*targets, result=results))
+    final_rho = c(np.copy(initial_rho))
+
+    c = models.Circuit(nqubits)
+    c.add(gates.Collapse(*targets, result=results))
+    target_psi = c(np.copy(initial_psi)).numpy()
+    target_rho = np.outer(target_psi, target_psi.conj())
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -642,6 +653,8 @@ def test_entanglement_entropy(backend):
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_density_matrix_gate_errors(backend):
     """Check errors related to gates that act on density matrices."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
@@ -654,6 +667,7 @@ def test_density_matrix_gate_errors(backend):
         channel.nqubits = 4
     with pytest.raises(ValueError):
         channel._state_vector_call(np.random.random(2))
+    qibo.set_backend(original_backend)
 
 
 def test_density_matrix_circuit_errors():

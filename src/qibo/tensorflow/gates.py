@@ -188,6 +188,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         TensorflowGate.__init__(self)
         self.order = None
         self.ids = None
+        self.dm_result = None
 
     @staticmethod
     def _result_to_list(res):
@@ -195,20 +196,23 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return Collapse._result_to_list(res)
 
     def _prepare(self):
-        if self.density_matrix:
-            raise_error(NotImplementedError,
-                        "Collapse gate is not implemented for density matrices.")
         self.order = list(self.sorted_qubits)
-        self.order.extend((q for q in range(self.nqubits)
-                           if q not in self.sorted_qubits))
+        if self.density_matrix:
+            self.order.extend((q + self.nqubits for q in self.sorted_qubits))
+            self.order.extend((q for q in range(self.nqubits)
+                               if q not in self.sorted_qubits))
+            self.order.extend((q + self.nqubits for q in range(self.nqubits)
+                               if q not in self.sorted_qubits))
+            self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
+            self.dm_result = 2 * self.result
+        else:
+            self.order.extend((q for q in range(self.nqubits)
+                               if q not in self.sorted_qubits))
 
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        if self._nqubits is None:
-            self.nqubits = len(tuple(state.shape))
-        substate = tf.gather_nd(tf.transpose(state, self.order), self.result)
-        norm = tf.reduce_sum(tf.square(tf.abs(substate)))
-        state = substate / tf.cast(tf.sqrt(norm), dtype=state.dtype)
-        for q, r in zip(self.sorted_qubits, self.result):
+    @staticmethod
+    def _append_zeros(state: tf.Tensor, qubits: List[int], results: List[int]
+                      ) -> tf.Tensor:
+        for q, r in zip(qubits, results):
             state = tf.expand_dims(state, axis=q)
             if r:
                 state = tf.concat([tf.zeros_like(state), state], axis=q)
@@ -216,9 +220,22 @@ class Collapse(TensorflowGate, base_gates.Collapse):
                 state = tf.concat([state, tf.zeros_like(state)], axis=q)
         return state
 
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape))
+        substate = tf.gather_nd(tf.transpose(state, self.order), self.result)
+        norm = tf.reduce_sum(tf.square(tf.abs(substate)))
+        state = substate / tf.cast(tf.sqrt(norm), dtype=state.dtype)
+        return self._append_zeros(state, self.sorted_qubits, self.result)
+
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(NotImplementedError,
-                    "Collapse gate is not implemented for density matrices.")
+        if self._nqubits is None:
+            self.nqubits = len(tuple(state.shape)) // 2
+        substate = tf.gather_nd(tf.transpose(state, self.order), self.dm_result)
+        n = 2 ** (len(tuple(substate.shape)) // 2)
+        norm = tf.linalg.trace(tf.reshape(substate, (n, n)))
+        state = substate / norm
+        return self._append_zeros(state, self.sorted_qubits, self.dm_result)
 
 
 class RX(TensorflowGate, base_gates.RX):

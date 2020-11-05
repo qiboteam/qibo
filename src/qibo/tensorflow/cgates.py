@@ -192,6 +192,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         base_gates.Collapse.__init__(self, *q, result=result)
         TensorflowGate.__init__(self)
         self.result_tensor = None
+        self.gate_op = op.collapse_state
 
     @staticmethod
     def _result_to_list(res):
@@ -202,20 +203,20 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return list(res)
 
     def _prepare(self):
-        if self.density_matrix:
-            raise_error(NotImplementedError,
-                        "Collapse gate is not implemented for density matrices.")
         n = len(self.result)
         result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
         self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        return op.collapse_state(state, self.qubits_tensor, self.result_tensor,
-                                 self.nqubits, self.normalize)
+        return self.gate_op(state, self.qubits_tensor, self.result_tensor,
+                            self.nqubits, self.normalize)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(NotImplementedError,
-                    "Collapse gate is not implemented for density matrices.")
+        state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
+                             2 * self.nqubits, False)
+        state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
+                             2 * self.nqubits, False)
+        return state / tf.linalg.trace(state)
 
 
 class M(TensorflowGate, base_gates.M):
