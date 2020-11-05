@@ -228,3 +228,18 @@ def test_ef_qae(layers, autoencoder, example):
     args = locals()
     os.chdir(os.path.join(base_dir, "EF_QAE"))
     run_script(args)
+
+
+@pytest.mark.parametrize("N", [5, 15])
+@pytest.mark.parametrize("times", [10, 15])
+@pytest.mark.parametrize("A", [None, 5])
+@pytest.mark.parametrize("semiclassical", [True, False])
+@pytest.mark.parametrize("enhance", [True, False])
+def test_shor(N, times, A, semiclassical, enhance):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "shor")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
