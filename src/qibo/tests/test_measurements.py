@@ -637,6 +637,28 @@ def test_post_measurement_bitflips_on_circuit(accelerators, probs, target):
     assert result == target
 
 
+def test_post_measurement_bitflips_on_circuit_result():
+    """Check bitflip errors on ``CircuitResult`` objects."""
+    import tensorflow as tf
+    from qibo.config import DTYPES
+    thetas = np.random.random(4)
+    c = models.Circuit(4)
+    c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
+    c.add(gates.M(0, 1))
+    c.add(gates.M(3))
+    result = c(nshots=30)
+    tf.random.set_seed(123)
+    noisy_result = result.apply_bitflips({0: 0.1, 1: 0.1, 3: 0.4})
+    noisy_samples = noisy_result.samples(binary=True)
+
+    samples = result.samples().numpy()
+    tf.random.set_seed(123)
+    sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE'))
+    flipper = sprobs.numpy() < np.array([0.1, 0.1, 0.4])
+    target_samples = (samples + flipper) % 2
+    np.testing.assert_allclose(noisy_samples, target_samples)
+
+
 def test_post_measurement_bitflip_errors():
     """Check errors raised by `GateResult.apply_bitflips` and `gates.M`."""
     from qibo.tensorflow import measurements
