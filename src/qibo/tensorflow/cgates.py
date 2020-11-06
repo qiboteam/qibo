@@ -263,18 +263,18 @@ class M(TensorflowGate, base_gates.M):
             raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
         return DEVICES['CPU'][0]
 
+    def _sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        dtype = DTYPES.get('DTYPEINT')
+        probs_dim = tf.cast((2 ** len(self.target_qubits),), dtype=dtype)
+        shape = (1 + self.density_matrix) * self.nqubits * (2,)
+        probs = self._calculate_probabilities(tf.reshape(state, shape))
+        logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
+        samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
+        return samples_dec
+
     def __call__(self, state: tf.Tensor, nshots: int,
                  samples_only: bool = False) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
-        probs_dim = tf.cast((2 ** len(self.target_qubits),),
-                            dtype=DTYPES.get('DTYPEINT'))
-        def sample():
-            shape = (1 + self.density_matrix) * self.nqubits * (2,)
-            probs = self._calculate_probabilities(tf.reshape(state, shape))
-            logits = tf.math.log(tf.reshape(probs, probs_dim))
-            return tf.random.categorical(logits[tf.newaxis], nshots,
-                                         dtype=DTYPES.get('DTYPEINT'))[0]
-
         device = DEVICES['DEFAULT']
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
@@ -284,13 +284,13 @@ class M(TensorflowGate, base_gates.M):
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
             with tf.device(device):
-                samples_dec = sample()
+                samples_dec = self._sample(state, nshots)
         except oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
             device = self._get_cpu()
             with tf.device(device):
-                samples_dec = sample()
+                samples_dec = self._sample(state, nshots)
 
         if samples_only:
             return samples_dec
