@@ -583,19 +583,26 @@ class M(Gate):
             other registers when used in circuits.
     """
 
-    def __init__(self, *q, register_name: Optional[str] = None):
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 bitflips: Optional[List[float]] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = q
         self.register_name = register_name
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name}
+        self.init_kwargs = {"register_name": register_name,
+                            "bitflips": bitflips}
 
         self._unmeasured_qubits = None # Tuple
         self._reduced_target_qubits = None # List
+        self.bitflip_map = None
+        if bitflips is not None:
+            self._set_bitflip_probabilities(bitflips)
+        else:
+            self.bitflip_map = {q: 0 for q in self.target_qubits}
 
-    def _add(self, qubits: Tuple[int]):
+    def _add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
@@ -604,12 +611,31 @@ class M(Gate):
         raised if he does so.
 
         Args:
-            qubits: Tuple of qubit ids to be added to the measurement's qubits.
+            gate: Measurement gate to add its qubits in the current gate.
         """
         if self._unmeasured_qubits is not None:
-            raise_error(RuntimeError, "Cannot add qubits to a measurement gate that "
-                                      "was executed.")
-        self.target_qubits += qubits
+            raise_error(RuntimeError, "Cannot add qubits to a measurement "
+                                      "gate that was executed.")
+        assert isinstance(gate, self.__class__)
+        self.target_qubits += gate.target_qubits
+        self.bitflip_map.update(gate.bitflip_map)
+
+    def _set_bitflip_probabilities(self, probs):
+        if isinstance(probs, float):
+            self.bitflip_map = {q: probs for q in self.target_qubits}
+        elif isinstance(probs, list):
+            if len(probs) != len(self.target_qubits):
+                raise_error(ValueError, "Bitflip map length incompatible with "
+                                        "number of measured qubits.")
+            self.bitflip_map = {q: p for q, p in zip(self.target_qubits, probs)}
+        elif isinstance(probs, dict):
+            if set(self.target_qubits) != set(probs.keys()):
+                raise_error(KeyError, "Bitflip map keys incompatible with "
+                                      "measured qubits.")
+            self.bitflip_map = dict(probs)
+        else:
+            raise_error(TypeError, "Invalid type {} of bitflip map."
+                                   "".format(probs))
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:

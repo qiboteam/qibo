@@ -223,8 +223,10 @@ class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import distutils
     from qibo.tensorflow import measurements
 
-    def __init__(self, *q, register_name: Optional[str] = None):
-        base_gates.M.__init__(self, *q, register_name=register_name)
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 bitflips: Optional[List[float]] = None):
+        base_gates.M.__init__(self, *q, register_name=register_name,
+                              bitflips=bitflips)
         self.qubits_tensor = None
         self._density_matrix = False
         self._traceout = None
@@ -265,8 +267,11 @@ class M(TensorflowGate, base_gates.M):
         probs = self._calculate_probabilities(tf.reshape(state, shape))
         logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
         samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
-        return self.measurements.GateResult(
+        result = self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
+        if self.bitflip_map:
+            result = result.apply_bitflips(self.bitflip_map)
+        return result
 
     def _get_cpu(self): # pragma: no cover
         # case not covered by GitHub workflows because it requires OOM

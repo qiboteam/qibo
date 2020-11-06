@@ -618,3 +618,27 @@ def test_post_measurement_bitflips(prob):
     flipper = sprobs < prob
     target_samples = (samples + flipper) % 2
     np.testing.assert_allclose(noisy_result.samples(), target_samples)
+
+
+def test_post_measurement_bitflips_on_circuit():
+    """Check bitflip errors on circuit measurements."""
+    from qibo.config import DTYPES
+    import tensorflow as tf
+    #probs = np.array([0.1, 0.3, 0.2])
+    probs = np.zeros(3)
+    c = models.Circuit(5)
+    c.add([gates.X(0), gates.X(2), gates.X(3)])
+    c.add(gates.M(0, 1, bitflips={0: probs[0], 1: probs[1]}))
+    c.add(gates.M(3, bitflips=probs[2]))
+    tf.random.set_seed(123)
+    samples = c(nshots=30).samples()
+
+    c = models.Circuit(5)
+    c.add([gates.X(0), gates.X(2), gates.X(3)])
+    c.add([gates.M(0, 1), gates.M(3)])
+    tf.random.set_seed(123)
+    target_samples = c(nshots=30).samples()
+    sprobs = tf.random.uniform(target_samples.shape, dtype=DTYPES.get('DTYPE'))
+    flipper = sprobs.numpy() < probs
+    target_samples = (target_samples.numpy() + flipper) % 2
+    np.testing.assert_allclose(samples, target_samples)

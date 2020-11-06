@@ -58,6 +58,9 @@ class GateResult:
             self._decimal = self._convert_to_decimal(self._binary, self.nqubits)
         return self._decimal
 
+    def __getitem__(self, i: int) -> TensorType:
+        return self.samples(binary=False)[i]
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
@@ -100,7 +103,7 @@ class GateResult:
         elif isinstance(probability, dict):
             if set(self.qubits) != set(probability.keys()):
                 raise_error(KeyError,
-                            "Qubit in the bitflip probability map are "
+                            "Qubits in the bitflip probability map are "
                             "different from the measured qubits.")
             probs = tuple(probability[q] for q in self.qubits)
         else:
@@ -218,6 +221,22 @@ class CircuitResult:
         if not registers:
             return self.result.frequencies(binary)
         return {k: v.frequencies(binary) for k, v in self._register_results.items()}
+
+    def apply_bitflips(self, probability: Union[Dict[int, float], float]
+                       ) -> "CircuitResult":
+        """Applies bitflip noise to the measured samples.
+
+        Args:
+            probability (dict): Dictionary that maps each measured qubit to the
+                probability that it is flipped. If a ``float`` is given the same
+                probability will be used for all qubits.
+
+        Returns:
+            A new :class:`qibo.base.measurements.CircuitResult` object that
+            holds the noisy samples.
+        """
+        noisy_result = self.result.apply_bitflips(probability)
+        return self.__class__(self.register_qubits, noisy_result)
 
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
