@@ -585,8 +585,14 @@ How to perform noisy simulation?
 --------------------------------
 
 Qibo can perform noisy simulation with two different methods: by repeating the
-circuit execution multiple times and applying noise channels probabilistically
-or by using density matrices.
+circuit execution multiple times and applying noise gates probabilistically
+or by using density matrices and applying noise channels. The two methods
+are analyzed in the following sections.
+
+Moreover, Qibo provides functionality to add bit-flip errors to measurements
+after the simulation is completed. This is analyzed in
+:ref:`Measurement errors <measurementbitflips-example>`.
+
 
 Using repeated execution
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -752,6 +758,66 @@ matrices instead, this is possible by initializing a
 :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit` using the
 ``density_matrix=True`` flag during initialization and call ``.with_noise``
 on this circuit.
+
+
+.. _measurementbitflips-example:
+
+Measurement errors
+^^^^^^^^^^^^^^^^^^
+
+As described in the :ref:`How to perform measurements? <measurement-examples>`
+example, simulating a circuit with measurements returns a
+:class:`qibo.base.measurements.CircuitResult` object. This object provides
+the :meth:`qibo.base.measurements.CircuitResult.apply_bitflips` method which
+allows adding bit-flip errors to the sampled bit-strings without having to
+re-execute the simulation. For example:
+
+.. code-block:: python
+
+      import numpy as np
+      from qibo import models, gates
+
+      thetas = np.random.random(4)
+      c = models.Circuit(4)
+      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
+      c.add([gates.M(0, 1), gates.M(2, 3)])
+      result = c(nshots=100)
+      # add bit-flip errors with probability 0.2 for all qubits
+      noisy_result1 = result.apply_bitflips(0.2)
+      # add bit-flip errors with different probabilities for each qubit
+      error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
+      noisy_result2 = result.apply_bitflips(error_map)
+
+
+In this example ``noisy_result1`` and ``noisy_result2`` are new
+:class:`qibo.base.measurements.CircuitResult` objects and therefore
+the corresponding noisy samples and frequencies can be obtained as described
+in the :ref:`How to perform measurements? <measurement-examples>` example.
+
+Alternatively, the user may specify a bit-flip error map when defining
+measurement gates:
+
+.. code-block:: python
+
+      import numpy as np
+      from qibo import models, gates
+
+      thetas = np.random.random(6)
+      c = models.Circuit(6)
+      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
+      c.add(gates.M(0, 1, bitflips=0.2))
+      c.add(gates.M(2, 3, bitflips={3: 0.1, 4: 0.0}))
+      c.add(gates.M(4, 5, bitflips=[0.4, 0.3]))
+      result = c(nshots=100)
+
+In this case ``result`` will contain noisy samples according to the given
+bit-flip probabilities. The probabilities can be given as a
+dictionary (must contain all measured qubits as keys),
+a list (must have the sample as the measured qubits) or
+a single float number (to be used on all measured qubits).
+Note that, unlike the previous code example, when bit-flip errors are
+incorporated as part of measurement gates it is not possible to access the
+noiseless samples.
 
 
 .. _timeevol-example:

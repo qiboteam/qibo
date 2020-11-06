@@ -644,19 +644,23 @@ def test_post_measurement_bitflips_on_circuit_result():
     thetas = np.random.random(4)
     c = models.Circuit(4)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-    c.add(gates.M(0, 1))
-    c.add(gates.M(3))
+    c.add(gates.M(0, 1, register_name="a"))
+    c.add(gates.M(3, register_name="b"))
     result = c(nshots=30)
     tf.random.set_seed(123)
-    noisy_result = result.apply_bitflips({0: 0.1, 1: 0.1, 3: 0.4})
+    noisy_result = result.apply_bitflips({0: 0.2, 1: 0.4, 3: 0.3})
     noisy_samples = noisy_result.samples(binary=True)
+    register_samples = noisy_result.samples(binary=True, registers=True)
 
     samples = result.samples().numpy()
     tf.random.set_seed(123)
     sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE'))
-    flipper = sprobs.numpy() < np.array([0.1, 0.1, 0.4])
+    flipper = sprobs.numpy() < np.array([0.2, 0.4, 0.3])
     target_samples = (samples + flipper) % 2
     np.testing.assert_allclose(noisy_samples, target_samples)
+    # Check register samples
+    np.testing.assert_allclose(register_samples["a"], target_samples[:, :2])
+    np.testing.assert_allclose(register_samples["b"], target_samples[:, 2:])
 
 
 def test_post_measurement_bitflip_errors():
