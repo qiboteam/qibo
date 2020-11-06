@@ -78,7 +78,6 @@ class GateResult:
             res, cnts = self._calculate_counts(self.samples(binary=False))
             self._frequencies = collections.Counter(
                 {k: v for k, v in zip(res, cnts)})
-
         if binary:
             return collections.Counter(
                 {"{0:b}".format(k).zfill(self.nqubits): v

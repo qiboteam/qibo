@@ -599,8 +599,8 @@ def test_measurements_with_probabilistic_noise(accelerators=None):
     np.testing.assert_allclose(result.samples(), target_samples)
 
 
-@pytest.mark.parametrize("prob", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
-def test_post_measurement_bitflips(prob):
+@pytest.mark.parametrize("probs", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
+def test_post_measurement_bitflips(probs):
     """Check applying bitflips to measurement samples."""
     import tensorflow as tf
     from qibo.config import DTYPES
@@ -609,36 +609,50 @@ def test_post_measurement_bitflips(prob):
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.GateResult(qubits, binary_samples=samples)
     tf.random.set_seed(123)
-    noisy_result = result.apply_bitflips(prob)
+    noisy_result = result.apply_bitflips(probs)
 
     tf.random.set_seed(123)
-    if isinstance(prob, dict):
-        prob = np.array([prob[q] for q in qubits])
+    if isinstance(probs, dict):
+        probs = np.array([probs[q] for q in qubits])
     sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE')).numpy()
-    flipper = sprobs < prob
+    flipper = sprobs < probs
     target_samples = (samples + flipper) % 2
     np.testing.assert_allclose(noisy_result.samples(), target_samples)
 
 
-def test_post_measurement_bitflips_on_circuit():
+@pytest.mark.parametrize("accelerators", _ACCELERATORS)
+@pytest.mark.parametrize("probs,target",
+                         [([0.0, 0.0, 0.0], {5:30}),
+                          ([0.1, 0.3, 0.2], {5:16, 7:10, 6:2, 3: 1, 4: 1}),
+                          ([0.5, 0.5, 0.5], {3:6, 5:6, 7:5, 2:4, 4:3, 0:2, 1:2, 6:2})])
+def test_post_measurement_bitflips_on_circuit(accelerators, probs, target):
     """Check bitflip errors on circuit measurements."""
-    from qibo.config import DTYPES
     import tensorflow as tf
-    #probs = np.array([0.1, 0.3, 0.2])
-    probs = np.zeros(3)
-    c = models.Circuit(5)
+    tf.random.set_seed(123)
+    c = models.Circuit(5, accelerators=accelerators)
     c.add([gates.X(0), gates.X(2), gates.X(3)])
     c.add(gates.M(0, 1, bitflips={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, bitflips=probs[2]))
-    tf.random.set_seed(123)
-    samples = c(nshots=30).samples()
+    result = c(nshots=30).frequencies(binary=False)
+    assert result == target
 
-    c = models.Circuit(5)
-    c.add([gates.X(0), gates.X(2), gates.X(3)])
-    c.add([gates.M(0, 1), gates.M(3)])
-    tf.random.set_seed(123)
-    target_samples = c(nshots=30).samples()
-    sprobs = tf.random.uniform(target_samples.shape, dtype=DTYPES.get('DTYPE'))
-    flipper = sprobs.numpy() < probs
-    target_samples = (target_samples.numpy() + flipper) % 2
-    np.testing.assert_allclose(samples, target_samples)
+
+def test_post_measurement_bitflip_errors():
+    """Check errors raised by `GateResult.apply_bitflips` and `gates.M`."""
+    from qibo.tensorflow import measurements
+    samples = np.random.randint(0, 2, (20, 3))
+    result = measurements.GateResult((0, 1, 3), binary_samples=samples)
+    # Passing wrong qubit ids in bitflip error map
+    with pytest.raises(KeyError):
+        noisy_result = result.apply_bitflips({0: 0.1, 2: 0.2})
+    # Passing wrong bitflip error map type
+    with pytest.raises(TypeError):
+        noisy_result = result.apply_bitflips("test")
+    # Check bitflip error map errors when creating measurement gate
+    gate = gates.M(0, 1, bitflips=2 * [0.1])
+    with pytest.raises(ValueError):
+        gate = gates.M(0, 1, bitflips=4 * [0.1])
+    with pytest.raises(KeyError):
+        gate = gates.M(0, 1, bitflips={0: 0.1, 2: 0.2})
+    with pytest.raises(TypeError):
+        gate = gates.M(0, 1, bitflips="test")

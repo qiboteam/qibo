@@ -579,8 +579,12 @@ class M(Gate):
             It is possible to measure multiple qubits using ``gates.M(0, 1, 2, ...)``.
             If the qubits to measure are held in an iterable (eg. list) the ``*``
             operator can be used, for example ``gates.M(*[0, 1, 4])`` or ``gates.M(*range(5))``.
-        register_name: Optional name of the register to distinguish it from
-            other registers when used in circuits.
+        register_name (str): Optional name of the register to distinguish it
+            from other registers when used in circuits.
+        bitflips (list): Optional list of bit-flip error probabilities for each
+            of the measured qubits. If ``None`` no errors will be added to the
+            measurements. If a ``float`` is given the same probability will
+            be used for all qubits.
     """
 
     def __init__(self, *q, register_name: Optional[str] = None,
