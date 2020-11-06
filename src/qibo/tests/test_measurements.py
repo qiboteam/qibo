@@ -570,11 +570,11 @@ def test_copy_measurements(accelerators):
         assert rg1[k] == rg2[k]
 
 
-def test_measurements_with_probabilistic_noise(accelerators=None):
+def test_measurements_with_probabilistic_noise():
     """Check measurements when simulating noise with repeated execution."""
     import tensorflow as tf
     thetas = np.random.random(5)
-    c = models.Circuit(5, accelerators)
+    c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
     c.add((gates.ProbabilisticNoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
            for i in range(5)))
