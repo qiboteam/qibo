@@ -220,6 +220,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
 
 class M(TensorflowGate, base_gates.M):
+    from qibo.tensorflow import distutils
     from qibo.tensorflow import measurements
 
     def __init__(self, *q, register_name: Optional[str] = None):
@@ -257,12 +258,6 @@ class M(TensorflowGate, base_gates.M):
         # Bring probs in the order specified by the user
         return tf.transpose(probs, perm=self.reduced_target_qubits)
 
-    def _get_cpu(self): # pragma: no cover
-        # case not covered by GitHub workflows because it requires OOM
-        if not DEVICES['CPU']:
-            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
-        return DEVICES['CPU'][0]
-
     def _sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         dtype = DTYPES.get('DTYPEINT')
         probs_dim = tf.cast((2 ** len(self.target_qubits),), dtype=dtype)
@@ -270,12 +265,20 @@ class M(TensorflowGate, base_gates.M):
         probs = self._calculate_probabilities(tf.reshape(state, shape))
         logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
         samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
-        return samples_dec
+        return self.measurements.GateResult(
+            self.qubits, decimal_samples=samples_dec)
 
-    def __call__(self, state: tf.Tensor, nshots: int,
-                 samples_only: bool = False) -> tf.Tensor:
+    def _get_cpu(self): # pragma: no cover
+        # case not covered by GitHub workflows because it requires OOM
+        if not DEVICES['CPU']:
+            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
+        return DEVICES['CPU'][0]
+
+    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        if isinstance(state, self.distutils.DistributedState):
+            with tf.device(state.device):
+                state = state.vector
         TensorflowGate._set_nqubits(self, state)
-        device = DEVICES['DEFAULT']
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
@@ -283,19 +286,15 @@ class M(TensorflowGate, base_gates.M):
 
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
-            with tf.device(device):
-                samples_dec = self._sample(state, nshots)
+            with tf.device(self.device):
+                result = self._sample(state, nshots)
         except oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
             device = self._get_cpu()
             with tf.device(device):
-                samples_dec = self._sample(state, nshots)
-
-        if samples_only:
-            return samples_dec
-        return self.measurements.GateResult(
-            self.qubits, decimal_samples=samples_dec)
+                result = self._sample(state, nshots)
+        return result
 
 
 class RX(MatrixGate, base_gates.RX):
