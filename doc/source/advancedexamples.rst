@@ -586,7 +586,7 @@ How to perform noisy simulation?
 
 Qibo can perform noisy simulation with two different methods: by repeating the
 circuit execution multiple times and applying noise channels probabilistically
-or by using density density matrices.
+or by using density matrices.
 
 Using repeated execution
 ^^^^^^^^^^^^^^^^^^^^^^^^
