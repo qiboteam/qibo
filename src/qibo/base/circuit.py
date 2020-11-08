@@ -354,7 +354,7 @@ class BaseCircuit(object):
         if self.density_matrix:
             channel_cls = gate_module.NoiseChannel
         else:
-            channel_name = gate_module.ProbabilisticNoiseChannel
+            channel_cls = gate_module.ProbabilisticNoiseChannel
 
         channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel,
                     gates.GeneralChannel)
