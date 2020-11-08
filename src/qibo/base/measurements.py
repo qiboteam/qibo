@@ -4,6 +4,8 @@ import collections
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 from qibo.config import raise_error
 TensorType = Any
+ProbType = Union[float, Tuple[float, float]]
+ProbsType = Union[ProbType, List[ProbType], Dict[int, ProbType]]
 
 
 class GateResult:
@@ -84,8 +86,32 @@ class GateResult:
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
-    def apply_bitflips(self, probability: Union[Dict[int, float], float]
-                       ) -> "GateResult":
+    @staticmethod
+    def _get_bitflip_tuple(qubits: Tuple[int], probs: ProbsType) -> Tuple[float]:
+        if isinstance(probs, float):
+            if probs < 0 or probs > 1:
+                raise_error(ValueError, "Invalid bitflip probability {}."
+                                        "".format(probs))
+            return len(qubits) * (probs,)
+
+        if isinstance(probs, (tuple, list)):
+            if len(probs) != len(qubits):
+                raise_error(ValueError, "{} qubits were measured but the given "
+                                        "bitflip probability list contains {} "
+                                        "values.".format(
+                                            len(qubits), len(probs)))
+            return tuple(probs)
+
+        if isinstance(probs, dict):
+            diff = set(probs.keys()) - set(qubits)
+            if diff:
+                raise_error(KeyError, "Bitflip map contains {} qubits that are "
+                                      "not measured.".format(diff))
+            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
+
+        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+
+    def apply_bitflips(self, probability: ProbsType) -> "GateResult":
         """Applies bitflip noise to the measured samples.
 
         Args:
@@ -97,18 +123,7 @@ class GateResult:
             A new :class:`qibo.base.measurements.GateResult` object that holds
             the noisy samples.
         """
-        if isinstance(probability, float):
-            probs = len(self.qubits) * (probability,)
-        elif isinstance(probability, dict):
-            if set(self.qubits) != set(probability.keys()):
-                raise_error(KeyError,
-                            "Qubits in the bitflip probability map are "
-                            "different from the measured qubits.")
-            probs = tuple(probability[q] for q in self.qubits)
-        else:
-            raise_error(TypeError, "Measurement bitflip probability can be "
-                                   "a float or a dictionary but is {}."
-                                   "".format(type(probability)))
+        probs = self._get_bitflip_tuple(self.qubits, probability)
         noisy = self._apply_bitflips(self.samples(), probs)
         return self.__class__(self.qubits, binary_samples=noisy)
 
