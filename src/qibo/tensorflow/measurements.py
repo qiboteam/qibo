@@ -30,8 +30,11 @@ class GateResult(base_measurements.GateResult):
         dtype = DTYPES.get('DTYPE')
         fprobs = tf.cast(probs, dtype=dtype)
         sprobs = tf.random.uniform(noiseless_samples.shape, dtype=dtype)
-        flipper = tf.cast(sprobs < fprobs, dtype=noiseless_samples.dtype)
-        return (noiseless_samples + flipper) % 2
+        flip0 = tf.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = tf.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
+        noisy_samples = noisy_samples - noiseless_samples * flip1
+        return noisy_samples
 
 
 class CircuitResult(base_measurements.CircuitResult):
