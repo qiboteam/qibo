@@ -123,19 +123,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                        "different one using ``qibo.set_device``.")
         return state
 
-    def _sample_measurements(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
-        """Generates measurement samples from the given state vector."""
-        return self.measurement_gate(state, nshots, samples_only=True)
-
-    def _measurement_result(self, samples: tf.Tensor,
-                            state: Optional[tf.Tensor] = None
-                            ) -> measurements.CircuitResult:
-        """Creates the measurement result object using the sampled bitstrings."""
-        self.measurement_gate_result = measurements.GateResult(
-            self.measurement_gate.qubits, decimal_samples=samples)
-        return measurements.CircuitResult(
-            self.measurement_tuples, self.measurement_gate_result)
-
     def _repeated_execute(self, nreps: int,
                           initial_state: Optional[InitStateType] = None
                           ) -> tf.Tensor:
@@ -143,7 +130,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         for _ in range(nreps):
             state = self._device_execute(initial_state)
             if self.measurement_gate is not None:
-                results.append(self._sample_measurements(state, nshots=1)[0])
+                results.append(self.measurement_gate(state, nshots=1)[0])
                 del(state)
             else:
                 results.append(tf.identity(state))
@@ -151,7 +138,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         if self.measurement_gate is None:
             return results
-        return self._measurement_result(results)
+
+        mgate_result = measurements.GateResult(
+                self.measurement_gate.qubits, decimal_samples=results)
+        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
     def execute(self, initial_state: Optional[InitStateType] = None,
                 nshots: Optional[int] = None) -> OutputType:
@@ -191,8 +181,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self.measurement_gate is None or nshots is None:
             return state
 
-        samples = self._sample_measurements(state, nshots)
-        return self._measurement_result(samples, state)
+        mgate_result = self.measurement_gate(state, nshots)
+        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
                  nshots: Optional[int] = None) -> OutputType:

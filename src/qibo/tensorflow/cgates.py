@@ -220,6 +220,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
 
 class M(TensorflowGate, base_gates.M):
+    from qibo.tensorflow import distutils
     from qibo.tensorflow import measurements
 
     def __init__(self, *q, register_name: Optional[str] = None):
@@ -263,8 +264,10 @@ class M(TensorflowGate, base_gates.M):
             raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
         return DEVICES['CPU'][0]
 
-    def __call__(self, state: tf.Tensor, nshots: int,
-                 samples_only: bool = False) -> tf.Tensor:
+    def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        if isinstance(state, self.distutils.DistributedState):
+            with tf.device(state.device):
+                state = state.vector
         TensorflowGate._set_nqubits(self, state)
         probs_dim = tf.cast((2 ** len(self.target_qubits),),
                             dtype=DTYPES.get('DTYPEINT'))
@@ -291,9 +294,6 @@ class M(TensorflowGate, base_gates.M):
             device = self._get_cpu()
             with tf.device(device):
                 samples_dec = sample()
-
-        if samples_only:
-            return samples_dec
         return self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
 
