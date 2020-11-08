@@ -352,15 +352,21 @@ class BaseCircuit(object):
 
         # Generate noise gates
         noise_gates = []
-        channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel)
-        channel_cls = getattr(gate_module, channels[int(probabilistic)].__name__)
+        channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel,
+                    gates.GeneralChannel)
+        channel_cls = gate_module.NoiseChannel
+        if probabilistic:
+            channel_cls = gate_module.ProbabilisticNoiseChannel
         for gate in self.queue:
             if isinstance(gate, channels):
                 raise_error(ValueError, "`.with_noise` method is not available for "
                                         "circuits that already contain noise channels.")
-            noise_gates.append([channel_cls(q, px=p[0], py=p[1], pz=p[2])
-                                for q, p in noise_map.items()
-                                if sum(p) > 0])
+            noise_gates.append([])
+            for q in gate.qubits:
+                if q in noise_map and sum(noise_map[q]) > 0:
+                    p = noise_map[q]
+                    noise_gates[-1].append(channel_cls(
+                        q, px=p[0], py=p[1], pz=p[2]))
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
