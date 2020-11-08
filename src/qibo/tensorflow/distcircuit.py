@@ -205,6 +205,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
+        if self.measurement_gate is not None:
+            self.measurement_gate.device = self.memory_device
 
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
@@ -235,15 +237,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             raise_error(RuntimeError, "State does not fit in memory during distributed "
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
-
-    def _sample_measurements(self, state: utils.DistributedState, nshots: int
-                             ) -> tf.Tensor:
-        """Generates measurement samples from the given state vector."""
-        with tf.device(self.memory_device):
-            samples = self.measurement_gate(
-                state.vector, nshots, samples_only=True,
-                is_density_matrix=self.using_density_matrix)
-        return samples
 
     def execute(self, initial_state: Optional[InitStateType] = None,
                 nshots: Optional[int] = None) -> OutputType:

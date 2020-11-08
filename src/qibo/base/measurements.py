@@ -58,6 +58,9 @@ class GateResult:
             self._decimal = self._convert_to_decimal(self._binary, self.nqubits)
         return self._decimal
 
+    def __getitem__(self, i: int) -> TensorType:
+        return self.samples(binary=False)[i]
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
