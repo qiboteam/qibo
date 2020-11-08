@@ -224,9 +224,10 @@ class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import measurements
 
     def __init__(self, *q, register_name: Optional[str] = None,
-                 bitflips: Optional[List[float]] = None):
+                 p0: Optional["ProbsType"] = None,
+                 p1: Optional["ProbsType"] = None):
         base_gates.M.__init__(self, *q, register_name=register_name,
-                              bitflips=bitflips)
+                              p0=p0, p1=p1)
         self.qubits_tensor = None
         self._density_matrix = False
         self._traceout = None
@@ -269,8 +270,9 @@ class M(TensorflowGate, base_gates.M):
         samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
         result = self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
-        if self.bitflip_map:
-            result = result.apply_bitflips(self.bitflip_map)
+        # optional bitflip noise
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
         return result
 
     def _get_cpu(self): # pragma: no cover

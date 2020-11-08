@@ -4,8 +4,7 @@ import collections
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 from qibo.config import raise_error
 TensorType = Any
-ProbType = Union[float, Tuple[float, float]]
-ProbsType = Union[ProbType, List[ProbType], Dict[int, ProbType]]
+ProbsType = Union[float, List[float], Dict[int, float]]
 
 
 class GateResult:

@@ -631,8 +631,8 @@ def test_post_measurement_bitflips_on_circuit(accelerators, probs, target):
     tf.random.set_seed(123)
     c = models.Circuit(5, accelerators=accelerators)
     c.add([gates.X(0), gates.X(2), gates.X(3)])
-    c.add(gates.M(0, 1, bitflips={0: probs[0], 1: probs[1]}))
-    c.add(gates.M(3, bitflips=probs[2]))
+    c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
+    c.add(gates.M(3, p0=probs[2]))
     result = c(nshots=30).frequencies(binary=False)
     assert result == target
 
@@ -675,10 +675,10 @@ def test_post_measurement_bitflip_errors():
     with pytest.raises(TypeError):
         noisy_result = result.apply_bitflips("test")
     # Check bitflip error map errors when creating measurement gate
-    gate = gates.M(0, 1, bitflips=2 * [0.1])
+    gate = gates.M(0, 1, p0=2 * [0.1])
     with pytest.raises(ValueError):
-        gate = gates.M(0, 1, bitflips=4 * [0.1])
+        gate = gates.M(0, 1, p0=4 * [0.1])
     with pytest.raises(KeyError):
-        gate = gates.M(0, 1, bitflips={0: 0.1, 2: 0.2})
+        gate = gates.M(0, 1, p0={0: 0.1, 2: 0.2})
     with pytest.raises(TypeError):
-        gate = gates.M(0, 1, bitflips="test")
+        gate = gates.M(0, 1, p0="test")
