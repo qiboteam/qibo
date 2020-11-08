@@ -803,9 +803,9 @@ measurement gates:
       thetas = np.random.random(6)
       c = models.Circuit(6)
       c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
-      c.add(gates.M(0, 1, bitflips=0.2))
-      c.add(gates.M(2, 3, bitflips={3: 0.1, 4: 0.0}))
-      c.add(gates.M(4, 5, bitflips=[0.4, 0.3]))
+      c.add(gates.M(0, 1, p0=0.2))
+      c.add(gates.M(2, 3, p0={3: 0.1, 4: 0.0}))
+      c.add(gates.M(4, 5, p0=[0.4, 0.3]))
       result = c(nshots=100)
 
 In this case ``result`` will contain noisy samples according to the given
@@ -816,6 +816,14 @@ a single float number (to be used on all measured qubits).
 Note that, unlike the previous code example, when bit-flip errors are
 incorporated as part of measurement gates it is not possible to access the
 noiseless samples.
+
+Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
+argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
+probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
+Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
+can be used both in :meth:`qibo.base.measurements.CircuitResult.apply_bitflips`
+and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
+be used for both errors.
 
 
 .. _timeevol-example:
