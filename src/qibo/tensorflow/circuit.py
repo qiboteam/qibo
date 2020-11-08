@@ -189,7 +189,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if self.measurement_gate is None or nshots is None:
             return state
 
-        mgate_result = self.measurement_gate(state, nshots)
+        mgate_result = self.measurement_gate(
+            state, nshots, is_density_matrix=self.using_density_matrix)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
     def __call__(self, initial_state: Optional[InitStateType] = None,
