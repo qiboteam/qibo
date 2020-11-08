@@ -78,22 +78,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if not self.using_tfgates:
+        if BACKEND['GATES'] == 'custom':
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
         self._compiled_execute = tf.function(self._execute_for_compile)
-
-    @property
-    def using_tfgates(self) -> bool:
-        """"""
-        return BACKEND['GATES'] != 'custom'
 
     def _execute(self, initial_state: Optional[InitStateType] = None
                  ) -> tf.Tensor:
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if self.using_tfgates:
+        if BACKEND['GATES'] != 'custom':
             state = tf.reshape(state, self.shapes.get('TENSOR'))
 
         if self._compiled_execute is None:
@@ -103,7 +98,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             for callback, results in callback_results.items():
                 callback.extend(results)
 
-        if self.using_tfgates:
+        if BACKEND['GATES'] != 'custom':
             state = tf.reshape(state, self.shapes.get('TF_FLAT'))
 
         self._final_state = state
@@ -180,6 +175,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
             return state
+
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 

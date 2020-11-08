@@ -342,9 +342,7 @@ class BaseCircuit(object):
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
                 c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
                 c2.add(gates.H(1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
                 c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
                 c2.add(gates.CNOT(0, 1))
                 c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
@@ -354,18 +352,23 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         if self.density_matrix:
-            channel_name = "NoiseChannel"
+            channel_cls = gate_module.NoiseChannel
         else:
-            channel_name = "ProbabilisticNoiseChannel"
-        channel_base = getattr(gates, channel_name)
-        channel_cls = getattr(gate_module, channel_name)
+            channel_cls = gate_module.ProbabilisticNoiseChannel
+
+        channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel,
+                    gates.GeneralChannel)
         for gate in self.queue:
-            if isinstance(gate, channel_base):
+            if isinstance(gate, channels):
                 raise_error(ValueError, "`.with_noise` method is not available for "
                                         "circuits that already contain noise channels.")
-            noise_gates.append([channel_cls(q, px=p[0], py=p[1], pz=p[2])
-                                for q, p in noise_map.items()
-                                if sum(p) > 0])
+            noise_gates.append([])
+            for q in gate.qubits:
+                if q in noise_map and sum(noise_map[q]) > 0:
+                    p = noise_map[q]
+                    noise_gates[-1].append(channel_cls(
+                        q, px=p[0], py=p[1], pz=p[2]))
+
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
         for i, gate in enumerate(self.queue):

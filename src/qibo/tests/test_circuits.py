@@ -464,11 +464,10 @@ def test_circuit_with_noise_probabilistic_channel(backend):
         noiseless_c = Circuit(4)
         for i, t in enumerate(thetas):
             noiseless_c.add(gates.RY(i, theta=t))
-            for j in range(4):
-                if np.random.random() < 0.2:
-                    noiseless_c.add(gates.X(j))
-                if np.random.random() < 0.1:
-                    noiseless_c.add(gates.Z(j))
+            if np.random.random() < 0.2:
+                noiseless_c.add(gates.X(i))
+            if np.random.random() < 0.1:
+                noiseless_c.add(gates.Z(i))
         target_state.append(noiseless_c().numpy())
     target_state = np.stack(target_state)
     np.testing.assert_allclose(final_state, target_state)
