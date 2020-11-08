@@ -2,7 +2,6 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-import joblib
 from qibo.base import circuit
 from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
