@@ -1,4 +1,4 @@
-from qibo.config import BACKEND_NAME, raise_error
+from qibo.config import BACKEND_NAME, raise_error, get_backend
 if BACKEND_NAME != "tensorflow": # pragma: no cover
     # case not tested because backend is preset to TensorFlow
     raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
@@ -191,7 +191,7 @@ class VQE(object):
             return self.hamiltonian.expectation(final_state)
 
         if compile:
-            if not self.circuit.using_tfgates:
+            if get_backend() == "custom":
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
