@@ -407,14 +407,14 @@ def test_circuit_with_noise_with_measurements():
     c = models.Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.M(0))
-    noisy_c = c.with_noise(3 * (0.1,), measurement_noise = (0.3, 0.0, 0.0))
+    noisy_c = c.with_noise(3 * (0.1,))
 
     target_c = models.Circuit(2)
     target_c.add(gates.H(0))
     target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
     target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(0, 0.3, 0.0, 0.0))
+    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
     target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
 
     final_state = noisy_c().numpy()
@@ -433,7 +433,7 @@ def test_circuit_with_noise_noise_map():
     c = models.Circuit(3)
     c.add([gates.H(0), gates.H(1), gates.X(2)])
     c.add(gates.M(2))
-    noisy_c = c.with_noise(noise_map, measurement_noise = (0.3, 0.0, 0.0))
+    noisy_c = c.with_noise(noise_map)
 
     target_c = models.Circuit(3)
     target_c.add(gates.H(0))
@@ -445,7 +445,6 @@ def test_circuit_with_noise_noise_map():
     target_c.add(gates.X(2))
     target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
     target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
-    target_c.add(gates.NoiseChannel(2, 0.3, 0.0, 0.0))
 
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
@@ -467,9 +466,6 @@ def test_circuit_with_noise_noise_map_exceptions():
         noisy_c = c.with_noise({0: (0.2, 0.3, 0.1)})
     with pytest.raises(TypeError):
         noisy_c = c.with_noise({0, 1})
-    with pytest.raises(ValueError):
-        noisy_c = c.with_noise((0.2, 0.3, 0.1),
-                               measurement_noise=(0.5, 0.0, 0.0))
     qibo.set_backend(original_backend)
 
 

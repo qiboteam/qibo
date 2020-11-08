@@ -307,9 +307,7 @@ class BaseCircuit(object):
         decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit
 
-    def with_noise(self, noise_map: NoiseMapType,
-                   measurement_noise: Optional[NoiseMapType] = None,
-                   probabilistic: bool = False
+    def with_noise(self, noise_map: NoiseMapType, probabilistic: bool = False
                    ) -> "BaseCircuit":
         """Creates a copy of the circuit with noise gates after each gate.
 
@@ -319,11 +317,6 @@ class BaseCircuit(object):
                 If a tuple of probabilities (px, py, pz) is given instead of
                 a dictionary, then the same probabilities will be used for all
                 qubits.
-            measurement_noise (dict): Optional map for using different noise
-                probabilities before measurement for the qubits that are
-                measured.
-                If ``None`` the default probabilities specified by ``noise_map``
-                will be used for all qubits.
             probabilistic (bool): If ``True`` the
                 :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be
                 used for noise simulation with repeated circuit execution,
@@ -356,16 +349,6 @@ class BaseCircuit(object):
                 c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
         """
         noise_map = self._check_noise_map(noise_map)
-        if measurement_noise is not None:
-            if self.measurement_gate is None:
-                raise_error(ValueError, "Passed measurement noise but the circuit "
-                                        "does not contain measurement gates.")
-            measurement_noise = self._check_noise_map(measurement_noise)
-            # apply measurement noise only to the qubits that are measured
-            # and leave default noise to the rest
-            measured_qubits = set(self.measurement_gate.target_qubits)
-            measurement_noise = {q: measurement_noise[q] if q in measured_qubits
-                                 else noise_map[q] for q in range(self.nqubits)}
 
         # Generate noise gates
         noise_gates = []
@@ -378,10 +361,6 @@ class BaseCircuit(object):
             noise_gates.append([channel_cls(q, px=p[0], py=p[1], pz=p[2])
                                 for q, p in noise_map.items()
                                 if sum(p) > 0])
-        if measurement_noise is not None:
-            noise_gates[-1] = [channel_cls(q, *list(p))
-                               for q, p in measurement_noise.items()
-                               if sum(p) > 0]
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)

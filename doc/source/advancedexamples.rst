@@ -755,44 +755,6 @@ in order to use the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate.
 This will simulate noise with repeated circuit execution in contrast to the
 default :class:`qibo.base.gates.NoiseChannel` which uses density matrices.
 
-Moreover, ``with_noise`` supports an additional optional argument ``measurement_noise``
-which allows the user to explicitly specify the probabilities of the noise
-channels that applied before measurement gates. For example:
-
-.. code-block:: python
-
-      import qibo
-      qibo.set_backend("matmuleinsum")
-      from qibo import models, gates
-
-      c = models.Circuit(2)
-      c.add([gates.H(0), gates.H(1)])
-      c.add(gates.M(0))
-
-      # Define a noise map that maps qubit IDs to noise probabilities
-      noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-      measurement_noise = (0.4, 0.0, 0.0)
-      noisy_c = c.with_noise(noise_map, measurement_noise=measurement_noise)
-
-is equivalent to the following:
-
-.. code-block:: python
-
-      noisy_c = models.Circuit(2)
-      noisy_c.add(gates.H(0))
-      noisy_c.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.H(1))
-      noisy_c.add(gates.NoiseChannel(0, 0.4, 0.0, 0.0))
-      noisy_c.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
-      noisy_c.add(gates.M(0))
-
-Note that ``measurement_noise`` does not affect qubits that are not measured
-and the default ``noise_map`` will be used for those.
-Similarly to ``noise_map``, ``measurement_noise`` can be either a dictionary
-that maps each qubit to the corresponding probability triplet or a tuple
-if the same triplet shall be used on all measured qubits.
-
 
 .. _timeevol-example:
 
