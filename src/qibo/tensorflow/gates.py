@@ -513,45 +513,20 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return self.cgates.VariationalLayer.__call__(self, state)
 
 
-class TensorflowChannel(TensorflowGate):
-    """Base Tensorflow channels.
-
-    All channels should inherit this class.
-    """
-
-    def __init__(self):
-        super(TensorflowChannel, self).__init__()
-
-    def _prepare(self):
-        from qibo.tensorflow import cgates
-        cgates.TensorflowChannel._prepare(self)
-
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "Channels cannot be used on state vectors.")
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
-
-class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
-
-    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
-        TensorflowChannel.__init__(self)
+class GateChannel(TensorflowGate, base_gates.GateChannel):
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
-        for p, gate in self.gates:
+        for p, gate in zip(self.probs, self.gates):
             new_state += p * gate(state)
-        return (1 - self.total_p) * state + new_state
+        return (1 - self.psum) * state + new_state
 
 
-class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
+class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):
 
     def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
         base_gates.GeneralChannel.__init__(self, A)
-        TensorflowChannel.__init__(self)
+        TensorflowGate.__init__(self)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)

@@ -1669,19 +1669,24 @@ class CallbackGate(Gate):
         self.callback.nqubits = n
 
 
-class _AbstractChannel(Gate):
-    """Abstract class for channels.
+class GateChannel(Gate):
 
-    All channels should inherit this class."""
-
-    def __init__(self):
-        super(_AbstractChannel, self).__init__()
+    def __init__(self, p, gates):
+        super(GateChannel, self).__init__()
+        self.name = "GateChannel"
         self.is_channel = True
         self.density_matrix = True
 
-    def _create_gates(self): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
+        if len(p) != len(gates):
+            raise_error(ValueError)
+
+        self.probs = p
+        self.psum = sum(p)
+
+        self.gates = tuple(gates)
+        self.target_qubits = tuple(sorted(set(
+            q for gate in gates for q in gate.target_qubits)))
+        self.init_args = [p, gates]
 
     @property
     def unitary(self): # pragma: no cover
@@ -1694,7 +1699,7 @@ class _AbstractChannel(Gate):
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
 
-class NoiseChannel(_AbstractChannel):
+class NoiseChannel(GateChannel):
     """Probabilistic noise channel implemented using density matrices.
 
     Implements the following evolution
@@ -1712,27 +1717,17 @@ class NoiseChannel(_AbstractChannel):
     """
 
     def __init__(self, q, px=0, py=0, pz=0):
-        super(NoiseChannel, self).__init__()
-        self.name = "NoiseChannel"
-        self.target_qubits = (q,)
-        self.p = (px, py, pz)
-        self.total_p = sum(self.p)
-        self.gates = tuple()
+        probs, gates = [], []
+        for p, gate in [(px, "X"), (py, "Y"), (pz, "Z")]:
+            if p > 0:
+                probs.append(p)
+                gates.append(getattr(self.module, gate)(q))
 
+        super(NoiseChannel, self).__init__(probs, gates)
+        self.name = "NoiseChannel"
+        assert self.target_qubits == (q,)
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz}
-
-    def _create_gates(self):
-        assert not self.gates
-        gatelist = []
-        for p, g in zip(self.p, ("X", "Y", "Z")):
-            if p > 0:
-                gate = getattr(self.module, g)(self.target_qubits[0])
-                gate.density_matrix = self.is_channel
-                gate.device = self.device
-                gate.nqubits = self.nqubits
-                gatelist.append((p, gate))
-        self.gates = tuple(gatelist)
 
 
 class ProbabilisticNoiseChannel(NoiseChannel):
@@ -1759,7 +1754,7 @@ class ProbabilisticNoiseChannel(NoiseChannel):
         self.seed = seed
 
 
-class GeneralChannel(_AbstractChannel):
+class GeneralChannel(Gate):
     """General channel defined by arbitrary Krauss operators.
 
     Implements the following evolution
@@ -1799,6 +1794,8 @@ class GeneralChannel(_AbstractChannel):
         super(GeneralChannel, self).__init__()
         self.name = "GeneralChannel"
         self.is_channel = True
+        self.density_matrix = True
+        
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
         self.init_args = [A]

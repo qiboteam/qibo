@@ -15,7 +15,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow",
-                      "ProbabilisticNoiseChannel"}
+                      "NoiseChannel", "ProbabilisticNoiseChannel"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -707,67 +707,62 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         return state
 
 
-class ProbabilisticNoiseChannel(TensorflowGate, base_gates.ProbabilisticNoiseChannel):
+class GateChannel(TensorflowGate, base_gates.GateChannel):
 
-    def __init__(self, q, px=0, py=0, pz=0, seed=None):
-        base_gates.ProbabilisticNoiseChannel.__init__(self, q, px, py, pz, seed)
+    def __init__(self, p: List[float], gates: List["Gate"]):
         TensorflowGate.__init__(self)
+        base_gates.GateChannel.__init__(self, p, gates)
 
     def _prepare(self):
-        self._create_gates()
-        if self.seed is not None:
-            np.random.seed(self.seed)
+        for gate in self.gates:
+            gate.density_matrix = self.is_channel
+            gate.device = self.device
+            gate.nqubits = self.nqubits
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
-        for p, gate in self.gates:
+        for p, gate in zip(self.probs, self.gates):
             if np.random.random() < p:
                 state = gate(state)
         return state
 
-
-class TensorflowChannel(TensorflowGate):
-    """Base Tensorflow channel.
-
-    All channels should inherit this class.
-    """
-
-    def __init__(self):
-        super(TensorflowChannel, self).__init__()
-
-    def _prepare(self):
-        if not self.density_matrix:
-            raise_error(ValueError, "Channels cannot be used on state vectors.")
-        base_cls = getattr(base_gates, self.__class__.__name__)
-        base_cls._create_gates(self)
-
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "Channels cannot be used on state vectors.")
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        """Loops over `self.gates` to calculate sum of Krauss operators."""
-        # abstract method
-        raise_error(NotImplementedError)
-
-
-class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
-
-    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
-        TensorflowChannel.__init__(self)
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
-
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
-        for p, gate in self.gates:
+        for p, gate in zip(self.probs, self.gates):
             new_state += p * gate(state)
             gate(state) # reset to the original state vector
-        return (1 - self.total_p) * state + new_state
+        return (1 - self.psum) * state + new_state
 
 
-class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
+class NoiseChannel(GateChannel, base_gates.NoiseChannel):
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
+        self.module.TensorflowGate.__init__(self)
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.module.GateChannel._state_vector_call(self, state)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.module.GateChannel._density_matrix_call(self, state)
+
+
+class ProbabilisticNoiseChannel(GateChannel, base_gates.ProbabilisticNoiseChannel):
+
+    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates.ProbabilisticNoiseChannel.__init__(self, q, px, py, pz, seed)
+
+    def _prepare(self):
+        GateChannel._prepare(self)
+        if self.seed is not None:
+            np.random.seed(self.seed)
+
+
+class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):
 
     def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        TensorflowChannel.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.GeneralChannel.__init__(self, A)
         self.dagger_gates = tuple()
 
@@ -786,7 +781,7 @@ class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
         return inv_gate
 
     def _prepare(self):
-        TensorflowChannel._prepare(self)
+        TensorflowGate._prepare(self)
         # create invert gates for resetting to the original state vector
         self.inv_gates = tuple(self._invert(gate) for gate in self.gates)
 
