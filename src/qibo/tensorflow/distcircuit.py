@@ -109,7 +109,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                              "support native tensorflow gates.")
         if isinstance(gate, gates.VariationalLayer):
             gate._prepare()
-        elif isinstance(gate, gates.ProbabilisticNoiseChannel):
+        elif isinstance(gate, gates.GateChannel):
             raise_error(NotImplementedError, "Distributed circuit does not "
                                              "noise channels.")
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and

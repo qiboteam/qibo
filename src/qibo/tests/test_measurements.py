@@ -575,7 +575,7 @@ def test_measurements_with_probabilistic_noise():
     thetas = np.random.random(5)
     c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.ProbabilisticNoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
+    c.add((gates.NoiseChannel(i, px=0.0, py=0.2, pz=0.4, seed=123)
            for i in range(5)))
     c.add(gates.M(*range(5)))
     tf.random.set_seed(123)

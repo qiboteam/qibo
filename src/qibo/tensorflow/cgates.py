@@ -15,7 +15,7 @@ class TensorflowGate(base_gates.Gate):
 
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow",
-                      "NoiseChannel", "ProbabilisticNoiseChannel"}
+                      "NoiseChannel"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -709,15 +709,18 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
 
 class GateChannel(TensorflowGate, base_gates.GateChannel):
 
-    def __init__(self, p: List[float], gates: List["Gate"]):
+    def __init__(self, p: List[float], gates: List["Gate"],
+                 seed: Optional[int] = None):
         TensorflowGate.__init__(self)
-        base_gates.GateChannel.__init__(self, p, gates)
+        base_gates.GateChannel.__init__(self, p, gates, seed=seed)
 
     def _prepare(self):
         for gate in self.gates:
-            gate.density_matrix = self.is_channel
+            gate.density_matrix = self.density_matrix
             gate.device = self.device
             gate.nqubits = self.nqubits
+        if self.seed is not None:
+            np.random.seed(self.seed)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
@@ -736,27 +739,16 @@ class GateChannel(TensorflowGate, base_gates.GateChannel):
 
 class NoiseChannel(GateChannel, base_gates.NoiseChannel):
 
-    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
+                 seed: Optional[int] = None):
         self.module.TensorflowGate.__init__(self)
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.module.GateChannel._state_vector_call(self, state)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.module.GateChannel._density_matrix_call(self, state)
-
-
-class ProbabilisticNoiseChannel(GateChannel, base_gates.ProbabilisticNoiseChannel):
-
-    def __init__(self, q, px=0, py=0, pz=0, seed=None):
-        TensorflowGate.__init__(self)
-        base_gates.ProbabilisticNoiseChannel.__init__(self, q, px, py, pz, seed)
-
-    def _prepare(self):
-        GateChannel._prepare(self)
-        if self.seed is not None:
-            np.random.seed(self.seed)
 
 
 class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):

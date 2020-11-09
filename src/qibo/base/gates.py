@@ -30,7 +30,6 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
-        self.is_channel = False
         self.is_controlled_by = False
         self.is_special_gate = False
         # special gates are ``CallbackGate`` and ``Flatten``
@@ -1671,22 +1670,22 @@ class CallbackGate(Gate):
 
 class GateChannel(Gate):
 
-    def __init__(self, p, gates):
+    def __init__(self, p, gates, seed=None):
         super(GateChannel, self).__init__()
-        self.name = "GateChannel"
-        self.is_channel = True
-        self.density_matrix = True
-
         if len(p) != len(gates):
             raise_error(ValueError)
-
+        self.name = "GateChannel"
         self.probs = p
         self.psum = sum(p)
+        self.seed = seed
+        self.density_matrix = False
 
         self.gates = tuple(gates)
         self.target_qubits = tuple(sorted(set(
             q for gate in gates for q in gate.target_qubits)))
+
         self.init_args = [p, gates]
+        self.init_kwargs = {"seed": seed}
 
     @property
     def unitary(self): # pragma: no cover
@@ -1716,42 +1715,19 @@ class NoiseChannel(GateChannel):
         pz (float): Phase flip (Z) error probability.
     """
 
-    def __init__(self, q, px=0, py=0, pz=0):
+    def __init__(self, q, px=0, py=0, pz=0, seed=None):
         probs, gates = [], []
         for p, gate in [(px, "X"), (py, "Y"), (pz, "Z")]:
             if p > 0:
                 probs.append(p)
                 gates.append(getattr(self.module, gate)(q))
 
-        super(NoiseChannel, self).__init__(probs, gates)
+        super(NoiseChannel, self).__init__(probs, gates, seed=seed)
         self.name = "NoiseChannel"
         assert self.target_qubits == (q,)
+
         self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz}
-
-
-class ProbabilisticNoiseChannel(NoiseChannel):
-    """Probabilistic noise channel implemented via Monte Carlo sampling.
-
-    Has the same effect as :class:`qibo.base.gates.NoiseChannel` but is
-    implemented by repeated execution of the circuit and Monte Carlo sampling
-    instead of density matrices.
-    Can be used to simulate phase flip and bit flip errors.
-
-    Args:
-        q (int): Qubit id that the noise acts on.
-        px (float): Bit flip (X) error probability.
-        py (float): Y-error probability.
-        pz (float): Phase flip (Z) error probability.
-        seed (int): Seed for numpy random generator used for sampling.
-    """
-
-    def __init__(self, q, px=0, py=0, pz=0, seed=None):
-        super(ProbabilisticNoiseChannel, self).__init__(q, px, py, pz)
-        self.name = "ProbabilisticNoiseChannel"
-        self.is_channel = False
-        self.density_matrix = False
-        self.seed = seed
+        self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
 
 
 class GeneralChannel(Gate):
@@ -1793,9 +1769,8 @@ class GeneralChannel(Gate):
     def __init__(self, A):
         super(GeneralChannel, self).__init__()
         self.name = "GeneralChannel"
-        self.is_channel = True
         self.density_matrix = True
-        
+
         self.target_qubits = tuple(sorted(set(
           q for qubits, _ in A for q in qubits)))
         self.init_args = [A]

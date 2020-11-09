@@ -1386,7 +1386,7 @@ def test_collapse_gate_errors():
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_probabilistic_noise_channel(backend):
+def test_noise_channel_repeated(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
@@ -1396,7 +1396,7 @@ def test_probabilistic_noise_channel(backend):
 
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.ProbabilisticNoiseChannel(i, px, py, pz, seed=123)
+    c.add((gates.NoiseChannel(i, px, py, pz, seed=123)
            for i, (px, py, pz) in enumerate(probs)))
     final_state = c().numpy()
 

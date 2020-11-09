@@ -351,23 +351,16 @@ class BaseCircuit(object):
         noise_map = self._check_noise_map(noise_map)
         # Generate noise gates
         noise_gates = []
-        if self.density_matrix:
-            channel_cls = gate_module.NoiseChannel
-        else:
-            channel_cls = gate_module.ProbabilisticNoiseChannel
-
-        channels = (gates.NoiseChannel, gates.ProbabilisticNoiseChannel,
-                    gates.GeneralChannel)
         for gate in self.queue:
-            if isinstance(gate, channels):
+            if isinstance(gate, (gates.GateChannel, gates.GeneralChannel)):
                 raise_error(ValueError, "`.with_noise` method is not available for "
                                         "circuits that already contain noise channels.")
             noise_gates.append([])
             for q in gate.qubits:
                 if q in noise_map and sum(noise_map[q]) > 0:
                     p = noise_map[q]
-                    noise_gates[-1].append(channel_cls(
-                        q, px=p[0], py=p[1], pz=p[2]))
+                    noise_gates[-1].append(gate_module.NoiseChannel(
+                            q, px=p[0], py=p[1], pz=p[2]))
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
@@ -414,18 +407,13 @@ class BaseCircuit(object):
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
     def _add(self, gate: gates.Gate):
-        if self.density_matrix:
+        if gate.density_matrix and not self.density_matrix:
+            raise_error(ValueError, "Cannot add {} on circuits that uses state "
+                                    "vectors. Please switch to density matrix "
+                                    "circuit.".format(gate.name))
+        elif self.density_matrix:
             gate.density_matrix = True
-            if isinstance(gate, gates.ProbabilisticNoiseChannel):
-                raise_error(ValueError, "Cannot add the probabilistic noise "
-                                        "channel gate to a circuit that uses "
-                                        "density matrices. Please use a state "
-                                        "vector circuit.")
-        else:
-            if gate.is_channel:
-                raise_error(ValueError, "Cannot add channels on circuits that "
-                                        "use state vectors. Please switch to "
-                                        "density matrix circuit.")
+
         if self._final_state is not None:
             raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
                                       "executed.")
@@ -442,7 +430,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-        elif isinstance(gate, gates.ProbabilisticNoiseChannel):
+        elif isinstance(gate, gates.GateChannel):
             self.repeated_execution = True
             self.queue.append(gate)
         else:
