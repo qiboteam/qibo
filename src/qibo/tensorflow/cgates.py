@@ -14,8 +14,7 @@ class TensorflowGate(base_gates.Gate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow",
-                      "NoiseChannel"}
+        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -785,11 +784,5 @@ class NoiseChannel(UnitaryChannel, base_gates.NoiseChannel):
 
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
                  seed: Optional[int] = None):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
-
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        return self.module.UnitaryChannel._state_vector_call(self, state)
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        return self.module.UnitaryChannel._density_matrix_call(self, state)

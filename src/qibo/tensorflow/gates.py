@@ -516,14 +516,18 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
 
     def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        base_gates.KrausChannel.__init__(self, gates)
         TensorflowGate.__init__(self)
+        base_gates.KrausChannel.__init__(self, gates)
 
     def _prepare(self):
         for gate in self.gates:
             gate.density_matrix = self.density_matrix
             gate.device = self.device
             gate.nqubits = self.nqubits
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "`KrausChannel` cannot be applied to state "
+                                "vectors. Please switch to density matrices.")
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
@@ -532,10 +536,35 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         return new_state
 
 
-class UnitaryChannel(TensorflowGate, base_gates.UnitaryChannel):
+class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
+
+    def __init__(self, p: List[float], gates: List["Gate"],
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.UnitaryChannel.__init__(self, p, gates, seed=seed)
+
+    def _prepare(self):
+        KrausChannel._prepare(self)
+        if self.seed is not None:
+            np.random.seed(self.seed)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        TensorflowGate._set_nqubits(self, state)
+        for p, gate in zip(self.probs, self.gates):
+            if np.random.random() < p:
+                state = gate(state)
+        return state
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for p, gate in zip(self.probs, self.gates):
             new_state += p * gate(state)
         return (1 - self.psum) * state + new_state
+
+
+class NoiseChannel(UnitaryChannel, base_gates.NoiseChannel):
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
