@@ -366,12 +366,11 @@ def test_circuit_reexecution(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("tfmatrices", [False, True])
 @pytest.mark.parametrize("oncircuit", [False, True])
 def test_general_channel(backend, tfmatrices, oncircuit):
-    """Test `gates.GeneralChannel`."""
+    """Test `gates.KrausChannel`."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(2)
@@ -385,7 +384,7 @@ def test_general_channel(backend, tfmatrices, oncircuit):
         a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
         a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
 
-    gate = gates.GeneralChannel([((1,), a1), ((0, 1), a2)])
+    gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
     if oncircuit:
         c = models.Circuit(2, density_matrix=True)
@@ -406,7 +405,6 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     c = models.Circuit(2, density_matrix=True)
@@ -418,15 +416,14 @@ def test_controlled_by_channel():
                                   [0, 0, 1, 0]])
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
-        gate = gates.GeneralChannel(config).controlled_by(1)
+        gate = gates.KrausChannel(config).controlled_by(1)
 
 
-@pytest.mark.skip
 def test_krauss_operator_bad_shape():
     """Test that defining a Krauss operator with wrong shape raises error."""
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
-        gate = gates.GeneralChannel([((0, 1), a1)])
+        gate = gates.KrausChannel([((0, 1), a1)])
 
 
 def test_circuit_with_noise_gates():

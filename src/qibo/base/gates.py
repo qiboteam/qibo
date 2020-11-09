@@ -827,6 +827,7 @@ class U1(_Un_):
         """"""
         return self.__class__(self.target_qubits[0], -self.parameter)
 
+
 class U2(_Un_):
     """Second general unitary gate.
 
@@ -1668,24 +1669,68 @@ class CallbackGate(Gate):
         self.callback.nqubits = n
 
 
-class GateChannel(Gate):
+class KrausChannel(Gate):
+    """General channel defined by arbitrary Krauss operators.
 
-    def __init__(self, p, gates, seed=None):
-        super(GateChannel, self).__init__()
-        if len(p) != len(gates):
-            raise_error(ValueError)
-        self.name = "GateChannel"
-        self.probs = p
-        self.psum = sum(p)
-        self.seed = seed
-        self.density_matrix = False
+    Implements the following evolution
 
-        self.gates = tuple(gates)
-        self.target_qubits = tuple(sorted(set(
-            q for gate in gates for q in gate.target_qubits)))
+    .. math::
+        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
 
-        self.init_args = [p, gates]
-        self.init_kwargs = {"seed": seed}
+    where A are arbitrary Kraus operators given by the user. Note that the
+    Krauss operators set should be trace preserving, however this is not checked here.
+    For more information on channels and Kraus operators please check
+    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
+
+    Args:
+        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
+          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
+          corresponding matrix.
+
+    Example:
+        ::
+
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
+    """
+    # TODO: Fix docs
+
+    def __init__(self, gates):
+        super(KrausChannel, self).__init__()
+        self.name = "KrausChannel"
+        self.density_matrix = True
+        if isinstance(gates[0], Gate):
+            self.gates = tuple(gates)
+            self.target_qubits = tuple(sorted(set(
+                q for gate in gates for q in gate.target_qubits)))
+        else:
+            self.gates, self.target_qubits = self.from_matrices(gates)
+        self.init_args = [self.gates]
+
+    def from_matrices(self, matrices):
+        gatelist, qubitset = [], set()
+        for qubits, matrix in matrices:
+            # Check that given operators have the proper shape.
+            rank = 2 ** len(qubits)
+            shape = tuple(matrix.shape)
+            if shape != (rank, rank):
+                raise_error(ValueError, "Invalid Krauss operator shape {} for "
+                                        " acting on {} qubits."
+                                        "".format(shape, len(qubits)))
+            qubitset.update(qubits)
+            gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+        return tuple(gatelist), tuple(sorted(qubitset))
 
     @property
     def unitary(self): # pragma: no cover
@@ -1697,8 +1742,28 @@ class GateChannel(Gate):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
+    def on_qubits(self, *q): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
+                                         "for the `GeneralChannel` gate.")
 
-class NoiseChannel(GateChannel):
+
+class UnitaryChannel(KrausChannel):
+
+    def __init__(self, p, gates, seed=None):
+        super(UnitaryChannel, self).__init__(gates)
+        if len(p) != len(gates):
+            raise_error(ValueError)
+        self.name = "UnitaryChannel"
+        self.probs = p
+        self.psum = sum(p)
+        self.seed = seed
+        self.density_matrix = False
+        self.init_args = [p, self.gates]
+        self.init_kwargs = {"seed": seed}
+
+
+class NoiseChannel(UnitaryChannel):
     """Probabilistic noise channel implemented using density matrices.
 
     Implements the following evolution
@@ -1728,77 +1793,3 @@ class NoiseChannel(GateChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
-
-
-class GeneralChannel(Gate):
-    """General channel defined by arbitrary Krauss operators.
-
-    Implements the following evolution
-
-    .. math::
-        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
-
-    where A are arbitrary Krauss operators given by the user. Note that the
-    Krauss operators set should be trace preserving, however this is not checked here.
-    For more information on channels and Krauss operators please check
-    `J. Preskill's notes <http://www.theory.caltech.edu/people/preskill/ph219/chap3_15.pdf>`_.
-
-    Args:
-        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
-          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
-          corresponding matrix.
-
-    Example:
-        ::
-
-            from qibo.models import Circuit
-            from qibo import gates
-            # initialize circuit with 3 qubits
-            c = Circuit(3)
-            # define a sqrt(0.4) * X gate
-            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-            # define a sqrt(0.6) * CNOT gate
-            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                          [0, 0, 0, 1], [0, 0, 1, 0]])
-            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
-            # add the channel to the circuit
-            c.add(channel)
-    """
-
-    def __init__(self, A):
-        super(GeneralChannel, self).__init__()
-        self.name = "GeneralChannel"
-        self.density_matrix = True
-
-        self.target_qubits = tuple(sorted(set(
-          q for qubits, _ in A for q in qubits)))
-        self.init_args = [A]
-        self.gates = tuple()
-        self._check_shapes(False)
-
-    def _check_shapes(self, create_gates: bool = False):
-        """Checks that given operators have the proper shape."""
-        gatelist = []
-        for qubits, matrix in self.init_args[0]:
-            rank = 2 ** len(qubits)
-            shape = tuple(matrix.shape)
-            if shape != (rank, rank):
-                raise_error(ValueError, "Invalid Krauss operator shape {} for "
-                                        " acting on {} qubits."
-                                        "".format(shape, len(qubits)))
-            if create_gates:
-                gatelist.append(self.module.Unitary(matrix, *list(qubits)))
-                gatelist[-1].density_matrix = True
-                gatelist[-1].device = self.device
-                gatelist[-1].nqubits = self.nqubits
-        return tuple(gatelist)
-
-    def _create_gates(self):
-        assert not self.gates
-        self.gates = self._check_shapes(True)
-
-    def on_qubits(self, *q): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `GeneralChannel` gate.")

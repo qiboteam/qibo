@@ -513,23 +513,29 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return self.cgates.VariationalLayer.__call__(self, state)
 
 
-class GateChannel(TensorflowGate, base_gates.GateChannel):
+class KrausChannel(TensorflowGate, base_gates.KrausChannel):
 
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
-        for p, gate in zip(self.probs, self.gates):
-            new_state += p * gate(state)
-        return (1 - self.psum) * state + new_state
-
-
-class GeneralChannel(TensorflowGate, base_gates.GeneralChannel):
-
-    def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        base_gates.GeneralChannel.__init__(self, A)
+    def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
+        base_gates.KrausChannel.__init__(self, gates)
         TensorflowGate.__init__(self)
+
+    def _prepare(self):
+        for gate in self.gates:
+            gate.density_matrix = self.density_matrix
+            gate.device = self.device
+            gate.nqubits = self.nqubits
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for gate in self.gates:
             new_state += gate(state)
         return new_state
+
+
+class UnitaryChannel(TensorflowGate, base_gates.UnitaryChannel):
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = tf.zeros_like(state)
+        for p, gate in zip(self.probs, self.gates):
+            new_state += p * gate(state)
+        return (1 - self.psum) * state + new_state

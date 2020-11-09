@@ -352,9 +352,10 @@ class BaseCircuit(object):
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, (gates.GateChannel, gates.GeneralChannel)):
-                raise_error(ValueError, "`.with_noise` method is not available for "
-                                        "circuits that already contain noise channels.")
+            if isinstance(gate, gates.KrausChannel):
+                raise_error(ValueError, "`.with_noise` method is not available "
+                                        "for circuits that already contain "
+                                        "channels.")
             noise_gates.append([])
             for q in gate.qubits:
                 if q in noise_map and sum(noise_map[q]) > 0:
@@ -430,7 +431,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-        elif isinstance(gate, gates.GateChannel):
+        elif isinstance(gate, gates.UnitaryChannel):
             self.repeated_execution = True
             self.queue.append(gate)
         else:
