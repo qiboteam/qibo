@@ -1672,20 +1672,21 @@ class CallbackGate(Gate):
 class KrausChannel(Gate):
     """General channel defined by arbitrary Krauss operators.
 
-    Implements the following evolution
+    Implements the following transformation:
 
     .. math::
-        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
+        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
 
-    where A are arbitrary Kraus operators given by the user. Note that the
-    Krauss operators set should be trace preserving, however this is not checked here.
+    where A are arbitrary Kraus operators given by the user. Note that Kraus
+    operators set should be trace preserving, however this is not checked.
+    Simulation of this gate requires the use of density matrices.
     For more information on channels and Kraus operators please check
     `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
 
     Args:
-        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
-          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
-          corresponding matrix.
+        gates (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
+          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
+          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
 
     Example:
         ::
@@ -1704,7 +1705,6 @@ class KrausChannel(Gate):
             # add the channel to the circuit
             c.add(channel)
     """
-    # TODO: Fix docs
 
     def __init__(self, gates):
         super(KrausChannel, self).__init__()
@@ -1715,10 +1715,11 @@ class KrausChannel(Gate):
             self.target_qubits = tuple(sorted(set(
                 q for gate in gates for q in gate.target_qubits)))
         else:
-            self.gates, self.target_qubits = self.from_matrices(gates)
+            self.gates, self.target_qubits = self._from_matrices(gates)
         self.init_args = [self.gates]
 
-    def from_matrices(self, matrices):
+    def _from_matrices(self, matrices):
+        """Creates gates from qubits and matrices list."""
         gatelist, qubitset = [], set()
         for qubits, matrix in matrices:
             # Check that given operators have the proper shape.
@@ -1749,6 +1750,30 @@ class KrausChannel(Gate):
 
 
 class UnitaryChannel(KrausChannel):
+    """Channel that is a probabilistic sum of unitary operations.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\left (1 - \\sum _k p_k \\right )\\rho +
+                                \\sum _k p_k U_k \\rho U_k^\\dagger
+
+    where U are arbitrary unitary operators and p are floats between 0 and 1.
+    Note that unlike :class:`qibo.base.gates.KrausChannel` which requires
+    density matrices, it is possible to simulate the unitary channel using
+    state vectors and probabilistic sampling. For more information on this
+    approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
+
+    Args:
+        p (list): List of floats that correspond to the probability that each
+            unitary Uk is applied.
+        gates (list): List of  operators as pairs ``(qubits, Uk)`` where
+            ``qubits``refers the qubit ids that ``Uk`` acts on and ``Uk`` is
+            the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
+            Must have the same length as the given probabilities ``p``.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
 
     def __init__(self, p, gates, seed=None):
         if len(p) != len(gates):
@@ -1768,10 +1793,10 @@ class UnitaryChannel(KrausChannel):
 class NoiseChannel(UnitaryChannel):
     """Probabilistic noise channel implemented using density matrices.
 
-    Implements the following evolution
+    Implements the following transformation:
 
     .. math::
-        \\rho \\rightarrow (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
+        \\mathcal{E}(\\rho ) = (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
 
     which can be used to simulate phase flip and bit flip errors.
 
@@ -1780,6 +1805,8 @@ class NoiseChannel(UnitaryChannel):
         px (float): Bit flip (X) error probability.
         py (float): Y-error probability.
         pz (float): Phase flip (Z) error probability.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
     """
 
     def __init__(self, q, px=0, py=0, pz=0, seed=None):

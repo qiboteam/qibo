@@ -711,6 +711,8 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
     def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
         TensorflowGate.__init__(self)
         base_gates.KrausChannel.__init__(self, gates)
+        # create inversion gates to rest to the original state vector
+        # because of the in-place updates used in custom operators
         self.inv_gates = tuple()
 
     @staticmethod
@@ -726,8 +728,8 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
     def _prepare(self):
         inv_gates = []
         for gate in self.gates:
-            # create invert gates for resetting to the original state vector
             inv_gate = self._invert(gate)
+            # use a ``set`` for this loop because it may be ``inv_gate == gate``
             for g in {gate, inv_gate}:
                 g.density_matrix = self.density_matrix
                 g.device = self.device
@@ -785,7 +787,9 @@ class NoiseChannel(UnitaryChannel, base_gates.NoiseChannel):
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
         base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
+        self.inv_gates = tuple()
 
     @staticmethod
     def _invert(gate):
+        """For Pauli gates we can use same gate for state inversion for efficiency."""
         return gate
