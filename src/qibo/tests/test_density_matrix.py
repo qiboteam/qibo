@@ -448,7 +448,7 @@ def test_unitary_channel(backend, density_matrix):
     matrices = [((0,), a1), ((2, 3), a2)]
     c = models.Circuit(4, density_matrix=density_matrix)
     c.add(gates.UnitaryChannel(probs, matrices, seed=123))
-    final_state = c().numpy()
+    final_state = c(nshots=20).numpy()
 
     eye = np.eye(2, dtype=final_state.dtype)
     ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))
@@ -461,13 +461,16 @@ def test_unitary_channel(backend, density_matrix):
                       0.3 * ma2.dot(target_state.dot(ma2)))
     else:
         # sample unitary channel
-        target_state = np.zeros(2 ** 4)
-        target_state[0] = 1
+        target_state = []
         np.random.seed(123)
-        if np.random.random() < 0.1:
-            target_state = ma1.dot(target_state)
-        if np.random.random() < 0.3:
-            target_state = ma2.dot(target_state)
+        for _ in range(20):
+            temp_state = np.zeros(2 ** 4)
+            temp_state[0] = 1
+            if np.random.random() < 0.1:
+                temp_state = ma1.dot(temp_state)
+            if np.random.random() < 0.3:
+                temp_state = ma2.dot(temp_state)
+            target_state.append(np.copy(temp_state))
     np.testing.assert_allclose(final_state, target_state)
     # Invalid probability length
     with pytest.raises(ValueError):
