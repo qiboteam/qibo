@@ -419,11 +419,16 @@ def test_controlled_by_channel():
         gate = gates.KrausChannel(config).controlled_by(1)
 
 
-def test_krauss_operator_bad_shape():
-    """Test that defining a Krauss operator with wrong shape raises error."""
+def test_krauss_channel_errors():
+    """Test errors raised by `gates.KrausChannel`."""
+    # bad Kraus matrix shape
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
         gate = gates.KrausChannel([((0, 1), a1)])
+    # Using KrausChannel on state vectors
+    channel = gates.KrausChannel([((0,), np.eye(2))])
+    with pytest.raises(ValueError):
+        channel._state_vector_call(np.random.random(4))
 
 
 def test_circuit_with_noise_gates():
@@ -638,38 +643,17 @@ def test_entanglement_entropy(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_density_matrix_gate_errors(backend):
-    """Check errors related to gates that act on density matrices."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
+def test_density_matrix_circuit_errors():
+    """Check errors of circuits that simulate density matrices."""
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
     with pytest.raises(RuntimeError):
         gate.density_matrix = True
-    # Attempt to use channels on state vectors
-    channel = gates.NoiseChannel(0, px=0.1, pz=0.2)
-    channel.density_matrix = False
-    with pytest.raises(ValueError):
-        channel.nqubits = 4
-    with pytest.raises(ValueError):
-        channel._state_vector_call(np.random.random(2))
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.skip
-def test_density_matrix_circuit_errors():
-    """Check errors of circuits that simulate density matrices."""
     # Attempt to distribute density matrix circuit
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
-    # Attempt to add channel to non-density matrix circuit
+    # Attempt to add Kraus channel to non-density matrix circuit
     c = models.Circuit(5)
     with pytest.raises(ValueError):
-        c.add(gates.NoiseChannel(2, px=0.2))
-    # Attempt to add probabilisitc noise channel to density matrix circuit
-    c = models.Circuit(5, density_matrix=True)
-    with pytest.raises(ValueError):
-        c.add(gates.ProbabilisticNoiseChannel(2, px=0.2))
+        c.add(gates.KrausChannel([((0,), np.eye(2))]))
