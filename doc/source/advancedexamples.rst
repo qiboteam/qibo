@@ -671,7 +671,7 @@ execution as follows:
     c = models.Circuit(5)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(np.random.random())))
     # Add noise channels to all qubits
-    c.add((gates.NoiseChannel(i, px=0.2, py=0.0, pz=0.3)
+    c.add((gates.PauliNoiseChannel(i, px=0.2, py=0.0, pz=0.3)
            for i in range(5)))
     # Add measurement of all qubits
     c.add(gates.M(*range(5)))
@@ -679,28 +679,34 @@ execution as follows:
     # Repeat execution 1000 times
     result = c(nshots=1000)
 
-# TODO: Fix below here
-
-Note that the command ``c(nshots=1000)`` has a different behavior than what is
-described in :ref:`How to perform measurements? <measurement-examples>` when
-the :class:`qibo.base.gates.NoiseChannel` gate is used.
+In this example the simulation is repeated 1000 times and the action of the
+:class:`qibo.base.gates.PauliNoiseChannel` gate differs each time, because
+the error ``X``, ``Y`` and ``Z`` gates are sampled according to the given
+probabilities. Note that when a channel is used, the command ``c(nshots=1000)``
+has a different behavior than what is described in
+:ref:`How to perform measurements? <measurement-examples>`.
 Normally ``c(nshots=1000)`` would execute the circuit once and would then
-sample 1000 bit-strings from the final state. When the noise channel is used
-the full circuit is executed 1000 times because the behavior of the noise
-channel is different each time.
+sample 1000 bit-strings from the final state. When channels are used, the full
+is executed 1000 times because the behavior of channels is probabilistic and
+different in each execution. Note that now the simulation time required will
+increase linearly with the number of repetitions (``nshots``).
 
-Executing a circuit with :class:`qibo.base.gates.ProbabilisticNoiseChannel`
-gates once is possible, however, since the channel acts probabilistically,
-the results of a single execution are random and not useful when not viewed as
-part of repeated executions.
+Note that executing a circuit with channels only once is possible, however,
+since the channel acts probabilistically, the results of a single execution
+are random and usually not useful on their own.
+It is possible also to use repeated execution with noise channels even without
+the presence of measurements. If ``c(nshots=1000)`` is called for a circuit
+that contains channels but no measurements measurements then the circuit will
+be executed 1000 times and the final 1000 state vectors will be returned as
+a tensor of shape ``(nshots, 2 ^ nqubits)``.
+Note that this tensor is usually large and may lead to memory errors,
+therefore this usage is not advised.
 
-It is possible to use repeated execution with noise channels even without the
-presence of measurements. If ``c(nshots=1000)`` is called for a circuit that
-contains :class:`qibo.base.gates.ProbabilisticNoiseChannel` gates but no
-measurements then the circuit will be executed 1000 times and the final
-1000 state vectors will be returned. Note that this tensor has shape
-``(nshots, 2 ^ nqubits)`` and is usually to large to hold in memory, therefore
-this usage is not advised.
+Unlike the density matrix approach, it is not possible to use every channel
+with sampling and repeated execution. Specifically,
+:class:`qibo.base.gates.UnitaryChannel` and
+:class:`qibo.base.gates.PauliNoiseChannel` can be used with sampling, while
+:class:`qibo.base.gates.KrausChannel` requires density matrices.
 
 
 Adding noise after every gate
@@ -708,12 +714,11 @@ Adding noise after every gate
 
 In practical applications noise typically occurs after every gate.
 Qibo provides the :meth:`qibo.base.circuit.BaseCircuit.with_noise()` method
-which automatically creates a new circuit that contains a noise channel after
-every normal gate. The user can control the probabilities of the noise channel
-using a noise map, which is a dictionary that maps qubits to the corresponding
-noise probability triplets.
-
-For example, the following script
+which automatically creates a new circuit that contains a
+:class:`qibo.base.gates.PauliNoiseChannel` after every gate.
+The user can control the probabilities of the noise channel using a noise map,
+which is a dictionary that maps qubits to the corresponding probability
+triplets. For example, the following script
 
 .. code-block:: python
 
@@ -732,12 +737,12 @@ will create a new circuit ``noisy_c`` that is equivalent to:
 
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
-      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
       noisy_c2.add(gates.H(1))
-      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
       noisy_c2.add(gates.CNOT(0, 1))
-      noisy_c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-      noisy_c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+      noisy_c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+      noisy_c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
 
 Note that ``noisy_c`` uses the gate objects of the original circuit ``c``
 (it is not a deep copy), while in ``noisy_c2`` each gate was created as
@@ -748,14 +753,13 @@ In this case the same probabilities will be applied to all qubits.
 That is ``noise_map = (0.1, 0.0, 0.1)`` is equivalent to
 ``noise_map = {0: (0.1, 0.0, 0.1), 1: (0.1, 0.0, 0.1), ...}``.
 
-If :meth:`qibo.base.circuit.BaseCircuit.with_noise()` is used in a circuit
-that uses state vectors for simulation, then
-:class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be used to
-simulate noise with repeated execution. If the user wishes to use density
-matrices instead, this is possible by initializing a
-:class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit` using the
-``density_matrix=True`` flag during initialization and call ``.with_noise``
-on this circuit.
+As described in the previous sections, if
+:meth:`qibo.base.circuit.BaseCircuit.with_noise()` is used in a circuit
+that uses state vectors then noise will be simulated with repeated execution.
+If the user wishes to use density matrices instead, this is possible by
+initializing a :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+using the ``density_matrix=True`` flag during initialization and call
+``.with_noise`` on this circuit.
 
 
 .. _timeevol-example:
