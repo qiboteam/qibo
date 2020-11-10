@@ -419,8 +419,11 @@ def test_controlled_by_channel():
         gate = gates.KrausChannel(config).controlled_by(1)
 
 
-def test_krauss_channel_errors():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_krauss_channel_errors(backend):
     """Test errors raised by `gates.KrausChannel`."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     # bad Kraus matrix shape
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
@@ -429,6 +432,47 @@ def test_krauss_channel_errors():
     channel = gates.KrausChannel([((0,), np.eye(2))])
     with pytest.raises(ValueError):
         channel._state_vector_call(np.random.random(4))
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("density_matrix", [True, False])
+def test_unitary_channel(backend, density_matrix):
+    """Test creating `gates.UnitaryChannel` from matrices and errors."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    a1 = np.array([[0, 1], [1, 0]])
+    a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    probs = [0.1, 0.3]
+    matrices = [((0,), a1), ((2, 3), a2)]
+    c = models.Circuit(4, density_matrix=density_matrix)
+    c.add(gates.UnitaryChannel(probs, matrices, seed=123))
+    final_state = c().numpy()
+
+    eye = np.eye(2, dtype=final_state.dtype)
+    ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))
+    ma2 = np.kron(np.kron(eye, eye), a2)
+    if density_matrix:
+        # use density matrices
+        target_state = np.zeros_like(final_state)
+        target_state[0, 0] = 1
+        target_state = (0.6 * target_state + 0.1 * ma1.dot(target_state.dot(ma1)) +
+                      0.3 * ma2.dot(target_state.dot(ma2)))
+    else:
+        # sample unitary channel
+        target_state = np.zeros(2 ** 4)
+        target_state[0] = 1
+        np.random.seed(123)
+        if np.random.random() < 0.1:
+            target_state = ma1.dot(target_state)
+        if np.random.random() < 0.3:
+            target_state = ma2.dot(target_state)
+    np.testing.assert_allclose(final_state, target_state)
+    # Invalid probability length
+    with pytest.raises(ValueError):
+        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_gates():

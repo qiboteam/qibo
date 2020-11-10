@@ -1726,7 +1726,7 @@ class KrausChannel(Gate):
             shape = tuple(matrix.shape)
             if shape != (rank, rank):
                 raise_error(ValueError, "Invalid Krauss operator shape {} for "
-                                        " acting on {} qubits."
+                                        "acting on {} qubits."
                                         "".format(shape, len(qubits)))
             qubitset.update(qubits)
             gatelist.append(self.module.Unitary(matrix, *list(qubits)))
@@ -1751,9 +1751,11 @@ class KrausChannel(Gate):
 class UnitaryChannel(KrausChannel):
 
     def __init__(self, p, gates, seed=None):
-        super(UnitaryChannel, self).__init__(gates)
         if len(p) != len(gates):
-            raise_error(ValueError)
+            raise_error(ValueError, "Probabilities list has length {} while "
+                                    "{} gates were given."
+                                    "".format(len(p), len(gates)))
+        super(UnitaryChannel, self).__init__(gates)
         self.name = "UnitaryChannel"
         self.probs = p
         self.psum = sum(p)
