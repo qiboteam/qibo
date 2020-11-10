@@ -142,15 +142,24 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 nshots: Optional[int] = None) -> OutputType:
         """Propagates the state through the circuit applying the corresponding gates.
 
-        In default usage the full final state vector.
+        In default usage the full final state vector is returned.
         If the circuit contains measurement gates and ``nshots`` is given, then
         the final state is sampled and the samples are returned. We refer to
         the :ref:`How to perform measurements? <measurement-examples>` example
         for more details on how to perform measurements in Qibo.
 
-        If the :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate is found
-        Qibo will perform noise simulation by repeating the circuit
-        execution ``nshots`` times. For more details on how to simulate noise
+        If channels are found within the circuits gates then Qibo will perform
+        the simulation by repeating the circuit execution ``nshots`` times.
+        If the circuit contains measurements the corresponding noisy measurement
+        result will be returned, otherwise the final state vectors will be
+        collected to a ``(nshots, 2 ** nqubits)`` tensor and returned.
+        The latter usage is memory intensive and not recommended.
+        If the circuit is created with the ``density_matrix = True`` flag and
+        contains channels, then density matrices will be used instead of
+        repeated execution.
+        Note that some channels (:class:`qibo.base.gates.KrausChannel`) can
+        only be simulated using density matrices and not repeated execution.
+        For more details on noise simulation with and without density matrices
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
 
         Args:
@@ -241,7 +250,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             from qibo import models, gates
             c = models.Circuit(2, density_matrix=True)
             c.add(gates.H(0))
-            c.add(gates.NoiseChannel(1, px=0.2))
+            c.add(gates.PauliNoiseChannel(1, px=0.2))
 
     Args:
         nqubits (int): Total number of qubits in the circuit.

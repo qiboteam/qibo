@@ -307,13 +307,13 @@ def test_density_matrix_circuit_initial_state(backend):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_bitflip_noise(backend):
-    """Test `gates.NoiseChannel` on random initial density matrix."""
+    """Test `gates.PauliNoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(2)
 
     c = models.Circuit(2, density_matrix=True)
-    c.add(gates.NoiseChannel(1, px=0.3))
+    c.add(gates.PauliNoiseChannel(1, px=0.3))
     final_rho = c(np.copy(initial_rho)).numpy()
 
     c = models.Circuit(2, density_matrix=True)
@@ -334,8 +334,8 @@ def test_multiple_noise(backend):
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.NoiseChannel(0, px=0.5, pz=0.3))
-    c.add(gates.NoiseChannel(1, py=0.1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, px=0.5, pz=0.3))
+    c.add(gates.PauliNoiseChannel(1, py=0.1, pz=0.3))
     final_rho = c().numpy()
 
     psi = np.ones(4) / 2
@@ -358,8 +358,8 @@ def test_circuit_reexecution(backend):
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.NoiseChannel(0, px=0.5))
-    c.add(gates.NoiseChannel(1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, px=0.5))
+    c.add(gates.PauliNoiseChannel(1, pz=0.3))
     final_rho = c().numpy()
     final_rho2 = c().numpy()
     np.testing.assert_allclose(final_rho, final_rho2)
@@ -370,7 +370,7 @@ def test_circuit_reexecution(backend):
 @pytest.mark.parametrize("tfmatrices", [False, True])
 @pytest.mark.parametrize("oncircuit", [False, True])
 def test_general_channel(backend, tfmatrices, oncircuit):
-    """Test `gates.GeneralChannel`."""
+    """Test `gates.KrausChannel`."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(2)
@@ -384,7 +384,7 @@ def test_general_channel(backend, tfmatrices, oncircuit):
         a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
         a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
 
-    gate = gates.GeneralChannel([((1,), a1), ((0, 1), a2)])
+    gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
     if oncircuit:
         c = models.Circuit(2, density_matrix=True)
@@ -409,21 +409,74 @@ def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     c = models.Circuit(2, density_matrix=True)
     with pytest.raises(ValueError):
-        c.add(gates.NoiseChannel(0, px=0.5).controlled_by(1))
+        c.add(gates.PauliNoiseChannel(0, px=0.5).controlled_by(1))
 
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                                   [0, 0, 1, 0]])
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
-        gate = gates.GeneralChannel(config).controlled_by(1)
+        gate = gates.KrausChannel(config).controlled_by(1)
 
 
-def test_krauss_operator_bad_shape():
-    """Test that defining a Krauss operator with wrong shape raises error."""
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_krauss_channel_errors(backend):
+    """Test errors raised by `gates.KrausChannel`."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    # bad Kraus matrix shape
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     with pytest.raises(ValueError):
-        gate = gates.GeneralChannel([((0, 1), a1)])
+        gate = gates.KrausChannel([((0, 1), a1)])
+    # Using KrausChannel on state vectors
+    channel = gates.KrausChannel([((0,), np.eye(2))])
+    with pytest.raises(ValueError):
+        channel._state_vector_call(np.random.random(4))
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("density_matrix", [True, False])
+def test_unitary_channel(backend, density_matrix):
+    """Test creating `gates.UnitaryChannel` from matrices and errors."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    a1 = np.array([[0, 1], [1, 0]])
+    a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    probs = [0.4, 0.3]
+    matrices = [((0,), a1), ((2, 3), a2)]
+    c = models.Circuit(4, density_matrix=density_matrix)
+    c.add(gates.UnitaryChannel(probs, matrices, seed=123))
+    final_state = c(nshots=20).numpy()
+
+    eye = np.eye(2, dtype=final_state.dtype)
+    ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))
+    ma2 = np.kron(np.kron(eye, eye), a2)
+    if density_matrix:
+        # use density matrices
+        target_state = np.zeros_like(final_state)
+        target_state[0, 0] = 1
+        target_state = (0.3 * target_state +
+                        0.4 * ma1.dot(target_state.dot(ma1)) +
+                        0.3 * ma2.dot(target_state.dot(ma2)))
+    else:
+        # sample unitary channel
+        target_state = []
+        np.random.seed(123)
+        for _ in range(20):
+            temp_state = np.zeros(2 ** 4)
+            temp_state[0] = 1
+            if np.random.random() < 0.4:
+                temp_state = ma1.dot(temp_state)
+            if np.random.random() < 0.3:
+                temp_state = ma2.dot(temp_state)
+            target_state.append(np.copy(temp_state))
+    np.testing.assert_allclose(final_state, target_state)
+    # Invalid probability length
+    with pytest.raises(ValueError):
+        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
+    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_gates():
@@ -435,7 +488,7 @@ def test_circuit_with_noise_gates():
     assert noisy_c.depth == 4
     assert noisy_c.ngates == 7
     for i in [1, 3, 5, 6]:
-        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
+        assert isinstance(noisy_c.queue[i], gates.PauliNoiseChannel)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -449,9 +502,9 @@ def test_circuit_with_noise_execution(backend):
 
     target_c = models.Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.3))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.2, 0.3))
 
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
@@ -471,9 +524,9 @@ def test_circuit_with_noise_with_measurements(backend):
 
     target_c = models.Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.1, 0.1))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.1, 0.1))
 
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
@@ -496,9 +549,9 @@ def test_circuit_with_noise_noise_map(backend):
 
     target_c = models.Circuit(3, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.1))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.PauliNoiseChannel(1, 0.2, 0.3, 0.0))
     target_c.add(gates.X(2))
 
     final_state = noisy_c().numpy()
@@ -524,7 +577,7 @@ def test_circuit_with_noise_noise_map_exceptions():
 def test_circuit_with_noise_exception():
     """Check that calling ``with_noise`` in a noisy circuit raises error."""
     c = models.Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
+    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, px=0.2)])
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
 
@@ -638,36 +691,17 @@ def test_entanglement_entropy(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_density_matrix_gate_errors(backend):
-    """Check errors related to gates that act on density matrices."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
+def test_density_matrix_circuit_errors():
+    """Check errors of circuits that simulate density matrices."""
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
     with pytest.raises(RuntimeError):
         gate.density_matrix = True
-    # Attempt to use channels on state vectors
-    channel = gates.NoiseChannel(0, px=0.1, pz=0.2)
-    channel.density_matrix = False
-    with pytest.raises(ValueError):
-        channel.nqubits = 4
-    with pytest.raises(ValueError):
-        channel._state_vector_call(np.random.random(2))
-    qibo.set_backend(original_backend)
-
-
-def test_density_matrix_circuit_errors():
-    """Check errors of circuits that simulate density matrices."""
     # Attempt to distribute density matrix circuit
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
-    # Attempt to add channel to non-density matrix circuit
+    # Attempt to add Kraus channel to non-density matrix circuit
     c = models.Circuit(5)
     with pytest.raises(ValueError):
-        c.add(gates.NoiseChannel(2, px=0.2))
-    # Attempt to add probabilisitc noise channel to density matrix circuit
-    c = models.Circuit(5, density_matrix=True)
-    with pytest.raises(ValueError):
-        c.add(gates.ProbabilisticNoiseChannel(2, px=0.2))
+        c.add(gates.KrausChannel([((0,), np.eye(2))]))

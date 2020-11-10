@@ -422,11 +422,11 @@ def test_circuit_repeated_execute_with_noise_channel(backend, accelerators):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     if accelerators:
         with pytest.raises(NotImplementedError):
-            c.add((gates.ProbabilisticNoiseChannel(
+            c.add((gates.PauliNoiseChannel(
                 i, px=0.1, py=0.2, pz=0.3, seed=1234) for i in range(4)))
     else:
-        c.add((gates.ProbabilisticNoiseChannel(
-            i, px=0.1, py=0.2, pz=0.3, seed=1234) for i in range(4)))
+        c.add((gates.PauliNoiseChannel(
+                i, px=0.1, py=0.2, pz=0.3, seed=1234) for i in range(4)))
         final_state = c(nshots=20)
 
         np.random.seed(1234)

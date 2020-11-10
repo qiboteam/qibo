@@ -513,48 +513,58 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return self.cgates.VariationalLayer.__call__(self, state)
 
 
-class TensorflowChannel(TensorflowGate):
-    """Base Tensorflow channels.
+class KrausChannel(TensorflowGate, base_gates.KrausChannel):
 
-    All channels should inherit this class.
-    """
-
-    def __init__(self):
-        super(TensorflowChannel, self).__init__()
+    def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
+        TensorflowGate.__init__(self)
+        base_gates.KrausChannel.__init__(self, gates)
 
     def _prepare(self):
-        from qibo.tensorflow import cgates
-        cgates.TensorflowChannel._prepare(self)
+        for gate in self.gates:
+            gate.density_matrix = self.density_matrix
+            gate.device = self.device
+            gate.nqubits = self.nqubits
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "Channels cannot be used on state vectors.")
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
-
-class NoiseChannel(TensorflowChannel, base_gates.NoiseChannel):
-
-    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0):
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz)
-        TensorflowChannel.__init__(self)
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
-        for p, gate in self.gates:
-            new_state += p * gate(state)
-        return (1 - self.total_p) * state + new_state
-
-
-class GeneralChannel(TensorflowChannel, base_gates.GeneralChannel):
-
-    def __init__(self, A: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        base_gates.GeneralChannel.__init__(self, A)
-        TensorflowChannel.__init__(self)
+        raise_error(ValueError, "`KrausChannel` cannot be applied to state "
+                                "vectors. Please switch to density matrices.")
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
         for gate in self.gates:
             new_state += gate(state)
         return new_state
+
+
+class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
+
+    def __init__(self, p: List[float], gates: List["Gate"],
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.UnitaryChannel.__init__(self, p, gates, seed=seed)
+
+    def _prepare(self):
+        KrausChannel._prepare(self)
+        if self.seed is not None:
+            np.random.seed(self.seed)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        TensorflowGate._set_nqubits(self, state)
+        for p, gate in zip(self.probs, self.gates):
+            if np.random.random() < p:
+                state = gate(state)
+        return state
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = tf.zeros_like(state)
+        for p, gate in zip(self.probs, self.gates):
+            new_state += p * gate(state)
+        return (1 - self.psum) * state + new_state
+
+
+class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
+
+    def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
