@@ -793,3 +793,18 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
     def _invert(gate):
         """For Pauli gates we can use same gate for state inversion for efficiency."""
         return gate
+
+
+class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
+
+    def __init__(self, *q: int, p0: float = 0.0, p1: float = 0.0,
+                 seed: Optional[int] = None):
+        TensorflowChannel.__init__(self)
+        base_gates.ResetChannel.__init__(self, *q, p0=p0, p1=p1, seed=seed)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        collapsed_states = []
+        for p, gate in self.gates:
+            collapsed_states.append(tf.zeros_like(state) + state)
+            collapsed_states[-1] = p * gate(collapsed_states[-1])
+        return (1 - self.total_p) * state + sum(collapsed_states)

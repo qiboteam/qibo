@@ -1826,3 +1826,20 @@ class PauliNoiseChannel(UnitaryChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
+
+
+class ResetChannel(UnitaryChannel):
+
+    def __init__(self, *q, p0=0.0, p1=0.0, seed=None):
+        probs, gates = [], []
+        for r, p in enumerate([p0, p1]):
+            if p > 0:
+                probs.append(p)
+                gates.append(gates.Collapse(*q, result=r))
+
+        super(ResetChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "ResetChannel"
+        assert self.target_qubits == tuple(q)
+
+        self.init_args = [q]
+        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
