@@ -728,7 +728,7 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         for gate in self.gates:
             # create invert gates for resetting to the original state vector
             inv_gate = self._invert(gate)
-            for g in (gate, inv_gate):
+            for g in {gate, inv_gate}:
                 g.density_matrix = self.density_matrix
                 g.device = self.device
                 g.nqubits = self.nqubits
@@ -785,3 +785,7 @@ class NoiseChannel(UnitaryChannel, base_gates.NoiseChannel):
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
         base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
+
+    @staticmethod
+    def _invert(gate):
+        return gate
