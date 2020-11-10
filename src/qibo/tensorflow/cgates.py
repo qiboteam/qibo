@@ -803,8 +803,7 @@ class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
         base_gates.ResetChannel.__init__(self, *q, p0=p0, p1=p1, seed=seed)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        collapsed_states = []
-        for p, gate in self.gates:
-            collapsed_states.append(tf.zeros_like(state) + state)
-            collapsed_states[-1] = p * gate(collapsed_states[-1])
-        return (1 - self.total_p) * state + sum(collapsed_states)
+        new_state = tf.zeros_like(state)
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+            new_state += p * gate(state + tf.zeros_like(state))
+        return (1 - self.psum) * state + new_state
