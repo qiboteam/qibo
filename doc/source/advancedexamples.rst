@@ -646,8 +646,8 @@ will perform the transformation
     \\& \rightarrow 0.7|01\rangle \langle 01| + 0.3(X\otimes I)|01\rangle \langle 01|(X\otimes I)^\dagger
     \\& = 0.7|01\rangle \langle 01| + 0.3|11\rangle \langle 11|
 
-Measurements and callbacks can also be used with density matrices exactly as in
-the case of state vector simulation.
+Measurements and callbacks can be used with density matrices exactly as in the
+case of state vector simulation.
 
 
 .. _repeatedexec-example:
@@ -657,10 +657,10 @@ Using repeated execution
 
 Simulating noise with density matrices is memory intensive as it effectively
 doubles the number of qubits. Qibo provides an alternative way of simulating
-the effect of channels without using density matrices, by relying on state
-vectors and repeated circuit execution with sampling. Noise can thus be
-simulated by creating a normal (non-density matrix) circuit and repeating its
-execution as follows:
+the effect of channels without using density matrices, which relies on state
+vectors and repeated circuit execution with sampling. Noise can be simulated
+by creating a normal (non-density matrix) circuit and repeating its execution
+as follows:
 
 .. code-block:: python
 
