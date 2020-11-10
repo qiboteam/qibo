@@ -241,7 +241,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             from qibo import models, gates
             c = models.Circuit(2, density_matrix=True)
             c.add(gates.H(0))
-            c.add(gates.NoiseChannel(1, px=0.2))
+            c.add(gates.PauliNoiseChannel(1, px=0.2))
 
     Args:
         nqubits (int): Total number of qubits in the circuit.

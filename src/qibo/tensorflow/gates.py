@@ -562,9 +562,9 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
         return (1 - self.psum) * state + new_state
 
 
-class NoiseChannel(UnitaryChannel, base_gates.NoiseChannel):
+class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
 
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
-        base_gates.NoiseChannel.__init__(self, q, px, py, pz, seed=seed)
+        base_gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)

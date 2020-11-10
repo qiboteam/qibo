@@ -307,13 +307,13 @@ def test_density_matrix_circuit_initial_state(backend):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_bitflip_noise(backend):
-    """Test `gates.NoiseChannel` on random initial density matrix."""
+    """Test `gates.PauliNoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(2)
 
     c = models.Circuit(2, density_matrix=True)
-    c.add(gates.NoiseChannel(1, px=0.3))
+    c.add(gates.PauliNoiseChannel(1, px=0.3))
     final_rho = c(np.copy(initial_rho)).numpy()
 
     c = models.Circuit(2, density_matrix=True)
@@ -334,8 +334,8 @@ def test_multiple_noise(backend):
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.NoiseChannel(0, px=0.5, pz=0.3))
-    c.add(gates.NoiseChannel(1, py=0.1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, px=0.5, pz=0.3))
+    c.add(gates.PauliNoiseChannel(1, py=0.1, pz=0.3))
     final_rho = c().numpy()
 
     psi = np.ones(4) / 2
@@ -358,8 +358,8 @@ def test_circuit_reexecution(backend):
     c = models.Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    c.add(gates.NoiseChannel(0, px=0.5))
-    c.add(gates.NoiseChannel(1, pz=0.3))
+    c.add(gates.PauliNoiseChannel(0, px=0.5))
+    c.add(gates.PauliNoiseChannel(1, pz=0.3))
     final_rho = c().numpy()
     final_rho2 = c().numpy()
     np.testing.assert_allclose(final_rho, final_rho2)
@@ -409,7 +409,7 @@ def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     c = models.Circuit(2, density_matrix=True)
     with pytest.raises(ValueError):
-        c.add(gates.NoiseChannel(0, px=0.5).controlled_by(1))
+        c.add(gates.PauliNoiseChannel(0, px=0.5).controlled_by(1))
 
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
@@ -488,7 +488,7 @@ def test_circuit_with_noise_gates():
     assert noisy_c.depth == 4
     assert noisy_c.ngates == 7
     for i in [1, 3, 5, 6]:
-        assert isinstance(noisy_c.queue[i], gates.NoiseChannel)
+        assert isinstance(noisy_c.queue[i], gates.PauliNoiseChannel)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
@@ -502,9 +502,9 @@ def test_circuit_with_noise_execution(backend):
 
     target_c = models.Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.3))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.3))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.2, 0.3))
+    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.2, 0.3))
 
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
@@ -524,9 +524,9 @@ def test_circuit_with_noise_with_measurements(backend):
 
     target_c = models.Circuit(2, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.1, 0.1))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.1, 0.1))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.1, 0.1, 0.1))
+    target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.1, 0.1))
 
     final_state = noisy_c().numpy()
     target_state = target_c().numpy()
@@ -549,9 +549,9 @@ def test_circuit_with_noise_noise_map(backend):
 
     target_c = models.Circuit(3, density_matrix=True)
     target_c.add(gates.H(0))
-    target_c.add(gates.NoiseChannel(0, 0.1, 0.2, 0.1))
+    target_c.add(gates.PauliNoiseChannel(0, 0.1, 0.2, 0.1))
     target_c.add(gates.H(1))
-    target_c.add(gates.NoiseChannel(1, 0.2, 0.3, 0.0))
+    target_c.add(gates.PauliNoiseChannel(1, 0.2, 0.3, 0.0))
     target_c.add(gates.X(2))
 
     final_state = noisy_c().numpy()
@@ -577,7 +577,7 @@ def test_circuit_with_noise_noise_map_exceptions():
 def test_circuit_with_noise_exception():
     """Check that calling ``with_noise`` in a noisy circuit raises error."""
     c = models.Circuit(2, density_matrix=True)
-    c.add([gates.H(0), gates.H(1), gates.NoiseChannel(0, px=0.2)])
+    c.add([gates.H(0), gates.H(1), gates.PauliNoiseChannel(0, px=0.2)])
     with pytest.raises(ValueError):
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
 

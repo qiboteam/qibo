@@ -1396,7 +1396,7 @@ def test_noise_channel_repeated(backend):
 
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-    c.add((gates.NoiseChannel(i, px, py, pz, seed=123)
+    c.add((gates.PauliNoiseChannel(i, px, py, pz, seed=123)
            for i, (px, py, pz) in enumerate(probs)))
     final_state = c().numpy()
 

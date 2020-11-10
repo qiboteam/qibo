@@ -1790,8 +1790,8 @@ class UnitaryChannel(KrausChannel):
         self.init_kwargs = {"seed": seed}
 
 
-class NoiseChannel(UnitaryChannel):
-    """Probabilistic noise channel implemented using density matrices.
+class PauliNoiseChannel(UnitaryChannel):
+    """Noise channel that applies Pauli operators with given probabilities.
 
     Implements the following transformation:
 
@@ -1799,6 +1799,10 @@ class NoiseChannel(UnitaryChannel):
         \\mathcal{E}(\\rho ) = (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
 
     which can be used to simulate phase flip and bit flip errors.
+    This channel can be simulated using either density matrices or state vectors
+    and sampling with repeated execution.
+    See :ref:`How to perform noisy simulation? <noisy-example>` for more
+    information.
 
     Args:
         q (int): Qubit id that the noise acts on.
@@ -1816,8 +1820,8 @@ class NoiseChannel(UnitaryChannel):
                 probs.append(p)
                 gates.append(getattr(self.module, gate)(q))
 
-        super(NoiseChannel, self).__init__(probs, gates, seed=seed)
-        self.name = "NoiseChannel"
+        super(PauliNoiseChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "PauliNoiseChannel"
         assert self.target_qubits == (q,)
 
         self.init_args = [q]

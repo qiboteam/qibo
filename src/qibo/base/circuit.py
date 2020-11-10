@@ -310,11 +310,12 @@ class BaseCircuit(object):
     def with_noise(self, noise_map: NoiseMapType) -> "BaseCircuit":
         """Creates a copy of the circuit with noise gates after each gate.
 
-        If the original circuit uses state vectors then the
-        :class:`qibo.base.gates.ProbabilisticNoiseChannel` gate will be
-        used for noise simulation with repeated circuit execution.
+        If the original circuit uses state vectors then noise simulation will
+        be done using sampling and repeated circuit execution.
         In order to use density matrices the original circuit should be created
         using the ``density_matrix`` flag set to ``True``.
+        For more information we refer to the
+        :ref:`How to perform noisy simulation? <noisy-example>` example.
 
         Args:
             noise_map (dict): Dictionary that maps qubit ids to noise
@@ -341,12 +342,12 @@ class BaseCircuit(object):
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
                 c2.add(gates.H(1))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
                 c2.add(gates.CNOT(0, 1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
         """
         noise_map = self._check_noise_map(noise_map)
         # Generate noise gates
@@ -360,7 +361,7 @@ class BaseCircuit(object):
             for q in gate.qubits:
                 if q in noise_map and sum(noise_map[q]) > 0:
                     p = noise_map[q]
-                    noise_gates[-1].append(gate_module.NoiseChannel(
+                    noise_gates[-1].append(gate_module.PauliNoiseChannel(
                             q, px=p[0], py=p[1], pz=p[2]))
 
         # Create new circuit with noise gates inside
