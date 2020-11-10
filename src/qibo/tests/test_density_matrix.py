@@ -444,7 +444,7 @@ def test_unitary_channel(backend, density_matrix):
 
     a1 = np.array([[0, 1], [1, 0]])
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probs = [0.1, 0.3]
+    probs = [0.4, 0.3]
     matrices = [((0,), a1), ((2, 3), a2)]
     c = models.Circuit(4, density_matrix=density_matrix)
     c.add(gates.UnitaryChannel(probs, matrices, seed=123))
@@ -457,8 +457,9 @@ def test_unitary_channel(backend, density_matrix):
         # use density matrices
         target_state = np.zeros_like(final_state)
         target_state[0, 0] = 1
-        target_state = (0.6 * target_state + 0.1 * ma1.dot(target_state.dot(ma1)) +
-                      0.3 * ma2.dot(target_state.dot(ma2)))
+        target_state = (0.3 * target_state +
+                        0.4 * ma1.dot(target_state.dot(ma1)) +
+                        0.3 * ma2.dot(target_state.dot(ma2)))
     else:
         # sample unitary channel
         target_state = []
@@ -466,7 +467,7 @@ def test_unitary_channel(backend, density_matrix):
         for _ in range(20):
             temp_state = np.zeros(2 ** 4)
             temp_state[0] = 1
-            if np.random.random() < 0.1:
+            if np.random.random() < 0.4:
                 temp_state = ma1.dot(temp_state)
             if np.random.random() < 0.3:
                 temp_state = ma2.dot(temp_state)
