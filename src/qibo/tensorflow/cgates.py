@@ -706,6 +706,40 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         return state
 
 
+class ResetChannel(TensorflowGate, base_gates.ResetChannel):
+
+    def __init__(self, *q: int, p0: float = 0.0, p1: float = 0.0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.ResetChannel.__init__(self, *q, p0=p0, p1=p1, seed=seed)
+
+    def _prepare(self):
+        for g in {self.collapse, self.flip}:
+            g.density_matrix = self.density_matrix
+            g.device = self.device
+            g.nqubits = self.nqubits
+        if self.seed is not None:
+            np.random.seed(self.seed)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        TensorflowGate._set_nqubits(self, state)
+        not_collapsed = True
+        if np.random.random() < self.p0:
+            state = self.collapse(state)
+            not_collapsed = False
+        if np.random.random() < self.p1:
+            if not_collapsed:
+                state = self.collapse(state)
+            state = self.flip(state)
+        return state
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = (1 - self.psum) * state
+        collapsed_state = self.collapse(state)
+        new_state += self.p0 * collapsed_state
+        return new_state + self.p1 * self.flip(collapsed_state)
+
+
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
 
     def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
@@ -793,17 +827,3 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
     def _invert(gate):
         """For Pauli gates we can use same gate for state inversion for efficiency."""
         return gate
-
-
-class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
-
-    def __init__(self, *q: int, p0: float = 0.0, p1: float = 0.0,
-                 seed: Optional[int] = None):
-        TensorflowChannel.__init__(self)
-        base_gates.ResetChannel.__init__(self, *q, p0=p0, p1=p1, seed=seed)
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
-        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
-            new_state += p * gate(state + tf.zeros_like(state))
-        return (1 - self.psum) * state + new_state

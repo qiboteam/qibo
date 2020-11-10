@@ -1410,3 +1410,27 @@ def test_noise_channel_repeated(backend):
     target_state = noiseless_c().numpy()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", ["custom"])
+def test_reset_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(5)
+    c = Circuit(5)
+    c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
+    final_state = c(np.copy(initial_state), nshots=30).numpy()
+
+    np.random.seed(123)
+    target_state = []
+    for _ in range(30):
+        noiseless_c = Circuit(5)
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+            noiseless_c.add(gates.X(2))
+        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
