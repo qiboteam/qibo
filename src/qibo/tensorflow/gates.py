@@ -526,8 +526,9 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             gate.nqubits = self.nqubits
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "`KrausChannel` cannot be applied to state "
-                                "vectors. Please switch to density matrices.")
+        from qibo.tensorflow import cgates
+        ccls = getattr(cgates, self.__class__.__name__)
+        return ccls._state_vector_call(self, state)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
@@ -548,18 +549,11 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
         if self.seed is not None:
             np.random.seed(self.seed)
 
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
-        for p, gate in zip(self.probs, self.gates):
-            if np.random.random() < p:
-                state = gate(state)
-        return state
-
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
+        new_state = (1 - self.psum) * state
         for p, gate in zip(self.probs, self.gates):
             new_state += p * gate(state)
-        return (1 - self.psum) * state + new_state
+        return new_state
 
 
 class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
@@ -568,3 +562,35 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
         base_gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
+
+
+class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
+
+    def __init__(self, q: int, p0: float = 0.0, p1: float = 0.0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = (1 - self.psum) * state
+        for p, gate in zip(self.probs, self.gates):
+            state = gate(state)
+            new_state += p * state
+        return new_state
+
+
+class ThermalRelaxationChannel(ResetChannel, base_gates.ThermalRelaxationChannel):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates.ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = (1 - self.psum) * state
+        new_state = self.probs[0] * self.gates[0](state)
+        for p, gate in zip(self.probs[1:], self.gates[1:]):
+            state = gate(state)
+            new_state += p * state
+        return new_state

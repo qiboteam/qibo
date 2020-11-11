@@ -667,7 +667,7 @@ def test_collapse_gate(backend, nqubits, targets, results):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_reset_channel(backend):
     """Check ``gates.ResetChannel`` on a 3-qubit random density matrix."""
     original_backend = qibo.get_backend()

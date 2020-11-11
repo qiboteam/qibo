@@ -1412,7 +1412,7 @@ def test_noise_channel_repeated(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_reset_channel_repeated(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -1436,7 +1436,7 @@ def test_reset_channel_repeated(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_thermal_relaxation_channel_repeated(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
