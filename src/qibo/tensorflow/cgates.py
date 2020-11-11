@@ -765,9 +765,10 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             inv_gate = self._invert(gate)
             # use a ``set`` for this loop because it may be ``inv_gate == gate``
             for g in {gate, inv_gate}:
-                g.density_matrix = self.density_matrix
-                g.device = self.device
-                g.nqubits = self.nqubits
+                if g is not None:
+                    g.density_matrix = self.density_matrix
+                    g.device = self.device
+                    g.nqubits = self.nqubits
             inv_gates.append(inv_gate)
         self.inv_gates = tuple(inv_gates)
 
@@ -827,3 +828,27 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
     def _invert(gate):
         """For Pauli gates we can use same gate for state inversion for efficiency."""
         return gate
+
+
+class ThermalRelaxationChannel(UnitaryChannel, base_gates.ThermalRelaxationChannel):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates.ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        self.inv_gates = tuple()
+
+    @staticmethod
+    def _invert(gate):
+        if isinstance(gate, base_gates.Collapse):
+            return None
+        return gate
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = (1 - self.psum) * state
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+            new_state += p * gate(state)
+            if inv_gate is not None:
+                inv_gate(state) # reset to the original state vector
+        return new_state

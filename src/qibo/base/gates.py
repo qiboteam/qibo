@@ -1843,3 +1843,58 @@ class PauliNoiseChannel(UnitaryChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
+
+
+class ThermalRelaxationChannel(UnitaryChannel):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        probs = self._calculate_probs(t1, t2, time, excited_population)
+        gates = [self.module.Z(q), self.module.Collapse(q),
+                 self.module.X(q)]
+
+        super(ThermalRelaxationChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "ThermalRelaxationChannel"
+        assert self.target_qubits == (q,)
+
+        self.init_args = [q, t1, t2, time]
+        self.init_kwargs = {"excited_population": excited_population,
+                            "seed": seed}
+
+    @staticmethod
+    def _calculate_probs(t1, t2, time, excited_population):
+        import numpy as np
+        if excited_population < 0 or excited_population > 1:
+            raise_error(ValueError, "Invalid excited state population {}."
+                                    "".format(excited_population))
+        if time < 0:
+            raise_error(ValueError, "Invalid gate_time ({} < 0)".format(time))
+        if t1 <= 0:
+            raise_error(ValueError, "Invalid T_1 relaxation time parameter: T_1 <= 0.")
+        if t2 <= 0:
+            raise_error(ValueError, "Invalid T_2 relaxation time parameter: T_2 <= 0.")
+        if t2 - 2 * t1 > 0:
+            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
+                                    "T_2 greater than 2 * T_1.")
+        # T1 relaxation rate
+        if t1 == np.inf:
+            rate1 = 0
+            p_reset = 0
+        else:
+            rate1 = 1 / t1
+            p_reset = 1 - np.exp(-time * rate1)
+        # T2 dephasing rate
+        if t2 == np.inf:
+            rate2 = 0
+            exp_t2 = 1
+        else:
+            rate2 = 1 / t2
+            exp_t2 = np.exp(-time * rate2)
+
+        if t2 > t1:
+            # TODO: Implement this case
+            raise_error(NotImplementedError)
+        else:
+            probs = ((1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2,
+                     p_reset * (1 - excited_population),
+                     p_reset * excited_population)
+        return probs
