@@ -1669,23 +1669,6 @@ class CallbackGate(Gate):
         self.callback.nqubits = n
 
 
-class ResetChannel(Gate):
-
-    def __init__(self, q, p0=0.0, p1=0.0, seed=None):
-        super(ResetChannel, self).__init__()
-        self.name = "ResetChannel"
-        self.target_qubits == (q,)
-        self.seed = seed
-
-        self.p0, self.p1 = p0, p1
-        self.psum = p0 + p1
-        self.collapse = self.module.Collapse(q)
-        self.flip = self.module.X(q)
-
-        self.init_args = [q]
-        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
-
-
 class KrausChannel(Gate):
     """General channel defined by arbitrary Krauss operators.
 
@@ -1845,6 +1828,19 @@ class PauliNoiseChannel(UnitaryChannel):
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
 
 
+class ResetChannel(UnitaryChannel):
+
+    def __init__(self, q, p0=0.0, p1=0.0, seed=None):
+        probs = [p0, p1]
+        gates = [self.module.Collapse(q), self.module.X(q)]
+        super(ResetChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "ResetChannel"
+        assert self.target_qubits == (q,)
+
+        self.init_args = [q]
+        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
+
+
 class ThermalRelaxationChannel(UnitaryChannel):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
@@ -1869,9 +1865,11 @@ class ThermalRelaxationChannel(UnitaryChannel):
         if time < 0:
             raise_error(ValueError, "Invalid gate_time ({} < 0)".format(time))
         if t1 <= 0:
-            raise_error(ValueError, "Invalid T_1 relaxation time parameter: T_1 <= 0.")
+            raise_error(ValueError, "Invalid T_1 relaxation time parameter: "
+                                    "T_1 <= 0.")
         if t2 <= 0:
-            raise_error(ValueError, "Invalid T_2 relaxation time parameter: T_2 <= 0.")
+            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
+                                    "T_2 <= 0.")
         if t2 - 2 * t1 > 0:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")

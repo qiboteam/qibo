@@ -446,27 +446,28 @@ def test_unitary_channel(backend, density_matrix):
     a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
     probs = [0.4, 0.3]
     matrices = [((0,), a1), ((2, 3), a2)]
+    if density_matrix:
+        initial_state = utils.random_density_matrix(4)
+    else:
+        initial_state = utils.random_numpy_state(4)
     c = models.Circuit(4, density_matrix=density_matrix)
     c.add(gates.UnitaryChannel(probs, matrices, seed=123))
-    final_state = c(nshots=20).numpy()
+    final_state = c(initial_state, nshots=20).numpy()
 
     eye = np.eye(2, dtype=final_state.dtype)
     ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))
     ma2 = np.kron(np.kron(eye, eye), a2)
     if density_matrix:
         # use density matrices
-        target_state = np.zeros_like(final_state)
-        target_state[0, 0] = 1
-        target_state = (0.3 * target_state +
-                        0.4 * ma1.dot(target_state.dot(ma1)) +
-                        0.3 * ma2.dot(target_state.dot(ma2)))
+        target_state = (0.3 * initial_state +
+                        0.4 * ma1.dot(initial_state.dot(ma1)) +
+                        0.3 * ma2.dot(initial_state.dot(ma2)))
     else:
         # sample unitary channel
         target_state = []
         np.random.seed(123)
         for _ in range(20):
-            temp_state = np.zeros(2 ** 4)
-            temp_state[0] = 1
+            temp_state = np.copy(initial_state)
             if np.random.random() < 0.4:
                 temp_state = ma1.dot(temp_state)
             if np.random.random() < 0.3:
@@ -701,7 +702,8 @@ def test_thermal_relaxation_channel(backend):
                                          excited_population=0.4))
     final_rho = c(np.copy(initial_rho))
 
-    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(0.8, 0.5, 1.0, 0.4)
+    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
+        0.8, 0.5, 1.0, 0.4)
     pi = 1 - pz - p0 - p1
     dtype = initial_rho.dtype
     collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
@@ -714,7 +716,8 @@ def test_thermal_relaxation_channel(backend):
     mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
     z_rho = mz.dot(initial_rho.dot(mz))
     flipped_rho = mx.dot(collapsed_rho.dot(mx))
-    target_rho = pi * initial_rho + pz * z_rho + p0 * collapsed_rho + p1 * flipped_rho
+    target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
+                  p1 * flipped_rho)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 

@@ -432,7 +432,7 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-        elif (isinstance(gate, (gates.UnitaryChannel, gates.ResetChannel)) and
+        elif (isinstance(gate, gates.UnitaryChannel) and
               not self.density_matrix):
             self.repeated_execution = True
             self.queue.append(gate)
