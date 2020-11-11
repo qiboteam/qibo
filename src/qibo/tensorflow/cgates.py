@@ -770,6 +770,7 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
                     g.device = self.device
                     g.nqubits = self.nqubits
             inv_gates.append(inv_gate)
+        inv_gates[-1] = None
         self.inv_gates = tuple(inv_gates)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
@@ -780,7 +781,8 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         new_state = tf.zeros_like(state)
         for gate, inv_gate in zip(self.gates, self.inv_gates):
             new_state += gate(state)
-            inv_gate(state)
+            if inv_gate is not None:
+                inv_gate(state)
         return new_state
 
 
@@ -809,11 +811,12 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
         return state
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
+        new_state = (1 - self.psum) * state
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
             new_state += p * gate(state)
-            inv_gate(state) # reset to the original state vector
-        return (1 - self.psum) * state + new_state
+            if inv_gate is not None:
+                inv_gate(state) # reset to the original state vector
+        return new_state
 
 
 class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
@@ -844,11 +847,3 @@ class ThermalRelaxationChannel(UnitaryChannel, base_gates.ThermalRelaxationChann
         if isinstance(gate, base_gates.Collapse):
             return None
         return gate
-
-    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = (1 - self.psum) * state
-        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
-            new_state += p * gate(state)
-            if inv_gate is not None:
-                inv_gate(state) # reset to the original state vector
-        return new_state
