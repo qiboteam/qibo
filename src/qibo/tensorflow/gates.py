@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
+from qibo.tensorflow import cgates
 from qibo.config import tfmatrices as matrices
 from qibo.config import BACKEND, DTYPES, raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -43,7 +44,6 @@ class TensorflowGate(base_gates.Gate):
 
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
-        from qibo.tensorflow import cgates
         return cgates.TensorflowGate.control_unitary(unitary)
 
     @base_gates.Gate.nqubits.setter
@@ -192,8 +192,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
     @staticmethod
     def _result_to_list(res):
-        from qibo.tensorflow.cgates import Collapse
-        return Collapse._result_to_list(res)
+        return cgates.Collapse._result_to_list(res)
 
     def _prepare(self):
         self.order = list(self.sorted_qubits)
@@ -288,7 +287,6 @@ class U2(TensorflowGate, base_gates.U2):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.U2.construct_unitary(self)
 
 
@@ -299,7 +297,6 @@ class U3(TensorflowGate, base_gates.U3):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.U3.construct_unitary(self)
 
 
@@ -398,7 +395,6 @@ class fSim(TensorflowGate, base_gates.fSim):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.fSim.construct_unitary(self)
 
 
@@ -409,11 +405,9 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim.construct_unitary(self)
 
     def _dagger(self) -> "GeneralizedfSim":
-        from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim._dagger(self)
 
 
@@ -448,13 +442,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         return matrix
 
     def _dagger(self) -> "Unitary":
-        from qibo.tensorflow import cgates
         return cgates.Unitary._dagger(self)
 
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
-
-    from qibo.tensorflow import cgates
 
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
@@ -506,11 +497,11 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return matrices, additional_matrix
 
     def _prepare(self):
-        self.cgates.VariationalLayer._prepare(self)
+        cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         # impractical case because VariationalLayer is not called by circuits
-        return self.cgates.VariationalLayer.__call__(self, state)
+        return cgates.VariationalLayer.__call__(self, state)
 
 
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
@@ -526,7 +517,6 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             gate.nqubits = self.nqubits
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        from qibo.tensorflow import cgates
         ccls = getattr(cgates, self.__class__.__name__)
         return ccls._state_vector_call(self, state)
 
