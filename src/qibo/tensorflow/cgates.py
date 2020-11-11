@@ -709,7 +709,7 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
 
     def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.KrausChannel.__init__(self, gates)
         # create inversion gates to rest to the original state vector
         # because of the in-place updates used in custom operators
@@ -756,7 +756,7 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
 
     def __init__(self, p: List[float], gates: List["Gate"],
                  seed: Optional[int] = None):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.UnitaryChannel.__init__(self, p, gates, seed=seed)
         self.inv_gates = tuple()
 
@@ -790,7 +790,7 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
 
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
                  seed: Optional[int] = None):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
         self.inv_gates = tuple()
 
@@ -804,7 +804,7 @@ class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
 
     def __init__(self, q: int, p0: float = 0.0, p1: float = 0.0,
                  seed: Optional[int] = None):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
         self.inv_gates = tuple()
 
@@ -830,7 +830,7 @@ class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
 class ThermalRelaxationChannel(ResetChannel, base_gates.ThermalRelaxationChannel):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        self.module.TensorflowGate.__init__(self)
+        TensorflowGate.__init__(self)
         base_gates.ThermalRelaxationChannel.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
