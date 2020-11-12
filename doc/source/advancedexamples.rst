@@ -675,7 +675,8 @@ as follows:
 
     # Define circuit
     c = models.Circuit(5)
-    c.add((gates.RX(i, theta=t) for i, t in enumerate(np.random.random())))
+    thetas = np.random.random(5)
+    c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
     # Add noise channels to all qubits
     c.add((gates.PauliNoiseChannel(i, px=0.2, py=0.0, pz=0.3)
            for i in range(5)))
@@ -814,7 +815,7 @@ measurement gates:
       c = models.Circuit(6)
       c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
       c.add(gates.M(0, 1, p0=0.2))
-      c.add(gates.M(2, 3, p0={3: 0.1, 4: 0.0}))
+      c.add(gates.M(2, 3, p0={2: 0.1, 3: 0.0}))
       c.add(gates.M(4, 5, p0=[0.4, 0.3]))
       result = c(nshots=100)
 
