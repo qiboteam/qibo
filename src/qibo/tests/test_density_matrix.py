@@ -473,10 +473,24 @@ def test_unitary_channel(backend, density_matrix):
                 temp_state = ma2.dot(temp_state)
             target_state.append(np.copy(temp_state))
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+def test_unitary_channel_errors():
+    """Check errors raised by ``gates.UnitaryChannel``."""
+    a1 = np.array([[0, 1], [1, 0]])
+    a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    probs = [0.4, 0.3]
+    matrices = [((0,), a1), ((2, 3), a2)]
     # Invalid probability length
     with pytest.raises(ValueError):
         gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
-    qibo.set_backend(original_backend)
+    # Probability > 1
+    with pytest.raises(ValueError):
+        gate = gates.UnitaryChannel([1.1, 0.2], matrices)
+    # Probability sum = 0
+    with pytest.raises(ValueError):
+        gate = gates.UnitaryChannel([0.0, 0.0], matrices)
 
 
 def test_circuit_with_noise_gates():

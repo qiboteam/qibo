@@ -1391,7 +1391,7 @@ def test_noise_channel_repeated(backend):
     qibo.set_backend(backend)
 
     thetas = np.random.random(4)
-    probs = np.random.random([4, 3])
+    probs = 0.2 * np.random.random([4, 3])
     gatelist = [gates.X, gates.Y, gates.Z]
 
     c = Circuit(4)

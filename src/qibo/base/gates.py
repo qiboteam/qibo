@@ -1809,10 +1809,18 @@ class UnitaryChannel(KrausChannel):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
                                     "".format(len(p), len(gates)))
+        for pp in p:
+            if pp < 0 or pp > 1:
+                raise_error(ValueError, "Probabilities should be between 0 "
+                                        "and 1 but {} was given.".format(pp))
         super(UnitaryChannel, self).__init__(gates)
         self.name = "UnitaryChannel"
         self.probs = p
         self.psum = sum(p)
+        if self.psum > 1 or self.psum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.psum))
         self.seed = seed
         self.density_matrix = False
         self.init_args = [p, self.gates]
