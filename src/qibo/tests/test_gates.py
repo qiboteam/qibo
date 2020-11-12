@@ -1391,22 +1391,24 @@ def test_noise_channel_repeated(backend):
     qibo.set_backend(backend)
 
     thetas = np.random.random(4)
-    probs = 0.2 * np.random.random([4, 3])
+    probs = 0.1 * np.random.random([4, 3]) + 0.2
     gatelist = [gates.X, gates.Y, gates.Z]
 
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.add((gates.PauliNoiseChannel(i, px, py, pz, seed=123)
            for i, (px, py, pz) in enumerate(probs)))
-    final_state = c().numpy()
+    final_state = c(nshots=40).numpy()
 
-    noiseless_c = Circuit(4)
-    noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     np.random.seed(123)
-    for i, ps in enumerate(probs):
-        for p, gate in zip(ps, gatelist):
-            if np.random.random() < p:
-                noiseless_c.add(gate(i))
-    target_state = noiseless_c().numpy()
+    target_state = []
+    for _ in range(40):
+        noiseless_c = Circuit(4)
+        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+        for i, ps in enumerate(probs):
+            for p, gate in zip(ps, gatelist):
+                if np.random.random() < p:
+                    noiseless_c.add(gate(i))
+        target_state.append(noiseless_c().numpy())
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
