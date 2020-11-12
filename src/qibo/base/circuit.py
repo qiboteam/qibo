@@ -681,7 +681,7 @@ class BaseCircuit(object):
         """Executes the circuit. Exact implementation depends on the backend.
 
         See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
-        detaisl.
+        details.
         """
         # abstract method
         raise_error(NotImplementedError)
