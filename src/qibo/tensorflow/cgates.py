@@ -222,8 +222,11 @@ class M(TensorflowGate, base_gates.M):
     from qibo.tensorflow import distutils
     from qibo.tensorflow import measurements
 
-    def __init__(self, *q, register_name: Optional[str] = None):
-        base_gates.M.__init__(self, *q, register_name=register_name)
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 p0: Optional["ProbsType"] = None,
+                 p1: Optional["ProbsType"] = None):
+        base_gates.M.__init__(self, *q, register_name=register_name,
+                              p0=p0, p1=p1)
         self.qubits_tensor = None
         self._density_matrix = False
         self._traceout = None
@@ -257,6 +260,20 @@ class M(TensorflowGate, base_gates.M):
         # Bring probs in the order specified by the user
         return tf.transpose(probs, perm=self.reduced_target_qubits)
 
+    def _sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        dtype = DTYPES.get('DTYPEINT')
+        probs_dim = tf.cast((2 ** len(self.target_qubits),), dtype=dtype)
+        shape = (1 + self.density_matrix) * self.nqubits * (2,)
+        probs = self._calculate_probabilities(tf.reshape(state, shape))
+        logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
+        samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
+        result = self.measurements.GateResult(
+            self.qubits, decimal_samples=samples_dec)
+        # optional bitflip noise
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
+        return result
+
     def _get_cpu(self): # pragma: no cover
         # case not covered by GitHub workflows because it requires OOM
         if not DEVICES['CPU']:
@@ -268,16 +285,6 @@ class M(TensorflowGate, base_gates.M):
             with tf.device(state.device):
                 state = state.vector
         TensorflowGate._set_nqubits(self, state)
-        probs_dim = tf.cast((2 ** len(self.target_qubits),),
-                            dtype=DTYPES.get('DTYPEINT'))
-        def sample():
-            shape = (1 + self.density_matrix) * self.nqubits * (2,)
-            probs = self._calculate_probabilities(tf.reshape(state, shape))
-            logits = tf.math.log(tf.reshape(probs, probs_dim))
-            return tf.random.categorical(logits[tf.newaxis], nshots,
-                                         dtype=DTYPES.get('DTYPEINT'))[0]
-
-        device = DEVICES['DEFAULT']
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
@@ -285,16 +292,15 @@ class M(TensorflowGate, base_gates.M):
 
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
-            with tf.device(device):
-                samples_dec = sample()
+            with tf.device(self.device):
+                result = self._sample(state, nshots)
         except oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
             device = self._get_cpu()
             with tf.device(device):
-                samples_dec = sample()
-        return self.measurements.GateResult(
-            self.qubits, decimal_samples=samples_dec)
+                result = self._sample(state, nshots)
+        return result
 
 
 class RX(MatrixGate, base_gates.RX):
