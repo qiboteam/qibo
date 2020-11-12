@@ -330,9 +330,7 @@ def quantum_order_finding_full(N, a):
     for i in range(len(q_reg)):
         circuit.add(gates.H(q_reg[i]))
     circuit.add(gates.X(x[len(x)-1]))
-    for i in (range(len(q_reg))):
-        a_i = (a**(2**(i)))
-        circuit.add(c_U(q_reg[i], x, b, a_i, N, ancilla, n))
+    circuit.add((c_U(q, x, b, a**(2**i), N, ancilla, n) for i, q in enumerate(q_reg)))
     circuit.add(i_qft(q_reg))
 
     # Adding measurement gates
@@ -397,3 +395,26 @@ def quantum_order_finding_semiclassical(N, a):
         s += r[i]*2**(i)
     print(f"The quantum circuit measures s = {s}.\n")
     return s
+
+
+def find_factors(r, a, N):
+    if r % 2 != 0:
+        print('The value found for r is not even. Trying again.\n')
+        print('-'*60+'\n')
+        return None
+    if a**(r//2) == -1%N:
+        print('Unusable value for r found. Trying again.\n')
+        print('-'*60+'\n')
+        return None
+    f1 = np.gcd((a**(r//2))-1, N)
+    f2 = np.gcd((a**(r//2))+1, N)
+    if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
+        print(f'Trivial factors 1 and {N} found. Trying again.\n')
+        print('-'*60+'\n')
+        return None
+    if f1 != 1 and f1 != N:
+        f2 = N // f1
+    elif f2 != 1 and f2 != N:
+        f1 = N // f2
+    print(f'Found as factors for {N}:  {f1}  and  {f2}.\n')
+    return f1, f2

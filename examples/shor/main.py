@@ -41,114 +41,25 @@ def main(N, times, A, semiclassical, enhance):
         sr = s/2**(2*n)
         r = fractions.Fraction.from_float(sr).limit_denominator(N).denominator
         print(f'Quantum circuit outputs r = {r}.\n')
-        for i in range(1):
-            if r % 2 != 0:
-                print('The value found for r is not even. Trying again.\n')
-                print('-'*60+'\n')
-                continue
-            if a**(r//2) == -1%N:
-                print('Unusable value for r found. Trying again.\n')
-                print('-'*60+'\n')
-                continue
-            f1 = np.gcd((a**(r//2))-1, N)
-            f2 = np.gcd((a**(r//2))+1, N)
-            if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
-                print(f'Trivial factors 1 and {N} found. Trying again.\n')
-                print('-'*60+'\n')
-            elif f1 != 1 and f1 != N:
-                print(f'Found as factors for {N}:  {f1}  and  {N//f1}.\n')
-                return f1, N//f1
-                break
-            elif f2 != 1 and f2 != N:
-                print(f'Found as factors for {N}:  {f2}  and  {N//f2}.\n')
-                return f2, N//f2
-                break
+        factors = functions.find_factors(r, a, N)
+        if factors:
+            return factors
         if enhance:
-            for c in range(1, 5):
-                ss = s+c
-                srr = ss/2**(2*n)
-                rr = fractions.Fraction.from_float(srr).limit_denominator(N).denominator
+            for c in range(-4, 5):
+                sr = (s + c) / 2**(2*n)
+                rr = fractions.Fraction.from_float(sr).limit_denominator(N).denominator
                 if rr == r:
                     continue
                 print(f'Checking for near values outputs r = {rr}.\n')
-                if rr % 2 != 0:
-                    print('The value found for r is not even. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                if a**(rr//2) == -1%N:
-                    print('Unusable value for r found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                f1 = np.gcd((a**(rr//2))-1, N)
-                f2 = np.gcd((a**(rr//2))+1, N)
-                if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
-                    print(f'Trivial factors 1 and {N} found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                elif f1 != 1 and f1 != N:
-                    print(f'Found as factors for {N}:  {f1}  and  {N//f1}.\n')
-                    return f1, N//f1
-                    break
-                elif f2 != 1 and f2 != N:
-                    print(f'Found as factors for {N}:  {f2}  and  {N//f2}.\n')
-                    return f2, N//f2
-                    break
-            for c in range(1, 5):
-                ss = s-c
-                srr = ss/2**(2*n)
-                rr = fractions.Fraction.from_float(srr).limit_denominator(N).denominator
-                if rr == r:
-                    continue
-                print(f'Checking for near values outputs r = {rr}.\n')
-                if rr % 2 != 0:
-                    print('The value found for r is not even. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                if a**(rr//2) == -1%N:
-                    print('Unusable value for r found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                f1 = np.gcd((a**(rr//2))-1, N)
-                f2 = np.gcd((a**(rr//2))+1, N)
-                if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
-                    print(f'Trivial factors 1 and {N} found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                elif f1 != 1 and f1 != N:
-                    print(f'Found as factors for {N}:  {f1}  and  {N//f1}.\n')
-                    return f1, N//f1
-                    break
-                elif f2 != 1 and f2 != N:
-                    print(f'Found as factors for {N}:  {f2}  and  {N//f2}.\n')
-                    return f2, N//f2
-                    break
+                factors = functions.find_factors(rr, a, N)
+                if factors:
+                    return factors
             print('Checking multiples.\n')
             for c in range(2, n):
                 rr = c*r
-                if rr % 2 != 0:
-                    print('The value found for r is not even. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                if a**(rr//2) == -1%N:
-                    print('Unusable value for r found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                f1 = np.gcd((a**(rr//2))-1, N)
-                f2 = np.gcd((a**(rr//2))+1, N)
-                if (f1 == N or f1 == 1) and (f2 == N or f2 == 1):
-                    print(f'Trivial factors 1 and {N} found. Trying again.\n')
-                    print('-'*60+'\n')
-                    continue
-                if f1 != 1 and f1 != N:
-                    print(f'With multiple r = {rr}.\n')
-                    print(f'Found as factors for {N}:  {f1}  and  {N//f1}.\n')
-                    return f1, N//f1
-                    break
-                if f2 != 1 and f2 != N:
-                    print(f'With multiple r = {rr}.\n')
-                    print(f'Found as factors for {N}:  {f2}  and  {N//f2}.\n')
-                    return f2, N//f2
-                    break
+                factors = functions.find_factors(rr, a, N)
+                if factors:
+                    return factors
         continue
 
 

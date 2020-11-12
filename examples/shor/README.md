@@ -8,6 +8,8 @@ A circuit proposal for Shor's algorithm, mainly on the construction of a quantum
 
 The following years, more proposals were introduced that decreased the number of qubits needed for the algorithm. This example is based on the Shor's algorithm implementation put forward by Beauregard [arXiv:0205095](https://arxiv.org/abs/quant-ph/0205095) in which the number of qubits needed is reduced to only 2n+3.
 
+All images taken from [arXiv:0205095](https://arxiv.org/abs/quant-ph/0205095).
+
 #### Quantum order finding algorithm
 
 The aim of this algorithm is to find the least integer r>0 such that x^r = 1 mod N.
@@ -57,7 +59,7 @@ Since the controlled gates that apply the modular exponentiation commute, instea
 
 ![semiclassical](images/semiclassical.png)
 
-The single qubit at the top register will be measured 2n times, and will be reset to |0> accordingly. Additionally, the Rotation gates applied to the qubit will depend on all the previeos measuements recorded. This can be interpreted as a semiclassical implementation of the inverse Quantum Fourier transform.
+The single qubit at the top register will be measured 2n times, and will be reset to |0> accordingly. Additionally, the Rotation gates applied to the qubit will depend on all the previous measurements recorded. This can be interpreted as a semiclassical implementation of the inverse Quantum Fourier transform.
 
 ### Running the code
 
@@ -69,7 +71,7 @@ Certain parameters can be given to the main file in order to tune the example.
 - `N`: number to factorize. Recomended to be the multiplication of two prime numbers. Minimum number possible is 15. `default = 15`
 - `times`: maximum number of tries for the algorithm to find the prime numbers. `default = 10`
 - `A`: fix the value used for order finding. If `None` the value is chosen randomly. `default = None`
-- `semiclassical`: flag to perform the iQFT in a semiclassical way. This achieves the final scaling of 2n+3 (4n+2 instead).
+- `semiclassical`: flag to perform the iQFT in a semiclassical way. This achieves the final scaling of 2n+3 qubits (4n+2 qubits instead).
 - `enhance`: flag to enhance the quantum result classically in order to find the solution in less iterations.
 
 This example returns a comprehensible step by step analysis of Shor's factorization algorithm, culmination with two non-trivial factors of given number N.
