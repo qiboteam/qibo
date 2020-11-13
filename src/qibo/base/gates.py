@@ -1914,7 +1914,7 @@ class ThermalRelaxationChannel:
     If :math:`T_1 \\geq T_2`:
 
     .. math::
-        \\mathcal{E} [\\rho ] = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
+        \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
         + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
         + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
 
