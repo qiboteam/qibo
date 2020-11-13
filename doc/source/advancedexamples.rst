@@ -625,12 +625,11 @@ initial density matrix by passing the corresponding array when executing the
 circuit. If a state vector is passed as an initial state in a density matrix
 circuit, it will be transformed automatically to the equivalent density matrix.
 
-Qibo currently provides the following channels that can be used during a
-density matrix simulation: :class:`qibo.base.gates.KrausChannel`,
-:class:`qibo.base.gates.UnitaryChannel` and
-:class:`qibo.base.gates.PauliNoiseChannel`.
-We refer to the documentation of each channel for more details.
-Noise can be simulated using these channels, for example:
+Additionally, Qibo provides several gates that represent channels which can
+be used during a density matrix simulation. We refer to the
+:ref:`Channels <Channels>` section of the documentation for a complete list of
+the available channels. Noise can be simulated using these channels,
+for example:
 
 .. code-block:: python
 
