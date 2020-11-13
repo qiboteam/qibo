@@ -749,6 +749,20 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("t1,t2,time,excpop",
+                         [(1.0, 0.5, 1.5, 1.5), (1.0, 0.5, -0.5, 0.5),
+                          (1.0, -0.5, 1.5, 0.5), (-1.0, 0.5, 1.5, 0.5),
+                          (1.0, 3.0, 1.5, 0.5)])
+def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    with pytest.raises(ValueError):
+        gate = gates.ThermalRelaxationChannel(
+            0, t1, t2, time, excited_population=excpop)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()

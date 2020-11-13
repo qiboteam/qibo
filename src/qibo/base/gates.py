@@ -1934,10 +1934,6 @@ class ThermalRelaxationChannel:
             instead of density matrices is used to simulate this gate.
     """
 
-    def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
-        # abstract method
-        raise_error(NotImplementedError)
-
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         self.name = "ThermalRelaxationChannel"
         self.init_args = [q, t1, t2, time]
