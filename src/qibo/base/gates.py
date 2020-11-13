@@ -577,24 +577,50 @@ class M(Gate):
         *q (int): id numbers of the qubits to measure.
             It is possible to measure multiple qubits using ``gates.M(0, 1, 2, ...)``.
             If the qubits to measure are held in an iterable (eg. list) the ``*``
-            operator can be used, for example ``gates.M(*[0, 1, 4])`` or ``gates.M(*range(5))``.
-        register_name: Optional name of the register to distinguish it from
-            other registers when used in circuits.
+            operator can be used, for example ``gates.M(*[0, 1, 4])`` or
+            ``gates.M(*range(5))``.
+        register_name (str): Optional name of the register to distinguish it
+            from other registers when used in circuits.
+        p0 (dict): Optional bitflip probability map. Can be:
+            A dictionary that maps each measured qubit to the probability
+            that it is flipped, a list or tuple that has the same length
+            as the tuple of measured qubits or a single float number.
+            If a single float is given the same probability will be used
+            for all qubits.
+        p1 (dict): Optional bitflip probability map for asymmetric bitflips.
+            Same as ``p0`` but controls the 1->0 bitflip probability.
+            If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
+            1->0 bitflips.
     """
+    from qibo.base import measurements
 
-    def __init__(self, *q, register_name: Optional[str] = None):
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 p0: Optional["ProbsType"] = None,
+                 p1: Optional["ProbsType"] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = q
         self.register_name = register_name
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name}
+        self.init_kwargs = {"register_name": register_name, "p0": p0, "p1": p1}
 
         self._unmeasured_qubits = None # Tuple
         self._reduced_target_qubits = None # List
+        if p1 is None: p1 = p0
+        if p0 is None: p0 = p1
+        self.bitflip_map = (self._get_bitflip_map(p0),
+                            self._get_bitflip_map(p1))
 
-    def _add(self, qubits: Tuple[int]):
+    def _get_bitflip_map(self, p: Optional["ProbsType"] = None
+                         ) -> Dict[int, float]:
+        """Creates dictionary with bitflip probabilities."""
+        if p is None:
+            return {q: 0 for q in self.qubits}
+        pt = self.measurements.GateResult._get_bitflip_tuple(self.qubits, p)
+        return {q: p for q, p in zip(self.qubits, pt)}
+
+    def _add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
@@ -603,12 +629,15 @@ class M(Gate):
         raised if he does so.
 
         Args:
-            qubits: Tuple of qubit ids to be added to the measurement's qubits.
+            gate: Measurement gate to add its qubits in the current gate.
         """
         if self._unmeasured_qubits is not None:
-            raise_error(RuntimeError, "Cannot add qubits to a measurement gate that "
-                                      "was executed.")
-        self.target_qubits += qubits
+            raise_error(RuntimeError, "Cannot add qubits to a measurement "
+                                      "gate that was executed.")
+        assert isinstance(gate, self.__class__)
+        self.target_qubits += gate.target_qubits
+        self.bitflip_map[0].update(gate.bitflip_map[0])
+        self.bitflip_map[1].update(gate.bitflip_map[1])
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:
@@ -1780,10 +1809,18 @@ class UnitaryChannel(KrausChannel):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
                                     "".format(len(p), len(gates)))
+        for pp in p:
+            if pp < 0 or pp > 1:
+                raise_error(ValueError, "Probabilities should be between 0 "
+                                        "and 1 but {} was given.".format(pp))
         super(UnitaryChannel, self).__init__(gates)
         self.name = "UnitaryChannel"
         self.probs = p
         self.psum = sum(p)
+        if self.psum > 1 or self.psum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.psum))
         self.seed = seed
         self.density_matrix = False
         self.init_args = [p, self.gates]

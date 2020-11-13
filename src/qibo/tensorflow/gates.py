@@ -188,7 +188,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         TensorflowGate.__init__(self)
         self.order = None
         self.ids = None
-        self.dm_result = None
+        self.density_matrix_result = None
 
     @staticmethod
     def _result_to_list(res):
@@ -203,7 +203,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
             self.order.extend((q + self.nqubits for q in range(self.nqubits)
                                if q not in self.sorted_qubits))
             self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
-            self.dm_result = 2 * self.result
+            self.density_matrix_result = 2 * self.result
         else:
             self.order.extend((q for q in range(self.nqubits)
                                if q not in self.sorted_qubits))
@@ -226,11 +226,13 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         return self._append_zeros(state, self.sorted_qubits, self.result)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        substate = tf.gather_nd(tf.transpose(state, self.order), self.dm_result)
+        substate = tf.gather_nd(tf.transpose(state, self.order),
+                                self.density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = tf.linalg.trace(tf.reshape(substate, (n, n)))
         state = substate / norm
-        return self._append_zeros(state, self.sorted_qubits, self.dm_result)
+        return self._append_zeros(state, self.sorted_qubits,
+                                  self.density_matrix_result)
 
 
 class RX(TensorflowGate, base_gates.RX):

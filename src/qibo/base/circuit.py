@@ -140,7 +140,7 @@ class BaseCircuit(object):
                                           "circuit.".format(k))
                 newcircuit._check_measured(v)
                 newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
+            newcircuit.measurement_gate._add(c2.measurement_gate)
         return newcircuit
 
     def on_qubits(self, *q) -> Iterable[gates.Gate]:
@@ -471,7 +471,7 @@ class BaseCircuit(object):
             self.measurement_gate = gate
             self.measurement_tuples[name] = tuple(gate.target_qubits)
         else:
-            self.measurement_gate._add(gate.target_qubits)
+            self.measurement_gate._add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
     def _add_layer(self, gate: gates.Gate):
@@ -682,7 +682,7 @@ class BaseCircuit(object):
         """Executes the circuit. Exact implementation depends on the backend.
 
         See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
-        detaisl.
+        details.
         """
         # abstract method
         raise_error(NotImplementedError)
