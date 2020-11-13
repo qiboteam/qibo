@@ -178,6 +178,7 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
         self._calculate_qubits_tensor()
+        self._calculate_einsum_cache()
         self._prepare()
 
     @property
@@ -235,7 +236,11 @@ class Gate(object):
         return self.__matmul__(other)
 
     def _calculate_qubits_tensor(self):
-        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        """Calculates qubits tensor required for applying gates using custom operators."""
+        pass
+
+    def _calculate_einsum_cache(self):
+        """Calculates einsum cache required for applying gates using Tensorflow ops."""
         pass
 
     def _prepare(self): # pragma: no cover

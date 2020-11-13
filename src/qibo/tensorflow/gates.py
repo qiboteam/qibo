@@ -36,6 +36,19 @@ class TensorflowGate(base_gates.Gate):
         rank = int(np.log2(int(matrix.shape[0])))
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
+    def _calculate_einsum_cache(self):
+        if self.is_controlled_by:
+            if self.density_matrix:
+                from qibo.tensorflow import einsum
+                self.einsum = einsum.DefaultEinsum()
+            self.control_cache = cache.ControlCache(self)
+            nactive = self.nqubits - len(self.control_qubits)
+            targets = self.control_cache.targets
+            self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
+        else:
+            self.calculation_cache = self.einsum.create_cache(self.qubits, self.nqubits)
+        self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
+
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
@@ -45,29 +58,6 @@ class TensorflowGate(base_gates.Gate):
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
         return cgates.TensorflowGate.control_unitary(unitary)
-
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        """Sets the number of qubit that this gate acts on.
-
-        This is called automatically by the `Circuit.add` method if the gate
-        is used on a `Circuit`. If the gate is called on a state then `nqubits`
-        is set during the first `__call__`.
-        When `nqubits` is set we also calculate the einsum string so that it
-        is calculated only once per gate.
-        """
-        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        if self.is_controlled_by:
-            if self.density_matrix:
-                from qibo.tensorflow import einsum
-                self.einsum = einsum.DefaultEinsum()
-            self.control_cache = cache.ControlCache(self)
-            nactive = n - len(self.control_qubits)
-            targets = self.control_cache.targets
-            self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
-        else:
-            self.calculation_cache = self.einsum.create_cache(self.qubits, n)
-        self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
     def _set_nqubits(self, state: tf.Tensor):
         """Sets ``gate.nqubits`` from state, if not already set."""
