@@ -44,10 +44,13 @@ class TensorflowGate(base_gates.Gate):
             self.control_cache = cache.ControlCache(self)
             nactive = self.nqubits - len(self.control_qubits)
             targets = self.control_cache.targets
-            self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
+            self.calculation_cache = self.einsum.create_cache(
+                targets, nactive, ncontrol=len(self.control_qubits))
         else:
-            self.calculation_cache = self.einsum.create_cache(self.qubits, self.nqubits)
-        self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
+            self.calculation_cache = self.einsum.create_cache(
+                self.qubits, self.nqubits)
+        self.calculation_cache.cast_shapes(
+            lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
@@ -581,3 +584,26 @@ class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChan
         base_gates._ThermalRelaxationChannelA.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
+
+
+class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationChannelB):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelB.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+
+    def _calculate_einsum_cache(self):
+        qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
+        self.calculation_cache = self.einsum.create_cache(
+            qubits, 2 * self.nqubits)
+        self.calculation_cache.cast_shapes(
+            lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
+
+    def construct_unitary(self):
+        return cgates._ThermalRelaxationChannelB.construct_unitary(self)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        einsum_str = self.calculation_cache.vector
+        return self.einsum(einsum_str, state, self.matrix)

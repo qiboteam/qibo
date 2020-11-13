@@ -1893,7 +1893,6 @@ class ThermalRelaxationChannel:
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         self.name = "ThermalRelaxationChannel"
-        assert self.target_qubits == (q,)
         self.init_args = [q, t1, t2, time]
         self.init_kwargs = {"excited_population": excited_population,
                             "seed": seed}
@@ -1941,6 +1940,7 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
         ThermalRelaxationChannel.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
+        assert self.target_qubits == (q,)
 
 
 class _ThermalRelaxationChannelB(Gate):

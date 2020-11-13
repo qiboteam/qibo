@@ -862,7 +862,7 @@ class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChan
         return ResetChannel._state_vector_call(self, state)
 
 
-class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationChannelB):
+class _ThermalRelaxationChannelB(MatrixGate, base_gates._ThermalRelaxationChannelB):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)
@@ -881,13 +881,12 @@ class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationCh
         self.target_qubits_dm = (self.target_qubits +
                                  tuple(np.array(self.target_qubits) + self.nqubits))
 
-    def _prepare(self):
+    def construct_unitary(self) -> np.ndarray:
         matrix = np.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
                           1 - self.preset0])
         matrix[0, -1] = self.preset1
         matrix[-1, 0] = self.preset0
-        with tf.device(self.device):
-            self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
+        return matrix.astype(DTYPES.get('NPTYPECPX'))
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(ValueError, "Thermal relaxation cannot be applied to "
@@ -896,11 +895,3 @@ class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationCh
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.matrix, self.qubits_tensor,
                             2 * self.nqubits, *self.target_qubits_dm)
-
-    #def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        #state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
-        #                     2 * self.nqubits, *self.target_qubits)
-        #adjmatrix = tf.math.conj(self.matrix)
-        #state = self.gate_op(state, adjmatrix, self.qubits_tensor,
-        #                     2 * self.nqubits, *self.target_qubits_dm)
-        #return state

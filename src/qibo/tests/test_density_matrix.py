@@ -705,8 +705,7 @@ def test_reset_channel(backend):
     qibo.set_backend(original_backend)
 
 
-#@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("t1,t2,time,excpop",
                          [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)])
 def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
