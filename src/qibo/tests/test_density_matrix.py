@@ -714,8 +714,9 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(3)
     c = models.Circuit(3, density_matrix=True)
-    c.add(gates.ThermalRelaxationChannel(0, t1, t2, time=time,
-                                         excited_population=excpop))
+    gate = gates.ThermalRelaxationChannel(0, t1, t2, time=time,
+        excited_population=excpop)
+    c.add(gate)
     final_rho = c(np.copy(initial_rho))
 
     exp, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
@@ -745,6 +746,10 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
         target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
                       p1 * flipped_rho)
     np.testing.assert_allclose(final_rho, target_rho)
+    # Try to apply to state vector if t1 < t2
+    if t1 < t2:
+        with pytest.raises(ValueError):
+            target_rho = gate._state_vector_call(initial_rho)
     qibo.set_backend(original_backend)
 
 
