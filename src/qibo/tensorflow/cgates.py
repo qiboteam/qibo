@@ -827,11 +827,24 @@ class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
         return state
 
 
-class ThermalRelaxationChannel(ResetChannel, base_gates.ThermalRelaxationChannel):
+class ThermalRelaxationChannel(TensorflowGate, base_gates.ThermalRelaxationChannel):
+
+    def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
+        if t2 > t1:
+            return _ThermalRelaxationChannelB(
+                q, t1, t2, time, excited_population=excited_population,
+                seed=seed)
+        else:
+            return _ThermalRelaxationChannelA(
+                q, t1, t2, time, excited_population=excited_population,
+                seed=seed)
+
+
+class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChannelA):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)
-        base_gates.ThermalRelaxationChannel.__init__(
+        base_gates._ThermalRelaxationChannelA.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
         self.inv_gates = tuple()

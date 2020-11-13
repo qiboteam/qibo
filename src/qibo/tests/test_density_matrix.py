@@ -691,7 +691,7 @@ def test_reset_channel(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_thermal_relaxation_channel(backend):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     original_backend = qibo.get_backend()

@@ -1841,20 +1841,11 @@ class ResetChannel(UnitaryChannel):
         self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
 
 
-class ThermalRelaxationChannel(UnitaryChannel):
+class ThermalRelaxationChannel:
 
-    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = self._calculate_probs(t1, t2, time, excited_population)
-        gates = [self.module.Z(q), self.module.Collapse(q),
-                 self.module.X(q)]
-
-        super(ThermalRelaxationChannel, self).__init__(probs, gates, seed=seed)
-        self.name = "ThermalRelaxationChannel"
-        assert self.target_qubits == (q,)
-
-        self.init_args = [q, t1, t2, time]
-        self.init_kwargs = {"excited_population": excited_population,
-                            "seed": seed}
+    def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
+        # abstract method
+        raise_error(NotImplementedError)
 
     @staticmethod
     def _calculate_probs(t1, t2, time, excited_population):
@@ -1888,11 +1879,33 @@ class ThermalRelaxationChannel(UnitaryChannel):
             rate2 = 1 / t2
             exp_t2 = np.exp(-time * rate2)
 
-        if t2 > t1:
-            # TODO: Implement this case
+        if t1 < t2:
             raise_error(NotImplementedError)
         else:
             probs = ((1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2,
-                     p_reset * (1 - excited_population),
-                     p_reset * excited_population)
-        return probs
+                      p_reset * (1 - excited_population),
+                      p_reset * excited_population)
+            return probs
+
+
+class _ThermalRelaxationChannelA(UnitaryChannel):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        probs = ThermalRelaxationChannel._calculate_probs(
+            t1, t2, time, excited_population)
+        gates = [self.module.Z(q), self.module.Collapse(q),
+                 self.module.X(q)]
+
+        super(_ThermalRelaxationChannelA, self).__init__(probs, gates, seed=seed)
+        self.name = "ThermalRelaxationChannel"
+        assert self.target_qubits == (q,)
+
+        self.init_args = [q, t1, t2, time]
+        self.init_kwargs = {"excited_population": excited_population,
+                            "seed": seed}
+
+
+class _ThermalRelaxationChannelB(Gate):
+
+    def __init__(self):
+        raise_error(NotImplementedError)
