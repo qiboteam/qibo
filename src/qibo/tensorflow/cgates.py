@@ -854,3 +854,47 @@ class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChan
         if np.random.random() < self.probs[0]:
             state = self.gates[0](state)
         return ResetChannel._state_vector_call(self, state)
+
+
+class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationChannelB):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelB.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        self.gate_op = op.apply_two_qubit_gate
+
+    def _calculate_qubits_tensor(self) -> tf.Tensor:
+        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        qubits = sorted(list(self.nqubits - np.array(self.control_qubits) - 1))
+        qubits = self.nqubits - np.array(self.target_qubits) - 1
+        qubits = np.concatenate([qubits, qubits + self.nqubits], axis=0)
+        qubits = sorted(list(qubits))
+        self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+        self.target_qubits_dm = (self.target_qubits +
+                                 tuple(np.array(self.target_qubits) + self.nqubits))
+
+    def _prepare(self):
+        matrix = np.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
+                          1 - self.preset0])
+        matrix[0, -1] = self.preset1
+        matrix[-1, 0] = self.preset0
+        with tf.device(self.device):
+            self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Thermal relaxation cannot be applied to "
+                                "state vectors when T1 < T2.")
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.gate_op(state, self.matrix, self.qubits_tensor,
+                            2 * self.nqubits, *self.target_qubits_dm)
+
+    #def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        #state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
+        #                     2 * self.nqubits, *self.target_qubits)
+        #adjmatrix = tf.math.conj(self.matrix)
+        #state = self.gate_op(state, adjmatrix, self.qubits_tensor,
+        #                     2 * self.nqubits, *self.target_qubits_dm)
+        #return state

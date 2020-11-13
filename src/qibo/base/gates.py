@@ -1842,10 +1842,19 @@ class ResetChannel(UnitaryChannel):
 
 
 class ThermalRelaxationChannel:
+    # T1 relaxation rate
+    # T2 dephasing rate
 
     def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
         # abstract method
         raise_error(NotImplementedError)
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        self.name = "ThermalRelaxationChannel"
+        assert self.target_qubits == (q,)
+        self.init_args = [q, t1, t2, time]
+        self.init_kwargs = {"excited_population": excited_population,
+                            "seed": seed}
 
     @staticmethod
     def _calculate_probs(t1, t2, time, excited_population):
@@ -1861,34 +1870,23 @@ class ThermalRelaxationChannel:
         if t2 <= 0:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 <= 0.")
-        if t2 - 2 * t1 > 0:
+        if t2 > 2 * t1:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")
-        # T1 relaxation rate
-        if t1 == np.inf:
-            rate1 = 0
-            p_reset = 0
-        else:
-            rate1 = 1 / t1
-            p_reset = 1 - np.exp(-time * rate1)
-        # T2 dephasing rate
-        if t2 == np.inf:
-            rate2 = 0
-            exp_t2 = 1
-        else:
-            rate2 = 1 / t2
-            exp_t2 = np.exp(-time * rate2)
 
+        p_reset = 1 - np.exp(-time / t1)
+        p0 = p_reset * (1 - excited_population)
+        p1 = p_reset * excited_population
         if t1 < t2:
-            raise_error(NotImplementedError)
+            exp = np.exp(-time / t2)
         else:
-            probs = ((1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2,
-                      p_reset * (1 - excited_population),
-                      p_reset * excited_population)
-            return probs
+            rate1, rate2 = 1 / t1, 1 / t2
+            exp = (1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2
+        return (exp, p0, p1)
 
 
 class _ThermalRelaxationChannelA(UnitaryChannel):
+    """Implements thermal relaxation when T1 >= T2."""
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         probs = ThermalRelaxationChannel._calculate_probs(
@@ -1896,16 +1894,25 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
         gates = [self.module.Z(q), self.module.Collapse(q),
                  self.module.X(q)]
 
-        super(_ThermalRelaxationChannelA, self).__init__(probs, gates, seed=seed)
-        self.name = "ThermalRelaxationChannel"
-        assert self.target_qubits == (q,)
-
-        self.init_args = [q, t1, t2, time]
-        self.init_kwargs = {"excited_population": excited_population,
-                            "seed": seed}
+        super(_ThermalRelaxationChannelA, self).__init__(
+            probs, gates, seed=seed)
+        ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
 
 
 class _ThermalRelaxationChannelB(Gate):
+    """Implements thermal relaxation when T1 < T2."""
 
-    def __init__(self):
-        raise_error(NotImplementedError)
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        probs = ThermalRelaxationChannel._calculate_probs(
+            t1, t2, time, excited_population)
+        self.exp_t2, self.preset0, self.preset1 = probs
+
+        super(_ThermalRelaxationChannelB, self).__init__()
+        self.target_qubits = (q,)
+        ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        # this case can only be applied to density matrices
+        self.density_matrix = True

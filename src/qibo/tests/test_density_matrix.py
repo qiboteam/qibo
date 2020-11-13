@@ -691,33 +691,45 @@ def test_reset_channel(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_thermal_relaxation_channel(backend):
+#@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("backend", ["custom"])
+@pytest.mark.parametrize("t1,t2,time,excpop",
+                         [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)])
+def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = utils.random_density_matrix(3)
     c = models.Circuit(3, density_matrix=True)
-    c.add(gates.ThermalRelaxationChannel(0, t1=0.8, t2=0.5, time=1.0,
-                                         excited_population=0.4))
+    c.add(gates.ThermalRelaxationChannel(0, t1, t2, time=time,
+                                         excited_population=excpop))
     final_rho = c(np.copy(initial_rho))
 
-    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
-        0.8, 0.5, 1.0, 0.4)
-    pi = 1 - pz - p0 - p1
-    dtype = initial_rho.dtype
-    collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
-    collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho = collapsed_rho.reshape((8, 8))
-    collapsed_rho /= np.trace(collapsed_rho)
-    mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
-    mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
-    z_rho = mz.dot(initial_rho.dot(mz))
-    flipped_rho = mx.dot(collapsed_rho.dot(mx))
-    target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
-                  p1 * flipped_rho)
+    exp, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
+        t1, t2, time, excpop)
+    if t2 > t1:
+        matrix = np.diag([1 - p1, p0, p1, 1 - p0])
+        matrix[0, -1], matrix[-1, 0] = exp, exp
+        matrix = matrix.reshape(4 * (2,))
+        target_rho = np.copy(initial_rho).reshape(6 * (2,))
+        target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
+        target_rho = target_rho.reshape(initial_rho.shape)
+    else:
+        pz = exp
+        pi = 1 - pz - p0 - p1
+        dtype = initial_rho.dtype
+        collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
+        collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
+        collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
+        collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
+        collapsed_rho = collapsed_rho.reshape((8, 8))
+        collapsed_rho /= np.trace(collapsed_rho)
+        mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
+        mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
+        z_rho = mz.dot(initial_rho.dot(mz))
+        flipped_rho = mx.dot(collapsed_rho.dot(mx))
+        target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
+                      p1 * flipped_rho)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
