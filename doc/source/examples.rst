@@ -114,6 +114,7 @@ decomposition of multi-controlled ``X`` gates is implemented.
 
 
 .. _measurement-examples:
+
 How to perform measurements?
 ----------------------------
 

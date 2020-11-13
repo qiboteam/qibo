@@ -1,37 +1,56 @@
-from qibo.config import BACKEND_NAME, raise_error
+from qibo.config import BACKEND_NAME, raise_error, get_backend
 if BACKEND_NAME != "tensorflow": # pragma: no cover
     # case not tested because backend is preset to TensorFlow
     raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
-from qibo.tensorflow.circuit import TensorflowCircuit as SimpleCircuit
+from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
+from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
 
 class Circuit(DistributedCircuit):
-    """Factory class for circuits.
+    """"""
 
-    Creates both normal and distributed circuits.
-    """
+    @classmethod
+    def _constructor(cls, *args, **kwargs):
+        if kwargs["density_matrix"]:
+            if kwargs["accelerators"] is not None:
+                raise_error(NotImplementedError,
+                            "Distributed circuits are not implemented for "
+                            "density matrices.")
+            circuit_cls = DensityMatrixCircuit
+            kwargs = {}
+        elif kwargs["accelerators"] is None:
+            circuit_cls = StateCircuit
+            kwargs = {}
+        else:
+            circuit_cls = DistributedCircuit
+            kwargs.pop("density_matrix")
+        return circuit_cls, args, kwargs
 
     def __new__(cls, nqubits: int,
                 accelerators: Optional[Dict[str, int]] = None,
-                memory_device: str = "/CPU:0"):
-        if accelerators is None:
-            return SimpleCircuit(nqubits)
-        else:
-            return DistributedCircuit(nqubits, accelerators, memory_device)
+                memory_device: str = "/CPU:0",
+                density_matrix: bool = False):
+        circuit_cls, args, kwargs = cls._constructor(
+                  nqubits, accelerators=accelerators,
+                  memory_device=memory_device,
+                  density_matrix=density_matrix
+                )
+        return circuit_cls(*args, **kwargs)
 
     @classmethod
     def from_qasm(cls, qasm_code: str,
                   accelerators: Optional[Dict[str, int]] = None,
-                  memory_device: str = "/CPU:0"):
-      if accelerators is None:
-          return SimpleCircuit.from_qasm(qasm_code)
-      else:
-          return DistributedCircuit.from_qasm(qasm_code,
-                                              accelerators=accelerators,
-                                              memory_device=memory_device)
+                  memory_device: str = "/CPU:0",
+                  density_matrix: bool = False):
+      circuit_cls, args, kwargs = cls._constructor(
+                qasm_code, accelerators=accelerators,
+                memory_device=memory_device,
+                density_matrix=density_matrix
+              )
+      return circuit_cls.from_qasm(*args, **kwargs)
 
 
 def QFT(nqubits: int, with_swaps: bool = True,
@@ -172,7 +191,7 @@ class VQE(object):
             return self.hamiltonian.expectation(final_state)
 
         if compile:
-            if not self.circuit.using_tfgates:
+            if get_backend() == "custom":
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
@@ -339,7 +358,7 @@ class QAOA(object):
             state = self.K.ones(n, dtype=dtype)
             norm = self.K.cast(2 ** float(self.nqubits / 2.0), dtype=dtype)
             return state / norm
-        return SimpleCircuit._cast_initial_state(self, state)
+        return StateCircuit._cast_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell', options=None):
         """Optimizes the variational parameters of the QAOA.

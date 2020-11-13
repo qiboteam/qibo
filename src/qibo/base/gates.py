@@ -30,7 +30,6 @@ class Gate(object):
 
     def __init__(self):
         self.name = None
-        self.is_channel = False
         self.is_controlled_by = False
         self.is_special_gate = False
         # special gates are ``CallbackGate`` and ``Flatten``
@@ -41,18 +40,21 @@ class Gate(object):
 
         self._target_qubits = tuple()
         self._control_qubits = set()
-        self.qubits_tensor = None
 
         self._unitary = None
         self._nqubits = None
         self._nstates = None
-        self.qubits_tensor = None
 
         # Cast gate matrices to the proper device
         self.device = config.get_device()
         # Reference to copies of this gate that are casted in devices when
         # a distributed circuit is used
         self.device_gates = set()
+        self.original_gate = None
+
+        # Using density matrices or state vectors
+        self._density_matrix = False
+        self._active_call = "_state_vector_call"
 
         config.ALLOW_SWITCHERS = False
 
@@ -128,6 +130,22 @@ class Gate(object):
                                     "gate {}.".format(common, self.name))
 
     @property
+    def density_matrix(self) -> bool:
+        return self._density_matrix
+
+    @density_matrix.setter
+    def density_matrix(self, x: bool):
+        if self._nqubits is not None:
+            raise_error(RuntimeError,
+                        "Density matrix mode cannot be switched after "
+                        "preparing the gate for execution.")
+        self._density_matrix = x
+        if x:
+            self._active_call = "_density_matrix_call"
+        else:
+            self._active_call = "_state_vector_call"
+
+    @property
     def nqubits(self) -> int:
         """Number of qubits in the circuit that the gate is part of.
 
@@ -155,7 +173,7 @@ class Gate(object):
         The user is not supposed to set `nqubits` by hand.
         """
         if self._nqubits is not None:
-            raise_error(RuntimeError, "The number of qubits for this gates is already "
+            raise_error(RuntimeError, "The number of qubits for this gates is "
                                       "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
@@ -310,8 +328,18 @@ class Gate(object):
         # original gate
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def __call__(self, state, is_density_matrix): # pragma: no cover
-        """Acts with the gate on a given state vector:
+    def _state_vector_call(self, state): # pragma: no cover
+        """Acts with the gate on a given state vector."""
+        # abstract method
+        raise_error(NotImplementedError)
+
+    def _density_matrix_call(self, state): # pragma: no cover
+        """Acts with the gate on a given density matrix."""
+        # abstract method
+        raise_error(NotImplementedError)
+
+    def __call__(self, state): # pragma: no cover
+        """Acts with the gate on a given state vector or density matrix.
 
         Args:
             state: Input state vector.
@@ -549,24 +577,50 @@ class M(Gate):
         *q (int): id numbers of the qubits to measure.
             It is possible to measure multiple qubits using ``gates.M(0, 1, 2, ...)``.
             If the qubits to measure are held in an iterable (eg. list) the ``*``
-            operator can be used, for example ``gates.M(*[0, 1, 4])`` or ``gates.M(*range(5))``.
-        register_name: Optional name of the register to distinguish it from
-            other registers when used in circuits.
+            operator can be used, for example ``gates.M(*[0, 1, 4])`` or
+            ``gates.M(*range(5))``.
+        register_name (str): Optional name of the register to distinguish it
+            from other registers when used in circuits.
+        p0 (dict): Optional bitflip probability map. Can be:
+            A dictionary that maps each measured qubit to the probability
+            that it is flipped, a list or tuple that has the same length
+            as the tuple of measured qubits or a single float number.
+            If a single float is given the same probability will be used
+            for all qubits.
+        p1 (dict): Optional bitflip probability map for asymmetric bitflips.
+            Same as ``p0`` but controls the 1->0 bitflip probability.
+            If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
+            1->0 bitflips.
     """
+    from qibo.base import measurements
 
-    def __init__(self, *q, register_name: Optional[str] = None):
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 p0: Optional["ProbsType"] = None,
+                 p1: Optional["ProbsType"] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = q
         self.register_name = register_name
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name}
+        self.init_kwargs = {"register_name": register_name, "p0": p0, "p1": p1}
 
         self._unmeasured_qubits = None # Tuple
         self._reduced_target_qubits = None # List
+        if p1 is None: p1 = p0
+        if p0 is None: p0 = p1
+        self.bitflip_map = (self._get_bitflip_map(p0),
+                            self._get_bitflip_map(p1))
 
-    def _add(self, qubits: Tuple[int]):
+    def _get_bitflip_map(self, p: Optional["ProbsType"] = None
+                         ) -> Dict[int, float]:
+        """Creates dictionary with bitflip probabilities."""
+        if p is None:
+            return {q: 0 for q in self.qubits}
+        pt = self.measurements.GateResult._get_bitflip_tuple(self.qubits, p)
+        return {q: p for q, p in zip(self.qubits, pt)}
+
+    def _add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used
@@ -575,12 +629,15 @@ class M(Gate):
         raised if he does so.
 
         Args:
-            qubits: Tuple of qubit ids to be added to the measurement's qubits.
+            gate: Measurement gate to add its qubits in the current gate.
         """
         if self._unmeasured_qubits is not None:
-            raise_error(RuntimeError, "Cannot add qubits to a measurement gate that "
-                                      "was executed.")
-        self.target_qubits += qubits
+            raise_error(RuntimeError, "Cannot add qubits to a measurement "
+                                      "gate that was executed.")
+        assert isinstance(gate, self.__class__)
+        self.target_qubits += gate.target_qubits
+        self.bitflip_map[0].update(gate.bitflip_map[0])
+        self.bitflip_map[1].update(gate.bitflip_map[1])
 
     def _set_unmeasured_qubits(self):
         if self._nqubits is None:
@@ -798,6 +855,7 @@ class U1(_Un_):
     def _dagger(self) -> "Gate":
         """"""
         return self.__class__(self.target_qubits[0], -self.parameter)
+
 
 class U2(_Un_):
     """Second general unitary gate.
@@ -1594,114 +1652,6 @@ class VariationalLayer(ParametrizedGate):
                                 "``VariationalLayer``.")
 
 
-class NoiseChannel(Gate):
-    """Probabilistic noise channel.
-
-    Implements the following evolution
-
-    .. math::
-        \\rho \\rightarrow (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
-
-    which can be used to simulate phase flip and bit flip errors.
-
-    Args:
-        q (int): Qubit id that the noise acts on.
-        px (float): Bit flip (X) error probability.
-        py (float): Y-error probability.
-        pz (float): Phase flip (Z) error probability.
-    """
-
-    def __init__(self, q, px=0, py=0, pz=0):
-        super(NoiseChannel, self).__init__()
-        self.name = "NoiseChannel"
-        self.is_channel = True
-        self.target_qubits = (q,)
-        self.p = (px, py, pz)
-        self.total_p = sum(self.p)
-
-        self.init_args = [q]
-        self.init_kwargs = {"px": px, "py": py, "pz": pz}
-
-    @property
-    def unitary(self): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "Unitary property not implemented for "
-                                         "channels.")
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
-
-
-class GeneralChannel(Gate):
-    """General channel defined by arbitrary Krauss operators.
-
-    Implements the following evolution
-
-    .. math::
-        \\rho \\rightarrow \\sum _k A_k \\rho A_k^\\dagger
-
-    where A are arbitrary Krauss operators given by the user. Note that the
-    Krauss operators set should be trace preserving, however this is not checked here.
-    For more information on channels and Krauss operators please check
-    `J. Preskill's notes <http://www.theory.caltech.edu/people/preskill/ph219/chap3_15.pdf>`_.
-
-    Args:
-        A (list): List of Krauss operators as pairs ``(qubits, Ak)`` where
-          qubits are the qubit ids that ``Ak`` acts on and ``Ak`` is the
-          corresponding matrix.
-
-    Example:
-        ::
-
-            from qibo.models import Circuit
-            from qibo import gates
-            # initialize circuit with 3 qubits
-            c = Circuit(3)
-            # define a sqrt(0.4) * X gate
-            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-            # define a sqrt(0.6) * CNOT gate
-            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                          [0, 0, 0, 1], [0, 0, 1, 0]])
-            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
-            # add the channel to the circuit
-            c.add(channel)
-    """
-
-    def __init__(self, A):
-        super(GeneralChannel, self).__init__()
-        self.name = "GeneralChannel"
-        self.is_channel = True
-        self.target_qubits = tuple(sorted(set(
-          q for qubits, _ in A for q in qubits)))
-        self.init_args = [A]
-
-        # Check that given operators have the proper shape
-        for qubits, matrix in A:
-            rank = 2 ** len(qubits)
-            shape = tuple(matrix.shape)
-            if shape != (rank, rank):
-                raise_error(ValueError, "Invalid Krauss operator shape {} for "
-                                        " acting on {} qubits."
-                                        "".format(shape, len(qubits)))
-
-    def on_qubits(self, *q): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `GeneralChannel` gate.")
-
-    @property
-    def unitary(self): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "Unitary property not implemented for "
-                                         "channels.")
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Channel cannot be controlled on qubits.")
-
-
 class Flatten(Gate):
     """Passes an arbitrary state vector in the circuit.
 
@@ -1746,3 +1696,170 @@ class CallbackGate(Gate):
     def nqubits(self, n: int):
         Gate.nqubits.fset(self, n) # pylint: disable=no-member
         self.callback.nqubits = n
+
+
+class KrausChannel(Gate):
+    """General channel defined by arbitrary Krauss operators.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\sum _k A_k \\rho A_k^\\dagger
+
+    where A are arbitrary Kraus operators given by the user. Note that Kraus
+    operators set should be trace preserving, however this is not checked.
+    Simulation of this gate requires the use of density matrices.
+    For more information on channels and Kraus operators please check
+    `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
+
+    Args:
+        gates (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
+          ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
+          the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
+
+    Example:
+        ::
+
+            from qibo.models import Circuit
+            from qibo import gates
+            # initialize circuit with 3 qubits
+            c = Circuit(3)
+            # define a sqrt(0.4) * X gate
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+            # define a sqrt(0.6) * CNOT gate
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                          [0, 0, 0, 1], [0, 0, 1, 0]])
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
+            # add the channel to the circuit
+            c.add(channel)
+    """
+
+    def __init__(self, gates):
+        super(KrausChannel, self).__init__()
+        self.name = "KrausChannel"
+        self.density_matrix = True
+        if isinstance(gates[0], Gate):
+            self.gates = tuple(gates)
+            self.target_qubits = tuple(sorted(set(
+                q for gate in gates for q in gate.target_qubits)))
+        else:
+            self.gates, self.target_qubits = self._from_matrices(gates)
+        self.init_args = [self.gates]
+
+    def _from_matrices(self, matrices):
+        """Creates gates from qubits and matrices list."""
+        gatelist, qubitset = [], set()
+        for qubits, matrix in matrices:
+            # Check that given operators have the proper shape.
+            rank = 2 ** len(qubits)
+            shape = tuple(matrix.shape)
+            if shape != (rank, rank):
+                raise_error(ValueError, "Invalid Krauss operator shape {} for "
+                                        "acting on {} qubits."
+                                        "".format(shape, len(qubits)))
+            qubitset.update(qubits)
+            gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+        return tuple(gatelist), tuple(sorted(qubitset))
+
+    @property
+    def unitary(self): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "Unitary property not implemented for "
+                                         "channels.")
+
+    def controlled_by(self, *q):
+        """"""
+        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+
+    def on_qubits(self, *q): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
+                                         "for the `GeneralChannel` gate.")
+
+
+class UnitaryChannel(KrausChannel):
+    """Channel that is a probabilistic sum of unitary operations.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\left (1 - \\sum _k p_k \\right )\\rho +
+                                \\sum _k p_k U_k \\rho U_k^\\dagger
+
+    where U are arbitrary unitary operators and p are floats between 0 and 1.
+    Note that unlike :class:`qibo.base.gates.KrausChannel` which requires
+    density matrices, it is possible to simulate the unitary channel using
+    state vectors and probabilistic sampling. For more information on this
+    approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
+
+    Args:
+        p (list): List of floats that correspond to the probability that each
+            unitary Uk is applied.
+        gates (list): List of  operators as pairs ``(qubits, Uk)`` where
+            ``qubits``refers the qubit ids that ``Uk`` acts on and ``Uk`` is
+            the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
+            Must have the same length as the given probabilities ``p``.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
+
+    def __init__(self, p, gates, seed=None):
+        if len(p) != len(gates):
+            raise_error(ValueError, "Probabilities list has length {} while "
+                                    "{} gates were given."
+                                    "".format(len(p), len(gates)))
+        for pp in p:
+            if pp < 0 or pp > 1:
+                raise_error(ValueError, "Probabilities should be between 0 "
+                                        "and 1 but {} was given.".format(pp))
+        super(UnitaryChannel, self).__init__(gates)
+        self.name = "UnitaryChannel"
+        self.probs = p
+        self.psum = sum(p)
+        if self.psum > 1 or self.psum <= 0:
+            raise_error(ValueError, "UnitaryChannel probability sum should be "
+                                    "between 0 and 1 but is {}."
+                                    "".format(self.psum))
+        self.seed = seed
+        self.density_matrix = False
+        self.init_args = [p, self.gates]
+        self.init_kwargs = {"seed": seed}
+
+
+class PauliNoiseChannel(UnitaryChannel):
+    """Noise channel that applies Pauli operators with given probabilities.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - p_x - p_y - p_z) \\rho + p_x X\\rho X + p_y Y\\rho Y + p_z Z\\rho Z
+
+    which can be used to simulate phase flip and bit flip errors.
+    This channel can be simulated using either density matrices or state vectors
+    and sampling with repeated execution.
+    See :ref:`How to perform noisy simulation? <noisy-example>` for more
+    information.
+
+    Args:
+        q (int): Qubit id that the noise acts on.
+        px (float): Bit flip (X) error probability.
+        py (float): Y-error probability.
+        pz (float): Phase flip (Z) error probability.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
+
+    def __init__(self, q, px=0, py=0, pz=0, seed=None):
+        probs, gates = [], []
+        for p, gate in [(px, "X"), (py, "Y"), (pz, "Z")]:
+            if p > 0:
+                probs.append(p)
+                gates.append(getattr(self.module, gate)(q))
+
+        super(PauliNoiseChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "PauliNoiseChannel"
+        assert self.target_qubits == (q,)
+
+        self.init_args = [q]
+        self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}

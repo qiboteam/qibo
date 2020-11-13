@@ -1383,3 +1383,32 @@ def test_collapse_gate_errors():
     gate = gates.Collapse(2, 0, result=[0, 0])
     gate.nqubits = 4
     gate.result = np.ones(2, dtype=np.int)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_noise_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    thetas = np.random.random(4)
+    probs = 0.1 * np.random.random([4, 3]) + 0.2
+    gatelist = [gates.X, gates.Y, gates.Z]
+
+    c = Circuit(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    c.add((gates.PauliNoiseChannel(i, px, py, pz, seed=123)
+           for i, (px, py, pz) in enumerate(probs)))
+    final_state = c(nshots=40).numpy()
+
+    np.random.seed(123)
+    target_state = []
+    for _ in range(40):
+        noiseless_c = Circuit(4)
+        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+        for i, ps in enumerate(probs):
+            for p, gate in zip(ps, gatelist):
+                if np.random.random() < p:
+                    noiseless_c.add(gate(i))
+        target_state.append(noiseless_c().numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)

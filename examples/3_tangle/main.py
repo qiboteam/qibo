@@ -15,11 +15,6 @@ def main(N, p, shots, post_selection, no_plot):
     #Initialize exact and measured tangles
     tangles = np.empty(N)
     opt_tangles = np.empty(N)
-    if p != 0:
-        # backend is adapted to the error implementation
-        from qibo import set_backend
-        set_backend("matmuleinsum")
-
     circuit = ansatz(p)
     for i in range(N):
         """
