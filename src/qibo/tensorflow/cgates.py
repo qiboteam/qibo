@@ -877,7 +877,6 @@ class _ThermalRelaxationChannelB(MatrixGate, base_gates._ThermalRelaxationChanne
         self.gate_op = op.apply_two_qubit_gate
 
     def _calculate_qubits_tensor(self) -> tf.Tensor:
-        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
         qubits = sorted(list(self.nqubits - np.array(self.control_qubits) - 1))
         qubits = self.nqubits - np.array(self.target_qubits) - 1
         qubits = np.concatenate([qubits, qubits + self.nqubits], axis=0)

@@ -1871,7 +1871,29 @@ class PauliNoiseChannel(UnitaryChannel):
 
 
 class ResetChannel(UnitaryChannel):
-    # TODO: Add docstring
+    """Single-qubit reset channel.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho +
+        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
+        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
+
+    with
+
+    .. math::
+        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+
+    using :class:`qibo.base.gates.Collapse`.
+
+    Args:
+        q (int): Qubit id that the channel acts on.
+        p0 (float): Probability to reset to 0.
+        p1 (float): Probability to reset to 1.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
         probs = [p0, p1]
@@ -1893,8 +1915,8 @@ class ThermalRelaxationChannel:
 
     .. math::
         \\mathcal{E} [\\rho ] = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
-        + p_0 (|0\\rangle \\langle 0|) \\otimes \\tilde{\\rho }
-        + p_1 (|1\\rangle \langle 1|) \otimes \\tilde{\\rho }
+        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
+        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
 
     with
 
