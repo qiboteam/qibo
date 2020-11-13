@@ -1802,7 +1802,7 @@ class UnitaryChannel(KrausChannel):
         p (list): List of floats that correspond to the probability that each
             unitary Uk is applied.
         gates (list): List of  operators as pairs ``(qubits, Uk)`` where
-            ``qubits``refers the qubit ids that ``Uk`` acts on and ``Uk`` is
+            ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
             Must have the same length as the given probabilities ``p``.
         seed (int): Optional seed for the random number generator when sampling
@@ -1871,6 +1871,7 @@ class PauliNoiseChannel(UnitaryChannel):
 
 
 class ResetChannel(UnitaryChannel):
+    # TODO: Add docstring
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
         probs = [p0, p1]
@@ -1884,8 +1885,54 @@ class ResetChannel(UnitaryChannel):
 
 
 class ThermalRelaxationChannel:
-    # T1 relaxation rate
-    # T2 dephasing rate
+    """Single-qubit thermal relaxation error channel.
+
+    Implements the following transformation:
+
+    If :math:`T_1 \\geq T_2`:
+
+    .. math::
+        \\mathcal{E} [\\rho ] = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
+        + p_0 (|0\\rangle \\langle 0|) \\otimes \\tilde{\\rho }
+        + p_1 (|1\\rangle \langle 1|) \otimes \\tilde{\\rho }
+
+    with
+
+    .. math::
+        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+
+    while if :math:`T_1 < T_2`:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\mathrm{Tr} _\\mathcal{X}\\left [\\Lambda _{\\mathcal{X}\\mathcal{Y}}(\\rho _\\mathcal{X} ^T \\otimes \\mathbb{I}_\\mathcal{Y})\\right ]
+
+    with
+
+    .. math::
+        \\Lambda = \\begin{pmatrix}
+        1 - p_1 & 0 & 0 & e^{-t / T_2} \\\\
+        0 & p_1 & 0 & 0 \\\\
+        0 & 0 & p_0 & 0 \\\\
+        e^{-t / T_2} & 0 & 0 & 1 - p_0
+        \\end{pmatrix}
+
+    where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
+    and :math:`p_z = 1 - e^{-t / T_1} + e^{-t / T_2} - e^{t / T_1 - t / T_2}`.
+    Here :math:`\\eta` is the ``excited_population``
+    and :math:`t` is the ``time``, both controlled by the user.
+    This gate is based on
+    `Qiskit's thermal relaxation error channel <https://qiskit.org/documentation/stubs/qiskit.providers.aer.noise.thermal_relaxation_error.html#qiskit.providers.aer.noise.thermal_relaxation_error>`_.
+
+    Args:
+        q (int): Qubit id that the noise channel acts on.
+        t1 (float): T1 relaxation time.
+        t2 (float): T2 dephasing time.
+        time (float): the gate time for relaxation error.
+        excited_population (float): the population of the excited state at
+            equilibrium. Default is 0.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
 
     def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
         # abstract method

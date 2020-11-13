@@ -177,6 +177,32 @@ the gate on an arbitrary number of qubits. For example
 .. automodule:: qibo.base.gates
    :members:
    :member-order: bysource
+   :exclude-members: KrausChannel, UnitaryChannel, PauliNoiseChannel, ResetChannel, ThermalRelaxationChannel
+
+_______________________
+
+.. _Channels:
+
+Channels
+--------
+
+Write something here
+
+.. autoclass:: qibo.base.gates.KrausChannel
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.base.gates.UnitaryChannel
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.base.gates.PauliNoiseChannel
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.base.gates.ResetChannel
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.base.gates.ThermalRelaxationChannel
+    :members:
+    :member-order: bysource
 
 _______________________
 

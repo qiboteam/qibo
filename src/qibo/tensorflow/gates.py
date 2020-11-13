@@ -604,6 +604,10 @@ class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationCh
     def construct_unitary(self):
         return cgates._ThermalRelaxationChannelB.construct_unitary(self)
 
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Thermal relaxation cannot be applied to "
+                                "state vectors when T1 < T2.")
+
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         einsum_str = self.calculation_cache.vector
         return self.einsum(einsum_str, state, self.matrix)
