@@ -1876,7 +1876,7 @@ class ResetChannel(UnitaryChannel):
     Implements the following transformation:
 
     .. math::
-        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho +
+        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
         + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
         + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
 
@@ -1947,8 +1947,9 @@ class ThermalRelaxationChannel:
 
     Args:
         q (int): Qubit id that the noise channel acts on.
-        t1 (float): T1 relaxation time.
+        t1 (float): T1 relaxation time. Should satisfy ``t1 > 0``.
         t2 (float): T2 dephasing time.
+            Should satisfy ``t1 > 0`` and ``t2 < 2 * t1``.
         time (float): the gate time for relaxation error.
         excited_population (float): the population of the excited state at
             equilibrium. Default is 0.

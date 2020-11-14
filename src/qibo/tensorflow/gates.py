@@ -39,6 +39,9 @@ class TensorflowGate(base_gates.Gate):
     def _calculate_einsum_cache(self):
         if self.is_controlled_by:
             if self.density_matrix:
+                # fall back to the 'defaulteinsum' backend when using
+                # density matrices with `controlled_by` gates because
+                # 'matmuleinsum' is not properly implemented for this case
                 from qibo.tensorflow import einsum
                 self.einsum = einsum.DefaultEinsum()
             self.control_cache = cache.ControlCache(self)
