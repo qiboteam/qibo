@@ -737,10 +737,12 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             inv_gate = self._invert(gate)
             # use a ``set`` for this loop because it may be ``inv_gate == gate``
             for g in {gate, inv_gate}:
-                g.density_matrix = self.density_matrix
-                g.device = self.device
-                g.nqubits = self.nqubits
+                if g is not None:
+                    g.density_matrix = self.density_matrix
+                    g.device = self.device
+                    g.nqubits = self.nqubits
             inv_gates.append(inv_gate)
+        inv_gates[-1] = None
         self.inv_gates = tuple(inv_gates)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
@@ -751,7 +753,8 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         new_state = tf.zeros_like(state)
         for gate, inv_gate in zip(self.gates, self.inv_gates):
             new_state += gate(state)
-            inv_gate(state)
+            if inv_gate is not None:
+                inv_gate(state)
         return new_state
 
 
@@ -773,18 +776,20 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
             np.random.seed(self.seed)
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
+        self.module.TensorflowGate._set_nqubits(self, state)
         for p, gate in zip(self.probs, self.gates):
             if np.random.random() < p:
                 state = gate(state)
         return state
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
+        new_state = (1 - self.psum) * state
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
-            new_state += p * gate(state)
-            inv_gate(state) # reset to the original state vector
-        return (1 - self.psum) * state + new_state
+            state = gate(state)
+            new_state += p * state
+            if inv_gate is not None:
+                state = inv_gate(state) # reset to the original state vector
+        return new_state
 
 
 class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
@@ -797,5 +802,100 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
 
     @staticmethod
     def _invert(gate):
-        """For Pauli gates we can use same gate for state inversion for efficiency."""
+        # for Pauli gates we can use same gate as inverse for efficiency
         return gate
+
+
+class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
+
+    def __init__(self, q: int, p0: float = 0.0, p1: float = 0.0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
+        self.inv_gates = tuple()
+
+    @staticmethod
+    def _invert(gate):
+        if isinstance(gate, base_gates.Collapse):
+            return None
+        return gate
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        self.module.TensorflowGate._set_nqubits(self, state)
+        not_collapsed = True
+        if np.random.random() < self.probs[-2]:
+            state = self.gates[-2](state)
+            not_collapsed = False
+        if np.random.random() < self.probs[-1]:
+            if not_collapsed:
+                state = self.gates[-2](state)
+            state = self.gates[-1](state)
+        return state
+
+
+class ThermalRelaxationChannel(TensorflowGate, base_gates.ThermalRelaxationChannel):
+
+    def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
+        if BACKEND.get('GATES') == "custom":
+            cls_a = _ThermalRelaxationChannelA
+            cls_b = _ThermalRelaxationChannelB
+        else:
+            from qibo.tensorflow import gates
+            cls_a = gates._ThermalRelaxationChannelA
+            cls_b = gates._ThermalRelaxationChannelB
+        if t2 > t1:
+            cls_s = cls_b
+        else:
+            cls_s = cls_a
+        return cls_s(
+            q, t1, t2, time, excited_population=excited_population, seed=seed)
+
+
+class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChannelA):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelA.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        self.inv_gates = tuple()
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        self.module.TensorflowGate._set_nqubits(self, state)
+        if np.random.random() < self.probs[0]:
+            state = self.gates[0](state)
+        return ResetChannel._state_vector_call(self, state)
+
+
+class _ThermalRelaxationChannelB(MatrixGate, base_gates._ThermalRelaxationChannelB):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelB.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        self.gate_op = op.apply_two_qubit_gate
+
+    def _calculate_qubits_tensor(self) -> tf.Tensor:
+        qubits = sorted(list(self.nqubits - np.array(self.control_qubits) - 1))
+        qubits = self.nqubits - np.array(self.target_qubits) - 1
+        qubits = np.concatenate([qubits, qubits + self.nqubits], axis=0)
+        qubits = sorted(list(qubits))
+        self.qubits_tensor = tf.convert_to_tensor(qubits, dtype=tf.int32)
+        self.target_qubits_dm = (self.target_qubits +
+                                 tuple(np.array(self.target_qubits) + self.nqubits))
+
+    def construct_unitary(self) -> np.ndarray:
+        matrix = np.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
+                          1 - self.preset0])
+        matrix[0, -1] = self.preset1
+        matrix[-1, 0] = self.preset0
+        return matrix.astype(DTYPES.get('NPTYPECPX'))
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Thermal relaxation cannot be applied to "
+                                "state vectors when T1 < T2.")
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.gate_op(state, self.matrix, self.qubits_tensor,
+                            2 * self.nqubits, *self.target_qubits_dm)

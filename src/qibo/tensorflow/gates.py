@@ -4,6 +4,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
 from qibo.base import cache
+from qibo.tensorflow import cgates
 from qibo.config import tfmatrices as matrices
 from qibo.config import BACKEND, DTYPES, raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -35,6 +36,25 @@ class TensorflowGate(base_gates.Gate):
         rank = int(np.log2(int(matrix.shape[0])))
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
 
+    def _calculate_einsum_cache(self):
+        if self.is_controlled_by:
+            if self.density_matrix:
+                # fall back to the 'defaulteinsum' backend when using
+                # density matrices with `controlled_by` gates because
+                # 'matmuleinsum' is not properly implemented for this case
+                from qibo.tensorflow import einsum
+                self.einsum = einsum.DefaultEinsum()
+            self.control_cache = cache.ControlCache(self)
+            nactive = self.nqubits - len(self.control_qubits)
+            targets = self.control_cache.targets
+            self.calculation_cache = self.einsum.create_cache(
+                targets, nactive, ncontrol=len(self.control_qubits))
+        else:
+            self.calculation_cache = self.einsum.create_cache(
+                self.qubits, self.nqubits)
+        self.calculation_cache.cast_shapes(
+            lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
+
     def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
         gate = base_gates.Gate.__matmul__(self, other)
         if gate is None:
@@ -43,31 +63,7 @@ class TensorflowGate(base_gates.Gate):
 
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
-        from qibo.tensorflow import cgates
         return cgates.TensorflowGate.control_unitary(unitary)
-
-    @base_gates.Gate.nqubits.setter
-    def nqubits(self, n: int):
-        """Sets the number of qubit that this gate acts on.
-
-        This is called automatically by the `Circuit.add` method if the gate
-        is used on a `Circuit`. If the gate is called on a state then `nqubits`
-        is set during the first `__call__`.
-        When `nqubits` is set we also calculate the einsum string so that it
-        is calculated only once per gate.
-        """
-        base_gates.Gate.nqubits.fset(self, n) # pylint: disable=no-member
-        if self.is_controlled_by:
-            if self.density_matrix:
-                from qibo.tensorflow import einsum
-                self.einsum = einsum.DefaultEinsum()
-            self.control_cache = cache.ControlCache(self)
-            nactive = n - len(self.control_qubits)
-            targets = self.control_cache.targets
-            self.calculation_cache = self.einsum.create_cache(targets, nactive, ncontrol=len(self.control_qubits))
-        else:
-            self.calculation_cache = self.einsum.create_cache(self.qubits, n)
-        self.calculation_cache.cast_shapes(lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
 
     def _set_nqubits(self, state: tf.Tensor):
         """Sets ``gate.nqubits`` from state, if not already set."""
@@ -192,8 +188,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
     @staticmethod
     def _result_to_list(res):
-        from qibo.tensorflow.cgates import Collapse
-        return Collapse._result_to_list(res)
+        return cgates.Collapse._result_to_list(res)
 
     def _prepare(self):
         self.order = list(self.sorted_qubits)
@@ -290,7 +285,6 @@ class U2(TensorflowGate, base_gates.U2):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.U2.construct_unitary(self)
 
 
@@ -301,7 +295,6 @@ class U3(TensorflowGate, base_gates.U3):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.U3.construct_unitary(self)
 
 
@@ -400,7 +393,6 @@ class fSim(TensorflowGate, base_gates.fSim):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.fSim.construct_unitary(self)
 
 
@@ -411,11 +403,9 @@ class GeneralizedfSim(TensorflowGate, base_gates.GeneralizedfSim):
         TensorflowGate.__init__(self)
 
     def construct_unitary(self):
-        from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim.construct_unitary(self)
 
     def _dagger(self) -> "GeneralizedfSim":
-        from qibo.tensorflow import cgates
         return cgates.GeneralizedfSim._dagger(self)
 
 
@@ -450,13 +440,10 @@ class Unitary(TensorflowGate, base_gates.Unitary):
         return matrix
 
     def _dagger(self) -> "Unitary":
-        from qibo.tensorflow import cgates
         return cgates.Unitary._dagger(self)
 
 
 class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
-
-    from qibo.tensorflow import cgates
 
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
@@ -508,11 +495,11 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return matrices, additional_matrix
 
     def _prepare(self):
-        self.cgates.VariationalLayer._prepare(self)
+        cgates.VariationalLayer._prepare(self)
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor: # pragma: no cover
         # impractical case because VariationalLayer is not called by circuits
-        return self.cgates.VariationalLayer.__call__(self, state)
+        return cgates.VariationalLayer.__call__(self, state)
 
 
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
@@ -528,8 +515,8 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             gate.nqubits = self.nqubits
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        raise_error(ValueError, "`KrausChannel` cannot be applied to state "
-                                "vectors. Please switch to density matrices.")
+        ccls = getattr(cgates, self.__class__.__name__)
+        return ccls._state_vector_call(self, state)
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         new_state = tf.zeros_like(state)
@@ -550,18 +537,11 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
         if self.seed is not None:
             np.random.seed(self.seed)
 
-    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
-        for p, gate in zip(self.probs, self.gates):
-            if np.random.random() < p:
-                state = gate(state)
-        return state
-
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        new_state = tf.zeros_like(state)
+        new_state = (1 - self.psum) * state
         for p, gate in zip(self.probs, self.gates):
             new_state += p * gate(state)
-        return (1 - self.psum) * state + new_state
+        return new_state
 
 
 class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
@@ -570,3 +550,54 @@ class PauliNoiseChannel(UnitaryChannel, base_gates.PauliNoiseChannel):
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
         base_gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
+
+
+class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
+
+    def __init__(self, q: int, p0: float = 0.0, p1: float = 0.0,
+                 seed: Optional[int] = None):
+        TensorflowGate.__init__(self)
+        base_gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        new_state = (1 - self.psum) * state
+        for p, gate in zip(self.probs, self.gates):
+            state = gate(state)
+            new_state += p * state
+        return new_state
+
+
+class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChannelA):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelA.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+
+
+class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationChannelB):
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        TensorflowGate.__init__(self)
+        base_gates._ThermalRelaxationChannelB.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+
+    def _calculate_einsum_cache(self):
+        qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
+        self.calculation_cache = self.einsum.create_cache(
+            qubits, 2 * self.nqubits)
+        self.calculation_cache.cast_shapes(
+            lambda x: tf.cast(x, dtype=DTYPES.get('DTYPEINT')))
+
+    def construct_unitary(self):
+        return cgates._ThermalRelaxationChannelB.construct_unitary(self)
+
+    def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        raise_error(ValueError, "Thermal relaxation cannot be applied to "
+                                "state vectors when T1 < T2.")
+
+    def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        einsum_str = self.calculation_cache.vector
+        return self.einsum(einsum_str, state, self.matrix)

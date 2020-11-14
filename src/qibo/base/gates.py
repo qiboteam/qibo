@@ -178,6 +178,7 @@ class Gate(object):
         self._nqubits = n
         self._nstates = 2**n
         self._calculate_qubits_tensor()
+        self._calculate_einsum_cache()
         self._prepare()
 
     @property
@@ -235,7 +236,11 @@ class Gate(object):
         return self.__matmul__(other)
 
     def _calculate_qubits_tensor(self):
-        """Calculates ``qubits`` tensor required for applying gates using custom operators."""
+        """Calculates qubits tensor required for applying gates using custom operators."""
+        pass
+
+    def _calculate_einsum_cache(self):
+        """Calculates einsum cache required for applying gates using Tensorflow ops."""
         pass
 
     def _prepare(self): # pragma: no cover
@@ -1797,7 +1802,7 @@ class UnitaryChannel(KrausChannel):
         p (list): List of floats that correspond to the probability that each
             unitary Uk is applied.
         gates (list): List of  operators as pairs ``(qubits, Uk)`` where
-            ``qubits``refers the qubit ids that ``Uk`` acts on and ``Uk`` is
+            ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
             Must have the same length as the given probabilities ``p``.
         seed (int): Optional seed for the random number generator when sampling
@@ -1863,3 +1868,159 @@ class PauliNoiseChannel(UnitaryChannel):
 
         self.init_args = [q]
         self.init_kwargs = {"px": px, "py": py, "pz": pz, "seed": seed}
+
+
+class ResetChannel(UnitaryChannel):
+    """Single-qubit reset channel.
+
+    Implements the following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (1 - p_0 - p_1) \\rho
+        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
+        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
+
+    with
+
+    .. math::
+        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+
+    using :class:`qibo.base.gates.Collapse`.
+
+    Args:
+        q (int): Qubit id that the channel acts on.
+        p0 (float): Probability to reset to 0.
+        p1 (float): Probability to reset to 1.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
+
+    def __init__(self, q, p0=0.0, p1=0.0, seed=None):
+        probs = [p0, p1]
+        gates = [self.module.Collapse(q), self.module.X(q)]
+        super(ResetChannel, self).__init__(probs, gates, seed=seed)
+        self.name = "ResetChannel"
+        assert self.target_qubits == (q,)
+
+        self.init_args = [q]
+        self.init_kwargs = {"p0": p0, "p1": p1, "seed": seed}
+
+
+class ThermalRelaxationChannel:
+    """Single-qubit thermal relaxation error channel.
+
+    Implements the following transformation:
+
+    If :math:`T_1 \\geq T_2`:
+
+    .. math::
+        \\mathcal{E} (\\rho ) = (1 - p_z - p_0 - p_1)\\rho + p_zZ\\rho Z
+        + p_0 (|0\\rangle \\langle 0| \\otimes \\tilde{\\rho })
+        + p_1 (|1\\rangle \langle 1| \otimes \\tilde{\\rho })
+
+    with
+
+    .. math::
+        \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
+
+    while if :math:`T_1 < T_2`:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = \\mathrm{Tr} _\\mathcal{X}\\left [\\Lambda _{\\mathcal{X}\\mathcal{Y}}(\\rho _\\mathcal{X} ^T \\otimes \\mathbb{I}_\\mathcal{Y})\\right ]
+
+    with
+
+    .. math::
+        \\Lambda = \\begin{pmatrix}
+        1 - p_1 & 0 & 0 & e^{-t / T_2} \\\\
+        0 & p_1 & 0 & 0 \\\\
+        0 & 0 & p_0 & 0 \\\\
+        e^{-t / T_2} & 0 & 0 & 1 - p_0
+        \\end{pmatrix}
+
+    where :math:`p_0 = (1 - e^{-t / T_1})(1 - \\eta )` :math:`p_1 = (1 - e^{-t / T_1})\\eta`
+    and :math:`p_z = 1 - e^{-t / T_1} + e^{-t / T_2} - e^{t / T_1 - t / T_2}`.
+    Here :math:`\\eta` is the ``excited_population``
+    and :math:`t` is the ``time``, both controlled by the user.
+    This gate is based on
+    `Qiskit's thermal relaxation error channel <https://qiskit.org/documentation/stubs/qiskit.providers.aer.noise.thermal_relaxation_error.html#qiskit.providers.aer.noise.thermal_relaxation_error>`_.
+
+    Args:
+        q (int): Qubit id that the noise channel acts on.
+        t1 (float): T1 relaxation time. Should satisfy ``t1 > 0``.
+        t2 (float): T2 dephasing time.
+            Should satisfy ``t1 > 0`` and ``t2 < 2 * t1``.
+        time (float): the gate time for relaxation error.
+        excited_population (float): the population of the excited state at
+            equilibrium. Default is 0.
+        seed (int): Optional seed for the random number generator when sampling
+            instead of density matrices is used to simulate this gate.
+    """
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        self.name = "ThermalRelaxationChannel"
+        self.init_args = [q, t1, t2, time]
+        self.init_kwargs = {"excited_population": excited_population,
+                            "seed": seed}
+
+    @staticmethod
+    def _calculate_probs(t1, t2, time, excited_population):
+        import numpy as np
+        if excited_population < 0 or excited_population > 1:
+            raise_error(ValueError, "Invalid excited state population {}."
+                                    "".format(excited_population))
+        if time < 0:
+            raise_error(ValueError, "Invalid gate_time ({} < 0)".format(time))
+        if t1 <= 0:
+            raise_error(ValueError, "Invalid T_1 relaxation time parameter: "
+                                    "T_1 <= 0.")
+        if t2 <= 0:
+            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
+                                    "T_2 <= 0.")
+        if t2 > 2 * t1:
+            raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
+                                    "T_2 greater than 2 * T_1.")
+
+        p_reset = 1 - np.exp(-time / t1)
+        p0 = p_reset * (1 - excited_population)
+        p1 = p_reset * excited_population
+        if t1 < t2:
+            exp = np.exp(-time / t2)
+        else:
+            rate1, rate2 = 1 / t1, 1 / t2
+            exp = (1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2
+        return (exp, p0, p1)
+
+
+class _ThermalRelaxationChannelA(UnitaryChannel):
+    """Implements thermal relaxation when T1 >= T2."""
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        probs = ThermalRelaxationChannel._calculate_probs(
+            t1, t2, time, excited_population)
+        gates = [self.module.Z(q), self.module.Collapse(q),
+                 self.module.X(q)]
+
+        super(_ThermalRelaxationChannelA, self).__init__(
+            probs, gates, seed=seed)
+        ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        assert self.target_qubits == (q,)
+
+
+class _ThermalRelaxationChannelB(Gate):
+    """Implements thermal relaxation when T1 < T2."""
+
+    def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
+        probs = ThermalRelaxationChannel._calculate_probs(
+            t1, t2, time, excited_population)
+        self.exp_t2, self.preset0, self.preset1 = probs
+
+        super(_ThermalRelaxationChannelB, self).__init__()
+        self.target_qubits = (q,)
+        ThermalRelaxationChannel.__init__(
+            self, q, t1, t2, time, excited_population=excited_population,
+            seed=seed)
+        # this case can only be applied to density matrices
+        self.density_matrix = True

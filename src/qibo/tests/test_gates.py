@@ -1412,3 +1412,56 @@ def test_noise_channel_repeated(backend):
         target_state.append(noiseless_c().numpy())
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_reset_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(5)
+    c = Circuit(5)
+    c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
+    final_state = c(np.copy(initial_state), nshots=30).numpy()
+
+    np.random.seed(123)
+    target_state = []
+    for _ in range(30):
+        noiseless_c = Circuit(5)
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+            noiseless_c.add(gates.X(2))
+        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_thermal_relaxation_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(5)
+    c = Circuit(5)
+    c.add(gates.ThermalRelaxationChannel(4, t1=1.0, t2=0.6, time=0.8,
+                                         excited_population=0.8, seed=123))
+    final_state = c(np.copy(initial_state), nshots=30).numpy()
+
+    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
+        1.0, 0.6, 0.8, 0.8)
+    np.random.seed(123)
+    target_state = []
+    for _ in range(30):
+        noiseless_c = Circuit(5)
+        if np.random.random() < pz:
+            noiseless_c.add(gates.Z(4))
+        if np.random.random() < p0:
+            noiseless_c.add(gates.Collapse(4))
+        if np.random.random() < p1:
+            noiseless_c.add(gates.Collapse(4))
+            noiseless_c.add(gates.X(4))
+        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
