@@ -6,6 +6,7 @@ from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
 from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
+from qibo.optimizers import optimparallel_resources
 from typing import Dict, Optional
 
 
@@ -138,6 +139,29 @@ def _DistributedQFT(nqubits: int,
     return circuit
 
 
+def parallel_loss(params, resource):
+    return resource().loss(params)
+
+
+class vqe_optimparallel_resources(optimparallel_resources):
+
+    hamiltonian = None
+    circuits = None
+
+    def setup(self, circuit, hamiltonian, parallel):
+        self.hamiltonian = hamiltonian
+        max_workers = self.get_max_workers(parallel)
+        self.circuits = [circuit.copy(deep=True) for _ in range(max_workers)]
+
+    def loss(self, params, *args):
+        import multiprocessing as mp
+        thread_id = int(mp.current_process().name[-1])-1
+        circuit = self.circuits[thread_id]
+        circuit.set_parameters(params)
+        final_state = circuit()
+        return self.hamiltonian.expectation(final_state).numpy()
+
+
 class VQE(object):
     """This class implements the variational quantum eigensolver algorithm.
 
@@ -169,7 +193,7 @@ class VQE(object):
         self.circuit = circuit
         self.hamiltonian = hamiltonian
 
-    def minimize(self, initial_state, method='Powell', options=None, compile=True):
+    def minimize(self, initial_state, method='Powell', options=None, parallel=None, compile=True):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
@@ -210,8 +234,14 @@ class VQE(object):
                                                           "sgd", options,
                                                           compile)
         else:
-            result, parameters = self.optimizers.optimize(
-                lambda p: loss(p).numpy(), initial_state, method, options)
+            vqe_loss = lambda p, _: loss(p).numpy()
+
+            if method == 'parallel_lbfgsb':
+                vqe_loss = parallel_loss
+                vqe_optimparallel_resources().setup(self.circuit, self.hamiltonian, parallel)
+
+            result, parameters = self.optimizers.optimize(vqe_loss, initial_state,
+                method, options, parallel, args=vqe_optimparallel_resources)
 
         self.circuit.set_parameters(parameters)
         return result, parameters

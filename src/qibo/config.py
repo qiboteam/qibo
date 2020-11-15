@@ -37,8 +37,20 @@ if BACKEND_NAME == "tensorflow":
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import numpy as np
     import tensorflow as tf
+
     # Backend access
     K = tf
+
+    # Set the intra number of threads to the environment flag
+    if "QIBO_NUM_THREADS" in os.environ:
+        nthreads = int(os.environ["QIBO_NUM_THREADS"])
+        tf.config.threading.set_intra_op_parallelism_threads(nthreads)
+
+
+    THREADS = {
+        'inter': tf.config.threading.get_inter_op_parallelism_threads(),
+        'intra': tf.config.threading.get_intra_op_parallelism_threads()
+    }
 
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

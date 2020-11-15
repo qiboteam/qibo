@@ -1,5 +1,5 @@
 def optimize(loss, initial_parameters, method='Powell',
-             options=None, compile=False):
+             options=None, parallel=None, compile=False, args=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cma`
         - :meth:`qibo.optimizers.newtonian`
@@ -22,7 +22,7 @@ def optimize(loss, initial_parameters, method='Powell',
     elif method == "sgd":
         return sgd(loss, initial_parameters, options, compile)
     else:
-        return newtonian(loss, initial_parameters, method, options)
+        return newtonian(loss, initial_parameters, method, options, parallel, args)
 
 
 def cma(loss, initial_parameters, options=None):
@@ -42,7 +42,7 @@ def cma(loss, initial_parameters, options=None):
     return r[1].result.fbest, r[1].result.xbest
 
 
-def newtonian(loss, initial_parameters, method='Powell', options=None):
+def newtonian(loss, initial_parameters, method='Powell', options=None, parallel=None, args=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -56,8 +56,16 @@ def newtonian(loss, initial_parameters, method='Powell', options=None):
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
     """
-    from scipy.optimize import minimize
-    m = minimize(loss, initial_parameters, method=method, options=options)
+    if method == 'parallel_lbfgsb':
+        from qibo.config import raise_error, get_backend, THREADS
+        if get_backend() == 'custom' and THREADS.get("intra") != 1:
+            raise_error(RuntimeError, "Parallel L-BFGS-B with custom operator requires to"
+                                    " set the QIBO_NUM_THREADS=1 environment variable.")
+        from optimparallel import minimize_parallel
+        m = minimize_parallel(loss, initial_parameters, args=args, options=options, parallel=parallel)
+    else:
+        from scipy.optimize import minimize
+        m = minimize(loss, initial_parameters, args=args, method=method, options=options)
     return m.fun, m.x
 
 
@@ -110,3 +118,19 @@ def sgd(loss, initial_parameters, options=None, compile=False):
             log.info('ite %d : loss %f', e, l.numpy())
 
     return loss(vparams).numpy(), vparams.numpy()
+
+
+class optimparallel_resources:
+    _instance = None
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(optimparallel_resources, cls).__new__(cls, *args, **kwargs)
+        return cls._instance
+
+    def get_max_workers(self, parallel):
+        import multiprocessing as mp
+        if parallel is not None:
+            max_workers = parallel.get('max_workers', mp.cpu_count())
+        else:
+            max_workers = mp.cpu_count()
+        return max_workers
