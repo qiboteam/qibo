@@ -40,6 +40,12 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
+    # Numpy and Tensorflow numeric and array types
+    NUMERIC_TYPES = (np.int, np.float, np.complex,
+                     np.int32, np.int64, np.float32,
+                     np.float64, np.complex64, np.complex128)
+    ARRAY_TYPES = (tf.Tensor, np.ndarray)
+
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
