@@ -546,8 +546,7 @@ class Collapse(Gate):
         """Returns the result list in proper order after sorting the qubits."""
         return self._result
 
-    @staticmethod
-    def _result_to_list(res): # pragma: no cover
+    def _result_to_list(self, res): # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
