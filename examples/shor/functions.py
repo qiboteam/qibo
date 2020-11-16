@@ -375,7 +375,7 @@ def quantum_order_finding_semiclassical(N, a):
     # Using multiple measurements for the semiclassical QFT.
     for i in range(1, 2*n):
         circuit = Circuit(2*n+3)
-        circuit.add(gates.Collapse(q_reg, r[-1]))
+        circuit.add(gates.Collapse(q_reg, result=[r[-1]]))
         if r[-1] == 1:
             circuit.add(gates.X(q_reg))
         circuit.add(gates.H(q_reg))
