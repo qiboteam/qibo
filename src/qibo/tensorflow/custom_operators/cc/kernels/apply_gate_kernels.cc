@@ -265,9 +265,9 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
     };
 
     // Define vector that holds norms during parallel calculation
-    int nnorms = ncores + 1;
-    if (nreps > 0 && nstates / nreps > nnorms) {
-      nnorms = nstates / nreps;
+    int nnorms = 1;
+    if (nreps > 0) {
+      nnorms = ((int64)nstates / nreps) + 1;
     }
     Eigen::Matrix<NormType, Eigen::Dynamic, 1> norms(nnorms);
     norms.setZero();
