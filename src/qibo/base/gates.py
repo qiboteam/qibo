@@ -552,7 +552,7 @@ class Collapse(Gate):
 
     @result.setter
     def result(self, res):
-        res = self._result_to_list(res)
+        res = self._result_to_list(res) # pylint: disable=E1111
         if len(self.target_qubits) != len(res):
             raise_error(ValueError, "Collapse gate was created on {} qubits "
                                     "but {} result values were given."
