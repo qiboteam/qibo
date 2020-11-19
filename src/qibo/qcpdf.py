@@ -166,8 +166,9 @@ def ansatz_Fourier(layers, qubits=1):
     3 parameters per layer and qubit: U3(a, b, c) Ry(x) || U3(a, b, c) Ry(log x)
     """
     circuit = models.Circuit(qubits)
-    for _ in range(layers - 1):
-        for q in range(qubits):
+    for l in range(layers - 1):
+        for _ in range(2):
+            for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
@@ -180,29 +181,28 @@ def ansatz_Fourier(layers, qubits=1):
             for q in range(1, qubits + 1, 2):
                 circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
-    for q in range(qubits):
-        circuit.add(gates.RY(q, theta=0))
-        circuit.add(gates.RZ(q, theta=0))
-        circuit.add(gates.RY(q, theta=0))
-        circuit.add(gates.RY(q, theta=0))
+    for _ in range(2):
+        for q in range(qubits):
+            circuit.add(gates.RY(q, theta=0))
+            circuit.add(gates.RZ(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
+            circuit.add(gates.RY(q, theta=0))
 
     def rotation(theta, x):
         p = circuit.get_parameters()
         i = 0
         j = 0
         for l in range(layers - 1):
-            if l % 2 == 0:
-                for q in range(qubits):
-                    p[i: i + 3] = theta[j: j + 3]
-                    p[i + 3] = map_to(x)
-                    i += 4
-                    j += 3
-            else:
-                for q in range(qubits):
-                    p[i: i + 3] = theta[j: j + 3]
-                    p[i + 3] = .5 * maplog_to(x)
-                    i += 4
-                    j += 3
+            for q in range(qubits):
+                p[i] = map_to(x)
+                p[i + 1: i + 4] = theta[j: j + 3]
+                i += 4
+                j += 3
+            for q in range(qubits):
+                p[i] = .5 * maplog_to(x)
+                p[i + 1: i + 4] = theta[j: j + 3]
+                i += 4
+                j += 3
             if qubits > 1:
                 for q in range(0, qubits, 2):
                     p[i] = theta[j]
@@ -213,21 +213,19 @@ def ansatz_Fourier(layers, qubits=1):
                     p[i] = theta[j]
                     i += 1
                     j += 1
-        if layers % 2 == 0:
-            for q in range(qubits):
-                p[i: i + 3] = theta[j: j + 3]
-                p[i + 3] = map_to(x)
-                i += 4
-                j += 3
-        else:
-            for q in range(qubits):
-                p[i: i + 3] = theta[j: j + 3]
-                p[i + 3] = .5 * maplog_to(x)
-                i += 4
-                j += 3
+        for q in range(qubits):
+            p[i] = .5 * map_to(x)
+            p[i + 1: i + 4] = theta[j: j + 3]
+            i += 4
+            j += 3
+        for q in range(qubits):
+            p[i] = .5 * maplog_to(x)
+            p[i + 1: i + 4] = theta[j: j + 3]
+            i += 4
+            j += 3
         return p
 
-    nparams = 3 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
+    nparams = 6 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
