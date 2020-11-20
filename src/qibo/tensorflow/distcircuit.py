@@ -53,8 +53,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                  accelerators: Dict[str, int],
                  memory_device: str = "/CPU:0"):
         super(TensorflowDistributedCircuit, self).__init__(nqubits)
-        self._init_kwargs.update({"accelerators": accelerators,
-                                  "memory_device": memory_device})
+        self.init_kwargs.update({"accelerators": accelerators,
+                                 "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(np.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):

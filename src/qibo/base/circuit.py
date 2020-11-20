@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from qibo.base import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
@@ -86,7 +86,7 @@ class BaseCircuit(object):
             raise_error(ValueError, "Number of qubits must be positive but is "
                                     "{}.".format(nqubits))
         self.nqubits = nqubits
-        self._init_kwargs = {"nqubits": nqubits}
+        self.init_kwargs = {"nqubits": nqubits}
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -117,13 +117,13 @@ class BaseCircuit(object):
 
     @classmethod
     def _circuit_addition(cls, c1, c2):
-        for k, kwarg1 in c1._init_kwargs.items():
-            kwarg2 = c2._init_kwargs[k]
+        for k, kwarg1 in c1.init_kwargs.items():
+            kwarg2 = c2.init_kwargs[k]
             if kwarg1 != kwarg2:
                 raise_error(ValueError, "Cannot add circuits with different kwargs. "
                                         "{} is {} for first circuit and {} for the "
                                         "second.".format(k, kwarg1, kwarg2))
-        newcircuit = cls(**c1._init_kwargs)
+        newcircuit = cls(**c1.init_kwargs)
         # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.add(gate)
@@ -140,7 +140,7 @@ class BaseCircuit(object):
                 if k in newcircuit.measurement_tuples:
                     raise_error(KeyError, "Register name {} already exists in the "
                                           "circuit.".format(k))
-                newcircuit._check_measured(v)
+                newcircuit.check_measured(v)
                 newcircuit.measurement_tuples[k] = v
             newcircuit.measurement_gate._add(c2.measurement_gate)
         return newcircuit
@@ -186,7 +186,7 @@ class BaseCircuit(object):
             The copied circuit object.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         if deep:
             for gate in self.queue:
                 new_gate = copy.copy(gate)
@@ -217,7 +217,7 @@ class BaseCircuit(object):
             The circuit inverse.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
             new_circuit.add(gate.dagger())
         new_circuit.measurement_gate = copy.copy(self.measurement_gate)
@@ -232,7 +232,7 @@ class BaseCircuit(object):
         For distributed circuits a fully deep copy should be created.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
             if isinstance(gate, gates.ParametrizedGate):
                 new_gate = copy.copy(gate)
@@ -379,7 +379,7 @@ class BaseCircuit(object):
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
 
-    def _check_measured(self, gate_qubits: Tuple[int]):
+    def check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
 
         Checks if the qubits that a gate acts are already measured and raises
@@ -429,7 +429,7 @@ class BaseCircuit(object):
                                         "".format(gate.target_qubits, self.nqubits))
 
         self._set_nqubits(gate)
-        self._check_measured(gate.qubits)
+        self.check_measured(gate.qubits)
         if isinstance(gate, gates.M):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
@@ -601,7 +601,7 @@ class BaseCircuit(object):
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
 
-    def get_parameters(self, format: str = "list") -> Union[List, Dict]:
+    def get_parameters(self, format: str = "list") -> Union[List, Dict]: # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
