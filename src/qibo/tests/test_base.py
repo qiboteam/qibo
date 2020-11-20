@@ -11,7 +11,7 @@ from qibo.gates import *
 @pytest.mark.parametrize('nqubits', [0, -10, 2.5])
 def test_circuit_noqubit(nqubits):
     """Check that circuit raises errors with non physical setup."""
-    with pytest.raises( (ValueError, RuntimeError) ):
+    with pytest.raises((ValueError, TypeError)):
         c = Circuit(nqubits)
 
 

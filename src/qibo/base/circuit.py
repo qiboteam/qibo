@@ -5,7 +5,7 @@ from abc import ABCMeta, abstractmethod
 from qibo.base import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
@@ -80,9 +80,11 @@ class BaseCircuit(object):
 
     def __init__(self, nqubits):
         if not isinstance(nqubits, int):
-            raise_error(RuntimeError, f'nqubits must be an integer')
+            raise_error(TypeError, "Number of qubits must be an integer but "
+                                   "is {}.".format(nqubits))
         if nqubits < 1:
-            raise_error(ValueError, 'nqubits must be > 0')
+            raise_error(ValueError, "Number of qubits must be positive but is "
+                                    "{}.".format(nqubits))
         self.nqubits = nqubits
         self._init_kwargs = {"nqubits": nqubits}
         self.queue = _Queue(nqubits)
@@ -143,7 +145,7 @@ class BaseCircuit(object):
             newcircuit.measurement_gate._add(c2.measurement_gate)
         return newcircuit
 
-    def on_qubits(self, *q) -> Iterable[gates.Gate]:
+    def on_qubits(self, *q):
         """Generator of gates contained in the circuit acting on specified qubits.
 
         Useful for adding a circuit as a subroutine in a larger circuit.
@@ -301,7 +303,7 @@ class BaseCircuit(object):
         # FIXME: This method is not completed until the ``decompose`` is
         # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
-        for i, gate in enumerate(self.queue):
+        for gate in self.queue:
             decomp_circuit.add(gate.decompose(*free))
         decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
         decomp_circuit.measurement_gate = self.measurement_gate
@@ -400,7 +402,7 @@ class BaseCircuit(object):
                 In this case all gates in the iterable will be added in the
                 circuit.
         """
-        if isinstance(gate, Iterable):
+        if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
         elif isinstance(gate, gates.Gate):
@@ -504,10 +506,10 @@ class BaseCircuit(object):
 
         The QASM names are used as gate identifiers.
         """
-        gates = collections.Counter()
+        gatecounter = collections.Counter()
         for gate in self.queue:
-            gates[gate.name] += 1
-        return gates
+            gatecounter[gate.name] += 1
+        return gatecounter
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type.
@@ -616,12 +618,11 @@ class BaseCircuit(object):
             return {gate: gate.parameter for gate in self.parametrized_gates}
         elif format == "flatlist":
             import numpy as np
-            from collections.abc import Iterable
             params = []
             for gate in self.parametrized_gates:
                 if isinstance(gate.parameter, np.ndarray):
                     params.extend(gate.parameter.ravel())
-                elif isinstance(gate.parameter, Iterable):
+                elif isinstance(gate.parameter, collections.abc.Iterable):
                     params.extend(gate.parameter)
                 else:
                     params.append(gate.parameter)
@@ -720,7 +721,7 @@ class BaseCircuit(object):
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                if isinstance(gate.parameter, Iterable):
+                if isinstance(gate.parameter, collections.abc.Iterable):
                     params = (str(x) for x in gate.parameter)
                     name = "{}({})".format(gate.name, ", ".join(params))
                 else:
@@ -801,7 +802,7 @@ class BaseCircuit(object):
         """
         import re
         def read_args(args):
-            _args = iter(re.split("[\[\],]", args))
+            _args = iter(re.split(r"[\[\],]", args))
             for name in _args:
                 if name:
                     index = next(_args)
