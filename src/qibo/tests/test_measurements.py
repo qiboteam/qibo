@@ -57,7 +57,7 @@ def assert_register_results(
 
 def test_gate_result_initialization_errors():
     """Check ``ValueError``s during the initialization of ``GateResult`` object."""
-    from qibo.base import measurements
+    from qibo.tensorflow import measurements
     decimal_samples = np.random.randint(0, 4, (100,))
     binary_samples = np.random.randint(0, 2, (100, 2))
     with pytest.raises(ValueError):
