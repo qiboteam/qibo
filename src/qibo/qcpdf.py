@@ -172,7 +172,7 @@ def ansatz_Fourier(layers, qubits=1):
                 circuit.add(gates.RY(q, theta=0))
                 circuit.add(gates.RZ(q, theta=0))
                 circuit.add(gates.RY(q, theta=0))
-                circuit.add(gates.RY(q, theta=0))
+
 
         if qubits > 1:
             for q in range(0, qubits, 2):
@@ -187,7 +187,7 @@ def ansatz_Fourier(layers, qubits=1):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
-            circuit.add(gates.RY(q, theta=0))
+
 
     def rotation(theta, x):
         p = circuit.get_parameters()
@@ -196,14 +196,14 @@ def ansatz_Fourier(layers, qubits=1):
         for l in range(layers - 1):
             for q in range(qubits):
                 p[i] = map_to(x)
-                p[i + 1: i + 4] = theta[j: j + 3]
-                i += 4
-                j += 3
+                p[i + 1: i + 3] = theta[j: j + 2]
+                i += 3
+                j += 2
 
                 p[i] = .5 * maplog_to(x)
-                p[i + 1: i + 4] = theta[j: j + 3]
-                i += 4
-                j += 3
+                p[i + 1: i + 3] = theta[j: j + 2]
+                i += 3
+                j += 2
             if qubits > 1:
                 for q in range(0, qubits, 2):
                     p[i] = theta[j]
@@ -216,17 +216,17 @@ def ansatz_Fourier(layers, qubits=1):
                     j += 1
         for q in range(qubits):
             p[i] = .5 * map_to(x)
-            p[i + 1: i + 4] = theta[j: j + 3]
-            i += 4
-            j += 3
+            p[i + 1: i + 3] = theta[j: j + 2]
+            i += 3
+            j += 2
 
             p[i] = .5 * maplog_to(x)
-            p[i + 1: i + 4] = theta[j: j + 3]
-            i += 4
-            j += 3
+            p[i + 1: i + 3] = theta[j: j + 2]
+            i += 3
+            j += 2
         return p
 
-    nparams = 6 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
+    nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
