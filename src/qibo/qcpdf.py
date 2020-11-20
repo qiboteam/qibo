@@ -167,12 +167,12 @@ def ansatz_Fourier(layers, qubits=1):
     """
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
-        for _ in range(2):
-            for q in range(qubits):
-            circuit.add(gates.RY(q, theta=0))
-            circuit.add(gates.RZ(q, theta=0))
-            circuit.add(gates.RY(q, theta=0))
-            circuit.add(gates.RY(q, theta=0))
+        for q in range(qubits):
+            for _ in range(2):
+                circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.RZ(q, theta=0))
+                circuit.add(gates.RY(q, theta=0))
+                circuit.add(gates.RY(q, theta=0))
 
         if qubits > 1:
             for q in range(0, qubits, 2):
@@ -181,8 +181,9 @@ def ansatz_Fourier(layers, qubits=1):
             for q in range(1, qubits + 1, 2):
                 circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
-    for _ in range(2):
-        for q in range(qubits):
+
+    for q in range(qubits):
+        for _ in range(2):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
@@ -198,7 +199,7 @@ def ansatz_Fourier(layers, qubits=1):
                 p[i + 1: i + 4] = theta[j: j + 3]
                 i += 4
                 j += 3
-            for q in range(qubits):
+
                 p[i] = .5 * maplog_to(x)
                 p[i + 1: i + 4] = theta[j: j + 3]
                 i += 4
@@ -218,7 +219,7 @@ def ansatz_Fourier(layers, qubits=1):
             p[i + 1: i + 4] = theta[j: j + 3]
             i += 4
             j += 3
-        for q in range(qubits):
+
             p[i] = .5 * maplog_to(x)
             p[i + 1: i + 4] = theta[j: j + 3]
             i += 4
