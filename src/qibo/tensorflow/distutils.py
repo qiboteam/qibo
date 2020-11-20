@@ -201,7 +201,7 @@ class DistributedQueues(DistributedBase):
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if gate.is_special_gate:
+            if isinstance(gate, gates.SpecialGate):
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set

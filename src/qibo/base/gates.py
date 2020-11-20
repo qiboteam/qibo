@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 from qibo import config
 from qibo.config import raise_error
-from typing import Dict, List, Iterable, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -15,7 +15,7 @@ PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
                       "crx", "cry", "crz", "cu1", "cu3"}
 
 
-class Gate(object):
+class Gate:
     """The base class for gate implementation.
 
     All gates should inherit this class.
@@ -25,13 +25,9 @@ class Gate(object):
         target_qubits: Tuple with ids of target qubits.
     """
 
-    import sys
-    module = sys.modules[__name__]
-
     def __init__(self):
         self.name = None
         self.is_controlled_by = False
-        self.is_special_gate = False
         # special gates are ``CallbackGate`` and ``Flatten``
 
         # args for creating gate
@@ -262,7 +258,7 @@ class Gate(object):
         Returns:
             ``True`` if the gates commute, otherwise ``False``.
         """
-        if self.is_special_gate or gate.is_special_gate:
+        if isinstance(gate, SpecialGate):
             return False
         t1 = set(self.target_qubits)
         t2 = set(gate.target_qubits)
@@ -355,6 +351,50 @@ class Gate(object):
         """
         # abstract method
         raise_error(NotImplementedError)
+
+
+class SpecialGate(Gate):
+    """Abstract class for special gates.
+
+    Current special gates are :class:`qibo.base.gates.CallbackGate` and
+    :class:`qibo.base.gates.Flatten`.
+    """
+
+    def commutes(self, gate):
+        return False
+
+    def on_qubits(self, *q):
+        raise_error(NotImplementedError,
+                    "Cannot use special gates on subroutines.")
+
+
+class ParametrizedGate(Gate):
+    """Base class for parametrized gates.
+
+    Implements the basic functionality of parameter setters and getters.
+    """
+
+    def __init__(self):
+        super(ParametrizedGate, self).__init__()
+        self._theta = None
+        self.nparams = 1
+
+    @property
+    def parameter(self):
+        return self._theta
+
+    def _reprepare(self):
+        if self.device_gates:
+            for gate in self.device_gates:
+                gate.parameter = self.parameter
+        else:
+            self._prepare()
+
+    @parameter.setter
+    def parameter(self, x):
+        self._unitary = None
+        self._theta = x
+        self._reprepare()
 
 
 class H(Gate):
@@ -688,35 +728,6 @@ class M(Gate):
     def unitary(self):
         raise_error(ValueError, "Measurements cannot be represented as unitary "
                                 "matrices.")
-
-
-class ParametrizedGate(Gate):
-    """Base class for parametrized gates.
-
-    Implements the basic functionality of parameter setters and getters.
-    """
-
-    def __init__(self):
-        super(ParametrizedGate, self).__init__()
-        self._theta = None
-        self.nparams = 1
-
-    @property
-    def parameter(self):
-        return self._theta
-
-    def _reprepare(self):
-        if self.device_gates:
-            for gate in self.device_gates:
-                gate.parameter = self.parameter
-        else:
-            self._prepare()
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._theta = x
-        self._reprepare()
 
 
 class _Rn_(ParametrizedGate):
@@ -1656,7 +1667,7 @@ class VariationalLayer(ParametrizedGate):
                                 "``VariationalLayer``.")
 
 
-class Flatten(Gate):
+class Flatten(SpecialGate):
     """Passes an arbitrary state vector in the circuit.
 
     Args:
@@ -1669,14 +1680,13 @@ class Flatten(Gate):
         self.name = "Flatten"
         self.coefficients = coefficients
         self.init_args = [coefficients]
-        self.is_special_gate = True
 
     def on_qubits(self, *q):
         raise_error(NotImplementedError,
                     "Cannot use `Flatten` gate on subroutine.")
 
 
-class CallbackGate(Gate):
+class CallbackGate(SpecialGate):
     """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
 
     This gate performs the callback calulation without affecting the state vector.
@@ -1690,7 +1700,6 @@ class CallbackGate(Gate):
         self.name = callback.__class__.__name__
         self.callback = callback
         self.init_args = [callback]
-        self.is_special_gate = True
 
     def on_qubits(self, *q):
         raise_error(NotImplementedError,
