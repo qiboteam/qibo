@@ -292,6 +292,7 @@ class DistributedQueues(DistributedBase):
 
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits
+                gate.prepare()
                 self.special_queue.append(gate)
                 self.queues.append([])
 
@@ -321,6 +322,7 @@ class DistributedQueues(DistributedBase):
                     # device otherwise device parallelization will break
                     devgate.device = device
                     devgate.nqubits = self.nlocal
+                    devgate.prepare()
                     if is_collapse:
                         # For ``Collapse`` gates we have to skip the
                         # normalization step in each device

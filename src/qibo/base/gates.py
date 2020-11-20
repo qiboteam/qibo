@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+from abc import ABC, abstractmethod
 from qibo import config
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -50,7 +51,7 @@ class Gate:
 
         # Using density matrices or state vectors
         self._density_matrix = False
-        self._active_call = "_state_vector_call"
+        self._active_call = "state_vector_call"
 
         config.ALLOW_SWITCHERS = False
 
@@ -137,9 +138,9 @@ class Gate:
                         "preparing the gate for execution.")
         self._density_matrix = x
         if x:
-            self._active_call = "_density_matrix_call"
+            self._active_call = "density_matrix_call"
         else:
-            self._active_call = "_state_vector_call"
+            self._active_call = "state_vector_call"
 
     @property
     def nqubits(self) -> int:
@@ -173,9 +174,6 @@ class Gate:
                                       "set to {}.".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
-        self._calculate_qubits_tensor()
-        self._calculate_einsum_cache()
-        self._prepare()
 
     @property
     def unitary(self):
@@ -230,24 +228,6 @@ class Gate:
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
         # abstract method
         return self.__matmul__(other)
-
-    def _calculate_qubits_tensor(self):
-        """Calculates qubits tensor required for applying gates using custom operators."""
-        pass
-
-    def _calculate_einsum_cache(self):
-        """Calculates einsum cache required for applying gates using Tensorflow ops."""
-        pass
-
-    def _prepare(self): # pragma: no cover
-        """Prepares the gate for application to state vectors.
-
-        Called automatically by the ``nqubits`` setter.
-        Calculates the ``matrix`` required to apply the gate to state vectors.
-        This is not necessarily the same as the unitary matrix of the gate.
-        """
-        # abstract method
-        pass
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -329,29 +309,6 @@ class Gate:
         # original gate
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
-    def _state_vector_call(self, state): # pragma: no cover
-        """Acts with the gate on a given state vector."""
-        # abstract method
-        raise_error(NotImplementedError)
-
-    def _density_matrix_call(self, state): # pragma: no cover
-        """Acts with the gate on a given density matrix."""
-        # abstract method
-        raise_error(NotImplementedError)
-
-    def __call__(self, state): # pragma: no cover
-        """Acts with the gate on a given state vector or density matrix.
-
-        Args:
-            state: Input state vector.
-                The type and shape of this depend on the backend.
-
-        Returns:
-            The state vector after the action of the gate.
-        """
-        # abstract method
-        raise_error(NotImplementedError)
-
 
 class SpecialGate(Gate):
     """Abstract class for special gates.
@@ -387,8 +344,6 @@ class ParametrizedGate(Gate):
         if self.device_gates:
             for gate in self.device_gates:
                 gate.parameter = self.parameter
-        else:
-            self._prepare()
 
     @parameter.setter
     def parameter(self, x):
@@ -607,7 +562,7 @@ class Collapse(Gate):
         self._result = [resdict[q] for q in self.sorted_qubits]
         self.init_kwargs = {"result": res}
         if self._nqubits is not None:
-            self._prepare()
+            self.prepare()
 
     def controlled_by(self, *q): # pragma: no cover
         """"""
@@ -1633,7 +1588,7 @@ class VariationalLayer(ParametrizedGate):
         """"""
         import copy
         if not self.unitaries:
-            self._prepare()
+            self.prepare()
         varlayer = copy.copy(self)
         varlayer.is_dagger = True
         varlayer.unitaries = [u.dagger() for u in self.unitaries]

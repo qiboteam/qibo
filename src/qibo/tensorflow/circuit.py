@@ -39,12 +39,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
         self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
                                          dtype=DTYPES.get('DTYPEINT'))
 
-    def _set_nqubits(self, gate):
-        if gate._nqubits is None:
-            with tf.device(DEVICES['DEFAULT']):
-                gate.nqubits = self.nqubits
-        elif gate.nqubits != self.nqubits:
-            super(TensorflowCircuit, self)._set_nqubits(gate)
+    def set_nqubits(self, gate):
+        super().set_nqubits(gate)
+        gate.nqubits = self.nqubits
+        gate.prepare()
 
     def set_parameters(self, parameters):
         if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):

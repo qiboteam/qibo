@@ -426,7 +426,7 @@ class BaseCircuit(ABC):
                                         "on a circuit of {} qubits."
                                         "".format(gate.target_qubits, self.nqubits))
 
-        self._set_nqubits(gate)
+        self.set_nqubits(gate)
         self.check_measured(gate.qubits)
         if isinstance(gate, gates.M):
             self._add_measurement(gate)
@@ -441,14 +441,14 @@ class BaseCircuit(ABC):
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
 
-    def _set_nqubits(self, gate: gates.Gate):
-        """Sets the number of qubits in ``gate``.
+    def set_nqubits(self, gate: gates.Gate):
+        """Sets the number of qubits and prepares all gates.
 
         Helper method for ``circuit.add(gate)``.
         """
-        raise_error(ValueError, "Attempting to add gate with {} total qubits "
-                                "to a circuit with {} qubits."
-                                "".format(gate.nqubits, self.nqubits))
+        if gate.is_prepared:
+            raise_error(RuntimeError, "Cannot add gates to circuit if they "
+                                      "are already prepared.")
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.
@@ -477,10 +477,10 @@ class BaseCircuit(ABC):
     def _add_layer(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement."""
         for unitary in gate.unitaries:
-            self._set_nqubits(unitary)
+            self.set_nqubits(unitary)
             self.queue.append(unitary)
         if gate.additional_unitary is not None:
-            self._set_nqubits(gate.additional_unitary)
+            self.set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
     @property
