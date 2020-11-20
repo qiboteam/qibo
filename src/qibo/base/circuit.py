@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 import collections
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from qibo.base import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
@@ -55,7 +55,7 @@ class _Queue(list):
             self.moment_index[q] = idx + 1
 
 
-class BaseCircuit(object):
+class BaseCircuit(ABC):
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
@@ -74,8 +74,6 @@ class BaseCircuit(object):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-
-    __metaclass__ = ABCMeta
     from qibo.base import fusion
 
     def __init__(self, nqubits):
@@ -669,29 +667,27 @@ class BaseCircuit(object):
         return "\n".join(logs)
 
     @property
+    @abstractmethod
     def final_state(self): # pragma: no cover
         """Returns the final state after full simulation of the circuit.
 
         If the circuit is executed more than once, only the last final state
         is returned.
         """
-        # abstract method
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def execute(self, *args): # pragma: no cover
+    def execute(self, initial_state=None, nshots=None): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend.
 
         See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
         details.
         """
-        # abstract method
         raise_error(NotImplementedError)
 
-    def __call__(self, *args): # pragma: no cover
+    def __call__(self, initial_state=None, nshots=None):
         """Equivalent to ``circuit.execute``."""
-        # abstract method
-        return self.execute(*args)
+        return self.execute(initial_state=initial_state, nshots=nshots)
 
     def to_qasm(self):
         """Convert circuit to QASM.

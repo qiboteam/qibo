@@ -188,11 +188,6 @@ class TensorflowCircuit(circuit.BaseCircuit):
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
-    def __call__(self, initial_state: Optional[InitStateType] = None,
-                 nshots: Optional[int] = None) -> OutputType:
-        """Equivalent to ``circuit.execute``."""
-        return self.execute(initial_state=initial_state, nshots=nshots)
-
     @property
     def final_state(self) -> tf.Tensor:
         """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
