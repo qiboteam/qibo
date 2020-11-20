@@ -3,13 +3,14 @@
 import sys
 import numpy as np
 import tensorflow as tf
-from qibo.base import gates as base_gates
+from qibo.base import gates as base_gates # FIXME: rename this to simply `gates`
+from qibo.base.abstract_gates import BackendGate
 from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
-class TensorflowGate:
+class TensorflowGate(BackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
@@ -25,9 +26,8 @@ class TensorflowGate:
             raise_error(NotImplementedError,
                         "Custom operator gates should not be used in compiled "
                         "mode.")
+        super().__init__()
         self.gate_op = op.apply_gate
-
-        self.is_prepared = False
         self.qubits_tensor = None
         self.qubits_tensor_dm = None
         self.target_qubits_dm = None
@@ -53,7 +53,6 @@ class TensorflowGate:
     def prepare(self):
         """Prepares the gate for application to state vectors."""
         self.is_prepared = True
-        print(self.is_prepared)
         qubits = list(self.nqubits - np.array(self.control_qubits) - 1)
         qubits.extend(self.nqubits - np.array(self.target_qubits) - 1)
         qubits = sorted(qubits)
@@ -70,19 +69,17 @@ class TensorflowGate:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        self._set_nqubits(state)
         return self.gate_op(state, self.qubits_tensor, self.nqubits,
                             *self.target_qubits)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        self._set_nqubits(state)
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits)
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
                              *self.target_qubits_dm)
         return state
-
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        self._set_nqubits(state)
-        return getattr(self, self._active_call)(state)
 
 
 class MatrixGate(TensorflowGate):
@@ -114,8 +111,8 @@ class MatrixGate(TensorflowGate):
 class H(MatrixGate, base_gates.H):
 
     def __init__(self, q):
-        base_gates.H.__init__(self, q)
         MatrixGate.__init__(self)
+        base_gates.H.__init__(self, q)
 
     def construct_unitary(self) -> np.ndarray:
         return (np.array([[1, 1], [1, -1]], dtype=DTYPES.get('NPTYPECPX'))
@@ -125,8 +122,8 @@ class H(MatrixGate, base_gates.H):
 class X(TensorflowGate, base_gates.X):
 
     def __init__(self, q):
-        base_gates.X.__init__(self, q)
         TensorflowGate.__init__(self)
+        base_gates.X.__init__(self, q)
         self.gate_op = op.apply_x
 
     def construct_unitary(self) -> np.ndarray:
@@ -136,8 +133,8 @@ class X(TensorflowGate, base_gates.X):
 class Y(TensorflowGate, base_gates.Y):
 
     def __init__(self, q):
-        base_gates.Y.__init__(self, q)
         TensorflowGate.__init__(self)
+        base_gates.Y.__init__(self, q)
         self.gate_op = op.apply_y
 
     def construct_unitary(self) -> np.ndarray:
@@ -150,8 +147,8 @@ class Y(TensorflowGate, base_gates.Y):
 class Z(TensorflowGate, base_gates.Z):
 
     def __init__(self, q):
-        base_gates.Z.__init__(self, q)
         TensorflowGate.__init__(self)
+        base_gates.Z.__init__(self, q)
         self.gate_op = op.apply_z
 
     def construct_unitary(self) -> np.ndarray:
@@ -161,8 +158,8 @@ class Z(TensorflowGate, base_gates.Z):
 class I(TensorflowGate, base_gates.I):
 
     def __init__(self, *q):
-        base_gates.I.__init__(self, *q)
         TensorflowGate.__init__(self)
+        base_gates.I.__init__(self, *q)
 
     def construct_unitary(self) -> np.ndarray:
         dim = 2 ** len(self.target_qubits)
@@ -175,8 +172,8 @@ class I(TensorflowGate, base_gates.I):
 class Collapse(TensorflowGate, base_gates.Collapse):
 
     def __init__(self, *q: int, result: List[int] = 0):
-        base_gates.Collapse.__init__(self, *q, result=result)
         TensorflowGate.__init__(self)
+        base_gates.Collapse.__init__(self, *q, result=result)
         self.result_tensor = None
         self.gate_op = op.collapse_state
 
@@ -293,8 +290,8 @@ class M(TensorflowGate, base_gates.M):
 class RX(MatrixGate, base_gates.RX):
 
     def __init__(self, q, theta):
-        base_gates.RX.__init__(self, q, theta)
         MatrixGate.__init__(self)
+        base_gates.RX.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
         cos, isin = np.cos(self.parameter / 2.0), -1j * np.sin(self.parameter / 2.0)
@@ -304,8 +301,8 @@ class RX(MatrixGate, base_gates.RX):
 class RY(MatrixGate, base_gates.RY):
 
     def __init__(self, q, theta):
-        base_gates.RY.__init__(self, q, theta)
         MatrixGate.__init__(self)
+        base_gates.RY.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
         cos, sin = np.cos(self.parameter / 2.0), np.sin(self.parameter / 2.0)
@@ -315,8 +312,8 @@ class RY(MatrixGate, base_gates.RY):
 class RZ(MatrixGate, base_gates.RZ):
 
     def __init__(self, q, theta):
-        base_gates.RZ.__init__(self, q, theta)
         MatrixGate.__init__(self)
+        base_gates.RZ.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
         phase = np.exp(1j * self.parameter / 2.0)
@@ -326,8 +323,8 @@ class RZ(MatrixGate, base_gates.RZ):
 class U1(MatrixGate, base_gates.U1):
 
     def __init__(self, q, theta):
-        base_gates.U1.__init__(self, q, theta)
         MatrixGate.__init__(self)
+        base_gates.U1.__init__(self, q, theta)
         self.gate_op = op.apply_z_pow
 
     def prepare(self):
@@ -344,8 +341,8 @@ class U1(MatrixGate, base_gates.U1):
 class U2(MatrixGate, base_gates.U2):
 
     def __init__(self, q, phi, lam):
-        base_gates.U2.__init__(self, q, phi, lam)
         MatrixGate.__init__(self)
+        base_gates.U2.__init__(self, q, phi, lam)
 
     def construct_unitary(self) -> np.ndarray:
         eplus = np.exp(1j * (self._phi + self._lam) / 2.0)
@@ -358,8 +355,8 @@ class U2(MatrixGate, base_gates.U2):
 class U3(MatrixGate, base_gates.U3):
 
     def __init__(self, q, theta, phi, lam):
-        base_gates.U3.__init__(self, q, theta, phi, lam)
         MatrixGate.__init__(self)
+        base_gates.U3.__init__(self, q, theta, phi, lam)
 
     def construct_unitary(self) -> np.ndarray:
         cost = np.cos(self._theta / 2)
@@ -384,8 +381,8 @@ class ZPow(MatrixGate, base_gates.ZPow):
 class CNOT(TensorflowGate, base_gates.CNOT):
 
     def __init__(self, q0, q1):
-        base_gates.CNOT.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+        base_gates.CNOT.__init__(self, q0, q1)
         self.gate_op = op.apply_x
 
     def construct_unitary(self) -> np.ndarray:
@@ -397,8 +394,8 @@ class CNOT(TensorflowGate, base_gates.CNOT):
 class CZ(TensorflowGate, base_gates.CZ):
 
     def __init__(self, q0, q1):
-        base_gates.CZ.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+        base_gates.CZ.__init__(self, q0, q1)
         self.gate_op = op.apply_z
 
     def construct_unitary(self) -> np.ndarray:
@@ -485,8 +482,8 @@ class CZPow(MatrixGate, base_gates.CZPow):
 class SWAP(TensorflowGate, base_gates.SWAP):
 
     def __init__(self, q0, q1):
-        base_gates.SWAP.__init__(self, q0, q1)
         TensorflowGate.__init__(self)
+        base_gates.SWAP.__init__(self, q0, q1)
         self.gate_op = op.apply_swap
 
     def construct_unitary(self) -> np.ndarray:
@@ -498,8 +495,8 @@ class SWAP(TensorflowGate, base_gates.SWAP):
 class fSim(MatrixGate, base_gates.fSim):
 
     def __init__(self, q0, q1, theta, phi):
-        base_gates.fSim.__init__(self, q0, q1, theta, phi)
         MatrixGate.__init__(self)
+        base_gates.fSim.__init__(self, q0, q1, theta, phi)
         self.gate_op = op.apply_fsim
 
     def prepare(self):
@@ -525,8 +522,8 @@ class fSim(MatrixGate, base_gates.fSim):
 class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi):
-        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         TensorflowGate.__init__(self)
+        base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         self.gate_op = op.apply_fsim
 
     def prepare(self):
@@ -558,8 +555,8 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
-        base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         TensorflowGate.__init__(self)
+        base_gates.TOFFOLI.__init__(self, q0, q1, q2)
         self.gate_op = op.apply_x
 
     def construct_unitary(self) -> np.ndarray:
@@ -575,8 +572,8 @@ class Unitary(MatrixGate, base_gates.Unitary):
         if not isinstance(unitary, (np.ndarray, tf.Tensor)):
             raise_error(TypeError, "Unknown type {} of unitary matrix."
                                    "".format(type(unitary)))
-        base_gates.Unitary.__init__(self, unitary, *q, name=name)
         MatrixGate.__init__(self)
+        base_gates.Unitary.__init__(self, unitary, *q, name=name)
         rank = self.rank
         if rank == 1:
             self.gate_op = op.apply_gate
@@ -614,11 +611,11 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                  one_qubit_gate, two_qubit_gate,
                  params: List[float], params2: Optional[List[float]] = None,
                  name: Optional[str] = None):
+        MatrixGate.__init__(self)
         base_gates.VariationalLayer.__init__(self, qubits, pairs,
                                              one_qubit_gate, two_qubit_gate,
                                              params, params2,
                                              name=name)
-        MatrixGate.__init__(self)
 
     def _unitary_constructor(self, matrix, *targets):
         gate = Unitary(matrix, *targets)
@@ -676,8 +673,8 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
 class Flatten(TensorflowGate, base_gates.Flatten):
 
     def __init__(self, coefficients):
-        base_gates.Flatten.__init__(self, coefficients)
         TensorflowGate.__init__(self)
+        base_gates.Flatten.__init__(self, coefficients)
         self.swap_reset = []
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
@@ -694,8 +691,8 @@ class Flatten(TensorflowGate, base_gates.Flatten):
 class CallbackGate(TensorflowGate, base_gates.CallbackGate):
 
     def __init__(self, callback):
-        base_gates.CallbackGate.__init__(self, callback)
         TensorflowGate.__init__(self)
+        base_gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
