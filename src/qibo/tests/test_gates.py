@@ -302,7 +302,7 @@ def test_controlled_u2(backend):
 
     # for coverage
     gate = gates.CU2(0, 1, phi, lam)
-    assert gate.parameter == (phi, lam)
+    assert gate.parameters == (phi, lam)
     qibo.set_backend(original_backend)
 
 
@@ -328,7 +328,7 @@ def test_controlled_u3(backend):
 
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
-    assert gate.parameter == (theta, phi, lam)
+    assert gate.parameters == (theta, phi, lam)
     qibo.set_backend(original_backend)
 
 
@@ -1124,7 +1124,7 @@ def test_variational_layer_errors(backend):
 
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
                                   np.zeros(6), np.zeros(6))
-    np.testing.assert_allclose(gate.parameter, np.zeros(12))
+    np.testing.assert_allclose(gate.parameters, np.zeros(12))
     qibo.set_backend(original_backend)
 
 

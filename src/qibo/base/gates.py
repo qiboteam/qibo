@@ -361,14 +361,14 @@ class _Rn_(ParametrizedGate):
         super(_Rn_, self).__init__()
         self.name = "r{}".format(self.axis)
         self.target_qubits = (q,)
-        self.parameter = theta
 
+        self.parameters = theta
         self.init_args = [q]
         self.init_kwargs = {"theta": theta}
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameter)
+        return self.__class__(self.target_qubits[0], -self.parameters)
 
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
@@ -449,7 +449,6 @@ class _Un_(ParametrizedGate):
     def __init__(self, q):
         super(_Un_, self).__init__()
         self.name = "u{}".format(self.order)
-        self.nparams = self.order
         self.target_qubits = (q,)
         self.init_args = [q]
 
@@ -482,12 +481,12 @@ class U1(_Un_):
 
     def __init__(self, q, theta):
         super(U1, self).__init__(q)
-        self.parameter = theta
+        self.parameters = theta
         self.init_kwargs = {"theta": theta}
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameter)
+        return self.__class__(self.target_qubits[0], -self.parameters)
 
 
 class U2(_Un_):
@@ -513,24 +512,15 @@ class U2(_Un_):
         super(U2, self).__init__(q)
         self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam}
-        self.parameter = phi, lam
+        self.parameter_names = ["phi", "lam"]
+        self.parameters = phi, lam
 
     def _dagger(self) -> "Gate":
         """"""
         import numpy as np
-        phi = np.pi - self._lam
-        lam = - np.pi - self._phi
+        phi, lam = self.parameters
+        phi, lam = np.pi - lam, - np.pi - phi
         return self.__class__(self.target_qubits[0], phi, lam)
-
-    @property
-    def parameter(self):
-        return self._phi, self._lam
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._phi, self._lam = x
-        self._reprepare()
 
 
 class U3(_Un_):
@@ -556,22 +546,13 @@ class U3(_Un_):
         super(U3, self).__init__(q)
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
-        self.parameter = theta, phi, lam
+        self.parameter_names = ["theta", "phi", "lam"]
+        self.parameters = theta, phi, lam
 
     def _dagger(self) -> "Gate":
         """"""
-        theta, lam, phi = tuple(-x for x in self.parameter)
+        theta, lam, phi = tuple(-x for x in self.parameters)
         return self.__class__(self.target_qubits[0], theta, phi, lam)
-
-    @property
-    def parameter(self):
-        return self._theta, self._phi, self._lam
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._theta, self._phi, self._lam = x
-        self._reprepare()
 
 
 class ZPow(Gate): # pragma: no cover
@@ -590,8 +571,8 @@ class ZPow(Gate): # pragma: no cover
         q (int): the qubit id number.
         theta (float): the rotation angle.
     """
-    def __new__(cls, q, theta): # pragma: no cover
-        # code is not tested as it is substituted in `tensorflow` gates
+    # This class exists only for documentation purposes.
+    def __new__(cls, q, theta):
         return U1(q, theta)
 
 
@@ -666,7 +647,7 @@ class _CRn_(ParametrizedGate):
         self.name = "cr{}".format(self.axis)
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
-        self.parameter = theta
+        self.parameters = theta
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta}
@@ -675,7 +656,7 @@ class _CRn_(ParametrizedGate):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameter)
+        return self.__class__(q0, q1, -self.parameters)
 
 
 class CRX(_CRn_):
@@ -755,7 +736,6 @@ class _CUn_(ParametrizedGate):
     def __init__(self, q0, q1):
         super(_CUn_, self).__init__()
         self.name = "cu{}".format(self.order)
-        self.nparams = self.order
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
@@ -785,14 +765,14 @@ class CU1(_CUn_):
 
     def __init__(self, q0, q1, theta):
         super(CU1, self).__init__(q0, q1)
-        self.parameter = theta
+        self.parameters = theta
         self.init_kwargs = {"theta": theta}
 
     def _dagger(self) -> "Gate":
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameter)
+        return self.__class__(q0, q1, -self.parameters)
 
 
 class CU2(_CUn_):
@@ -819,28 +799,19 @@ class CU2(_CUn_):
 
     def __init__(self, q0, q1, phi, lam):
         super(CU2, self).__init__(q0, q1)
-        self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam}
-        self.parameter = phi, lam
+
+        self.parameter_names = ["phi", "lam"]
+        self.parameters = phi, lam
 
     def _dagger(self) -> "Gate":
         """"""
         import numpy as np
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        phi = np.pi - self._lam
-        lam = - np.pi - self._phi
+        phi, lam = self.parameters
+        phi, lam = np.pi - lam, - np.pi - phi
         return self.__class__(q0, q1, phi, lam)
-
-    @property
-    def parameter(self):
-        return self._phi, self._lam
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._phi, self._lam = x
-        self._reprepare()
 
 
 class CU3(_CUn_):
@@ -869,24 +840,15 @@ class CU3(_CUn_):
         super(CU3, self).__init__(q0, q1)
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
-        self.parameter = theta, phi, lam
+        self.parameter_names = ["theta", "phi", "lam"]
+        self.parameters = theta, phi, lam
 
     def _dagger(self) -> "Gate":
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        theta, lam, phi = tuple(-x for x in self.parameter)
+        theta, lam, phi = tuple(-x for x in self.parameters)
         return self.__class__(q0, q1, theta, phi, lam)
-
-    @property
-    def parameter(self):
-        return self._theta, self._phi, self._lam
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._theta, self._phi, self._lam = x
-        self._reprepare()
 
 
 class CZPow(Gate): # pragma: no cover
@@ -963,9 +925,9 @@ class fSim(ParametrizedGate):
         super(fSim, self).__init__()
         self.name = "fsim"
         self.target_qubits = (q0, q1)
-        self._phi = None
-        self.nparams = 2
-        self.parameter = theta, phi
+
+        self.parameter_names = ["theta", "phi"]
+        self.parameters = theta, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
@@ -973,17 +935,7 @@ class fSim(ParametrizedGate):
     def _dagger(self) -> "Gate":
         """"""
         q0, q1 = self.target_qubits
-        return self.__class__(q0, q1, *(-x for x in self.parameter))
-
-    @property
-    def parameter(self):
-        return self._theta, self._phi
-
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._theta, self._phi = x
-        self._reprepare()
+        return self.__class__(q0, q1, *(-x for x in self.parameters))
 
 
 class GeneralizedfSim(ParametrizedGate):
@@ -1011,10 +963,8 @@ class GeneralizedfSim(ParametrizedGate):
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
 
-        self._phi = None
-        self.__unitary = None
-        self.nparams = 2
-        self.parameter = unitary, phi
+        self.parameter_names = ["u", "phi"]
+        self.parameters = unitary, phi
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
@@ -1024,19 +974,13 @@ class GeneralizedfSim(ParametrizedGate):
         # abstract method
         raise_error(NotImplementedError)
 
-    @property
-    def parameter(self):
-        return self.__unitary, self._phi
-
-    @parameter.setter
-    def parameter(self, x):
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
         shape = tuple(x[0].shape)
         if shape != (2, 2):
-            raise_error(ValueError, "Invalid shape {} of rotation for generalized "
+            raise_error(ValueError, "Invalid rotation shape {} for generalized "
                                     "fSim gate".format(shape))
-        self._unitary = None
-        self.__unitary, self._phi = x
-        self._reprepare()
+        ParametrizedGate.parameters.fset(self, x)
 
 
 class TOFFOLI(Gate):
@@ -1114,10 +1058,8 @@ class Unitary(ParametrizedGate):
         self.name = "Unitary" if name is None else name
         self.target_qubits = tuple(q)
 
-        self.__unitary = None
-        self.parameter = unitary
-        self.nparams = int(tuple(unitary.shape)[0]) ** 2
-
+        self.parameter_names = "u"
+        self.parameters = unitary
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
 
@@ -1135,23 +1077,18 @@ class Unitary(ParametrizedGate):
         # abstract method
         raise_error(NotImplementedError)
 
-    @property
-    def parameter(self):
-        return self.__unitary
-
-    @parameter.setter
-    def parameter(self, x):
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
         shape = tuple(x.shape)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
-            self.__unitary = x
+            ParametrizedGate.parameters.fset(self, x)
         elif shape == (2 ** (2 * self.rank),):
-            self.__unitary = x.reshape(true_shape)
+            ParametrizedGate.parameters.fset(self, x.reshape(true_shape))
         else:
-            raise_error(ValueError, "Invalid shape {} of unitary matrix acting on "
-                                    "{} target qubits.".format(shape, self.rank))
-        self._unitary = None
-        self._reprepare()
+            raise_error(ValueError, "Invalid shape {} of unitary matrix "
+                                    "acting on {} target qubits."
+                                    "".format(shape, self.rank))
 
 
 class VariationalLayer(ParametrizedGate):
@@ -1207,14 +1144,16 @@ class VariationalLayer(ParametrizedGate):
         self.name = "VariationalLayer" if name is None else name
 
         self.target_qubits = tuple(qubits)
+        self.parameter_names = [f"theta{i}" for i, _ in enumerate(params)]
+        parameter_values = list(params)
         self.params = self._create_params_dict(params)
-        self._parameters = list(params)
-        if params2 is None:
-            self.params2 = {}
-        else:
+        self.params2 = {}
+        if params2 is not None:
             self.params2 = self._create_params_dict(params2)
-            self._parameters.extend(params2)
-        self.nparams = len(self.params) + len(self.params2)
+            n = len(self.parameter_names)
+            self.parameter_names.extend([f"theta{i + n}" for i, _ in enumerate(params2)])
+            parameter_values.extend(params2)
+        self.parameters = parameter_values
 
         self.pairs = pairs
         targets = set(self.target_qubits)
@@ -1259,25 +1198,21 @@ class VariationalLayer(ParametrizedGate):
             varlayer.additional_unitary = self.additional_unitary.dagger()
         return varlayer
 
-    @property
-    def parameter(self) -> List[float]:
-        return self._parameters
-
-    @parameter.setter
-    def parameter(self, x):
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
         if self.params2:
             n = len(x) // 2
             self.params = self._create_params_dict(x[:n])
             self.params2 = self._create_params_dict(x[n:])
         else:
             self.params = self._create_params_dict(x)
-        self._parameters = x
+        ParametrizedGate.parameters.fset(self, x)
 
-        matrices, additional_matrix = self._calculate_unitaries()
-        for unitary, matrix in zip(self.unitaries, matrices):
-            unitary.parameter = matrix
-        if additional_matrix is not None:
-            self.additional_unitary.parameter = additional_matrix
+        #matrices, additional_matrix = self._calculate_unitaries()
+        #for unitary, matrix in zip(self.unitaries, matrices):
+        #    unitary.parameter = matrix
+        #if additional_matrix is not None:
+        #    self.additional_unitary.parameter = additional_matrix
 
     @property
     def unitary(self):

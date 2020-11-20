@@ -292,23 +292,34 @@ class ParametrizedGate(Gate):
 
     def __init__(self):
         super(ParametrizedGate, self).__init__()
-        self._theta = None
-        self.nparams = 1
+        self.parameter_names = "theta"
+        self._parameters = None
 
     @property
-    def parameter(self):
-        return self._theta
+    def nparams(self):
+        if isinstance(self.parameter_names, str):
+            return 1
+        return len(self.parameter_names)
 
-    def _reprepare(self):
-        if self.device_gates:
-            for gate in self.device_gates:
-                gate.parameter = self.parameter
+    @property
+    def parameters(self):
+        if isinstance(self.parameter_names, str):
+            return self._parameters
+        return tuple(self._parameters)
 
-    @parameter.setter
-    def parameter(self, x):
-        self._unitary = None
-        self._theta = x
-        self._reprepare()
+    @parameters.setter
+    def parameters(self, x):
+        if self.nparams == 1:
+            self._parameters = x
+        else:
+            if self._parameters is None:
+                self._parameters = self.nparams * [None]
+            if len(x) != self.nparams:
+                raise_error(ValueError, "Parametrized gate has {} parameters "
+                                        "but {} update values were given."
+                                        "".format(self.nparams, len(x)))
+            for i, v in enumerate(x):
+                self._parameters[i] = v
 
 
 class BackendGate(ABC):
@@ -340,6 +351,11 @@ class BackendGate(ABC):
             self._active_call = "density_matrix_call"
         else:
             self._active_call = "state_vector_call"
+
+    def _reprepare(self):
+        if self.device_gates:
+            for gate in self.device_gates:
+                gate.parameter = self.parameter
 
     @abstractmethod
     def prepare(self): # pragma: no-cover

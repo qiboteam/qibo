@@ -15,6 +15,7 @@ class TensorflowGate(BackendGate):
 
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
+        # TODO: Move these to a different file and refactor
         if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
@@ -65,8 +66,9 @@ class TensorflowGate(BackendGate):
 
     def _set_nqubits(self, state: tf.Tensor):
         """Sets ``gate.nqubits`` from state, if not already set."""
-        if self._nqubits is None:
+        if not self.is_prepared:
             self.nqubits = int(np.log2(tuple(state.shape)[0]))
+            self.prepare()
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         self._set_nqubits(state)
@@ -165,7 +167,10 @@ class I(TensorflowGate, base_gates.I):
         dim = 2 ** len(self.target_qubits)
         return np.eye(dim, dtype=DTYPES.get('NPTYPECPX'))
 
-    def __call__(self, state: tf.Tensor):
+    def state_vector_call(self, state: tf.Tensor):
+        return state
+
+    def density_matrix_call(self, state: tf.Tensor):
         return state
 
 
@@ -204,6 +209,7 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
 
 class M(TensorflowGate, base_gates.M):
+    # TODO: Move this to a different file and refactor
     from qibo.tensorflow import distutils
     from qibo.tensorflow import measurements
 
@@ -294,7 +300,8 @@ class RX(MatrixGate, base_gates.RX):
         base_gates.RX.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
-        cos, isin = np.cos(self.parameter / 2.0), -1j * np.sin(self.parameter / 2.0)
+        theta = self.parameters
+        cos, isin = np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)
         return np.array([[cos, isin], [isin, cos]], dtype=DTYPES.get('NPTYPECPX'))
 
 
@@ -305,7 +312,8 @@ class RY(MatrixGate, base_gates.RY):
         base_gates.RY.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
-        cos, sin = np.cos(self.parameter / 2.0), np.sin(self.parameter / 2.0)
+        theta = self.parameters
+        cos, sin = np.cos(theta / 2.0), np.sin(theta / 2.0)
         return np.array([[cos, -sin], [sin, cos]], dtype=DTYPES.get('NPTYPECPX'))
 
 
@@ -316,7 +324,7 @@ class RZ(MatrixGate, base_gates.RZ):
         base_gates.RZ.__init__(self, q, theta)
 
     def construct_unitary(self) -> np.ndarray:
-        phase = np.exp(1j * self.parameter / 2.0)
+        phase = np.exp(1j * self.parameters / 2.0)
         return np.diag([phase.conj(), phase]).astype(DTYPES.get('NPTYPECPX'))
 
 
@@ -330,11 +338,11 @@ class U1(MatrixGate, base_gates.U1):
     def prepare(self):
         TensorflowGate.prepare(self)
         with tf.device(self.device):
-            self.matrix = tf.constant(np.exp(1j * self.parameter),
+            self.matrix = tf.constant(np.exp(1j * self.parameters),
                                       dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
-        return np.diag([1, np.exp(1j * self.parameter)]).astype(
+        return np.diag([1, np.exp(1j * self.parameters)]).astype(
             DTYPES.get('NPTYPECPX'))
 
 
@@ -345,10 +353,10 @@ class U2(MatrixGate, base_gates.U2):
         base_gates.U2.__init__(self, q, phi, lam)
 
     def construct_unitary(self) -> np.ndarray:
-        eplus = np.exp(1j * (self._phi + self._lam) / 2.0)
-        eminus = np.exp(1j * (self._phi - self._lam) / 2.0)
-        return np.array([[eplus.conj(), - eminus.conj()],
-                         [eminus, eplus]],
+        phi, lam = self.parameters
+        eplus = np.exp(1j * (phi + lam) / 2.0)
+        eminus = np.exp(1j * (phi - lam) / 2.0)
+        return np.array([[eplus.conj(), - eminus.conj()], [eminus, eplus]],
                         dtype=DTYPES.get('NPTYPECPX')) / np.sqrt(2)
 
 
@@ -359,10 +367,11 @@ class U3(MatrixGate, base_gates.U3):
         base_gates.U3.__init__(self, q, theta, phi, lam)
 
     def construct_unitary(self) -> np.ndarray:
-        cost = np.cos(self._theta / 2)
-        sint = np.sin(self._theta / 2)
-        eplus = np.exp(1j * (self._phi + self._lam) / 2.0)
-        eminus = np.exp(1j * (self._phi - self._lam) / 2.0)
+        theta, phi, lam = self.parameters
+        cost = np.cos(theta / 2)
+        sint = np.sin(theta / 2)
+        eplus = np.exp(1j * (phi + lam) / 2.0)
+        eminus = np.exp(1j * (phi - lam) / 2.0)
         return np.array([[eplus.conj() * cost, - eminus.conj() * sint],
                          [eminus * sint, eplus * cost]],
                         dtype=DTYPES.get('NPTYPECPX'))
@@ -419,8 +428,11 @@ class _CUn_(MatrixGate):
     def construct_unitary(self) -> tf.Tensor:
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
 
-    def __call__(self, state):
-        return self.base.__call__(self, state)
+    def state_vector_call(self, state):
+        return self.base.state_vector_call(self, state)
+
+    def density_matrix_call(self, state):
+        return self.base.density_matrix_call(self, state)
 
 
 class CRX(_CUn_, base_gates.CRX):
@@ -501,7 +513,7 @@ class fSim(MatrixGate, base_gates.fSim):
 
     def prepare(self):
         TensorflowGate.prepare(self)
-        theta, phi = self.parameter
+        theta, phi = self.parameters
         cos, isin = np.cos(theta), -1j * np.sin(theta)
         phase = np.exp(-1j * phi)
         matrix = np.array([cos, isin, isin, cos, phase],
@@ -510,7 +522,7 @@ class fSim(MatrixGate, base_gates.fSim):
             self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
-        theta, phi = self.parameter
+        theta, phi = self.parameters
         cos, isin = np.cos(theta), -1j * np.sin(theta)
         matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
         matrix[1, 1], matrix[2, 2] = cos, cos
@@ -528,7 +540,7 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
 
     def prepare(self):
         TensorflowGate.prepare(self)
-        unitary, phi = self.parameter
+        unitary, phi = self.parameters
         matrix = np.zeros(5, dtype=DTYPES.get("NPTYPECPX"))
         matrix[:4] = np.reshape(unitary, (4,))
         matrix[4] = np.exp(-1j * phi)
@@ -536,14 +548,14 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
             self.matrix = tf.constant(matrix, dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> np.ndarray:
-        unitary, phi = self.parameter
+        unitary, phi = self.parameters
         matrix = np.eye(4, dtype=DTYPES.get('NPTYPECPX'))
         matrix[1:3, 1:3] = np.reshape(unitary, (2, 2))
         matrix[3, 3] = np.exp(-1j * phi)
         return matrix
 
     def _dagger(self) -> "GenerelizedfSim":
-        unitary, phi = self.parameter
+        unitary, phi = self.parameters
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
         else:
@@ -587,17 +599,16 @@ class Unitary(MatrixGate, base_gates.Unitary):
                                              "were given. Please switch to a "
                                              "Tensorflow backend to execute "
                                              "this operation.".format(n))
-        self._unitary = self.construct_unitary()
 
     def construct_unitary(self) -> np.ndarray:
-        unitary = self.parameter
+        unitary = self.parameters
         if isinstance(unitary, np.ndarray):
             return unitary.astype(DTYPES.get('NPTYPECPX'))
         if isinstance(unitary, tf.Tensor):
             return tf.identity(tf.cast(unitary, dtype=DTYPES.get('DTYPECPX')))
 
     def _dagger(self) -> "Unitary":
-        unitary = self.parameter
+        unitary = self.parameters
         if isinstance(unitary, tf.Tensor):
             ud = tf.math.conj(tf.transpose(unitary))
         else:
@@ -661,13 +672,16 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                     additional_matrix, self.additional_target)
                 self.additional_unitary.density_matrix = self.density_matrix
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
         for i, unitary in enumerate(self.unitaries):
             state = unitary(state)
         if self.additional_unitary is not None:
             state = self.additional_unitary(state)
         return state
+
+    def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.state_vector_call(state)
 
 
 class Flatten(TensorflowGate, base_gates.Flatten):
@@ -677,15 +691,14 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         base_gates.Flatten.__init__(self, coefficients)
         self.swap_reset = []
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
+    def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        self._set_nqubits(state)
         shape = tuple(state.shape)
-        if self._nqubits is None:
-            if self.density_matrix:
-                self.nqubits = len(shape) // 2
-            else:
-                self.nqubits = len(shape)
         _state = np.array(self.coefficients).reshape(shape)
         return tf.convert_to_tensor(_state, dtype=DTYPES.get("DTYPECPX"))
+
+    def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.state_vector_call(state)
 
 
 class CallbackGate(TensorflowGate, base_gates.CallbackGate):
@@ -695,10 +708,13 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         base_gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
-    def __call__(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
+    def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        self._set_nqubits(state)
         self.callback.append(self.callback(state, self.density_matrix))
         return state
+
+    def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        return self.state_vector_call(state)
 
 
 class KrausChannel(TensorflowGate, base_gates.KrausChannel):
