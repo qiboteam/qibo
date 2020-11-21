@@ -104,13 +104,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if not isinstance(gate, gate_module.TensorflowGate):
             raise_error(NotImplementedError, "Distributed circuit does not "
                                              "support native tensorflow gates.")
-        if isinstance(gate, gates.VariationalLayer):
-            gate.prepare()
-        elif isinstance(gate, gates.KrausChannel):
+        if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
-              not isinstance(gate, gates.M)):
+              not isinstance(gate, (gates.M, gates.VariationalLayer))):
             raise_error(ValueError, "Insufficient qubits to use for global in "
                                     "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+from abc import abstractmethod
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
 from qibo.base.abstract_gates import Gate, ParametrizedGate, SpecialGate
@@ -964,9 +965,9 @@ class GeneralizedfSim(ParametrizedGate):
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
 
+    @abstractmethod
     def _dagger(self) -> "Gate": # pragma: no cover
         """"""
-        # abstract method
         raise_error(NotImplementedError)
 
     @ParametrizedGate.parameters.setter
@@ -1061,9 +1062,9 @@ class Unitary(ParametrizedGate):
         args.extend(q)
         return self.__class__(*args, **self.init_kwargs)
 
+    @abstractmethod
     def _dagger(self) -> "Gate": # pragma: no cover
         """"""
-        # abstract method
         raise_error(NotImplementedError)
 
     @ParametrizedGate.parameters.setter
@@ -1153,39 +1154,23 @@ class VariationalLayer(ParametrizedGate):
         elif len(additional_targets) == 1:
             self.additional_target = additional_targets.pop()
         else:
-            raise_error(ValueError, "Variational layer can have at most one additional "
-                                    "target for one qubit gates but has {}."
-                                    "".format(additional_targets))
+            raise_error(ValueError, "Variational layer can have at most one "
+                                    "additional target for one qubit gates but "
+                                    " has {}.".format(additional_targets))
 
         self.one_qubit_gate = one_qubit_gate
         self.two_qubit_gate = two_qubit_gate
 
-        self.is_dagger = False
-        self.unitaries = []
-        self.additional_unitary = None
-
     def _create_params_dict(self, params: List[float]) -> Dict[int, float]:
         if len(self.target_qubits) != len(params):
-            raise_error(ValueError, "VariationalLayer has {} target qubits but {} "
-                                    "parameters were given."
+            raise_error(ValueError, "VariationalLayer has {} target qubits but "
+                                    "{} parameters were given."
                                     "".format(len(self.target_qubits), len(params)))
         return {q: p for q, p in zip(self.target_qubits, params)}
 
-    def _calculate_unitaries(self): # pragma: no cover
-        # abstract method
-        return raise_error(NotImplementedError)
-
-    def _dagger(self) -> "Gate":
-        """"""
-        import copy
-        if not self.unitaries:
-            self.prepare()
-        varlayer = copy.copy(self)
-        varlayer.is_dagger = True
-        varlayer.unitaries = [u.dagger() for u in self.unitaries]
-        if self.additional_unitary is not None:
-            varlayer.additional_unitary = self.additional_unitary.dagger()
-        return varlayer
+    @abstractmethod
+    def _dagger(self) -> "Gate": # pragma: no cover
+        raise_error(NotImplementedError)
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):

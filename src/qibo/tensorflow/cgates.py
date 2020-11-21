@@ -196,8 +196,8 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
 
     def construct_unitary(self):
-        raise_error(RuntimeError, "Collapse gate does not have unitary "
-                                  "representation.")
+        raise_error(ValueError, "Collapse gate does not have unitary "
+                                "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
@@ -277,8 +277,8 @@ class M(TensorflowGate, base_gates.M):
         return DEVICES['CPU'][0]
 
     def construct_unitary(self):
-        raise_error(RuntimeError, "Measurement gate does not have unitary "
-                                  "representation.")
+        raise_error(ValueError, "Measurement gate does not have unitary "
+                                "representation.")
 
     def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         if isinstance(state, self.distutils.DistributedState):
@@ -632,22 +632,7 @@ class Unitary(MatrixGate, base_gates.Unitary):
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
 
 
-class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
-
-    def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
-                 one_qubit_gate, two_qubit_gate,
-                 params: List[float], params2: Optional[List[float]] = None,
-                 name: Optional[str] = None):
-        MatrixGate.__init__(self)
-        base_gates.VariationalLayer.__init__(self, qubits, pairs,
-                                             one_qubit_gate, two_qubit_gate,
-                                             params, params2,
-                                             name=name)
-
-    def _unitary_constructor(self, matrix, *targets):
-        gate = Unitary(matrix, *targets)
-        gate.density_matrix = self.density_matrix
-        return gate
+class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
 
     def _calculate_unitaries(self):
         matrices = np.stack([np.kron(
@@ -676,17 +661,43 @@ class VariationalLayer(MatrixGate, base_gates.VariationalLayer):
                 additional_matrix = _new @ additional_matrix
         return matrices, additional_matrix
 
+    def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
+                 one_qubit_gate, two_qubit_gate,
+                 params: List[float], params2: Optional[List[float]] = None,
+                 name: Optional[str] = None):
+        TensorflowGate.__init__(self)
+        base_gates.VariationalLayer.__init__(self, qubits, pairs,
+                                             one_qubit_gate, two_qubit_gate,
+                                             params, params2,
+                                             name=name)
+
+        matrices, additional_matrix = self._calculate_unitaries()
+        self.unitaries = []
+        for targets, matrix in zip(self.pairs, matrices):
+            unitary = Unitary(matrix, *targets)
+            unitary.density_matrix = self.density_matrix
+            self.unitaries.append(unitary)
+        if self.additional_target is not None:
+            self.additional_unitary = Unitary(
+                additional_matrix, self.additional_target)
+            self.additional_unitary.density_matrix = self.density_matrix
+        else:
+            self.additional_unitary = None
+
+    def _dagger(self):
+        import copy
+        varlayer = copy.copy(self)
+        varlayer.unitaries = [u.dagger() for u in self.unitaries]
+        if self.additional_unitary is not None:
+            varlayer.additional_unitary = self.additional_unitary.dagger()
+        return varlayer
+
+    def construct_unitary(self):
+        raise_error(ValueError, "VariationalLayer gate does not have unitary "
+                                 "representation.")
+
     def prepare(self):
         self.is_prepared = True
-        matrices, additional_matrix = self._calculate_unitaries()
-        if not self.is_dagger:
-            self.unitaries = [self._unitary_constructor(matrices[i], *targets)
-                              for i, targets in enumerate(self.pairs)]
-
-            if additional_matrix is not None:
-                self.additional_unitary = self._unitary_constructor(
-                    additional_matrix, self.additional_target)
-                self.additional_unitary.density_matrix = self.density_matrix
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         TensorflowGate._set_nqubits(self, state)
@@ -708,8 +719,8 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         self.swap_reset = []
 
     def construct_unitary(self):
-        raise_error(RuntimeError, "Flatten gate does not have unitary "
-                                  "representation.")
+        raise_error(ValueError, "Flatten gate does not have unitary "
+                                 "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         self._set_nqubits(state)
@@ -729,8 +740,8 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         self.swap_reset = []
 
     def construct_unitary(self):
-        raise_error(RuntimeError, "Unitary gate does not have unitary "
-                                  "representation.")
+        raise_error(ValueError, "Unitary gate does not have unitary "
+                                 "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         self._set_nqubits(state)
@@ -777,7 +788,7 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         self.inv_gates = tuple(inv_gates)
 
     def construct_unitary(self):
-        raise_error(RuntimeError, "Channels do not have unitary representation.")
+        raise_error(ValueError, "Channels do not have unitary representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(ValueError, "`KrausChannel` cannot be applied to state "
