@@ -125,11 +125,17 @@ class BaseCircuit(ABC):
         # Add gates from `c1` to `newcircuit` (including measurements)
         for gate in c1.queue:
             newcircuit.queue.append(gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                newcircuit.parametrized_gates.append(gate)
         newcircuit.measurement_gate = c1.measurement_gate
         newcircuit.measurement_tuples = c1.measurement_tuples
         # Add gates from `c2` to `newcircuit` (including measurements)
         for gate in c2.queue:
+            newcircuit.check_measured(gate.qubits)
             newcircuit.queue.append(gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                newcircuit.parametrized_gates.append(gate)
+
         if newcircuit.measurement_gate is None:
             newcircuit.measurement_gate = c2.measurement_gate
             newcircuit.measurement_tuples = c2.measurement_tuples
