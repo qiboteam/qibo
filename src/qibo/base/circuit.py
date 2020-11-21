@@ -535,16 +535,16 @@ class BaseCircuit(ABC):
         """
         if n == len(self.parametrized_gates):
             for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i]
+                gate.parameters = parameters[i]
         elif n == self.parametrized_gates.nparams:
             import numpy as np
             parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
                 if gate.nparams == 1:
-                    gate.parameter = parameters[i + k]
+                    gate.parameters = parameters[i + k]
                 else:
-                    gate.parameter = parameters[i + k: i + k + gate.nparams]
+                    gate.parameters = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
@@ -594,7 +594,7 @@ class BaseCircuit(ABC):
                 raise_error(ValueError, "Dictionary with gate parameters does not "
                                         "agree with the circuit gates.")
             for gate in self.parametrized_gates:
-                gate.parameter = parameters[gate]
+                gate.parameters = parameters[gate]
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
@@ -611,19 +611,19 @@ class BaseCircuit(ABC):
                 details on each format.
         """
         if format == "list":
-            return [gate.parameter for gate in self.parametrized_gates]
+            return [gate.parameters for gate in self.parametrized_gates]
         elif format == "dict":
-            return {gate: gate.parameter for gate in self.parametrized_gates}
+            return {gate: gate.parameters for gate in self.parametrized_gates}
         elif format == "flatlist":
             import numpy as np
             params = []
             for gate in self.parametrized_gates:
-                if isinstance(gate.parameter, np.ndarray):
-                    params.extend(gate.parameter.ravel())
-                elif isinstance(gate.parameter, collections.abc.Iterable):
-                    params.extend(gate.parameter)
+                if isinstance(gate.parameters, np.ndarray):
+                    params.extend(gate.parameters.ravel())
+                elif isinstance(gate.parameters, collections.abc.Iterable):
+                    params.extend(gate.parameters)
                 else:
-                    params.append(gate.parameter)
+                    params.append(gate.parameters)
             return params
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")

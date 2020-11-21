@@ -4,13 +4,12 @@ import qibo
 from qibo.models import Circuit
 from qibo import gates
 
-_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
-_DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
-                    ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
+_DEVICE_BACKENDS = [("custom", None)] #("matmuleinsum", None),
+                    #("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_rx_parameter_setter(backend):
+@pytest.mark.parametrize("backend,accelerators", _DEVICE_BACKENDS)
+def test_rx_parameter_setter(backend, accelerators):
     """Check that the parameter setter of RX gate is working properly."""
     def exact_state(theta):
         phase = np.exp(1j * theta / 2.0)
@@ -21,7 +20,7 @@ def test_rx_parameter_setter(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    c = Circuit(1)
+    c = Circuit(1, accelerators=accelerators)
     c.add(gates.H(0))
     c.add(gates.RX(0, theta=theta))
     final_state = c().numpy()
@@ -29,7 +28,7 @@ def test_rx_parameter_setter(backend):
     np.testing.assert_allclose(final_state, target_state)
 
     theta = 0.4321
-    c.queue[-1].parameter = theta
+    c.queue[-1].parameters = theta
     final_state = c().numpy()
     target_state = exact_state(theta)
     np.testing.assert_allclose(final_state, target_state)

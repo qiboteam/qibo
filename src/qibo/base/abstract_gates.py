@@ -240,14 +240,9 @@ class ParametrizedGate(Gate):
     def __init__(self):
         super(ParametrizedGate, self).__init__()
         self.parameter_names = "theta"
+        self.nparams = 1
         self._parameters = None
-
-    @property
-    def nparams(self):
-        if isinstance(self.parameter_names, str):
-            return 1
-        return len(self.parameter_names)
-
+        
     @property
     def parameters(self):
         if isinstance(self.parameter_names, str):
@@ -256,17 +251,24 @@ class ParametrizedGate(Gate):
 
     @parameters.setter
     def parameters(self, x):
-        if self.nparams == 1:
+        if isinstance(self.parameter_names, str):
+            nparams = 1
+        else:
+            nparams = len(self.parameter_names)
+
+        if nparams == 1:
             self._parameters = x
         else:
             if self._parameters is None:
-                self._parameters = self.nparams * [None]
-            if len(x) != self.nparams:
+                self._parameters = nparams * [None]
+            if len(x) != nparams:
                 raise_error(ValueError, "Parametrized gate has {} parameters "
                                         "but {} update values were given."
-                                        "".format(self.nparams, len(x)))
+                                        "".format(nparams, len(x)))
             for i, v in enumerate(x):
                 self._parameters[i] = v
+        if self.is_prepared:
+            self.reprepare()
 
 
 class BackendGate(ABC):

@@ -445,6 +445,7 @@ class _Un_(ParametrizedGate):
     def __init__(self, q):
         super(_Un_, self).__init__()
         self.name = "u{}".format(self.order)
+        self.nparams = self.order
         self.target_qubits = (q,)
         self.init_args = [q]
 
@@ -732,6 +733,7 @@ class _CUn_(ParametrizedGate):
     def __init__(self, q0, q1):
         super(_CUn_, self).__init__()
         self.name = "cu{}".format(self.order)
+        self.nparams = self.order
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
@@ -924,6 +926,7 @@ class fSim(ParametrizedGate):
 
         self.parameter_names = ["theta", "phi"]
         self.parameters = theta, phi
+        self.nparams = 2
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"theta": theta, "phi": phi}
@@ -961,6 +964,7 @@ class GeneralizedfSim(ParametrizedGate):
 
         self.parameter_names = ["u", "phi"]
         self.parameters = unitary, phi
+        self.nparams = 5
 
         self.init_args = [q0, q1]
         self.init_kwargs = {"unitary": unitary, "phi": phi}
@@ -1050,6 +1054,8 @@ class Unitary(ParametrizedGate):
 
         self.parameter_names = "u"
         self.parameters = unitary
+        self.nparams = 4 ** len(self.target_qubits)
+
         self.init_args = [unitary] + list(q)
         self.init_kwargs = {"name": name}
 
@@ -1144,6 +1150,7 @@ class VariationalLayer(ParametrizedGate):
             self.parameter_names.extend([f"theta{i + n}" for i, _ in enumerate(params2)])
             parameter_values.extend(params2)
         self.parameters = parameter_values
+        self.nparams = len(parameter_values)
 
         self.pairs = pairs
         targets = set(self.target_qubits)
