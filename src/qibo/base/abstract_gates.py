@@ -129,9 +129,9 @@ class Gate:
         The user is not supposed to set `nqubits` by hand.
         """
         if self._nqubits is not None and n != self.nqubits:
-            raise_error(RuntimeError, "Cannot set gate number of qubits to {} "
-                                      "because it is already set to {}."
-                                      "".format(n, self.nqubits))
+            raise_error(ValueError, "Cannot set gate number of qubits to {} "
+                                    "because it is already set to {}."
+                                    "".format(n, self.nqubits))
         self._nqubits = n
         self._nstates = 2**n
 
