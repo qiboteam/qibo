@@ -4,8 +4,8 @@ import qibo
 from qibo.models import Circuit
 from qibo import gates
 
-_DEVICE_BACKENDS = [("custom", None)] #("matmuleinsum", None),
-                    #("custom", {"/GPU:0": 1, "/GPU:1": 1})]
+_DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
+                    ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
 
 @pytest.mark.parametrize("backend,accelerators", _DEVICE_BACKENDS)
