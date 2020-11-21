@@ -140,7 +140,7 @@ class BaseCircuit(ABC):
                                           "circuit.".format(k))
                 newcircuit.check_measured(v)
                 newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate._add(c2.measurement_gate)
+            newcircuit.measurement_gate.add(c2.measurement_gate)
         return newcircuit
 
     def on_qubits(self, *q):
@@ -469,7 +469,7 @@ class BaseCircuit(ABC):
             self.measurement_gate = gate
             self.measurement_tuples[name] = tuple(gate.target_qubits)
         else:
-            self.measurement_gate._add(gate)
+            self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
     def _add_layer(self, gate: gates.Gate):

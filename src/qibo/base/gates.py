@@ -281,7 +281,7 @@ class M(Gate):
         pt = self.measurements.GateResult._get_bitflip_tuple(self.qubits, p)
         return {q: p for q, p in zip(self.qubits, pt)}
 
-    def _add(self, gate: "M"):
+    def add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
 
         This method is only used for creating the global measurement gate used

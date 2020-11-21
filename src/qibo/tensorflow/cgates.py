@@ -241,42 +241,6 @@ class M(TensorflowGate, gates.M):
             self.traceout = DefaultEinsum.partialtrace_str(
                 qubits, self.nqubits, measuring=True)
 
-    def _calculate_probabilities_dm(self, state: tf.Tensor) -> tf.Tensor:
-        return tf.cast(tf.einsum(self._traceout, state), dtype=DTYPES.get('DTYPE'))
-
-    def _calculate_probabilities(self, state: tf.Tensor) -> tf.Tensor:
-        """Calculates probabilities from state using Born's rule.
-
-        Args:
-            state: State vector of shape nqubits * (2,) or density matrix of
-                shape 2 * nqubits * (2,).
-
-        Returns:
-            Probabilities for measured qubits with shape len(target_qubits)* (2,).
-        """
-        # Trace out unmeasured qubits
-        if self.density_matrix:
-            probs = self._calculate_probabilities_dm(state)
-        else:
-            probs = tf.reduce_sum(tf.square(tf.abs(state)),
-                                  axis=self.unmeasured_qubits)
-        # Bring probs in the order specified by the user
-        return tf.transpose(probs, perm=self.reduced_target_qubits)
-
-    def _sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
-        dtype = DTYPES.get('DTYPEINT')
-        probs_dim = tf.cast((2 ** len(self.target_qubits),), dtype=dtype)
-        shape = (1 + self.density_matrix) * self.nqubits * (2,)
-        probs = self._calculate_probabilities(tf.reshape(state, shape))
-        logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
-        samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
-        result = self.measurements.GateResult(
-            self.qubits, decimal_samples=samples_dec)
-        # optional bitflip noise
-        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            result = result.apply_bitflips(*self.bitflip_map)
-        return result
-
     def _get_cpu(self): # pragma: no cover
         # case not covered by GitHub workflows because it requires OOM
         if not DEVICES['CPU']:
@@ -287,12 +251,40 @@ class M(TensorflowGate, gates.M):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
+    def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        shape = self.nqubits * (2,)
+        x = tf.reshape(tf.square(tf.abs(state)), shape)
+        return tf.reduce_sum(x, axis=self.unmeasured_qubits)
+
+    def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        shape = 2 * self.nqubits * (2,)
+        state = tf.einsum(self.traceout, tf.reshape(state, shape))
+        return tf.cast(tf.einsum(self._traceout, state), dtype=DTYPES.get('DTYPE'))
+
+    def sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
+        probs = getattr(self, self._active_call)(state)
+        probs = tf.transpose(probs, perm=self.reduced_target_qubits)
+
+        dtype = DTYPES.get('DTYPEINT')
+        probs_dim = tf.cast((2 ** len(self.target_qubits),), dtype=dtype)
+        logits = tf.math.log(tf.reshape(probs, probs_dim))[tf.newaxis]
+
+        samples_dec = tf.random.categorical(logits, nshots, dtype=dtype)[0]
+        result = self.measurements.GateResult(
+            self.qubits, decimal_samples=samples_dec)
+        # optional bitflip noise
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
+        return result
+
     def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         if isinstance(state, self.distutils.DistributedState):
             with tf.device(state.device):
                 state = state.vector
+
         if not self.is_prepared:
-            TensorflowGate.set_nqubits(self, state)
+            self.set_nqubits(state)
+
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
@@ -301,13 +293,13 @@ class M(TensorflowGate, gates.M):
         oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
         try:
             with tf.device(self.device):
-                result = self._sample(state, nshots)
+                result = self.sample(state, nshots)
         except oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
             device = self._get_cpu()
             with tf.device(device):
-                result = self._sample(state, nshots)
+                result = self.sample(state, nshots)
         return result
 
 
