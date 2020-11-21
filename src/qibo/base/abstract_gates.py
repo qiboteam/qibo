@@ -242,7 +242,7 @@ class ParametrizedGate(Gate):
         self.parameter_names = "theta"
         self.nparams = 1
         self._parameters = None
-        
+
     @property
     def parameters(self):
         if isinstance(self.parameter_names, str):
@@ -322,7 +322,8 @@ class BackendGate(ABC):
         if self.__class__.__name__ == other.__class__.__name__:
             square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
             if self.__class__.__name__ in square_identity:
-                return self.module.I(*self.qubits)
+                from qibo.gates import I
+                return I(*self.qubits)
         return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
 
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
