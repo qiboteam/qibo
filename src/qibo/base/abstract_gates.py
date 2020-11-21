@@ -130,63 +130,10 @@ class Gate:
         """
         if self._nqubits is not None:
             raise_error(RuntimeError, "The number of qubits for this gates is "
-                                      "set to {}.".format(self._nqubits))
+                                      "already set to {}."
+                                      "".format(self._nqubits))
         self._nqubits = n
         self._nstates = 2**n
-
-    @property
-    def unitary(self):
-        """Unitary matrix corresponding to the gate's action on a state vector.
-
-        This matrix is not necessarily used by ``__call__`` when applying the
-        gate to a state vector.
-        """
-        if len(self.qubits) > 2:
-            raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
-                                             "gates that target more than two qubits.")
-        if self._unitary is None:
-            self._unitary = self.construct_unitary()
-        if self.is_controlled_by and tuple(self._unitary.shape) == (2, 2):
-            self._unitary = self.control_unitary(self._unitary)
-        return self._unitary
-
-    def construct_unitary(self): # pragma: no cover
-        """Constructs the gate's unitary matrix.
-
-        Args:
-            *args: Variational parameters for parametrized gates.
-
-        Returns:
-            Unitary matrix as an array or tensor supported by the backend.
-        """
-        # abstract method
-        return raise_error(NotImplementedError)
-
-    @staticmethod
-    def control_unitary(unitary): # pragma: no cover
-        """Controls unitary matrix on one qubit.
-
-        Helper method for ``construct_unitary`` for gates where ``controlled_by``
-        has been used.
-        """
-        # abstract method
-        raise_error(NotImplementedError)
-
-    def __matmul__(self, other: "Gate") -> "Gate":
-        """Gate multiplication."""
-        if self.qubits != other.qubits:
-            raise_error(NotImplementedError, "Cannot multiply gates that target "
-                                             "different qubits.")
-        if self.__class__.__name__ == other.__class__.__name__:
-            square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
-            if self.__class__.__name__ in square_identity:
-                from qibo import gates
-                return gates.I(*self.qubits)
-        return None
-
-    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
-        # abstract method
-        return self.__matmul__(other)
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -324,6 +271,8 @@ class ParametrizedGate(Gate):
 
 class BackendGate(ABC):
 
+    module = None
+
     def __init__(self):
         self.is_prepared = False
         # Cast gate matrices to the proper device
@@ -352,21 +301,63 @@ class BackendGate(ABC):
         else:
             self._active_call = "state_vector_call"
 
+    @property
+    def unitary(self):
+        """Unitary matrix representing the gate in the computational basis."""
+        if len(self.qubits) > 2:
+            raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
+                                             "gates that target more than two qubits.")
+        if self._unitary is None:
+            self._unitary = self.construct_unitary()
+        if self.is_controlled_by and tuple(self._unitary.shape) == (2, 2):
+            self._unitary = self.control_unitary(self._unitary)
+        return self._unitary
+
     def _reprepare(self):
         if self.device_gates:
             for gate in self.device_gates:
                 gate.parameter = self.parameter
 
+    def __matmul__(self, other: "Gate") -> "Gate":
+        """Gate multiplication."""
+        if self.qubits != other.qubits:
+            raise_error(NotImplementedError, "Cannot multiply gates that target "
+                                             "different qubits.")
+        if self.__class__.__name__ == other.__class__.__name__:
+            square_identity = {"H", "X", "Y", "Z", "CNOT", "CZ", "SWAP"}
+            if self.__class__.__name__ in square_identity:
+                return self.module.I(*self.qubits)
+        return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
+
+    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
+        # abstract method
+        return self.__matmul__(other)
+
+    @staticmethod
     @abstractmethod
-    def prepare(self): # pragma: no-cover
+    def control_unitary(unitary): # pragma: no cover
+        """Controls unitary matrix on one qubit.
+
+        Helper method for ``construct_unitary`` for gates defined using
+        ``controlled_by``.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def state_vector_call(self, state): # pragma: no-cover
+    def construct_unitary(self): # pragma: no cover
+        """Constructs the gate's unitary matrix."""
+        return raise_error(NotImplementedError)
+
+    @abstractmethod
+    def prepare(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_call(self, state): # pragma: no-cover
+    def state_vector_call(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __call__(self, state):

@@ -342,11 +342,6 @@ class M(Gate):
         """"""
         raise_error(NotImplementedError, "Measurement gates cannot be controlled.")
 
-    @property
-    def unitary(self):
-        raise_error(ValueError, "Measurements cannot be represented as unitary "
-                                "matrices.")
-
 
 class _Rn_(ParametrizedGate):
     """Abstract class for defining the RX, RY and RZ rotations.
@@ -999,12 +994,6 @@ class TOFFOLI(Gate):
         self.target_qubits = (q2,)
         self.init_args = [q0, q1, q2]
 
-    @property
-    def unitary(self):
-        if self._unitary is None:
-            self._unitary = self.construct_unitary()
-        return self._unitary
-
     def decompose(self, *free, use_toffolis: bool = True) -> List[Gate]:
         c0, c1 = self.control_qubits
         t = self.target_qubits[0]
@@ -1214,11 +1203,6 @@ class VariationalLayer(ParametrizedGate):
         #if additional_matrix is not None:
         #    self.additional_unitary.parameter = additional_matrix
 
-    @property
-    def unitary(self):
-        raise_error(ValueError, "Unitary property does not exist for the "
-                                "``VariationalLayer``.")
-
 
 class Flatten(SpecialGate):
     """Passes an arbitrary state vector in the circuit.
@@ -1327,12 +1311,6 @@ class KrausChannel(Gate):
             qubitset.update(qubits)
             gatelist.append(self.module.Unitary(matrix, *list(qubits)))
         return tuple(gatelist), tuple(sorted(qubitset))
-
-    @property
-    def unitary(self): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "Unitary property not implemented for "
-                                         "channels.")
 
     def controlled_by(self, *q):
         """"""

@@ -33,12 +33,6 @@ class TensorflowGate(BackendGate):
         self.qubits_tensor_dm = None
         self.target_qubits_dm = None
 
-    def __matmul__(self, other: "TensorflowGate") -> "TensorflowGate":
-        gate = base_gates.Gate.__matmul__(self, other)
-        if gate is None:
-            gate = Unitary(self.unitary @ other.unitary, *self.qubits)
-        return gate
-
     @staticmethod
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
         shape = tuple(unitary.shape)
@@ -98,10 +92,12 @@ class MatrixGate(TensorflowGate):
                                       dtype=DTYPES.get('DTYPECPX'))
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-       return self.gate_op(state, self.matrix, self.qubits_tensor,
-                           self.nqubits, *self.target_qubits)
+        super()._set_nqubits(state)
+        return self.gate_op(state, self.matrix, self.qubits_tensor,
+                            self.nqubits, *self.target_qubits)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        super()._set_nqubits(state)
         state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
                              2 * self.nqubits, *self.target_qubits)
         adjmatrix = tf.math.conj(self.matrix)
@@ -168,9 +164,11 @@ class I(TensorflowGate, base_gates.I):
         return np.eye(dim, dtype=DTYPES.get('NPTYPECPX'))
 
     def state_vector_call(self, state: tf.Tensor):
+        TensorflowGate._set_nqubits(self, state)
         return state
 
     def density_matrix_call(self, state: tf.Tensor):
+        TensorflowGate._set_nqubits(self, state)
         return state
 
 
@@ -191,16 +189,23 @@ class Collapse(TensorflowGate, base_gates.Collapse):
             return len(self.target_qubits) * [res]
         return list(res)
 
-    def _prepare(self):
+    def prepare(self):
+        TensorflowGate.prepare(self)
         n = len(self.result)
         result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
         self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
 
+    def construct_unitary(self):
+        raise_error(RuntimeError, "Collapse gate does not have unitary "
+                                  "representation.")
+
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
+        TensorflowGate._set_nqubits(self, state)
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
                             self.nqubits, self.normalize)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
+        TensorflowGate._set_nqubits(self, state)
         state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
                              2 * self.nqubits, False)
         state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
@@ -216,6 +221,7 @@ class M(TensorflowGate, base_gates.M):
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
+        TensorflowGate.__init__(self)
         base_gates.M.__init__(self, *q, register_name=register_name,
                               p0=p0, p1=p1)
         self.qubits_tensor = None
@@ -269,6 +275,10 @@ class M(TensorflowGate, base_gates.M):
         if not DEVICES['CPU']:
             raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
         return DEVICES['CPU'][0]
+
+    def construct_unitary(self):
+        raise_error(RuntimeError, "Measurement gate does not have unitary "
+                                  "representation.")
 
     def __call__(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         if isinstance(state, self.distutils.DistributedState):
@@ -577,6 +587,12 @@ class TOFFOLI(TensorflowGate, base_gates.TOFFOLI):
         matrix[-1, -2], matrix[-1, -1] = 1, 0
         return matrix
 
+    @property
+    def unitary(self):
+        if self._unitary is None:
+            self._unitary = self.construct_unitary()
+        return self._unitary
+
 
 class Unitary(MatrixGate, base_gates.Unitary):
 
@@ -691,6 +707,10 @@ class Flatten(TensorflowGate, base_gates.Flatten):
         base_gates.Flatten.__init__(self, coefficients)
         self.swap_reset = []
 
+    def construct_unitary(self):
+        raise_error(RuntimeError, "Flatten gate does not have unitary "
+                                  "representation.")
+
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         self._set_nqubits(state)
         shape = tuple(state.shape)
@@ -707,6 +727,10 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
         TensorflowGate.__init__(self)
         base_gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
+
+    def construct_unitary(self):
+        raise_error(RuntimeError, "Unitary gate does not have unitary "
+                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         self._set_nqubits(state)
@@ -737,6 +761,7 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
         return Unitary(inv_matrix, *gate.target_qubits)
 
     def prepare(self):
+        self.is_prepared = True
         inv_gates = []
         for gate in self.gates:
             inv_gate = self._invert(gate)
@@ -750,6 +775,9 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
             inv_gates.append(inv_gate)
         inv_gates[-1] = None
         self.inv_gates = tuple(inv_gates)
+
+    def construct_unitary(self):
+        raise_error(RuntimeError, "Channels do not have unitary representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         raise_error(ValueError, "`KrausChannel` cannot be applied to state "
