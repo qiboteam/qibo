@@ -58,19 +58,15 @@ class TensorflowGate(BackendGate):
                                               self.nqubits)
                 self.qubits_tensor_dm = self.qubits_tensor + self.nqubits
 
-    def _set_nqubits(self, state: tf.Tensor):
-        """Sets ``gate.nqubits`` from state, if not already set."""
-        if not self.is_prepared:
-            self.nqubits = int(np.log2(tuple(state.shape)[0]))
-            self.prepare()
+    def set_nqubits(self, state: tf.Tensor):
+        self.nqubits = int(np.log2(tuple(state.shape)[0]))
+        self.prepare()
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self._set_nqubits(state)
         return self.gate_op(state, self.qubits_tensor, self.nqubits,
                             *self.target_qubits)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        self._set_nqubits(state)
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits)
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
@@ -79,7 +75,7 @@ class TensorflowGate(BackendGate):
 
 
 class MatrixGate(TensorflowGate):
-    """``TensorflowGate`` that uses matrix to be applied to states."""
+    """Gate that uses matrix multiplication to be applied to states."""
 
     def __init__(self):
         super().__init__()
@@ -92,12 +88,10 @@ class MatrixGate(TensorflowGate):
                                       dtype=DTYPES.get('DTYPECPX'))
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        super()._set_nqubits(state)
         return self.gate_op(state, self.matrix, self.qubits_tensor,
                             self.nqubits, *self.target_qubits)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        super()._set_nqubits(state)
         state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
                              2 * self.nqubits, *self.target_qubits)
         adjmatrix = tf.math.conj(self.matrix)
@@ -164,11 +158,9 @@ class I(TensorflowGate, base_gates.I):
         return np.eye(dim, dtype=DTYPES.get('NPTYPECPX'))
 
     def state_vector_call(self, state: tf.Tensor):
-        TensorflowGate._set_nqubits(self, state)
         return state
 
     def density_matrix_call(self, state: tf.Tensor):
-        TensorflowGate._set_nqubits(self, state)
         return state
 
 
@@ -200,12 +192,10 @@ class Collapse(TensorflowGate, base_gates.Collapse):
                                 "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
                             self.nqubits, self.normalize)
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
         state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
                              2 * self.nqubits, False)
         state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
@@ -284,7 +274,8 @@ class M(TensorflowGate, base_gates.M):
         if isinstance(state, self.distutils.DistributedState):
             with tf.device(state.device):
                 state = state.vector
-        TensorflowGate._set_nqubits(self, state)
+        if not self.is_prepared:
+            TensorflowGate.set_nqubits(self, state)
         if np.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
@@ -665,11 +656,10 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
                  one_qubit_gate, two_qubit_gate,
                  params: List[float], params2: Optional[List[float]] = None,
                  name: Optional[str] = None):
-        TensorflowGate.__init__(self)
+        self.module.TensorflowGate.__init__(self)
         base_gates.VariationalLayer.__init__(self, qubits, pairs,
                                              one_qubit_gate, two_qubit_gate,
-                                             params, params2,
-                                             name=name)
+                                             params, params2, name=name)
 
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = []
@@ -678,7 +668,7 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
             unitary.density_matrix = self.density_matrix
             self.unitaries.append(unitary)
         if self.additional_target is not None:
-            self.additional_unitary = Unitary(
+            self.additional_unitary = self.module.Unitary(
                 additional_matrix, self.additional_target)
             self.additional_unitary.density_matrix = self.density_matrix
         else:
@@ -700,7 +690,6 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         self.is_prepared = True
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        TensorflowGate._set_nqubits(self, state)
         for i, unitary in enumerate(self.unitaries):
             state = unitary(state)
         if self.additional_unitary is not None:
@@ -723,7 +712,6 @@ class Flatten(TensorflowGate, base_gates.Flatten):
                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self._set_nqubits(state)
         shape = tuple(state.shape)
         _state = np.array(self.coefficients).reshape(shape)
         return tf.convert_to_tensor(_state, dtype=DTYPES.get("DTYPECPX"))
@@ -744,7 +732,6 @@ class CallbackGate(TensorflowGate, base_gates.CallbackGate):
                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self._set_nqubits(state)
         self.callback.append(self.callback(state, self.density_matrix))
         return state
 
@@ -821,7 +808,6 @@ class UnitaryChannel(KrausChannel, base_gates.UnitaryChannel):
             np.random.seed(self.seed)
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.module.TensorflowGate._set_nqubits(self, state)
         for p, gate in zip(self.probs, self.gates):
             if np.random.random() < p:
                 state = gate(state)
@@ -866,7 +852,6 @@ class ResetChannel(UnitaryChannel, base_gates.ResetChannel):
         return gate
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.module.TensorflowGate._set_nqubits(self, state)
         not_collapsed = True
         if np.random.random() < self.probs[-2]:
             state = self.gates[-2](state)
@@ -906,7 +891,6 @@ class _ThermalRelaxationChannelA(ResetChannel, base_gates._ThermalRelaxationChan
         self.inv_gates = tuple()
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.module.TensorflowGate._set_nqubits(self, state)
         if np.random.random() < self.probs[0]:
             state = self.gates[0](state)
         return ResetChannel.state_vector_call(self, state)

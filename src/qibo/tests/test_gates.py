@@ -8,8 +8,8 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.tests import utils
 
-_BACKENDS = ["custom"]#, "defaulteinsum", "matmuleinsum"]
-_DEVICE_BACKENDS = [("custom", None), #("matmuleinsum", None),
+_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
+_DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
                     ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
 

@@ -270,7 +270,6 @@ class ParametrizedGate(Gate):
 
 
 class BackendGate(ABC):
-
     module = None
 
     def __init__(self):
@@ -353,6 +352,16 @@ class BackendGate(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def set_nqubits(self, state): # pragma: no cover
+        """Sets ``gate.nqubits`` and prepares gates for application to states.
+
+        This method is used only when gates are called directly on states
+        without being a part of circuit. If a gate is added in a circuit it
+        is automatically prepared and this method is not required.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def state_vector_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
 
@@ -361,4 +370,6 @@ class BackendGate(ABC):
         raise_error(NotImplementedError)
 
     def __call__(self, state):
+        if not self.is_prepared:
+            self.set_nqubits(state)
         return getattr(self, self._active_call)(state)
