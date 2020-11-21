@@ -111,42 +111,40 @@ class BaseCircuit(ABC):
         Returns:
             The resulting circuit from the addition.
         """
-        return self.__class__._circuit_addition(self, circuit)
-
-    @classmethod
-    def _circuit_addition(cls, c1, c2):
-        for k, kwarg1 in c1.init_kwargs.items():
-            kwarg2 = c2.init_kwargs[k]
+        for k, kwarg1 in self.init_kwargs.items():
+            kwarg2 = circuit.init_kwargs[k]
             if kwarg1 != kwarg2:
-                raise_error(ValueError, "Cannot add circuits with different kwargs. "
-                                        "{} is {} for first circuit and {} for the "
-                                        "second.".format(k, kwarg1, kwarg2))
-        newcircuit = cls(**c1.init_kwargs)
-        # Add gates from `c1` to `newcircuit` (including measurements)
-        for gate in c1.queue:
+                raise_error(ValueError,
+                            "Cannot add circuits with different kwargs. "
+                            "{} is {} for first circuit and {} for the "
+                            "second.".format(k, kwarg1, kwarg2))
+
+        newcircuit = self.__class__(**self.init_kwargs)
+        # Add gates from `self` to `newcircuit` (including measurements)
+        for gate in self.queue:
             newcircuit.queue.append(gate)
             if isinstance(gate, gates.ParametrizedGate):
                 newcircuit.parametrized_gates.append(gate)
-        newcircuit.measurement_gate = c1.measurement_gate
-        newcircuit.measurement_tuples = c1.measurement_tuples
-        # Add gates from `c2` to `newcircuit` (including measurements)
-        for gate in c2.queue:
+        newcircuit.measurement_gate = self.measurement_gate
+        newcircuit.measurement_tuples = self.measurement_tuples
+        # Add gates from `circuit` to `newcircuit` (including measurements)
+        for gate in circuit.queue:
             newcircuit.check_measured(gate.qubits)
             newcircuit.queue.append(gate)
             if isinstance(gate, gates.ParametrizedGate):
                 newcircuit.parametrized_gates.append(gate)
 
         if newcircuit.measurement_gate is None:
-            newcircuit.measurement_gate = c2.measurement_gate
-            newcircuit.measurement_tuples = c2.measurement_tuples
-        elif c2.measurement_gate is not None:
-            for k, v in c2.measurement_tuples.items():
+            newcircuit.measurement_gate = circuit.measurement_gate
+            newcircuit.measurement_tuples = circuit.measurement_tuples
+        elif circuit.measurement_gate is not None:
+            for k, v in circuit.measurement_tuples.items():
                 if k in newcircuit.measurement_tuples:
-                    raise_error(KeyError, "Register name {} already exists in the "
+                    raise_error(KeyError, "Register name {} already exists in "
                                           "circuit.".format(k))
                 newcircuit.check_measured(v)
                 newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate.add(c2.measurement_gate)
+            newcircuit.measurement_gate.add(circuit.measurement_gate)
         return newcircuit
 
     def on_qubits(self, *q):
