@@ -751,7 +751,7 @@ class KrausChannel(TensorflowGate, base_gates.KrausChannel):
     @staticmethod
     def _invert(gate):
         """Creates invert gates of each Ak to reset to the original state."""
-        matrix = gate.parameter
+        matrix = gate.parameters
         if isinstance(matrix, np.ndarray):
             inv_matrix = np.linalg.inv(matrix)
         elif isinstance(matrix, tf.Tensor):
@@ -906,6 +906,7 @@ class _ThermalRelaxationChannelB(MatrixGate, base_gates._ThermalRelaxationChanne
         self.gate_op = op.apply_two_qubit_gate
 
     def prepare(self) -> tf.Tensor:
+        super().prepare()
         qubits = sorted(list(self.nqubits - np.array(self.control_qubits) - 1))
         qubits = self.nqubits - np.array(self.target_qubits) - 1
         qubits = np.concatenate([qubits, qubits + self.nqubits], axis=0)

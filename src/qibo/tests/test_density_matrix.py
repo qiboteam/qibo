@@ -40,7 +40,6 @@ def test_rygate_application_twoqubit(backend):
 
     gate = gates.RY(0, theta=theta)
     gate.density_matrix = True
-    gate.nqubits = 1
     final_rho = gate(np.copy(initial_rho)).numpy()
 
     phase = np.exp(1j * theta / 2.0)
@@ -431,7 +430,7 @@ def test_krauss_channel_errors(backend):
     # Using KrausChannel on state vectors
     channel = gates.KrausChannel([((0,), np.eye(2))])
     with pytest.raises(ValueError):
-        channel._state_vector_call(np.random.random(4))
+        channel.state_vector_call(np.random.random(4))
     qibo.set_backend(original_backend)
 
 
@@ -749,7 +748,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     # Try to apply to state vector if t1 < t2
     if t1 < t2:
         with pytest.raises(ValueError):
-            target_rho = gate._state_vector_call(initial_rho)
+            target_rho = gate.state_vector_call(initial_rho)
     qibo.set_backend(original_backend)
 
 
