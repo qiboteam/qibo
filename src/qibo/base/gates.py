@@ -1182,12 +1182,6 @@ class VariationalLayer(ParametrizedGate):
             self.params = self._create_params_dict(x)
         ParametrizedGate.parameters.fset(self, x)
 
-        #matrices, additional_matrix = self._calculate_unitaries()
-        #for unitary, matrix in zip(self.unitaries, matrices):
-        #    unitary.parameter = matrix
-        #if additional_matrix is not None:
-        #    self.additional_unitary.parameter = additional_matrix
-
 
 class Flatten(SpecialGate):
     """Passes an arbitrary state vector in the circuit.

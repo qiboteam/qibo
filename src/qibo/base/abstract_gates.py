@@ -312,11 +312,6 @@ class BackendGate(ABC):
             self._unitary = self.control_unitary(self._unitary)
         return self._unitary
 
-    def _reprepare(self):
-        if self.device_gates:
-            for gate in self.device_gates:
-                gate.parameter = self.parameter
-
     def __matmul__(self, other: "Gate") -> "Gate":
         """Gate multiplication."""
         if self.qubits != other.qubits:
@@ -349,7 +344,19 @@ class BackendGate(ABC):
 
     @abstractmethod
     def prepare(self): # pragma: no cover
+        """Prepares gate for application to states."""
         raise_error(NotImplementedError)
+
+    @abstractmethod
+    def reprepare(self): # pragma: no cover
+        """Recalculates gate (matrix, etc.) when the gate's parameter are changed.
+
+        Use in parametrized gates only.
+        """
+        raise_error(NotImplementedError)
+        if self.device_gates:
+            for gate in self.device_gates:
+                gate.parameter = self.parameter
 
     @abstractmethod
     def set_nqubits(self, state): # pragma: no cover

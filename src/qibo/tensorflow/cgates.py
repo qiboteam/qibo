@@ -45,6 +45,9 @@ class TensorflowGate(BackendGate):
         part2 = tf.concat([zeros, unitary], axis=0)
         return tf.concat([part1, part2], axis=1)
 
+    def reprepare(self):
+        raise_error(RuntimeError, "Cannot reprepare non-parametrized gate.")
+
     def prepare(self):
         """Prepares the gate for application to state vectors."""
         self.is_prepared = True
@@ -81,11 +84,14 @@ class MatrixGate(TensorflowGate):
         super().__init__()
         self.matrix = None
 
-    def prepare(self):
-        super().prepare()
+    def reprepare(self):
         with tf.device(self.device):
             self.matrix = tf.constant(self.construct_unitary(),
                                       dtype=DTYPES.get('DTYPECPX'))
+
+    def prepare(self):
+        super().prepare()
+        self.reprepare()
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.matrix, self.qubits_tensor,
@@ -336,8 +342,7 @@ class U1(MatrixGate, base_gates.U1):
         base_gates.U1.__init__(self, q, theta)
         self.gate_op = op.apply_z_pow
 
-    def prepare(self):
-        TensorflowGate.prepare(self)
+    def reprepare(self):
         with tf.device(self.device):
             self.matrix = tf.constant(np.exp(1j * self.parameters),
                                       dtype=DTYPES.get('DTYPECPX'))
@@ -420,20 +425,13 @@ class _CUn_(MatrixGate):
         cbase = "C{}".format(self.base.__name__)
         getattr(base_gates, cbase).__init__(self, q0, q1, **params)
 
-    def prepare(self):
-        TensorflowGate.prepare(self)
+    def reprepare(self):
         with tf.device(self.device):
             self.matrix = tf.constant(self.base.construct_unitary(self),
                                       dtype=DTYPES.get('DTYPECPX'))
 
     def construct_unitary(self) -> tf.Tensor:
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
-
-    def state_vector_call(self, state):
-        return self.base.state_vector_call(self, state)
-
-    def density_matrix_call(self, state):
-        return self.base.density_matrix_call(self, state)
 
 
 class CRX(_CUn_, base_gates.CRX):
@@ -464,8 +462,8 @@ class CU1(_CUn_, base_gates.CU1):
         _CUn_.__init__(self, q0, q1, theta=theta)
         self.gate_op = op.apply_z_pow
 
-    def prepare(self):
-        U1.prepare(self)
+    def reprepare(self):
+        U1.reprepare(self)
 
 
 class CU2(_CUn_, base_gates.CU2):
@@ -512,8 +510,7 @@ class fSim(MatrixGate, base_gates.fSim):
         base_gates.fSim.__init__(self, q0, q1, theta, phi)
         self.gate_op = op.apply_fsim
 
-    def prepare(self):
-        TensorflowGate.prepare(self)
+    def reprepare(self):
         theta, phi = self.parameters
         cos, isin = np.cos(theta), -1j * np.sin(theta)
         phase = np.exp(-1j * phi)
@@ -539,8 +536,7 @@ class GeneralizedfSim(MatrixGate, base_gates.GeneralizedfSim):
         base_gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
         self.gate_op = op.apply_fsim
 
-    def prepare(self):
-        TensorflowGate.prepare(self)
+    def reprepare(self):
         unitary, phi = self.parameters
         matrix = np.zeros(5, dtype=DTYPES.get("NPTYPECPX"))
         matrix[:4] = np.reshape(unitary, (4,))
@@ -685,6 +681,15 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
     def construct_unitary(self):
         raise_error(ValueError, "VariationalLayer gate does not have unitary "
                                  "representation.")
+
+    def reprepare(self):
+        matrices, additional_matrix = self._calculate_unitaries()
+        for unitary, matrix in zip(self.unitaries, matrices):
+            unitary.parameters = matrix
+            unitary.reprepare()
+        if additional_matrix is not None:
+            self.additional_unitary.parameters = additional_matrix
+            self.additional_unitary.reprepare()
 
     def prepare(self):
         self.is_prepared = True

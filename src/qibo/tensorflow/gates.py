@@ -29,11 +29,14 @@ class TensorflowGate(BackendGate):
     def control_unitary(unitary: tf.Tensor) -> tf.Tensor:
         return cgates.TensorflowGate.control_unitary(unitary)
 
-    def prepare(self):
-        self.is_prepared = True
+    def reprepare(self):
         matrix = self.construct_unitary()
         rank = int(np.log2(int(matrix.shape[0])))
         self.matrix = tf.reshape(matrix, 2 * rank * (2,))
+
+    def prepare(self):
+        self.is_prepared = True
+        self.reprepare()
         if self.is_controlled_by:
             if self.density_matrix:
                 # fall back to the 'defaulteinsum' backend when using
@@ -477,7 +480,10 @@ class VariationalLayer(TensorflowGate, base_gates.VariationalLayer):
         return cgates.VariationalLayer._dagger(self)
 
     def construct_unitary(self):
-        cgates.VariationalLayer.construct_unitary(self)
+        return cgates.VariationalLayer.construct_unitary(self)
+
+    def reprepare(self):
+        cgates.VariationalLayer.reprepare(self)
 
     def prepare(self):
         cgates.VariationalLayer.prepare(self)
@@ -580,8 +586,7 @@ class _ThermalRelaxationChannelB(TensorflowGate, base_gates._ThermalRelaxationCh
 
     def prepare(self):
         self.is_prepared = True
-        matrix = self.construct_unitary()
-        self.matrix = tf.reshape(matrix, 4 * (2,))
+        self.reprepare()
         qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
         self.calculation_cache = self.einsum.create_cache(
             qubits, 2 * self.nqubits)
