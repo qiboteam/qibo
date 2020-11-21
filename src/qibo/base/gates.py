@@ -268,8 +268,6 @@ class M(Gate):
         self.init_args = q
         self.init_kwargs = {"register_name": register_name, "p0": p0, "p1": p1}
 
-        self._unmeasured_qubits = None # Tuple
-        self._reduced_target_qubits = None # List
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1
         self.bitflip_map = (self._get_bitflip_map(p0),
@@ -294,50 +292,13 @@ class M(Gate):
         Args:
             gate: Measurement gate to add its qubits in the current gate.
         """
-        if self._unmeasured_qubits is not None:
+        if self.is_prepared:
             raise_error(RuntimeError, "Cannot add qubits to a measurement "
-                                      "gate that was executed.")
+                                      "gate that is prepared.")
         assert isinstance(gate, self.__class__)
         self.target_qubits += gate.target_qubits
         self.bitflip_map[0].update(gate.bitflip_map[0])
         self.bitflip_map[1].update(gate.bitflip_map[1])
-
-    def _set_unmeasured_qubits(self):
-        if self._nqubits is None:
-            raise_error(RuntimeError, "Cannot calculate set of unmeasured "
-                                      "qubits if the number of qubits in the "
-                                      "circuit is unknown.")
-        if self._unmeasured_qubits is not None:
-            raise_error(RuntimeError, "Cannot recalculate unmeasured qubits.")
-        target_qubits = set(self.target_qubits)
-        unmeasured_qubits = []
-        reduced_target_qubits = dict()
-        for i in range(self.nqubits):
-            if i in target_qubits:
-                reduced_target_qubits[i] = i - len(unmeasured_qubits)
-            else:
-                unmeasured_qubits.append(i)
-
-        self._unmeasured_qubits = tuple(unmeasured_qubits)
-        self._reduced_target_qubits = list(reduced_target_qubits[i]
-                                           for i in self.target_qubits)
-
-    @property
-    def unmeasured_qubits(self) -> Tuple[int]:
-        """Tuple with ids of unmeasured qubits sorted in increasing order.
-
-        This is useful when tracing out unmeasured qubits to calculate
-        probabilities.
-        """
-        if self._unmeasured_qubits is None:
-            self._set_unmeasured_qubits()
-        return self._unmeasured_qubits
-
-    @property
-    def reduced_target_qubits(self) -> List[int]:
-        if self._unmeasured_qubits is None:
-            self._set_unmeasured_qubits()
-        return self._reduced_target_qubits
 
     def controlled_by(self, *q):
         """"""

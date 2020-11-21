@@ -210,28 +210,39 @@ class Collapse(TensorflowGate, gates.Collapse):
 
 
 class M(TensorflowGate, gates.M):
-    # TODO: Move this to a different file and refactor
-    from qibo.tensorflow import distutils
-    from qibo.tensorflow import measurements
+    from qibo.tensorflow import distutils, measurements
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
         TensorflowGate.__init__(self)
-        gates.M.__init__(self, *q, register_name=register_name,
-                              p0=p0, p1=p1)
-        self.qubits_tensor = None
-        self._traceout = None
+        gates.M.__init__(self, *q, register_name=register_name, p0=p0, p1=p1)
+        self.traceout = None
+        self.unmeasured_qubits = None # Tuple
+        self.reduced_target_qubits = None # List
 
-    def _calculate_probabilities_dm(self, state: tf.Tensor) -> tf.Tensor:
-        if self._traceout is None:
+    def prepare(self):
+        self.is_prepared = True
+        target_qubits = set(self.target_qubits)
+        unmeasured_qubits = []
+        reduced_target_qubits = dict()
+        for i in range(self.nqubits):
+            if i in target_qubits:
+                reduced_target_qubits[i] = i - len(unmeasured_qubits)
+            else:
+                unmeasured_qubits.append(i)
+        self.unmeasured_qubits = tuple(unmeasured_qubits)
+        self.reduced_target_qubits = list(
+            reduced_target_qubits[i] for i in self.target_qubits)
+        if self.density_matrix:
             from qibo.tensorflow.einsum import DefaultEinsum
             qubits = set(self.unmeasured_qubits)
             # TODO: Remove ``DefaultEinsum`` dependence here
-            self._traceout = DefaultEinsum.partialtrace_str(
-              qubits, self.nqubits, measuring=True)
-        return tf.cast(tf.einsum(self._traceout, state),
-                       dtype=DTYPES.get('DTYPE'))
+            self.traceout = DefaultEinsum.partialtrace_str(
+                qubits, self.nqubits, measuring=True)
+
+    def _calculate_probabilities_dm(self, state: tf.Tensor) -> tf.Tensor:
+        return tf.cast(tf.einsum(self._traceout, state), dtype=DTYPES.get('DTYPE'))
 
     def _calculate_probabilities(self, state: tf.Tensor) -> tf.Tensor:
         """Calculates probabilities from state using Born's rule.
