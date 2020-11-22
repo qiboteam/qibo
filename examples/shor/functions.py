@@ -330,7 +330,13 @@ def quantum_order_finding_full(N, a):
     for i in range(len(q_reg)):
         circuit.add(gates.H(q_reg[i]))
     circuit.add(gates.X(x[len(x)-1]))
-    circuit.add((c_U(q, x, b, a**(2**i), N, ancilla, n) for i, q in enumerate(q_reg)))
+    exponents = []
+    exp = a%N
+    for i in range(len(q_reg)):
+        exponents.append(exp)
+        exp = (exp**2)%N
+    #a**(2**i)
+    circuit.add((c_U(q, x, b, exponents[i], N, ancilla, n) for i, q in enumerate(q_reg)))
     circuit.add(i_qft(q_reg))
 
     # Adding measurement gates
@@ -360,12 +366,17 @@ def quantum_order_finding_semiclassical(N, a):
     circuit = Circuit(2*n+3)
     print(f'  - Total number of qubits used: {2*n+3}.\n')
     r = []
+    exponents = []
+    exp = a%N
+    for i in range(2*n):
+        exponents.append(exp)
+        exp = (exp**2)%N
     
     # Building the quantum circuit
     circuit.add(gates.H(q_reg))
     circuit.add(gates.X(x[len(x)-1]))
-    a_i = (a**(2**(2*n - 1)))
-    circuit.add(c_U(q_reg, x, b, a_i, N, ancilla, n))
+    #a_i = (a**(2**(2*n - 1)))
+    circuit.add(c_U(q_reg, x, b, exponents[-1], N, ancilla, n))
     circuit.add(gates.H(q_reg))
     circuit.add(gates.M(q_reg))
     result = circuit(nshots=1)
@@ -379,8 +390,8 @@ def quantum_order_finding_semiclassical(N, a):
         if r[-1] == 1:
             circuit.add(gates.X(q_reg))
         circuit.add(gates.H(q_reg))
-        a_i = (a**(2**(2*n - 1 - i)))
-        circuit.add(c_U(q_reg, x, b, a_i, N, ancilla, n))
+        #a_i = (a**(2**(2*n - 1 - i)))
+        circuit.add(c_U(q_reg, x, b, exponents[-1-i], N, ancilla, n))
         angle = 0
         for k in range(2, i+2):
             angle += 2*np.pi*r[i+1-k]/(2**k)
