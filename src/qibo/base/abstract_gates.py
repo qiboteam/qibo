@@ -290,6 +290,22 @@ class ParametrizedGate(Gate):
 
 
 class BackendGate(Gate, ABC):
+    """Abstract class for gate objects that can be used in calculations.
+
+    Attributes:
+        unitary: Unitary matrix representation of the gate in the computational
+            basis.
+        is_prepared: ``True`` if the gate is prepared for action to states.
+            A gate is prepared when its matrix and/or other tensors required
+            in the computation are calculated.
+            See :meth:`qibo.base.abstract_gates.BackendGate.prepare` for more
+            details.
+            Note that gate preparation is triggered automatically when a gate
+            is added to a circuit or when it acts on a state.
+        device: Hardware device to use in order to simulate this gate.
+        density_matrix: ``True`` if the gate will act on density matrices,
+            ``False`` if the gate will act on state vectors.
+    """
     module = None
 
     def __init__(self):
@@ -308,10 +324,12 @@ class BackendGate(Gate, ABC):
 
     @property
     def density_matrix(self) -> bool:
+        """Flag that controls if the gate acts on state vectors or density matrices."""
         return self._density_matrix
 
     @density_matrix.setter
     def density_matrix(self, x: bool):
+        """Density matrix flag switcher."""
         if self._nqubits is not None:
             raise_error(RuntimeError,
                         "Density matrix mode cannot be switched after "
@@ -347,17 +365,13 @@ class BackendGate(Gate, ABC):
         return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
 
     def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
-        # abstract method
+        # always falls back to left ``__matmul__``
         return self.__matmul__(other)
 
     @staticmethod
     @abstractmethod
     def control_unitary(unitary): # pragma: no cover
-        """Controls unitary matrix on one qubit.
-
-        Helper method for ``construct_unitary`` for gates defined using
-        ``controlled_by``.
-        """
+        """Updates the unitary matrix of the gate if it is controlled."""
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -367,14 +381,23 @@ class BackendGate(Gate, ABC):
 
     @abstractmethod
     def prepare(self): # pragma: no cover
-        """Prepares gate for application to states."""
+        """Prepares gate for application to states.
+
+        This method is called automatically when a gate is added to a circuit
+        or when called on a state. Note that the gate's ``nqubits`` should be
+        set before this method is called.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def reprepare(self): # pragma: no cover
         """Recalculates gate matrix when the gate's parameters are changed.
 
-        Relevant only for parametrized gates only.
+        Used in parametrized gates when the ``circuit.set_parameters`` method
+        is used to update the variational parameters.
+        This method is seperated from ``prepare`` because it is usually not
+        required to repeat the full preperation calculation from scratch when
+        the gate's parameters are updated.
         """
         raise_error(NotImplementedError)
 
@@ -390,13 +413,21 @@ class BackendGate(Gate, ABC):
 
     @abstractmethod
     def state_vector_call(self, state): # pragma: no cover
+        """Applies the gate on a state vector."""
         raise_error(NotImplementedError)
 
     @abstractmethod
     def density_matrix_call(self, state): # pragma: no cover
+        """Applies the gate on a density matrix."""
         raise_error(NotImplementedError)
 
     def __call__(self, state):
+        """Applies the gate on a state.
+
+        Falls back to a state vector or density matrix call according to the
+        current value of the ``gate.density_matrix`` flag.
+        It automatically prepares the gate if it is not already prepared.
+        """
         if not self.is_prepared:
             self.set_nqubits(state)
         return getattr(self, self._active_call)(state)

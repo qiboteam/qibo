@@ -1159,10 +1159,6 @@ class Flatten(SpecialGate):
         self.coefficients = coefficients
         self.init_args = [coefficients]
 
-    def on_qubits(self, *q):
-        raise_error(NotImplementedError,
-                    "Cannot use `Flatten` gate on subroutine.")
-
 
 class CallbackGate(SpecialGate):
     """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
@@ -1178,10 +1174,6 @@ class CallbackGate(SpecialGate):
         self.name = callback.__class__.__name__
         self.callback = callback
         self.init_args = [callback]
-
-    def on_qubits(self, *q):
-        raise_error(NotImplementedError,
-                    "Cannot use `CallbackGate` on subroutine.")
 
     @Gate.nqubits.setter
     def nqubits(self, n: int):
