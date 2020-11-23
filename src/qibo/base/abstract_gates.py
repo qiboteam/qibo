@@ -245,12 +245,14 @@ class ParametrizedGate(Gate):
 
     @property
     def parameters(self):
+        """Returns a tuple containing the current value of gate's parameters."""
         if isinstance(self.parameter_names, str):
             return self._parameters
         return tuple(self._parameters)
 
     @parameters.setter
     def parameters(self, x):
+        """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
             nparams = 1
         else:
@@ -267,8 +269,15 @@ class ParametrizedGate(Gate):
                                         "".format(nparams, len(x)))
             for i, v in enumerate(x):
                 self._parameters[i] = v
+
+        # This part uses ``BackendGate`` attributes (see below), assuming
+        # that the gate was initialized using a calculation backend.
+        # I could not find a cleaner way to write this so that the
+        # ``circuit.set_parameters`` method works properly.
         if self.is_prepared:
             self.reprepare()
+        for devgate in self.device_gates:
+            devgate.parameters = x
 
 
 class BackendGate(ABC):
@@ -352,9 +361,9 @@ class BackendGate(ABC):
 
     @abstractmethod
     def reprepare(self): # pragma: no cover
-        """Recalculates gate (matrix, etc.) when the gate's parameter are changed.
+        """Recalculates gate matrix when the gate's parameters are changed.
 
-        Use in parametrized gates only.
+        Relevant only for parametrized gates only.
         """
         raise_error(NotImplementedError)
         if self.device_gates:
