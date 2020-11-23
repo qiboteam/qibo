@@ -678,8 +678,7 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = []
         for targets, matrix in zip(self.pairs, matrices):
-            unitary = Unitary(matrix, *targets)
-            unitary.density_matrix = self.density_matrix
+            unitary = self.module.Unitary(matrix, *targets)
             self.unitaries.append(unitary)
         if self.additional_target is not None:
             self.additional_unitary = self.module.Unitary(
@@ -687,6 +686,14 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
             self.additional_unitary.density_matrix = self.density_matrix
         else:
             self.additional_unitary = None
+
+    @BackendGate.density_matrix.setter
+    def density_matrix(self, x: bool):
+        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        for unitary in self.unitaries:
+            unitary.density_matrix = x
+        if self.additional_unitary is not None:
+            self.additional_unitary.density_matrix = x
 
     def _dagger(self):
         import copy

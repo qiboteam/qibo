@@ -1040,11 +1040,10 @@ def test_controlled_rotations_from_un(backend, name, params):
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
-def test_variational_layer_call(nqubits):
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_variational_layer_call(nqubits, density_matrix):
     theta = 2 * np.pi * np.random.random(nqubits)
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, density_matrix=density_matrix)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
@@ -1053,9 +1052,9 @@ def test_variational_layer_call(nqubits):
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ,
                                   theta)
+    gate.density_matrix = density_matrix
     final_state = gate(c._default_initial_state()).numpy()
     np.testing.assert_allclose(target_state, final_state)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
