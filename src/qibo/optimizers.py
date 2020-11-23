@@ -1,5 +1,5 @@
 def optimize(loss, initial_parameters, method='Powell',
-             options=None, processes=None, compile=False, args=None):
+             options=None, compile=False, processes=None, args=()):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cma`
         - :meth:`qibo.optimizers.newtonian`
@@ -26,7 +26,7 @@ def optimize(loss, initial_parameters, method='Powell',
         return newtonian(loss, initial_parameters, method, options, processes, args)
 
 
-def cma(loss, initial_parameters, options=None, args=None):
+def cma(loss, initial_parameters, options=None, args=()):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
@@ -44,7 +44,7 @@ def cma(loss, initial_parameters, options=None, args=None):
     return r[1].result.fbest, r[1].result.xbest
 
 
-def newtonian(loss, initial_parameters, method='Powell', options=None, processes=None, args=None):
+def newtonian(loss, initial_parameters, method='Powell', options=None, processes=None, args=()):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -61,7 +61,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
         processes (int): number of processes when using the paralle BFGS method.
         args (tuple): optional arguments for the loss function.
     """
-    if method == 'parallel_L-BFGS-B':
+    if method == 'parallel_L-BFGS-B': # pragma: no cover
         from qibo.config import raise_error, get_backend, get_device, THREADS
         if "GPU" in get_device():
             raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
@@ -127,7 +127,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
     return loss(vparams).numpy(), vparams.numpy()
 
 
-class ParallelBFGSResources:
+class ParallelBFGSResources: # pragma: no cover
     """Auxiliary singleton class for sharing memory objects in a
     multiprocessing environment when performing a parallel_L-BFGS-B
     minimization procedure.
@@ -143,7 +143,7 @@ class ParallelBFGSResources:
     _objects_per_process = {}
     custom_loss = None
     lock = None
-    args = tuple()
+    args = ()
 
     def __new__(cls, *args, **kwargs):
         """Creates singleton instance."""
@@ -183,7 +183,7 @@ class ParallelBFGSResources:
         return self.custom_loss(params, *args)
 
 
-class ParallelBFGS:
+class ParallelBFGS: # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
@@ -201,7 +201,7 @@ class ParallelBFGS:
     import itertools
     from qibo.config import DTYPES
 
-    def __init__(self, function, args=None, bounds=None,
+    def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
         ParallelBFGSResources().args = args
         ParallelBFGSResources().custom_loss = function

@@ -179,7 +179,7 @@ class VQE(object):
                 See :meth:`qibo.optimizers.optimize` for available optimization
                 methods.
             options (dict): a dictionary with options for the different optimizers.
-            compile (bool): whether the TensorFlow graph should be compiled (default False).
+            compile (bool): whether the TensorFlow graph should be compiled.
             processes (int): number of processes when using the paralle BFGS method.
 
         Return:
@@ -215,7 +215,8 @@ class VQE(object):
                                                           compile)
         else:
             result, parameters = self.optimizers.optimize(lambda p, c, h: loss(p, c, h).numpy(), initial_state,
-                                                          method, options, processes, args=(self.circuit, self.hamiltonian))
+                                                          method, options, processes=processes,
+                                                          args=(self.circuit, self.hamiltonian))
 
         self.circuit.set_parameters(parameters)
         return result, parameters
@@ -384,20 +385,20 @@ class QAOA(object):
                                     "contain an even number of values but "
                                     "contains {}.".format(len(initial_p)))
 
-        def _loss(p):
-            self.set_parameters(p)
-            state = self(initial_state)
-            return self.hamiltonian.expectation(state)
+        def _loss(params, qaoa, hamiltonian):
+            qaoa.set_parameters(params)
+            state = qaoa(initial_state)
+            return hamiltonian.expectation(state)
 
         if method == "sgd":
             import tensorflow as tf
             loss = lambda p: _loss(tf.cast(
-                p, dtype=self.DTYPES.get('DTYPECPX')))
+                p, dtype=self.DTYPES.get('DTYPECPX')), self, self.hamiltonian)
         else:
             import numpy as np
-            loss = lambda p: _loss(p).numpy()
+            loss = lambda p, c, h: _loss(p, c, h).numpy()
 
         result, parameters = self.optimizers.optimize(loss, initial_p, method,
-                                                      options)
+                                                      options, args=(self, self.hamiltonian))
         self.set_parameters(parameters)
         return result, parameters
