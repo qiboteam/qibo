@@ -12,7 +12,16 @@ class Gate:
 
     Attributes:
         name: Name of the gate.
+        is_controlled_by: ``True`` if the gate was created using the
+            :meth:`qibo.base.abstract_gates.Gate.controlled_by` method,
+            otherwise ``False``.
+        init_args: Arguments used to initialize the gate.
+        init_kwargs: Arguments used to initialize the gate.
         target_qubits: Tuple with ids of target qubits.
+        control_qubits: Tuple with ids of control qubits sorted in increasing
+            order.
+        nqubits: Number of qubits that this gate acts on.
+        nstates: Size of state vectors that this gate acts on.
     """
 
     def __init__(self):
@@ -25,7 +34,6 @@ class Gate:
         self._target_qubits = tuple()
         self._control_qubits = set()
 
-        self._unitary = None
         self._nqubits = None
         self._nstates = None
         config.ALLOW_SWITCHERS = False
@@ -103,11 +111,7 @@ class Gate:
 
     @property
     def nqubits(self) -> int:
-        """Number of qubits in the circuit that the gate is part of.
-
-        This is set automatically when the gate is added on a circuit or
-        when the gate is called on a state. The user should not set this.
-        """
+        """Number of qubits that this gate acts on."""
         if self._nqubits is None:
             raise_error(ValueError, "Accessing number of qubits for gate {} but "
                                     "this is not yet set.".format(self))
@@ -115,6 +119,7 @@ class Gate:
 
     @property
     def nstates(self) -> int:
+        """Size of the state vectors that this gate acts on."""
         if self._nstates is None:
             raise_error(ValueError, "Accessing number of qubits for gate {} but "
                                     "this is not yet set.".format(self))
@@ -162,6 +167,9 @@ class Gate:
 
     def _dagger(self) -> "Gate":
         """Helper method for :meth:`qibo.base.gates.Gate.dagger`."""
+        # By default the ``_dagger`` method creates an equivalent gate, assuming
+        # that the gate is Hermitian (true for common gates like H or Paulis).
+        # If the gate is not Hermitian the ``_dagger`` method should be modified.
         return self.__class__(*self.init_args, **self.init_kwargs)
 
     def dagger(self) -> "Gate":
@@ -210,9 +218,10 @@ class Gate:
         Returns:
             List with gates that have the same effect as applying the original gate.
         """
-        # FIXME: Implement this method for all gates not supported by OpenQASM.
-        # If the method is not implemented this returns a deep copy of the
-        # original gate
+        # TODO: Implement this method for all gates not supported by OpenQASM.
+        # Currently this is implemented only for multi-controlled X gates.
+        # If it is used on a different gate it will just return a deep copy
+        # of the same gate.
         return [self.__class__(*self.init_args, **self.init_kwargs)]
 
 
@@ -284,6 +293,7 @@ class BackendGate(ABC):
     module = None
 
     def __init__(self):
+        self._unitary = None
         self.is_prepared = False
         # Cast gate matrices to the proper device
         self.device = config.get_device()
