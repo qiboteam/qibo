@@ -42,7 +42,7 @@ if BACKEND_NAME == "tensorflow":
     K = tf
 
     # Set the intra number of threads to the environment flag
-    if "QIBO_NUM_THREADS" in os.environ:
+    if "QIBO_NUM_THREADS" in os.environ: # pragma: no cover
         nthreads = int(os.environ["QIBO_NUM_THREADS"])
         tf.config.threading.set_intra_op_parallelism_threads(nthreads)
 
