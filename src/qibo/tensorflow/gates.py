@@ -166,8 +166,12 @@ class Collapse(TensorflowGate, gates.Collapse):
         self.ids = None
         self.density_matrix_result = None
 
-    def _result_to_list(self, res):
-        return cgates.Collapse._result_to_list(self, res)
+    @gates.Collapse.result.setter
+    def result(self, res):
+        x = cgates.Collapse._result_to_list(self, res)
+        gates.Collapse.result.fset(self, x) # pylint: disable=no-member
+        if self.is_prepared:
+            self.prepare()
 
     def prepare(self):
         self.is_prepared = True

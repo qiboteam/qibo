@@ -211,7 +211,6 @@ class Collapse(Gate):
 
     @result.setter
     def result(self, res):
-        res = self._result_to_list(res) # pylint: disable=E1111
         if len(self.target_qubits) != len(res):
             raise_error(ValueError, "Collapse gate was created on {} qubits "
                                     "but {} result values were given."
@@ -225,8 +224,6 @@ class Collapse(Gate):
 
         self._result = [resdict[q] for q in self.sorted_qubits]
         self.init_kwargs = {"result": res}
-        if self._nqubits is not None:
-            self.prepare()
 
     def controlled_by(self, *q): # pragma: no cover
         """"""
@@ -292,9 +289,6 @@ class M(Gate):
         Args:
             gate: Measurement gate to add its qubits in the current gate.
         """
-        if self.is_prepared:
-            raise_error(RuntimeError, "Cannot add qubits to a measurement "
-                                      "gate that is prepared.")
         assert isinstance(gate, self.__class__)
         self.target_qubits += gate.target_qubits
         self.bitflip_map[0].update(gate.bitflip_map[0])
@@ -941,7 +935,7 @@ class GeneralizedfSim(ParametrizedGate):
         if shape != (2, 2):
             raise_error(ValueError, "Invalid rotation shape {} for generalized "
                                     "fSim gate".format(shape))
-        ParametrizedGate.parameters.fset(self, x)
+        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class TOFFOLI(Gate):
@@ -1039,9 +1033,9 @@ class Unitary(ParametrizedGate):
         shape = tuple(x.shape)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x)
+            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
         elif shape == (2 ** (2 * self.rank),):
-            ParametrizedGate.parameters.fset(self, x.reshape(true_shape))
+            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
         else:
             raise_error(ValueError, "Invalid shape {} of unitary matrix "
                                     "acting on {} target qubits."
@@ -1148,7 +1142,7 @@ class VariationalLayer(ParametrizedGate):
             self.params2 = self._create_params_dict(x[n:])
         else:
             self.params = self._create_params_dict(x)
-        ParametrizedGate.parameters.fset(self, x)
+        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class Flatten(SpecialGate):

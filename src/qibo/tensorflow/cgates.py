@@ -187,11 +187,20 @@ class Collapse(TensorflowGate, gates.Collapse):
             return len(self.target_qubits) * [res]
         return list(res)
 
-    def prepare(self):
-        TensorflowGate.prepare(self)
+    @gates.Collapse.result.setter
+    def result(self, res):
+        gates.Collapse.result.fset(self, self._result_to_list(res)) # pylint: disable=no-member
+        if self.is_prepared:
+            self.reprepare()
+
+    def reprepare(self):
         n = len(self.result)
         result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
         self.result_tensor = tf.cast(result, dtype=DTYPES.get('DTYPEINT'))
+
+    def prepare(self):
+        TensorflowGate.prepare(self)
+        self.reprepare()
 
     def construct_unitary(self):
         raise_error(ValueError, "Collapse gate does not have unitary "
@@ -220,6 +229,12 @@ class M(TensorflowGate, gates.M):
         self.traceout = None
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
+
+    def add(self, gate: gates.M):
+        if self.is_prepared:
+            raise_error(RuntimeError, "Cannot add qubits to a measurement "
+                                      "gate that is prepared.")
+        gates.M.add(self, gate)
 
     def prepare(self):
         self.is_prepared = True

@@ -23,6 +23,7 @@ class Gate:
         nqubits: Number of qubits that this gate acts on.
         nstates: Size of state vectors that this gate acts on.
     """
+    module = None
 
     def __init__(self):
         self.name = None
@@ -290,10 +291,11 @@ class ParametrizedGate(Gate):
             devgate.parameters = x
 
 
-class BackendGate(ABC):
+class BackendGate(Gate, ABC):
     module = None
 
     def __init__(self):
+        Gate.__init__(self)
         self._unitary = None
         self.is_prepared = False
         # Cast gate matrices to the proper device
