@@ -43,7 +43,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gate):
         else: # pragma: no cover
             # case doesn't happen in tests (could remove)
             theta = float(theta)
-        np.testing.assert_allclose(theta, qibo_gate.parameter)
+        np.testing.assert_allclose(theta, qibo_gate.parameters)
 
 
 def assert_circuit_same_gates(circuit1, circuit2):

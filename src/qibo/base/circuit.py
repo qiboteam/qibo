@@ -448,9 +448,11 @@ class BaseCircuit(ABC):
 
         Helper method for ``circuit.add(gate)``.
         """
-        if gate.is_prepared:
-            raise_error(RuntimeError, "Cannot add gates to circuit if they "
-                                      "are already prepared.")
+        if gate.is_prepared and gate.nqubits != self.nqubits:
+            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
+                                      "qubits to circuit that contains {}"
+                                      "qubits.".format(
+                                            gate, gate.nqubits, self.nqubits))
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.

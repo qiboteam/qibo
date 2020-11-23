@@ -8,7 +8,7 @@ from typing import List, Sequence, Tuple
 class Gate:
     """The base class for gate implementation.
 
-    All gates should inherit this class.
+    All base gates should inherit this class.
 
     Attributes:
         name: Name of the gate.
