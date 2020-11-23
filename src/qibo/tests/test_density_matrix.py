@@ -748,7 +748,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     # Try to apply to state vector if t1 < t2
     if t1 < t2:
         with pytest.raises(ValueError):
-            target_rho = gate.state_vector_call(initial_rho)
+            gate.state_vector_call(initial_rho) # pylint: disable=no-member
     qibo.set_backend(original_backend)
 
 
