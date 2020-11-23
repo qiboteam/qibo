@@ -39,6 +39,10 @@ def test_flatten(backend):
     np.testing.assert_allclose(final_state, target_state)
     gate = gates.Flatten(target_state)
     gate(final_state)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
+    with pytest.raises(RuntimeError):
+        gate.reprepare()
     qibo.set_backend(original_backend)
 
 
@@ -1374,16 +1378,22 @@ def test_collapse_after_measurement(backend):
     qibo.set_backend(original_backend)
 
 
-def test_collapse_gate_errors():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_gate_errors(backend):
     # pass wrong result length
     with pytest.raises(ValueError):
         gate = gates.Collapse(0, 1, result=[0, 1, 0])
     # pass wrong result values
     with pytest.raises(ValueError):
         gate = gates.Collapse(0, 1, result=[0, 2])
+    # attempt to construct unitary
+    gate = gates.Collapse(2, 0, result=[0, 0])
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
     # change result after creation
     gate = gates.Collapse(2, 0, result=[0, 0])
     gate.nqubits = 4
+    gate.prepare()
     gate.result = np.ones(2, dtype=np.int)
 
 

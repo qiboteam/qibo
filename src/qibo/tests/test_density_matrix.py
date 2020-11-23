@@ -431,6 +431,9 @@ def test_krauss_channel_errors(backend):
     channel = gates.KrausChannel([((0,), np.eye(2))])
     with pytest.raises(ValueError):
         channel.state_vector_call(np.random.random(4))
+    # Attempt to construct unitary for KrausChannel
+    with pytest.raises(ValueError):
+        channel.construct_unitary()
     qibo.set_backend(original_backend)
 
 

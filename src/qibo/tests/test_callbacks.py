@@ -94,11 +94,12 @@ def test_entropy_numerical():
     np.testing.assert_allclose(result, target)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
-def test_entropy_in_circuit(accelerators):
+@pytest.mark.parametrize("accelerators,dm",
+                         [(None, False), (None, True), (None, {"/GPU:0": 2})])
+def test_entropy_in_circuit(accelerators, dm):
     """Check that entropy calculation works in circuit."""
     entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
-    c = Circuit(2, accelerators)
+    c = Circuit(2, accelerators=accelerators, density_matrix=dm)
     c.add(gates.CallbackGate(entropy))
     c.add(gates.H(0))
     c.add(gates.CallbackGate(entropy))
@@ -270,6 +271,14 @@ def test_entropy_large_circuit(accelerators):
 
     np.testing.assert_allclose(state3.numpy(), state.numpy())
     np.testing.assert_allclose(entropy[:].numpy(), [0, e1, e2, e3])
+
+
+def test_callback_gate_errors():
+    """Check errors associated with ``gates.CallbackGate``."""
+    entropy = callbacks.EntanglementEntropy([0])
+    gate = gates.CallbackGate(entropy)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
 
 
 def test_entropy_bad_indexing():
