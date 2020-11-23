@@ -983,7 +983,7 @@ def test_construct_unitary_errors(backend):
     theta = 2 * np.pi * np.random.random(6)
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
-        matrix = gate.construct_unitary()
+        gate.construct_unitary()
     qibo.set_backend(original_backend)
 
 

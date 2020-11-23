@@ -415,7 +415,7 @@ def test_controlled_by_channel():
                                   [0, 0, 1, 0]])
     config = [((1,), a1), ((0, 1), a2)]
     with pytest.raises(ValueError):
-        gate = gates.KrausChannel(config).controlled_by(1)
+        gates.KrausChannel(config).controlled_by(1)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

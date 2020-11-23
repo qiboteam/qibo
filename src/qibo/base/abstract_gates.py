@@ -284,6 +284,7 @@ class ParametrizedGate(Gate):
         # that the gate was initialized using a calculation backend.
         # I could not find a cleaner way to write this so that the
         # ``circuit.set_parameters`` method works properly.
+        # pylint: disable=E1101
         self._unitary = None
         if self.is_prepared:
             self.reprepare()
@@ -379,9 +380,6 @@ class BackendGate(Gate, ABC):
         Relevant only for parametrized gates only.
         """
         raise_error(NotImplementedError)
-        if self.device_gates:
-            for gate in self.device_gates:
-                gate.parameter = self.parameter
 
     @abstractmethod
     def set_nqubits(self, state): # pragma: no cover

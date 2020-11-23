@@ -151,7 +151,7 @@ def test_multiple_qubit_measurement_gate():
 def test_controlled_measurement_error():
     """Check that using `controlled_by` in measurements raises error."""
     with pytest.raises(NotImplementedError):
-        m = gates.M(0).controlled_by(1)
+        gates.M(0).controlled_by(1)
 
 
 @pytest.mark.parametrize("accelerators", _ACCELERATORS)

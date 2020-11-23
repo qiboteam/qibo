@@ -20,7 +20,7 @@ class TensorflowGate(BackendGate):
             return super(TensorflowGate, cls).__new__(cls)
         else:
             from qibo.tensorflow import gates
-            return getattr(gates, cls.__name__)(*args, **kwargs)
+            return getattr(gates, cls.__name__)(*args, **kwargs) # pylint: disable=E0110
 
     def __init__(self):
         if not tf.executing_eagerly():
@@ -401,7 +401,7 @@ class U3(MatrixGate, gates.U3):
                         dtype=DTYPES.get('NPTYPECPX'))
 
 
-class ZPow(MatrixGate, gates.ZPow):
+class ZPow(gates.ZPow):
 
   def __new__(cls, q, theta):
       if BACKEND.get('GATES') == 'custom':
@@ -498,7 +498,7 @@ class CU3(_CUn_, gates.CU3):
         _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
 
 
-class CZPow(MatrixGate, gates.CZPow):
+class CZPow(gates.CZPow):
 
   def __new__(cls, q0, q1, theta):
       if BACKEND.get('GATES') == 'custom':
@@ -886,7 +886,7 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
         return state
 
 
-class ThermalRelaxationChannel(TensorflowGate, gates.ThermalRelaxationChannel):
+class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):
 
     def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
         if BACKEND.get('GATES') == "custom":
