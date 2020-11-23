@@ -722,11 +722,11 @@ class BaseCircuit(ABC):
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                if isinstance(gate.parameter, collections.abc.Iterable):
-                    params = (str(x) for x in gate.parameter)
+                if isinstance(gate.parameters, collections.abc.Iterable):
+                    params = (str(x) for x in gate.parameters)
                     name = "{}({})".format(gate.name, ", ".join(params))
                 else:
-                    name = f"{gate.name}({gate.parameter})"
+                    name = f"{gate.name}({gate.parameters})"
             else:
                 name = gate.name
             code.append(f"{name} {qubits};")
