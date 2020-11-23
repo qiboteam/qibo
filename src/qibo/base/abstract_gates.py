@@ -283,6 +283,7 @@ class ParametrizedGate(Gate):
         # that the gate was initialized using a calculation backend.
         # I could not find a cleaner way to write this so that the
         # ``circuit.set_parameters`` method works properly.
+        self._unitary = None
         if self.is_prepared:
             self.reprepare()
         for devgate in self.device_gates:
