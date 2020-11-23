@@ -258,8 +258,8 @@ class M(TensorflowGate, gates.M):
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         shape = 2 * self.nqubits * (2,)
-        state = tf.einsum(self.traceout, tf.reshape(state, shape))
-        return tf.cast(tf.einsum(self._traceout, state), dtype=DTYPES.get('DTYPE'))
+        x = tf.einsum(self.traceout, tf.reshape(state, shape))
+        return tf.cast(x, dtype=DTYPES.get('DTYPE'))
 
     def sample(self, state: tf.Tensor, nshots: int) -> tf.Tensor:
         probs = getattr(self, self._active_call)(state)
@@ -749,9 +749,9 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
 
 class KrausChannel(TensorflowGate, gates.KrausChannel):
 
-    def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
+    def __init__(self, ops: Sequence[Tuple[Tuple[int], np.ndarray]]):
         TensorflowGate.__init__(self)
-        gates.KrausChannel.__init__(self, gates)
+        gates.KrausChannel.__init__(self, ops)
         # create inversion gates to rest to the original state vector
         # because of the in-place updates used in custom operators
         self.inv_gates = tuple()
@@ -800,10 +800,10 @@ class KrausChannel(TensorflowGate, gates.KrausChannel):
 
 class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
-    def __init__(self, p: List[float], gates: List["Gate"],
+    def __init__(self, p: List[float], ops: List["Gate"],
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
-        gates.UnitaryChannel.__init__(self, p, gates, seed=seed)
+        gates.UnitaryChannel.__init__(self, p, ops, seed=seed)
         self.inv_gates = tuple()
 
     @staticmethod

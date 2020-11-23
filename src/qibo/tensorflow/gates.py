@@ -498,9 +498,9 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
 
 class KrausChannel(TensorflowGate, gates.KrausChannel):
 
-    def __init__(self, gates: Sequence[Tuple[Tuple[int], np.ndarray]]):
+    def __init__(self, ops: Sequence[Tuple[Tuple[int], np.ndarray]]):
         TensorflowGate.__init__(self)
-        gates.KrausChannel.__init__(self, gates)
+        gates.KrausChannel.__init__(self, ops)
 
     def prepare(self):
         self.is_prepared = True
@@ -526,10 +526,10 @@ class KrausChannel(TensorflowGate, gates.KrausChannel):
 
 class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
-    def __init__(self, p: List[float], gates: List["Gate"],
+    def __init__(self, p: List[float], ops: List["Gate"],
                  seed: Optional[int] = None):
         TensorflowGate.__init__(self)
-        gates.UnitaryChannel.__init__(self, p, gates, seed=seed)
+        gates.UnitaryChannel.__init__(self, p, ops, seed=seed)
 
     def prepare(self):
         KrausChannel.prepare(self)

@@ -1210,7 +1210,7 @@ class KrausChannel(Gate):
     `J. Preskill's notes <http://theory.caltech.edu/~preskill/ph219/chap3_15.pdf>`_.
 
     Args:
-        gates (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
+        ops (list): List of Kraus operators as pairs ``(qubits, Ak)`` where
           ``qubits`` refers the qubit ids that ``Ak`` acts on and ``Ak`` is
           the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
 
@@ -1232,16 +1232,16 @@ class KrausChannel(Gate):
             c.add(channel)
     """
 
-    def __init__(self, gates):
+    def __init__(self, ops):
         super(KrausChannel, self).__init__()
         self.name = "KrausChannel"
         self.density_matrix = True
-        if isinstance(gates[0], Gate):
-            self.gates = tuple(gates)
+        if isinstance(ops[0], Gate):
+            self.gates = tuple(ops)
             self.target_qubits = tuple(sorted(set(
-                q for gate in gates for q in gate.target_qubits)))
+                q for gate in ops for q in gate.target_qubits)))
         else:
-            self.gates, self.target_qubits = self._from_matrices(gates)
+            self.gates, self.target_qubits = self._from_matrices(ops)
         self.init_args = [self.gates]
 
     def _from_matrices(self, matrices):
@@ -1287,7 +1287,7 @@ class UnitaryChannel(KrausChannel):
     Args:
         p (list): List of floats that correspond to the probability that each
             unitary Uk is applied.
-        gates (list): List of  operators as pairs ``(qubits, Uk)`` where
+        ops (list): List of  operators as pairs ``(qubits, Uk)`` where
             ``qubits`` refers the qubit ids that ``Uk`` acts on and ``Uk`` is
             the corresponding matrix as a ``np.ndarray``/``tf.Tensor``.
             Must have the same length as the given probabilities ``p``.
@@ -1295,16 +1295,16 @@ class UnitaryChannel(KrausChannel):
             instead of density matrices is used to simulate this gate.
     """
 
-    def __init__(self, p, gates, seed=None):
-        if len(p) != len(gates):
+    def __init__(self, p, ops, seed=None):
+        if len(p) != len(ops):
             raise_error(ValueError, "Probabilities list has length {} while "
                                     "{} gates were given."
-                                    "".format(len(p), len(gates)))
+                                    "".format(len(p), len(ops)))
         for pp in p:
             if pp < 0 or pp > 1:
                 raise_error(ValueError, "Probabilities should be between 0 "
                                         "and 1 but {} was given.".format(pp))
-        super(UnitaryChannel, self).__init__(gates)
+        super(UnitaryChannel, self).__init__(ops)
         self.name = "UnitaryChannel"
         self.probs = p
         self.psum = sum(p)
