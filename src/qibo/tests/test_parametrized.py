@@ -216,6 +216,8 @@ def test_circuit_set_parameters_errors():
         c.set_parameters(tf.random.uniform((6,), dtype=tf.float64))
     with pytest.raises(TypeError):
         c.set_parameters({0.3568})
+    with pytest.raises(ValueError):
+        c.queue[2].parameters = [0.1234, 0.4321, 0.156]
     fused_c = c.fuse()
     with pytest.raises(TypeError):
         fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})

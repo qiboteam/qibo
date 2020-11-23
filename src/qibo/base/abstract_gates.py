@@ -2,6 +2,7 @@
 from abc import ABC, abstractmethod
 from qibo import config
 from qibo.config import raise_error
+from collections.abc import Iterable
 from typing import List, Sequence, Tuple
 
 
@@ -264,13 +265,9 @@ class ParametrizedGate(Gate):
     def parameters(self, x):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
-            nparams = 1
-        else:
-            nparams = len(self.parameter_names)
-
-        if nparams == 1:
             self._parameters = x
         else:
+            nparams = len(self.parameter_names)
             if self._parameters is None:
                 self._parameters = nparams * [None]
             if len(x) != nparams:
