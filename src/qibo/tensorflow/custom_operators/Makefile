@@ -32,7 +32,6 @@ CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
 ifeq ($(shell uname -s),Linux)
 	CFLAGS += -fopenmp
 endif
-
 ifeq ($(shell uname -s),Darwin)
 	CFLAGS += -Xpreprocessor -fopenmp
 endif
@@ -41,6 +40,10 @@ CFLAGS_CUDA = $(CFLAGS) -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
 CFLAGS_NVCC = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
 
 LDFLAGS = -shared ${TF_LFLAGS}
+ifeq ($(shell uname -s),Darwin)
+	LDFLAGS += -lomp
+endif
+
 LDFLAGS_CUDA = $(LDFLAGS) -L$(CUDA_PATH)/lib64 -lcudart
 
 OBJECT_SRCS = $(SOURCES:.cc=.o)
