@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import BACKEND, DTYPES, DEVICES, raise_error
+from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -193,12 +193,13 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         self.result_tensor = None
         self.gate_op = op.collapse_state
 
-    @staticmethod
-    def _result_to_list(res):
+    def _result_to_list(self, res):
         if isinstance(res, np.ndarray):
             return list(res.astype(np.int))
         if isinstance(res, tf.Tensor):
             return list(res.numpy().astype(np.int))
+        if isinstance(res, int) or isinstance(res, NUMERIC_TYPES):
+            return len(self.target_qubits) * [res]
         return list(res)
 
     def _prepare(self):

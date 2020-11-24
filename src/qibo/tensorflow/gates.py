@@ -186,9 +186,8 @@ class Collapse(TensorflowGate, base_gates.Collapse):
         self.ids = None
         self.density_matrix_result = None
 
-    @staticmethod
-    def _result_to_list(res):
-        return cgates.Collapse._result_to_list(res)
+    def _result_to_list(self, res):
+        return cgates.Collapse._result_to_list(self, res)
 
     def _prepare(self):
         self.order = list(self.sorted_qubits)
