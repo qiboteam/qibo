@@ -28,7 +28,13 @@ SOURCES = $(filter-out $(CUDASRC), $(SRCS))
 TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_compile_flags()))')
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
-CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11 -fopenmp
+CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
+ifneq ($(CXX),g++)
+	CFLAGS += -fopenmp
+else
+	CFLAGS += -Xpreprocessor -fopenmp
+endif
+
 CFLAGS_CUDA = $(CFLAGS) -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
 CFLAGS_NVCC = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
 
