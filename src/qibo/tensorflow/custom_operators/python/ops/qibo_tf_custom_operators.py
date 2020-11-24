@@ -4,7 +4,7 @@ import tensorflow as tf
 import numpy as np
 from tensorflow.python.framework import load_library
 from tensorflow.python.platform import resource_loader
-from qibo.config import get_device
+from qibo.config import get_device, get_threads
 
 
 if tf.config.list_physical_devices("GPU"): # pragma: no cover
@@ -26,7 +26,7 @@ transpose_state = custom_module.transpose_state
 swap_pieces = custom_module.swap_pieces
 
 # apply_gate operator
-def apply_gate(state, gate, qubits, nqubits, target):
+def apply_gate(state, gate, qubits, nqubits, target, omp_num_threads=get_threads()):
     """Applies arbitrary one-qubit gate to a state vector.
 
     Modifies ``state`` in-place.
@@ -46,7 +46,7 @@ def apply_gate(state, gate, qubits, nqubits, target):
         state (tf.Tensor): State vector of shape ``(2 ** nqubits,)`` after
             ``gate`` is applied.
     """
-    return custom_module.apply_gate(state, gate, qubits, nqubits, target)
+    return custom_module.apply_gate(state, gate, qubits, nqubits, target, omp_num_threads)
 
 
 apply_two_qubit_gate = custom_module.apply_two_qubit_gate
@@ -64,5 +64,5 @@ apply_fsim = custom_module.apply_fsim
 
 apply_swap = custom_module.apply_swap
 
-def collapse_state(state, qubits, result, nqubits, normalize=True):
-    return custom_module.collapse_state(state, qubits, result, nqubits, normalize)
+def collapse_state(state, qubits, result, nqubits, normalize=True, omp_num_threads=get_threads()):
+    return custom_module.collapse_state(state, qubits, result, nqubits, normalize, omp_num_threads)

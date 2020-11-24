@@ -56,6 +56,8 @@ class TransposeStateOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("ndevices", &ndevices_));
     OP_REQUIRES_OK(context, context->GetAttr("qubit_order", &qubit_order_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext *context) override {
@@ -80,6 +82,7 @@ class TransposeStateOp : public OpKernel {
   private:
    int nqubits_;
    int ndevices_;
+   int threads_;
    std::vector<int> qubit_order_;
 };
 
@@ -90,6 +93,8 @@ class SwapPiecesOp : public OpKernel {
   explicit SwapPiecesOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext *context) override {
@@ -112,7 +117,7 @@ class SwapPiecesOp : public OpKernel {
     context->set_output(1, piece1);
   }
   private:
-   int nqubits_, target_;
+   int nqubits_, target_, threads_;
 };
 
 

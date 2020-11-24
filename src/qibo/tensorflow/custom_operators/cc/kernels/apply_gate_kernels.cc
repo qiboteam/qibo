@@ -248,6 +248,8 @@ class OneQubitGateOp : public OpKernel {
   explicit OneQubitGateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -278,6 +280,7 @@ class OneQubitGateOp : public OpKernel {
  private:
   int nqubits_;
   int target_;
+  int threads_;
 };
 
 template <typename Device, typename T, typename F, bool UseMatrix>
@@ -287,6 +290,8 @@ class TwoQubitGateOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target1", &target1_));
     OP_REQUIRES_OK(context, context->GetAttr("target2", &target2_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -317,6 +322,7 @@ class TwoQubitGateOp : public OpKernel {
  private:
   int nqubits_;
   int target1_, target2_;
+  int threads_;
 };
 
 template <typename Device, typename T, typename NormType>
@@ -325,6 +331,8 @@ class CollapseStateOp : public OpKernel {
   explicit CollapseStateOp(OpKernelConstruction* context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("normalize", &normalize_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext* context) override {
@@ -342,7 +350,7 @@ class CollapseStateOp : public OpKernel {
   }
 
  private:
-   int nqubits_;
+   int nqubits_, threads_;
    bool normalize_;
 };
 

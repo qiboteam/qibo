@@ -6,6 +6,7 @@
 # Compilers
 NVCC := $(CUDA_PATH)/bin/nvcc
 PYTHON_BIN_PATH	:= python
+UNAME_S := $(shell uname -s)
 
 ifneq ($(PYTHON),)
 	PYTHON_BIN_PATH = $(PYTHON)
@@ -29,10 +30,10 @@ TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".j
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
 CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
-ifeq ($(shell uname -s),Linux)
+ifeq ($(UNAME_S),Linux)
 	CFLAGS += -fopenmp
 endif
-ifeq ($(shell uname -s),Darwin)
+ifeq ($(UNAME_S),Darwin)
 	CFLAGS += -Xpreprocessor -fopenmp
 endif
 
@@ -40,7 +41,7 @@ CFLAGS_CUDA = $(CFLAGS) -D GOOGLE_CUDA=1 -I$(CUDA_PATH)/include
 CFLAGS_NVCC = ${TF_CFLAGS} -O2 -std=c++11 -D GOOGLE_CUDA=1 -x cu -Xcompiler -fPIC -DNDEBUG --expt-relaxed-constexpr
 
 LDFLAGS = -shared ${TF_LFLAGS}
-ifeq ($(shell uname -s),Darwin)
+ifeq ($(UNAME_S),Darwin)
 	LDFLAGS += -lomp
 endif
 
