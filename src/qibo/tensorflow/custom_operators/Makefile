@@ -29,9 +29,11 @@ TF_CFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".j
 TF_LFLAGS := $(shell $(PYTHON_BIN_PATH) -c 'import tensorflow as tf; print(" ".join(tf.sysconfig.get_link_flags()))')
 
 CFLAGS = ${TF_CFLAGS} -fPIC -O2 -std=c++11
-ifneq ($(CXX),g++)
+ifeq ($(shell uname -s),Linux)
 	CFLAGS += -fopenmp
-else
+endif
+
+ifeq ($(shell uname -s),Darwin)
 	CFLAGS += -Xpreprocessor -fopenmp
 endif
 
