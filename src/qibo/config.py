@@ -41,23 +41,23 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
-    # Set the intra number of threads to the environment flag
-    if "QIBO_NUM_THREADS" in os.environ: # pragma: no cover
-        nthreads = int(os.environ["QIBO_NUM_THREADS"])
-        tf.config.threading.set_intra_op_parallelism_threads(nthreads)
+    # Set the number of threads from the environment variable
+    if "OMP_NUM_THREADS" not in os.environ: # pragma: no cover
+        import psutil
+        # using physical cores by default
+        cores = psutil.cpu_count(logical=False)
+        os.environ["OMP_NUM_THREADS"] = str(cores)
 
-
-    THREADS = {
-        'inter': tf.config.threading.get_inter_op_parallelism_threads(),
-        'intra': tf.config.threading.get_intra_op_parallelism_threads()
-    }
+    def get_threads(): # pragma: no cover
+        """Returns number of threads."""
+        return int(os.environ.get("OMP_NUM_THREADS"))
 
     # Numpy and Tensorflow numeric and array types
     NUMERIC_TYPES = (np.int, np.float, np.complex,
                      np.int32, np.int64, np.float32,
                      np.float64, np.complex64, np.complex128)
     ARRAY_TYPES = (tf.Tensor, np.ndarray)
-    
+
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
