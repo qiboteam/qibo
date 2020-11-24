@@ -3,7 +3,6 @@
 #endif  // GOOGLE_CUDA
 
 #include "apply_gate.h"
-#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
 
@@ -11,8 +10,6 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
-
-using thread::ThreadPool;
 
 // Helper methods for complex numbers
 template <typename T>
@@ -37,42 +34,25 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     const int64 tk = (int64)1 << m;
     int64 nstates = (int64)1 << (nqubits - ncontrols - 1);
 
-    // Set multi-threading
-    auto thread_pool =
-        context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int)thread_pool->NumThreads();
-    int64 nreps;
-    if (ncores > 1) {
-      nreps = (int64)nstates / ncores;
-    } else {
-      nreps = 1;
-    }
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
-
     // Apply gate
     if (ncontrols == 0) {
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
-          apply(state[i], state[i + tk], gate);
-        }
-      };
-      thread_pool->ParallelFor(nstates, p, DoWork);
+      #pragma omp parallel for
+      for (auto g = 0; g < nstates; g += 1) {
+        int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
+        apply(state[i], state[i + tk], gate);
+      }
     } else {
       const int N = ncontrols + 1;
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = g;
-          for (auto iq = 0; iq < N; iq++) {
-            const auto n = qubits[iq];
-            int64 k = (int64)1 << n;
-            i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1)) + k;
-          }
-          apply(state[i - tk], state[i], gate);
+      #pragma omp parallel for
+      for (auto g = 0; g < nstates; g += 1) {
+        int64 i = g;
+        for (auto iq = 0; iq < N; iq++) {
+          const auto n = qubits[iq];
+          int64 k = (int64)1 << n;
+          i = ((int64)((int64)i >> n) << (n + 1)) + (i & (k - 1)) + k;
         }
-      };
-      thread_pool->ParallelFor(nstates, p, DoWork);
+        apply(state[i - tk], state[i], gate);
+      }
     }
   }
 };
@@ -143,41 +123,25 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
       std::swap(targetk1, targetk2);
     }
 
-    auto thread_pool =
-        context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int)thread_pool->NumThreads();
-    int64 nreps;
-    if (ncores > 1) {
-      nreps = (int64)nstates / ncores;
-    } else {
-      nreps = 1;
-    }
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
-
     if (ncontrols == 0) {
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
-          i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
-          apply(state, i, targetk1, targetk2, gate);
-        }
-      };
-      thread_pool->ParallelFor(nstates, p, DoWork);
+      #pragma omp parallel for
+      for (auto g = 0; g < nstates; g += 1) {
+        int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+        i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
+        apply(state, i, targetk1, targetk2, gate);
+      }
     } else {
       const int N = ncontrols + 2;
-      auto DoWork = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g += 1) {
-          int64 i = g;
-          for (auto iq = 0; iq < N; iq++) {
-            const auto m = qubits[iq];
-            int64 k = (int64)1 << m;
-            i = ((int64)((int64)i >> m) << (m + 1)) + (i & (k - 1)) + k;
-          }
-          apply(state, i - tk1 - tk2, targetk1, targetk2, gate);
+      #pragma omp parallel for
+      for (auto g = 0; g < nstates; g += 1) {
+        int64 i = g;
+        for (auto iq = 0; iq < N; iq++) {
+          const auto m = qubits[iq];
+          int64 k = (int64)1 << m;
+          i = ((int64)((int64)i >> m) << (m + 1)) + (i & (k - 1)) + k;
         }
-      };
-      thread_pool->ParallelFor(nstates, p, DoWork);
+        apply(state, i - tk1 - tk2, targetk1, targetk2, gate);
+      }
     }
   }
 };
@@ -240,19 +204,6 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
     int64 nsubstates = (int64)1 << ntargets;
     const int64 res = result[0];
 
-    // Set multi-threading
-    auto thread_pool =
-        context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int)thread_pool->NumThreads();
-    int64 nreps;
-    if (ncores > 1) {
-      nreps = (int64)nstates / ncores;
-    } else {
-      nreps = 1;
-    }
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt, nreps);
-
     auto GetIndex = [&](int64 g, int64 h) {
       int64 i = g;
       for (auto iq = 0; iq < ntargets; iq++) {
@@ -264,43 +215,28 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
       return i;
     };
 
-    // Define vector that holds norms during parallel calculation
-    int nnorms = 1;
-    if (nreps > 0) {
-      nnorms = ((int64)nstates / nreps) + 1;
+    NormType norms = 0;
+    #pragma omp parallel for shared(state) reduction(+: norms)
+    for (auto g = 0; g < nstates; g++) {
+      for (auto h = 0; h < res; h++) {
+        state[GetIndex(g, h)] = 0;
+      }
+      auto x = state[GetIndex(g, res)];
+      norms += x.real() * x.real() + x.imag() * x.imag();
+      for (auto h = res + 1; h < nsubstates; h++) {
+        state[GetIndex(g, h)] = 0;
+      }
     }
-    Eigen::Matrix<NormType, Eigen::Dynamic, 1> norms(nnorms);
-    norms.setZero();
-
-    auto ZeroState = [&](int64 t, int64 w) {
-      int n = 0;
-      if (nreps > 0) {
-        n = ((int) t / nreps);
-      }
-      for (auto g = t; g < w; g++) {
-        for (auto h = 0; h < res; h++) {
-          state[GetIndex(g, h)] = 0;
-        }
-        auto x = state[GetIndex(g, res)];
-        norms[n] += x.real() * x.real() + x.imag() * x.imag();
-        for (auto h = res + 1; h < nsubstates; h++) {
-          state[GetIndex(g, h)] = 0;
-        }
-      }
-    };
-    thread_pool->ParallelFor(nstates, p, ZeroState);
 
     if (normalize) {
-      auto norm = std::sqrt(norms.sum());
+      auto norm = std::sqrt(norms);
       auto NormalizeComponent = [&](T& x) {
         x = T(x.real() / norm, x.imag() / norm);
       };
-      auto NormalizeState = [&](int64 t, int64 w) {
-        for (auto g = t; g < w; g++) {
-          NormalizeComponent(state[GetIndex(g, res)]);
-        }
-      };
-      thread_pool->ParallelFor(nstates, p, NormalizeState);
+      #pragma omp parallel for
+      for (auto g = 0; g < nstates; g++) {
+        NormalizeComponent(state[GetIndex(g, res)]);
+      }
     }
   }
 };
