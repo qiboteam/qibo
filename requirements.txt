@@ -1,7 +1,6 @@
 # Runtime requirements for qibo
 
 # numpy (included in tf)
-# psutil already included
 tensorflow>=2.2,<=2.3.1
 scipy
 sympy
@@ -9,3 +8,4 @@ cma
 joblib
 matplotlib
 blessings
+psutil
