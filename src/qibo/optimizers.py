@@ -21,7 +21,7 @@ def optimize(loss, initial_parameters, method='Powell',
     if method == "cma":
         return cma(loss, initial_parameters, options, args)
     elif method == "sgd":
-        return sgd(loss, initial_parameters, options, compile)
+        return sgd(loss, initial_parameters, options, compile, args)
     else:
         return newtonian(loss, initial_parameters, method, options, processes, args)
 
@@ -76,7 +76,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
     return m.fun, m.x
 
 
-def sgd(loss, initial_parameters, options=None, compile=False):
+def sgd(loss, initial_parameters, options=None, compile=False, args=()):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -111,7 +111,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
 
     def opt_step():
         with K.GradientTape() as tape:
-            l = loss(vparams)
+            l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
@@ -124,7 +124,7 @@ def sgd(loss, initial_parameters, options=None, compile=False):
         if e % sgd_options["nmessage"] == 1:
             log.info('ite %d : loss %f', e, l.numpy())
 
-    return loss(vparams).numpy(), vparams.numpy()
+    return loss(vparams, *args).numpy(), vparams.numpy()
 
 
 class ParallelBFGSResources: # pragma: no cover

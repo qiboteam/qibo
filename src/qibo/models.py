@@ -186,7 +186,7 @@ class VQE(object):
             The final expectation value.
             The corresponding best parameters.
         """
-        def loss(params, circuit, hamiltonian):
+        def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
             final_state = circuit()
             return hamiltonian.expectation(final_state)
@@ -196,7 +196,7 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
-            loss = K.function(loss)
+            loss = K.function(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
@@ -206,18 +206,13 @@ class VQE(object):
                     raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')
-
-            result, parameters = self.optimizers.optimize(lambda p: loss(p,
-                                                                         self.circuit,
-                                                                         self.hamiltonian),
-                                                          initial_state,
-                                                          "sgd", options,
-                                                          compile)
+            loss = _loss
         else:
-            result, parameters = self.optimizers.optimize(lambda p, c, h: loss(p, c, h).numpy(), initial_state,
-                                                          method, options, processes=processes,
-                                                          args=(self.circuit, self.hamiltonian))
-
+            loss = lambda p, c, h: _loss(p, c, h).numpy()
+        result, parameters = self.optimizers.optimize(loss, initial_state, method,
+                                                      options, compile=compile,
+                                                      processes=processes,
+                                                      args=(self.circuit, self.hamiltonian))
         self.circuit.set_parameters(parameters)
         return result, parameters
 
@@ -392,8 +387,8 @@ class QAOA(object):
 
         if method == "sgd":
             import tensorflow as tf
-            loss = lambda p: _loss(tf.cast(
-                p, dtype=self.DTYPES.get('DTYPECPX')), self, self.hamiltonian)
+            loss = lambda p, c, h: _loss(tf.cast(
+                p, dtype=self.DTYPES.get('DTYPECPX')), c, h)
         else:
             import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()
