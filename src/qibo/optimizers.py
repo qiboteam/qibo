@@ -133,6 +133,7 @@ class ParallelBFGSResources: # pragma: no cover
     and calling the respective loss function.
     """
     import multiprocessing as mp
+    mp.set_start_method('fork') # enforce on Darwin
 
     # private objects holding the state
     _instance = None
