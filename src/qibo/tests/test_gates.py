@@ -1281,3 +1281,189 @@ def test_variational_layer_dagger(backend, nqubits):
     final_state = c(np.copy(initial_state)).numpy()
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits,targets,results,oncircuit",
+                         [(2, [1], [0], False),
+                          (3, [1], 0, True),
+                          (4, [1, 3], [0, 1], True),
+                          (5, [0, 3, 4], [1, 1, 0], False),
+                          (6, [1, 3], np.ones(2, dtype=np.int), True),
+                          (4, [0, 2], np.zeros(2, dtype=np.int32)[0], True)])
+def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
+    from qibo.config import NUMERIC_TYPES
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(nqubits)
+    if oncircuit:
+        c = Circuit(nqubits)
+        c.add(gates.Collapse(*targets, result=results))
+        final_state = c(np.copy(initial_state)).numpy()
+    else:
+        collapse = gates.Collapse(*targets, result=results)
+        if backend == "custom":
+            final_state = collapse(np.copy(initial_state)).numpy()
+        else:
+            original_shape = initial_state.shape
+            new_shape = nqubits * (2,)
+            final_state = collapse(np.copy(initial_state).reshape(new_shape))
+            final_state = final_state.numpy().reshape(original_shape)
+
+    if isinstance(results, int) or isinstance(results, NUMERIC_TYPES):
+        results = nqubits * [results]
+    slicer = nqubits * [slice(None)]
+    for t, r in zip(targets, results):
+        slicer[t] = r
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("accelerators",
+                         [None, {"/GPU:0": 1, "/GPU:1": 1},
+                          {"GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}])
+@pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
+def test_collapse_gate_distributed(accelerators, nqubits, targets):
+    initial_state = utils.random_numpy_state(nqubits)
+    c = Circuit(nqubits, accelerators)
+    c.add(gates.Collapse(*targets))
+    final_state = c(np.copy(initial_state)).numpy()
+
+    slicer = nqubits * [slice(None)]
+    for t in targets:
+        slicer[t] = 0
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_after_measurement(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    qubits = [0, 2, 3]
+
+    c1 = Circuit(5)
+    c1.add((gates.H(i) for i in range(5)))
+    c1.add(gates.M(*qubits))
+    result = c1(nshots=1)
+    c2 = Circuit(5)
+    bitstring = result.samples(binary=True)[0]
+    c2.add(gates.Collapse(*qubits, result=bitstring))
+    c2.add((gates.H(i) for i in range(5)))
+    final_state = c2(initial_state=c1.final_state)
+
+    ct = Circuit(5)
+    for i, r in zip(qubits, bitstring.numpy()):
+        if r:
+            ct.add(gates.X(i))
+    ct.add((gates.H(i) for i in qubits))
+    target_state = ct()
+    np.testing.assert_allclose(final_state, target_state, atol=1e-15)
+    qibo.set_backend(original_backend)
+
+
+def test_collapse_gate_errors():
+    # pass wrong result length
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 1, 0])
+    # pass wrong result values
+    with pytest.raises(ValueError):
+        gate = gates.Collapse(0, 1, result=[0, 2])
+    # change result after creation
+    gate = gates.Collapse(2, 0, result=[0, 0])
+    gate.nqubits = 4
+    gate.result = np.ones(2, dtype=np.int)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_noise_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    thetas = np.random.random(4)
+    probs = 0.1 * np.random.random([4, 3]) + 0.2
+    gatelist = [gates.X, gates.Y, gates.Z]
+
+    c = Circuit(4)
+    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+    c.add((gates.PauliNoiseChannel(i, px, py, pz, seed=123)
+           for i, (px, py, pz) in enumerate(probs)))
+    final_state = c(nshots=40).numpy()
+
+    np.random.seed(123)
+    target_state = []
+    for _ in range(40):
+        noiseless_c = Circuit(4)
+        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
+        for i, ps in enumerate(probs):
+            for p, gate in zip(ps, gatelist):
+                if np.random.random() < p:
+                    noiseless_c.add(gate(i))
+        target_state.append(noiseless_c().numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_reset_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(5)
+    c = Circuit(5)
+    c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
+    final_state = c(np.copy(initial_state), nshots=30).numpy()
+
+    np.random.seed(123)
+    target_state = []
+    for _ in range(30):
+        noiseless_c = Circuit(5)
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+        if np.random.random() < 0.3:
+            noiseless_c.add(gates.Collapse(2))
+            noiseless_c.add(gates.X(2))
+        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_thermal_relaxation_channel_repeated(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    initial_state = utils.random_numpy_state(5)
+    c = Circuit(5)
+    c.add(gates.ThermalRelaxationChannel(4, t1=1.0, t2=0.6, time=0.8,
+                                         excited_population=0.8, seed=123))
+    final_state = c(np.copy(initial_state), nshots=30).numpy()
+
+    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
+        1.0, 0.6, 0.8, 0.8)
+    np.random.seed(123)
+    target_state = []
+    for _ in range(30):
+        noiseless_c = Circuit(5)
+        if np.random.random() < pz:
+            noiseless_c.add(gates.Z(4))
+        if np.random.random() < p0:
+            noiseless_c.add(gates.Collapse(4))
+        if np.random.random() < p1:
+            noiseless_c.add(gates.Collapse(4))
+            noiseless_c.add(gates.X(4))
+        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)

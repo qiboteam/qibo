@@ -99,7 +99,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
 
 
 def X(nqubits, numpy=False, trotter=False):
-    """Non-interacting pauli-X Hamiltonian.
+    """Non-interacting Pauli-X Hamiltonian.
 
     .. math::
         H = - \\sum _{i=0}^N X_i.
@@ -121,7 +121,7 @@ def X(nqubits, numpy=False, trotter=False):
 
 
 def Y(nqubits, numpy=False, trotter=False):
-    """Non-interacting pauli-X Hamiltonian.
+    """Non-interacting Pauli-Y Hamiltonian.
 
     .. math::
         H = - \\sum _{i=0}^N Y_i.
@@ -139,7 +139,7 @@ def Y(nqubits, numpy=False, trotter=False):
 
 
 def Z(nqubits, numpy=False, trotter=False):
-    """Non-interacting pauli-X Hamiltonian.
+    """Non-interacting Pauli-Z Hamiltonian.
 
     .. math::
         H = - \\sum _{i=0}^N Z_i.

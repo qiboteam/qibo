@@ -13,16 +13,16 @@ def ansatz(p=0):
       Returns:
         Qibo circuit implementing the variational ansatz.
     """
-    C = Circuit(3)
+    C = Circuit(3, density_matrix=p > 0)
     for i in range(3):
         C.add(gates.RZ(i, theta=0))
         C.add(gates.RY(i, theta=0))
         C.add(gates.RZ(i, theta=0))
         if p > 0:
-            C.add(gates.NoiseChannel(i, px=p/3, py=p/3, pz=p/3))
+            C.add(gates.PauliNoiseChannel(i, px=p/3, py=p/3, pz=p/3))
     for i in range(3):
         if p > 0:
-            C.add(gates.NoiseChannel(i, px=10 * p))
+            C.add(gates.PauliNoiseChannel(i, px=10 * p))
         C.add(gates.M(i))
     return C
 

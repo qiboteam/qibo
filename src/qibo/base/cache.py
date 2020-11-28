@@ -39,7 +39,7 @@ class BaseCache:
 
     @property
     def left(self):
-        if self._left is None:
+        if self._left is None: # pragma: no cover
             self._calculate_density_matrix()
         return self._left
 
@@ -198,25 +198,12 @@ class MatmulEinsumCache(BaseCache):
         self._right["inverse_ids"] = [len(self.ids)] + self.inverse_ids
         self._right["conjugate"] = True
 
-    def _calculate_density_matrix_controlled(self):
-            cdim = 2 ** self.ncontrol - 1
-            shapes = ((cdim,) + self.shape + (self.nstates,),
-                      (2 ** self.ntargets, (2 ** self.nrest) * self.nstates * cdim),
-                      self.transposed_shape + (self.nstates, cdim),
-                      (cdim,) + 2 * self.nqubits * (2,))
-
-            self._left0 = self._controlled_ids(self.left)
-            self._left0["shapes"] = shapes
-            self._right0 = self._controlled_ids(self.right)
-            self._right0["shapes"] = shapes
-
-    @staticmethod
-    def _controlled_ids(original):
-        new = {"ids": [i + 1 for i in original["ids"]],
-               "inverse_ids": [len(original["ids"])] + original["inverse_ids"],
-               "conjugate": original["conjugate"]}
-        new["ids"].append(0)
-        return new
+    def _calculate_density_matrix_controlled(self): # pragma: no cover
+        # `MatmulEinsum` falls back to `DefaultEinsum` if `controlled_by`
+        # and density matrices are used simultaneously due to an error
+        raise_error(NotImplementedError,
+                    "MatmulEinsum backend is not implemented when multicontrol "
+                    "gates are used on density matrices.")
 
 
 class ControlCache:

@@ -59,20 +59,20 @@ class BaseCircuit(object):
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
-    A specific backend (eg. Tensorflow) has to be used for performing
-    calculations (evolving the state vector).
-    All backend-based circuits should inherit `BaseCircuit`.
+    A specific backend has to be used for performing calculations.
+    All backend-based circuits should inherit ``BaseCircuit``.
+
+    Qibo provides the following circuits:
+    A state vector simulation circuit:
+    :class:`qibo.tensorflow.circuit.TensorflowCircuit`,
+    a density matrix simulation circuit:
+    :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+    and a circuit that distributes state vector simulation on multiple devices:
+    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`.
+    All circuits use Tensorflow as the computation backend.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
-
-    Example:
-        ::
-
-            from qibo.models import Circuit
-            from qibo import gates
-            c = Circuit(3) # initialized circuit with 3 qubits
-            c.add(gates.H(0)) # added Hadamard gate on qubit 0
     """
 
     __metaclass__ = ABCMeta
@@ -99,7 +99,8 @@ class BaseCircuit(object):
         self.fusion_groups = []
 
         self._final_state = None
-        self.using_density_matrix = False
+        self.density_matrix = False
+        self.repeated_execution = False
 
     def __add__(self, circuit) -> "BaseCircuit":
         """Add circuits.
@@ -139,7 +140,7 @@ class BaseCircuit(object):
                                           "circuit.".format(k))
                 newcircuit._check_measured(v)
                 newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate._add(c2.measurement_gate.target_qubits)
+            newcircuit.measurement_gate._add(c2.measurement_gate)
         return newcircuit
 
     def on_qubits(self, *q) -> Iterable[gates.Gate]:
@@ -306,10 +307,15 @@ class BaseCircuit(object):
         decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit
 
-    def with_noise(self, noise_map: NoiseMapType,
-                   measurement_noise: Optional[NoiseMapType] = None
-                   ) -> "BaseCircuit":
+    def with_noise(self, noise_map: NoiseMapType) -> "BaseCircuit":
         """Creates a copy of the circuit with noise gates after each gate.
+
+        If the original circuit uses state vectors then noise simulation will
+        be done using sampling and repeated circuit execution.
+        In order to use density matrices the original circuit should be created
+        using the ``density_matrix`` flag set to ``True``.
+        For more information we refer to the
+        :ref:`How to perform noisy simulation? <noisy-example>` example.
 
         Args:
             noise_map (dict): Dictionary that maps qubit ids to noise
@@ -317,11 +323,6 @@ class BaseCircuit(object):
                 If a tuple of probabilities (px, py, pz) is given instead of
                 a dictionary, then the same probabilities will be used for all
                 qubits.
-            measurement_noise (dict): Optional map for using different noise
-                probabilities before measurement for the qubits that are
-                measured.
-                If ``None`` the default probabilities specified by ``noise_map``
-                will be used for all qubits.
 
         Returns:
             Circuit object that contains all the gates of the original circuit
@@ -332,48 +333,36 @@ class BaseCircuit(object):
 
                 from qibo.models import Circuit
                 from qibo import gates
-                c = Circuit(2)
+                # use density matrices for noise simulation
+                c = Circuit(2, density_matrix=True)
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
                 noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
                 noisy_c = c.with_noise(noise_map)
 
                 # ``noisy_c`` will be equivalent to the following circuit
-                c2 = Circuit(2)
+                c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
                 c2.add(gates.H(1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
                 c2.add(gates.CNOT(0, 1))
-                c2.add(gates.NoiseChannel(0, 0.1, 0.0, 0.2))
-                c2.add(gates.NoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
         """
         noise_map = self._check_noise_map(noise_map)
-        if measurement_noise is not None:
-            if self.measurement_gate is None:
-                raise_error(ValueError, "Passed measurement noise but the circuit "
-                                        "does not contain measurement gates.")
-            measurement_noise = self._check_noise_map(measurement_noise)
-            # apply measurement noise only to the qubits that are measured
-            # and leave default noise to the rest
-            measured_qubits = set(self.measurement_gate.target_qubits)
-            measurement_noise = {q: measurement_noise[q] if q in measured_qubits
-                                 else noise_map[q] for q in range(self.nqubits)}
-
         # Generate noise gates
         noise_gates = []
         for gate in self.queue:
-            if isinstance(gate, gates.NoiseChannel):
-                raise_error(ValueError, "`.with_noise` method is not available for "
-                                        "circuits that already contain noise channels.")
-            noise_gates.append([gate_module.NoiseChannel(q, *list(p))
-                                for q, p in noise_map.items()
-                                if sum(p) > 0])
-        if measurement_noise is not None:
-            noise_gates[-1] = [gate_module.NoiseChannel(q, *list(p))
-                               for q, p in measurement_noise.items()
-                               if sum(p) > 0]
+            if isinstance(gate, gates.KrausChannel):
+                raise_error(ValueError, "`.with_noise` method is not available "
+                                        "for circuits that already contain "
+                                        "channels.")
+            noise_gates.append([])
+            for q in gate.qubits:
+                if q in noise_map and sum(noise_map[q]) > 0:
+                    p = noise_map[q]
+                    noise_gates[-1].append(gate_module.PauliNoiseChannel(
+                            q, px=p[0], py=p[1], pz=p[2]))
 
         # Create new circuit with noise gates inside
         noisy_circuit = self.__class__(self.nqubits)
@@ -383,6 +372,7 @@ class BaseCircuit(object):
             noisy_circuit.queue.append(gate)
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
+        noisy_circuit.parametrized_gates = list(self.parametrized_gates)
         noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
@@ -419,6 +409,13 @@ class BaseCircuit(object):
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
     def _add(self, gate: gates.Gate):
+        if gate.density_matrix and not self.density_matrix:
+            raise_error(ValueError, "Cannot add {} on circuits that uses state "
+                                    "vectors. Please switch to density matrix "
+                                    "circuit.".format(gate.name))
+        elif self.density_matrix:
+            gate.density_matrix = True
+
         if self._final_state is not None:
             raise_error(RuntimeError, "Cannot add gates to a circuit after it is "
                                       "executed.")
@@ -435,6 +432,10 @@ class BaseCircuit(object):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
+        elif (isinstance(gate, gates.UnitaryChannel) and
+              not self.density_matrix):
+            self.repeated_execution = True
+            self.queue.append(gate)
         else:
             self.queue.append(gate)
         if isinstance(gate, gates.ParametrizedGate):
@@ -470,7 +471,7 @@ class BaseCircuit(object):
             self.measurement_gate = gate
             self.measurement_tuples[name] = tuple(gate.target_qubits)
         else:
-            self.measurement_gate._add(gate.target_qubits)
+            self.measurement_gate._add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
     def _add_layer(self, gate: gates.Gate):
@@ -678,7 +679,11 @@ class BaseCircuit(object):
 
     @abstractmethod
     def execute(self, *args): # pragma: no cover
-        """Executes the circuit. Exact implementation depends on the backend."""
+        """Executes the circuit. Exact implementation depends on the backend.
+
+        See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
+        details.
+        """
         # abstract method
         raise_error(NotImplementedError)
 
