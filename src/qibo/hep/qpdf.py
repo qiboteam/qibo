@@ -1,52 +1,52 @@
-"""Models for Quantum Circuit PDFs.
-    TODO:
-        * documentation
-        * tests
-        * ansatz cleanup
-"""
 import numpy as np
 from qibo import models
 from qibo.hamiltonians import Hamiltonian, matrices
 from qibo import gates
-from qibo.config import raise_error, K, DTYPES
+from qibo.config import raise_error
 
 
-class qPDF(object):
-    """Allocates a PDF object based on a circuit for a specific model ansatz.
-    This class can be initialized with single and multiple output.
+class qPDF: # pragma: no cover
+    """Variational Circuit for Quantum PDFs (qPDF).
 
     Args:
-        ansatz (str): the ansatz name.
+        ansatz (str): the ansatz name, options are 'Weighted' and 'Fourier'.
         layers (int): the number of layers for the ansatz.
-        nqubits (int): the circuit size.
-        multi_output (boolean): default false, allocates a multi-output model per PDF flavour.
-        fuse (boolean): fuse gates.
-        meansure_qubits (list): list of qubits for measurement.
+        nqubits (int): the number of qubits for the circuit.
+        multi_output (bool): allocates a multi-output model per PDF flavour (default is False).
     """
+    def __init__(self, ansatz, layers, nqubits, multi_output=False):
+        """Initialize qPDF."""
+        if not isinstance(layers, int) or layers < 1:
+            raise_error(RuntimeError, "Layers must be positive and integer.")
+        if not isinstance(nqubits, int) or nqubits < 1:
+            raise_error(RuntimeError, "Number of qubits must be positive and integer.")
+        if not isinstance(multi_output, bool):
+            raise_error(TypeError, "multi-output must be a boolean.")
 
-    def __init__(self, ansatz, layers, nqubits, multi_output=False, fuse=False, measure_qubits=None):
-        if measure_qubits is None:
-            self.measure_qubits = nqubits
-        else:
-            self.measure_qubits = measure_qubits
+        # load ansatz
         try:
             self.circuit, self.rotation, self.nparams = globals(
             )[f"ansatz_{ansatz}"](layers, nqubits)
         except KeyError:
             raise_error(NotImplementedError, "Ansatz not found.")
+
+        # load hamiltonian
         if multi_output:
-            self.hamiltonian = [qcpdf_hamiltonian(
-                nqubits, z_qubit=q) for q in range(self.measure_qubits)]
+            self.hamiltonian = [qpdf_hamiltonian(
+                nqubits, z_qubit=q) for q in range(nqubits)]
         else:
-            self.hamiltonian = [qcpdf_hamiltonian(nqubits)]
-        if fuse:
-            self.circuit = self.circuit.fuse()
-        self.multi_output = multi_output
-        self.layers = layers
-        self.nqubits = nqubits
+            self.hamiltonian = [qpdf_hamiltonian(nqubits)]
 
     def _model(self, state, hamiltonian):
-        """Internal function for the evaluation of PDFs."""
+        """Internal function for the evaluation of PDFs.
+
+        Args:
+            state (numpy.array): state vector.
+            hamiltonian (qibo.hamiltonian.Hamiltonian): the Hamiltonian object.
+
+        Returs:
+            The qPDF object following the (1-z)/(1+z) structure.
+        """
         z = hamiltonian.expectation(state)
         y = (1 - z) / (1 + z)
         return y
@@ -55,14 +55,15 @@ class qPDF(object):
         """Predict PDF model from underlying circuit.
 
         Args:
-            parameters: the list of parameters for the gates.
-            x (np.array): a numpy array with the points in x to be evaluated.
+            parameters (numpy.array): list of parameters for the gates.
+            x (numpy.array): a numpy array with the points in x to be evaluated.
 
         Returns:
             A numpy array with the PDF values.
         """
         if len(parameters) != self.nparams:
-            raise_error(RuntimeError, 'Mismatch between number of parameters and model size.')
+            raise_error(
+                RuntimeError, 'Mismatch between number of parameters and model size.')
         pdf = np.zeros(shape=(len(x), len(self.hamiltonian)))
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
@@ -72,40 +73,14 @@ class qPDF(object):
                 pdf[i, flavour] = self._model(state, flavour_hamiltonian)
         return pdf
 
-    def correlation(self, parameters, x):
-        """Predict PDF correlations from underlying circuit.
-        Args:
-            parameters: the list of parameters for the gates.
-            x (np.array): a numpy array with the points in x to be evaluated.
 
-        Returns:
-            A numpy array with the correlations values.
-        """
-        if len(parameters) != self.nparams:
-            raise_error(RuntimeError, 'Mismatch between number of parameters and model size.')
-        correlation = np.zeros(shape=(len(x), len(self.hamiltonian), len(self.hamiltonian)))
-        for i, x_value in enumerate(x):
-            params = self.rotation(parameters, x_value)
-            self.circuit.set_parameters(params)
-            state = self.circuit()
-            for flavour1 in range(len(self.hamiltonian)):
-                for flavour2 in range(flavour1 + 1):
-                    h1 = self.hamiltonian[flavour1].matrix
-                    h2 = self.hamiltonian[flavour2].matrix
-                    H = h1 @ h2
-                    hamiltonian = Hamiltonian(self.nqubits, H)
-
-                    correlation[i, flavour1, flavour2] = self._model(state, hamiltonian)
-
-        correlation = 0.5 * (correlation + np.transpose(correlation, axes=[0,2,1]))
-        return correlation
-
-
-def qcpdf_hamiltonian(nqubits, z_qubit=0):
+def qpdf_hamiltonian(nqubits, z_qubit=0): # pragma: no cover
     """Precomputes Hamiltonian.
+
     Args:
         nqubits (int): number of qubits.
         z_qubit (int): qubit where the Z measurement is applied, must be z_qubit < nqubits
+
     Returns:
         An Hamiltonian object.
     """
@@ -123,22 +98,25 @@ def qcpdf_hamiltonian(nqubits, z_qubit=0):
     else:
         h = eye
         for _ in range(nqubits - 1):
-            if _ + 1== z_qubit:
+            if _ + 1 == z_qubit:
                 h = np.kron(matrices.Z, h)
             else:
                 h = np.kron(eye, h)
     return Hamiltonian(nqubits, h)
 
 
-def map_to(x):
+def map_to(x): # pragma: no cover
+    """Auxiliary function"""
     return 2 * np.pi * x
 
 
-def maplog_to(x):
+def maplog_to(x): # pragma: no cover
+    """Auxiliary function"""
     return - np.pi * np.log10(x)
 
 
-def entangler(circuit):
+def entangler(circuit): # pragma: no cover
+    """Auxiliary function"""
     qubits = circuit.nqubits
     if qubits > 1:
         for q in range(0, qubits, 2):
@@ -147,7 +125,9 @@ def entangler(circuit):
         for q in range(1, qubits + 1, 2):
             circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
-def rotation_entangler(qubits, p, theta, i, j):
+
+def rotation_entangler(qubits, p, theta, i, j): # pragma: no cover
+    """Auxiliary function"""
     if qubits > 1:
         for q in range(0, qubits, 2):
             p[i] = theta[j]
@@ -161,9 +141,16 @@ def rotation_entangler(qubits, p, theta, i, j):
     return p, theta, i, j
 
 
-def ansatz_Fourier(layers, qubits=1):
-    """
-    3 parameters per layer and qubit: U3(a, b, c) Ry(x) || U3(a, b, c) Ry(log x)
+def ansatz_Fourier(layers, qubits=1): # pragma: no cover
+    """Fourier Ansatz implementation. It is composed by 3 parameters per layer
+    and qubit: U3(a, b, c) Ry(x) || U3(a, b, c) Ry(log x).
+
+    Args:
+        layers (int): number of layers.
+        qubits (int): number of qubits.
+
+    Returns:
+        The circuit, the rotation function and the total number of parameters.
     """
     circuit = models.Circuit(qubits)
     for l in range(layers - 1):
@@ -173,7 +160,6 @@ def ansatz_Fourier(layers, qubits=1):
                 circuit.add(gates.RZ(q, theta=0))
                 circuit.add(gates.RY(q, theta=0))
 
-
         if qubits > 1:
             for q in range(0, qubits, 2):
                 circuit.add(gates.CZPow(q, q + 1, theta=0))
@@ -181,13 +167,11 @@ def ansatz_Fourier(layers, qubits=1):
             for q in range(1, qubits + 1, 2):
                 circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
-
     for q in range(qubits):
         for _ in range(2):
             circuit.add(gates.RY(q, theta=0))
             circuit.add(gates.RZ(q, theta=0))
             circuit.add(gates.RY(q, theta=0))
-
 
     def rotation(theta, x):
         p = circuit.get_parameters()
@@ -226,13 +210,24 @@ def ansatz_Fourier(layers, qubits=1):
             j += 2
         return p
 
-    nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
+    nparams = 4 * layers * qubits + \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
+        (int(qubits > 1) + int(qubits > 2))
 
     return circuit, rotation, nparams
 
-def ansatz_Weighted(layers, qubits=1):
-    """
-    4 parameters per layer and qubit: Ry(wx + a), Rz(v log(x) + b)
+
+def ansatz_Weighted(layers, qubits=1): # pragma: no cover
+    """Fourier Ansatz implementation. 4 parameters per layer and
+    qubit: Ry(wx + a), Rz(v log(x) + b)
+
+    Args:
+        layers (int): number of layers.
+        qubits (int): number of qubits.
+
+    Returns:
+        The circuit, the rotation function and the total number of
+        parameters.
     """
     circuit = models.Circuit(qubits)
     for _ in range(layers - 1):
@@ -279,6 +274,7 @@ def ansatz_Weighted(layers, qubits=1):
 
         return p
 
-    nparams = 4 * layers * qubits + (layers - 1) * int(np.ceil(qubits / 2)) * (int(qubits > 1) + int(qubits > 2))
+    nparams = 4 * layers * qubits + \
+        (layers - 1) * int(np.ceil(qubits / 2)) * \
+        (int(qubits > 1) + int(qubits > 2))
     return circuit, rotation, nparams
-
