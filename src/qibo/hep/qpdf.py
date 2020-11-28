@@ -16,18 +16,18 @@ class qPDF:
     """
     def __init__(self, ansatz, layers, nqubits, multi_output=False):
         """Initialize qPDF."""
-        if not isinstance(layers, int) or layers < 1:
+        if not isinstance(layers, int) or layers < 1: # pragma: no cover
             raise_error(RuntimeError, "Layers must be positive and integer.")
-        if not isinstance(nqubits, int) or nqubits < 1:
+        if not isinstance(nqubits, int) or nqubits < 1: # pragma: no cover
             raise_error(RuntimeError, "Number of qubits must be positive and integer.")
-        if not isinstance(multi_output, bool):
+        if not isinstance(multi_output, bool): # pragma: no cover
             raise_error(TypeError, "multi-output must be a boolean.")
 
         # load ansatz
         try:
             self.circuit, self.rotation, self.nparams = globals(
             )[f"ansatz_{ansatz}"](layers, nqubits)
-        except KeyError:
+        except KeyError: # pragma: no cover
             raise_error(NotImplementedError, "Ansatz not found.")
 
         # load hamiltonian
@@ -61,7 +61,7 @@ class qPDF:
         Returns:
             A numpy array with the PDF values.
         """
-        if len(parameters) != self.nparams:
+        if len(parameters) != self.nparams: # pragma: no cover
             raise_error(
                 RuntimeError, 'Mismatch between number of parameters and model size.')
         pdf = np.zeros(shape=(len(x), len(self.hamiltonian)))
@@ -113,32 +113,6 @@ def map_to(x):
 def maplog_to(x):
     """Auxiliary function"""
     return - np.pi * np.log10(x)
-
-
-def entangler(circuit):
-    """Auxiliary function"""
-    qubits = circuit.nqubits
-    if qubits > 1:
-        for q in range(0, qubits, 2):
-            circuit.add(gates.CZPow(q, q + 1, theta=0))
-    if qubits > 2:
-        for q in range(1, qubits + 1, 2):
-            circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
-
-
-def rotation_entangler(qubits, p, theta, i, j):
-    """Auxiliary function"""
-    if qubits > 1:
-        for q in range(0, qubits, 2):
-            p[i] = theta[j]
-            i += 1
-            j += 1
-    if qubits > 2:
-        for q in range(1, qubits + 1, 2):
-            p[i + 1] = theta[j + 1]
-            i += 1
-            j += 1
-    return p, theta, i, j
 
 
 def ansatz_Fourier(layers, qubits=1):
