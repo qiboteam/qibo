@@ -11,7 +11,7 @@ from qibo import gates
 from qibo.config import raise_error, K, DTYPES
 
 
-class PDFModel(object):
+class qPDF(object):
     """Allocates a PDF object based on a circuit for a specific model ansatz.
     This class can be initialized with single and multiple output.
 

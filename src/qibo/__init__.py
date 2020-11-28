@@ -6,5 +6,4 @@ from qibo import models
 from qibo import gates
 from qibo import hamiltonians
 from qibo import optimizers
-from qibo import qcpdf
 from qibo import solvers

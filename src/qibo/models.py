@@ -6,7 +6,6 @@ from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
 from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
-from qibo.qcpdf import PDFModel
 from typing import Dict, Optional
 
 
