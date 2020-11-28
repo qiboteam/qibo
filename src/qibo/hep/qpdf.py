@@ -5,7 +5,7 @@ from qibo import gates
 from qibo.config import raise_error
 
 
-class qPDF: # pragma: no cover
+class qPDF:
     """Variational Circuit for Quantum PDFs (qPDF).
 
     Args:
@@ -74,7 +74,7 @@ class qPDF: # pragma: no cover
         return pdf
 
 
-def qpdf_hamiltonian(nqubits, z_qubit=0): # pragma: no cover
+def qpdf_hamiltonian(nqubits, z_qubit=0):
     """Precomputes Hamiltonian.
 
     Args:
@@ -105,17 +105,17 @@ def qpdf_hamiltonian(nqubits, z_qubit=0): # pragma: no cover
     return Hamiltonian(nqubits, h)
 
 
-def map_to(x): # pragma: no cover
+def map_to(x):
     """Auxiliary function"""
     return 2 * np.pi * x
 
 
-def maplog_to(x): # pragma: no cover
+def maplog_to(x):
     """Auxiliary function"""
     return - np.pi * np.log10(x)
 
 
-def entangler(circuit): # pragma: no cover
+def entangler(circuit):
     """Auxiliary function"""
     qubits = circuit.nqubits
     if qubits > 1:
@@ -126,7 +126,7 @@ def entangler(circuit): # pragma: no cover
             circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
 
 
-def rotation_entangler(qubits, p, theta, i, j): # pragma: no cover
+def rotation_entangler(qubits, p, theta, i, j):
     """Auxiliary function"""
     if qubits > 1:
         for q in range(0, qubits, 2):
@@ -141,7 +141,7 @@ def rotation_entangler(qubits, p, theta, i, j): # pragma: no cover
     return p, theta, i, j
 
 
-def ansatz_Fourier(layers, qubits=1): # pragma: no cover
+def ansatz_Fourier(layers, qubits=1):
     """Fourier Ansatz implementation. It is composed by 3 parameters per layer
     and qubit: U3(a, b, c) Ry(x) || U3(a, b, c) Ry(log x).
 
@@ -217,7 +217,7 @@ def ansatz_Fourier(layers, qubits=1): # pragma: no cover
     return circuit, rotation, nparams
 
 
-def ansatz_Weighted(layers, qubits=1): # pragma: no cover
+def ansatz_Weighted(layers, qubits=1):
     """Fourier Ansatz implementation. 4 parameters per layer and
     qubit: Ry(wx + a), Rz(v log(x) + b)
 
