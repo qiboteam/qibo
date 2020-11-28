@@ -14,6 +14,7 @@ physics problems.
 - [Quantum unary approach to option pricing](unary/README.md)
 - [Simple Adiabatic Evolution Examples](adiabatic/README.md)
 - [Adiabatic evolution for solving an Exact Cover problem](adiabatic-3SAT/README.md)
+- [Tutorial for determining the parton content of the proton with a quantum computer](qPDF/qPDF.ipynb)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)
