@@ -16,6 +16,7 @@ def optimize(loss, initial_parameters, method='Powell',
             bellow for a list of the supported options.
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
             This is relevant only for the ``'sgd'`` optimizer.
+        processes (int): number of processes when using the parallel BFGS method.
         args (tuple): optional arguments for the loss function.
     """
     if method == "cma":
@@ -49,6 +50,16 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
 
+    .. note::
+        When using the method ``parallel_L-BFGS-B`` the ``processes`` option controls the
+        number of processes used by the parallel L-BFGS-B algorithm through the ``multiprocessing`` library.
+        By default ``processes=None``, in this case the total number of logical cores are used.
+        Make sure to select the appropriate number of processes for your computer specification,
+        taking in consideration memory and physical cores. In order to obtain optimal results
+        you can control the number of threads used by each process with the ``qibo.set_threads`` method.
+        For example, for small-medium size circuits you may benefit from single thread per process, thus set
+        ``qibo.set_threads(1)`` before running the optimization.
+
     Args:
         loss (callable): Loss as a function of variational parameters to be
             optimized.
@@ -58,7 +69,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
             a parallel version of L-BFGS-B algorithm.
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
-        processes (int): number of processes when using the paralle BFGS method.
+        processes (int): number of processes when using the parallel BFGS method.
         args (tuple): optional arguments for the loss function.
     """
     if method == 'parallel_L-BFGS-B':
@@ -230,7 +241,7 @@ class ParallelBFGS: # pragma: no cover
 
     @staticmethod
     def loss(params):
-        """Returns singletong loss."""
+        """Returns singleton loss."""
         return ParallelBFGSResources().loss(params)
 
     @staticmethod
