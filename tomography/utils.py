@@ -1,6 +1,5 @@
 import json
 import numpy as np
-from scipy.linalg import solve
 
 
 def extract_data(filename):
@@ -8,19 +7,6 @@ def extract_data(filename):
         r = r.read()
         raw = json.loads(r)
     return {k: np.array(v) for k, v in raw.items()}
-
-
-def find_beta(filename):
-    """Finds beta from state data."""
-    states = extract_data(filename)
-    vdict = {k: np.sqrt(v[0] ** 2 + v[1] ** 2) for k, v in states.items()}
-    refer_A = np.matrix([[1, 1, 1, 1],
-                        [1, 1, -1, -1],
-                        [1, -1, 1, -1],
-                        [1, -1, -1, 1]])
-    refer_B = np.array([vdict["00"], vdict["01"], vdict["10"], vdict["11"]])
-    beta = solve(refer_A, refer_B)
-    return np.array(beta).flatten()
 
 
 def cholesky(inmatrix):
@@ -127,7 +113,7 @@ class Matrices:
               np.kron(g_H*qb_a, g_I*qb_b)*np.kron(g_H*qb_a, g_I*qb_b).H,
               g_cnot*np.kron(g_I*qb_a, g_X_p2*qb_b)*(g_cnot*np.kron(g_I*qb_a, g_X_p2*qb_b)).H]
 
-    def rho_th_plot(self, index):
+    def rho_theory(self, index):
         return np.array(self.rho_th[index])
 
     def gate(self, beta):
