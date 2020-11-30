@@ -41,23 +41,39 @@ if BACKEND_NAME == "tensorflow":
     # Backend access
     K = tf
 
-    # Set the intra number of threads to the environment flag
-    if "QIBO_NUM_THREADS" in os.environ: # pragma: no cover
-        nthreads = int(os.environ["QIBO_NUM_THREADS"])
-        tf.config.threading.set_intra_op_parallelism_threads(nthreads)
+    # Set the number of threads from the environment variable
+    OMP_NUM_THREADS = None
+    if "OMP_NUM_THREADS" not in os.environ:
+        import psutil
+        # using physical cores by default
+        cores = psutil.cpu_count(logical=False)
+        OMP_NUM_THREADS = cores
+    else: # pragma: no cover
+        OMP_NUM_THREADS = int(os.environ.get("OMP_NUM_THREADS"))
 
+    def get_threads():
+        """Returns number of threads."""
+        return OMP_NUM_THREADS
 
-    THREADS = {
-        'inter': tf.config.threading.get_inter_op_parallelism_threads(),
-        'intra': tf.config.threading.get_intra_op_parallelism_threads()
-    }
+    def set_threads(num_threads):
+        """Set number of OpenMP threads.
+
+        Args:
+            num_threads (int): number of threads.
+        """
+        if not isinstance(num_threads, int): # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be integer.")
+        if num_threads < 1: # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be positive.")
+        global OMP_NUM_THREADS
+        OMP_NUM_THREADS = num_threads
 
     # Numpy and Tensorflow numeric and array types
     NUMERIC_TYPES = (np.int, np.float, np.complex,
                      np.int32, np.int64, np.float32,
                      np.float64, np.complex64, np.complex128)
     ARRAY_TYPES = (tf.Tensor, np.ndarray)
-    
+
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 

@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from qibo.base import gates
 from qibo.tensorflow import custom_operators as op
-from qibo.config import DTYPES, raise_error
+from qibo.config import DTYPES, raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -434,7 +434,8 @@ class DistributedState(DistributedBase):
             pieces = [full_state[i] for i in range(self.ndevices)]
             new_state = tf.zeros(self.shapes["device"], dtype=self.dtype)
             new_state = op.transpose_state(pieces, new_state, self.nqubits,
-                                           self.qubits.transpose_order)
+                                           self.qubits.transpose_order,
+                                           get_threads())
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
 
@@ -457,7 +458,8 @@ class DistributedState(DistributedBase):
             with tf.device(self.device):
                 state = tf.zeros(self.shapes["full"], dtype=self.dtype)
                 state = op.transpose_state(self.pieces, state, self.nqubits,
-                                           self.qubits.reverse_transpose_order)
+                                           self.qubits.reverse_transpose_order,
+                                           get_threads())
         return state
 
     def __len__(self) -> int:

@@ -1,6 +1,5 @@
 #include "transpose_state.h"
 #include "tensorflow/core/framework/op_kernel.h"
-#include "tensorflow/core/util/work_sharder.h"
 
 namespace tensorflow {
 
@@ -8,8 +7,6 @@ typedef Eigen::ThreadPoolDevice CPUDevice;
 typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
-
-using thread::ThreadPool;
 
 template <typename T>
 struct TransposeStateFunctor<CPUDevice, T> {
@@ -23,31 +20,14 @@ struct TransposeStateFunctor<CPUDevice, T> {
       qubit_exponents[q] = (int64) 1 << (nqubits - qubit_order[nqubits - q - 1] - 1);
     }
 
-    // Set multi-threading
-    auto thread_pool =
-        context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int) thread_pool->NumThreads();
-    int64 nreps;
-    if (ncores > 1) {
-      nreps = (int64) nstates / ncores;
-    }
-    else {
-      nreps = 1;
-    }
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        nreps);
-
-    auto DoWork = [&](int64 t, int64 w) {
-      for (auto g = t; g < w; g++) {
-        int64 k = 0;
-        for (int q = 0; q < nqubits; q++) {
-          if ((g >> q) % 2) k += qubit_exponents[q];
-        }
-        transposed_state[g] = state[(int64) k / npiece][(int64) k % npiece];
+    #pragma omp parallel for
+    for (auto g = 0; g < nstates; g++) {
+      int64 k = 0;
+      for (int q = 0; q < nqubits; q++) {
+        if ((g >> q) % 2) k += qubit_exponents[q];
       }
-    };
-    thread_pool->ParallelFor(nstates, p, DoWork);
+      transposed_state[g] = state[(int64) k / npiece][(int64) k % npiece];
+    }
   };
 };
 
@@ -60,28 +40,11 @@ struct SwapPiecesFunctor<CPUDevice, T> {
     const int64 tk = (int64)1 << m;
     const int64 nstates = (int64)1 << (nqubits - 1);
 
-    // Set multi-threading
-    auto thread_pool =
-        context->device()->tensorflow_cpu_worker_threads()->workers;
-    const int ncores = (int) thread_pool->NumThreads();
-    int64 nreps;
-    if (ncores > 1) {
-      nreps = (int64) nstates / ncores;
+    #pragma omp parallel for
+    for (auto g = 0; g < nstates; g++) {
+      int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
+      std::swap(piece0[i + tk], piece1[i]);
     }
-    else {
-      nreps = 1;
-    }
-    const ThreadPool::SchedulingParams p(
-        ThreadPool::SchedulingStrategy::kFixedBlockSize, absl::nullopt,
-        nreps);
-
-    auto DoWork = [&](int64 t, int64 w) {
-      for (auto g = t; g < w; g++) {
-        int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
-        std::swap(piece0[i + tk], piece1[i]);
-      }
-    };
-    thread_pool->ParallelFor(nstates, p, DoWork);
   }
 };
 
@@ -93,6 +56,8 @@ class TransposeStateOp : public OpKernel {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("ndevices", &ndevices_));
     OP_REQUIRES_OK(context, context->GetAttr("qubit_order", &qubit_order_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext *context) override {
@@ -117,6 +82,7 @@ class TransposeStateOp : public OpKernel {
   private:
    int nqubits_;
    int ndevices_;
+   int threads_;
    std::vector<int> qubit_order_;
 };
 
@@ -127,6 +93,8 @@ class SwapPiecesOp : public OpKernel {
   explicit SwapPiecesOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("target", &target_));
+    OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext *context) override {
@@ -149,7 +117,7 @@ class SwapPiecesOp : public OpKernel {
     context->set_output(1, piece1);
   }
   private:
-   int nqubits_, target_;
+   int nqubits_, target_, threads_;
 };
 
 
