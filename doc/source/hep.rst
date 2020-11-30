@@ -18,8 +18,6 @@ simple API to evaluate PDF flavours at specific values of the momentum fraction
 x. Further details and references about this model are presented in the
 ``examples/qPDF`` tutorial.
 
-.. _generalpurpose:
-
 qPDF circuit model
 ^^^^^^^^^^^^^^^^^^
 

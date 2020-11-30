@@ -23,12 +23,16 @@ class qPDF:
         if not isinstance(multi_output, bool): # pragma: no cover
             raise_error(TypeError, "multi-output must be a boolean.")
 
+        # parse ansatz
+        if ansatz == 'Weighted':
+            ansatz_function = ansatz_Weighted
+        elif ansatz == 'Fourier':
+            ansatz_function = ansatz_Fourier
+        else:
+            raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
+
         # load ansatz
-        try:
-            self.circuit, self.rotation, self.nparams = globals(
-            )[f"ansatz_{ansatz}"](layers, nqubits)
-        except KeyError: # pragma: no cover
-            raise_error(NotImplementedError, "Ansatz not found.")
+        self.circuit, self.rotation, self.nparams = ansatz_function(layers, nqubits)
 
         # load hamiltonian
         if multi_output:
