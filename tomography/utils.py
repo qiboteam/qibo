@@ -89,14 +89,6 @@ def MLE(x, amp, gate):
     return abs(L)
 
 
-def MLE2(rho, amp, gate):
-    L = 0
-    for i in range(len(amp)):
-        M = np.trace(rho.reshape((4, 4)) * gate[i])
-        L += 0.5*(amp[i] - M)**2/M
-    return abs(L)
-
-
 class Matrices:
     I = np.matrix([[1, 0], [0, 1]], dtype = complex)
     X = np.matrix([[0, 1], [1, 0]], dtype = complex)
