@@ -8,7 +8,7 @@ from scipy.linalg import solve
 
 
 #%% Extract state data
-beta = utils.find_beta("states_181120.json")
+beta = utils.find_beta("data/states_181120.json")
 gate = np.array(utils.matrices.gate(beta))
 
 # Extract tomography amplitudes
@@ -21,7 +21,7 @@ filename = ["tomo_181120-00.json",
             #"tomo_181120-hadamard-tunable.json",
             #"tomo_181120-hadamard-fixed.json",
             #"tomo_181120-bell_beta.json"
-data = utils.extract_data(filename[index])
+data = utils.extract_data("data/" + filename[index])
 amp = np.sqrt([v[0] ** 2 + v[1] ** 2 for v in data.values()])
 
 

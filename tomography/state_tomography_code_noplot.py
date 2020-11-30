@@ -62,7 +62,7 @@ def MLE(x, amp, gate):
 
 
 #%% Extract data
-refer_raw = extract_data("states_181120.json")
+refer_raw = extract_data("data/states_181120.json")
 refer = copy.copy(refer_raw)
 refer_key =[*refer_raw.keys()]
 for key in refer_key:
@@ -105,7 +105,7 @@ filename = ["tomo_181120-00.json",
             "tomo_181120-hadamard-tunable.json",
             "tomo_181120-hadamard-fixed.json",
             "tomo_181120-bell_beta.json"]
-raw = extract_data(filename[index])
+raw = extract_data("data/" + filename[index])
 data = copy.copy(raw)
 meas = [*data.keys()]
 for key in meas:
