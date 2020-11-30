@@ -4,23 +4,17 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def plot(rho_theory, rho_linear, rho_fit, fidelity, success, width=0.8, depth=0.8):
-    _x = np.arange(4)
-    _y = np.arange(4)
-    _xx, _yy = np.meshgrid(_x, _y)
-    x, y = _xx.ravel(), _yy.ravel()
+    _x, _y = np.meshgrid(np.arange(4), np.arange(4))
+    x, y = _x.ravel(), _y.ravel()
 
-    p_rho_thr = np.copy(rho_theory)
-    p_rho_lin = np.copy(rho_linear)
-    p_rho_fit = np.copy(rho_fit)
+    top_real_th = rho_theory.real.ravel()
+    top_imag_th = rho_theory.imag.ravel()
 
-    top_real_th = np.real(p_rho_thr).flatten()
-    top_imag_th = np.imag(p_rho_thr).flatten()
+    top_real_exp = rho_linear.real.ravel()
+    top_imag_exp = rho_linear.imag.ravel()
 
-    top_real_exp = np.real(p_rho_lin).flatten()
-    top_imag_exp = np.imag(p_rho_lin).flatten()
-
-    top_real_fit = np.real(p_rho_fit).flatten()
-    top_imag_fit = np.imag(p_rho_fit).flatten()
+    top_real_fit = rho_fit.real.ravel()
+    top_imag_fit = rho_fit.imag.ravel()
 
     plt.style.use('default')
     ticks = [0.5, 1.5, 2.5, 3.5]
