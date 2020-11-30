@@ -73,7 +73,10 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
         args (tuple): optional arguments for the loss function.
     """
     if method == 'parallel_L-BFGS-B':
-        from qibo.config import raise_error, get_device
+        from qibo.config import raise_error, get_device, get_threads, log
+        if processes is None and get_threads() != 1: # pragma: no cover
+            log.warning('Please consider using a lower number of threads per process,'
+                        ' or reduce the number of processes for better performance')
         if "GPU" in get_device(): # pragma: no cover
             raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
         o = ParallelBFGS(loss, args=args, options=options, processes=processes)
@@ -160,7 +163,7 @@ class ParallelBFGSResources: # pragma: no cover
             cls._instance = super(ParallelBFGSResources, cls).__new__(cls, *args, **kwargs)
         return cls._instance
 
-    def loss(self, params):
+    def loss(self, params=None):
         """Computes loss (custom_loss) for a specific set of parameters.
         This class performs the lock mechanism to duplicate objects
         for each process.
