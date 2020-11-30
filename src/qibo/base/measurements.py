@@ -4,6 +4,7 @@ import collections
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 from qibo.config import raise_error
 TensorType = Any
+ProbsType = Union[float, List[float], Dict[int, float]]
 
 
 class GateResult:
@@ -14,9 +15,6 @@ class GateResult:
 
     Args:
         qubits: Sorted tuple of qubit ids that the measurement gate acts on.
-        state: Reference to the tensor that holds the state that was sampled.
-            The state should have shape ``nqubits * (2,)`` if it is a state vector
-            or ``2 * nqubits * (2,)`` if it is a density matrix.
         decimal_samples: Tensor holding the measured samples in decimal
             representation. Has shape (nshots,).
         binary_samples: Tensor holding the measured samples in binary
@@ -26,11 +24,9 @@ class GateResult:
     """
 
     def __init__(self, qubits: Tuple[int],
-                 state: Optional[TensorType] = None,
                  decimal_samples: Optional[TensorType] = None,
                  binary_samples: Optional[TensorType] = None):
         self.qubits = qubits
-        self.sampled_state = state
 
         if decimal_samples is not None and binary_samples is not None:
             raise_error(ValueError, "Measurement result object cannot be created "
@@ -63,6 +59,9 @@ class GateResult:
             self._decimal = self._convert_to_decimal(self._binary, self.nqubits)
         return self._decimal
 
+    def __getitem__(self, i: int) -> TensorType:
+        return self.samples(binary=False)[i]
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
@@ -80,12 +79,64 @@ class GateResult:
             res, cnts = self._calculate_counts(self.samples(binary=False))
             self._frequencies = collections.Counter(
                 {k: v for k, v in zip(res, cnts)})
-
         if binary:
             return collections.Counter(
                 {"{0:b}".format(k).zfill(self.nqubits): v
                  for k, v in self._frequencies.items()})
         return self._frequencies
+
+    @staticmethod
+    def _get_bitflip_tuple(qubits: Tuple[int], probs: ProbsType) -> Tuple[float]:
+        if isinstance(probs, float):
+            if probs < 0 or probs > 1:
+                raise_error(ValueError, "Invalid bitflip probability {}."
+                                        "".format(probs))
+            return len(qubits) * (probs,)
+
+        if isinstance(probs, (tuple, list)):
+            if len(probs) != len(qubits):
+                raise_error(ValueError, "{} qubits were measured but the given "
+                                        "bitflip probability list contains {} "
+                                        "values.".format(
+                                            len(qubits), len(probs)))
+            return tuple(probs)
+
+        if isinstance(probs, dict):
+            diff = set(probs.keys()) - set(qubits)
+            if diff:
+                raise_error(KeyError, "Bitflip map contains {} qubits that are "
+                                      "not measured.".format(diff))
+            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
+
+        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+
+    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
+                       ) -> "GateResult":
+        """Applies bitflip noise to the measured samples.
+
+        Args:
+            p0: Bitflip probability map. Can be:
+                A dictionary that maps each measured qubit to the probability
+                that it is flipped, a list or tuple that has the same length
+                as the tuple of measured qubits or a single float number.
+                If a single float is given the same probability will be used
+                for all qubits.
+            p1: Probability of asymmetric bitflip. If ``p1`` is given, ``p0``
+                will be used as the probability for 0->1 and ``p1`` as the
+                probability for 1->0. If ``p1`` is ``None`` the same probability
+                ``p0`` will be used for both bitflips.
+
+        Returns:
+            A new :class:`qibo.base.measurements.GateResult` object that holds
+            the noisy samples.
+        """
+        if p1 is None:
+            probs = 2 * (self._get_bitflip_tuple(self.qubits, p0),)
+        else:
+            probs = (self._get_bitflip_tuple(self.qubits, p0),
+                     self._get_bitflip_tuple(self.qubits, p1))
+        noisy = self._apply_bitflips(self.samples(), probs)
+        return self.__class__(self.qubits, binary_samples=noisy)
 
     @staticmethod
     def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
@@ -99,6 +150,12 @@ class GateResult:
 
     @staticmethod
     def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
+        # abstract method
+        raise_error(NotImplementedError)
+
+    @staticmethod
+    def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float]
+                        ) -> TensorType: # pragma: no cover
         # abstract method
         raise_error(NotImplementedError)
 
@@ -189,6 +246,29 @@ class CircuitResult:
         if not registers:
             return self.result.frequencies(binary)
         return {k: v.frequencies(binary) for k, v in self._register_results.items()}
+
+    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
+                       ) -> "CircuitResult":
+        """Applies bitflip noise to the measured samples.
+
+        Args:
+            p0: Bitflip probability map. Can be:
+                A dictionary that maps each measured qubit to the probability
+                that it is flipped, a list or tuple that has the same length
+                as the tuple of measured qubits or a single float number.
+                If a single float is given the same probability will be used
+                for all qubits.
+            p1: Probability of asymmetric bitflip. If ``p1`` is given, ``p0``
+                will be used as the probability for 0->1 and ``p1`` as the
+                probability for 1->0. If ``p1`` is ``None`` the same probability
+                ``p0`` will be used for both bitflips.
+
+        Returns:
+            A new :class:`qibo.base.measurements.CircuitResult` object that
+            holds the noisy samples.
+        """
+        noisy_result = self.result.apply_bitflips(p0, p1)
+        return self.__class__(self.register_qubits, noisy_result)
 
     @staticmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],

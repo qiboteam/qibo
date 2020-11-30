@@ -3,7 +3,8 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import measurements as base_measurements
-from typing import Dict, Tuple
+from qibo.config import DTYPES
+from typing import Dict, Optional, Tuple
 
 
 class GateResult(base_measurements.GateResult):
@@ -22,6 +23,18 @@ class GateResult(base_measurements.GateResult):
     @staticmethod
     def _calculate_counts(decimal_samples: tf.Tensor) -> Tuple[np.ndarray]:
         return np.unique(decimal_samples.numpy(), return_counts=True)
+
+    @staticmethod
+    def _apply_bitflips(noiseless_samples: tf.Tensor, probs: Tuple[float]
+                        ) -> tf.Tensor:
+        dtype = DTYPES.get('DTYPE')
+        fprobs = tf.cast(probs, dtype=dtype)
+        sprobs = tf.random.uniform(noiseless_samples.shape, dtype=dtype)
+        flip0 = tf.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = tf.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
+        noisy_samples = noisy_samples - noiseless_samples * flip1
+        return noisy_samples
 
 
 class CircuitResult(base_measurements.CircuitResult):

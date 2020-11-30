@@ -22,6 +22,7 @@ __device__ T cadd(T a, T b) {
   return T(a.real() + b.real(), a.imag() + b.imag());
 }
 
+
 template <typename T>
 struct BaseOneQubitGateFunctor<GPUDevice, T> {
   virtual void nocontrolwork(const GPUDevice& d, int numBlocks, int blockSize,
@@ -517,10 +518,125 @@ struct ApplySwapFunctor<GPUDevice, T> : BaseTwoQubitGateFunctor<GPUDevice, T> {
   }
 };
 
+
+// Methods for Collapse gate
+__device__ long GetIndex(long g, long h, const int* qubits, int ntargets) {
+  long i = g;
+  for (auto iq = 0; iq < ntargets; iq++) {
+    const auto n = qubits[iq];
+    long k = (long)1 << n;
+    i = ((long)((int64)i >> n) << (n + 1)) + (i & (k - 1));
+    i += ((long)((int)(h >> iq) % 2) * k);
+  }
+  return i;
+};
+
+template <typename T>
+__global__ void CollapseStateKernel(T* state, const int* qubits,
+                                    const int64* results, int ntargets) {
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  const long result = results[0];
+  const long nsubstates = (int64)1 << ntargets;
+
+  for (auto h = 0; h < result; h++) {
+    state[GetIndex(g, h, qubits, ntargets)] = T(0, 0);
+  }
+  for (auto h = result + 1; h < nsubstates; h++) {
+    state[GetIndex(g, h, qubits, ntargets)] = T(0, 0);
+  }
+}
+
+template <typename T, typename NormType>
+__global__ void CalculateCollapsedNormKernel(T* state, NormType* norms,
+                                             const int* qubits,
+                                             const int64* results,
+                                             long nstates, int ntargets) {
+  const auto tid = threadIdx.x;
+  const auto stride = blockDim.x;
+  const long result = results[0];
+  norms[tid] = 0;
+
+  for (auto g = tid; g < nstates; g += stride) {
+    auto x = state[GetIndex(g, result, qubits, ntargets)];
+    norms[tid] += x.real() * x.real() + x.imag() * x.imag();
+  }
+}
+
+
+template <typename NormType>
+__global__ void VectorReductionKernel(NormType *g_idata, NormType *g_odata) {
+  extern __shared__ double sdata[DEFAULT_BLOCK_SIZE];
+  // each thread loads one element from global to shared mem
+  const auto tid = threadIdx.x;
+  sdata[tid] = g_idata[blockIdx.x * blockDim.x + threadIdx.x];
+  __syncthreads();
+  // do reduction in shared mem
+  for (auto s = blockDim.x / 2; s > 0; s >>= 1) {
+    if (tid < s) {
+      sdata[tid] += sdata[tid + s];
+    }
+    __syncthreads();
+  }
+  // write result for this block to global mem
+  if (tid == 0) {
+    g_odata[blockIdx.x] = std::sqrt(sdata[0]);
+  }
+}
+
+template <typename T, typename NormType>
+__global__ void NormalizeCollapsedStateKernel(T* state, NormType* norms,
+                                              const int* qubits,
+                                              const int64* results,
+                                              long nstates, int ntargets) {
+  const auto g = blockIdx.x * blockDim.x + threadIdx.x;
+  auto NormalizeComponent = [&](T& x) {
+    x = T(x.real() / norms[0], x.imag() / norms[0]);
+  };
+  NormalizeComponent(state[GetIndex(g, results[0], qubits, ntargets)]);
+}
+
+// Collapse state gate
+template <typename T, typename NormType>
+struct CollapseStateFunctor<GPUDevice, T, NormType> {
+  void operator()(OpKernelContext* context, const GPUDevice& d, T* state,
+                  int nqubits, bool normalize, int ntargets,
+                  const int32* qubits, const int64* result) const {
+    int64 nstates = (int64)1 << (nqubits - ntargets);
+    int blockSize = DEFAULT_BLOCK_SIZE;
+    int numBlocks = (nstates + blockSize - 1) / blockSize;
+    if (nstates < blockSize) {
+      numBlocks = 1;
+      blockSize = nstates;
+    }
+
+    CollapseStateKernel<T><<<numBlocks, blockSize, 0, d.stream()>>>(
+        state, qubits, result, ntargets);
+
+    if (normalize) {
+      // allocates support arrays on GPU
+      Tensor tensor_norms, tensor_block_norms;
+      TensorShape tensor_norms_shape{1}, tensor_block_norms_shape{blockSize};
+      const auto dtype = std::is_same<NormType, double>::value ? DT_DOUBLE : DT_FLOAT;
+      OP_REQUIRES_OK(context, context->allocate_temp(dtype, tensor_norms_shape, &tensor_norms));
+      OP_REQUIRES_OK(context, context->allocate_temp(dtype, tensor_block_norms_shape, &tensor_block_norms));
+      auto norms = tensor_norms.flat<NormType>().data();
+      auto block_norms = tensor_block_norms.flat<NormType>().data();
+
+      CalculateCollapsedNormKernel<T, NormType><<<1, blockSize, 0, d.stream()>>>(
+        state, block_norms, qubits, result, nstates, ntargets);
+      VectorReductionKernel<NormType><<<1, blockSize, 0, d.stream()>>>(
+        block_norms, norms);
+      NormalizeCollapsedStateKernel<T, NormType><<<numBlocks, blockSize, 0, d.stream()>>>(
+        state, norms, qubits, result, nstates, ntargets);
+    }
+  }
+};
+
 // Explicitly instantiate functors for the types of OpKernels registered.
 #define REGISTER_TEMPLATE(FUNCTOR)               \
   template struct FUNCTOR<GPUDevice, complex64>; \
   template struct FUNCTOR<GPUDevice, complex128>;
+
 
 REGISTER_TEMPLATE(BaseOneQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyGateFunctor);
@@ -532,6 +648,8 @@ REGISTER_TEMPLATE(BaseTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyTwoQubitGateFunctor);
 REGISTER_TEMPLATE(ApplyFsimFunctor);
 REGISTER_TEMPLATE(ApplySwapFunctor);
+template struct CollapseStateFunctor<GPUDevice, complex64, float>;
+template struct CollapseStateFunctor<GPUDevice, complex128, double>;
 }  // end namespace functor
 }  // end namespace tensorflow
 #endif  // GOOGLE_CUDA
