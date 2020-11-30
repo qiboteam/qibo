@@ -50,8 +50,9 @@ set2a = (1, 0, 3, 2)
 set2b = (0, 1, 2, 3)
 
 set2_A = gate[set2][:, set2a, set2b]
-set2_B = (amp[set2].astype(dtype) -
-          np.einsum("ik,k->i", gate[set2][:, set1a, set1b], rho_linear[set1b, set1a]))
+minus = np.einsum("ik,k->i", gate[set2][:, set1a, set1b], rho_linear[set1b, set1a])
+print(minus)
+set2_B = amp[set2].astype(dtype) - minus
 rho_linear[set2b, set2a] = solve(set2_A, set2_B)
 
 #########################
@@ -62,9 +63,10 @@ set3a = (2, 3, 0, 1)
 set3b = (0, 1, 2, 3)
 
 set3_A = gate[set3][:, set3a, set3b]
-set3_B = (amp[set3].astype(dtype)
-          - np.einsum("ik,k->i", gate[set3][:, set1a, set1b], rho_linear[set1b, set1a])
-          - np.einsum("ik,k->i", gate[set3][:, set2a, set2b], rho_linear[set2b, set2a]))
+minus = (np.einsum("ik,k->i", gate[set3][:, set1a, set1b], rho_linear[set1b, set1a])
+         + np.einsum("ik,k->i", gate[set3][:, set2a, set2b], rho_linear[set2b, set2a]))
+print(minus)
+set3_B = amp[set3].astype(dtype) - minus
 rho_linear[set3b, set3a] = solve(set3_A, set3_B)
 
 
@@ -73,10 +75,11 @@ set4 = [4, 5, 8, 9]
 set4a = (3, 2, 1, 0)
 set4b = (0, 1, 2, 3)
 set4_A = gate[set4][:, set4a, set4b]
-set4_B = (amp[set4].astype(dtype)
-          - np.einsum("ik,k->i", gate[set4][:, set1a, set1b], rho_linear[set1b, set1a])
-          - np.einsum("ik,k->i", gate[set4][:, set2a, set2b], rho_linear[set2b, set2a])
-          - np.einsum("ik,k->i", gate[set4][:, set3a, set3b], rho_linear[set3b, set3a]))
+minus = (np.einsum("ik,k->i", gate[set4][:, set1a, set1b], rho_linear[set1b, set1a])
+         + np.einsum("ik,k->i", gate[set4][:, set2a, set2b], rho_linear[set2b, set2a])
+         + np.einsum("ik,k->i", gate[set4][:, set3a, set3b], rho_linear[set3b, set3a]))
+print(minus)
+set4_B = amp[set4].astype(dtype) - minus
 rho_linear[set4b, set4a] = solve(set4_A, set4_B)
 
 
