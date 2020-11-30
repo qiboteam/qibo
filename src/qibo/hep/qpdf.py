@@ -28,7 +28,7 @@ class qPDF:
             ansatz_function = ansatz_Weighted
         elif ansatz == 'Fourier':
             ansatz_function = ansatz_Fourier
-        else:
+        else: # pragma: no cover
             raise_error(NotImplementedError, f"Ansatz {ansatz} not found.")
 
         # load ansatz
