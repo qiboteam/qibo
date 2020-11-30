@@ -73,12 +73,14 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
         args (tuple): optional arguments for the loss function.
     """
     if method == 'parallel_L-BFGS-B':
+        import psutil
         from qibo.config import raise_error, get_device, get_threads, log
-        if processes is None and get_threads() != 1: # pragma: no cover
-            log.warning('Please consider using a lower number of threads per process,'
-                        ' or reduce the number of processes for better performance')
         if "GPU" in get_device(): # pragma: no cover
             raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
+        if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
+            (processes is None and get_threads() != 1)): # pragma: no cover
+            log.warning('Please consider using a lower number of threads per process,'
+                        ' or reduce the number of processes for better performance')
         o = ParallelBFGS(loss, args=args, options=options, processes=processes)
         m = o.run(initial_parameters)
     else:
