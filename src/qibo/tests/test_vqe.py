@@ -3,6 +3,7 @@ Testing Variational Quantum Eigensolver.
 """
 import numpy as np
 import pytest
+from qibo.config import get_threads, set_threads
 from qibo import gates
 from qibo.models import Circuit, VQE
 from qibo.hamiltonians import XXZ
@@ -14,6 +15,8 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
+               ("parallel_L-BFGS-B", {'maxiter': 1}, True, None),
+               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None),
                ("cma", {"maxfevals": 2}, False, None),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
@@ -26,6 +29,10 @@ def test_vqe(method, options, compile, filename):
         qibo.set_backend("matmuleinsum")
     else:
         qibo.set_backend("custom")
+
+    original_threads = get_threads()
+    if method == 'parallel_L-BFGS-B':
+        qibo.set_threads(1)
 
     nqubits = 6
     layers  = 4
@@ -57,6 +64,7 @@ def test_vqe(method, options, compile, filename):
     if filename is not None:
         utils.assert_regression_fixture(params, filename)
     qibo.set_backend(original_backend)
+    qibo.set_threads(original_threads)
 
 
 def test_vqe_custom_gates_errors():

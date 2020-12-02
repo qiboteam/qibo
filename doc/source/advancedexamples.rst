@@ -64,9 +64,25 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Qibo inherits Tensorflow's defaults for CPU thread configuration and in most cases
-will utilize all available CPU threads. For small circuits the parallelization
-overhead may decrease performance making single thread execution preferrable.
+Qibo by default uses the ``"custom"`` operators backend. This backend uses
+OpenMP instructions for the parallelization. In most cases will utilize all
+available CPU threads. For small circuits the parallelization overhead may
+decrease performance making single thread execution preferrable.
+
+You can restrict the number of threads by exporting the ``OMP_NUM_THREADS``
+environment variable with the requested number of threads before launching Qibo,
+or programmatically, during runtime, as follows:
+
+.. code-block::  python
+
+    import qibo
+    # set the number of threads to 1
+    qibo.set_threads(1)
+    # retrieve the current number of threads
+    current_threads = qibo.get_threads()
+
+On the other hand, when using the ``"matmuleinsum"`` or ``"defaulteinsum"``
+backends Qibo inherits Tensorflow's defaults for CPU thread configuration.
 Tensorflow allows restricting the number of threads as follows:
 
 .. code-block::  python

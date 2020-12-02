@@ -322,6 +322,7 @@ variational model.
 .. automodule:: qibo.optimizers
    :members:
    :member-order: bysource
+   :exclude-members: ParallelBFGSResources, ParallelBFGS
 
 .. _Backends:
 

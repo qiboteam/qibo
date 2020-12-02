@@ -40,8 +40,36 @@ if BACKEND_NAME == "tensorflow":
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import numpy as np
     import tensorflow as tf
+
     # Backend access
     K = tf
+
+    # Set the number of threads from the environment variable
+    OMP_NUM_THREADS = None
+    if "OMP_NUM_THREADS" not in os.environ:
+        import psutil
+        # using physical cores by default
+        cores = psutil.cpu_count(logical=False)
+        OMP_NUM_THREADS = cores
+    else: # pragma: no cover
+        OMP_NUM_THREADS = int(os.environ.get("OMP_NUM_THREADS"))
+
+    def get_threads():
+        """Returns number of threads."""
+        return OMP_NUM_THREADS
+
+    def set_threads(num_threads):
+        """Set number of OpenMP threads.
+
+        Args:
+            num_threads (int): number of threads.
+        """
+        if not isinstance(num_threads, int): # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be integer.")
+        if num_threads < 1: # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be positive.")
+        global OMP_NUM_THREADS
+        OMP_NUM_THREADS = num_threads
 
     # Numpy and Tensorflow numeric and array types
     NUMERIC_TYPES = (np.int, np.float, np.complex,

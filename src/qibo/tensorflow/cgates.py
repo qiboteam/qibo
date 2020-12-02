@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 from qibo.base import gates as base_gates
-from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error
+from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -80,13 +80,13 @@ class TensorflowGate(base_gates.Gate):
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.qubits_tensor, self.nqubits,
-                            *self.target_qubits)
+                            *self.target_qubits, get_threads())
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
-                             *self.target_qubits)
+                             *self.target_qubits, get_threads())
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
-                             *self.target_qubits_dm)
+                             *self.target_qubits_dm, get_threads())
         return state
 
     def __call__(self, state: tf.Tensor) -> tf.Tensor:
@@ -113,14 +113,14 @@ class MatrixGate(TensorflowGate):
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
        return self.gate_op(state, self.matrix, self.qubits_tensor,
-                           self.nqubits, *self.target_qubits)
+                           self.nqubits, *self.target_qubits, get_threads())
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
-                             2 * self.nqubits, *self.target_qubits)
+                             2 * self.nqubits, *self.target_qubits, get_threads())
         adjmatrix = tf.math.conj(self.matrix)
         state = self.gate_op(state, adjmatrix, self.qubits_tensor,
-                             2 * self.nqubits, *self.target_qubits_dm)
+                             2 * self.nqubits, *self.target_qubits_dm, get_threads())
         return state
 
 
@@ -209,13 +209,13 @@ class Collapse(TensorflowGate, base_gates.Collapse):
 
     def _state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                            self.nqubits, self.normalize)
+                            self.nqubits, self.normalize, get_threads())
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
-                             2 * self.nqubits, False)
+                             2 * self.nqubits, False, get_threads())
         state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                             2 * self.nqubits, False)
+                             2 * self.nqubits, False, get_threads())
         return state / tf.linalg.trace(state)
 
 
@@ -899,4 +899,4 @@ class _ThermalRelaxationChannelB(MatrixGate, base_gates._ThermalRelaxationChanne
 
     def _density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
         return self.gate_op(state, self.matrix, self.qubits_tensor,
-                            2 * self.nqubits, *self.target_qubits_dm)
+                            2 * self.nqubits, *self.target_qubits_dm, get_threads())

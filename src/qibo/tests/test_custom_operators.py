@@ -4,6 +4,7 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
+from qibo.config import get_threads
 from qibo.tensorflow import custom_operators as op
 from qibo.tests import utils
 
@@ -44,7 +45,7 @@ def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     """Check that ``op.apply_gate`` agrees with ``tf.einsum``."""
     def apply_operator(state, gate):
       qubits = qubits_tensor(nqubits, [target])
-      return op.apply_gate(state, gate, qubits, nqubits, target)
+      return op.apply_gate(state, gate, qubits, nqubits, target, get_threads())
 
     state = utils.random_tensorflow_complex((2 ** nqubits,), dtype)
     gate = utils.random_tensorflow_complex((2, 2), dtype)
@@ -75,7 +76,7 @@ def test_apply_gate_cx(nqubits, compile):
     controls = list(range(nqubits - 1))
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, [nqubits - 1], controls)
-      return op.apply_gate(state, xgate, qubits, nqubits, nqubits - 1)
+      return op.apply_gate(state, xgate, qubits, nqubits, nqubits - 1, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -105,7 +106,7 @@ def test_apply_gate_controlled(nqubits, target, controls, compile, einsum_str):
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, [target], controls)
-      return op.apply_gate(state, gate, qubits, nqubits, target)
+      return op.apply_gate(state, gate, qubits, nqubits, target, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
 
@@ -125,11 +126,11 @@ def test_apply_pauli_gate(nqubits, target, gate, compile):
     state = utils.random_tensorflow_complex((2 ** nqubits,), dtype=tf.float64)
     target_state = tf.cast(state.numpy(), dtype=state.dtype)
     qubits = qubits_tensor(nqubits, [target])
-    target_state = op.apply_gate(state, matrices[gate], qubits, nqubits, target)
+    target_state = op.apply_gate(state, matrices[gate], qubits, nqubits, target, get_threads())
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, [target])
-      return getattr(op, "apply_{}".format(gate))(state, qubits, nqubits, target)
+      return getattr(op, "apply_{}".format(gate))(state, qubits, nqubits, target, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -159,7 +160,7 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, [target], controls)
-      return op.apply_z_pow(state, phase, qubits, nqubits, target)
+      return op.apply_z_pow(state, phase, qubits, nqubits, target, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -194,7 +195,7 @@ def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, targets, controls)
-      return op.apply_two_qubit_gate(state, gate, qubits, nqubits, *targets)
+      return op.apply_two_qubit_gate(state, gate, qubits, nqubits, *targets, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
 
@@ -237,7 +238,7 @@ def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
     gate = tf.concat([tf.reshape(rotation, (4,)), phase], axis=0)
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, targets, controls)
-      return op.apply_fsim(state, gate, qubits, nqubits, *targets)
+      return op.apply_fsim(state, gate, qubits, nqubits, *targets, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
 
@@ -257,7 +258,7 @@ def test_apply_swap_with_matrix(compile):
 
     def apply_operator(state):
       qubits = qubits_tensor(2, [0, 1])
-      return op.apply_swap(state, qubits, 2, 0, 1)
+      return op.apply_swap(state, qubits, 2, 0, 1, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -290,7 +291,7 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, targets, controls)
-      return op.apply_swap(state, qubits, nqubits, *targets)
+      return op.apply_swap(state, qubits, nqubits, *targets, get_threads())
     if compile:
         apply_operator = tf.function(apply_operator)
     state = apply_operator(state)
@@ -352,13 +353,14 @@ def test_custom_op_toy_callback(gate, compile):
     qubits_t1 = qubits_tensor(2, [0])
     qubits_t2 = qubits_tensor(2, [0, 1])
     apply_gate = {"h": functools.partial(op.apply_gate, gate=htf, qubits=qubits_t1,
-                                         nqubits=2, target=0),
+                                         nqubits=2, target=0, omp_num_threads=get_threads()),
                   "x": functools.partial(op.apply_x, qubits=qubits_t1,
-                                         nqubits=2, target=0),
+                                         nqubits=2, target=0, omp_num_threads=get_threads()),
                   "z": functools.partial(op.apply_z, qubits=qubits_t1,
-                                         nqubits=2, target=0),
+                                         nqubits=2, target=0, omp_num_threads=get_threads()),
                   "swap": functools.partial(op.apply_swap, qubits=qubits_t2,
-                                            nqubits=2, target1=0, target2=1)}
+                                            nqubits=2, target1=0, target2=1,
+                                            omp_num_threads=get_threads())}
 
     def apply_operator(state):
         c1 = tf.reduce_sum(mask * state)
@@ -401,9 +403,9 @@ def test_transpose_state(nqubits, ndevices):
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
             # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.transpose_state,
-                                      pieces, new_state, nqubits, qubit_order)
+                                      pieces, new_state, nqubits, qubit_order, get_threads())
         else:
-            new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order)
+            new_state = op.transpose_state(pieces, new_state, nqubits, qubit_order, get_threads())
             np.testing.assert_allclose(target_state, new_state.numpy())
 
 
@@ -418,16 +420,16 @@ def test_swap_pieces_zero_global(nqubits):
         local = np.random.randint(1, nqubits)
 
         qubits_t = qubits_tensor(nqubits, [0, local])
-        target_state = op.apply_swap(target_state, qubits_t, nqubits, 0, local)
+        target_state = op.apply_swap(target_state, qubits_t, nqubits, 0, local, get_threads())
         target_state = tf.reshape(target_state, shape)
 
         piece0, piece1 = state[0], state[1]
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
             # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.swap_pieces,
-                                      piece0, piece1, local - 1, nqubits - 1)
+                                      piece0, piece1, local - 1, nqubits - 1, get_threads())
         else:
-            op.swap_pieces(piece0, piece1, local - 1, nqubits - 1)
+            op.swap_pieces(piece0, piece1, local - 1, nqubits - 1, get_threads())
             np.testing.assert_allclose(target_state[0], piece0.numpy())
             np.testing.assert_allclose(target_state[1], piece1.numpy())
 
@@ -448,7 +450,7 @@ def test_swap_pieces(nqubits):
                            list(range(global_qubit + 1, nqubits)))
 
         qubits_t = qubits_tensor(nqubits, [global_qubit, local_qubit])
-        target_state = op.apply_swap(target_state, qubits_t, nqubits, global_qubit, local_qubit)
+        target_state = op.apply_swap(target_state, qubits_t, nqubits, global_qubit, local_qubit, get_threads())
         target_state = tf.reshape(target_state, nqubits * (2,))
         target_state = tf.transpose(target_state, transpose_order)
         target_state = tf.reshape(target_state, shape)
@@ -460,10 +462,10 @@ def test_swap_pieces(nqubits):
         if tf.config.list_physical_devices("GPU"): # pragma: no cover
             # case not tested by GitHub workflows because it requires GPU
             check_unimplemented_error(op.swap_pieces,
-                                      piece0, piece1, local_qubit - 1, nqubits - 1)
+                                      piece0, piece1, local_qubit - 1, nqubits - 1, get_threads())
         else:
             op.swap_pieces(piece0, piece1,
                            local_qubit - int(global_qubit < local_qubit),
-                           nqubits - 1)
+                           nqubits - 1, get_threads())
             np.testing.assert_allclose(target_state[0], piece0.numpy())
             np.testing.assert_allclose(target_state[1], piece1.numpy())
