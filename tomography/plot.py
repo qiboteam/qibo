@@ -3,18 +3,19 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 
-def plot(rho_theory, rho_linear, rho_fit, fidelity, success, width=0.8, depth=0.8):
+def plot(tomography, rho_theory, width=0.8, depth=0.8):
     _x, _y = np.meshgrid(np.arange(4), np.arange(4))
     x, y = _x.ravel(), _y.ravel()
 
     top_real_th = rho_theory.real.ravel()
     top_imag_th = rho_theory.imag.ravel()
 
-    top_real_exp = rho_linear.real.ravel()
-    top_imag_exp = rho_linear.imag.ravel()
+    top_real_exp = tomography.linear.real.ravel()
+    top_imag_exp = tomography.linear.imag.ravel()
 
-    top_real_fit = rho_fit.real.ravel()
-    top_imag_fit = rho_fit.imag.ravel()
+    top_real_fit = tomography.fit.real.ravel()
+    top_imag_fit = tomography.fit.imag.ravel()
+    fidelity = tomography.fidelity(rho_theory)
 
     plt.style.use('default')
     ticks = [0.5, 1.5, 2.5, 3.5]
@@ -67,7 +68,7 @@ def plot(rho_theory, rho_linear, rho_fit, fidelity, success, width=0.8, depth=0.
     ax5.set_yticks(ticks)
     ax5.set_yticklabels(tick_labels)
     ax5.set_zlim3d(-1, 1)
-    ax5.set_title('Real part, MLE_{}'.format(success))
+    ax5.set_title('Real part, MLE_{}'.format(tomography.success))
 
     ax6.bar3d(x, y, bottom, width, depth, top_imag_fit, shade=True, color='C2')
     ax6.set_xticks(ticks)
@@ -75,6 +76,6 @@ def plot(rho_theory, rho_linear, rho_fit, fidelity, success, width=0.8, depth=0.
     ax6.set_yticks(ticks)
     ax6.set_yticklabels(tick_labels)
     ax6.set_zlim3d(-1, 1)
-    ax6.set_title('Imaginary part, MLE_{}'.format(success))
+    ax6.set_title('Imaginary part, MLE_{}'.format(tomography.success))
 
     plt.show()
