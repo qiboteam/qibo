@@ -1,5 +1,6 @@
 import numpy as np
 from qibo import matrices
+from qibo.config import raise_error
 from scipy.linalg import solve, sqrtm
 from scipy.optimize import minimize
 
@@ -56,7 +57,7 @@ class Cholesky:
             m_re[idx] = self.vector[n:-k]
             m_im = np.zeros_like(m_re)
             m_im[idx] = self.vector[-k:]
-            return np.matrix(m_re + 1j * m_im)
+            self._matrix = np.matrix(m_re + 1j * m_im)
         return self._matrix
 
     @property
@@ -83,6 +84,7 @@ class Tomography:
 
         self._linear = None
         self._fitres = None
+        self._fitrho = None
 
     @property
     def gates(self):
@@ -151,14 +153,18 @@ class Tomography:
 
     @property
     def fit(self):
-        if self._fitres is None:
-            raise ValueError
-        return Cholesky.from_vector(self._fitres.x).reconstruct()
+        if self._fitrho is None:
+            if self._fitres is None:
+                raise_error(ValueError, "Cannot return fitted density matrix "
+                                        "before `minimize` is called.")
+            self._fitrho = Cholesky.from_vector(self._fitres.x).reconstruct()
+        return self._fitrho
 
     @property
     def success(self):
         if self._fitres is None:
-            raise ValueError
+            raise_error(ValueError, "Cannot return minimization success "
+                                    "before `minimize` is called.")
         return self._fitres.success
 
     def mle(self, x):
