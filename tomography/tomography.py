@@ -82,11 +82,11 @@ class Cholesky:
 
 class Tomography:
 
-    def __init__(self, states, amplitudes, gates=None, gatesets=None):
-        self.states = states
+    def __init__(self, amplitudes, state=None, gates=None, gatesets=None):
         self.amplitudes = amplitudes
-        self._gates = None
-        self._gatesets = None
+        self.state = state
+        self._gates = gates
+        self._gatesets = gatesets
 
         self._linear = None
         self._fitres = None
@@ -94,7 +94,7 @@ class Tomography:
     @property
     def gates(self):
         if self._gates is None:
-            beta = self.find_beta(self.states)
+            beta = self.find_beta(self.state)
             self._gates = self._default_gates(beta)
         return self._gates
 
@@ -105,15 +105,13 @@ class Tomography:
         return self._gatesets
 
     @staticmethod
-    def find_beta(states):
+    def find_beta(state):
         """Finds beta from state data."""
         refer_A = np.matrix([[1, 1, 1, 1],
                              [1, 1, -1, -1],
                              [1, -1, 1, -1],
                              [1, -1, -1, 1]])
-        refer_B = np.array([states["00"], states["01"],
-                            states["10"], states["11"]])
-        beta = solve(refer_A, refer_B)
+        beta = solve(refer_A, state)
         return np.array(beta).flatten()
 
     @staticmethod

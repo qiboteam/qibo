@@ -11,16 +11,18 @@ parser.add_argument("--plot", action="store_true")
 
 def main(index, plot):
     # Extract state data and define ``gate``
-    states = data.extract(data.statefile)
-    states = {k: np.sqrt(v[0] ** 2 + v[1] ** 2) for k, v in states.items()}
+    state = data.extract(data.statefile)
+    state = np.stack(list(state.values()))
+    state = np.sqrt((state ** 2).sum(axis=1))
 
     # Extract tomography amplitudes
     filename, circuit = data.measurementfiles[index]
     amp = data.extract(filename)
-    amp = np.sqrt([v[0] ** 2 + v[1] ** 2 for v in amp.values()])
+    amp = np.stack(list(amp.values()))
+    amp = np.sqrt((amp ** 2).sum(axis=1))
 
     # Create tomography object
-    tom = tomography.Tomography(states, amp)
+    tom = tomography.Tomography(amp, state)
     tom.minimize()
 
     rho_theory = circuit().numpy()
