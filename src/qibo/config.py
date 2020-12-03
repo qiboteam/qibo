@@ -8,7 +8,7 @@ import blessings
 LOG_LEVEL = 3
 
 # Select the default backend engine
-BACKEND_NAME = "tensorflow"
+BACKEND_NAME = "numpy"
 
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
@@ -30,7 +30,22 @@ def raise_error(exception, message=None, args=None):
 
 
 # Load backend specifics
-if BACKEND_NAME == "tensorflow":
+if BACKEND_NAME == "numpy":
+    import numpy as np
+    # Default types
+    DTYPES = {
+        'STRING': 'double',
+        'DTYPEINT': np.int64,
+        'DTYPE': np.float64,
+        'DTYPECPX': np.complex128,
+    }
+    # Backend access
+    K = np
+
+    from qibo.numpy import matrices as _matrices
+    matrices = _matrices.NumpyMatrices()
+
+elif BACKEND_NAME == "tensorflow":
     import os
     import warnings
 
