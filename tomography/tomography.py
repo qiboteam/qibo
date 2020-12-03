@@ -1,4 +1,5 @@
 import numpy as np
+from qibo import matrices
 from scipy.linalg import solve, sqrtm
 from scipy.optimize import minimize
 
@@ -19,39 +20,31 @@ class Cholesky:
 
     @classmethod
     def decompose(cls, inmatrix):
-        T_linear = np.zeros((4, 4), dtype=complex)
-        det_linear = np.linalg.det(inmatrix)
-        M11 = np.copy(inmatrix)
-        M11 = np.delete(M11, 0, 0)
-        M11 = np.delete(M11, 0, 1)
-        M11 = np.linalg.det(M11)
-        M12 = np.copy(inmatrix)
-        M12 = np.delete(M12, 0, 0)
-        M12 = np.delete(M12, 1, 1)
-        M12 = np.linalg.det(M12)
-        M1122 = np.copy(inmatrix)
-        M1122 = np.delete(M1122, [0,1] , 0)
-        M1122 = np.delete(M1122, [0,1] , 1)
-        M1122 = np.linalg.det(M1122)
-        M1223 = np.copy(inmatrix)
-        M1223 = np.delete(M1223, [0,1] , 0)
-        M1223 = np.delete(M1223, [1,2] , 1)
-        M1223 = np.linalg.det(M1223)
-        M1123 = np.copy(inmatrix)
-        M1123 = np.delete(M1123, [0,1] , 0)
-        M1123 = np.delete(M1123, [0,2] , 1)
-        M1123 = np.linalg.det(M1123)
-        T_linear[0,0] = np.sqrt(det_linear/M11)
-        T_linear[1,0] = M12/np.sqrt(M11*M1122)
-        T_linear[1,1] = np.sqrt(M11/M1122)
-        T_linear[2,0] = M1223/np.sqrt(inmatrix[3,3])/np.sqrt(M1122)
-        T_linear[2,1] = M1123/np.sqrt(inmatrix[3,3])/np.sqrt(M1122)
-        T_linear[2,2] = np.sqrt(M1122)/np.sqrt(inmatrix[3,3])
-        T_linear[3,0] = inmatrix[3,0]/np.sqrt(inmatrix[3,3])
-        T_linear[3,1] = inmatrix[3,1]/np.sqrt(inmatrix[3,3])
-        T_linear[3,2] = inmatrix[3,2]/np.sqrt(inmatrix[3,3])
-        T_linear[3,3] = np.sqrt(inmatrix[3,3])
+        D = np.linalg.det(inmatrix)
+        M11 = cls.minor(inmatrix, [0, 0], [0, 1])
+        M12 = cls.minor(inmatrix, [0, 1], [0, 1])
+        M1122 = cls.minor(inmatrix, [[0, 1], [0, 1]], [0, 1])
+        M1223 = cls.minor(inmatrix, [[0, 1], [1, 2]], [0, 1])
+        M1123 = cls.minor(inmatrix, [[0, 1], [0, 2]], [0, 1])
+        T_linear = np.zeros_like(inmatrix)
+        T_linear[0, 0] = np.sqrt(D / M11)
+        T_linear[1, 0] = M12 / np.sqrt(M11 * M1122)
+        T_linear[1, 1] = np.sqrt(M11 / M1122)
+        T_linear[2, 0] = M1223 / np.sqrt(inmatrix[3,3]) / np.sqrt(M1122)
+        T_linear[2, 1] = M1123 / np.sqrt(inmatrix[3,3]) / np.sqrt(M1122)
+        T_linear[2, 2] = np.sqrt(M1122) / np.sqrt(inmatrix[3,3])
+        T_linear[3, 0] = inmatrix[3,0] / np.sqrt(inmatrix[3,3])
+        T_linear[3, 1] = inmatrix[3,1] / np.sqrt(inmatrix[3,3])
+        T_linear[3, 2] = inmatrix[3,2] / np.sqrt(inmatrix[3,3])
+        T_linear[3, 3] = np.sqrt(inmatrix[3,3])
         return cls(matrix=T_linear)
+
+    @staticmethod
+    def minor(m, a, b):
+        mc = np.copy(m)
+        for x, y in zip(a, b):
+            mc = np.delete(mc, x, y)
+        return np.linalg.det(mc)
 
     @property
     def matrix(self):
@@ -116,10 +109,7 @@ class Tomography:
 
     @staticmethod
     def _default_gates(beta):
-        I = np.matrix([[1, 0], [0, 1]], dtype = complex)
-        X = np.matrix([[0, 1], [1, 0]], dtype = complex)
-        Y = np.matrix([[0, -1j], [1j, 0]], dtype = complex)
-        Z = np.matrix([[1, 0], [0, -1]], dtype = complex)
+        I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
         return np.array([
             beta[0]*np.kron(I,I) + beta[1]*np.kron(Z,I) + beta[2]*np.kron(I,Z) + beta[3]*np.kron(Z,Z),
             beta[0]*np.kron(I,I) - beta[1]*np.kron(Z,I) + beta[2]*np.kron(I,Z) - beta[3]*np.kron(Z,Z),

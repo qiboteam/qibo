@@ -16,7 +16,7 @@ def main(index, plot):
     state = np.sqrt((state ** 2).sum(axis=1))
 
     # Extract tomography amplitudes
-    filename, circuit = data.measurementfiles[index]
+    filename, rho_theory = data.measurementfiles[index]
     amp = data.extract(filename)
     amp = np.stack(list(amp.values()))
     amp = np.sqrt((amp ** 2).sum(axis=1))
@@ -25,7 +25,6 @@ def main(index, plot):
     tom = tomography.Tomography(amp, state)
     tom.minimize()
 
-    rho_theory = circuit().numpy()
     fidelity = tom.fidelity(rho_theory)
     print("Convergence:", tom.success)
     print("Fidelity:", fidelity)
