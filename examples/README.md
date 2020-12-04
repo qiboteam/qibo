@@ -15,6 +15,7 @@ physics problems.
 - [Simple Adiabatic Evolution Examples](adiabatic/README.md)
 - [Adiabatic evolution for solving an Exact Cover problem](adiabatic-3SAT/README.md)
 - [Quantum autoencoders with enhanced data encoding](EF_QAE/README.md)
+- [Shor's factorization algorithm](shor/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)

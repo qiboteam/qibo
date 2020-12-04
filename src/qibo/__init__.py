@@ -1,4 +1,4 @@
-__version__ = "0.1.2-dev"
+__version__ = "0.1.2-dev-cqt"
 from qibo.config import BACKEND_NAME, raise_error
 
 if BACKEND_NAME == "numpy":

@@ -20,3 +20,4 @@ problems.
     tutorials/adiabatic/README.md
     tutorials/adiabatic3sat/README.md
     tutorials/EF_QAE/README.md
+    tutorials/shor/README.md
