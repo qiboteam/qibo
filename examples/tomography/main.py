@@ -31,6 +31,15 @@ parser.add_argument("--plot", action="store_true")
 
 
 def main(index, plot):
+    """Perform tomography to estimate density matrix from measurements.
+
+    Args:
+        index (int): Which experimental json file to use.
+            See ``measurement_files`` list defined above for available files.
+        plot (bool): Plot histograms comparing the estimated density matrices
+            with the theoretical ones. If ``False`` only the fidelity is
+            calculated.
+    """
     # Extract state data and define ``gate``
     state = extract(state_file)
     state = np.stack(list(state.values()))

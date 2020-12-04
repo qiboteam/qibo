@@ -6,21 +6,45 @@ from scipy.optimize import minimize
 
 
 class Cholesky:
+    """Cholesky decomposition of the density matrix.
+
+    Note that this object can be initialized passing either the ``matrix``
+    or ``vector`` argument, not both.
+
+    Args:
+        matrix (np.matrix): Cholesky decomposition as a lower triangular
+            complex matrix.
+        vector (np.ndarray): Cholesky decomposition matrix values re-arranged
+            to a real vector.
+    """
 
     def __init__(self, matrix=None, vector=None):
+        if matrix is not None and vector is not None:
+            raise_error(ValueError, "Cannot initialize Cholesky object using "
+                                    "both a matrix and a vector. Please use "
+                                    "one of them.")
+        if matrix is not None and not isinstance(matrix, np.matrix):
+            raise_error(TypeError, "Matrix must be a ``np.matrix`` but is {}."
+                                   "".format(type(matrix)))
+        if vector is not None and not isinstance(vector, np.ndarray):
+            raise_error(TypeError, "Vector must be a ``np.ndarray`` but is {}."
+                                   "".format(type(matrix)))
         self._matrix = matrix
         self._vector = vector
 
     @classmethod
     def from_matrix(cls, x):
+        """Creates :class:`qibo.numpy.tomography.Cholesky` object from matrix."""
         return cls(matrix=x)
 
     @classmethod
     def from_vector(cls, x):
+        """Creates :class:`qibo.numpy.tomography.Cholesky` object from vector."""
         return cls(vector=x)
 
     @classmethod
     def decompose(cls, inmatrix):
+        """Creates :class:`qibo.numpy.tomography.Cholesky` by decomposing a matrix."""
         D = np.linalg.det(inmatrix)
         M11 = cls.minor(inmatrix, [0, 0], [0, 1])
         M12 = cls.minor(inmatrix, [0, 1], [0, 1])
@@ -42,6 +66,10 @@ class Cholesky:
 
     @staticmethod
     def minor(m, a, b):
+        """Calculates minor of a matrix.
+
+        Helper method for :class:`qibo.numpy.tomography.Cholesky.decompose`.
+        """
         mc = np.copy(m)
         for x, y in zip(a, b):
             mc = np.delete(mc, x, y)
@@ -49,6 +77,7 @@ class Cholesky:
 
     @property
     def matrix(self):
+        """Cholesky decomposition represented as a complex lower triangular matrix."""
         if self._matrix is None:
             n = int(np.sqrt(len(self.vector)))
             k = (len(self.vector) - n) // 2
@@ -62,6 +91,11 @@ class Cholesky:
 
     @property
     def vector(self):
+        """Cholesky decomposition represented as a real vector.
+
+        Useful for the MLE minimization in
+        :meth:`qibo.numpy.tomography.Tomography.fit`.
+        """
         if self._vector is None:
             diag = np.diag(self.matrix).real
             idx = np.tril_indices(len(self.matrix), k=-1)
@@ -70,11 +104,35 @@ class Cholesky:
         return self._vector
 
     def reconstruct(self):
+        """Reconstructs density matrix from its Cholesky decomposition."""
         m = self.matrix.H * self.matrix
         return np.array(m) / np.trace(m)
 
 
 class Tomography:
+    """Performs density matrix tomography from experimental measurements.
+
+    Follows the tomography approach presented in
+    `Phys. Rev. A 81, 062325 <https://journals.aps.org/pra/abstract/10.1103/PhysRevA.81.062325>`_.
+
+    Args:
+        amplitudes (np.ndarray): Array of shape (16,) with the measured
+            amplitudes.
+        state (np.ndarray): Optional array of shape (4,) with the state values
+            to use in the ``beta`` parameter calculation.
+            Relevant only if the default beta calculation is used.
+        gates (np.ndarray): Optional array of shape (16, 4, 4) with the gates
+            to use for the linear estimation of the density matrix.
+            If ``None`` the default gates will be calculated using the given
+            ``state``. See
+            :meth:`qibo.numpy.tomography.Tomography.default_gates` for more
+            details.
+        gatesets (list): List of gate indices to use for the linear estimation
+            of the density matrix.
+            If ``None`` the default configuration will be used. See
+            :meth:`qibo.numpy.tomography.Tomography.default_gatesets` for more
+            details.
+    """
 
     def __init__(self, amplitudes, state=None, gates=None, gatesets=None):
         self.amplitudes = amplitudes
@@ -88,6 +146,7 @@ class Tomography:
 
     @property
     def gates(self):
+        """Array of gates to use in the linear density matrix estimation."""
         if self._gates is None:
             beta = self.find_beta(self.state)
             self._gates = self._default_gates(beta)
@@ -95,13 +154,17 @@ class Tomography:
 
     @property
     def gatesets(self):
+        """List of gate indices to use in the linear density matrix estimation."""
         if self._gatesets is None:
             self._gatesets = self._default_gatesets()
         return self._gatesets
 
     @staticmethod
     def find_beta(state):
-        """Finds beta from state data."""
+        """Finds beta from state data.
+
+        Beta is then used to define the default gate matrices.
+        """
         refer_A = np.matrix([[1, 1, 1, 1],
                              [1, 1, -1, -1],
                              [1, -1, 1, -1],
@@ -111,6 +174,7 @@ class Tomography:
 
     @staticmethod
     def _default_gates(beta):
+        """Calculates default gate matrices for a given beta."""
         I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
         return np.array([
             beta[0]*np.kron(I,I) + beta[1]*np.kron(Z,I) + beta[2]*np.kron(I,Z) + beta[3]*np.kron(Z,Z),
@@ -132,6 +196,7 @@ class Tomography:
         ])
 
     def _default_gatesets(self):
+        """Calculates the default gate indices."""
         return [([0, 1, 2, 15], (0, 1, 2, 3), (0, 1, 2, 3)),
                 ([11, 12, 13, 14], (1, 0, 3, 2), (0, 1, 2, 3)),
                 ([3, 6, 7, 10], (2, 3, 0, 1), (0, 1, 2, 3)),
@@ -139,7 +204,7 @@ class Tomography:
 
     @property
     def linear(self):
-        """Linear estimation of the density matrix."""
+        """Linear estimation of the density matrix from given measurements."""
         if self._linear is None:
             dtype = self.gates.dtype
             self._linear = np.zeros_like(self.gates[0])
@@ -153,6 +218,7 @@ class Tomography:
 
     @property
     def fit(self):
+        """MLE estimation of the density matrix from given measurements."""
         if self._fitrho is None:
             if self._fitres is None:
                 raise_error(ValueError, "Cannot return fitted density matrix "
@@ -162,12 +228,19 @@ class Tomography:
 
     @property
     def success(self):
+        """Bool that shows if the MLE minimization was successful."""
         if self._fitres is None:
             raise_error(ValueError, "Cannot return minimization success "
                                     "before `minimize` is called.")
         return self._fitres.success
 
     def mle(self, x):
+        """Calculates the MLE loss.
+
+        Args:
+            x (np.ndarray): Cholesky decomposition of the density matrix
+                decomposed to a real vector.
+        """
         rho = Cholesky.from_vector(x).reconstruct()
         loss = 0
         for gate, amp in zip(self.gates, self.amplitudes):
@@ -176,11 +249,12 @@ class Tomography:
         return abs(loss)
 
     def minimize(self, tol=1e-9):
-        """Fits density matrix to minimize MLE."""
+        """Finds density matrix that minimizes MLE."""
         t_guess = Cholesky.decompose(self.linear).vector
         self._fitres = minimize(self.mle, t_guess, tol=tol)
         return self._fitres
 
     def fidelity(self, theory):
+        """Fidelity between the MLE-fitted density matrix and a given one."""
         sqrt_th = sqrtm(theory)
         return abs(np.trace(sqrtm(sqrt_th @ self.fit @ sqrt_th))) * 100

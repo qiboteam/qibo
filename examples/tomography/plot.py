@@ -4,6 +4,15 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 def plot(tomography, rho_theory, width=0.8, depth=0.8):
+    """Plots histograms of theory and estimated density matrices.
+
+    Args:
+        tomography (:class:`qibo.numpy.tomography.Tomography`): Tomography
+            Qibo object that holds the estimated density matrices.
+        rho_theory (np.ndarray): Theoretical (target) density matrix.
+        width (float): Width of the histograms.
+        depth (float): Depth of the histograms.
+    """
     _x, _y = np.meshgrid(np.arange(4), np.arange(4))
     x, y = _x.ravel(), _y.ravel()
 

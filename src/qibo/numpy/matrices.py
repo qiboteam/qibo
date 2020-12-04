@@ -3,6 +3,7 @@ from qibo.config import DTYPES
 
 
 class NumpyMatrices:
+    """Class that holds useful matrices as ``np.ndarray``."""
 
     _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "SWAP", "TOFFOLI"]
 
