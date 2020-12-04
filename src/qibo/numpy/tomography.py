@@ -12,7 +12,7 @@ class Cholesky:
     or ``vector`` argument, not both.
 
     Args:
-        matrix (np.matrix): Cholesky decomposition as a lower triangular
+        matrix (np.ndarray): Cholesky decomposition as a lower triangular
             complex matrix.
         vector (np.ndarray): Cholesky decomposition matrix values re-arranged
             to a real vector.
@@ -23,8 +23,8 @@ class Cholesky:
             raise_error(ValueError, "Cannot initialize Cholesky object using "
                                     "both a matrix and a vector. Please use "
                                     "one of them.")
-        if matrix is not None and not isinstance(matrix, np.matrix):
-            raise_error(TypeError, "Matrix must be a ``np.matrix`` but is {}."
+        if matrix is not None and not isinstance(matrix, np.ndarray):
+            raise_error(TypeError, "Matrix must be a ``np.ndarray`` but is {}."
                                    "".format(type(matrix)))
         if vector is not None and not isinstance(vector, np.ndarray):
             raise_error(TypeError, "Vector must be a ``np.ndarray`` but is {}."
@@ -86,7 +86,7 @@ class Cholesky:
             m_re[idx] = self.vector[n:-k]
             m_im = np.zeros_like(m_re)
             m_im[idx] = self.vector[-k:]
-            self._matrix = np.matrix(m_re + 1j * m_im)
+            self._matrix = m_re + 1j * m_im
         return self._matrix
 
     @property
@@ -105,7 +105,7 @@ class Cholesky:
 
     def reconstruct(self):
         """Reconstructs density matrix from its Cholesky decomposition."""
-        m = self.matrix.H * self.matrix
+        m = self.matrix.conj().T @ self.matrix
         return np.array(m) / np.trace(m)
 
 
@@ -149,14 +149,14 @@ class Tomography:
         """Array of gates to use in the linear density matrix estimation."""
         if self._gates is None:
             beta = self.find_beta(self.state)
-            self._gates = self._default_gates(beta)
+            self._gates = self.default_gates(beta)
         return self._gates
 
     @property
     def gatesets(self):
         """List of gate indices to use in the linear density matrix estimation."""
         if self._gatesets is None:
-            self._gatesets = self._default_gatesets()
+            self._gatesets = self.default_gatesets()
         return self._gatesets
 
     @staticmethod
@@ -165,15 +165,15 @@ class Tomography:
 
         Beta is then used to define the default gate matrices.
         """
-        refer_A = np.matrix([[1, 1, 1, 1],
-                             [1, 1, -1, -1],
-                             [1, -1, 1, -1],
-                             [1, -1, -1, 1]])
+        refer_A = np.array([[1, 1, 1, 1],
+                            [1, 1, -1, -1],
+                            [1, -1, 1, -1],
+                            [1, -1, -1, 1]])
         beta = solve(refer_A, state)
         return np.array(beta).flatten()
 
     @staticmethod
-    def _default_gates(beta):
+    def default_gates(beta):
         """Calculates default gate matrices for a given beta."""
         I, X, Y, Z = matrices.I, matrices.X, matrices.Y, matrices.Z
         return np.array([
@@ -195,7 +195,7 @@ class Tomography:
             beta[0]*np.kron(I,I) - beta[1]*np.kron(Z,I) - beta[2]*np.kron(I,Z) + beta[3]*np.kron(Z,Z)
         ])
 
-    def _default_gatesets(self):
+    def default_gatesets(self):
         """Calculates the default gate indices."""
         return [([0, 1, 2, 15], (0, 1, 2, 3), (0, 1, 2, 3)),
                 ([11, 12, 13, 14], (1, 0, 3, 2), (0, 1, 2, 3)),
