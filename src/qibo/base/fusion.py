@@ -76,9 +76,9 @@ class FusionGroup:
         current ``FusionGroup`` have already been updated.
         """
         updated_gates = self.calculate()
-        for gate, new_gate in zip(self._fused_gates, updated_gates):
+        for gate, new_gate in zip(self.gates, updated_gates):
             if isinstance(gate, base_gates.ParametrizedGate):
-                gate.parameter = new_gate.parameter
+                gate.parameters = new_gate.parameters
         return self._fused_gates
 
     def first_gate(self, i: int) -> Optional["Gate"]:

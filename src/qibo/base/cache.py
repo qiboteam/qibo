@@ -4,7 +4,7 @@ Elements cached are the indices strings required for ``tf.einsum`` or the
 shapes and transposition orders required for ``tf.matmul``.
 """
 from qibo.base import gates as base_gates
-from qibo.config import log, raise_error
+from qibo.config import raise_error
 from typing import List, Optional, Sequence
 
 
@@ -90,25 +90,25 @@ class DefaultEinsumCache(BaseCache):
 
     def __init__(self, qubits: Sequence[int], nqubits: int,
                  ncontrol: Optional[int] = None):
-      super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
+        super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
 
-      if nqubits + len(qubits) > len(self._chars): # pragma: no cover
-          raise_error(NotImplementedError, "Not enough einsum characters.")
+        if nqubits + len(qubits) > len(self._chars): # pragma: no cover
+            raise_error(NotImplementedError, "Not enough einsum characters.")
 
-      input_state = list(self._chars[:nqubits])
-      output_state = input_state[:]
-      gate_chars = list(self._chars[nqubits : nqubits + len(qubits)])
+        input_state = list(self._chars[:nqubits])
+        output_state = input_state[:]
+        gate_chars = list(self._chars[nqubits : nqubits + len(qubits)])
 
-      for i, q in enumerate(qubits):
-          gate_chars.append(input_state[q])
-          output_state[q] = gate_chars[i]
+        for i, q in enumerate(qubits):
+            gate_chars.append(input_state[q])
+            output_state[q] = gate_chars[i]
 
-      self.input = "".join(input_state)
-      self.output = "".join(output_state)
-      self.gate = "".join(gate_chars)
-      self.rest = self._chars[nqubits + len(qubits):]
+        self.input = "".join(input_state)
+        self.output = "".join(output_state)
+        self.gate = "".join(gate_chars)
+        self.rest = self._chars[nqubits + len(qubits):]
 
-      self._vector = f"{self.input},{self.gate}->{self.output}"
+        self._vector = f"{self.input},{self.gate}->{self.output}"
 
     def _calculate_density_matrix(self):
         if self.nqubits > len(self.rest): # pragma: no cover

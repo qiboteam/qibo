@@ -36,6 +36,19 @@ def test_circuit_addition_result(backend, accelerators):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+def test_adding_gate_with_bad_nqubits(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gate = gates.H(0)
+    gate.nqubits = 5
+    gate.prepare()
+    c = Circuit(2)
+    with pytest.raises(RuntimeError):
+        c.add(gate)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_custom_circuit(backend):
     """Check consistency between Circuit and custom circuits"""
     import tensorflow as tf

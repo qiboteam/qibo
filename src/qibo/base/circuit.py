@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
 import collections
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from qibo.base import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
-from typing import Dict, Iterable, List, Optional, Set, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 NoiseMapType = Union[Tuple[int, int, int],
                      Dict[int, Tuple[int, int, int]]]
 
@@ -55,7 +55,7 @@ class _Queue(list):
             self.moment_index[q] = idx + 1
 
 
-class BaseCircuit(object):
+class BaseCircuit(ABC):
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
@@ -74,17 +74,17 @@ class BaseCircuit(object):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-
-    __metaclass__ = ABCMeta
     from qibo.base import fusion
 
     def __init__(self, nqubits):
         if not isinstance(nqubits, int):
-            raise_error(RuntimeError, f'nqubits must be an integer')
+            raise_error(TypeError, "Number of qubits must be an integer but "
+                                   "is {}.".format(nqubits))
         if nqubits < 1:
-            raise_error(ValueError, 'nqubits must be > 0')
+            raise_error(ValueError, "Number of qubits must be positive but is "
+                                    "{}.".format(nqubits))
         self.nqubits = nqubits
-        self._init_kwargs = {"nqubits": nqubits}
+        self.init_kwargs = {"nqubits": nqubits}
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
@@ -111,39 +111,43 @@ class BaseCircuit(object):
         Returns:
             The resulting circuit from the addition.
         """
-        return self.__class__._circuit_addition(self, circuit)
-
-    @classmethod
-    def _circuit_addition(cls, c1, c2):
-        for k, kwarg1 in c1._init_kwargs.items():
-            kwarg2 = c2._init_kwargs[k]
+        for k, kwarg1 in self.init_kwargs.items():
+            kwarg2 = circuit.init_kwargs[k]
             if kwarg1 != kwarg2:
-                raise_error(ValueError, "Cannot add circuits with different kwargs. "
-                                        "{} is {} for first circuit and {} for the "
-                                        "second.".format(k, kwarg1, kwarg2))
-        newcircuit = cls(**c1._init_kwargs)
-        # Add gates from `c1` to `newcircuit` (including measurements)
-        for gate in c1.queue:
-            newcircuit.add(gate)
-        newcircuit.measurement_gate = c1.measurement_gate
-        newcircuit.measurement_tuples = c1.measurement_tuples
-        # Add gates from `c2` to `newcircuit` (including measurements)
-        for gate in c2.queue:
-            newcircuit.add(gate)
+                raise_error(ValueError,
+                            "Cannot add circuits with different kwargs. "
+                            "{} is {} for first circuit and {} for the "
+                            "second.".format(k, kwarg1, kwarg2))
+
+        newcircuit = self.__class__(**self.init_kwargs)
+        # Add gates from `self` to `newcircuit` (including measurements)
+        for gate in self.queue:
+            newcircuit.queue.append(gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                newcircuit.parametrized_gates.append(gate)
+        newcircuit.measurement_gate = self.measurement_gate
+        newcircuit.measurement_tuples = self.measurement_tuples
+        # Add gates from `circuit` to `newcircuit` (including measurements)
+        for gate in circuit.queue:
+            newcircuit.check_measured(gate.qubits)
+            newcircuit.queue.append(gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                newcircuit.parametrized_gates.append(gate)
+
         if newcircuit.measurement_gate is None:
-            newcircuit.measurement_gate = c2.measurement_gate
-            newcircuit.measurement_tuples = c2.measurement_tuples
-        elif c2.measurement_gate is not None:
-            for k, v in c2.measurement_tuples.items():
+            newcircuit.measurement_gate = circuit.measurement_gate
+            newcircuit.measurement_tuples = circuit.measurement_tuples
+        elif circuit.measurement_gate is not None:
+            for k, v in circuit.measurement_tuples.items():
                 if k in newcircuit.measurement_tuples:
-                    raise_error(KeyError, "Register name {} already exists in the "
+                    raise_error(KeyError, "Register name {} already exists in "
                                           "circuit.".format(k))
-                newcircuit._check_measured(v)
+                newcircuit.check_measured(v)
                 newcircuit.measurement_tuples[k] = v
-            newcircuit.measurement_gate._add(c2.measurement_gate)
+            newcircuit.measurement_gate.add(circuit.measurement_gate)
         return newcircuit
 
-    def on_qubits(self, *q) -> Iterable[gates.Gate]:
+    def on_qubits(self, *q):
         """Generator of gates contained in the circuit acting on specified qubits.
 
         Useful for adding a circuit as a subroutine in a larger circuit.
@@ -184,7 +188,7 @@ class BaseCircuit(object):
             The copied circuit object.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         if deep:
             for gate in self.queue:
                 new_gate = copy.copy(gate)
@@ -215,7 +219,7 @@ class BaseCircuit(object):
             The circuit inverse.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue[::-1]:
             new_circuit.add(gate.dagger())
         new_circuit.measurement_gate = copy.copy(self.measurement_gate)
@@ -230,7 +234,7 @@ class BaseCircuit(object):
         For distributed circuits a fully deep copy should be created.
         """
         import copy
-        new_circuit = self.__class__(**self._init_kwargs)
+        new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
             if isinstance(gate, gates.ParametrizedGate):
                 new_gate = copy.copy(gate)
@@ -301,7 +305,7 @@ class BaseCircuit(object):
         # FIXME: This method is not completed until the ``decompose`` is
         # implemented for all gates not supported by OpenQASM.
         decomp_circuit = self.__class__(self.nqubits)
-        for i, gate in enumerate(self.queue):
+        for gate in self.queue:
             decomp_circuit.add(gate.decompose(*free))
         decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
         decomp_circuit.measurement_gate = self.measurement_gate
@@ -377,7 +381,7 @@ class BaseCircuit(object):
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
 
-    def _check_measured(self, gate_qubits: Tuple[int]):
+    def check_measured(self, gate_qubits: Tuple[int]):
         """Helper method for `add`.
 
         Checks if the qubits that a gate acts are already measured and raises
@@ -400,7 +404,7 @@ class BaseCircuit(object):
                 In this case all gates in the iterable will be added in the
                 circuit.
         """
-        if isinstance(gate, Iterable):
+        if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
         elif isinstance(gate, gates.Gate):
@@ -426,29 +430,29 @@ class BaseCircuit(object):
                                         "on a circuit of {} qubits."
                                         "".format(gate.target_qubits, self.nqubits))
 
-        self._set_nqubits(gate)
-        self._check_measured(gate.qubits)
+        self.check_measured(gate.qubits)
         if isinstance(gate, gates.M):
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
-        elif (isinstance(gate, gates.UnitaryChannel) and
-              not self.density_matrix):
-            self.repeated_execution = True
-            self.queue.append(gate)
         else:
+            self.set_nqubits(gate)
             self.queue.append(gate)
+            if isinstance(gate, gates.UnitaryChannel):
+                self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
 
-    def _set_nqubits(self, gate: gates.Gate):
-        """Sets the number of qubits in ``gate``.
+    def set_nqubits(self, gate: gates.Gate):
+        """Sets the number of qubits and prepares all gates.
 
         Helper method for ``circuit.add(gate)``.
         """
-        raise_error(ValueError, "Attempting to add gate with {} total qubits "
-                                "to a circuit with {} qubits."
-                                "".format(gate.nqubits, self.nqubits))
+        if gate.is_prepared and gate.nqubits != self.nqubits:
+            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
+                                      "qubits to circuit that contains {}"
+                                      "qubits.".format(
+                                            gate, gate.nqubits, self.nqubits))
 
     def _add_measurement(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement.
@@ -471,16 +475,17 @@ class BaseCircuit(object):
             self.measurement_gate = gate
             self.measurement_tuples[name] = tuple(gate.target_qubits)
         else:
-            self.measurement_gate._add(gate)
+            self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
     def _add_layer(self, gate: gates.Gate):
         """Called automatically by `add` when `gate` is measurement."""
+        gate.prepare()
         for unitary in gate.unitaries:
-            self._set_nqubits(unitary)
+            self.set_nqubits(unitary)
             self.queue.append(unitary)
         if gate.additional_unitary is not None:
-            self._set_nqubits(gate.additional_unitary)
+            self.set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
     @property
@@ -504,10 +509,10 @@ class BaseCircuit(object):
 
         The QASM names are used as gate identifiers.
         """
-        gates = collections.Counter()
+        gatecounter = collections.Counter()
         for gate in self.queue:
-            gates[gate.name] += 1
-        return gates
+            gatecounter[gate.name] += 1
+        return gatecounter
 
     def gates_of_type(self, gate: Union[str, type]) -> List[Tuple[int, gates.Gate]]:
         """Finds all gate objects of specific type.
@@ -535,16 +540,16 @@ class BaseCircuit(object):
         """
         if n == len(self.parametrized_gates):
             for i, gate in enumerate(self.parametrized_gates):
-                gate.parameter = parameters[i]
+                gate.parameters = parameters[i]
         elif n == self.parametrized_gates.nparams:
             import numpy as np
             parameters = np.array(parameters)
             k = 0
             for i, gate in enumerate(self.parametrized_gates):
                 if gate.nparams == 1:
-                    gate.parameter = parameters[i + k]
+                    gate.parameters = parameters[i + k]
                 else:
-                    gate.parameter = parameters[i + k: i + k + gate.nparams]
+                    gate.parameters = parameters[i + k: i + k + gate.nparams]
                 k += gate.nparams - 1
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
@@ -594,12 +599,12 @@ class BaseCircuit(object):
                 raise_error(ValueError, "Dictionary with gate parameters does not "
                                         "agree with the circuit gates.")
             for gate in self.parametrized_gates:
-                gate.parameter = parameters[gate]
+                gate.parameters = parameters[gate]
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
 
-    def get_parameters(self, format: str = "list") -> Union[List, Dict]:
+    def get_parameters(self, format: str = "list") -> Union[List, Dict]: # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
@@ -611,20 +616,19 @@ class BaseCircuit(object):
                 details on each format.
         """
         if format == "list":
-            return [gate.parameter for gate in self.parametrized_gates]
+            return [gate.parameters for gate in self.parametrized_gates]
         elif format == "dict":
-            return {gate: gate.parameter for gate in self.parametrized_gates}
+            return {gate: gate.parameters for gate in self.parametrized_gates}
         elif format == "flatlist":
             import numpy as np
-            from collections.abc import Iterable
             params = []
             for gate in self.parametrized_gates:
-                if isinstance(gate.parameter, np.ndarray):
-                    params.extend(gate.parameter.ravel())
-                elif isinstance(gate.parameter, Iterable):
-                    params.extend(gate.parameter)
+                if isinstance(gate.parameters, np.ndarray):
+                    params.extend(gate.parameters.ravel())
+                elif isinstance(gate.parameters, collections.abc.Iterable):
+                    params.extend(gate.parameters)
                 else:
-                    params.append(gate.parameter)
+                    params.append(gate.parameters)
             return params
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
@@ -668,29 +672,27 @@ class BaseCircuit(object):
         return "\n".join(logs)
 
     @property
+    @abstractmethod
     def final_state(self): # pragma: no cover
         """Returns the final state after full simulation of the circuit.
 
         If the circuit is executed more than once, only the last final state
         is returned.
         """
-        # abstract method
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def execute(self, *args): # pragma: no cover
+    def execute(self, initial_state=None, nshots=None): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend.
 
         See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
         details.
         """
-        # abstract method
         raise_error(NotImplementedError)
 
-    def __call__(self, *args): # pragma: no cover
+    def __call__(self, initial_state=None, nshots=None):
         """Equivalent to ``circuit.execute``."""
-        # abstract method
-        return self.execute(*args)
+        return self.execute(initial_state=initial_state, nshots=nshots)
 
     def to_qasm(self):
         """Convert circuit to QASM.
@@ -720,11 +722,11 @@ class BaseCircuit(object):
 
             qubits = ",".join(f"q[{i}]" for i in gate.qubits)
             if gate.name in gates.PARAMETRIZED_GATES:
-                if isinstance(gate.parameter, Iterable):
-                    params = (str(x) for x in gate.parameter)
+                if isinstance(gate.parameters, collections.abc.Iterable):
+                    params = (str(x) for x in gate.parameters)
                     name = "{}({})".format(gate.name, ", ".join(params))
                 else:
-                    name = f"{gate.name}({gate.parameter})"
+                    name = f"{gate.name}({gate.parameters})"
             else:
                 name = gate.name
             code.append(f"{name} {qubits};")
@@ -801,7 +803,7 @@ class BaseCircuit(object):
         """
         import re
         def read_args(args):
-            _args = iter(re.split("[\[\],]", args))
+            _args = iter(re.split(r"[\[\],]", args))
             for name in _args:
                 if name:
                     index = next(_args)

@@ -4,12 +4,11 @@ import qibo
 from qibo.models import Circuit
 from qibo import gates
 
-_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
 _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
                     ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
 def test_rx_parameter_setter(backend):
     """Check that the parameter setter of RX gate is working properly."""
     def exact_state(theta):
@@ -29,7 +28,7 @@ def test_rx_parameter_setter(backend):
     np.testing.assert_allclose(final_state, target_state)
 
     theta = 0.4321
-    c.queue[-1].parameter = theta
+    c.queue[-1].parameters = theta
     final_state = c().numpy()
     target_state = exact_state(theta)
     np.testing.assert_allclose(final_state, target_state)
@@ -58,6 +57,7 @@ def test_get_parameters():
     assert params == c.get_parameters("flatlist")
     with pytest.raises(ValueError):
         c.get_parameters("test")
+
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_set_parameters_with_list(backend, accelerators):
@@ -216,6 +216,8 @@ def test_circuit_set_parameters_errors():
         c.set_parameters(tf.random.uniform((6,), dtype=tf.float64))
     with pytest.raises(TypeError):
         c.set_parameters({0.3568})
+    with pytest.raises(ValueError):
+        c.queue[2].parameters = [0.1234, 0.4321, 0.156]
     fused_c = c.fuse()
     with pytest.raises(TypeError):
         fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})

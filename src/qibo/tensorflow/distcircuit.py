@@ -5,6 +5,7 @@ import tensorflow as tf
 import joblib
 from qibo.config import raise_error, get_threads
 from qibo.base import gates
+from qibo.base import circuit as base_circuit
 from qibo import gates as gate_module
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import distutils as utils
@@ -53,8 +54,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                  accelerators: Dict[str, int],
                  memory_device: str = "/CPU:0"):
         super(TensorflowDistributedCircuit, self).__init__(nqubits)
-        self._init_kwargs.update({"accelerators": accelerators,
-                                  "memory_device": memory_device})
+        self.init_kwargs.update({"accelerators": accelerators,
+                                 "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(np.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
@@ -67,12 +68,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.calc_devices = accelerators
         self.queues = utils.DistributedQueues(self, gate_module)
 
-    def _set_nqubits(self, gate):
-        # Do not set ``gate.nqubits`` during gate addition because this will
-        # be set by ``self.queues`` when creating the gates on each device.
-        if gate._nqubits is not None:
-            raise_error(ValueError, "Attempting to add gate with preset number of "
-                                    "qubits in distributed circuit.")
+    def set_nqubits(self, gate):
+        base_circuit.BaseCircuit.set_nqubits(self, gate)
 
     def on_qubits(self, *q):
         if self.queues.queues:
@@ -107,13 +104,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if not isinstance(gate, gate_module.TensorflowGate):
             raise_error(NotImplementedError, "Distributed circuit does not "
                                              "support native tensorflow gates.")
-        if isinstance(gate, gates.VariationalLayer):
-            gate._prepare()
-        elif isinstance(gate, gates.KrausChannel):
+        if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
-              not isinstance(gate, gates.M)):
+              not isinstance(gate, (gates.M, gates.VariationalLayer))):
             raise_error(ValueError, "Insufficient qubits to use for global in "
                                     "distributed circuit.")
         super(TensorflowDistributedCircuit, self)._add(gate)
