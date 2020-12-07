@@ -24,7 +24,7 @@ class Gate:
         nqubits: Number of qubits that this gate acts on.
         nstates: Size of state vectors that this gate acts on.
     """
-    module = None
+    from qibo.base import gates as module
 
     def __init__(self):
         self.name = None
@@ -282,11 +282,12 @@ class ParametrizedGate(Gate):
         # I could not find a cleaner way to write this so that the
         # ``circuit.set_parameters`` method works properly.
         # pylint: disable=E1101
-        self._unitary = None
-        if self.is_prepared:
-            self.reprepare()
-        for devgate in self.device_gates:
-            devgate.parameters = x
+        if isinstance(self, BackendGate):
+            self._unitary = None
+            if self.is_prepared:
+                self.reprepare()
+            for devgate in self.device_gates:
+                devgate.parameters = x
 
 
 class BackendGate(Gate, ABC):

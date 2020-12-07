@@ -205,10 +205,6 @@ class Collapse(Gate):
         """Returns the result list in proper order after sorting the qubits."""
         return self._result
 
-    def _result_to_list(self, res): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
     @result.setter
     def result(self, res):
         if len(self.target_qubits) != len(res):
@@ -225,7 +221,7 @@ class Collapse(Gate):
         self._result = [resdict[q] for q in self.sorted_qubits]
         self.init_kwargs = {"result": res}
 
-    def controlled_by(self, *q): # pragma: no cover
+    def controlled_by(self, *q):
         """"""
         raise_error(NotImplementedError, "Collapse gates cannot be controlled.")
 
