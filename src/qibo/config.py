@@ -1,14 +1,17 @@
 """
 Define the default circuit, constants and types.
 """
+import os
 import logging
 import blessings
 
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
 
-# Select the default backend engine
+# Select the backend engine
 BACKEND_NAME = "tensorflow"
+if "QIBO_BACKEND" in os.environ:
+    BACKEND_NAME = os.environ["QIBO_BACKEND"]
 
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
@@ -17,6 +20,32 @@ if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
     # case not tested because least significant qubit is preset to 0
     raise_error(NotImplementedError, "The least significant qubit should be 0.")
 
+# Configuration for logging mechanism
+t = blessings.Terminal()
+
+class CustomColorHandler(logging.StreamHandler):
+    """Custom color handler for logging algorithm."""
+
+    colors = {
+        logging.DEBUG: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold},
+        logging.INFO: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_green},
+        logging.WARNING: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_yellow},
+        logging.ERROR: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_red, '%(message)s': t.bold},
+        logging.CRITICAL: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_white_on_red, '%(message)s': t.bold},
+    }
+
+    def format(self, record):
+        """Format the record with specific color."""
+        levelcolors = self.colors[record.levelno]
+        fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
+        for s, subs in levelcolors.items():
+            fmt = fmt.replace(s, subs(s))
+        return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
+
+# allocate logger object
+log = logging.getLogger(__name__)
+log.setLevel(logging.DEBUG)
+log.addHandler(CustomColorHandler())
 
 def raise_error(exception, message=None, args=None):
     """Raise exception with logging error.
@@ -33,8 +62,22 @@ def raise_error(exception, message=None, args=None):
 
 
 # Load backend specifics
-if BACKEND_NAME == "tensorflow":
-    import os
+if BACKEND_NAME == "cqt":
+    import numpy as np
+    # Default types
+    DTYPES = {
+        'STRING': 'double',
+        'DTYPEINT': np.int64,
+        'DTYPE': np.float64,
+        'DTYPECPX': np.complex128,
+    }
+    # Backend access
+    K = np
+
+    from qibo.numpy import matrices as _matrices
+    matrices = _matrices.NumpyMatrices()
+
+elif BACKEND_NAME == "tensorflow":
     import warnings
 
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
@@ -225,34 +268,5 @@ if BACKEND_NAME == "tensorflow":
 
 else: # pragma: no cover
     # case not tested because the backend is preset to TensorFlow
-    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
-
-
-# Configuration for logging mechanism
-t = blessings.Terminal()
-
-
-class CustomColorHandler(logging.StreamHandler):
-    """Custom color handler for logging algorithm."""
-
-    colors = {
-        logging.DEBUG: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold},
-        logging.INFO: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_green},
-        logging.WARNING: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_yellow},
-        logging.ERROR: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_red, '%(message)s': t.bold},
-        logging.CRITICAL: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_white_on_red, '%(message)s': t.bold},
-    }
-
-    def format(self, record):
-        """Format the record with specific color."""
-        levelcolors = self.colors[record.levelno]
-        fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
-        for s, subs in levelcolors.items():
-            fmt = fmt.replace(s, subs(s))
-        return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
-
-
-# allocate logger object
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
-log.addHandler(CustomColorHandler())
+    raise_error(NotImplementedError, "Unknown Qibo backend {}."
+                                     "".format(BACKEND_NAME))
