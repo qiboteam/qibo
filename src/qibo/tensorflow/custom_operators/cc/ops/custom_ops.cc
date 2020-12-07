@@ -19,6 +19,7 @@ REGISTER_OP("TransposeState")
     .Input("transposed_state: T")
     .Attr("nqubits: int")
     .Attr("qubit_order: list(int)")
+    .Attr("omp_num_threads: int")
     .Output("out: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
@@ -30,6 +31,7 @@ REGISTER_OP("SwapPieces")
     .Input("piece1: T")
     .Attr("target: int")
     .Attr("nqubits: int")
+    .Attr("omp_num_threads: int")
     .Output("out0: T")
     .Output("out1: T")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
@@ -43,6 +45,7 @@ REGISTER_OP("CollapseState")            \
     .Input("result: int64")             \
     .Attr("nqubits: int")               \
     .Attr("normalize: bool")            \
+    .Attr("omp_num_threads: int")       \
     .Output("out: T")                   \
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
@@ -56,6 +59,7 @@ REGISTER_OP("CollapseState")            \
       .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
+      .Attr("omp_num_threads: int")       \
       .Output("out: T")                   \
       .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
@@ -67,6 +71,7 @@ REGISTER_OP("CollapseState")            \
       .Input("qubits: int32")             \
       .Attr("nqubits: int")               \
       .Attr("target: int")                \
+      .Attr("omp_num_threads: int")       \
       .Output("out: T")                   \
       .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
@@ -80,6 +85,7 @@ REGISTER_OP("CollapseState")            \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
+      .Attr("omp_num_threads: int")       \
       .Output("out: T")                   \
       .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
@@ -92,6 +98,7 @@ REGISTER_OP("CollapseState")            \
       .Attr("nqubits: int")               \
       .Attr("target1: int")               \
       .Attr("target2: int")               \
+      .Attr("omp_num_threads: int")       \
       .Output("out: T")                   \
       .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 

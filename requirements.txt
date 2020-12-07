@@ -8,3 +8,4 @@ cma
 joblib
 matplotlib
 blessings
+psutil

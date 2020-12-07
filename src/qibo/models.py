@@ -169,7 +169,7 @@ class VQE(object):
         self.circuit = circuit
         self.hamiltonian = hamiltonian
 
-    def minimize(self, initial_state, method='Powell', options=None, compile=True):
+    def minimize(self, initial_state, method='Powell', options=None, compile=False, processes=None):
         """Search for parameters which minimizes the hamiltonian expectation.
 
         Args:
@@ -180,22 +180,23 @@ class VQE(object):
                 methods.
             options (dict): a dictionary with options for the different optimizers.
             compile (bool): whether the TensorFlow graph should be compiled.
+            processes (int): number of processes when using the paralle BFGS method.
 
         Return:
             The final expectation value.
             The corresponding best parameters.
         """
-        def loss(params):
-            self.circuit.set_parameters(params)
-            final_state = self.circuit()
-            return self.hamiltonian.expectation(final_state)
+        def _loss(params, circuit, hamiltonian):
+            circuit.set_parameters(params)
+            final_state = circuit()
+            return hamiltonian.expectation(final_state)
 
         if compile:
             if get_backend() == "custom":
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
-            loss = K.function(loss)
+            loss = K.function(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
@@ -205,14 +206,13 @@ class VQE(object):
                     raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')
-
-            result, parameters = self.optimizers.optimize(loss, initial_state,
-                                                          "sgd", options,
-                                                          compile)
+            loss = _loss
         else:
-            result, parameters = self.optimizers.optimize(
-                lambda p: loss(p).numpy(), initial_state, method, options)
-
+            loss = lambda p, c, h: _loss(p, c, h).numpy()
+        result, parameters = self.optimizers.optimize(loss, initial_state, method,
+                                                      options, compile=compile,
+                                                      processes=processes,
+                                                      args=(self.circuit, self.hamiltonian))
         self.circuit.set_parameters(parameters)
         return result, parameters
 
@@ -380,20 +380,20 @@ class QAOA(object):
                                     "contain an even number of values but "
                                     "contains {}.".format(len(initial_p)))
 
-        def _loss(p):
-            self.set_parameters(p)
-            state = self(initial_state)
-            return self.hamiltonian.expectation(state)
+        def _loss(params, qaoa, hamiltonian):
+            qaoa.set_parameters(params)
+            state = qaoa(initial_state)
+            return hamiltonian.expectation(state)
 
         if method == "sgd":
             import tensorflow as tf
-            loss = lambda p: _loss(tf.cast(
-                p, dtype=self.DTYPES.get('DTYPECPX')))
+            loss = lambda p, c, h: _loss(tf.cast(
+                p, dtype=self.DTYPES.get('DTYPECPX')), c, h)
         else:
             import numpy as np
-            loss = lambda p: _loss(p).numpy()
+            loss = lambda p, c, h: _loss(p, c, h).numpy()
 
         result, parameters = self.optimizers.optimize(loss, initial_p, method,
-                                                      options)
+                                                      options, args=(self, self.hamiltonian))
         self.set_parameters(parameters)
         return result, parameters
