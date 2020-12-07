@@ -3,7 +3,7 @@
 import numpy as np
 import tensorflow as tf
 import joblib
-from qibo.config import raise_error
+from qibo.config import raise_error, get_threads
 from qibo.base import gates
 from qibo.base import circuit as base_circuit
 from qibo import gates as gate_module
@@ -152,7 +152,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             local_eff = self.queues.qubits.reduced_local[local_qubit]
             with tf.device(self.memory_device):
                 op.swap_pieces(state.pieces[i], state.pieces[i + t],
-                               local_eff, self.nlocal)
+                               local_eff, self.nlocal, get_threads())
 
     def _normalize(self, state: utils.DistributedState):
         """Normalizes state by summing the norms of each state piece.

@@ -39,3 +39,10 @@ This documentation refers to Qibo |release|.
     general
     contributing
     benchmarks
+
+.. toctree::
+    :maxdepth: 3
+    :glob:
+    :caption: Extra
+
+    hep
