@@ -9,7 +9,7 @@ import blessings
 LOG_LEVEL = 3
 
 # Select the backend engine
-BACKEND_NAME = "numpy"
+BACKEND_NAME = "tensorflow"
 if "QIBO_BACKEND" in os.environ:
     BACKEND_NAME = os.environ["QIBO_BACKEND"]
 
@@ -59,7 +59,7 @@ def raise_error(exception, message=None, args=None):
 
 
 # Load backend specifics
-if BACKEND_NAME == "numpy":
+if BACKEND_NAME == "cqt":
     import numpy as np
     # Default types
     DTYPES = {
