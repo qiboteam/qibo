@@ -12,17 +12,19 @@ class Gate:
     All base gates should inherit this class.
 
     Attributes:
-        name: Name of the gate.
-        is_controlled_by: ``True`` if the gate was created using the
+        name (str): Name of the gate.
+        is_controlled_by (bool): ``True`` if the gate was created using the
             :meth:`qibo.base.abstract_gates.Gate.controlled_by` method,
             otherwise ``False``.
-        init_args: Arguments used to initialize the gate.
-        init_kwargs: Arguments used to initialize the gate.
-        target_qubits: Tuple with ids of target qubits.
-        control_qubits: Tuple with ids of control qubits sorted in increasing
-            order.
-        nqubits: Number of qubits that this gate acts on.
-        nstates: Size of state vectors that this gate acts on.
+        init_args (list): Arguments used to initialize the gate.
+        init_kwargs (dict): Arguments used to initialize the gate.
+        target_qubits (tuple): Tuple with ids of target qubits.
+        control_qubits (tuple): Tuple with ids of control qubits sorted in
+            increasing order.
+        nqubits (int): Number of qubits that this gate acts on.
+        nstates (int): Size of state vectors that this gate acts on.
+        density_matrix (bool): Controls if the gate acts on state vectors or
+            density matrices.
     """
     from qibo.base import gates as module
 
@@ -39,6 +41,10 @@ class Gate:
         self._nqubits = None
         self._nstates = None
         config.ALLOW_SWITCHERS = False
+
+        # Using density matrices or state vectors
+        self._density_matrix = False
+        self._active_call = "state_vector_call"
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -141,6 +147,24 @@ class Gate:
                                     "".format(n, self.nqubits))
         self._nqubits = n
         self._nstates = 2**n
+
+    @property
+    def density_matrix(self) -> bool:
+        """Controls if the gate acts on state vectors or density matrices."""
+        return self._density_matrix
+
+    @density_matrix.setter
+    def density_matrix(self, x: bool):
+        """Density matrix flag switcher."""
+        if self._nqubits is not None:
+            raise_error(RuntimeError,
+                        "Density matrix mode cannot be switched after "
+                        "preparing the gate for execution.")
+        self._density_matrix = x
+        if x:
+            self._active_call = "density_matrix_call"
+        else:
+            self._active_call = "state_vector_call"
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -319,27 +343,6 @@ class BackendGate(Gate, ABC):
         # a distributed circuit is used
         self.device_gates = set()
         self.original_gate = None
-        # Using density matrices or state vectors
-        self._density_matrix = False
-        self._active_call = "state_vector_call"
-
-    @property
-    def density_matrix(self) -> bool:
-        """Flag that controls if the gate acts on state vectors or density matrices."""
-        return self._density_matrix
-
-    @density_matrix.setter
-    def density_matrix(self, x: bool):
-        """Density matrix flag switcher."""
-        if self._nqubits is not None:
-            raise_error(RuntimeError,
-                        "Density matrix mode cannot be switched after "
-                        "preparing the gate for execution.")
-        self._density_matrix = x
-        if x:
-            self._active_call = "density_matrix_call"
-        else:
-            self._active_call = "state_vector_call"
 
     @property
     def unitary(self):

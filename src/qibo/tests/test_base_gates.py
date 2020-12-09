@@ -312,6 +312,20 @@ def test_nqubits_getter_and_setter():
     assert gate.nstates == 1024
 
 
+def test_density_matrix_getter_and_setter():
+    from qibo.base import abstract_gates
+    gate = abstract_gates.Gate()
+    gate.target_qubits = (0, 1)
+    gate.control_qubits = (2,)
+    assert gate._active_call == "state_vector_call"
+    gate.density_matrix = True
+    assert gate._active_call == "density_matrix_call"
+
+    gate.nqubits = 4
+    with pytest.raises(RuntimeError):
+        gate.density_matrix = False
+
+
 def test_gates_commute():
     assert gates.H(0).commutes(gates.X(1))
     assert gates.H(0).commutes(gates.H(1))
