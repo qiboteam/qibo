@@ -252,30 +252,6 @@ def test_base_gate_errors():
         gate = H(0).controlled_by(1).controlled_by(2)
 
 
-def test_gate_with_repeated_qubits():
-    """Check that repeating the same qubit in a gate raises errors."""
-    with pytest.raises(ValueError):
-        gate = SWAP(0, 0)
-    with pytest.raises(ValueError):
-        gate = H(0).controlled_by(1, 2, 3, 1)
-    with pytest.raises(ValueError):
-        gate = CNOT(1, 1)
-    with pytest.raises(ValueError):
-        gate = Y(1).controlled_by(0, 1, 2)
-
-
-def test_gates_commute():
-    """Check ``gate.commutes`` for various gate configurations."""
-    assert H(0).commutes(X(1))
-    assert H(0).commutes(H(0))
-    assert not H(0).commutes(Y(0))
-    assert not CNOT(0, 1).commutes(SWAP(1, 2))
-    assert not CNOT(0, 1).commutes(H(1))
-    assert not CNOT(0, 1).commutes(Y(0).controlled_by(2))
-    assert not CNOT(2, 3).commutes(CNOT(3, 0))
-    assert CNOT(0, 1).commutes(Y(2).controlled_by(0))
-
-
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_state_precision(precision):
     """Check ``set_precision`` in state dtype."""

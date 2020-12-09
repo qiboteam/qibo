@@ -1,8 +1,10 @@
 import pytest
 from qibo.base import gates
 
-# TODO: Add tests for `abstract_gates.py`
-# TODO: Test dagger in backend gates
+# Gate methods not tested here because they require a calculation backend:
+# * dagger
+# * parameter getter and setters
+# * all methods of :class:`qibo.base.abstract_gates.BackendGate`
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "I"])
 def test_one_qubit_gates_init(gatename):
@@ -280,3 +282,72 @@ def test_reset_channel_init():
     assert isinstance(gate.gates[1], gates.X)
 
 # TODO: Add thermal relaxation channel init test
+
+def test_qubit_getter_and_setter():
+    from qibo.base import abstract_gates
+    gate = abstract_gates.Gate()
+    gate.target_qubits = (0, 3)
+    gate.control_qubits = (1, 4, 2)
+    assert gate.qubits == (1, 2, 4, 0, 3)
+
+    gate = abstract_gates.Gate()
+    with pytest.raises(ValueError):
+        gate.target_qubits = (1, 1)
+    gate = abstract_gates.Gate()
+    with pytest.raises(ValueError):
+        gate.control_qubits = (1, 1)
+    gate = abstract_gates.Gate()
+    gate.target_qubits = (0, 1)
+    with pytest.raises(ValueError):
+        gate.control_qubits = (1,)
+
+
+def test_nqubits_getter_and_setter():
+    from qibo.base import abstract_gates
+    gate = abstract_gates.Gate()
+    gate.target_qubits = (0, 1)
+    gate.control_qubits = (2,)
+    gate.nqubits = 10
+    assert gate.nqubits == 10
+    assert gate.nstates == 1024
+
+
+def test_gates_commute():
+    assert gates.H(0).commutes(gates.X(1))
+    assert gates.H(0).commutes(gates.H(1))
+    assert gates.H(0).commutes(gates.H(0))
+    assert not gates.H(0).commutes(gates.Y(0))
+    assert not gates.CNOT(0, 1).commutes(gates.SWAP(1, 2))
+    assert not gates.CNOT(0, 1).commutes(gates.H(1))
+    assert not gates.CNOT(0, 1).commutes(gates.Y(0).controlled_by(2))
+    assert not gates.CNOT(2, 3).commutes(gates.CNOT(3, 0))
+    assert gates.CNOT(0, 1).commutes(gates.Y(2).controlled_by(0))
+
+
+def test_on_qubits():
+    gate = gates.CNOT(0, 1).on_qubits(2, 3)
+    assert gate.target_qubits == (3,)
+    assert gate.control_qubits == (2,)
+    assert isinstance(gate, gates.CNOT)
+
+
+def test_controlled_by():
+    gate = gates.RX(0, 0.1234).controlled_by(1, 2, 3)
+    assert gate.target_qubits == (0,)
+    assert gate.control_qubits == (1, 2, 3)
+    assert gate.is_controlled_by
+    assert isinstance(gate, gates.RX)
+
+
+def test_decompose():
+    decomp_gates = gates.H(0).decompose(1)
+    assert len(decomp_gates) == 1
+    assert isinstance(decomp_gates[0], gates.H)
+
+
+def test_special_gate():
+    from qibo.base import abstract_gates
+    gate = abstract_gates.SpecialGate()
+    assert not gate.commutes(gates.H(0))
+    with pytest.raises(NotImplementedError):
+        gate.on_qubits(1)
