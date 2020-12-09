@@ -38,7 +38,6 @@ def test_queue_class():
 def test_circuit_init():
     c = Circuit(2)
     assert c.nqubits == 2
-    assert c.size == 2
 
 
 @pytest.mark.parametrize("nqubits", [0, -10, 2.5])
@@ -111,6 +110,51 @@ def test_circuit_add_nested_generator():
 # TODO: Test `_add_measurement`
 # TODO: Test `_add_layer`
 
+def test_gate_types():
+    import collections
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.X(2))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
+    assert target_counter == c.gate_types
+
+
+def test_gates_of_type():
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.X(1))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    c.add(gates.H(2))
+    h_gates = c.gates_of_type(gates.H)
+    cx_gates = c.gates_of_type("cx")
+    assert h_gates == [(0, c.queue[0]), (1, c.queue[1]), (6, c.queue[6])]
+    assert cx_gates == [(2, c.queue[2]), (4, c.queue[4])]
+    with pytest.raises(TypeError):
+        c.gates_of_type(5)
+
+
+def test_summary():
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    c.add(gates.H(2))
+    target_summary = "\n".join(["Circuit depth = 5",
+                                "Total number of gates = 6",
+                                "Number of qubits = 3",
+                                "Most common gates:",
+                                "h: 3", "cx: 2", "ccx: 1"])
+    assert c.summary() == target_summary
+
 
 def test_circuit_addition():
     c1 = Circuit(2)
@@ -126,6 +170,7 @@ def test_circuit_addition():
     assert c3.depth == 2
     assert list(c3.queue) == [g1, g2, g3]
 
+# TODO: Test addition with measurements
 
 def test_circuit_addition_errors():
     c1 = Circuit(2)
@@ -137,3 +182,33 @@ def test_circuit_addition_errors():
 
     with pytest.raises(ValueError):
         c3 = c1 + c2
+
+
+@pytest.mark.parametrize("deep", [False, True])
+def test_circuit_copy(deep):
+    c1 = Circuit(2)
+    c1.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    c2 = c1.copy(deep)
+    assert c2.depth == c1.depth
+    assert c2.ngates == c1.ngates
+    assert c2.nqubits == c1.nqubits
+    for g1, g2 in zip(c1.queue, c2.queue):
+        if deep:
+            assert g1.__class__ == g2.__class__
+            assert g1.target_qubits == g2.target_qubits
+            assert g1.control_qubits == g2.control_qubits
+        else:
+            assert g1 is g2
+
+
+def test_circuit_copy_with_measurements():
+    c1 = Circuit(4)
+    c1.add([gates.H(0), gates.H(3), gates.CNOT(0, 2)])
+    c1.add(gates.M(0, 1, register_name="a"))
+    c1.add(gates.M(3, register_name="b"))
+    c2 = c1.copy()
+
+    assert c2.measurement_gate is c1.measurement_gate
+    assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
+
+# TODO: Continue with `invert` and move on

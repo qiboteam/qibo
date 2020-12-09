@@ -206,11 +206,6 @@ class BaseCircuit(ABC):
             self.queue.append(gate.additional_unitary)
 
     @property
-    def size(self) -> int:
-        """Total number of qubits in the circuit."""
-        return self.nqubits
-
-    @property
     def ngates(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
@@ -249,6 +244,44 @@ class BaseCircuit(ABC):
             return [(i, g) for i, g in enumerate(self.queue)
                     if isinstance(g, gate)]
         raise_error(TypeError, "Gate identifier {} not recognized.".format(gate))
+
+    def summary(self) -> str:
+        """Generates a summary of the circuit.
+
+        The summary contains the circuit depths, total number of qubits and
+        the all gates sorted in decreasing number of appearance.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(3)
+                c.add(gates.H(0))
+                c.add(gates.H(1))
+                c.add(gates.CNOT(0, 2))
+                c.add(gates.CNOT(1, 2))
+                c.add(gates.H(2))
+                c.add(gates.TOFFOLI(0, 1, 2))
+                print(c.summary())
+                # Prints
+                '''
+                Circuit depth = 5
+                Total number of gates = 7
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
+        """
+        logs = [f"Circuit depth = {self.depth}",
+                f"Total number of gates = {self.ngates}",
+                f"Number of qubits = {self.nqubits}",
+                "Most common gates:"]
+        common_gates = self.gate_types.most_common()
+        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        return "\n".join(logs)
 
     def __add__(self, circuit) -> "BaseCircuit":
         """Add circuits.
@@ -628,44 +661,6 @@ class BaseCircuit(ABC):
             return params
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
-
-    def summary(self) -> str:
-        """Generates a summary of the circuit.
-
-        The summary contains the circuit depths, total number of qubits and
-        the all gates sorted in decreasing number of appearance.
-
-        Example:
-            ::
-
-                from qibo.models import Circuit
-                from qibo import gates
-                c = Circuit(3)
-                c.add(gates.H(0))
-                c.add(gates.H(1))
-                c.add(gates.CNOT(0, 2))
-                c.add(gates.CNOT(1, 2))
-                c.add(gates.H(2))
-                c.add(gates.TOFFOLI(0, 1, 2))
-                print(c.summary())
-                # Prints
-                '''
-                Circuit depth = 5
-                Total number of gates = 7
-                Number of qubits = 3
-                Most common gates:
-                h: 3
-                cx: 2
-                ccx: 1
-                '''
-        """
-        logs = [f"Circuit depth = {self.depth}",
-                f"Total number of gates = {self.ngates}",
-                f"Number of qubits = {self.nqubits}",
-                "Most common gates:"]
-        common_gates = self.gate_types.most_common()
-        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
-        return "\n".join(logs)
 
     @property
     @abstractmethod
