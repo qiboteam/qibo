@@ -819,7 +819,8 @@ class CZPow(Gate): # pragma: no cover
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
-    def __new__(cls, q0, q1, theta): # pragma: no cover
+    # This class exists only for documentation purposes.
+    def __new__(cls, q0, q1, theta):
         # code is not tested as it is substituted in `tensorflow` gates
         return CU1(q0, q1, theta)
 
