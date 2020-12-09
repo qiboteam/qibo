@@ -69,7 +69,11 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.queues = utils.DistributedQueues(self, gate_module)
 
     def set_nqubits(self, gate):
-        base_circuit.BaseCircuit.set_nqubits(self, gate)
+        if gate.is_prepared and gate.nqubits != self.nqubits:
+            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
+                                      "qubits to circuit that contains {}"
+                                      "qubits.".format(
+                                            gate, gate.nqubits, self.nqubits))
 
     def on_qubits(self, *q):
         if self.queues.queues:

@@ -40,7 +40,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                          dtype=DTYPES.get('DTYPEINT'))
 
     def set_nqubits(self, gate):
-        super().set_nqubits(gate)
+        if gate.is_prepared and gate.nqubits != self.nqubits:
+            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
+                                      "qubits to circuit that contains {}"
+                                      "qubits.".format(
+                                            gate, gate.nqubits, self.nqubits))
         gate.nqubits = self.nqubits
         gate.prepare()
 

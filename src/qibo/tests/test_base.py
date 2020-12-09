@@ -8,19 +8,6 @@ from qibo.models import *
 from qibo.gates import *
 
 
-@pytest.mark.parametrize('nqubits', [0, -10, 2.5])
-def test_circuit_noqubit(nqubits):
-    """Check that circuit raises errors with non physical setup."""
-    with pytest.raises((ValueError, TypeError)):
-        c = Circuit(nqubits)
-
-
-def test_circuit_sanity():
-    """Check if the number of qbits is preserved."""
-    c = Circuit(2)
-    assert c.nqubits == 2
-    assert c.size == 2
-
 
 def test_importing_full_qibo():
     """Checks accessing `models` and `gates` from `qibo`."""
@@ -40,116 +27,6 @@ def test_importing_qibo_modules():
     assert c.nqubits == 2
     assert c.depth == 1
     assert c.ngates == 1
-
-
-def test_circuit_add():
-    """Check if circuit depth increases with the add method."""
-    c = Circuit(2)
-    c.add(H(0))
-    c.add(H(1))
-    c.add(CNOT(0, 1))
-    assert c.depth == 2
-    assert c.ngates == 3
-
-
-def test_circuit_add_bad_gate():
-    """Check ``circuit.add()`` exceptions."""
-    c = Circuit(2)
-    with pytest.raises(TypeError):
-        c.add(0)
-    with pytest.raises(ValueError):
-        c.add(H(2))
-    with pytest.raises(ValueError):
-        gate = H(1)
-        gate.nqubits = 3
-        c.add(gate)
-
-    final_state = c()
-    with pytest.raises(RuntimeError):
-        c.add(H(0))
-
-
-def test_circuit_add_iterable():
-    """Check if `circuit.add` works with iterables."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
-    c = Circuit(2)
-    # Try adding list
-    c.add([H(0), H(1), CNOT(0, 1)])
-    assert c.depth == 2
-    assert c.ngates == 3
-    assert isinstance(c.queue[-1], CNOT)
-    # Try adding tuple
-    c.add((H(0), H(1), CNOT(0, 1)))
-    assert c.depth == 4
-    assert c.ngates == 6
-    assert isinstance(c.queue[-1], CNOT)
-    qibo.set_backend(original_backend)
-
-
-def test_circuit_add_generator():
-    """Check if `circuit.add` works with generators."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
-    def gen():
-        yield H(0)
-        yield H(1)
-        yield CNOT(0, 1)
-    c = Circuit(2)
-    c.add(gen())
-    assert c.depth == 2
-    assert c.ngates == 3
-    assert isinstance(c.queue[-1], CNOT)
-    qibo.set_backend(original_backend)
-
-
-def test_circuit_add_nested_generator():
-    """Check if `circuit.add` works with nested generators."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
-    def gen():
-        yield H(0)
-        yield H(1)
-        yield CNOT(0, 1)
-    c = Circuit(2)
-    c.add((gen() for _ in range(3)))
-    assert c.depth == 6
-    assert c.ngates == 9
-    assert isinstance(c.queue[2], CNOT)
-    assert isinstance(c.queue[5], CNOT)
-    assert isinstance(c.queue[7], H)
-    qibo.set_backend(original_backend)
-
-
-def test_circuit_addition():
-    """Check if circuit addition increases depth."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
-    c1 = Circuit(2)
-    c1.add(H(0))
-    c1.add(H(1))
-    assert c1.depth == 1
-
-    c2 = Circuit(2)
-    c2.add(CNOT(0, 1))
-    assert c2.depth == 1
-
-    c3 = c1 + c2
-    assert c3.depth == 2
-    qibo.set_backend(original_backend)
-
-
-def test_bad_circuit_addition():
-    """Check that it is not possible to add circuits with different number of qubits."""
-    c1 = Circuit(2)
-    c1.add(H(0))
-    c1.add(H(1))
-
-    c2 = Circuit(1)
-    c2.add(X(0))
-
-    with pytest.raises(ValueError):
-        c3 = c1 + c2
 
 
 def test_gate_types():
