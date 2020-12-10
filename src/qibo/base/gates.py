@@ -308,14 +308,14 @@ class _Rn_(ParametrizedGate):
     """
     axis = "n"
 
-    def __init__(self, q, theta):
-        super(_Rn_, self).__init__()
+    def __init__(self, q, theta, trainable=True):
+        super(_Rn_, self).__init__(trainable)
         self.name = "r{}".format(self.axis)
         self.target_qubits = (q,)
 
         self.parameters = theta
         self.init_args = [q]
-        self.init_kwargs = {"theta": theta}
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
         """"""
@@ -397,12 +397,13 @@ class _Un_(ParametrizedGate):
     """
     order = 0
 
-    def __init__(self, q):
-        super(_Un_, self).__init__()
+    def __init__(self, q, trainable=True):
+        super(_Un_, self).__init__(trainable)
         self.name = "u{}".format(self.order)
         self.nparams = self.order
         self.target_qubits = (q,)
         self.init_args = [q]
+        self.init_kwargs = {"trainable": trainable}
 
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
@@ -431,8 +432,8 @@ class U1(_Un_):
     """
     order = 1
 
-    def __init__(self, q, theta):
-        super(U1, self).__init__(q)
+    def __init__(self, q, theta, trainable=True):
+        super(U1, self).__init__(q, trainable=trainable)
         self.parameters = theta
         self.init_kwargs = {"theta": theta}
 
@@ -460,8 +461,8 @@ class U2(_Un_):
     """
     order = 2
 
-    def __init__(self, q, phi, lam):
-        super(U2, self).__init__(q)
+    def __init__(self, q, phi, lam, trainable=True):
+        super(U2, self).__init__(q, trainable=trainable)
         self._phi, self._lam = None, None
         self.init_kwargs = {"phi": phi, "lam": lam}
         self.parameter_names = ["phi", "lam"]
@@ -494,8 +495,8 @@ class U3(_Un_):
     """
     order = 3
 
-    def __init__(self, q, theta, phi, lam):
-        super(U3, self).__init__(q)
+    def __init__(self, q, theta, phi, lam, trainable=True):
+        super(U3, self).__init__(q, trainable=trainable)
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
         self.parameter_names = ["theta", "phi", "lam"]
@@ -524,8 +525,8 @@ class ZPow(Gate): # pragma: no cover
         theta (float): the rotation angle.
     """
     # This class exists only for documentation purposes.
-    def __new__(cls, q, theta):
-        return U1(q, theta)
+    def __new__(cls, q, theta, trainable=True):
+        return U1(q, theta, trainable=trainable)
 
 
 class CNOT(Gate):
@@ -594,8 +595,8 @@ class _CRn_(ParametrizedGate):
     """
     axis = "n"
 
-    def __init__(self, q0, q1, theta):
-        super(_CRn_, self).__init__()
+    def __init__(self, q0, q1, theta, trainable=True):
+        super(_CRn_, self).__init__(trainable)
         self.name = "cr{}".format(self.axis)
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
@@ -685,8 +686,8 @@ class _CUn_(ParametrizedGate):
     """
     order = 0
 
-    def __init__(self, q0, q1):
-        super(_CUn_, self).__init__()
+    def __init__(self, q0, q1, trainable=True):
+        super(_CUn_, self).__init__(trainable)
         self.name = "cu{}".format(self.order)
         self.nparams = self.order
         self.control_qubits = (q0,)
@@ -716,8 +717,8 @@ class CU1(_CUn_):
     """
     order = 1
 
-    def __init__(self, q0, q1, theta):
-        super(CU1, self).__init__(q0, q1)
+    def __init__(self, q0, q1, theta, trainable=True):
+        super(CU1, self).__init__(q0, q1, trainable=trainable)
         self.parameters = theta
         self.init_kwargs = {"theta": theta}
 
@@ -750,8 +751,8 @@ class CU2(_CUn_):
     """
     order = 2
 
-    def __init__(self, q0, q1, phi, lam):
-        super(CU2, self).__init__(q0, q1)
+    def __init__(self, q0, q1, phi, lam, trainable=True):
+        super(CU2, self).__init__(q0, q1, trainable=trainable)
         self.init_kwargs = {"phi": phi, "lam": lam}
 
         self.parameter_names = ["phi", "lam"]
@@ -789,8 +790,8 @@ class CU3(_CUn_):
     """
     order = 3
 
-    def __init__(self, q0, q1, theta, phi, lam):
-        super(CU3, self).__init__(q0, q1)
+    def __init__(self, q0, q1, theta, phi, lam, trainable=True):
+        super(CU3, self).__init__(q0, q1, trainable=trainable)
         self._theta, self._phi, self._lam = None, None, None
         self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
         self.parameter_names = ["theta", "phi", "lam"]
@@ -823,9 +824,9 @@ class CZPow(Gate): # pragma: no cover
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
     """
-    def __new__(cls, q0, q1, theta): # pragma: no cover
+    def __new__(cls, q0, q1, theta, trainable=True): # pragma: no cover
         # code is not tested as it is substituted in `tensorflow` gates
-        return CU1(q0, q1, theta)
+        return CU1(q0, q1, theta, trainable=trainable)
 
 
 class SWAP(Gate):
@@ -874,8 +875,8 @@ class fSim(ParametrizedGate):
     """
     # TODO: Check how this works with QASM.
 
-    def __init__(self, q0, q1, theta, phi):
-        super(fSim, self).__init__()
+    def __init__(self, q0, q1, theta, phi, trainable=True):
+        super(fSim, self).__init__(trainable)
         self.name = "fsim"
         self.target_qubits = (q0, q1)
 
@@ -912,8 +913,8 @@ class GeneralizedfSim(ParametrizedGate):
         phi (float): Angle for the |11> phase.
     """
 
-    def __init__(self, q0, q1, unitary, phi):
-        super(GeneralizedfSim, self).__init__()
+    def __init__(self, q0, q1, unitary, phi, trainable=True):
+        super(GeneralizedfSim, self).__init__(trainable)
         self.name = "generalizedfsim"
         self.target_qubits = (q0, q1)
 
@@ -1002,8 +1003,8 @@ class Unitary(ParametrizedGate):
         name (str): Optional name for the gate.
     """
 
-    def __init__(self, unitary, *q, name: Optional[str] = None):
-        super(Unitary, self).__init__()
+    def __init__(self, unitary, *q, trainable=True, name=None):
+        super(Unitary, self).__init__(trainable)
         self.name = "Unitary" if name is None else name
         self.target_qubits = tuple(q)
 
@@ -1088,8 +1089,9 @@ class VariationalLayer(ParametrizedGate):
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params: List[float], params2: Optional[List[float]] = None,
+                 trainable: bool = True,
                  name: Optional[str] = None):
-        super(VariationalLayer, self).__init__()
+        super(VariationalLayer, self).__init__(trainable)
         self.init_args = [qubits, pairs, one_qubit_gate, two_qubit_gate]
         self.init_kwargs = {"params": params, "params2": params2, "name": name}
         self.name = "VariationalLayer" if name is None else name

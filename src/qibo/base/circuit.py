@@ -42,7 +42,7 @@ class _Queue(list):
         self.moments = [nqubits * [None]]
         self.moment_index = nqubits * [0]
 
-    def append(self, gate: gates.ParametrizedGate):
+    def append(self, gate: gates.Gate):
         super(_Queue, self).append(gate)
         # Calculate moment index for this gate
         if gate.qubits:
@@ -123,7 +123,7 @@ class BaseCircuit(ABC):
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
             newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
+            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
                 newcircuit.parametrized_gates.append(gate)
         newcircuit.measurement_gate = self.measurement_gate
         newcircuit.measurement_tuples = self.measurement_tuples
@@ -131,7 +131,7 @@ class BaseCircuit(ABC):
         for gate in circuit.queue:
             newcircuit.check_measured(gate.qubits)
             newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate):
+            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
                 newcircuit.parametrized_gates.append(gate)
 
         if newcircuit.measurement_gate is None:
@@ -193,7 +193,7 @@ class BaseCircuit(ABC):
             for gate in self.queue:
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
-                if isinstance(gate, gates.ParametrizedGate):
+                if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
                     new_circuit.parametrized_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
             if self.fusion_groups: # pragma: no cover
@@ -236,7 +236,7 @@ class BaseCircuit(ABC):
         import copy
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
-            if isinstance(gate, gates.ParametrizedGate):
+            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
                 new_circuit.parametrized_gates.append(new_gate)
@@ -440,7 +440,7 @@ class BaseCircuit(ABC):
             self.queue.append(gate)
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
-        if isinstance(gate, gates.ParametrizedGate):
+        if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
             self.parametrized_gates.append(gate)
 
     def set_nqubits(self, gate: gates.Gate):
