@@ -435,7 +435,7 @@ class U1(_Un_):
     def __init__(self, q, theta, trainable=True):
         super(U1, self).__init__(q, trainable=trainable)
         self.parameters = theta
-        self.init_kwargs = {"theta": theta}
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
         """"""
@@ -464,7 +464,7 @@ class U2(_Un_):
     def __init__(self, q, phi, lam, trainable=True):
         super(U2, self).__init__(q, trainable=trainable)
         self._phi, self._lam = None, None
-        self.init_kwargs = {"phi": phi, "lam": lam}
+        self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
         self.parameter_names = ["phi", "lam"]
         self.parameters = phi, lam
 
@@ -498,7 +498,8 @@ class U3(_Un_):
     def __init__(self, q, theta, phi, lam, trainable=True):
         super(U3, self).__init__(q, trainable=trainable)
         self._theta, self._phi, self._lam = None, None, None
-        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
+        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
+                            "trainable": trainable}
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
@@ -603,7 +604,7 @@ class _CRn_(ParametrizedGate):
         self.parameters = theta
 
         self.init_args = [q0, q1]
-        self.init_kwargs = {"theta": theta}
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
         """"""
@@ -693,6 +694,7 @@ class _CUn_(ParametrizedGate):
         self.control_qubits = (q0,)
         self.target_qubits = (q1,)
         self.init_args = [q0, q1]
+        self.init_kwargs = {"trainable": trainable}
 
 
 class CU1(_CUn_):
@@ -720,7 +722,7 @@ class CU1(_CUn_):
     def __init__(self, q0, q1, theta, trainable=True):
         super(CU1, self).__init__(q0, q1, trainable=trainable)
         self.parameters = theta
-        self.init_kwargs = {"theta": theta}
+        self.init_kwargs = {"theta": theta, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
         """"""
@@ -753,7 +755,7 @@ class CU2(_CUn_):
 
     def __init__(self, q0, q1, phi, lam, trainable=True):
         super(CU2, self).__init__(q0, q1, trainable=trainable)
-        self.init_kwargs = {"phi": phi, "lam": lam}
+        self.init_kwargs = {"phi": phi, "lam": lam, "trainable": trainable}
 
         self.parameter_names = ["phi", "lam"]
         self.parameters = phi, lam
@@ -793,7 +795,8 @@ class CU3(_CUn_):
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
         super(CU3, self).__init__(q0, q1, trainable=trainable)
         self._theta, self._phi, self._lam = None, None, None
-        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam}
+        self.init_kwargs = {"theta": theta, "phi": phi, "lam": lam,
+                            "trainable": trainable}
         self.parameter_names = ["theta", "phi", "lam"]
         self.parameters = theta, phi, lam
 
@@ -885,7 +888,7 @@ class fSim(ParametrizedGate):
         self.nparams = 2
 
         self.init_args = [q0, q1]
-        self.init_kwargs = {"theta": theta, "phi": phi}
+        self.init_kwargs = {"theta": theta, "phi": phi, "trainable": trainable}
 
     def _dagger(self) -> "Gate":
         """"""
@@ -923,7 +926,8 @@ class GeneralizedfSim(ParametrizedGate):
         self.nparams = 5
 
         self.init_args = [q0, q1]
-        self.init_kwargs = {"unitary": unitary, "phi": phi}
+        self.init_kwargs = {"unitary": unitary, "phi": phi,
+                            "trainable": trainable}
 
     @abstractmethod
     def _dagger(self) -> "Gate": # pragma: no cover
@@ -1013,7 +1017,7 @@ class Unitary(ParametrizedGate):
         self.nparams = 4 ** len(self.target_qubits)
 
         self.init_args = [unitary] + list(q)
-        self.init_kwargs = {"name": name}
+        self.init_kwargs = {"name": name, "trainable": trainable}
 
     @property
     def rank(self) -> int:
@@ -1093,7 +1097,8 @@ class VariationalLayer(ParametrizedGate):
                  name: Optional[str] = None):
         super(VariationalLayer, self).__init__(trainable)
         self.init_args = [qubits, pairs, one_qubit_gate, two_qubit_gate]
-        self.init_kwargs = {"params": params, "params2": params2, "name": name}
+        self.init_kwargs = {"params": params, "params2": params2,
+                            "trainable": trainable, "name": name}
         self.name = "VariationalLayer" if name is None else name
 
         self.target_qubits = tuple(qubits)
