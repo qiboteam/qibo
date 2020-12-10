@@ -173,30 +173,41 @@ def test_circuit_set_parameters_ungates(backend, accelerators, trainable):
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_circuit_set_parameters_with_unitary(backend, accelerators):
+@pytest.mark.parametrize("trainable", [True, False])
+def test_circuit_set_parameters_with_unitary(backend, accelerators, trainable):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
+    params = [0.1234, np.random.random((4, 4))]
+
     c = Circuit(3, accelerators)
     c.add(gates.RX(0, theta=0))
-    c.add(gates.Unitary(np.zeros((4, 4)), 1, 2))
+    if trainable:
+        c.add(gates.Unitary(np.zeros((4, 4)), 1, 2, trainable=trainable))
+        trainable_params = list(params)
+    else:
+        c.add(gates.Unitary(params[1], 1, 2, trainable=trainable))
+        trainable_params = [params[0]]
     # execute once
     final_state = c()
 
-    params = [0.1234, np.random.random((4, 4))]
     target_c = Circuit(3)
     target_c.add(gates.RX(0, theta=params[0]))
     target_c.add(gates.Unitary(params[1], 1, 2))
-    c.set_parameters(params)
+    c.set_parameters(trainable_params)
     np.testing.assert_allclose(c(), target_c())
 
     # Attempt using a flat list / np.ndarray
-    params = np.random.random(17)
+    new_params = np.random.random(17)
+    if trainable:
+        c.set_parameters(new_params)
+    else:
+        c.set_parameters(new_params[:1])
+        new_params[1:] = params[1].ravel()
     target_c = Circuit(3)
-    target_c.add(gates.RX(0, theta=params[0]))
-    target_c.add(gates.Unitary(params[1:].reshape((4, 4)), 1, 2))
-    c.set_parameters(params)
+    target_c.add(gates.RX(0, theta=new_params[0]))
+    target_c.add(gates.Unitary(new_params[1:].reshape((4, 4)), 1, 2))
     np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
@@ -243,6 +254,19 @@ def test_circuit_set_parameters_with_dictionary(backend, accelerators, trainable
         params_dict = {c.queue[3]: params[1], c.queue[5]: params[2]}
     c.set_parameters(params_dict)
     np.testing.assert_allclose(c(), target_c())
+
+    # test not passing all parametrized gates
+    target_c = Circuit(3, accelerators)
+    target_c.add(gates.X(0))
+    target_c.add(gates.X(2))
+    target_c.add(gates.U1(0, theta=params[0]))
+    target_c.add(gates.RZ(1, theta=params[1]))
+    target_c.add(gates.CZ(1, 2))
+    target_c.add(gates.CU1(0, 2, theta=0.7891))
+    target_c.add(gates.H(2))
+    target_c.add(gates.Unitary(params[3], 1))
+    c.set_parameters({c.queue[5]: 0.7891})
+    np.testing.assert_allclose(c(), target_c())
     qibo.set_backend(original_backend)
 
 
@@ -253,7 +277,7 @@ def test_circuit_set_parameters_errors():
     c.add(gates.RX(1, theta=0.789))
     c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(KeyError):
         c.set_parameters({gates.RX(0, theta=1.0): 0.568})
     with pytest.raises(ValueError):
         c.set_parameters([0.12586])

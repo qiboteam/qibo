@@ -595,11 +595,13 @@ class BaseCircuit(ABC):
             if self.fusion_groups:
                 raise_error(TypeError, "Cannot accept new parameters as dictionary "
                                        "for fused circuits. Use list, tuple or array.")
-            if set(parameters.keys()) != self.parametrized_gates.set:
-                raise_error(ValueError, "Dictionary with gate parameters does not "
-                                        "agree with the circuit gates.")
-            for gate in self.parametrized_gates:
-                gate.parameters = parameters[gate]
+            diff = set(parameters.keys()) - self.parametrized_gates.set
+            if diff:
+                raise_error(KeyError, "Dictionary contains gates {} which are "
+                                      "not on the list of parametrized gates "
+                                      "of the circuit.".format(diff))
+            for gate, params in parameters.items():
+                gate.parameters = params
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
