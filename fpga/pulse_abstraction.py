@@ -1,8 +1,21 @@
-import numpy as np
+"""Contains the pulse abstraction and pulse shaping for the FPGA
+"""
 
+import numpy as np
+from qibo import raise_error
+from static_config import sample_size, sampling_rate, n_channels
 
 class PulseSequence:
-    def __init__(self, pulses, n_channels, sample_size, sampling_rate):
+    """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
+    
+    Current FPGA binary has variable sampling rate but fixed sample size.
+    Due to software limitations we need to prepare all 16 DAC channel arrays.
+    @see BasicPulse, MultifrequencyPulse and FilePulse for more information about supported pulses.
+
+    Args:
+        pulses: Array of Pulse objects
+    """
+    def __init__(self, pulses):
         self.pulses = pulses
         self.n_channels = n_channels
         self.sample_size = sample_size
@@ -11,7 +24,14 @@ class PulseSequence:
         self.duration = self.sample_size / self.sampling_rate
         self.time = np.linspace(0, self.duration, num=self.sample_size)
 
-    def compile(self):
+    def compile(self) -> np.ndarray:
+        """Compiles pulse sequence into waveform arrays
+
+        FPGA binary is currently unable to parse pulse sequences, so this is a temporary workaround to prepare the arrays
+
+        Returns:
+            Numpy.ndarray holding waveforms for each channel. Has shape (n_channels, sample_size).
+        """
         waveform = np.zeros((self.n_channels, self.sample_size))
         for pulse in self.pulses:
             if pulse.serial[0] == "P":
@@ -46,16 +66,36 @@ class PulseSequence:
         waveform[pulse.channel, i_start:i_start + len(arr)] = arr
         return waveform
 
-    def serialize(self):
-        return ", ".join([p.serial for p in self.pulses])
-
+    def serialize(self) -> str:
+        """Returns the serialized pulse sequence
+        """
+        return ", ".join([p.serial() for p in self.pulses])
 
 class Pulse:
-    def __init__(self, serial):
-        self.serial = serial
+    """Describes a pulse to be added onto the channel waveform
+    """
+    def __init__(self):
+        self.channel = None
 
+    def serial(self):
+        """Returns the serialized pulse
+        """
+        raise_error(NotImplementedError)
+
+    def __repr__(self):
+        return self.serial()
 
 class BasicPulse(Pulse):
+    """Describes a single pulse to be added to waveform array.
+
+    Args:
+        channel (int): FPGA channel to play pulse on.
+        start (float): Start time of pulse in seconds.
+        duration (float): Pulse duration in seconds.
+        amplitude (float): Pulse amplitude in volts.
+        frequency (float): Pulse frequency in Hz.
+        shape: (PulseShape): Pulse shape, @see Rectangular, Gaussian, DRAG for more information.
+    """
     def __init__(self, channel, start, duration, amplitude, frequency, phase, shape):
         self.channel = channel
         self.start = start
@@ -64,55 +104,69 @@ class BasicPulse(Pulse):
         self.frequency = frequency
         self.phase = phase
         self.shape = shape  # PulseShape objects
-        super().__init__(
-            "P({}, {}, {}, {}, {}, {}, {})".format(channel, start, duration, amplitude, frequency, phase, shape.serial))
 
+    def serial(self):
+        return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
+                                                      self.amplitude, self.frequency, self.phase, self.shape)
 
 class MultifrequencyPulse(Pulse):
+    """Describes multiple pulses to be added to waveform array.
+
+    Used when multiple pulses are overlapping to avoid overwrite
+    """
     def __init__(self, members):
         self.members = members
-        super().__init__("M({})".format(", ".join([m.serial for m in members])))
 
+    def serial(self):
+        return "M({})".format(", ".join([m.serial() for m in self.members]))
 
 class FilePulse(Pulse):
+    """Commands the FPGA to load a file as a waveform array in the specified channel
+    """
     def __init__(self, channel, start, filename):
         self.channel = channel
         self.start = start
         self.filename = filename
-        super().__init__("F({}, {}, {})".format(channel, start, filename))
 
+    def serial(self):
+        return "F({}, {}, {})".format(self.channel, self.start, self.filename)
 
 class PulseShape:
-    def __init__(self, name, *args):
-        self.parameters = []
-        self.serial = "(" + name
-        for p in args:
-            self.parameters.append(p)
-            self.serial += ", {}".format(p)
-        self.serial += ")"
+    """Describes the pulse shape to be used
+    """
+    def __init__(self):
+        self.name = ""
 
     def envelope(self, time, start, duration, amplitude):
-        return amplitude * time
+        raise_error(NotImplementedError)
 
+    def __repr__(self):
+        return "({})".format(self.name)
 
 class Rectangular(PulseShape):
+    """Rectangular/square pulse shape    
+    """
     def __init__(self):
-        super().__init__("retangular")
+        self.name = "retangular"
 
+    def envelope(self, time, start, duration, amplitude):
+        return amplitude
 
 class Gaussian(PulseShape):
     def __init__(self, sigma):
-        super().__init__("gaussian", sigma)
+        self.name = "gaussian"
         self.sigma = sigma
 
     def envelope(self, time, start, duration, amplitude):
         mu = start + duration / 2
         return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
+    def __repr__(self):
+        return "({}, {})".format(self.name, self.sigma)
 
 class Drag(PulseShape):
     def __init__(self, sigma, beta):
-        super().__init__("drag", sigma, beta)
+        self.name = "drag"
         self.sigma = sigma
         self.beta = beta
 
@@ -120,3 +174,6 @@ class Drag(PulseShape):
         mu = start + duration / 2
         gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
         return gaussian + 1j * self.beta * ((-(time - mu)) / self.sigma ** 2) * gaussian
+
+    def __repr__(self):
+        return "({}, {}, {})".format(self.name, self.sigma, self.beta)
