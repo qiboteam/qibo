@@ -757,12 +757,17 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
         gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
+    @BackendGate.density_matrix.setter
+    def density_matrix(self, x):
+        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        self.callback.density_matrix = x
+
     def construct_unitary(self):
         raise_error(ValueError, "Unitary gate does not have unitary "
                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.callback.append(self.callback(state, self.density_matrix))
+        self.callback.append(self.callback(state))
         return state
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:

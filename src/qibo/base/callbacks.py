@@ -6,7 +6,8 @@ from typing import List, Optional, Union
 class Callback(ABC):
     """Base callback class.
 
-    Callbacks should inherit this class and implement its `__call__` method.
+    Callbacks should inherit this class and implement its
+    `state_vector_call` and `density_matrix_call` methods.
 
     Results of a callback can be accessed by indexing the corresponding object.
     """
@@ -15,6 +16,8 @@ class Callback(ABC):
     def __init__(self):
         self._results = []
         self._nqubits = None
+        self._density_matrix = False
+        self._active_call = "state_vector_call"
 
     @property
     def nqubits(self): # pragma: no cover
@@ -26,6 +29,18 @@ class Callback(ABC):
     def nqubits(self, n: int): # pragma: no cover
         # abstract method
         self._nqubits = n
+
+    @property
+    def density_matrix(self):
+        return self._density_matrix
+
+    @density_matrix.setter
+    def density_matrix(self, x):
+        self._density_matrix = x
+        if x:
+            self._active_call = "density_matrix_call"
+        else:
+            self._active_call = "state_vector_call"
 
     def __getitem__(self, k):
         if isinstance(k, int):
@@ -45,8 +60,15 @@ class Callback(ABC):
         self._results.extend(x)
 
     @abstractmethod
-    def __call__(self, state, is_density_matrix=False): # pragma: no cover
+    def state_vector_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_call(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def __call__(self, state):
+        return getattr(self, self._active_call)(state)
 
 
 class PartialTrace(Callback):
@@ -68,11 +90,7 @@ class PartialTrace(Callback):
         self.rho_dim = None
         self._traceout = None
 
-    @property
-    def nqubits(self) -> int:
-        return self._nqubits
-
-    @nqubits.setter
+    @Callback.nqubits.setter
     def nqubits(self, n: int):
         self._nqubits = n
         if self.partition is None: # pragma: no cover
@@ -94,7 +112,7 @@ class PartialTrace(Callback):
         return self._traceout
 
 
-class EntanglementEntropy(PartialTrace):
+class EntanglementEntropy(Callback):
     """Von Neumann entanglement entropy callback.
 
     .. math::
@@ -132,9 +150,29 @@ class EntanglementEntropy(PartialTrace):
 
     def __init__(self, partition: Optional[List[int]] = None,
                  compute_spectrum: bool = False):
+        from qibo import callbacks
+        super().__init__()
         self.compute_spectrum = compute_spectrum
         self.spectrum = list()
-        super().__init__(partition)
+        self.partial_trace = callbacks.PartialTrace(partition)
+
+    @Callback.nqubits.setter
+    def nqubits(self, n: int):
+        self._nqubits = n
+        self.partial_trace.nqubits = n
+
+    @abstractmethod
+    def entropy(self, rho): # pragma: no cover
+        """Calculates entropy of a density matrix via exact diagonalization."""
+        raise_error(NotImplementedError)
+
+    def state_vector_call(self, state):
+        rho = self.partial_trace.state_vector_call(state)
+        return self.entropy(rho)
+
+    def density_matrix_call(self, state):
+        rho = self.partial_trace.density_matrix_call(state)
+        return self.entropy(rho)
 
 
 class Norm(Callback):
@@ -184,7 +222,7 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
-    def __call__(self, state, is_density_matrix=False):
+    def state_vector_call(self, state):
         return self.hamiltonian.expectation(state)
 
 
@@ -251,14 +289,10 @@ class Gap(Callback):
             raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
         self._evolution = ev
 
-    def __call__(self, state, is_density_matrix=False):
+    def state_vector_call(self, state):
         if self.evolution is None:
             raise_error(ValueError, "Gap callback can only be used in "
                                     "adiabatic evolution models.")
-        if is_density_matrix:
-            raise_error(NotImplementedError, "Adiabatic evolution gap callback "
-                                             "is not implemented for density "
-                                             "matrices.")
         hamiltonian = self.evolution.hamiltonian()
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()
@@ -267,3 +301,7 @@ class Gap(Callback):
         # case: self.mode == "gap"
         return self.K.math.real(hamiltonian.eigenvalues()[1] -
                                 hamiltonian.eigenvalues()[0])
+
+    def density_matrix_call(self, state):
+        raise_error(NotImplementedError, "Gap callback is not implemented for "
+                                         "density matrices.")

@@ -781,7 +781,8 @@ def test_entanglement_entropy(backend):
     # this is a positive rho
 
     entropy = callbacks.EntanglementEntropy([0, 2])
-    final_ent = entropy(rho, is_density_matrix=True)
+    entropy.density_matrix = True
+    final_ent = entropy(rho)
 
     rho = rho.reshape(8 * (2,))
     reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
