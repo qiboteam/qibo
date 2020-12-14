@@ -370,6 +370,9 @@ def test_gap(trotter):
     gap.density_matrix = True
     with pytest.raises(NotImplementedError):
         gap(np.zeros(8))
+    # for coverage
+    _ = gap.density_matrix
+    gap.density_matrix = False
 
 
 def test_gap_errors():

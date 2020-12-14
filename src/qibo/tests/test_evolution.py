@@ -24,7 +24,7 @@ class TimeStepChecker(Callback):
     def state_vector_call(self, state):
         assert_states_equal(state, next(self.target_states), atol=self.atol)
 
-    def density_matrix_call(self, state):
+    def density_matrix_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
 
 
