@@ -36,7 +36,8 @@ def test_rx_parameter_setter(backend):
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_get_parameters(trainable):
+@pytest.mark.parametrize("include_not_trainable", [True, False])
+def test_get_parameters(trainable, include_not_trainable):
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(1, theta=0.456, trainable=trainable))
@@ -46,7 +47,7 @@ def test_get_parameters(trainable):
     unitary = np.array([[0.123, 0.123], [0.123, 0.123]])
     c.add(gates.Unitary(unitary, 1))
 
-    if trainable:
+    if trainable or include_not_trainable:
         params = {
             "list": [0.123, 0.456, (0.789, 0.987), unitary],
             "dict": {c.queue[0]: 0.123, c.queue[1]: 0.456,
@@ -61,7 +62,7 @@ def test_get_parameters(trainable):
             }
     params["flatlist"].extend(unitary.ravel())
     for fmt, prm in params.items():
-        assert c.get_parameters(fmt) == prm
+        assert c.get_parameters(fmt, include_not_trainable) == prm
 
     with pytest.raises(ValueError):
         c.get_parameters("test")
@@ -221,21 +222,23 @@ def test_circuit_set_parameters_with_dictionary(backend, accelerators, trainable
 
     params = [0.123, 0.456, 0.789, np.random.random((2, 2))]
 
-    c = Circuit(3, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
+    c1 = Circuit(3, accelerators)
+    c1.add(gates.X(0))
+    c1.add(gates.X(2))
     if trainable:
-        c.add(gates.U1(0, theta=0, trainable=trainable))
+        c1.add(gates.U1(0, theta=0, trainable=trainable))
     else:
-        c.add(gates.U1(0, theta=params[0], trainable=trainable))
-    c.add(gates.RZ(1, theta=0))
-    c.add(gates.CZ(1, 2))
-    c.add(gates.CU1(0, 2, theta=0))
-    c.add(gates.H(2))
+        c1.add(gates.U1(0, theta=params[0], trainable=trainable))
+    c2 = Circuit(3, accelerators)
+    c2.add(gates.RZ(1, theta=0))
+    c2.add(gates.CZ(1, 2))
+    c2.add(gates.CU1(0, 2, theta=0))
+    c2.add(gates.H(2))
     if trainable:
-        c.add(gates.Unitary(np.eye(2), 1, trainable=trainable))
+        c2.add(gates.Unitary(np.eye(2), 1, trainable=trainable))
     else:
-        c.add(gates.Unitary(params[3], 1, trainable=trainable))
+        c2.add(gates.Unitary(params[3], 1, trainable=trainable))
+    c = c1 + c2
     final_state = c()
 
     target_c = Circuit(3, accelerators)

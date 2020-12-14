@@ -88,6 +88,7 @@ class BaseCircuit(ABC):
         self.queue = _Queue(nqubits)
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
+        self.trainable_gates = _ParametrizedGates()
         # Flag to keep track if the circuit was executed
         # We do not allow adding gates in an executed circuit
         self.is_executed = False
@@ -123,16 +124,20 @@ class BaseCircuit(ABC):
         # Add gates from `self` to `newcircuit` (including measurements)
         for gate in self.queue:
             newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
+            if isinstance(gate, gates.ParametrizedGate):
                 newcircuit.parametrized_gates.append(gate)
+                if gate.trainable:
+                    newcircuit.trainable_gates.append(gate)
         newcircuit.measurement_gate = self.measurement_gate
         newcircuit.measurement_tuples = self.measurement_tuples
         # Add gates from `circuit` to `newcircuit` (including measurements)
         for gate in circuit.queue:
             newcircuit.check_measured(gate.qubits)
             newcircuit.queue.append(gate)
-            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
+            if isinstance(gate, gates.ParametrizedGate):
                 newcircuit.parametrized_gates.append(gate)
+                if gate.trainable:
+                    newcircuit.trainable_gates.append(gate)
 
         if newcircuit.measurement_gate is None:
             newcircuit.measurement_gate = circuit.measurement_gate
@@ -193,8 +198,10 @@ class BaseCircuit(ABC):
             for gate in self.queue:
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
-                if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
+                if isinstance(gate, gates.ParametrizedGate):
                     new_circuit.parametrized_gates.append(new_gate)
+                    if gate.trainable:
+                        new_circuit.trainable_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
             if self.fusion_groups: # pragma: no cover
                 # impractical case
@@ -203,6 +210,7 @@ class BaseCircuit(ABC):
         else:
             new_circuit.queue = copy.copy(self.queue)
             new_circuit.parametrized_gates = list(self.parametrized_gates)
+            new_circuit.trainable_gates = list(self.trainable_gates)
             new_circuit.measurement_gate = self.measurement_gate
             new_circuit.fusion_groups = list(self.fusion_groups)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
@@ -236,10 +244,15 @@ class BaseCircuit(ABC):
         import copy
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
-            if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
-                new_gate = copy.copy(gate)
-                new_circuit.queue.append(new_gate)
-                new_circuit.parametrized_gates.append(new_gate)
+            if isinstance(gate, gates.ParametrizedGate):
+                if gate.trainable:
+                    new_gate = copy.copy(gate)
+                    new_circuit.queue.append(new_gate)
+                    new_circuit.parametrized_gates.append(new_gate)
+                    new_circuit.trainable_gates.append(new_gate)
+                else:
+                    new_circuit.queue.append(gate)
+                    new_circuit.parametrized_gates.append(gate)
             else:
                 new_circuit.queue.append(gate)
         new_circuit.measurement_gate = copy.copy(self.measurement_gate)
@@ -377,6 +390,7 @@ class BaseCircuit(ABC):
             for noise_gate in noise_gates[i]:
                 noisy_circuit.add(noise_gate)
         noisy_circuit.parametrized_gates = list(self.parametrized_gates)
+        noisy_circuit.trainable_gates = list(self.trainable_gates)
         noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
@@ -440,8 +454,10 @@ class BaseCircuit(ABC):
             self.queue.append(gate)
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
-        if isinstance(gate, gates.ParametrizedGate) and gate.trainable:
+        if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
+            if gate.trainable:
+                self.trainable_gates.append(gate)
 
     def set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.
@@ -538,14 +554,14 @@ class BaseCircuit(ABC):
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
-        if n == len(self.parametrized_gates):
-            for i, gate in enumerate(self.parametrized_gates):
+        if n == len(self.trainable_gates):
+            for i, gate in enumerate(self.trainable_gates):
                 gate.parameters = parameters[i]
-        elif n == self.parametrized_gates.nparams:
+        elif n == self.trainable_gates.nparams:
             import numpy as np
             parameters = np.array(parameters)
             k = 0
-            for i, gate in enumerate(self.parametrized_gates):
+            for i, gate in enumerate(self.trainable_gates):
                 if gate.nparams == 1:
                     gate.parameters = parameters[i + k]
                 else:
@@ -554,7 +570,7 @@ class BaseCircuit(ABC):
         else:
             raise_error(ValueError, "Given list of parameters has length {} while "
                                     "the circuit contains {} parametrized gates."
-                                    "".format(n, len(self.parametrized_gates)))
+                                    "".format(n, len(self.trainable_gates)))
 
         for fusion_group in self.fusion_groups:
             fusion_group.update()
@@ -595,7 +611,7 @@ class BaseCircuit(ABC):
             if self.fusion_groups:
                 raise_error(TypeError, "Cannot accept new parameters as dictionary "
                                        "for fused circuits. Use list, tuple or array.")
-            diff = set(parameters.keys()) - self.parametrized_gates.set
+            diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
                 raise_error(KeyError, "Dictionary contains gates {} which are "
                                       "not on the list of parametrized gates "
@@ -606,25 +622,34 @@ class BaseCircuit(ABC):
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
 
-    def get_parameters(self, format: str = "list") -> Union[List, Dict]: # pylint: disable=W0622
+    def get_parameters(self, format: str = "list",
+                       include_not_trainable: bool = False
+                       ) -> Union[List, Dict]: # pylint: disable=W0622
         """Returns the parameters of all parametrized gates in the circuit.
 
         Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
 
         Args:
-            format: How to return the variational parameters.
-                Available formats are 'list', 'dict' and 'flatlist'.
-                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for more
-                details on each format.
+            format (str): How to return the variational parameters.
+                Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
+                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for
+                more details on each format. Default is ``'list'``.
+            include_not_trainable (bool): If ``True`` it includes the parameters
+                of non-trainable parametrized gates in the returned list or
+                dictionary. Default is ``False``.
         """
+        if include_not_trainable:
+            parametrized_gates = self.parametrized_gates
+        else:
+            parametrized_gates = self.trainable_gates
         if format == "list":
-            return [gate.parameters for gate in self.parametrized_gates]
+            return [gate.parameters for gate in parametrized_gates]
         elif format == "dict":
-            return {gate: gate.parameters for gate in self.parametrized_gates}
+            return {gate: gate.parameters for gate in parametrized_gates}
         elif format == "flatlist":
             import numpy as np
             params = []
-            for gate in self.parametrized_gates:
+            for gate in parametrized_gates:
                 if isinstance(gate.parameters, np.ndarray):
                     params.extend(gate.parameters.ravel())
                 elif isinstance(gate.parameters, collections.abc.Iterable):
