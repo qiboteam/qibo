@@ -20,7 +20,7 @@ examples.
 import tensorflow as tf
 from qibo.base import cache
 from qibo.config import raise_error
-from typing import Dict, Optional, Sequence, Set
+from typing import Dict, Optional, Sequence
 
 
 class DefaultEinsum:
