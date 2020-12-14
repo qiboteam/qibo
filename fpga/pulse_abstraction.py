@@ -2,7 +2,7 @@
 """
 
 import numpy as np
-from qibo import raise_error
+from qibo.config import raise_error
 from static_config import sample_size, sampling_rate, n_channels
 
 class PulseSequence:
@@ -34,14 +34,17 @@ class PulseSequence:
         """
         waveform = np.zeros((self.n_channels, self.sample_size))
         for pulse in self.pulses:
-            if pulse.serial[0] == "P":
+            #if pulse.serial[0] == "P":
+            if isinstance(pulse, BasicPulse):
                 waveform = self._compile_basic(waveform, pulse)
-            elif pulse.serial[0] == "M":
+            #elif pulse.serial[0] == "M":
+            elif isinstance(pulse, MultifrequencyPulse):
                 waveform = self._compile_multi(waveform, pulse)
-            elif pulse.serial[0] == "F":
+            #elif pulse.serial[0] == "F":
+            elif isinstance(pulse, FilePulse):
                 waveform = self._compile_file(waveform, pulse)
             else:
-                raise Exception("Invalid pulse type \"{}\"".format(pulse.serial[0]))
+                raise Exception("Invalid pulse type \"{}\"".format(pulse))
         return waveform
 
     def _compile_basic(self, waveform, pulse):
@@ -147,7 +150,7 @@ class Rectangular(PulseShape):
     """Rectangular/square pulse shape    
     """
     def __init__(self):
-        self.name = "retangular"
+        self.name = "rectangular"
 
     def envelope(self, time, start, duration, amplitude):
         return amplitude
