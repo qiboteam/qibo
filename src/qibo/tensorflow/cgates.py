@@ -250,10 +250,9 @@ class M(TensorflowGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
         if self.density_matrix:
-            from qibo.tensorflow.einsum import DefaultEinsum
+            from qibo.base.callbacks import PartialTrace
             qubits = set(self.unmeasured_qubits)
-            # TODO: Remove ``DefaultEinsum`` dependence here
-            self.traceout = DefaultEinsum.partialtrace_str(
+            self.traceout = PartialTrace.einsum_string(
                 qubits, self.nqubits, measuring=True)
 
     def _get_cpu(self): # pragma: no cover

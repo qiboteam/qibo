@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
-from typing import List, Optional, Union
+from typing import List, Optional, Set, Union
 
 
 class Callback(ABC):
@@ -83,6 +83,7 @@ class PartialTrace(Callback):
             If `partition` is not given then the first subsystem is the first
             half of the qubits.
     """
+    from qibo.config import EINSUM_CHARS
 
     def __init__(self, partition: Optional[List[int]] = None):
         super().__init__()
@@ -103,12 +104,49 @@ class PartialTrace(Callback):
         self.rho_dim = 2 ** (n - len(self.partition))
         self._traceout = None
 
+    @classmethod
+    def einsum_string(cls, qubits: Set[int], nqubits: int,
+                      measuring: bool = False) -> str:
+        """Generates einsum string for partial trace of density matrices.
+
+        This method is also used in :meth:`qibo.tensorflow.cgates.M.prepare`.
+
+        Args:
+            qubits (list): Set of qubit ids that are traced out.
+            nqubits (int): Total number of qubits in the state.
+            measuring (bool): If True non-traced-out indices are multiplied and
+                the output has shape (nqubits - len(qubits),).
+                If False the output has shape 2 * (nqubits - len(qubits),).
+
+        Returns:
+            String to use in einsum for performing partial density of a
+            density matrix.
+        """
+        if (2 - int(measuring)) * nqubits > len(cls.EINSUM_CHARS): # pragma: no cover
+            # case not tested because it requires large instance
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        left_in, right_in, left_out, right_out = [], [], [], []
+        for i in range(nqubits):
+            left_in.append(cls.EINSUM_CHARS[i])
+            if i in qubits:
+                right_in.append(cls.EINSUM_CHARS[i])
+            else:
+                left_out.append(cls.EINSUM_CHARS[i])
+                if measuring:
+                    right_in.append(cls.EINSUM_CHARS[i])
+                else:
+                    right_in.append(cls.EINSUM_CHARS[i + nqubits])
+                    right_out.append(cls.EINSUM_CHARS[i + nqubits])
+
+        left_in, left_out = "".join(left_in), "".join(left_out)
+        right_in, right_out = "".join(right_in), "".join(right_out)
+        return f"{left_in}{right_in}->{left_out}{right_out}"
+
     def traceout(self):
-        """Einsum string used to trace out when state is density matrix."""
         if self._traceout is None:
-            from qibo.tensorflow.einsum import DefaultEinsum
             partition = set(self.partition)
-            self._traceout = DefaultEinsum.partialtrace_str(partition, self.nqubits)
+            self._traceout = self.einsum_string(partition, self.nqubits)
         return self._traceout
 
 

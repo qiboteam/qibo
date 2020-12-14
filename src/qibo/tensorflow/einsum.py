@@ -31,7 +31,6 @@ class DefaultEinsum:
     The user should switch to :class:`qibo.tensorflow.einsum.MatmulEinsum`
     if automatic differentiation is required.
     """
-    from qibo.config import EINSUM_CHARS as _chars
 
     def __call__(self, cache: str, state: tf.Tensor, gate: tf.Tensor) -> tf.Tensor:
       return tf.einsum(cache, state, gate)
@@ -40,46 +39,6 @@ class DefaultEinsum:
     def create_cache(qubits: Sequence[int], nqubits: int,
                      ncontrol: Optional[int] = None) -> cache.DefaultEinsumCache:
         return cache.DefaultEinsumCache(qubits, nqubits, ncontrol)
-
-    @classmethod
-    def partialtrace_str(cls, qubits: Set[int], nqubits: int,
-                         measuring: bool = False) -> str:
-        """Generates einsum strings for partial trace of density matrices.
-
-        Helper method used when measuring or calculating entanglement entropies
-        on density matrices.
-
-        Args:
-            qubits (list): Set of qubit ids that are traced out.
-            nqubits (int): Total number of qubits in the state.
-            measuring (bool): If True non-traced-out indices are multiplied and
-                the output has shape (nqubits - len(qubits),).
-                If False the output has shape 2 * (nqubits - len(qubits),).
-
-        Returns:
-            String to use in einsum for performing partial density of a
-            density matrix.
-        """
-        if (2 - int(measuring)) * nqubits > len(cls._chars): # pragma: no cover
-            # case not tested because it requires large instance
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        left_in, right_in, left_out, right_out = [], [], [], []
-        for i in range(nqubits):
-            left_in.append(cls._chars[i])
-            if i in qubits:
-                right_in.append(cls._chars[i])
-            else:
-                left_out.append(cls._chars[i])
-                if measuring:
-                    right_in.append(cls._chars[i])
-                else:
-                    right_in.append(cls._chars[i + nqubits])
-                    right_out.append(cls._chars[i + nqubits])
-
-        left_in, left_out = "".join(left_in), "".join(left_out)
-        right_in, right_out = "".join(right_in), "".join(right_out)
-        return f"{left_in}{right_in}->{left_out}{right_out}"
 
 
 class MatmulEinsum:
