@@ -5,7 +5,7 @@ from qibo.config import DTYPES, EIGVAL_CUTOFF, raise_error
 from typing import Union
 
 
-class PartialTrace(callbacks.Callback):
+class PartialTrace(callbacks.PartialTrace):
 
     def __call__(self, state: tf.Tensor, is_density_matrix: bool = False
                  ) -> tf.Tensor:
