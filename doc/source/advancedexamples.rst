@@ -176,7 +176,7 @@ How to use callbacks?
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
-implemented easily using :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+implemented easily using :class:`qibo.base.callbacks.EntanglementEntropy`
 and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 
 .. code-block::  python
@@ -1049,7 +1049,7 @@ of the ``AdiabaticEvolution`` model. In this case the default initial state is
 |++...+> (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
-(:class:`qibo.tensorflow.callbacks.Gap`) is available for calculating the
+(:class:`qibo.base.callbacks.Gap`) is available for calculating the
 energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
 similar to other callbacks:
 
