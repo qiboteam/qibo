@@ -143,6 +143,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
             circuit = argument
             for gate in circuit.queue:
                 if not isinstance(gate, TensorflowGate):
+                    from qibo.config import raise_error
                     raise_error(RuntimeError, 'SGD requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')
