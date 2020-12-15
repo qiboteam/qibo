@@ -32,6 +32,8 @@ def test_vqe(method, options, compile, filename):
 
     original_threads = get_threads()
     if method == 'parallel_L-BFGS-B':
+        if 'GPU' in qibo.get_device(): # pragma: no cover
+            pytest.skip("unsupported configuration")
         qibo.set_threads(1)
 
     nqubits = 6
