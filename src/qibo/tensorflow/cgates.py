@@ -3,7 +3,7 @@
 import sys
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import errors_impl
+from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate
 from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error, get_threads

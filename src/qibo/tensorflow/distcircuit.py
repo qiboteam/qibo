@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import errors_impl
+from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 import joblib
 from qibo.config import raise_error, get_threads
 from qibo.base import gates

@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import errors_impl
+from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
 from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements

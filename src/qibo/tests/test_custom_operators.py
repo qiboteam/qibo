@@ -4,7 +4,7 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.framework import errors_impl
+from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.config import get_threads
 from qibo.tensorflow import custom_operators as op
 from qibo.tests import utils
