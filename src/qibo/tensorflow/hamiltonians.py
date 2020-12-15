@@ -1,14 +1,8 @@
 import itertools
 import numpy as np
 import tensorflow as tf
-from qibo.config import raise_error, EINSUM_CHARS
+from qibo.config import raise_error, EINSUM_CHARS, NUMERIC_TYPES, ARRAY_TYPES
 from qibo.base import hamiltonians
-
-
-NUMERIC_TYPES = (np.int, np.float, np.complex,
-                 np.int32, np.int64, np.float32,
-                 np.float64, np.complex64, np.complex128)
-ARRAY_TYPES = (tf.Tensor, np.ndarray)
 
 
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):

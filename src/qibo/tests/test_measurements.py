@@ -57,7 +57,7 @@ def assert_register_results(
 
 def test_gate_result_initialization_errors():
     """Check ``ValueError``s during the initialization of ``GateResult`` object."""
-    from qibo.base import measurements
+    from qibo.tensorflow import measurements
     decimal_samples = np.random.randint(0, 4, (100,))
     binary_samples = np.random.randint(0, 2, (100, 2))
     with pytest.raises(ValueError):
@@ -123,28 +123,14 @@ def test_measurement_gate2():
 
 
 def test_measurement_gate_errors():
-    """Check various errors that are raised by the measurement gate."""
+    """Check error of adding qubits to a prepared gate."""
     state = np.zeros(4)
     state[-1] = 1
     # add targets after calling
     gate = gates.M(1)
     result = gate(state, nshots=100)
     with pytest.raises(RuntimeError):
-        gate._add((0,))
-    # try to set unmeasured qubits before setting ``nqubits``
-    gate = gates.M(1)
-    with pytest.raises(RuntimeError):
-        gate._set_unmeasured_qubits()
-    # try to set unmeasured qubit a second time
-    gate = gates.M(1)
-    gate.nqubits = 3
-    gate._unmeasured_qubits = (0, 2)
-    with pytest.raises(RuntimeError):
-        gate._set_unmeasured_qubits()
-    # get reduced target qubits
-    gate = gates.M(1)
-    gate.nqubits = 3
-    assert gate.reduced_target_qubits == [0]
+        gate.add(gates.M(2))
 
 
 def test_multiple_qubit_measurement_gate():
@@ -165,7 +151,7 @@ def test_multiple_qubit_measurement_gate():
 def test_controlled_measurement_error():
     """Check that using `controlled_by` in measurements raises error."""
     with pytest.raises(NotImplementedError):
-        m = gates.M(0).controlled_by(1)
+        gates.M(0).controlled_by(1)
 
 
 @pytest.mark.parametrize("accelerators", _ACCELERATORS)

@@ -183,11 +183,6 @@ def test_distributed_circuit_errors():
     # Attempt to access state before being set
     with pytest.raises(RuntimeError):
         final_state = c.final_state
-    # Attempt to add preset gate
-    with pytest.raises(ValueError):
-        gate = gates.H(0)
-        gate.nqubits = 6
-        c.add(gate)
     # Attempt to add gate so that available global qubits are not enough
     small_c = models.Circuit(2, {"/GPU:0": 2})
     with pytest.raises(ValueError):

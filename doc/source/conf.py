@@ -43,7 +43,8 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "recommonmark",
-    'sphinx_markdown_tables'
+    "sphinx_markdown_tables",
+    "nbsphinx"
 ]
 
 # Add any paths that contain templates here, relative to this directory.

@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import collections
+from abc import ABC, abstractmethod
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 from qibo.config import raise_error
 TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
 
 
-class GateResult:
+class GateResult(ABC):
     """Object returned when user uses a `gates.M` on a state.
 
     Implements tools to convert samples from decimal to binary representation
@@ -139,24 +140,24 @@ class GateResult:
         return self.__class__(self.qubits, binary_samples=noisy)
 
     @staticmethod
+    @abstractmethod
     def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
-        # abstract method
         raise_error(NotImplementedError)
 
     @staticmethod
+    @abstractmethod
     def _convert_to_decimal(x: TensorType, n: int) -> TensorType: # pragma: no cover
-        # abstract method
         raise_error(NotImplementedError)
 
     @staticmethod
+    @abstractmethod
     def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
-        # abstract method
         raise_error(NotImplementedError)
 
     @staticmethod
+    @abstractmethod
     def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float]
                         ) -> TensorType: # pragma: no cover
-        # abstract method
         raise_error(NotImplementedError)
 
 
@@ -271,6 +272,7 @@ class CircuitResult:
         return self.__class__(self.register_qubits, noisy_result)
 
     @staticmethod
+    @abstractmethod
     def _calculate_register_results(register_qubits: Dict[str, Set[int]],
                                     gate_result: GateResult
                                     ) -> Dict[str, GateResult]: # pragma: no cover
@@ -279,5 +281,4 @@ class CircuitResult:
         This uses the `register_qubits` map to divide the bitstrings to their
         appropriate registers.
         """
-        # abstract method
         raise_error(NotImplementedError)

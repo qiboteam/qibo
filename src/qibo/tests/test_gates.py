@@ -42,6 +42,22 @@ def test_flatten(backend):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_flatten_errors(backend):
+    """Check errors raised by ``Flatten`` and ``SpecialGate``."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    target_state = np.ones(4) / 2.0
+    gate = gates.Flatten(target_state)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
+    with pytest.raises(RuntimeError):
+        gate.reprepare()
+    with pytest.raises(NotImplementedError):
+        gate.on_qubits(0, 2)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_xgate(backend, accelerators):
     """Check X gate is working properly."""
@@ -302,7 +318,7 @@ def test_controlled_u2(backend):
 
     # for coverage
     gate = gates.CU2(0, 1, phi, lam)
-    assert gate.parameter == (phi, lam)
+    assert gate.parameters == (phi, lam)
     qibo.set_backend(original_backend)
 
 
@@ -328,7 +344,7 @@ def test_controlled_u3(backend):
 
     # for coverage
     gate = gates.U3(0, theta, phi, lam)
-    assert gate.parameter == (theta, phi, lam)
+    assert gate.parameters == (theta, phi, lam)
     qibo.set_backend(original_backend)
 
 
@@ -983,7 +999,7 @@ def test_construct_unitary_errors(backend):
     theta = 2 * np.pi * np.random.random(6)
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
-        matrix = gate.unitary
+        gate.construct_unitary()
     qibo.set_backend(original_backend)
 
 
@@ -1024,11 +1040,10 @@ def test_controlled_rotations_from_un(backend, name, params):
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
-def test_variational_layer_call(nqubits):
-    original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_variational_layer_call(nqubits, density_matrix):
     theta = 2 * np.pi * np.random.random(nqubits)
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, density_matrix=density_matrix)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     target_state = c().numpy()
@@ -1037,9 +1052,9 @@ def test_variational_layer_call(nqubits):
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ,
                                   theta)
+    gate.density_matrix = density_matrix
     final_state = gate(c._default_initial_state()).numpy()
     np.testing.assert_allclose(target_state, final_state)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
@@ -1124,7 +1139,7 @@ def test_variational_layer_errors(backend):
 
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
                                   np.zeros(6), np.zeros(6))
-    np.testing.assert_allclose(gate.parameter, np.zeros(12))
+    np.testing.assert_allclose(gate.parameters, np.zeros(12))
     qibo.set_backend(original_backend)
 
 
@@ -1289,8 +1304,10 @@ def test_variational_layer_dagger(backend, nqubits):
                           (3, [1], 0, True),
                           (4, [1, 3], [0, 1], True),
                           (5, [0, 3, 4], [1, 1, 0], False),
-                          (6, [1, 3], np.ones(2, dtype=np.int), True)])
+                          (6, [1, 3], np.ones(2, dtype=np.int), True),
+                          (4, [0, 2], np.zeros(2, dtype=np.int32)[0], True)])
 def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
+    from qibo.config import NUMERIC_TYPES
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
@@ -1309,7 +1326,7 @@ def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
             final_state = collapse(np.copy(initial_state).reshape(new_shape))
             final_state = final_state.numpy().reshape(original_shape)
 
-    if isinstance(results, int):
+    if isinstance(results, int) or isinstance(results, NUMERIC_TYPES):
         results = nqubits * [results]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
@@ -1372,17 +1389,26 @@ def test_collapse_after_measurement(backend):
     qibo.set_backend(original_backend)
 
 
-def test_collapse_gate_errors():
+@pytest.mark.parametrize("backend", _BACKENDS)
+def test_collapse_gate_errors(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     # pass wrong result length
     with pytest.raises(ValueError):
         gate = gates.Collapse(0, 1, result=[0, 1, 0])
     # pass wrong result values
     with pytest.raises(ValueError):
         gate = gates.Collapse(0, 1, result=[0, 2])
+    # attempt to construct unitary
+    gate = gates.Collapse(2, 0, result=[0, 0])
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
     # change result after creation
     gate = gates.Collapse(2, 0, result=[0, 0])
     gate.nqubits = 4
+    gate.prepare()
     gate.result = np.ones(2, dtype=np.int)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)

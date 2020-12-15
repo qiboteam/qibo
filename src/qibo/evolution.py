@@ -287,26 +287,19 @@ class AdiabaticEvolution(StateEvolution):
                 return c.get_initial_state("ones")
         return super(AdiabaticEvolution, self).get_initial_state(state)
 
-    def _loss(self, params):
+    @staticmethod
+    def _loss(params, adiabatic_evolution, h1, opt_messages, opt_history):
         """Expectation value of H1 for a choice of scheduling parameters.
 
         Returns a ``tf.Tensor``.
         """
-        self.set_parameters(params)
-        final_state = super(AdiabaticEvolution, self).execute(params[-1])
-        loss = self.h1.expectation(final_state, normalize=True)
-        if self.opt_messages:
-            self.opt_history["params"].append(params)
-            self.opt_history["loss"].append(loss)
+        adiabatic_evolution.set_parameters(params)
+        final_state = super(AdiabaticEvolution, adiabatic_evolution).execute(params[-1])
+        loss = h1.expectation(final_state, normalize=True)
+        if opt_messages:
+            opt_history["params"].append(params)
+            opt_history["loss"].append(loss)
             log.info(f"Params: {params}  -  <H1> = {loss}")
-        return loss
-
-    def _nploss(self, params):
-        """Expectation value of H1 for a choice of scheduling parameters.
-
-        Returns a ``np.ndarray``.
-        """
-        loss = self._loss(params).numpy()
         return loss
 
     def minimize(self, initial_parameters, method="BFGS", options=None,
@@ -331,10 +324,10 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             loss = self._loss
         else:
-            loss = self._nploss
+            loss = lambda p, ae, h1, msg, hist: self._loss(p, ae, h1, msg, hist).numpy()
 
-        result, parameters = optimizers.optimize(loss, initial_parameters,
-                                                 method, options)
+        result, parameters = optimizers.optimize(loss, initial_parameters, method, options,
+                                                 args=(self, self.h1, self.opt_messages, self.opt_history))
         if isinstance(parameters, np.ndarray) and not len(parameters.shape): # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]
