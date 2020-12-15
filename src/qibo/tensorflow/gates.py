@@ -220,9 +220,9 @@ class Collapse(TensorflowGate, gates.Collapse):
 
 class RX(TensorflowGate, gates.RX):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         TensorflowGate.__init__(self)
-        gates.RX.__init__(self, q, theta)
+        gates.RX.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameters, dtype=DTYPES.get('DTYPECPX'))
@@ -231,9 +231,9 @@ class RX(TensorflowGate, gates.RX):
 
 class RY(TensorflowGate, gates.RY):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         TensorflowGate.__init__(self)
-        gates.RY.__init__(self, q, theta)
+        gates.RY.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameters, dtype=DTYPES.get('DTYPECPX'))
@@ -242,9 +242,9 @@ class RY(TensorflowGate, gates.RY):
 
 class RZ(TensorflowGate, gates.RZ):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         TensorflowGate.__init__(self)
-        gates.RZ.__init__(self, q, theta)
+        gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameters, dtype=DTYPES.get('DTYPECPX'))
@@ -255,9 +255,9 @@ class RZ(TensorflowGate, gates.RZ):
 
 class U1(TensorflowGate, gates.U1):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         TensorflowGate.__init__(self)
-        gates.U1.__init__(self, q, theta)
+        gates.U1.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> tf.Tensor:
         t = tf.cast(self.parameters, dtype=DTYPES.get('DTYPECPX'))
@@ -267,9 +267,9 @@ class U1(TensorflowGate, gates.U1):
 
 class U2(TensorflowGate, gates.U2):
 
-    def __init__(self, q, phi, lam):
+    def __init__(self, q, phi, lam, trainable=True):
         TensorflowGate.__init__(self)
-        gates.U2.__init__(self, q, phi, lam)
+        gates.U2.__init__(self, q, phi, lam, trainable)
 
     def construct_unitary(self):
         return cgates.U2.construct_unitary(self)
@@ -277,9 +277,9 @@ class U2(TensorflowGate, gates.U2):
 
 class U3(TensorflowGate, gates.U3):
 
-    def __init__(self, q, theta, phi, lam):
+    def __init__(self, q, theta, phi, lam, trainable=True):
         TensorflowGate.__init__(self)
-        gates.U3.__init__(self, q, theta, phi, lam)
+        gates.U3.__init__(self, q, theta, phi, lam, trainable=trainable)
 
     def construct_unitary(self):
         return cgates.U3.construct_unitary(self)
@@ -322,43 +322,44 @@ class _CUn_(TensorflowGate):
 class CRX(_CUn_, gates.CRX):
     base = RX
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CRY(_CUn_, gates.CRY):
     base = RY
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CRZ(_CUn_, gates.CRZ):
     base = RZ
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CU1(_CUn_, gates.CU1):
     base = U1
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CU2(_CUn_, gates.CU2):
     base = U2
 
-    def __init__(self, q0, q1, phi, lam):
-        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam)
+    def __init__(self, q0, q1, phi, lam, trainable=True):
+        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam, trainable=trainable)
 
 
 class CU3(_CUn_, gates.CU3):
     base = U3
 
-    def __init__(self, q0, q1, theta, phi, lam):
-        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
+    def __init__(self, q0, q1, theta, phi, lam, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam,
+                       trainable=trainable)
 
 
 class SWAP(TensorflowGate, gates.SWAP):
@@ -375,9 +376,9 @@ class SWAP(TensorflowGate, gates.SWAP):
 
 class fSim(TensorflowGate, gates.fSim):
 
-    def __init__(self, q0, q1, theta, phi):
+    def __init__(self, q0, q1, theta, phi, trainable=True):
         TensorflowGate.__init__(self)
-        gates.fSim.__init__(self, q0, q1, theta, phi)
+        gates.fSim.__init__(self, q0, q1, theta, phi, trainable)
 
     def construct_unitary(self):
         return cgates.fSim.construct_unitary(self)
@@ -385,9 +386,9 @@ class fSim(TensorflowGate, gates.fSim):
 
 class GeneralizedfSim(TensorflowGate, gates.GeneralizedfSim):
 
-    def __init__(self, q0, q1, unitary, phi):
+    def __init__(self, q0, q1, unitary, phi, trainable=True):
         TensorflowGate.__init__(self)
-        gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi, trainable)
 
     def construct_unitary(self):
         return cgates.GeneralizedfSim.construct_unitary(self)
@@ -414,12 +415,12 @@ class TOFFOLI(TensorflowGate, gates.TOFFOLI):
 
 class Unitary(TensorflowGate, gates.Unitary):
 
-    def __init__(self, unitary, *q, name: Optional[str] = None):
+    def __init__(self, unitary, *q, trainable=True, name: Optional[str] = None):
         if not isinstance(unitary, (np.ndarray, tf.Tensor)):
             raise_error(TypeError, "Unknown type {} of unitary matrix."
                                    "".format(type(unitary)))
         TensorflowGate.__init__(self)
-        gates.Unitary.__init__(self, unitary, *q, name=name)
+        gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
 
     def construct_unitary(self):
         unitary = self.parameters
@@ -474,10 +475,12 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
                  one_qubit_gate, two_qubit_gate,
                  params: List[float],
                  params2: Optional[List[float]] = None,
+                 trainable: bool = True,
                  name: Optional[str] = None):
         cgates.VariationalLayer.__init__(self, qubits, pairs,
                                          one_qubit_gate, two_qubit_gate,
-                                         params, params2, name=name)
+                                         params, params2,
+                                         trainable=trainable, name=name)
 
     def _dagger(self):
         return cgates.VariationalLayer._dagger(self)

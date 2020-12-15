@@ -248,10 +248,11 @@ class ParametrizedGate(Gate):
     Implements the basic functionality of parameter setters and getters.
     """
 
-    def __init__(self):
+    def __init__(self, trainable=True):
         super(ParametrizedGate, self).__init__()
         self.parameter_names = "theta"
         self.nparams = 1
+        self.trainable = trainable
         self._parameters = None
 
     @property
