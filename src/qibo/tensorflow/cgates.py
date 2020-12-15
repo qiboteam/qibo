@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework import errors_impl
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate
 from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error, get_threads
@@ -305,7 +306,7 @@ class M(TensorflowGate, gates.M):
             # Use CPU to avoid "aborted" error
             device = self._get_cpu()
 
-        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        oom_error = errors_impl.ResourceExhaustedError
         try:
             with tf.device(self.device):
                 result = self.sample(state, nshots)

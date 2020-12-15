@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework import errors_impl
 from qibo.base import circuit
 from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
@@ -105,7 +106,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _device_execute(self, initial_state: Optional[InitStateType] = None
                         ) -> tf.Tensor:
         """Executes circuit on the specified device and checks for OOM errors."""
-        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        oom_error = errors_impl.ResourceExhaustedError
         device = DEVICES['DEFAULT']
         try:
             with tf.device(device):

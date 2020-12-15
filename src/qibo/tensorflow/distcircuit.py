@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework import errors_impl
 import joblib
 from qibo.config import raise_error, get_threads
 from qibo.base import gates
@@ -225,7 +226,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _device_execute(self, initial_state: Optional[InitStateType] = None
                         ) -> utils.DistributedState:
         """Executes circuit and checks for OOM errors."""
-        oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        oom_error = errors_impl.ResourceExhaustedError
         try:
             return self._execute(initial_state)
         except oom_error:
