@@ -250,10 +250,9 @@ class M(TensorflowGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
         if self.density_matrix:
-            from qibo.tensorflow.einsum import DefaultEinsum
+            from qibo.base.callbacks import PartialTrace
             qubits = set(self.unmeasured_qubits)
-            # TODO: Remove ``DefaultEinsum`` dependence here
-            self.traceout = DefaultEinsum.partialtrace_str(
+            self.traceout = PartialTrace.einsum_string(
                 qubits, self.nqubits, measuring=True)
 
     def _get_cpu(self): # pragma: no cover
@@ -760,12 +759,17 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
         gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
+    @BackendGate.density_matrix.setter
+    def density_matrix(self, x):
+        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        self.callback.density_matrix = x
+
     def construct_unitary(self):
         raise_error(ValueError, "Unitary gate does not have unitary "
                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.callback.append(self.callback(state, self.density_matrix))
+        self.callback.append(self.callback(state))
         return state
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:
