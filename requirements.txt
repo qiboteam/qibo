@@ -2,10 +2,16 @@
 
 # numpy (included in tf)
 tensorflow>=2.2,<=2.3.1
-scipy
-sympy
+scipy~=1.5.4
+sympy~=1.7
 cma
-joblib
-matplotlib
-blessings
-psutil
+joblib~=0.17.0
+matplotlib~=3.3.3
+blessings~=1.7
+psutil~=5.7.3
+
+# paramiko requirements
+numpy~=1.18.5
+paramiko~=2.7.2
+h5py~=2.10.0
+setuptools~=51.0.0
