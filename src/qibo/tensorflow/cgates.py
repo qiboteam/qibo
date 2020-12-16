@@ -251,10 +251,9 @@ class M(TensorflowGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
         if self.density_matrix:
-            from qibo.tensorflow.einsum import DefaultEinsum
+            from qibo.base.callbacks import PartialTrace
             qubits = set(self.unmeasured_qubits)
-            # TODO: Remove ``DefaultEinsum`` dependence here
-            self.traceout = DefaultEinsum.partialtrace_str(
+            self.traceout = PartialTrace.einsum_string(
                 qubits, self.nqubits, measuring=True)
 
     def _get_cpu(self): # pragma: no cover
@@ -321,9 +320,9 @@ class M(TensorflowGate, gates.M):
 
 class RX(MatrixGate, gates.RX):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
-        gates.RX.__init__(self, q, theta)
+        gates.RX.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> np.ndarray:
         theta = self.parameters
@@ -333,9 +332,9 @@ class RX(MatrixGate, gates.RX):
 
 class RY(MatrixGate, gates.RY):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
-        gates.RY.__init__(self, q, theta)
+        gates.RY.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> np.ndarray:
         theta = self.parameters
@@ -345,9 +344,9 @@ class RY(MatrixGate, gates.RY):
 
 class RZ(MatrixGate, gates.RZ):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
-        gates.RZ.__init__(self, q, theta)
+        gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self) -> np.ndarray:
         phase = np.exp(1j * self.parameters / 2.0)
@@ -356,9 +355,9 @@ class RZ(MatrixGate, gates.RZ):
 
 class U1(MatrixGate, gates.U1):
 
-    def __init__(self, q, theta):
+    def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
-        gates.U1.__init__(self, q, theta)
+        gates.U1.__init__(self, q, theta, trainable)
         self.gate_op = op.apply_z_pow
 
     def reprepare(self):
@@ -373,9 +372,9 @@ class U1(MatrixGate, gates.U1):
 
 class U2(MatrixGate, gates.U2):
 
-    def __init__(self, q, phi, lam):
+    def __init__(self, q, phi, lam, trainable=True):
         MatrixGate.__init__(self)
-        gates.U2.__init__(self, q, phi, lam)
+        gates.U2.__init__(self, q, phi, lam, trainable)
 
     def construct_unitary(self) -> np.ndarray:
         phi, lam = self.parameters
@@ -387,9 +386,9 @@ class U2(MatrixGate, gates.U2):
 
 class U3(MatrixGate, gates.U3):
 
-    def __init__(self, q, theta, phi, lam):
+    def __init__(self, q, theta, phi, lam, trainable=True):
         MatrixGate.__init__(self)
-        gates.U3.__init__(self, q, theta, phi, lam)
+        gates.U3.__init__(self, q, theta, phi, lam, trainable)
 
     def construct_unitary(self) -> np.ndarray:
         theta, phi, lam = self.parameters
@@ -404,12 +403,12 @@ class U3(MatrixGate, gates.U3):
 
 class ZPow(gates.ZPow):
 
-  def __new__(cls, q, theta):
+  def __new__(cls, q, theta, trainable=True):
       if BACKEND.get('GATES') == 'custom':
-          return U1(q, theta)
+          return U1(q, theta, trainable)
       else:
           from qibo.tensorflow import gates
-          return gates.U1(q, theta)
+          return gates.U1(q, theta, trainable)
 
 
 class CNOT(TensorflowGate, gates.CNOT):
@@ -456,29 +455,29 @@ class _CUn_(MatrixGate):
 class CRX(_CUn_, gates.CRX):
     base = RX
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CRY(_CUn_, gates.CRY):
     base = RY
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CRZ(_CUn_, gates.CRZ):
     base = RZ
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
 
 
 class CU1(_CUn_, gates.CU1):
     base = U1
 
-    def __init__(self, q0, q1, theta):
-        _CUn_.__init__(self, q0, q1, theta=theta)
+    def __init__(self, q0, q1, theta, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
         self.gate_op = op.apply_z_pow
 
     def reprepare(self):
@@ -488,25 +487,26 @@ class CU1(_CUn_, gates.CU1):
 class CU2(_CUn_, gates.CU2):
     base = U2
 
-    def __init__(self, q0, q1, phi, lam):
-        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam)
+    def __init__(self, q0, q1, phi, lam, trainable=True):
+        _CUn_.__init__(self, q0, q1, phi=phi, lam=lam, trainable=trainable)
 
 
 class CU3(_CUn_, gates.CU3):
     base = U3
 
-    def __init__(self, q0, q1, theta, phi, lam):
-        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam)
+    def __init__(self, q0, q1, theta, phi, lam, trainable=True):
+        _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam,
+                       trainable=trainable)
 
 
 class CZPow(gates.CZPow):
 
-  def __new__(cls, q0, q1, theta):
+  def __new__(cls, q0, q1, theta, trainable=True):
       if BACKEND.get('GATES') == 'custom':
-          return CU1(q0, q1, theta)
+          return CU1(q0, q1, theta, trainable)
       else:
           from qibo.tensorflow import gates
-          return gates.CU1(q0, q1, theta)
+          return gates.CU1(q0, q1, theta, trainable)
 
 
 class SWAP(TensorflowGate, gates.SWAP):
@@ -524,9 +524,9 @@ class SWAP(TensorflowGate, gates.SWAP):
 
 class fSim(MatrixGate, gates.fSim):
 
-    def __init__(self, q0, q1, theta, phi):
+    def __init__(self, q0, q1, theta, phi, trainable=True):
         MatrixGate.__init__(self)
-        gates.fSim.__init__(self, q0, q1, theta, phi)
+        gates.fSim.__init__(self, q0, q1, theta, phi, trainable)
         self.gate_op = op.apply_fsim
 
     def reprepare(self):
@@ -550,9 +550,9 @@ class fSim(MatrixGate, gates.fSim):
 
 class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
-    def __init__(self, q0, q1, unitary, phi):
+    def __init__(self, q0, q1, unitary, phi, trainable=True):
         TensorflowGate.__init__(self)
-        gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi)
+        gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi, trainable)
         self.gate_op = op.apply_fsim
 
     def reprepare(self):
@@ -602,12 +602,12 @@ class TOFFOLI(TensorflowGate, gates.TOFFOLI):
 
 class Unitary(MatrixGate, gates.Unitary):
 
-    def __init__(self, unitary, *q, name: Optional[str] = None):
+    def __init__(self, unitary, *q, trainable=True, name: Optional[str] = None):
         if not isinstance(unitary, (np.ndarray, tf.Tensor)):
             raise_error(TypeError, "Unknown type {} of unitary matrix."
                                    "".format(type(unitary)))
         MatrixGate.__init__(self)
-        gates.Unitary.__init__(self, unitary, *q, name=name)
+        gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
         rank = self.rank
         if rank == 1:
             self.gate_op = op.apply_gate
@@ -670,11 +670,13 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
                  one_qubit_gate, two_qubit_gate,
                  params: List[float], params2: Optional[List[float]] = None,
+                 trainable: bool = True,
                  name: Optional[str] = None):
         self.module.TensorflowGate.__init__(self)
         gates.VariationalLayer.__init__(self, qubits, pairs,
                                         one_qubit_gate, two_qubit_gate,
-                                        params, params2, name=name)
+                                        params, params2,
+                                        trainable=trainable, name=name)
 
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = []
@@ -758,12 +760,17 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
         gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
+    @BackendGate.density_matrix.setter
+    def density_matrix(self, x):
+        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        self.callback.density_matrix = x
+
     def construct_unitary(self):
         raise_error(ValueError, "Unitary gate does not have unitary "
                                  "representation.")
 
     def state_vector_call(self, state: tf.Tensor) -> tf.Tensor:
-        self.callback.append(self.callback(state, self.density_matrix))
+        self.callback.append(self.callback(state))
         return state
 
     def density_matrix_call(self, state: tf.Tensor) -> tf.Tensor:

@@ -176,7 +176,7 @@ How to use callbacks?
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
-implemented easily using :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+implemented easily using :class:`qibo.base.callbacks.EntanglementEntropy`
 and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 
 .. code-block::  python
@@ -318,10 +318,31 @@ The following gates support parameter setting:
     # rotations and five additional RX rotations are added afterwards.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
-a flat list.
+a flat list. Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more
+efficient than recreating a new circuit with new parameter values. The inverse
+method :meth:`qibo.base.circuit.BaseCircuit.get_parameters` is also available
+and returns a list, dictionary or flat list with the current parameter values
+of all parametrized gates in the circuit.
 
-Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
-recreating a new circuit with new parameter values.
+It is possible to hide a parametrized gate from the action of
+:meth:`qibo.base.circuit.BaseCircuit.get_parameters` and
+:meth:`qibo.base.circuit.BaseCircuit.set_parameters` by setting
+the ``trainable=False`` during gate creation. For example:
+
+.. code-block::  python
+
+    c = Circuit(3)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(1, theta=0.456, trainable=False))
+    c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
+
+    print(c.get_parameters())
+    # prints [0.123, (0.789, 0.567)] ignoring the parameters of the RY gate
+
+
+This is useful when the user wants to freeze the parameters of specific
+gates during optimization.
+Note that ``trainable`` defaults to ``True`` for all parametrized gates.
 
 
 How to invert a circuit?
@@ -1049,7 +1070,7 @@ of the ``AdiabaticEvolution`` model. In this case the default initial state is
 |++...+> (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
-(:class:`qibo.tensorflow.callbacks.Gap`) is available for calculating the
+(:class:`qibo.base.callbacks.Gap`) is available for calculating the
 energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
 similar to other callbacks:
 
