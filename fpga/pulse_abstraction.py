@@ -153,14 +153,21 @@ class Rectangular(PulseShape):
         self.name = "rectangular"
 
     def envelope(self, time, start, duration, amplitude):
+        """Constant amplitude envelope
+        """
         return amplitude
 
 class Gaussian(PulseShape):
+    """Gaussian pulse shape
+    """
     def __init__(self, sigma):
         self.name = "gaussian"
         self.sigma = sigma
 
     def envelope(self, time, start, duration, amplitude):
+        """Gaussian envelope centered with respect to the pulse:
+        A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+        """
         mu = start + duration / 2
         return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
@@ -168,15 +175,21 @@ class Gaussian(PulseShape):
         return "({}, {})".format(self.name, self.sigma)
 
 class Drag(PulseShape):
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape
+    """
     def __init__(self, sigma, beta):
         self.name = "drag"
         self.sigma = sigma
         self.beta = beta
 
     def envelope(self, time, start, duration, amplitude):
+        """DRAG envelope centered with respect to the pulse:
+        G + i\beta(-\frac{t-\mu}{\sigma^2})G
+        where Gaussian G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
+        """
         mu = start + duration / 2
         gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
-        return gaussian + 1j * self.beta * ((-(time - mu)) / self.sigma ** 2) * gaussian
+        return gaussian + 1j * self.beta * (-(time - mu) / self.sigma ** 2) * gaussian
 
     def __repr__(self):
         return "({}, {}, {})".format(self.name, self.sigma, self.beta)
