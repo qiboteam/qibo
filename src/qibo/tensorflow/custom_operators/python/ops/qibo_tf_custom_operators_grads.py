@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.python.framework import ops
+from tensorflow.python.framework import ops # pylint: disable=no-name-in-module
 
 
 @ops.RegisterGradient("InitialState")
