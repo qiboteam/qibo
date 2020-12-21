@@ -468,12 +468,12 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
 
 .. _vqc-example:
 
-How to write a custom VQC optimization?
----------------------------------------
+How to write a custom variational circuit optimization?
+-------------------------------------------------------
 
-Similarly to the VQE, a custom implementation of a VQC model can be achieved by
-defining a custom loss function and calling the :meth:`qibo.optimizers.optimize`
-method.
+Similarly to the VQE, a custom implementation of a Variational Quantum Circuit
+(VQC) model can be achieved by defining a custom loss function and calling the
+:meth:`qibo.optimizers.optimize` method.
 
 Here is a simple example using a custom loss function:
 
@@ -483,10 +483,10 @@ Here is a simple example using a custom loss function:
     from qibo import models, gates
     from qibo.optimizers import optimize
 
-    # custom loss function which returns numpy object
+    # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        return np.square(np.sum(circuit()-target))
+        return 1 - np.abs(np.conj(target).dot(circuit()))
 
     nqubits = 6
     nlayers  = 4
