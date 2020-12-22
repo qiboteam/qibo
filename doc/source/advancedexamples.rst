@@ -466,6 +466,51 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
 
+.. _vqc-example:
+
+How to write a custom variational circuit optimization?
+-------------------------------------------------------
+
+Similarly to the VQE, a custom implementation of a Variational Quantum Circuit
+(VQC) model can be achieved by defining a custom loss function and calling the
+:meth:`qibo.optimizers.optimize` method.
+
+Here is a simple example using a custom loss function:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo import models, gates
+    from qibo.optimizers import optimize
+
+    # custom loss function, computes fidelity
+    def myloss(parameters, circuit, target):
+        circuit.set_parameters(parameters)
+        return 1 - np.abs(np.conj(target).dot(circuit()))
+
+    nqubits = 6
+    nlayers  = 4
+
+    # Create variational circuit
+    c = models.Circuit(nqubits)
+    for l in range(nlayers):
+        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        c.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        c.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        c.add(gates.CZ(0, nqubits-1))
+    c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+
+    # Optimize starting from a random guess for the variational parameters
+    x0 = np.random.uniform(0, 2*np.pi, 2*nqubits*nlayers + nqubits)
+    data = np.random.normal(0, 1, size=2**nqubits)
+
+    # perform optimization
+    best, params = optimize(myloss, x0, args=(c, data), method='BFGS')
+
+    # set final solution to circuit instance
+    c.set_parameters(params)
+
 
 .. _qaoa-example:
 
