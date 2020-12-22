@@ -52,9 +52,15 @@ def test_vqc(method, options, compile, filename):
 
 
 test_names = "method,options,compile,filename"
-test_values = [
+test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
+               ("Powell", {'maxiter': 1}, False, 'vqe_powell.out'),
+               ("BFGS", {'maxiter': 1}, True, 'vqe_bfgs.out'),
+               ("BFGS", {'maxiter': 1}, False, 'vqe_bfgs.out'),
                ("parallel_L-BFGS-B", {'maxiter': 1}, True, None),
-               ]
+               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None),
+               ("cma", {"maxfevals": 2}, False, None),
+               ("sgd", {"nepochs": 5}, False, None),
+               ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""

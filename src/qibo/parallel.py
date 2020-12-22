@@ -70,7 +70,7 @@ class ParallelResources:  # pragma: no cover
         self.args = ()
 
 
-def _executor(params):
+def _executor(params): # pragma: no cover
     """Executes singleton call."""
     return ParallelResources().run(params)
 
@@ -92,7 +92,7 @@ def parallel_execution(circuit, states=None, processes=None):
 
     _check_parallel_configuration(processes)
 
-    def operation(state, circuit):
+    def operation(state, circuit): # pragma: no cover
         return circuit(state)
 
     ParallelResources().arguments = (circuit,)
@@ -125,7 +125,7 @@ def parallel_reuploading_execution(circuit, parameters=None, initial_state=None,
 
     _check_parallel_configuration(processes)
 
-    def operation(params, circuit, state):
+    def operation(params, circuit, state): # pragma: no cover
         circuit.set_parameters(params)
         return circuit(state)
 
