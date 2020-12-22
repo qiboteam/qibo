@@ -32,6 +32,18 @@ def raise_error(exception, message=None, args=None):
         raise exception(message)
 
 
+# Backend access
+from qibo import backend as K
+def set_computation_backend(backend="tensorflow"):
+    # TODO: Rename this to ``set_backend`` and change the
+    # defaulteinsum/matmuleinsum setter name
+    bk = K.factory.get(backend)()
+    for method in K.function_names:
+        setattr(K, method, getattr(bk, method))
+
+set_computation_backend()
+
+
 # Load backend specifics
 if BACKEND_NAME == "tensorflow":
     import os
@@ -40,9 +52,6 @@ if BACKEND_NAME == "tensorflow":
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import numpy as np
     import tensorflow as tf
-
-    # Backend access
-    K = tf
 
     # Set the number of threads from the environment variable
     OMP_NUM_THREADS = None
