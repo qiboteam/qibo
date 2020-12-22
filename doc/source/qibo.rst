@@ -7,6 +7,10 @@ The Qibo package comes with the following modules:
 * Gates_
 * Hamiltonians_
 * Callbacks_
+* Solvers_
+* Optimizers_
+* Parallel_
+* Backends_
 
 _______________________
 
@@ -322,7 +326,20 @@ variational model.
 .. automodule:: qibo.optimizers
    :members:
    :member-order: bysource
-   :exclude-members: ParallelBFGSResources, ParallelBFGS
+   :exclude-members: ParallelBFGS
+
+.. _Parallel:
+
+Parallelism
+-----------
+
+We provide CPU multi-processing methods for circuit evaluation for multiple
+input states and multiple parameters (reuploading) for fixed input state.
+
+.. automodule:: qibo.parallel
+   :members:
+   :member-order: bysource
+   :exclude-members: ParallelResources
 
 .. _Backends:
 
