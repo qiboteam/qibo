@@ -334,7 +334,9 @@ Parallelism
 -----------
 
 We provide CPU multi-processing methods for circuit evaluation for multiple
-input states and multiple parameters (reuploading) for fixed input state.
+input states and multiple parameters (reuploading) for fixed input state. Make
+sure to set an adeguate number of threads per process with ``qibo.set_threads``
+before using the functions describe below.
 
 .. automodule:: qibo.parallel
    :members:

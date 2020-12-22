@@ -87,6 +87,7 @@ def parallel_execution(circuit, states=None, processes=None):
         Circuit evaluation for input states.
     """
     if states is None or not isinstance(states, list):  # pragma: no cover
+        from qibo.config import raise_error
         raise_error(RuntimeError, "states must not be empty.")
 
     _check_parallel_configuration(processes)
@@ -119,6 +120,7 @@ def parallel_reuploading_execution(circuit, parameters=None, initial_state=None,
         Circuit evaluation for input parameters.
     """
     if parameters is None or not isinstance(parameters, list):  # pragma: no cover
+        from qibo.config import raise_error
         raise_error(RuntimeError, "parameters must not be empty.")
 
     _check_parallel_configuration(processes)
