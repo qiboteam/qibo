@@ -5,8 +5,7 @@ Resources for parallel circuit evaluation.
 
 class ParallelResources:  # pragma: no cover
     """Auxiliary singleton class for sharing memory objects in a
-    multiprocessing environment when performing a parallel_L-BFGS-B
-    minimization procedure.
+    multiprocessing environment when performing a parallel evaluations.
 
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
@@ -32,8 +31,8 @@ class ParallelResources:  # pragma: no cover
         return cls._instance
 
     def run(self, params=None):
-        """Computes loss (custom_loss) for a specific set of parameters.
-        This class performs the lock mechanism to duplicate objects
+        """Evaluates the custom_function object for a specific set of
+        parameters. This class performs the lock mechanism to duplicate objects
         for each process.
         """
         # lock to avoid race conditions
@@ -59,15 +58,15 @@ class ParallelResources:  # pragma: no cover
             self._objects_per_process[pname] = args
         # unlock
         self.lock.release()
-        # finally compute the loss function
+        # finally compute the custom function
         return self.custom_function(params, *args)
 
     def reset(self):
         """Cleanup memory."""
         self._objects_per_process = {}
-        self.custom_loss = None
+        self.custom_function = None
         self.lock = None
-        self.args = ()
+        self.arguments = ()
 
 
 def _executor(params): # pragma: no cover
@@ -75,8 +74,24 @@ def _executor(params): # pragma: no cover
     return ParallelResources().run(params)
 
 
-def parallel_execution(circuit, states=None, processes=None):
+def parallel_execution(circuit, states, processes=None):
     """Execute circuit for multiple states.
+
+    Example:
+        ::
+
+            from qibo import models, set_threads
+            from qibo.parallel import parallel_execution
+            import numpy as np
+            # create circuit
+            nqubits = 22
+            circuit = models.QFT(nqubits)
+            # create random states
+            states = [ np.random.random(2**nqubits) for i in range(5)]
+            # set threads to 1 per process (optional, requires tuning)
+            set_threads(1)
+            # execute in parallel
+            results = parallel_execution(circuit, states, processes=2)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.
@@ -88,7 +103,7 @@ def parallel_execution(circuit, states=None, processes=None):
     """
     if states is None or not isinstance(states, list):  # pragma: no cover
         from qibo.config import raise_error
-        raise_error(RuntimeError, "states must not be empty.")
+        raise_error(RuntimeError, "states must be a list.")
 
     _check_parallel_configuration(processes)
 
@@ -107,8 +122,33 @@ def parallel_execution(circuit, states=None, processes=None):
     return results
 
 
-def parallel_reuploading_execution(circuit, parameters=None, initial_state=None, processes=None):
+def parallel_reuploading_execution(circuit, parameters, initial_state=None, processes=None):
     """Execute circuit for multiple parameters and fixed initial_state.
+
+    Example:
+        ::
+
+            from qibo import models, gates, set_threads
+            from qibo.parallel import parallel_reuploading_execution
+            import numpy as np
+            # create circuit
+            nqubits = 6
+            nlayers = 2
+            circuit = models.Circuit(nqubits)
+            for l in range(nlayers):
+                circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+                circuit.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+                circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+                circuit.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+                circuit.add(gates.CZ(0, nqubits-1))
+            circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
+            # create random parameters
+            size = len(circuit.get_parameters())
+            parameters = [ np.random.uniform(0, 2*np.pi, size) for _ in range(10) ]
+            # set threads to 1 per process (optional, requires tuning)
+            set_threads(1)
+            # execute in parallel
+            results = parallel_reuploading_execution(circuit, parameters, processes=2)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.
@@ -119,9 +159,9 @@ def parallel_reuploading_execution(circuit, parameters=None, initial_state=None,
     Returns:
         Circuit evaluation for input parameters.
     """
-    if parameters is None or not isinstance(parameters, list):  # pragma: no cover
+    if not isinstance(parameters, list):  # pragma: no cover
         from qibo.config import raise_error
-        raise_error(RuntimeError, "parameters must not be empty.")
+        raise_error(RuntimeError, "parameters must be a list.")
 
     _check_parallel_configuration(processes)
 
@@ -146,7 +186,7 @@ def _check_parallel_configuration(processes):
     import psutil
     from qibo.config import raise_error, get_device, get_threads, log
     if "GPU" in get_device():  # pragma: no cover
-        raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
+        raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
     if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
             (processes is None and get_threads() != 1)):  # pragma: no cover
         log.warning('Please consider using a lower number of threads per process,'
