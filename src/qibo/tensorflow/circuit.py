@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import collections
 import numpy as np
+from qibo import K
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
@@ -9,8 +10,8 @@ from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
-InitStateType = Union[np.ndarray, tf.Tensor]
-OutputType = Union[tf.Tensor, measurements.CircuitResult]
+InitStateType = Union[np.ndarray, K.tensortype]
+OutputType = Union[K.tensortype, measurements.CircuitResult]
 
 
 class TensorflowCircuit(circuit.BaseCircuit):
@@ -38,8 +39,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             'TENSOR': self.nqubits * (2,),
             'FLAT': (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
-                                         dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                        dtype=DTYPES.get('DTYPEINT'))
 
     def set_nqubits(self, gate):
         super().set_nqubits(gate)
@@ -63,7 +64,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 params.append(gate.parameters)
         return params
 
-    def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
+    def _eager_execute(self, state: K.tensortype) -> K.tensortype:
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
             state = gate(state)
@@ -91,15 +92,15 @@ class TensorflowCircuit(circuit.BaseCircuit):
         if BACKEND['GATES'] == 'custom':
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
-        self._compiled_execute = tf.function(self._execute_for_compile)
+        self._compiled_execute = K.compile(self._execute_for_compile)
 
     def _execute(self, initial_state: Optional[InitStateType] = None
-                 ) -> tf.Tensor:
+                 ) -> K.tensortype:
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
         if BACKEND['GATES'] != 'custom':
-            state = tf.reshape(state, self.shapes.get('TENSOR'))
+            state = K.reshape(state, self.shapes.get('TENSOR'))
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -109,18 +110,18 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 callback.extend(results)
 
         if BACKEND['GATES'] != 'custom':
-            state = tf.reshape(state, self.shapes.get('TF_FLAT'))
+            state = K.reshape(state, self.shapes.get('TF_FLAT'))
 
         self._final_state = state
         return state
 
     def _device_execute(self, initial_state: Optional[InitStateType] = None
-                        ) -> tf.Tensor:
+                        ) -> K.tensortype:
         """Executes circuit on the specified device and checks for OOM errors."""
         oom_error = errors_impl.ResourceExhaustedError
         device = DEVICES['DEFAULT']
         try:
-            with tf.device(device):
+            with K.device(device):
                 state = self._execute(initial_state=initial_state)
         except oom_error:
             raise_error(RuntimeError, f"State does not fit in {device} memory."
@@ -130,7 +131,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _repeated_execute(self, nreps: int,
                           initial_state: Optional[InitStateType] = None
-                          ) -> tf.Tensor:
+                          ) -> K.tensortype:
         results = []
         for _ in range(nreps):
             state = self._device_execute(initial_state)
@@ -138,8 +139,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 results.append(self.measurement_gate(state, nshots=1)[0])
                 del(state)
             else:
-                results.append(tf.identity(state))
-        results = tf.stack(results, axis=0)
+                results.append(K.copy(state))
+        results = K.stack(results, axis=0)
 
         if self.measurement_gate is None:
             return results
@@ -199,7 +200,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
     @property
-    def final_state(self) -> tf.Tensor:
+    def final_state(self) -> K.tensortype:
         """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
 
         The circuit has to be executed at least once before accessing this
@@ -211,23 +212,23 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+    def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
         if isinstance(state, tf.Tensor):
             return state
         elif isinstance(state, np.ndarray):
-            return tf.cast(state.astype(DTYPES.get('NPTYPECPX')),
+            return K.cast(state.astype(DTYPES.get('NPTYPECPX')),
                            dtype=DTYPES.get('DTYPECPX'))
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
-    def _default_initial_state(self) -> tf.Tensor:
+    def _default_initial_state(self) -> K.tensortype:
         """Creates the |000...0> state for default initialization."""
-        zeros = tf.zeros(self.shapes.get('TF_FLAT'), dtype=DTYPES.get('DTYPECPX'))
+        zeros = K.zeros(self.shapes.get('TF_FLAT'), dtype=DTYPES.get('DTYPECPX'))
         state = op.initial_state(zeros)
         return state
 
     def get_initial_state(self, state: Optional[InitStateType] = None
-                           ) -> tf.Tensor:
+                           ) -> K.tensortype:
         """"""
         if state is None:
             return self._default_initial_state()
@@ -269,15 +270,12 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             'VECTOR': (2 ** nqubits,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
-                                         dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                        dtype=DTYPES.get('DTYPEINT'))
 
-    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+    def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
         if tuple(state.shape) == self.shapes['VECTOR']:
-            if isinstance(state, tf.Tensor):
-                state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            elif isinstance(state, np.ndarray):
-                state = np.outer(state, state.conj())
+            state = K.outer(state, K.conj(state))
         return TensorflowCircuit._cast_initial_state(self, state)
