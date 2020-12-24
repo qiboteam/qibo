@@ -918,8 +918,25 @@ class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):
         return cls_s(
             q, t1, t2, time, excited_population=excited_population, seed=seed)
 
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        cls = gates.ThermalRelaxationChannel
+        cls.calculate_probabilities(self, t1, t2, time, excited_population)
+        p_reset = 1 - np.exp(-time / t1)
+        p0 = p_reset * (1 - excited_population)
+        p1 = p_reset * excited_population
+        if t1 < t2:
+            exp = np.exp(-time / t2)
+        else:
+            rate1, rate2 = 1 / t1, 1 / t2
+            exp = (1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2
+        return (exp, p0, p1)
+
 
 class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA):
+
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)
@@ -935,6 +952,10 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
 
 
 class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
+
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)

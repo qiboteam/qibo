@@ -575,6 +575,10 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
 class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA):
 
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        cls = cgates.ThermalRelaxationChannel
+        return cls.calculate_probabilities(self, t1, t2, time, excited_population)
+
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)
         gates._ThermalRelaxationChannelA.__init__(
@@ -583,6 +587,10 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
 
 
 class _ThermalRelaxationChannelB(TensorflowGate, gates._ThermalRelaxationChannelB):
+
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        cls = cgates.ThermalRelaxationChannel
+        return cls.calculate_probabilities(self, t1, t2, time, excited_population)
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         TensorflowGate.__init__(self)

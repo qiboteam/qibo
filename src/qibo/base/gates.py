@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+import math
 from abc import abstractmethod
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
@@ -491,9 +492,8 @@ class U2(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        import numpy as np
         phi, lam = self.parameters
-        phi, lam = np.pi - lam, - np.pi - phi
+        phi, lam = math.pi - lam, - math.pi - phi
         return self.__class__(self.target_qubits[0], phi, lam)
 
 
@@ -810,11 +810,10 @@ class CU2(_CUn_):
 
     def _dagger(self) -> "Gate":
         """"""
-        import numpy as np
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         phi, lam = self.parameters
-        phi, lam = np.pi - lam, - np.pi - phi
+        phi, lam = math.pi - lam, - math.pi - phi
         return self.__class__(q0, q1, phi, lam)
 
 
@@ -1045,15 +1044,14 @@ class TOFFOLI(Gate):
             return self.decompose()
 
         import importlib
-        import numpy as np
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
         RY = self.module.RY
         CNOT = self.module.CNOT
-        return [RY(target, -np.pi / 4), CNOT(control1, target),
-                RY(target, -np.pi / 4), CNOT(control0, target),
-                RY(target, np.pi / 4), CNOT(control1, target),
-                RY(target, np.pi / 4)]
+        return [RY(target, -math.pi / 4), CNOT(control1, target),
+                RY(target, -math.pi / 4), CNOT(control0, target),
+                RY(target, math.pi / 4), CNOT(control1, target),
+                RY(target, math.pi / 4)]
 
 
 class Unitary(ParametrizedGate):
@@ -1508,9 +1506,7 @@ class ThermalRelaxationChannel:
         self.init_kwargs = {"excited_population": excited_population,
                             "seed": seed}
 
-    @staticmethod
-    def _calculate_probs(t1, t2, time, excited_population):
-        import numpy as np
+    def calculate_probabilities(self, t1, t2, time, excited_population):
         if excited_population < 0 or excited_population > 1:
             raise_error(ValueError, "Invalid excited state population {}."
                                     "".format(excited_population))
@@ -1526,23 +1522,16 @@ class ThermalRelaxationChannel:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")
 
-        p_reset = 1 - np.exp(-time / t1)
-        p0 = p_reset * (1 - excited_population)
-        p1 = p_reset * excited_population
-        if t1 < t2:
-            exp = np.exp(-time / t2)
-        else:
-            rate1, rate2 = 1 / t1, 1 / t2
-            exp = (1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2
-        return (exp, p0, p1)
-
 
 class _ThermalRelaxationChannelA(UnitaryChannel):
     """Implements thermal relaxation when T1 >= T2."""
 
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
+
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = ThermalRelaxationChannel._calculate_probs(
-            t1, t2, time, excited_population)
+        probs = self.calculate_probabilities(t1, t2, time, excited_population)
         gates = [self.module.Z(q), self.module.Collapse(q),
                  self.module.X(q)]
 
@@ -1557,9 +1546,12 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 class _ThermalRelaxationChannelB(Gate):
     """Implements thermal relaxation when T1 < T2."""
 
+    def calculate_probabilities(self, t1, t2, time, excited_population):
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
+
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = ThermalRelaxationChannel._calculate_probs(
-            t1, t2, time, excited_population)
+        probs = self.calculate_probabilities(t1, t2, time, excited_population)
         self.exp_t2, self.preset0, self.preset1 = probs
 
         super(_ThermalRelaxationChannelB, self).__init__()

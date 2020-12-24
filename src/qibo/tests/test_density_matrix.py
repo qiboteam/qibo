@@ -721,8 +721,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     c.add(gate)
     final_rho = c(np.copy(initial_rho))
 
-    exp, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
-        t1, t2, time, excpop)
+    exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
     if t2 > t1:
         matrix = np.diag([1 - p1, p0, p1, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp

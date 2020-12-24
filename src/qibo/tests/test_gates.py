@@ -1475,8 +1475,7 @@ def test_thermal_relaxation_channel_repeated(backend):
                                          excited_population=0.8, seed=123))
     final_state = c(np.copy(initial_state), nshots=30).numpy()
 
-    pz, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
-        1.0, 0.6, 0.8, 0.8)
+    pz, p0, p1 = c.queue[0].calculate_probabilities(1.0, 0.6, 0.8, 0.8)
     np.random.seed(123)
     target_state = []
     for _ in range(30):
