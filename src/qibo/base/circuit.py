@@ -909,10 +909,11 @@ class BaseCircuit(ABC):
                     try:
                         for i, p in enumerate(params):
                             if 'pi' in p:
-                                # FIXME: Remove numpy depedency
-                                import numpy as np
-                                s = p.replace('pi', str(np.pi)).split('*')
-                                p = np.prod([float(j) for j in s], axis=0)
+                                import math
+                                from operator import mul
+                                from functools import reduce
+                                s = p.replace('pi', str(math.pi)).split('*')
+                                p = reduce(mul, [float(j) for j in s], 1)
                             params[i] = float(p)
                     except ValueError:
                         raise_error(ValueError, "Invalid value {} for gate parameters."
