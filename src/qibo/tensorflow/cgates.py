@@ -5,7 +5,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import gates
-from qibo.base.abstract_gates import BackendGate
+from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.config import BACKEND, DTYPES, DEVICES, NUMERIC_TYPES, raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -636,6 +636,20 @@ class Unitary(MatrixGate, gates.Unitary):
         else:
             ud = unitary.conj().T
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
+
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
+        x = np.array(x)
+        shape = tuple(x.shape)
+        true_shape = (2 ** self.rank, 2 ** self.rank)
+        if shape == true_shape:
+            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
+        elif shape == (2 ** (2 * self.rank),):
+            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
+        else:
+            raise_error(ValueError, "Invalid shape {} of unitary matrix "
+                                    "acting on {} target qubits."
+                                    "".format(shape, self.rank))
 
 
 class VariationalLayer(TensorflowGate, gates.VariationalLayer):

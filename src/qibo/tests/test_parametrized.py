@@ -37,7 +37,8 @@ def test_rx_parameter_setter(backend):
 
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize("include_not_trainable", [True, False])
-def test_get_parameters(trainable, include_not_trainable):
+@pytest.mark.parametrize("format", ["list", "flatlist"])
+def test_get_parameters(trainable, include_not_trainable, format):
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(1, theta=0.456, trainable=trainable))
@@ -47,22 +48,32 @@ def test_get_parameters(trainable, include_not_trainable):
     unitary = np.array([[0.123, 0.123], [0.123, 0.123]])
     c.add(gates.Unitary(unitary, 1))
 
+    params = c.get_parameters(format, include_not_trainable)
     if trainable or include_not_trainable:
-        params = {
+        target_params = {
             "list": [0.123, 0.456, (0.789, 0.987), unitary],
             "dict": {c.queue[0]: 0.123, c.queue[1]: 0.456,
                      c.queue[3]: (0.789, 0.987), c.queue[5]: unitary},
             "flatlist": [0.123, 0.456, 0.789, 0.987]
             }
     else:
-        params = {
+        target_params = {
             "list": [0.123, unitary],
             "dict": {c.queue[0]: 0.123, c.queue[5]: unitary},
             "flatlist": [0.123]
             }
-    params["flatlist"].extend(unitary.ravel())
-    for fmt, prm in params.items():
-        assert c.get_parameters(fmt, include_not_trainable) == prm
+    target_params["flatlist"].extend(unitary.ravel())
+
+    target_params = target_params[format]
+    if format == "list":
+        assert params[:-1] == target_params[:-1]
+        np.testing.assert_allclose(params[-1], target_params[-1])
+    elif format == "dict":
+        gate = c.queue[5]
+        np.testing.assert_allclose(params.pop(gate), target_params.pop(gate))
+        assert params == target_params
+    elif format == "flatlist":
+        assert params == target_params
 
     with pytest.raises(ValueError):
         c.get_parameters("test")

@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 from qibo.base import cache, gates
-from qibo.base.abstract_gates import BackendGate
+from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.tensorflow import cgates
 from qibo.config import tfmatrices as matrices
 from qibo.config import BACKEND, DTYPES, raise_error
@@ -434,6 +434,10 @@ class Unitary(TensorflowGate, gates.Unitary):
 
     def _dagger(self) -> "Unitary":
         return cgates.Unitary._dagger(self)
+
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
+        cgates.Unitary.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class VariationalLayer(TensorflowGate, gates.VariationalLayer):

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import collections
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
@@ -47,10 +48,20 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def set_parameters(self, parameters):
         if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
-            super(TensorflowCircuit, self)._set_parameters_list(
-                parameters, int(parameters.shape[0]))
+            super()._set_parameters_list(parameters, int(parameters.shape[0]))
         else:
-            super(TensorflowCircuit, self).set_parameters(parameters)
+            super().set_parameters(parameters)
+
+    def _get_parameters_flatlist(self, parametrized_gates):
+        params = []
+        for gate in parametrized_gates:
+            if isinstance(gate.parameters, np.ndarray):
+                params.extend(gate.parameters.ravel())
+            elif isinstance(gate.parameters, collections.abc.Iterable):
+                params.extend(gate.parameters)
+            else:
+                params.append(gate.parameters)
+        return params
 
     def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
         """Simulates the circuit gates in eager mode."""

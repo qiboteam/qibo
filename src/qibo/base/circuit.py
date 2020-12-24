@@ -558,8 +558,7 @@ class BaseCircuit(ABC):
             for i, gate in enumerate(self.trainable_gates):
                 gate.parameters = parameters[i]
         elif n == self.trainable_gates.nparams:
-            import numpy as np
-            parameters = np.array(parameters)
+            parameters = list(parameters)
             k = 0
             for i, gate in enumerate(self.trainable_gates):
                 if gate.nparams == 1:
@@ -647,18 +646,14 @@ class BaseCircuit(ABC):
         elif format == "dict":
             return {gate: gate.parameters for gate in parametrized_gates}
         elif format == "flatlist":
-            import numpy as np
-            params = []
-            for gate in parametrized_gates:
-                if isinstance(gate.parameters, np.ndarray):
-                    params.extend(gate.parameters.ravel())
-                elif isinstance(gate.parameters, collections.abc.Iterable):
-                    params.extend(gate.parameters)
-                else:
-                    params.append(gate.parameters)
-            return params
+            return self._get_parameters_flatlist(parametrized_gates)
         else:
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
+
+    @abstractmethod
+    def _get_parameters_flatlist(self, parametrized_gates):
+        raise_error(NotImplementedError, "Flat list format not available "
+                                         "in the base circuit.")
 
     def summary(self) -> str:
         """Generates a summary of the circuit.
@@ -914,6 +909,7 @@ class BaseCircuit(ABC):
                     try:
                         for i, p in enumerate(params):
                             if 'pi' in p:
+                                # FIXME: Remove numpy depedency
                                 import numpy as np
                                 s = p.replace('pi', str(np.pi)).split('*')
                                 p = np.prod([float(j) for j in s], axis=0)

@@ -1094,19 +1094,6 @@ class Unitary(ParametrizedGate):
         """"""
         raise_error(NotImplementedError)
 
-    @ParametrizedGate.parameters.setter
-    def parameters(self, x):
-        shape = tuple(x.shape)
-        true_shape = (2 ** self.rank, 2 ** self.rank)
-        if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
-        elif shape == (2 ** (2 * self.rank),):
-            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
-        else:
-            raise_error(ValueError, "Invalid shape {} of unitary matrix "
-                                    "acting on {} target qubits."
-                                    "".format(shape, self.rank))
-
 
 class VariationalLayer(ParametrizedGate):
     """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
