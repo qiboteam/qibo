@@ -6,7 +6,7 @@ from qibo import K
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND, TENSOR_TYPES, raise_error
+from qibo.config import DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -39,8 +39,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             'TENSOR': self.nqubits * (2,),
             'FLAT': (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'),
-                                        dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'), dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
         super().set_nqubits(gate)
@@ -48,7 +47,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         gate.prepare()
 
     def set_parameters(self, parameters):
-        if isinstance(parameters, TENSOR_TYPES):
+        if isinstance(parameters, K.tensor_types):
             super()._set_parameters_list(parameters, int(parameters.shape[0]))
         else:
             super().set_parameters(parameters)
@@ -213,14 +212,14 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return self._final_state
 
     def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
-        if isinstance(state, TENSOR_TYPES):
-            return K.cast(state, dtype=DTYPES.get('DTYPECPX'))
+        if isinstance(state, K.tensor_types):
+            return K.cast(state)
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
     def _default_initial_state(self) -> K.tensortype:
         """Creates the |000...0> state for default initialization."""
-        zeros = K.zeros(self.shapes.get('TF_FLAT'), dtype=DTYPES.get('DTYPECPX'))
+        zeros = K.zeros(self.shapes.get('TF_FLAT'))
         state = op.initial_state(zeros)
         return state
 
@@ -267,8 +266,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             'VECTOR': (2 ** nqubits,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'),
-                                        dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'), dtype='DTYPEINT')
 
     def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
         # Allow using state vectors as initial states but transform them

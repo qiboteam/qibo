@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
+# TODO: Implement precision setter in backends
 
 
 class BaseBackend(ABC):
@@ -7,12 +8,20 @@ class BaseBackend(ABC):
     def __init__(self):
         self.backend = None
         self.name = "base"
+        self._dtypes = {}
 
-        self.NUMERIC_TYPES = None
-        # TODO: Consider removing ``ARRAY_TYPES``
-        self.ARRAY_TYPES = None
-        self.TENSOR_TYPES = None
-        self.DTYPES = {'string': "double"}
+    def dtypes(self, name):
+        return getattr(self.backend, self._dtypes.get(name))
+
+    @property
+    @abstractmethod
+    def numeric_types(self):
+        raise_error(NotImplementedError)
+
+    @property
+    @abstractmethod
+    def tensor_types(self):
+        raise_error(NotImplementedError)
 
     @property
     @abstractmethod
@@ -90,27 +99,27 @@ class NumpyBackend(BaseBackend):
         import numpy as np
         self.backend = np
         self.name = "numpy"
+        self.np = np
+        self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
+                        'DTYPECPX': 'complex128'}
 
-        self.NUMERIC_TYPES = (np.int, np.float, np.complex,
-                              np.int32, np.int64, np.float32,
-                              np.float64, np.complex64, np.complex128)
-        # TODO: Consider removing ``ARRAY_TYPES``
-        self.ARRAY_TYPES = (np.ndarray,)
-        self.TENSOR_TYPES = (np.ndarray,)
-        self.DTYPES = {
-            'STRING': 'double',
-            'DTYPEINT': np.int64,
-            'DTYPE': np.float64,
-            'DTYPECPX': np.complex128
-            }
+    @property
+    def numeric_types(self):
+        return (self.np.int, self.np.float, self.np.complex,
+                self.np.int32, self.np.int64, self.np.float32,
+                self.np.float64, self.np.complex64, self.np.complex128)
+
+    @property
+    def tensor_types(self):
+        return (self.backend.npndarray,)
 
     @property
     def tensortype(self):
         return self.backend.ndarray
 
-    def cast(self, x, dtype=None):
-        if dtype is None:
-            dtype = self.DTYPES.get('DTYPECPX')
+    def cast(self, x, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
         return x.astype(dtype)
 
     def reshape(self, x, shape):
@@ -122,9 +131,9 @@ class NumpyBackend(BaseBackend):
     def copy(self, x):
         return self.backend.copy(x)
 
-    def zeros(self, shape, dtype=None):
-        if dtype is None:
-            dtype = self.DTYPES.get('DTYPECPX')
+    def zeros(self, shape, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
         return self.backend.zeros(shape, dtype=dtype)
 
     def conj(self, x):
@@ -156,31 +165,22 @@ class NumpyBackend(BaseBackend):
 class TensorflowBackend(NumpyBackend):
 
     def __init__(self):
-        import numpy as np
+        super().__init__()
         import tensorflow as tf
         self.backend = tf
         self.name = "tensorflow"
-        self.np = np
 
-        self.NUMERIC_TYPES = (np.int, np.float, np.complex,
-                              np.int32, np.int64, np.float32,
-                              np.float64, np.complex64, np.complex128)
-        self.ARRAY_TYPES = (np.ndarray, tf.Tensor)
-        self.TENSOR_TYPES = (np.ndarray, tf.Tensor, tf.Variable)
-        self.DTYPES = {
-            'STRING': 'double',
-            'DTYPEINT': tf.int64,
-            'DTYPE': tf.float64,
-            'DTYPECPX': tf.complex128
-            }
+    @property
+    def tensor_types(self):
+        return (self.np.ndarray, self.backend.Tensor, self.backend.Variable)
 
     @property
     def tensortype(self):
         return self.backend.Tensor
 
-    def cast(self, x, dtype=None):
-        if dtype is None:
-            dtype = self.DTYPES.get('DTYPECPX')
+    def cast(self, x, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
         if isinstance(x, self.np.ndarray):
             dtypestr = dtype.__repr__().split(".")[1]
             x = x.astype(getattr(self.np, dtypestr))
