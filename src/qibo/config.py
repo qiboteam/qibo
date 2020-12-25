@@ -80,19 +80,10 @@ if BACKEND_NAME == "tensorflow":
         global OMP_NUM_THREADS
         OMP_NUM_THREADS = num_threads
 
-    # Numpy and Tensorflow numeric and array types
-    NUMERIC_TYPES = (np.int, np.float, np.complex,
-                     np.int32, np.int64, np.float32,
-                     np.float64, np.complex64, np.complex128)
-    ARRAY_TYPES = (tf.Tensor, np.ndarray)
-
     # characters used in einsum strings
     EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-    # Entanglement entropy eigenvalue cut-off
-    # Eigenvalues smaller than this cut-off are ignored in entropy calculation
-    EIGVAL_CUTOFF = 1e-14
-
+    # TODO: Remove types from here and keep them to backend
     # Default types
     DTYPES = {
         'STRING': 'double',
@@ -101,6 +92,15 @@ if BACKEND_NAME == "tensorflow":
         'DTYPECPX': tf.complex128,
         'NPTYPECPX': np.complex128
     }
+    NUMERIC_TYPES = (np.int, np.float, np.complex,
+                     np.int32, np.int64, np.float32,
+                     np.float64, np.complex64, np.complex128)
+    ARRAY_TYPES = (np.ndarray, tf.Tensor)
+    TENSOR_TYPES = (np.ndarray, tf.Tensor, tf.Variable)
+
+    # Entanglement entropy eigenvalue cut-off
+    # Eigenvalues smaller than this cut-off are ignored in entropy calculation
+    EIGVAL_CUTOFF = 1e-14
 
     # Flag for raising warning in ``set_precision`` and ``set_backend``
     ALLOW_SWITCHERS = True

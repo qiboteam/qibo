@@ -6,7 +6,7 @@ from qibo import K
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
+from qibo.config import DTYPES, DEVICES, BACKEND, TENSOR_TYPES, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -48,7 +48,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         gate.prepare()
 
     def set_parameters(self, parameters):
-        if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
+        if isinstance(parameters, TENSOR_TYPES):
             super()._set_parameters_list(parameters, int(parameters.shape[0]))
         else:
             super().set_parameters(parameters)
@@ -213,11 +213,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return self._final_state
 
     def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
-        if isinstance(state, tf.Tensor):
-            return state
-        elif isinstance(state, np.ndarray):
-            return K.cast(state.astype(DTYPES.get('NPTYPECPX')),
-                           dtype=DTYPES.get('DTYPECPX'))
+        if isinstance(state, TENSOR_TYPES):
+            return K.cast(state, dtype=DTYPES.get('DTYPECPX'))
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
