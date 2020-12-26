@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import collections
-import numpy as np
 from qibo import K
 from qibo.base import circuit
 from qibo.config import DEVICES, BACKEND, raise_error
@@ -53,7 +52,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
     def _get_parameters_flatlist(self, parametrized_gates):
         params = []
         for gate in parametrized_gates:
-            if isinstance(gate.parameters, np.ndarray):
+            if isinstance(gate.parameters, K.tensor_types):
                 params.extend(gate.parameters.ravel())
             elif isinstance(gate.parameters, collections.abc.Iterable):
                 params.extend(gate.parameters)

@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import numpy as np
-import tensorflow as tf
-from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
+import math
 import joblib
-from qibo.config import raise_error, get_threads
+from qibo import K
+from qibo import gates as gate_module
 from qibo.base import gates
 from qibo.base import circuit as base_circuit
-from qibo import gates as gate_module
+from qibo.config import raise_error, get_threads
 from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import distutils as utils
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Set, Tuple, Union
-InitStateType = Union[np.ndarray, tf.Tensor, utils.DistributedState]
+InitStateType = Union[K.tensortype, utils.DistributedState]
 OutputType = Union[utils.DistributedState, measurements.CircuitResult]
 
 
@@ -58,7 +57,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self.init_kwargs.update({"accelerators": accelerators,
                                  "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
-        self.nglobal = float(np.log2(self.ndevices))
+        self.nglobal = float(math.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
             raise_error(ValueError, "Number of calculation devices should be a power "
                                     "of 2 but is {}.".format(self.ndevices))
@@ -118,7 +117,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
-    def _device_job(self, state: tf.Tensor, gates: List["TensorflowGate"]) -> tf.Tensor:
+    def _device_job(self, state: K.tensortype, gates: List["TensorflowGate"]
+                    ) -> K.tensortype:
         for gate in gates:
             state = gate(state)
         return state
@@ -134,7 +134,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """
         def device_job(ids, device):
             for i in ids:
-                with tf.device(device):
+                with K.device(device):
                     piece = self._device_job(state.pieces[i], queues[i])
                     state.pieces[i].assign(piece)
                     del(piece)
@@ -151,7 +151,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.qubits.reduced_local[local_qubit]
-            with tf.device(self.memory_device):
+            with K.device(self.memory_device):
                 op.swap_pieces(state.pieces[i], state.pieces[i + t],
                                local_eff, self.nlocal, get_threads())
 
@@ -163,10 +163,10 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         The full calculation happens on CPU. (may not be efficient)
         """
         total_norm = 0
-        with tf.device(self.memory_device):
+        with K.device(self.memory_device):
             for piece in state.pieces:
-                total_norm += tf.reduce_sum(tf.math.square(tf.abs(piece)))
-            total_norm = tf.cast(tf.math.sqrt(total_norm), dtype=state.dtype)
+                total_norm += K.sum(K.square(K.abs(piece)))
+            total_norm = K.cast(K.sqrt(total_norm), dtype=state.dtype)
             for piece in state.pieces:
                 piece.assign(piece / total_norm)
 
@@ -184,7 +184,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         This method calculates the full state vector because special gates
         are not implemented for state pieces.
         """
-        with tf.device(self.memory_device):
+        with K.device(self.memory_device):
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
             full_state = state.vector
@@ -226,10 +226,9 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
     def _device_execute(self, initial_state: Optional[InitStateType] = None
                         ) -> utils.DistributedState:
         """Executes circuit and checks for OOM errors."""
-        oom_error = errors_impl.ResourceExhaustedError
         try:
             return self._execute(initial_state)
-        except oom_error:
+        except K.oom_error:
             raise_error(RuntimeError, "State does not fit in memory during distributed "
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
@@ -240,7 +239,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         If measurements are not specified this returns a
         :class:`qibo.tensorflow.distutils.DistributedState` instead of a
-        ``tf.Tensor``. This avoids creating multiple copies of large states in
+        tensor. This avoids creating multiple copies of large states in
         the CPU memory.
         """
         return super(TensorflowDistributedCircuit, self).execute(
@@ -248,7 +247,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
     def get_initial_state(
           self, state: Optional[Union[InitStateType, str]] = None
-          ) -> tf.Tensor:
+          ) -> K.tensortype:
         """"""
         if not self.queues.queues and self.queue:
             self.queues.set(self.queue)

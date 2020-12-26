@@ -60,6 +60,18 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def square(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def sqrt(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def abs(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def sum(self, x, axis=None):
         """Sum of tensor elements."""
         raise_error(NotImplementedError)
@@ -144,6 +156,15 @@ class NumpyBackend(BaseBackend):
     def conj(self, x):
         return self.backend.conj(x)
 
+    def square(self, x):
+        return x ** 2
+
+    def sqrt(self, x):
+        return self.backend.sqrt(x)
+
+    def abs(self, x):
+        return self.backend.abs(x)
+
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)
 
@@ -200,6 +221,12 @@ class TensorflowBackend(NumpyBackend):
 
     def conj(self, x):
         return self.backend.math.conj(x)
+
+    def square(self, x):
+        return self.backend.square(x)
+
+    def sqrt(self, x):
+        return self.backend.math.sqrt(x)
 
     def sum(self, x, axis=None):
         return self.backend.reduce_sum(x, axis=axis)
