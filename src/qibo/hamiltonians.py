@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import matrices, K
-from qibo.config import BACKEND_NAME, DTYPES, raise_error
+from qibo.config import BACKEND_NAME, raise_error
 from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
 from qibo.base.hamiltonians import _SymbolicHamiltonian
 if BACKEND_NAME == "tensorflow":
@@ -19,8 +19,8 @@ class Hamiltonian(BaseHamiltonian):
     def __new__(cls, nqubits, matrix, numpy=False):
         if isinstance(matrix, np.ndarray):
             if not numpy:
-                matrix = K.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
-        elif isinstance(matrix, K.Tensor):
+                matrix = K.cast(matrix, dtype='DTYPECPX')
+        elif isinstance(matrix, K.tensortype):
             if numpy:
                 matrix = matrix.numpy()
         else:
@@ -114,9 +114,9 @@ def X(nqubits, numpy=False, trotter=False):
             it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
     """
     def ground_state():
-        n = K.cast(2 ** nqubits, dtype=DTYPES.get('DTYPEINT'))
-        state = K.ones(n, dtype=DTYPES.get('DTYPECPX'))
-        return state / K.math.sqrt(K.cast(n, dtype=state.dtype))
+        n = K.cast(2 ** nqubits, dtype='DTYPEINT')
+        state = K.ones(n, dtype='DTYPECPX')
+        return state / K.sqrt(K.cast(n, dtype=state.dtype))
     return _OneBodyPauli(nqubits, matrices.X, numpy, trotter, ground_state)
 
 

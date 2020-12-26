@@ -363,6 +363,7 @@ def test_gap(trotter):
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
 
+    print(ground[:])
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])

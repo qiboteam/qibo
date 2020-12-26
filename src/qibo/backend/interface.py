@@ -72,6 +72,14 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def real(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def imag(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def conj(self, x):
         """Elementwise complex conjugate of a tensor."""
         raise_error(NotImplementedError)
@@ -85,7 +93,15 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def log(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def abs(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def trace(self, x):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -159,10 +175,10 @@ class NumpyBackend(BaseBackend):
     def reshape(self, x, shape):
         return self.backend.reshape(x, shape)
 
-    def stack(self, x, axis=None):
+    def stack(self, x, axis=0):
         return self.backend.stack(x, axis=axis)
 
-    def concatenate(self, x, axis=None):
+    def concatenate(self, x, axis=0):
         return self.backend.concatenate(x, axis=axis)
 
     @property
@@ -185,6 +201,12 @@ class NumpyBackend(BaseBackend):
     def ones_like(self, x):
         return self.backend.ones_like(x)
 
+    def real(self, x):
+        return self.backend.real(x)
+
+    def imag(self, x):
+        return self.backend.imag(x)
+
     def conj(self, x):
         return self.backend.conj(x)
 
@@ -194,8 +216,14 @@ class NumpyBackend(BaseBackend):
     def sqrt(self, x):
         return self.backend.sqrt(x)
 
+    def log(self, x):
+        return self.backend.log(x)
+
     def abs(self, x):
         return self.backend.abs(x)
+
+    def trace(self, x):
+        return self.backend.trace(x)
 
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)
@@ -254,6 +282,12 @@ class TensorflowBackend(NumpyBackend):
     def copy(self, x):
         return self.backend.identity(x)
 
+    def real(self, x):
+        return self.backend.math.real(x)
+
+    def imag(self, x):
+        return self.backend.math.imag(x)
+
     def conj(self, x):
         return self.backend.math.conj(x)
 
@@ -262,6 +296,12 @@ class TensorflowBackend(NumpyBackend):
 
     def sqrt(self, x):
         return self.backend.math.sqrt(x)
+
+    def log(self, x):
+        return self.backend.math.log(x)
+
+    def trace(self, x):
+        return self.backend.linalg.trace(x)
 
     def sum(self, x, axis=None):
         return self.backend.reduce_sum(x, axis=axis)

@@ -451,11 +451,11 @@ class DistributedState(DistributedBase):
         """
         if self.qubits.list == list(range(self.nglobal)):
             with K.device(self.device):
-                state = K.concat([x[K.newaxis] for x in self.pieces], axis=0)
+                state = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
                 state = K.reshape(state, self.shapes["full"])
         elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
             with K.device(self.device):
-                state = K.concat([x[:, K.newaxis] for x in self.pieces], axis=1)
+                state = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
                 state = K.reshape(state, self.shapes["full"])
         else: # fall back to the transpose op
             with K.device(self.device):

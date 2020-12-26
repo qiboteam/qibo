@@ -11,6 +11,7 @@ class Callback(ABC):
 
     Results of a callback can be accessed by indexing the corresponding object.
     """
+    # FIXME: Remove this because base should be independent of backends
     from qibo.config import K
 
     def __init__(self):
@@ -335,10 +336,10 @@ class Gap(Callback):
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()
         if isinstance(self.mode, int):
-            return self.K.math.real(hamiltonian.eigenvalues()[self.mode])
+            return self.K.real(hamiltonian.eigenvalues()[self.mode])
         # case: self.mode == "gap"
-        return self.K.math.real(hamiltonian.eigenvalues()[1] -
-                                hamiltonian.eigenvalues()[0])
+        return self.K.real(hamiltonian.eigenvalues()[1] -
+                           hamiltonian.eigenvalues()[0])
 
     def density_matrix_call(self, state):
         raise_error(NotImplementedError, "Gap callback is not implemented for "
