@@ -47,6 +47,9 @@ class ParallelResources:  # pragma: no cover
                 try:
                     # copy object if copy method is available
                     copy = obj.copy(deep=True)
+                except TypeError:
+                    # if deep option is not available try with copy (numpy case)
+                    copy = obj.copy()
                 except AttributeError:
                     # if copy is not implemented just use the original object
                     copy = obj
