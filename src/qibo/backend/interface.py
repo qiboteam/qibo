@@ -163,12 +163,7 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def gather(self, x, indices, axis=0):
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def drop_values(self, x, condition):
-        """Used in callbacks.EntanglementEntropy."""
+    def gather(self, x, indices=None, condition=None, axis=0):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -310,14 +305,16 @@ class NumpyBackend(BaseBackend):
         # Uses numpy backend always (even on Tensorflow)
         return self.np.unique(x, return_counts=return_counts)
 
-    def gather(self, x, indices, axis=0):
+    def gather(self, x, indices=None, condition=None, axis=0):
+        if indices is None:
+            if condition is None:
+                raise_error(ValueError, "Gather call requires either indices "
+                                        "or condition.")
+            indices = condition
         if axis < 0:
             axis += len(x.shape)
         idx = axis * (slice(None),) + (indices,)
         return x[idx]
-
-    def drop_values(self, x, condition):
-        return x[condition]
 
     def compile(self, func):
         return func
@@ -402,12 +399,13 @@ class TensorflowBackend(NumpyBackend):
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
 
-    def gather(self, x, indices, axis=0):
+    def gather(self, x, indices=None, condition=None, axis=0):
+        if indices is None:
+            if condition is None:
+                raise_error(ValueError, "Gather call is missing indices or "
+                                        "condition.")
+            indices = self.backend.where(condition)
         return self.backend.gather(x, indices, axis=axis)
-
-    def drop_values(self, x, condition):
-        idx = self.backend.where(condition)
-        return self.backend.gather(x, idx)[:, 0]
 
     def compile(self, func):
         return self.backend.function(func)

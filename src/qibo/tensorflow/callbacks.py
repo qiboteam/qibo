@@ -34,7 +34,8 @@ class EntanglementEntropy(callbacks.EntanglementEntropy):
         # Diagonalize
         eigvals = K.real(K.eigvalsh(rho))
         # Treating zero and negative eigenvalues
-        masked_eigvals = K.drop_values(eigvals, eigvals > EIGVAL_CUTOFF)
+        drop_condition = eigvals > EIGVAL_CUTOFF
+        masked_eigvals = K.gather(eigvals, condition=drop_condition)[:, 0]
         spectrum = -1 * K.log(masked_eigvals)
         if self.compute_spectrum:
             self.spectrum.append(spectrum)

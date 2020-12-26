@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import tensorflow as tf
 from qibo import K
 from qibo.base import measurements as base_measurements
 
