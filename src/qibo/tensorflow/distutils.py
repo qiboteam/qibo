@@ -1,6 +1,7 @@
 import copy
 import numpy as np
 import tensorflow as tf
+from qibo import K
 from qibo.base import gates
 from qibo.tensorflow import custom_operators as op
 from qibo.config import DTYPES, raise_error, get_threads
@@ -178,7 +179,7 @@ class DistributedQueues(DistributedBase):
         return devgate
 
     @staticmethod
-    def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
+    def count(queue: List[gates.Gate], nqubits: int):
         """Counts how many gates target each qubit.
 
         Args:
@@ -358,9 +359,9 @@ class DistributedState(DistributedBase):
     :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
     which uses state pieces instead of the full state vector tensor to allow
     distribution to multiple devices.
-    Using the ``DistributedState`` instead of the full state vector as a
-    ``tf.Tensor`` avoids creating two copies of the state in the CPU memory
-    and allows simulation of one more qubit.
+    Using the ``DistributedState`` instead of the full state vector as a tensor
+    avoids creating two copies of the state in the CPU memory and allows
+    simulation of one more qubit.
 
     The full state vector can be accessed using the ``state.vector`` or
     ``state.numpy()`` methods of the ``DistributedState``.
@@ -383,14 +384,14 @@ class DistributedState(DistributedBase):
 
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
-        with tf.device(self.device):
-            self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
+        with K.device(self.device):
+            self.pieces = [tf.Variable(K.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
         dtype = DTYPES.get('DTYPEINT')
         self.shapes = {
-            "full": tf.cast((2 ** self.nqubits,), dtype=dtype),
-            "device": tf.cast((len(self.pieces), n), dtype=dtype),
+            "full": K.cast((2 ** self.nqubits,), dtype=dtype),
+            "device": K.cast((len(self.pieces), n), dtype=dtype),
             "tensor": self.nqubits * (2,)
             }
 
@@ -403,7 +404,7 @@ class DistributedState(DistributedBase):
     def default(cls, circuit: "DistributedCircuit"):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
-      with tf.device(state.device):
+      with K.device(state.device):
           op.initial_state(state.pieces[0])
       return state
 
@@ -411,30 +412,30 @@ class DistributedState(DistributedBase):
     def ones(cls, circuit: "DistributedCircuit"):
       """Creates the |+++...+> state for adiabatic evolution initialization."""
       state = cls(circuit)
-      with tf.device(state.device):
-          norm = tf.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
-          state.pieces = [tf.Variable(tf.ones_like(p) / norm)
+      with K.device(state.device):
+          norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
+          state.pieces = [tf.Variable(K.ones_like(p) / norm)
                           for p in state.pieces]
       return state
 
     @classmethod
-    def from_vector(cls, full_state: tf.Tensor, circuit: "DistributedCircuit"):
+    def from_vector(cls, full_state: K.tensortype, circuit: "DistributedCircuit"):
         """Initializes pieces from a given full state vector."""
         state = cls(circuit)
         state.assign_vector(full_state)
         return state
 
-    def assign_vector(self, full_state: tf.Tensor):
+    def assign_vector(self, full_state: K.tensortype):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
         Args:
-            full_state (tf.Tensor): Full state vector as a tensor of shape
+            full_state (array): Full state vector as a tensor of shape
                 ``(2 ** nqubits)``.
         """
-        with tf.device(self.device):
-            full_state = tf.reshape(full_state, self.shapes["device"])
+        with K.device(self.device):
+            full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
-            new_state = tf.zeros(self.shapes["device"], dtype=self.dtype)
+            new_state = K.zeros(self.shapes["device"], dtype=self.dtype)
             new_state = op.transpose_state(pieces, new_state, self.nqubits,
                                            self.qubits.transpose_order,
                                            get_threads())
@@ -442,23 +443,23 @@ class DistributedState(DistributedBase):
                 self.pieces[i].assign(new_state[i])
 
     @property
-    def vector(self) -> tf.Tensor:
-        """Returns the full state vector as a ``tf.Tensor`` of shape ``(2 ** nqubits,)``.
+    def vector(self) -> K.tensortype:
+        """Returns the full state vector as a tensor of shape ``(2 ** nqubits,)``.
 
         This is done by merging the state pieces to a single tensor.
         Using this method will double memory usage.
         """
         if self.qubits.list == list(range(self.nglobal)):
-            with tf.device(self.device):
-                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
-                state = tf.reshape(state, self.shapes["full"])
+            with K.device(self.device):
+                state = K.concat([x[K.newaxis] for x in self.pieces], axis=0)
+                state = K.reshape(state, self.shapes["full"])
         elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
-            with tf.device(self.device):
-                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
-                state = tf.reshape(state, self.shapes["full"])
+            with K.device(self.device):
+                state = K.concat([x[:, K.newaxis] for x in self.pieces], axis=1)
+                state = K.reshape(state, self.shapes["full"])
         else: # fall back to the transpose op
-            with tf.device(self.device):
-                state = tf.zeros(self.shapes["full"], dtype=self.dtype)
+            with K.device(self.device):
+                state = K.zeros(self.shapes["full"], dtype=self.dtype)
                 state = op.transpose_state(self.pieces, state, self.nqubits,
                                            self.qubits.reverse_transpose_order,
                                            get_threads())

@@ -45,6 +45,15 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def concatenate(self, x, axis=None):
+        raise_error(NotImplementedError)
+
+    @property
+    @abstractmethod
+    def newaxis(self):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def copy(self, x):
         """Creates a copy of the tensor in memory."""
         raise_error(NotImplementedError)
@@ -52,6 +61,14 @@ class BaseBackend(ABC):
     @abstractmethod
     def zeros(self, shape, dtype=None):
         """Creates tensor of zeros with the given shape and dtype."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def ones(self, shape, dtype=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def ones_like(self, x):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -145,6 +162,13 @@ class NumpyBackend(BaseBackend):
     def stack(self, x, axis=None):
         return self.backend.stack(x, axis=axis)
 
+    def concatenate(self, x, axis=None):
+        return self.backend.concatenate(x, axis=axis)
+
+    @property
+    def newaxis(self):
+        return self.backend.newaxis
+
     def copy(self, x):
         return self.backend.copy(x)
 
@@ -152,6 +176,14 @@ class NumpyBackend(BaseBackend):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         return self.backend.zeros(shape, dtype=dtype)
+
+    def ones(self, shape, dtype=None):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.ones(shape, dtype=dtype)
+
+    def ones_like(self, x):
+        return self.backend.ones_like(x)
 
     def conj(self, x):
         return self.backend.conj(x)
@@ -215,6 +247,9 @@ class TensorflowBackend(NumpyBackend):
             dtypestr = dtype.__repr__().split(".")[1]
             x = x.astype(getattr(self.np, dtypestr))
         return self.backend.cast(x, dtype=dtype)
+
+    def concatenate(self, x, axis=None):
+        return self.backend.concat(x, axis=axis)
 
     def copy(self, x):
         return self.backend.identity(x)
