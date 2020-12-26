@@ -114,6 +114,18 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def exp(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def sin(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def cos(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def pow(self, base, exponent):
         raise_error(NotImplementedError)
 
@@ -227,7 +239,14 @@ class NumpyBackend(BaseBackend):
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
-        return x.astype(dtype)
+        if isinstance(x, self.backend.ndarray):
+            return x.astype(dtype)
+        return self.backend.array(x, dtype=dtype)
+
+    def diag(self, x, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.diag(x).astype(dtype)
 
     def reshape(self, x, shape):
         return self.backend.reshape(x, shape)
@@ -285,6 +304,15 @@ class NumpyBackend(BaseBackend):
 
     def right_shift(self, x, y):
         return self.backend.right_shift(x, y)
+
+    def exp(self, x):
+        return self.backend.exp(x)
+
+    def sin(self, x):
+        return self.backend.sin(x)
+
+    def cos(self, x):
+        return self.backend.cos(x)
 
     def pow(self, base, exponent):
         return base ** exponent
