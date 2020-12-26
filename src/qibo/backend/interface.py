@@ -29,6 +29,11 @@ class BaseBackend(ABC):
         """Type of tensor object that is compatible to the backend."""
         raise_error(NotImplementedError)
 
+    @property
+    @abstractmethod
+    def random(self):
+        raise_error(NotImplementedError)
+
     @abstractmethod
     def cast(self, x, dtype=None):
         """Casts tensor to the given dtype."""
@@ -59,6 +64,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def range(start, finish, step, dtype=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def zeros(self, shape, dtype=None):
         """Creates tensor of zeros with the given shape and dtype."""
         raise_error(NotImplementedError)
@@ -82,6 +91,18 @@ class BaseBackend(ABC):
     @abstractmethod
     def conj(self, x):
         """Elementwise complex conjugate of a tensor."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def mod(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def right_shift(self, x, y):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def pow(self, base, exponent):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -138,6 +159,14 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def unique(self, x, return_counts=False):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def gather(self, x, indices, axis=0):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def drop_values(self, x, condition):
         """Used in callbacks.EntanglementEntropy."""
         raise_error(NotImplementedError)
@@ -180,6 +209,10 @@ class NumpyBackend(BaseBackend):
     def tensortype(self):
         return self.backend.ndarray
 
+    @property
+    def random(self):
+        return self.backend.random
+
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
@@ -200,6 +233,11 @@ class NumpyBackend(BaseBackend):
 
     def copy(self, x):
         return self.backend.copy(x)
+
+    def range(self, start, stop, step, dtype=None):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.arange(start, stop, step, dtype=dtype)
 
     def zeros(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -222,6 +260,15 @@ class NumpyBackend(BaseBackend):
 
     def conj(self, x):
         return self.backend.conj(x)
+
+    def mod(self, x, y):
+        return self.backend.mod(x, y)
+
+    def right_shift(self, x, y):
+        return self.backend.right_shift(x, y)
+
+    def pow(self, base, exponent):
+        return base ** exponent
 
     def square(self, x):
         return x ** 2
@@ -258,6 +305,16 @@ class NumpyBackend(BaseBackend):
 
     def eigvalsh(self, x):
         return self.backend.linalg.eigvalsh(x)
+
+    def unique(self, x, return_counts=False):
+        # Uses numpy backend always (even on Tensorflow)
+        return self.np.unique(x, return_counts=return_counts)
+
+    def gather(self, x, indices, axis=0):
+        if axis < 0:
+            axis += len(x.shape)
+        idx = axis * (slice(None),) + (indices,)
+        return x[idx]
 
     def drop_values(self, x, condition):
         return x[condition]
@@ -304,6 +361,11 @@ class TensorflowBackend(NumpyBackend):
     def copy(self, x):
         return self.backend.identity(x)
 
+    def range(self, start, stop, step, dtype=None):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.range(start, stop, step, dtype=dtype)
+
     def real(self, x):
         return self.backend.math.real(x)
 
@@ -312,6 +374,15 @@ class TensorflowBackend(NumpyBackend):
 
     def conj(self, x):
         return self.backend.math.conj(x)
+
+    def mod(self, x, y):
+        return self.backend.math.mod(x, y)
+
+    def right_shift(self, x, y):
+        return self.backend.bitwise.right_shift(x, y)
+
+    def pow(self, base, exponent):
+        return self.backend.math.pow(base, exponent)
 
     def square(self, x):
         return self.backend.square(x)
@@ -330,6 +401,9 @@ class TensorflowBackend(NumpyBackend):
 
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
+
+    def gather(self, x, indices, axis=0):
+        return self.backend.gather(x, indices, axis=axis)
 
     def drop_values(self, x, condition):
         idx = self.backend.where(condition)
