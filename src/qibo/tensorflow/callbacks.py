@@ -1,65 +1,64 @@
-import numpy as np
-import tensorflow as tf
+import math
+from qibo import K
 from qibo.base import callbacks
-from qibo.config import DTYPES, EIGVAL_CUTOFF, raise_error
-from typing import Union
+from qibo.config import EIGVAL_CUTOFF, raise_error
 
 
 class PartialTrace(callbacks.PartialTrace):
 
     def set_nqubits(self, state):
-        if not (isinstance(state, np.ndarray) or isinstance(state, tf.Tensor)):
+        if not isinstance(state, K.tensor_types):
             raise_error(TypeError, "State of unknown type {} was given in callback "
                                    "calculation.".format(type(state)))
         if self._nqubits is None:
-            self.nqubits = int(np.log2(tuple(state.shape)[0]))
+            self.nqubits = int(math.log2(tuple(state.shape)[0]))
 
     def state_vector_call(self, state):
         self.set_nqubits(state)
-        state = tf.reshape(state, self.nqubits * (2,))
-        rho = tf.tensordot(state, tf.math.conj(state),
+        state = K.reshape(state, self.nqubits * (2,))
+        rho = K.tensordot(state, K.conj(state),
                            axes=[self.partition, self.partition])
-        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
+        return K.reshape(rho, (self.rho_dim, self.rho_dim))
 
     def density_matrix_call(self, state):
         self.set_nqubits(state)
-        state = tf.reshape(state, 2 * self.nqubits * (2,))
-        rho = tf.einsum(self.traceout(), state)
-        return tf.reshape(rho, (self.rho_dim, self.rho_dim))
+        state = K.reshape(state, 2 * self.nqubits * (2,))
+        rho = K.einsum(self.traceout(), state)
+        return K.reshape(rho, (self.rho_dim, self.rho_dim))
 
 
 class EntanglementEntropy(callbacks.EntanglementEntropy):
-    _log2 = tf.cast(tf.math.log(2.0), dtype=DTYPES.get('DTYPE'))
+    _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
-    def entropy(self, rho: tf.Tensor) -> tf.Tensor:
+    def entropy(self, rho: K.tensortype) -> K.tensortype:
         # Diagonalize
-        eigvals = tf.math.real(tf.linalg.eigvalsh(rho))
+        eigvals = K.real(K.eigvalsh(rho))
         # Treating zero and negative eigenvalues
-        masked_eigvals = tf.gather(eigvals, tf.where(eigvals > EIGVAL_CUTOFF))[:, 0]
-        spectrum = -1 * tf.math.log(masked_eigvals)
+        masked_eigvals = K.drop_values(eigvals, eigvals > EIGVAL_CUTOFF)
+        spectrum = -1 * K.log(masked_eigvals)
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
-        entropy = tf.reduce_sum(masked_eigvals * spectrum)
+        entropy = K.sum(masked_eigvals * spectrum)
         return entropy / self._log2
 
 
 class Norm(callbacks.Norm):
 
     def state_vector_call(self, state):
-        return tf.sqrt(tf.reduce_sum(tf.square(tf.abs(state))))
+        return K.sqrt(K.sum(K.square(K.abs(state))))
 
     def density_matrix_call(self, state):
-        return tf.linalg.trace(state)
+        return K.trace(state)
 
 
 class Overlap(callbacks.Overlap):
 
-    def __init__(self, state: Union[np.ndarray, tf.Tensor]):
+    def __init__(self, state: K.tensortype):
         super().__init__()
-        self.statec = tf.math.conj(tf.cast(state, dtype=DTYPES.get('DTYPECPX')))
+        self.statec = K.conj(K.cast(state, dtype='DTYPECPX'))
 
     def state_vector_call(self, state):
-        return tf.abs(tf.reduce_sum(self.statec * state))
+        return K.abs(K.sum(self.statec * state))
 
     def density_matrix_call(self, state):
         raise_error(NotImplementedError, "Overlap callback is not implemented "
@@ -69,7 +68,7 @@ class Overlap(callbacks.Overlap):
 class Energy(callbacks.Energy):
 
     def density_matrix_call(self, state):
-        return tf.linalg.trace(tf.matmul(self.hamiltonian.matrix, state))
+        return K.trace(K.matmul(self.hamiltonian.matrix, state))
 
 
 class Gap(callbacks.Gap):

@@ -130,6 +130,19 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def eigh(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def eigvalsh(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def drop_values(self, x, condition):
+        """Used in callbacks.EntanglementEntropy."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def compile(self, func):
         raise_error(NotImplementedError)
 
@@ -240,6 +253,15 @@ class NumpyBackend(BaseBackend):
     def tensordot(self, x, y, axes=None):
         return self.backend.tensordot(x, y, axes=axes)
 
+    def eigh(self, x):
+        return self.backend.linalg.eigh(x)
+
+    def eigvalsh(self, x):
+        return self.backend.linalg.eigvalsh(x)
+
+    def drop_values(self, x, condition):
+        return x[condition]
+
     def compile(self, func):
         return func
 
@@ -308,6 +330,10 @@ class TensorflowBackend(NumpyBackend):
 
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
+
+    def drop_values(self, x, condition):
+        idx = self.backend.where(condition)
+        return self.backend.gather(x, idx)[:, 0]
 
     def compile(self, func):
         return self.backend.function(func)
