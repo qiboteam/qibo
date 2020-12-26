@@ -11,7 +11,11 @@ class BaseBackend(ABC):
         self._dtypes = {}
 
     def dtypes(self, name):
-        return getattr(self.backend, self._dtypes.get(name))
+        if name in self._dtypes:
+            dtype = self._dtypes.get(name)
+        else:
+            dtype = name
+        return getattr(self.backend, dtype)
 
     @property
     @abstractmethod
@@ -68,12 +72,20 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def zeros(self, shape, dtype=None):
+    def eye(self, dim, dtype='DTYPECPX'):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def zeros(self, shape, dtype='DTYPECPX'):
         """Creates tensor of zeros with the given shape and dtype."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def ones(self, shape, dtype=None):
+    def ones(self, shape, dtype='DTYPECPX'):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def zeros_like(self, x):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -148,6 +160,10 @@ class BaseBackend(ABC):
     @abstractmethod
     def tensordot(self, x, y, axes=None):
         """Generalized tensor product of two tensors."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def transpose(self, x, axes=None):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -234,15 +250,23 @@ class NumpyBackend(BaseBackend):
             dtype = self.dtypes(dtype)
         return self.backend.arange(start, stop, step, dtype=dtype)
 
+    def eye(self, dim, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.eye(dim, dtype=dtype)
+
     def zeros(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         return self.backend.zeros(shape, dtype=dtype)
 
-    def ones(self, shape, dtype=None):
+    def ones(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         return self.backend.ones(shape, dtype=dtype)
+
+    def zeros_like(self, x):
+        return self.backend.zeros_like(x)
 
     def ones_like(self, x):
         return self.backend.ones_like(x)
@@ -294,6 +318,9 @@ class NumpyBackend(BaseBackend):
 
     def tensordot(self, x, y, axes=None):
         return self.backend.tensordot(x, y, axes=axes)
+
+    def transpose(self, x, axes=None):
+        return self.backend.transpose(x, axes)
 
     def eigh(self, x):
         return self.backend.linalg.eigh(x)
