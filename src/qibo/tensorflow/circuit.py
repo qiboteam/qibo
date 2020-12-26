@@ -3,14 +3,11 @@
 import collections
 import numpy as np
 from qibo import K
-import tensorflow as tf
-from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
 from qibo.config import DEVICES, BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
-InitStateType = Union[np.ndarray, K.tensortype]
 OutputType = Union[K.tensortype, measurements.CircuitResult]
 
 
@@ -39,7 +36,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
             'TENSOR': self.nqubits * (2,),
             'FLAT': (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'), dtype='DTYPEINT')
+        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                            dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
         super().set_nqubits(gate)
@@ -93,7 +91,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "operators.")
         self._compiled_execute = K.compile(self._execute_for_compile)
 
-    def _execute(self, initial_state: Optional[InitStateType] = None
+    def _execute(self, initial_state: Optional[K.tensortype] = None
                  ) -> K.tensortype:
         """Performs all circuit gates on the state vector."""
         self._final_state = None
@@ -109,27 +107,26 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 callback.extend(results)
 
         if BACKEND['GATES'] != 'custom':
-            state = K.reshape(state, self.shapes.get('TF_FLAT'))
+            state = K.reshape(state, self.shapes.get('TENSOR_FLAT'))
 
         self._final_state = state
         return state
 
-    def _device_execute(self, initial_state: Optional[InitStateType] = None
+    def _device_execute(self, initial_state: Optional[K.tensortype] = None
                         ) -> K.tensortype:
         """Executes circuit on the specified device and checks for OOM errors."""
-        oom_error = errors_impl.ResourceExhaustedError
         device = DEVICES['DEFAULT']
         try:
             with K.device(device):
                 state = self._execute(initial_state=initial_state)
-        except oom_error:
+        except K.oom_error:
             raise_error(RuntimeError, f"State does not fit in {device} memory."
                                        "Please switch the execution device to a "
                                        "different one using ``qibo.set_device``.")
         return state
 
     def _repeated_execute(self, nreps: int,
-                          initial_state: Optional[InitStateType] = None
+                          initial_state: Optional[K.tensortype] = None
                           ) -> K.tensortype:
         results = []
         for _ in range(nreps):
@@ -148,7 +145,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 self.measurement_gate.qubits, decimal_samples=results)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
-    def execute(self, initial_state: Optional[InitStateType] = None,
+    def execute(self, initial_state: Optional[K.tensortype] = None,
                 nshots: Optional[int] = None) -> OutputType:
         """Propagates the state through the circuit applying the corresponding gates.
 
@@ -173,7 +170,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
 
         Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
+            initial_state (array): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
                 A Tensorflow tensor with shape ``nqubits * (2,)`` is also allowed
                 allowed as an initial state but must have the `dtype` of the circuit.
                 If ``initial_state`` is ``None`` the |000...0> state will be used.
@@ -211,7 +208,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
+    def _cast_initial_state(self, state: K.tensortype) -> K.tensortype:
         if isinstance(state, K.tensor_types):
             return K.cast(state)
         raise_error(TypeError, "Initial state type {} is not recognized."
@@ -219,11 +216,11 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> K.tensortype:
         """Creates the |000...0> state for default initialization."""
-        zeros = K.zeros(self.shapes.get('TF_FLAT'))
+        zeros = K.zeros(self.shapes.get('TENSOR_FLAT'))
         state = op.initial_state(zeros)
         return state
 
-    def get_initial_state(self, state: Optional[InitStateType] = None
+    def get_initial_state(self, state: Optional[K.tensortype] = None
                            ) -> K.tensortype:
         """"""
         if state is None:
@@ -266,9 +263,10 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
             'VECTOR': (2 ** nqubits,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = K.cast(self.shapes.get('FLAT'), dtype='DTYPEINT')
+        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                            dtype='DTYPEINT')
 
-    def _cast_initial_state(self, state: InitStateType) -> K.tensortype:
+    def _cast_initial_state(self, state: K.tensortype) -> K.tensortype:
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
         if tuple(state.shape) == self.shapes['VECTOR']:

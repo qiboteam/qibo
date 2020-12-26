@@ -92,6 +92,11 @@ class BaseBackend(ABC):
     def device(self, device_name):
         raise_error(NotImplementedError)
 
+    @property
+    @abstractmethod
+    def oom_error(self):
+        raise_error(NotImplementedError)
+
 
 class NumpyBackend(BaseBackend):
 
@@ -111,7 +116,7 @@ class NumpyBackend(BaseBackend):
 
     @property
     def tensor_types(self):
-        return (self.backend.npndarray,)
+        return (self.backend.ndarray,)
 
     @property
     def tensortype(self):
@@ -161,6 +166,10 @@ class NumpyBackend(BaseBackend):
         raise_error(NotImplementedError, "Device functionality is not "
                                          "available in the numpy backend.")
 
+    @property
+    def oom_error(self):
+        raise_error(NotImplementedError)
+
 
 class TensorflowBackend(NumpyBackend):
 
@@ -203,6 +212,10 @@ class TensorflowBackend(NumpyBackend):
 
     def device(self, device_name):
         return self.backend.device(device_name)
+
+    @property
+    def oom_error(self):
+        return self.backend.python.framework.errors_impl.ResourceExhaustedError
 
 
 function_names = [m for m in dir(BaseBackend) if m[:2] != "__"]
