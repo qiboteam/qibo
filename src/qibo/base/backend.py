@@ -7,29 +7,32 @@ class BaseBackend(ABC):
     def __init__(self):
         self.backend = None
         self.name = "base"
-        self._dtypes = {'STRING': 'double', 'DTYPEINT': 'int64',
-                        'DTYPE': 'float64', 'DTYPECPX': 'complex128'}
+        self._gates = None
+        self._einsum = None
+
+        self._precision = 'double'
+        self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
+                        'DTYPECPX': 'complex128'}
 
         self.cpu_devices = None
         self.gpu_devices = None
-        self._active_device = None
+        self._default_device = None
+
+    @property
+    def precision(self):
+        return self._precision
 
     def dtypes(self, name):
-        if name == 'STRING':
-            return self._dtypes.get('STRING')
         if name in self._dtypes:
             dtype = self._dtypes.get(name)
         else:
             dtype = name
         return getattr(self.backend, dtype)
 
-    @property
-    def active_device(self):
-        return self._active_device
-
-    def set_precision(self, dtype='double'):
+    @precision.setter
+    def precision(self, dtype):
         from qibo.config import ALLOW_SWITCHERS, warnings
-        if not ALLOW_SWITCHERS and dtype != self._dtypes['STRING']:
+        if not ALLOW_SWITCHERS and dtype != self.precision:
             warnings.warn("Precision should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if dtype == 'single':
@@ -40,18 +43,16 @@ class BaseBackend(ABC):
             self._dtypes['DTYPECPX'] = 'complex128'
         else:
             raise_error(RuntimeError, f'dtype {dtype} not supported.')
-        self._dtypes['STRING'] = dtype
+        self._precision = dtype
 
-    def set_device(self, name):
-        """Set default execution device.
+    @property
+    def default_device(self):
+        return self._default_device
 
-        Args:
-            name (str): Device name. Should follow the pattern
-                '/{device type}:{device number}' where device type is one of
-                CPU or GPU.
-        """
+    @default_device.setter
+    def default_device(self, name):
         from qibo.config import ALLOW_SWITCHERS, warnings
-        if not ALLOW_SWITCHERS and name != self._active_device:  # pragma: no cover
+        if not ALLOW_SWITCHERS and name != self.default_device: # pragma: no cover
             # no testing is implemented for warnings
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
@@ -64,7 +65,7 @@ class BaseBackend(ABC):
             raise_error(ValueError, f"Unknown device type {device_type}.")
         if device_number >= len(self._devices[device_type]):
             raise_error(ValueError, f"Device {name} does not exist.")
-        self._active_device = name
+        self._default_device = name
 
     @property
     @abstractmethod

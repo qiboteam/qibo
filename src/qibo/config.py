@@ -92,6 +92,43 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.int32, np.int64, np.float32,
                  np.float64, np.complex64, np.complex128)
 
+BACKEND = {'GATES': 'custom', 'EINSUM': None, 'STRING': 'custom'}
+
+def set_backend(backend='custom'):
+    """Sets backend used to implement gates.
+
+    Args:
+        backend (str): possible options are 'custom' for the gates that use
+            custom tensorflow operator and 'defaulteinsum' or 'matmuleinsum'
+            for the gates that use tensorflow primitives (``tf.einsum`` or
+            ``tf.matmul`` respectively).
+    """
+    if not ALLOW_SWITCHERS and backend != BACKEND['GATES']:
+        warnings.warn("Backend should not be changed after allocating gates.",
+                      category=RuntimeWarning)
+    if backend == 'custom':
+        BACKEND['GATES'] = 'custom'
+        BACKEND['EINSUM'] = None
+    elif backend == 'defaulteinsum':
+        from qibo.tensorflow import einsum
+        BACKEND['GATES'] = 'native'
+        BACKEND['EINSUM'] = einsum.DefaultEinsum()
+    elif backend == 'matmuleinsum':
+        from qibo.tensorflow import einsum
+        BACKEND['GATES'] = 'native'
+        BACKEND['EINSUM'] = einsum.MatmulEinsum()
+    else:
+        raise_error(RuntimeError, f"Gate backend '{backend}' not supported.")
+    BACKEND['STRING'] = backend
+
+def get_backend():
+    """Get backend used to implement gates.
+
+    Returns:
+        A string with the backend name.
+    """
+    return BACKEND['STRING']
+
 
 # Define numpy and tensorflow matrices
 # numpy matrices are exposed to user via ``from qibo import matrices``
@@ -108,7 +145,7 @@ def set_precision(dtype='double'):
         dtype (str): possible options are 'single' for single precision
             (complex64) and 'double' for double precision (complex128).
     """
-    K.set_precision(dtype)
+    K.precision = dtype
     matrices.allocate_matrices()
     tfmatrices.allocate_matrices()
 
@@ -118,61 +155,23 @@ def get_precision():
     Returns:
         A string with the precision name ('single', 'double').
     """
-    return K.dtypes('STRING')
+    return K.precision
 
 
 def set_device(name):
-    K.set_device(name)
-    with tf.device(name):
+    """Set default execution device.
+
+    Args:
+        name (str): Device name. Should follow the pattern
+            '/{device type}:{device number}' where device type is one of
+            CPU or GPU.
+    """
+    K.default_device = name
+    with tf.device(K.default_device):
         tfmatrices.allocate_matrices()
 
 def get_device():
-    return K.active_device
-
-
-# Load backend specifics
-if BACKEND_NAME == "tensorflow":
-    # Gate backends
-    BACKEND = {'GATES': 'custom', 'EINSUM': None, 'STRING': 'custom'}
-
-    def set_backend(backend='custom'):
-        """Sets backend used to implement gates.
-
-        Args:
-            backend (str): possible options are 'custom' for the gates that use
-                custom tensorflow operator and 'defaulteinsum' or 'matmuleinsum'
-                for the gates that use tensorflow primitives (``tf.einsum`` or
-                ``tf.matmul`` respectively).
-        """
-        if not ALLOW_SWITCHERS and backend != BACKEND['GATES']:
-            warnings.warn("Backend should not be changed after allocating gates.",
-                          category=RuntimeWarning)
-        if backend == 'custom':
-            BACKEND['GATES'] = 'custom'
-            BACKEND['EINSUM'] = None
-        elif backend == 'defaulteinsum':
-            from qibo.tensorflow import einsum
-            BACKEND['GATES'] = 'native'
-            BACKEND['EINSUM'] = einsum.DefaultEinsum()
-        elif backend == 'matmuleinsum':
-            from qibo.tensorflow import einsum
-            BACKEND['GATES'] = 'native'
-            BACKEND['EINSUM'] = einsum.MatmulEinsum()
-        else:
-            raise_error(RuntimeError, f"Gate backend '{backend}' not supported.")
-        BACKEND['STRING'] = backend
-
-    def get_backend():
-        """Get backend used to implement gates.
-
-        Returns:
-            A string with the backend name.
-        """
-        return BACKEND['STRING']
-
-else: # pragma: no cover
-    # case not tested because the backend is preset to TensorFlow
-    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
+    return K.default_device
 
 
 # Configuration for logging mechanism

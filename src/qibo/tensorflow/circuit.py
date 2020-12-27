@@ -111,7 +111,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _device_execute(self, initial_state=None):
         """Executes circuit on the specified device and checks for OOM errors."""
-        device = K.active_device
+        device = K.default_device
         try:
             with K.device(device):
                 state = self._execute(initial_state=initial_state)
