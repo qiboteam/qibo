@@ -29,7 +29,7 @@ class BaseBackend(ABC):
 
     @property
     @abstractmethod
-    def tensortype(self):
+    def Tensor(self):
         """Type of tensor object that is compatible to the backend."""
         raise_error(NotImplementedError)
 
@@ -237,7 +237,7 @@ class NumpyBackend(BaseBackend):
         return (self.backend.ndarray,)
 
     @property
-    def tensortype(self):
+    def Tensor(self):
         return self.backend.ndarray
 
     @property
@@ -410,7 +410,7 @@ class TensorflowBackend(NumpyBackend):
         return (self.np.ndarray, self.backend.Tensor, self.backend.Variable)
 
     @property
-    def tensortype(self):
+    def Tensor(self):
         return self.backend.Tensor
 
     def cast(self, x, dtype='DTYPECPX'):

@@ -30,7 +30,7 @@ class PartialTrace(callbacks.PartialTrace):
 class EntanglementEntropy(callbacks.EntanglementEntropy):
     _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
-    def entropy(self, rho: K.tensortype) -> K.tensortype:
+    def entropy(self, rho):
         # Diagonalize
         eigvals = K.real(K.eigvalsh(rho))
         # Treating zero and negative eigenvalues
@@ -54,7 +54,7 @@ class Norm(callbacks.Norm):
 
 class Overlap(callbacks.Overlap):
 
-    def __init__(self, state: K.tensortype):
+    def __init__(self, state):
         super().__init__()
         self.statec = K.conj(K.cast(state, dtype='DTYPECPX'))
 

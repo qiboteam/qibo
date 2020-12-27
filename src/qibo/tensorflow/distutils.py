@@ -419,13 +419,13 @@ class DistributedState(DistributedBase):
       return state
 
     @classmethod
-    def from_vector(cls, full_state: K.tensortype, circuit: "DistributedCircuit"):
+    def from_vector(cls, full_state, circuit):
         """Initializes pieces from a given full state vector."""
         state = cls(circuit)
         state.assign_vector(full_state)
         return state
 
-    def assign_vector(self, full_state: K.tensortype):
+    def assign_vector(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
         Args:
@@ -443,7 +443,7 @@ class DistributedState(DistributedBase):
                 self.pieces[i].assign(new_state[i])
 
     @property
-    def vector(self) -> K.tensortype:
+    def vector(self):
         """Returns the full state vector as a tensor of shape ``(2 ** nqubits,)``.
 
         This is done by merging the state pieces to a single tensor.

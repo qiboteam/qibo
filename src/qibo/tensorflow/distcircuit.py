@@ -11,7 +11,6 @@ from qibo.tensorflow import callbacks, circuit, measurements
 from qibo.tensorflow import distutils as utils
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Set, Tuple, Union
-InitStateType = Union[K.tensortype, utils.DistributedState]
 OutputType = Union[utils.DistributedState, measurements.CircuitResult]
 
 
@@ -117,8 +116,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
-    def _device_job(self, state: K.tensortype, gates: List["TensorflowGate"]
-                    ) -> K.tensortype:
+    def _device_job(self, state, gates):
         for gate in gates:
             state = gate(state)
         return state
@@ -196,8 +194,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             # Redo all global SWAPs that happened so far
             self._revert_swaps(state, gate.swap_reset)
 
-    def _execute(self, initial_state: Optional[InitStateType] = None
-                 ) -> utils.DistributedState:
+    def _execute(self, initial_state=None) -> utils.DistributedState:
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
@@ -223,8 +220,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         self._final_state = state
         return state
 
-    def _device_execute(self, initial_state: Optional[InitStateType] = None
-                        ) -> utils.DistributedState:
+    def _device_execute(self, initial_state=None) -> utils.DistributedState:
         """Executes circuit and checks for OOM errors."""
         try:
             return self._execute(initial_state)
@@ -233,8 +229,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
 
-    def execute(self, initial_state: Optional[InitStateType] = None,
-                nshots: Optional[int] = None) -> OutputType:
+    def execute(self, initial_state=None, nshots=None) -> OutputType:
         """Equivalent to :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute`.
 
         If measurements are not specified this returns a
@@ -245,9 +240,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         return super(TensorflowDistributedCircuit, self).execute(
             initial_state=initial_state, nshots=nshots)
 
-    def get_initial_state(
-          self, state: Optional[Union[InitStateType, str]] = None
-          ) -> K.tensortype:
+    def get_initial_state(self, state=None):
         """"""
         if not self.queues.queues and self.queue:
             self.queues.set(self.queue)

@@ -38,7 +38,7 @@ class TensorflowGate(BackendGate):
         self.target_qubits_dm = None
 
     @staticmethod
-    def control_unitary(unitary: K.tensortype) -> K.tensortype:
+    def control_unitary(unitary):
         shape = tuple(unitary.shape)
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method for "
@@ -65,15 +65,15 @@ class TensorflowGate(BackendGate):
                 self.target_qubits_dm = tuple(targets + self.nqubits)
                 self.qubits_tensor_dm = self.qubits_tensor + self.nqubits
 
-    def set_nqubits(self, state: K.tensortype):
+    def set_nqubits(self, state):
         self.nqubits = int(math.log2(tuple(state.shape)[0]))
         self.prepare()
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         return self.gate_op(state, self.qubits_tensor, self.nqubits,
                             *self.target_qubits, get_threads())
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits, get_threads())
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
@@ -96,11 +96,11 @@ class MatrixGate(TensorflowGate):
         super().prepare()
         self.reprepare()
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         return self.gate_op(state, self.matrix, self.qubits_tensor,
                             self.nqubits, *self.target_qubits, get_threads())
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
                              2 * self.nqubits, *self.target_qubits, get_threads())
         adjmatrix = K.conj(self.matrix)
@@ -140,7 +140,7 @@ class Y(TensorflowGate, gates.Y):
     def construct_unitary(self):
         return np.cast([[0, -1j], [1j, 0]])
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         return -TensorflowGate.density_matrix_call(self, state)
 
 
@@ -164,10 +164,10 @@ class I(TensorflowGate, gates.I):
     def construct_unitary(self):
         return np.eye(2 ** len(self.target_qubits))
 
-    def state_vector_call(self, state: K.tensortype):
+    def state_vector_call(self, state):
         return state
 
-    def density_matrix_call(self, state: K.tensortype):
+    def density_matrix_call(self, state):
         return state
 
 
@@ -205,11 +205,11 @@ class Collapse(TensorflowGate, gates.Collapse):
         raise_error(ValueError, "Collapse gate does not have unitary "
                                 "representation.")
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
                             self.nqubits, self.normalize, get_threads())
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
                              2 * self.nqubits, False, get_threads())
         state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
@@ -264,17 +264,17 @@ class M(TensorflowGate, gates.M):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         shape = self.nqubits * (2,)
         x = K.reshape(K.square(K.abs(state)), shape)
         return K.sum(x, axis=self.unmeasured_qubits)
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         shape = 2 * self.nqubits * (2,)
         x = K.einsum(self.traceout, K.reshape(state, shape))
         return K.cast(x, dtype='DTYPE')
 
-    def sample(self, state: K.tensortype, nshots: int) -> K.tensortype:
+    def sample(self, state, nshots):
         probs = getattr(self, self._active_call)(state)
         probs = K.transpose(probs, axes=self.reduced_target_qubits)
 
@@ -290,7 +290,7 @@ class M(TensorflowGate, gates.M):
             result = result.apply_bitflips(*self.bitflip_map)
         return result
 
-    def __call__(self, state: K.tensortype, nshots: int) -> K.tensortype:
+    def __call__(self, state, nshots):
         if isinstance(state, self.distutils.DistributedState):
             with K.device(state.device):
                 state = state.vector
@@ -442,7 +442,7 @@ class _CUn_(MatrixGate):
             self.matrix = K.cast(self.base.construct_unitary(self),
                                  dtype='DTYPECPX')
 
-    def construct_unitary(self) -> K.tensortype:
+    def construct_unitary(self):
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
 
 
@@ -564,7 +564,7 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def _dagger(self) -> "GenerelizedfSim":
         unitary, phi = self.parameters
-        if isinstance(unitary, K.tensortype):
+        if isinstance(unitary, K.Tensor):
             ud = K.conj(K.transpose(unitary))
         else:
             ud = unitary.conj().T
@@ -616,14 +616,14 @@ class Unitary(MatrixGate, gates.Unitary):
 
     def construct_unitary(self):
         unitary = self.parameters
-        if isinstance(unitary, np.tensortype):
+        if isinstance(unitary, np.Tensor):
             return np.cast(unitary)
-        if isinstance(unitary, self.K.tensortype):
+        if isinstance(unitary, self.K.Tensor):
             return K.copy(K.cast(unitary))
 
     def _dagger(self) -> "Unitary":
         unitary = self.parameters
-        if isinstance(unitary, K.tensortype):
+        if isinstance(unitary, K.Tensor):
             ud = K.conj(K.transpose(unitary))
         else:
             ud = unitary.conj().T
@@ -728,14 +728,14 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
     def prepare(self):
         self.is_prepared = True
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         for i, unitary in enumerate(self.unitaries):
             state = unitary(state)
         if self.additional_unitary is not None:
             state = self.additional_unitary(state)
         return state
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         return self.state_vector_call(state)
 
 
@@ -750,12 +750,12 @@ class Flatten(TensorflowGate, gates.Flatten):
         raise_error(ValueError, "Flatten gate does not have unitary "
                                  "representation.")
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         shape = tuple(state.shape)
         _state = np.reshape(np.cast(self.coefficients), shape)
         return K.cast(_state, dtype="DTYPECPX")
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         return self.state_vector_call(state)
 
 
@@ -775,11 +775,11 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
         raise_error(ValueError, "Unitary gate does not have unitary "
                                  "representation.")
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         self.callback.append(self.callback(state))
         return state
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         return self.state_vector_call(state)
 
 
@@ -819,11 +819,11 @@ class KrausChannel(TensorflowGate, gates.KrausChannel):
     def construct_unitary(self):
         raise_error(ValueError, "Channels do not have unitary representation.")
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         raise_error(ValueError, "`KrausChannel` cannot be applied to state "
                                 "vectors. Please switch to density matrices.")
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         new_state = K.zeros_like(state)
         for gate, inv_gate in zip(self.gates, self.inv_gates):
             new_state += gate(state)
@@ -849,13 +849,13 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
         if self.seed is not None:
             np.random.seed(self.seed)
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         for p, gate in zip(self.probs, self.gates):
             if np.random.random() < p:
                 state = gate(state)
         return state
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
             state = gate(state)
@@ -893,7 +893,7 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
             return None
         return gate
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         not_collapsed = True
         if np.random.random() < self.probs[-2]:
             state = self.gates[-2](state)
@@ -949,7 +949,7 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
             seed=seed)
         self.inv_gates = tuple()
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         if np.random.random() < self.probs[0]:
             state = self.gates[0](state)
         return ResetChannel.state_vector_call(self, state)
@@ -968,7 +968,7 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
             seed=seed)
         self.gate_op = op.apply_two_qubit_gate
 
-    def prepare(self) -> K.tensortype:
+    def prepare(self):
         super().prepare()
         targets = np.cast(self.target_qubits, dtype="int32")
         controls = np.cast(self.control_qubits, dtype="int32")
@@ -987,10 +987,10 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
         matrix[-1, 0] = self.preset0
         return matrix
 
-    def state_vector_call(self, state: K.tensortype) -> K.tensortype:
+    def state_vector_call(self, state):
         raise_error(ValueError, "Thermal relaxation cannot be applied to "
                                 "state vectors when T1 < T2.")
 
-    def density_matrix_call(self, state: K.tensortype) -> K.tensortype:
+    def density_matrix_call(self, state):
         return self.gate_op(state, self.matrix, self.qubits_tensor,
                             2 * self.nqubits, *self.target_qubits_dm, get_threads())
