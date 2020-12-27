@@ -3,7 +3,7 @@
 import collections
 from qibo import K
 from qibo.base import circuit
-from qibo.config import DEVICES, BACKEND, raise_error
+from qibo.config import BACKEND, raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Tuple
@@ -111,7 +111,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _device_execute(self, initial_state=None):
         """Executes circuit on the specified device and checks for OOM errors."""
-        device = DEVICES['DEFAULT']
+        device = K.active_device
         try:
             with K.device(device):
                 state = self._execute(initial_state=initial_state)

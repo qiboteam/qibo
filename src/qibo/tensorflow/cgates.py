@@ -7,7 +7,7 @@ from qibo import K
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.backend import factory
-from qibo.config import BACKEND, DEVICES, raise_error, get_threads
+from qibo.config import BACKEND, raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 np = factory.get("numpy")()
@@ -256,9 +256,9 @@ class M(TensorflowGate, gates.M):
 
     def _get_cpu(self): # pragma: no cover
         # case not covered by GitHub workflows because it requires OOM
-        if not DEVICES['CPU']:
+        if not K.cpu_devices:
             raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
-        return DEVICES['CPU'][0]
+        return K.cpu_devices[0]
 
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "

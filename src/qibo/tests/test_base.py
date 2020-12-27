@@ -299,13 +299,12 @@ def test_precision_dictionary(precision):
     """Check if ``set_precision`` changes the ``DTYPES`` dictionary."""
     import qibo
     import tensorflow as tf
-    from qibo.config import DTYPES
     original_precision = qibo.get_precision()
     qibo.set_precision(precision)
     if precision == "single":
-        assert DTYPES.get("DTYPECPX") == tf.complex64
+        assert qibo.K.dtypes("DTYPECPX") == tf.complex64
     else:
-        assert DTYPES.get("DTYPECPX") == tf.complex128
+        assert qibo.K.dtypes("DTYPECPX") == tf.complex128
     qibo.set_precision(original_precision)
 
 
