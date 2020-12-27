@@ -378,10 +378,8 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                   [0, 0, 0, 1], [0, 0, 1, 0]])
     if tfmatrices:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
-        a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
+        from qibo import K
+        a1, a2 = K.cast(a1), K.cast(a2)
 
     gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)

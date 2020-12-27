@@ -140,12 +140,11 @@ def test_compiling_twice_exception():
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_custom_compilation(backend):
-    import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    init_state = tf.cast(np.ones(4) / 2.0, dtype=DTYPES.get('DTYPECPX'))
+    init_state = K.ones(4) / 2.0
 
     def run_circuit(initial_state):
         c = Circuit(2)
@@ -155,7 +154,7 @@ def test_circuit_custom_compilation(backend):
         return c.execute(initial_state)
 
     r1 = run_circuit(init_state).numpy()
-    compiled_circuit = tf.function(run_circuit)
+    compiled_circuit = K.compile(run_circuit)
     if backend == "custom":
         with pytest.raises(NotImplementedError):
             r2 = compiled_circuit(init_state)

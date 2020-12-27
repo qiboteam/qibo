@@ -4,7 +4,7 @@ import tensorflow as tf
 from qibo import K
 from qibo.base import gates
 from qibo.tensorflow import custom_operators as op
-from qibo.config import DTYPES, raise_error, get_threads
+from qibo.config import raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -380,7 +380,7 @@ class DistributedState(DistributedBase):
         super(DistributedState, self).__init__(circuit)
         self.device = circuit.memory_device
         self.qubits = circuit.queues.qubits
-        self.dtype = DTYPES.get('DTYPECPX')
+        self.dtype = K.dtypes('DTYPECPX')
 
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
@@ -388,10 +388,9 @@ class DistributedState(DistributedBase):
             self.pieces = [tf.Variable(K.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
-        dtype = DTYPES.get('DTYPEINT')
         self.shapes = {
-            "full": K.cast((2 ** self.nqubits,), dtype=dtype),
-            "device": K.cast((len(self.pieces), n), dtype=dtype),
+            "full": K.cast((2 ** self.nqubits,), dtype='DTYPEINT'),
+            "device": K.cast((len(self.pieces), n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
@@ -435,7 +434,7 @@ class DistributedState(DistributedBase):
         with K.device(self.device):
             full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
-            new_state = K.zeros(self.shapes["device"], dtype=self.dtype)
+            new_state = K.zeros(self.shapes["device"])
             new_state = op.transpose_state(pieces, new_state, self.nqubits,
                                            self.qubits.transpose_order,
                                            get_threads())
@@ -459,7 +458,7 @@ class DistributedState(DistributedBase):
                 state = K.reshape(state, self.shapes["full"])
         else: # fall back to the transpose op
             with K.device(self.device):
-                state = K.zeros(self.shapes["full"], dtype=self.dtype)
+                state = K.zeros(self.shapes["full"])
                 state = op.transpose_state(self.pieces, state, self.nqubits,
                                            self.qubits.reverse_transpose_order,
                                            get_threads())

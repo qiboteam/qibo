@@ -213,16 +213,16 @@ class ParallelBFGS: # pragma: no cover
     import numpy as np
     import functools
     import itertools
-    from qibo.config import DTYPES
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
+        from qibo import K
         ParallelBFGSResources().args = args
         ParallelBFGSResources().custom_loss = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo(self.DTYPES.get("DTYPE").as_numpy_dtype).eps
+        self.precision = self.np.finfo(K.dtypes("DTYPE").as_numpy_dtype).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options

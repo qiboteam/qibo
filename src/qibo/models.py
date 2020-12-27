@@ -252,8 +252,7 @@ class QAOA(object):
             initial_parameters = 0.01 * np.random.random(4)
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
-    from qibo import hamiltonians, optimizers
-    from qibo.config import K, DTYPES
+    from qibo import hamiltonians, optimizers, K
     from qibo.base.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
@@ -353,10 +352,9 @@ class QAOA(object):
 
         if state is None:
             # Generate |++...+> state
-            dtype = self.DTYPES.get('DTYPECPX')
-            n = self.K.cast(2 ** self.nqubits, dtype=self.DTYPES.get('DTYPEINT'))
+            n = self.K.cast(2 ** self.nqubits, dtype='DTYPEINT')
             state = self.K.ones(n, dtype=dtype)
-            norm = self.K.cast(2 ** float(self.nqubits / 2.0), dtype=dtype)
+            norm = self.K.cast(2 ** float(self.nqubits / 2.0))
             return state / norm
         return StateCircuit._cast_initial_state(self, state)
 
@@ -386,9 +384,7 @@ class QAOA(object):
             return hamiltonian.expectation(state)
 
         if method == "sgd":
-            import tensorflow as tf
-            loss = lambda p, c, h: _loss(tf.cast(
-                p, dtype=self.DTYPES.get('DTYPECPX')), c, h)
+            loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
             import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()

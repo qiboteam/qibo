@@ -1219,9 +1219,8 @@ def test_unitary_dagger(backend, nqubits, tfmatrix):
 
     matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
     if tfmatrix:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+        from qibo import K
+        matrix = K.cast(matrix)
     gate = gates.Unitary(matrix, *range(nqubits))
     c = Circuit(nqubits)
     c.add((gate, gate.dagger()))
@@ -1265,9 +1264,8 @@ def test_generalizedfsim_dagger(backend, tfmatrix):
     matrix = np.random.random((2, 2))
     matrix = expm(1j * (matrix + matrix.T))
     if tfmatrix:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        matrix = tf.cast(matrix, dtype=DTYPES.get('DTYPECPX'))
+        from qibo import K
+        matrix = K.cast(matrix)
     gate = gates.GeneralizedfSim(0, 1, matrix, phi)
     c = Circuit(2)
     c.add((gate, gate.dagger()))

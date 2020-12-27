@@ -1,8 +1,10 @@
 """
 Define the default circuit, constants and types.
 """
-import logging
+import os
 import blessings
+import logging
+import warnings
 
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
@@ -16,6 +18,16 @@ LEAST_SIGNIFICANT_QUBIT = 0
 if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
     # case not tested because least significant qubit is preset to 0
     raise_error(NotImplementedError, "The least significant qubit should be 0.")
+
+# characters used in einsum strings
+EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+# Entanglement entropy eigenvalue cut-off
+# Eigenvalues smaller than this cut-off are ignored in entropy calculation
+EIGVAL_CUTOFF = 1e-14
+
+# Flag for raising warning in ``set_precision`` and ``set_backend``
+ALLOW_SWITCHERS = True
 
 
 def raise_error(exception, message=None, args=None):
@@ -46,12 +58,21 @@ set_computation_backend()
 
 # Load backend specifics
 if BACKEND_NAME == "tensorflow":
-    import os
-    import warnings
-
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
     import numpy as np
     import tensorflow as tf
+
+    ARRAY_TYPES = (np.ndarray, tf.Tensor)
+    NUMERIC_TYPES = (np.int, np.float, np.complex,
+                     np.int32, np.int64, np.float32,
+                     np.float64, np.complex64, np.complex128)
+
+    # Define numpy and tensorflow matrices
+    # numpy matrices are exposed to user via ``from qibo import matrices``
+    # tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
+    from qibo.backend import matrices as _matrices
+    matrices = _matrices.NumpyMatrices(np.complex128)
+    tfmatrices = _matrices.TensorflowMatrices(tf.complex128)
 
     # Set the number of threads from the environment variable
     OMP_NUM_THREADS = None
@@ -80,31 +101,6 @@ if BACKEND_NAME == "tensorflow":
         global OMP_NUM_THREADS
         OMP_NUM_THREADS = num_threads
 
-    # characters used in einsum strings
-    EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-    # TODO: Remove types from here and keep them to backend
-    # Default types
-    DTYPES = {
-        'STRING': 'double',
-        'DTYPEINT': tf.int64,
-        'DTYPE': tf.float64,
-        'DTYPECPX': tf.complex128,
-        'NPTYPECPX': np.complex128
-    }
-    NUMERIC_TYPES = (np.int, np.float, np.complex,
-                     np.int32, np.int64, np.float32,
-                     np.float64, np.complex64, np.complex128)
-    ARRAY_TYPES = (np.ndarray, tf.Tensor)
-    TENSOR_TYPES = (np.ndarray, tf.Tensor, tf.Variable)
-
-    # Entanglement entropy eigenvalue cut-off
-    # Eigenvalues smaller than this cut-off are ignored in entropy calculation
-    EIGVAL_CUTOFF = 1e-14
-
-    # Flag for raising warning in ``set_precision`` and ``set_backend``
-    ALLOW_SWITCHERS = True
-
     # Gate backends
     BACKEND = {'GATES': 'custom', 'EINSUM': None, 'STRING': 'custom'}
 
@@ -123,12 +119,6 @@ if BACKEND_NAME == "tensorflow":
         # case not tested by GitHub workflows because it requires no device
         raise_error(RuntimeError, "Unable to find Tensorflow devices.")
 
-    # Define numpy and tensorflow matrices
-    # numpy matrices are exposed to user via ``from qibo import matrices``
-    # tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
-    from qibo.tensorflow import matrices as _matrices
-    matrices = _matrices.NumpyMatrices()
-    tfmatrices = _matrices.TensorflowMatrices()
 
     def set_backend(backend='custom'):
         """Sets backend used to implement gates.
