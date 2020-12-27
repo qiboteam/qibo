@@ -1,11 +1,13 @@
-from qibo.base import backend
+from qibo.backend import Backend
+from qibo.base.backend import BaseBackend
 from qibo.config import raise_error
 
 
-class NumpyBackend(backend.BaseBackend):
+class NumpyBackend(Backend, BaseBackend):
 
     def __init__(self):
-        super().__init__()
+        Backend.__init__(self)
+        BaseBackend.__init__(self)
         import numpy as np
         self.backend = np
         self.name = "numpy"
@@ -291,11 +293,3 @@ class TensorflowBackend(NumpyBackend):
     @property
     def oom_error(self):
         return self.backend.python.framework.errors_impl.ResourceExhaustedError
-
-
-function_names = [m for m in dir(backend.BaseBackend) if m[:2] != "__"]
-
-factory = {
-    'numpy': NumpyBackend,
-    'tensorflow': TensorflowBackend
-}

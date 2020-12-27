@@ -6,11 +6,11 @@ import tensorflow as tf
 from qibo import K
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
-from qibo.backend import factory
-from qibo.config import BACKEND, raise_error, get_threads
+from qibo.backend.interface import NumpyBackend
+from qibo.config import raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
-np = factory.get("numpy")()
+np = NumpyBackend()
 
 
 class TensorflowGate(BackendGate):
@@ -19,7 +19,7 @@ class TensorflowGate(BackendGate):
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
         # TODO: Move these to a different file and refactor
-        if BACKEND.get('GATES') == 'custom' or cls.__name__ in cgate_only:
+        if K.custom_gates or cls.__name__ in cgate_only:
             return super(TensorflowGate, cls).__new__(cls)
         else:
             from qibo.tensorflow import gates
@@ -399,7 +399,7 @@ class U3(MatrixGate, gates.U3):
 class ZPow(gates.ZPow):
 
   def __new__(cls, q, theta, trainable=True):
-      if BACKEND.get('GATES') == 'custom':
+      if K.custom_gates:
           return U1(q, theta, trainable)
       else:
           from qibo.tensorflow import gates
@@ -496,7 +496,7 @@ class CU3(_CUn_, gates.CU3):
 class CZPow(gates.CZPow):
 
   def __new__(cls, q0, q1, theta, trainable=True):
-      if BACKEND.get('GATES') == 'custom':
+      if K.custom_gates:
           return CU1(q0, q1, theta, trainable)
       else:
           from qibo.tensorflow import gates
@@ -911,7 +911,7 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):
 
     def __new__(cls, q, t1, t2, time, excited_population=0, seed=None):
-        if BACKEND.get('GATES') == "custom":
+        if K.custom_gates:
             cls_a = _ThermalRelaxationChannelA
             cls_b = _ThermalRelaxationChannelB
         else:

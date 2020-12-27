@@ -7,65 +7,6 @@ class BaseBackend(ABC):
     def __init__(self):
         self.backend = None
         self.name = "base"
-        self._gates = None
-        self._einsum = None
-
-        self._precision = 'double'
-        self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
-                        'DTYPECPX': 'complex128'}
-
-        self.cpu_devices = None
-        self.gpu_devices = None
-        self._default_device = None
-
-    @property
-    def precision(self):
-        return self._precision
-
-    def dtypes(self, name):
-        if name in self._dtypes:
-            dtype = self._dtypes.get(name)
-        else:
-            dtype = name
-        return getattr(self.backend, dtype)
-
-    @precision.setter
-    def precision(self, dtype):
-        from qibo.config import ALLOW_SWITCHERS, warnings
-        if not ALLOW_SWITCHERS and dtype != self.precision:
-            warnings.warn("Precision should not be changed after allocating gates.",
-                          category=RuntimeWarning)
-        if dtype == 'single':
-            self._dtypes['DTYPE'] = 'float32'
-            self._dtypes['DTYPECPX'] = 'complex64'
-        elif dtype == 'double':
-            self._dtypes['DTYPE'] = 'float64'
-            self._dtypes['DTYPECPX'] = 'complex128'
-        else:
-            raise_error(RuntimeError, f'dtype {dtype} not supported.')
-        self._precision = dtype
-
-    @property
-    def default_device(self):
-        return self._default_device
-
-    @default_device.setter
-    def default_device(self, name):
-        from qibo.config import ALLOW_SWITCHERS, warnings
-        if not ALLOW_SWITCHERS and name != self.default_device: # pragma: no cover
-            # no testing is implemented for warnings
-            warnings.warn("Device should not be changed after allocating gates.",
-                          category=RuntimeWarning)
-        parts = name[1:].split(":")
-        if name[0] != "/" or len(parts) < 2 or len(parts) > 3:
-            raise_error(ValueError, "Device name should follow the pattern: "
-                             "/{device type}:{device number}.")
-        device_type, device_number = parts[-2], int(parts[-1])
-        if device_type not in {"CPU", "GPU"}:
-            raise_error(ValueError, f"Unknown device type {device_type}.")
-        if device_number >= len(self._devices[device_type]):
-            raise_error(ValueError, f"Device {name} does not exist.")
-        self._default_device = name
 
     @property
     @abstractmethod

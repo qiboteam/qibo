@@ -8,7 +8,7 @@ from qibo.base import cache, gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.tensorflow import cgates
 from qibo.config import tfmatrices as matrices
-from qibo.config import BACKEND, raise_error
+from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
 
 
@@ -23,7 +23,7 @@ class TensorflowGate(BackendGate):
         # Gate matrices
         self.matrix = None
         # Einsum backend
-        self.einsum = BACKEND.get('EINSUM')
+        self.einsum = K.einsum
 
     @staticmethod
     def control_unitary(unitary):

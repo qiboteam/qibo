@@ -2,8 +2,8 @@ import functools
 import operator
 import numpy as np
 import tensorflow as tf
+from qibo import K
 from qibo.base import fusion
-from qibo.config import BACKEND
 from qibo import gates
 from typing import Tuple
 
@@ -13,7 +13,7 @@ class FusionGroup(fusion.FusionGroup):
     def __init__(self):
         super(FusionGroup, self).__init__()
         self.bk = np
-        if BACKEND.get('GATES') != "custom":
+        if not K.custom_gates:
             self.bk = tf
 
     def _one_qubit_matrix(self, gate0: "Gate", gate1: "Gate"):
@@ -27,7 +27,7 @@ class FusionGroup(fusion.FusionGroup):
             4x4 matrix that corresponds to the Kronecker product of the 2x2
             gate matrices.
         """
-        if BACKEND.get('GATES') == "custom":
+        if K.custom_gates:
             return np.kron(gate0.unitary, gate1.unitary)
         else:
             matrix = tf.tensordot(gate0.unitary, gate1.unitary, axes=0)

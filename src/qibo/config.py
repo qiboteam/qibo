@@ -72,17 +72,6 @@ def set_threads(num_threads):
     OMP_NUM_THREADS = num_threads
 
 
-# Backend access
-from qibo import backend as K
-def set_computation_backend(backend="tensorflow"):
-    # TODO: Rename this to ``set_backend`` and change the
-    # defaulteinsum/matmuleinsum setter name
-    bk = K.factory.get(backend)()
-    for method in K.function_names:
-        setattr(K, method, getattr(bk, method))
-
-set_computation_backend()
-
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
 import numpy as np
 import tensorflow as tf
@@ -92,7 +81,8 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.int32, np.int64, np.float32,
                  np.float64, np.complex64, np.complex128)
 
-BACKEND = {'GATES': 'custom', 'EINSUM': None, 'STRING': 'custom'}
+
+from qibo.backend import backend as K
 
 def set_backend(backend='custom'):
     """Sets backend used to implement gates.
@@ -103,23 +93,14 @@ def set_backend(backend='custom'):
             for the gates that use tensorflow primitives (``tf.einsum`` or
             ``tf.matmul`` respectively).
     """
-    if not ALLOW_SWITCHERS and backend != BACKEND['GATES']:
+    if not ALLOW_SWITCHERS and backend != K.gates:
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
-    if backend == 'custom':
-        BACKEND['GATES'] = 'custom'
-        BACKEND['EINSUM'] = None
-    elif backend == 'defaulteinsum':
-        from qibo.tensorflow import einsum
-        BACKEND['GATES'] = 'native'
-        BACKEND['EINSUM'] = einsum.DefaultEinsum()
-    elif backend == 'matmuleinsum':
-        from qibo.tensorflow import einsum
-        BACKEND['GATES'] = 'native'
-        BACKEND['EINSUM'] = einsum.MatmulEinsum()
-    else:
-        raise_error(RuntimeError, f"Gate backend '{backend}' not supported.")
-    BACKEND['STRING'] = backend
+
+    from qibo.backend.interface import TensorflowBackend
+    bk = TensorflowBackend()
+    K.assign(bk)
+    K.set_gates(backend)
 
 def get_backend():
     """Get backend used to implement gates.
@@ -127,7 +108,9 @@ def get_backend():
     Returns:
         A string with the backend name.
     """
-    return BACKEND['STRING']
+    return K.gates
+
+set_backend()
 
 
 # Define numpy and tensorflow matrices

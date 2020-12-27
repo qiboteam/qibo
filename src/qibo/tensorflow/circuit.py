@@ -3,7 +3,7 @@
 import collections
 from qibo import K
 from qibo.base import circuit
-from qibo.config import BACKEND, raise_error
+from qibo.config import raise_error
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Tuple
@@ -84,7 +84,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if BACKEND['GATES'] == 'custom':
+        if K.custom_gates:
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
         self._compiled_execute = K.compile(self._execute_for_compile)
@@ -93,7 +93,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if BACKEND['GATES'] != 'custom':
+        if not K.custom_gates:
             state = K.reshape(state, self.shapes.get('TENSOR'))
 
         if self._compiled_execute is None:
@@ -103,7 +103,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             for callback, results in callback_results.items():
                 callback.extend(results)
 
-        if BACKEND['GATES'] != 'custom':
+        if not K.custom_gates:
             state = K.reshape(state, self.shapes.get('TENSOR_FLAT'))
 
         self._final_state = state
