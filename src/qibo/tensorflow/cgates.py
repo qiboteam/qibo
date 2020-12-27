@@ -7,7 +7,7 @@ from qibo import K
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.backend import factory
-from qibo.config import BACKEND, DEVICES, NUMERIC_TYPES, raise_error, get_threads
+from qibo.config import BACKEND, DEVICES, raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 np = factory.get("numpy")()
@@ -26,6 +26,7 @@ class TensorflowGate(BackendGate):
             return getattr(gates, cls.__name__)(*args, **kwargs) # pylint: disable=E0110
 
     def __init__(self):
+        # TODO: Move this check somewhere else
         if not tf.executing_eagerly():
             raise_error(NotImplementedError,
                         "Custom operator gates should not be used in compiled "
@@ -179,11 +180,9 @@ class Collapse(TensorflowGate, gates.Collapse):
         self.gate_op = op.collapse_state
 
     def _result_to_list(self, res):
-        if isinstance(res, np.tensortype):
-            return list(res.astype(np.int))
-        if isinstance(res, tf.Tensor):
-            return list(res.numpy().astype(np.int))
-        if isinstance(res, int) or isinstance(res, NUMERIC_TYPES):
+        if isinstance(res, K.tensor_types):
+            return list(np.cast(res, dtype='DTYPEINT'))
+        if isinstance(res, int) or isinstance(res, K.numeric_types):
             return len(self.target_qubits) * [res]
         return list(res)
 
@@ -797,10 +796,8 @@ class KrausChannel(TensorflowGate, gates.KrausChannel):
     def _invert(gate):
         """Creates invert gates of each Ak to reset to the original state."""
         matrix = gate.parameters
-        if isinstance(matrix, np.tensortype):
-            inv_matrix = np.linalg.inv(matrix)
-        elif isinstance(matrix, tf.Tensor):
-            inv_matrix = np.linalg.inv(matrix)
+        if isinstance(matrix, K.tensor_types):
+            inv_matrix = np.inv(matrix)
         return Unitary(inv_matrix, *gate.target_qubits)
 
     def prepare(self):

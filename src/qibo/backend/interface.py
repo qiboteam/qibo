@@ -165,6 +165,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def kron(self, x, y):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def einsum(self, *args):
         """Generic tensor operation based on Einstein's summation convention."""
         raise_error(NotImplementedError)
@@ -176,6 +180,10 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def transpose(self, x, axes=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def inv(self, x):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -341,6 +349,9 @@ class NumpyBackend(BaseBackend):
     def outer(self, x, y):
         return self.backend.outer(x, y)
 
+    def kron(self, x, y):
+        return self.backend.kron(x, y)
+
     def einsum(self, *args):
         return self.backend.einsum(*args)
 
@@ -349,6 +360,9 @@ class NumpyBackend(BaseBackend):
 
     def transpose(self, x, axes=None):
         return self.backend.transpose(x, axes)
+
+    def inv(self, x):
+        return self.backend.linalg.inv(x)
 
     def eigh(self, x):
         return self.backend.linalg.eigh(x)
@@ -453,6 +467,12 @@ class TensorflowBackend(NumpyBackend):
 
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
+
+    def kron(self, x, y):
+        raise_error(NotImplementedError)
+
+    def inv(self, x):
+        raise_error(NotImplementedError)
 
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is None:
