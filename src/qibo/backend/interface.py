@@ -39,8 +39,12 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def cast(self, x, dtype=None):
+    def cast(self, x, dtype='DTYPECPX'):
         """Casts tensor to the given dtype."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def diag(self, x, dtype='DTYPECPX'):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -420,6 +424,11 @@ class TensorflowBackend(NumpyBackend):
             dtypestr = dtype.__repr__().split(".")[1]
             x = x.astype(getattr(self.np, dtypestr))
         return self.backend.cast(x, dtype=dtype)
+
+    def diag(self, x, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.backend.cast(self.backend.linalg.diag(x), dtype=dtype)
 
     def concatenate(self, x, axis=None):
         return self.backend.concat(x, axis=axis)

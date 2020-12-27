@@ -844,10 +844,13 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
     def _invert(gate):
         return gate.dagger()
 
-    def prepare(self):
-        KrausChannel.prepare(self)
+    def set_seed(self):
         if self.seed is not None:
             np.random.seed(self.seed)
+
+    def prepare(self):
+        KrausChannel.prepare(self)
+        self.set_seed()
 
     def state_vector_call(self, state):
         for p, gate in zip(self.probs, self.gates):
