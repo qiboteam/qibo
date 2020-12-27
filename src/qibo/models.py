@@ -153,7 +153,7 @@ class VQE(object):
             from qibo import gates, models, hamiltonians
             # create circuit ansatz for two qubits
             circuit = models.Circuit(2)
-            circuit.add(gates.RY(q, theta=0))
+            circuit.add(gates.RY(0, theta=0))
             # create XXZ Hamiltonian for two qubits
             hamiltonian = hamiltonians.XXZ(2)
             # create VQE model for the circuit and Hamiltonian
@@ -209,10 +209,10 @@ class VQE(object):
             loss = _loss
         else:
             loss = lambda p, c, h: _loss(p, c, h).numpy()
-        result, parameters = self.optimizers.optimize(loss, initial_state, method,
-                                                      options, compile=compile,
-                                                      processes=processes,
-                                                      args=(self.circuit, self.hamiltonian))
+        result, parameters = self.optimizers.optimize(loss, initial_state,
+                                                      args=(self.circuit, self.hamiltonian),
+                                                      method=method, options=options,
+                                                      compile=compile, processes=processes)
         self.circuit.set_parameters(parameters)
         return result, parameters
 
@@ -389,7 +389,7 @@ class QAOA(object):
             import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()
 
-        result, parameters = self.optimizers.optimize(loss, initial_p, method,
-                                                      options, args=(self, self.hamiltonian))
+        result, parameters = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
+                                                      method=method, options=options)
         self.set_parameters(parameters)
         return result, parameters
