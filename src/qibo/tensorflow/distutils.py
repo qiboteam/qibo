@@ -404,7 +404,7 @@ class DistributedState(DistributedBase):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
       with tf.device(state.device):
-          op.initial_state(state.pieces[0])
+          state.pieces[0] = op.initial_state(state.pieces[0].shape, state.pieces[0].dtype, get_threads())
       return state
 
     @classmethod
@@ -439,7 +439,7 @@ class DistributedState(DistributedBase):
                                            self.qubits.transpose_order,
                                            get_threads())
             for i in range(self.ndevices):
-                self.pieces[i].assign(new_state[i])
+                self.pieces[i] = new_state[i]
 
     @property
     def vector(self) -> tf.Tensor:

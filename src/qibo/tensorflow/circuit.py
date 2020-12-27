@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND, raise_error
+from qibo.config import DTYPES, DEVICES, BACKEND, raise_error, get_threads
 from qibo.tensorflow import measurements
 from qibo.tensorflow import custom_operators as op
 from typing import List, Optional, Tuple, Union
@@ -211,9 +211,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        zeros = tf.zeros(self.shapes.get('TF_FLAT'), dtype=DTYPES.get('DTYPECPX'))
-        state = op.initial_state(zeros)
-        return state
+        return op.initial_state(self.shapes.get('TF_FLAT'), DTYPES.get('DTYPECPX'), get_threads())
 
     def get_initial_state(self, state: Optional[InitStateType] = None
                            ) -> tf.Tensor:

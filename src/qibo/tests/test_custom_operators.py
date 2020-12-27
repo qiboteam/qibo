@@ -25,8 +25,7 @@ def test_initial_state(dtype, compile):
   """Check that initial_state updates first element properly."""
   def apply_operator(dtype):
     """Apply the initial_state operator"""
-    a = tf.zeros(10, dtype=dtype)
-    return op.initial_state(a)
+    return op.initial_state(10, dtype, get_threads())
 
   func = apply_operator
   if compile:

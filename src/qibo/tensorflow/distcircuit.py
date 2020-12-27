@@ -136,7 +136,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             for i in ids:
                 with tf.device(device):
                     piece = self._device_job(state.pieces[i], queues[i])
-                    state.pieces[i].assign(piece)
+                    state.pieces[i] = piece
                     del(piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
@@ -167,8 +167,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             for piece in state.pieces:
                 total_norm += tf.reduce_sum(tf.math.square(tf.abs(piece)))
             total_norm = tf.cast(tf.math.sqrt(total_norm), dtype=state.dtype)
-            for piece in state.pieces:
-                piece.assign(piece / total_norm)
+            state.pieces /= total_norm
 
     def _revert_swaps(self, state: utils.DistributedState, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
