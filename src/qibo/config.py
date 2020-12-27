@@ -82,8 +82,12 @@ NUMERIC_TYPES = (np.int, np.float, np.complex,
                  np.float64, np.complex64, np.complex128)
 
 
-from qibo.backend import backend as K
+from qibo.backends import numpy
+numpy = numpy.NumpyBackend()
+matrices = numpy.matrices
 
+
+from qibo.backends import backend as K
 def set_backend(backend='custom'):
     """Sets backend used to implement gates.
 
@@ -97,8 +101,8 @@ def set_backend(backend='custom'):
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
 
-    from qibo.backend.interface import TensorflowBackend
-    bk = TensorflowBackend()
+    from qibo.backends import tensorflow
+    bk = tensorflow.TensorflowBackend()
     K.assign(bk)
     K.set_gates(backend)
 
@@ -111,14 +115,6 @@ def get_backend():
     return K.gates
 
 set_backend()
-
-
-# Define numpy and tensorflow matrices
-# numpy matrices are exposed to user via ``from qibo import matrices``
-# tensorflow matrices are used by native gates (``/tensorflow/gates.py``)
-from qibo.backend import matrices as _matrices
-matrices = _matrices.NumpyMatrices(np.complex128)
-tfmatrices = _matrices.TensorflowMatrices(tf.complex128)
 
 
 def set_precision(dtype='double'):

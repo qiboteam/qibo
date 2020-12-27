@@ -4,13 +4,12 @@ import sys
 import math
 import tensorflow as tf
 from qibo import K
+from qibo import numpy as np
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
-from qibo.backend.interface import NumpyBackend
 from qibo.config import raise_error, get_threads
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
-np = NumpyBackend()
 
 
 class TensorflowGate(BackendGate):

@@ -1,17 +1,19 @@
-from qibo.backend import Backend
-from qibo.base.backend import BaseBackend
+from qibo.backends import Backend
+from qibo.backends import base
 from qibo.config import raise_error
 
 
-class NumpyBackend(Backend, BaseBackend):
+class NumpyBackend(Backend, base.BaseBackend):
 
     def __init__(self):
         Backend.__init__(self)
-        BaseBackend.__init__(self)
+        base.BaseBackend.__init__(self)
         import numpy as np
         self.backend = np
         self.name = "numpy"
         self.np = np
+        from qibo.backends import matrices
+        self.matrices = matrices.NumpyMatrices(self.dtypes('DTYPECPX'))
 
     @property
     def numeric_types(self):
@@ -182,114 +184,3 @@ class NumpyBackend(Backend, BaseBackend):
     @property
     def oom_error(self):
         raise_error(NotImplementedError)
-
-
-class TensorflowBackend(NumpyBackend):
-
-    def __init__(self):
-        super().__init__()
-        import tensorflow as tf
-        self.backend = tf
-        self.name = "tensorflow"
-
-        self.cpu_devices = tf.config.list_logical_devices("CPU")
-        self.gpu_devices = tf.config.list_logical_devices("GPU")
-        if self.gpu_devices:
-            self._active_device = self.gpu_devices[0].name
-        elif self.cpu_devices:
-            self._active_device = self.cpu_devices[0].name
-        else: # pragma: no cover
-            # case not tested by GitHub workflows because it requires no device
-            raise_error(RuntimeError, "Unable to find Tensorflow devices.")
-
-    @property
-    def tensor_types(self):
-        return (self.np.ndarray, self.backend.Tensor, self.backend.Variable)
-
-    @property
-    def Tensor(self):
-        return self.backend.Tensor
-
-    def cast(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        if isinstance(x, self.np.ndarray):
-            dtypestr = dtype.__repr__().split(".")[1]
-            x = x.astype(getattr(self.np, dtypestr))
-        return self.backend.cast(x, dtype=dtype)
-
-    def diag(self, x, dtype='DTYPECPX'):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.cast(self.backend.linalg.diag(x), dtype=dtype)
-
-    def concatenate(self, x, axis=None):
-        return self.backend.concat(x, axis=axis)
-
-    def copy(self, x):
-        return self.backend.identity(x)
-
-    def range(self, start, stop, step, dtype=None):
-        if isinstance(dtype, str):
-            dtype = self.dtypes(dtype)
-        return self.backend.range(start, stop, step, dtype=dtype)
-
-    def real(self, x):
-        return self.backend.math.real(x)
-
-    def imag(self, x):
-        return self.backend.math.imag(x)
-
-    def conj(self, x):
-        return self.backend.math.conj(x)
-
-    def mod(self, x, y):
-        return self.backend.math.mod(x, y)
-
-    def right_shift(self, x, y):
-        return self.backend.bitwise.right_shift(x, y)
-
-    def pow(self, base, exponent):
-        return self.backend.math.pow(base, exponent)
-
-    def square(self, x):
-        return self.backend.square(x)
-
-    def sqrt(self, x):
-        return self.backend.math.sqrt(x)
-
-    def log(self, x):
-        return self.backend.math.log(x)
-
-    def trace(self, x):
-        return self.backend.linalg.trace(x)
-
-    def sum(self, x, axis=None):
-        return self.backend.reduce_sum(x, axis=axis)
-
-    def outer(self, x, y):
-        return self.tensordot(x, y, axes=0)
-
-    def kron(self, x, y):
-        raise_error(NotImplementedError)
-
-    def inv(self, x):
-        raise_error(NotImplementedError)
-
-    def gather(self, x, indices=None, condition=None, axis=0):
-        if indices is None:
-            if condition is None:
-                raise_error(ValueError, "Gather call is missing indices or "
-                                        "condition.")
-            indices = self.backend.where(condition)
-        return self.backend.gather(x, indices, axis=axis)
-
-    def compile(self, func):
-        return self.backend.function(func)
-
-    def device(self, device_name):
-        return self.backend.device(device_name)
-
-    @property
-    def oom_error(self):
-        return self.backend.python.framework.errors_impl.ResourceExhaustedError

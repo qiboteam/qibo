@@ -7,7 +7,6 @@ from qibo import K
 from qibo.base import cache, gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.tensorflow import cgates
-from qibo.config import tfmatrices as matrices
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
 
@@ -117,7 +116,7 @@ class H(TensorflowGate, gates.H):
         gates.H.__init__(self, q)
 
     def construct_unitary(self):
-        return matrices.H
+        return K.matrices.H
 
 
 class X(TensorflowGate, gates.X):
@@ -127,7 +126,7 @@ class X(TensorflowGate, gates.X):
         gates.X.__init__(self, q)
 
     def construct_unitary(self):
-        return matrices.X
+        return K.matrices.X
 
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if controls are one or two."""
@@ -144,7 +143,7 @@ class Y(TensorflowGate, gates.Y):
         gates.Y.__init__(self, q)
 
     def construct_unitary(self):
-        return matrices.Y
+        return K.matrices.Y
 
 
 class Z(TensorflowGate, gates.Z):
@@ -154,7 +153,7 @@ class Z(TensorflowGate, gates.Z):
         gates.Z.__init__(self, q)
 
     def construct_unitary(self):
-        return matrices.Z
+        return K.matrices.Z
 
 
 class Collapse(TensorflowGate, gates.Collapse):
@@ -225,7 +224,7 @@ class RX(TensorflowGate, gates.RX):
 
     def construct_unitary(self):
         t = K.cast(self.parameters)
-        return K.cos(t / 2.0) * matrices.I - 1j * K.sin(t / 2.0) * matrices.X
+        return K.cos(t / 2.0) * K.matrices.I - 1j * K.sin(t / 2.0) * K.matrices.X
 
 
 class RY(TensorflowGate, gates.RY):
@@ -236,7 +235,7 @@ class RY(TensorflowGate, gates.RY):
 
     def construct_unitary(self):
         t = K.cast(self.parameters)
-        return K.cos(t / 2.0) * matrices.I - 1j * K.sin(t / 2.0) * matrices.Y
+        return K.cos(t / 2.0) * K.matrices.I - 1j * K.sin(t / 2.0) * K.matrices.Y
 
 
 class RZ(TensorflowGate, gates.RZ):
@@ -291,7 +290,7 @@ class CNOT(TensorflowGate, gates.CNOT):
         gates.CNOT.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        return K.reshape(matrices.CNOT, (4, 4))
+        return K.reshape(K.matrices.CNOT, (4, 4))
 
 
 class CZ(TensorflowGate, gates.CZ):
@@ -401,7 +400,7 @@ class TOFFOLI(TensorflowGate, gates.TOFFOLI):
         gates.TOFFOLI.__init__(self, q0, q1, q2)
 
     def construct_unitary(self):
-        return K.reshape(matrices.TOFFOLI, (8, 8))
+        return K.reshape(K.matrices.TOFFOLI, (8, 8))
 
     @property
     def unitary(self):
