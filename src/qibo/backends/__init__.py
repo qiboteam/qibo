@@ -1,4 +1,5 @@
-from qibo.config import ALLOW_SWITCHERS, raise_error, warnings
+from qibo import config
+from qibo.config import raise_error, warnings
 
 
 class Backend:
@@ -50,7 +51,7 @@ class Backend:
         return getattr(self.backend, dtype)
 
     def set_precision(self, dtype):
-        if not ALLOW_SWITCHERS and dtype != self.precision:
+        if not config.ALLOW_SWITCHERS and dtype != self.precision:
             warnings.warn("Precision should not be changed after allocating gates.",
                           category=RuntimeWarning)
         if dtype == 'single':
@@ -64,7 +65,7 @@ class Backend:
         self.precision = dtype
 
     def set_device(self, name):
-        if not ALLOW_SWITCHERS and name != self.default_device: # pragma: no cover
+        if not config.ALLOW_SWITCHERS and name != self.default_device: # pragma: no cover
             # no testing is implemented for warnings
             warnings.warn("Device should not be changed after allocating gates.",
                           category=RuntimeWarning)
@@ -106,7 +107,7 @@ def set_backend(backend="custom"):
             for the gates that use tensorflow primitives (``tf.einsum`` or
             ``tf.matmul`` respectively).
     """
-    if not ALLOW_SWITCHERS and backend != K.gates:
+    if not config.ALLOW_SWITCHERS and backend != K.gates:
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
 

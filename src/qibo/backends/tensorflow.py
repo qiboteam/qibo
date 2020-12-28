@@ -3,6 +3,15 @@ from qibo.backends import numpy
 from qibo.config import LOG_LEVEL, raise_error
 
 
+class Optimization:
+
+    def __init__(self):
+        import tensorflow as tf
+        self.Variable = tf.Variable
+        self.GradientTape = tf.GradientTape
+        self.optimizers = tf.optimizers
+
+
 class TensorflowBackend(numpy.NumpyBackend):
 
     def __init__(self):
@@ -15,15 +24,17 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.cpu_devices = tf.config.list_logical_devices("CPU")
         self.gpu_devices = tf.config.list_logical_devices("GPU")
         if self.gpu_devices:
-            self._active_device = self.gpu_devices[0].name
+            self.default_device = self.gpu_devices[0].name
         elif self.cpu_devices:
-            self._active_device = self.cpu_devices[0].name
+            self.default_device = self.cpu_devices[0].name
         else: # pragma: no cover
             # case not tested by GitHub workflows because it requires no device
             raise_error(RuntimeError, "Unable to find Tensorflow devices.")
 
         from qibo.backends import matrices
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
+
+        self._optimization = Optimization()
 
     @property
     def tensor_types(self):
@@ -119,3 +130,7 @@ class TensorflowBackend(numpy.NumpyBackend):
     @property
     def oom_error(self):
         return self.backend.python.framework.errors_impl.ResourceExhaustedError
+
+    @property
+    def optimization(self):
+        return self._optimization

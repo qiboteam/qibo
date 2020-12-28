@@ -100,7 +100,8 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
     """
     if method == 'parallel_L-BFGS-B':
         import psutil
-        from qibo.config import raise_error, get_device, get_threads, log
+        from qibo import get_device, get_threads
+        from qibo.config import raise_error, log
         if "GPU" in get_device(): # pragma: no cover
             raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
         if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
@@ -158,19 +159,19 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         sgd_options.update(options)
 
     # proceed with the training
-    vparams = K.Variable(initial_parameters)
-    optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+    vparams = K.optimization.Variable(initial_parameters)
+    optimizer = getattr(K.optimization.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"])
 
     def opt_step():
-        with K.GradientTape() as tape:
+        with K.optimization.GradientTape() as tape:
             l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
 
     if compile:
-        opt_step = K.function(opt_step)
+        opt_step = K.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()

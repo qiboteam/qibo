@@ -1,3 +1,4 @@
+import math
 from qibo import get_backend
 from qibo.config import raise_error
 from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
@@ -88,14 +89,13 @@ def QFT(nqubits: int, with_swaps: bool = True,
                                              "with SWAPs.")
         return _DistributedQFT(nqubits, accelerators, memory_device)
 
-    import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (i2 - i1)
+            theta = math.pi / 2 ** (i2 - i1)
             circuit.add(gates.CU1(i2, i1, theta))
 
     if with_swaps:
@@ -130,7 +130,7 @@ def _DistributedQFT(nqubits: int,
 
         circuit.add(gates.H(i1eff))
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (i2 - i1)
+            theta = math.pi / 2 ** (i2 - i1)
             circuit.add(gates.CU1(i2, i1eff, theta))
 
     return circuit
@@ -194,7 +194,7 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
-            loss = K.function(_loss)
+            loss = K.compile(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
@@ -351,7 +351,7 @@ class QAOA(object):
         if state is None:
             # Generate |++...+> state
             n = self.K.cast(2 ** self.nqubits, dtype='DTYPEINT')
-            state = self.K.ones(n, dtype=dtype)
+            state = self.K.ones(n)
             norm = self.K.cast(2 ** float(self.nqubits / 2.0))
             return state / norm
         return StateCircuit._cast_initial_state(self, state)
@@ -382,6 +382,7 @@ class QAOA(object):
             return hamiltonian.expectation(state)
 
         if method == "sgd":
+            from qibo import K
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
             import numpy as np

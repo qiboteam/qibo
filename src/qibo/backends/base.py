@@ -218,3 +218,9 @@ class BaseBackend(ABC):
     @abstractmethod
     def oom_error(self):
         raise_error(NotImplementedError)
+
+    @property
+    @abstractmethod
+    def optimization(self):
+        """Module with attributes useful for optimization."""
+        raise_error(NotImplementedError)

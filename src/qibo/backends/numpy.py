@@ -191,3 +191,8 @@ class NumpyBackend(Backend, base.BaseBackend):
     @property
     def oom_error(self):
         raise_error(NotImplementedError)
+
+    @property
+    def optimization(self):
+        raise_error(ValueError, "Optimization is not available for numpy "
+                                "backend.")
