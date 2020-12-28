@@ -87,6 +87,9 @@ class TensorflowBackend(numpy.NumpyBackend):
     def trace(self, x):
         return self.backend.linalg.trace(x)
 
+    def expm(self, x):
+        return self.backend.linalg.expm(x)
+
     def sum(self, x, axis=None):
         return self.backend.reduce_sum(x, axis=axis)
 

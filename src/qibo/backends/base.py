@@ -141,6 +141,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def expm(self, x):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def trace(self, x):
         raise_error(NotImplementedError)
 

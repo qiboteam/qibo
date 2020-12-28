@@ -129,6 +129,10 @@ class NumpyBackend(Backend, base.BaseBackend):
     def trace(self, x):
         return self.backend.trace(x)
 
+    def expm(self, x):
+        from scipy import linalg
+        return linalg.expm(x)
+
     def sum(self, x, axis=None):
         return self.backend.sum(x, axis=axis)
 

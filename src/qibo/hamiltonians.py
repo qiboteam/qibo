@@ -1,46 +1,13 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo import matrices, K
-from qibo.config import BACKEND_NAME, raise_error
-from qibo.base.hamiltonians import Hamiltonian as BaseHamiltonian
-from qibo.base.hamiltonians import _SymbolicHamiltonian
-if BACKEND_NAME == "tensorflow":
-    from qibo.tensorflow import hamiltonians
-    from qibo.tensorflow.hamiltonians import TensorflowTrotterHamiltonian as TrotterHamiltonian
-else: # pragma: no cover
-    # case not tested because backend is preset to TensorFlow
-    raise raise_error(NotImplementedError,
-                      "Only Tensorflow backend is implemented.")
-
-
-class Hamiltonian(BaseHamiltonian):
-    """"""
-
-    def __new__(cls, nqubits, matrix, numpy=False):
-        if isinstance(matrix, np.ndarray):
-            if not numpy:
-                matrix = K.cast(matrix, dtype='DTYPECPX')
-        elif isinstance(matrix, K.tensortype):
-            if numpy:
-                matrix = matrix.numpy()
-        else:
-            raise raise_error(TypeError, "Invalid type {} of Hamiltonian "
-                                         "matrix.".format(type(matrix)))
-        if numpy:
-            return hamiltonians.NumpyHamiltonian(nqubits, matrix)
-        else:
-            return hamiltonians.TensorflowHamiltonian(nqubits, matrix)
-
-    @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
-        """See :class:`qibo.base.hamiltonians.Hamiltonian` for docs."""
-        ham = _SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
-        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
+from qibo.config import raise_error
+from qibo.tensorflow.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(_SymbolicHamiltonian._multikron(
+    h = sum(SymbolicHamiltonian.multikron(
       (matrix if condition(i, j) else matrices.I for j in range(nqubits)))
             for i in range(nqubits))
     return h

@@ -1,17 +1,15 @@
 import numpy as np
 import pytest
+from qibo import matrices, K
 from qibo.hamiltonians import Hamiltonian, TrotterHamiltonian
 from qibo.hamiltonians import XXZ, TFIM, X, Y, Z
-from qibo.tensorflow.hamiltonians import NUMERIC_TYPES
-from qibo import matrices
 from qibo.tests import utils
 
 
 def test_hamiltonian_initialization():
     """Testing hamiltonian initialization errors."""
     import tensorflow as tf
-    from qibo.config import DTYPES
-    dtype = DTYPES.get('DTYPECPX')
+    dtype = K.dtypes('DTYPECPX')
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
     H1 = Hamiltonian(2, np.eye(4))
@@ -26,7 +24,7 @@ def test_hamiltonian_initialization():
         H3 = Hamiltonian(4, np.eye(10))
 
 
-@pytest.mark.parametrize("dtype", NUMERIC_TYPES)
+@pytest.mark.parametrize("dtype", K.numeric_types)
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_overloading(dtype, numpy):
     """Test basic hamiltonian overloading."""
@@ -189,7 +187,7 @@ def test_hamiltonian_notimplemented_errors(numpy):
         R = [3] - H1
 
 
-@pytest.mark.parametrize("dtype", NUMERIC_TYPES)
+@pytest.mark.parametrize("dtype", K.numeric_types)
 @pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("trotter", [True, False])
 def test_hamiltonian_eigenvalues(dtype, numpy, trotter):
@@ -211,7 +209,7 @@ def test_hamiltonian_eigenvalues(dtype, numpy, trotter):
     np.testing.assert_allclose(H3._eigenvalues, hH3_eigen)
 
 
-@pytest.mark.parametrize("dtype", NUMERIC_TYPES)
+@pytest.mark.parametrize("dtype", K.numeric_types)
 @pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("trotter", [True, False])
 def test_hamiltonian_eigenvectors(dtype, numpy, trotter):
@@ -495,10 +493,6 @@ def test_trotter_hamiltonian_initialization_errors():
     h2 = TFIM(nqubits=2, numpy=False)
     with pytest.raises(TypeError):
         ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
-    # Different term matrix types
-    h2 = Hamiltonian(2, np.eye(4, dtype=np.float32), numpy=True)
-    with pytest.raises(TypeError):
-        ham = TrotterHamiltonian({(0, 1): h, (1, 2): h2})
 
 
 def test_trotter_hamiltonian_operation_errors():
@@ -673,9 +667,9 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
 
 @pytest.mark.parametrize("sufficient", [True, False])
 def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
-    """Check that ``_merge_one_qubit`` works both when two-qubit are sufficient and no."""
+    """Check that ``merge_one_qubit`` works both when two-qubit are sufficient and no."""
     import sympy
-    from qibo.hamiltonians import _SymbolicHamiltonian
+    from qibo.hamiltonians import SymbolicHamiltonian
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
@@ -684,9 +678,9 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     symham += sum(x_symbols)
     if sufficient:
         symham += z_symbols[0] * z_symbols[-1]
-    symham = _SymbolicHamiltonian(symham, symmap)
+    symham = SymbolicHamiltonian(symham, symmap)
     terms = {t: m for t, m in symham.partial_matrices()}
-    merged = symham._merge_one_qubit(terms)
+    merged = symham.merge_one_qubit(terms)
 
     two_qubit_keys = {(i, i + 1) for i in range(4)}
     if sufficient:
@@ -708,29 +702,29 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
 
 
 def test_symbolic_hamiltonian_errors():
-    """Check errors raised by `_SymbolicHamiltonian`."""
+    """Check errors raised by `SymbolicHamiltonian`."""
     import sympy
-    from qibo.hamiltonians import _SymbolicHamiltonian
+    from qibo.hamiltonians import SymbolicHamiltonian
     a, b = sympy.symbols("a b")
     ham = a * b
     # Bad hamiltonian type
     with pytest.raises(TypeError):
-        sh = _SymbolicHamiltonian("test", "test")
+        sh = SymbolicHamiltonian("test", "test")
     # Bad symbol map type
     with pytest.raises(TypeError):
-        sh = _SymbolicHamiltonian(ham, "test")
+        sh = SymbolicHamiltonian(ham, "test")
     # Bad symbol map key
     with pytest.raises(TypeError):
-        sh = _SymbolicHamiltonian(ham, {"a": 2})
+        sh = SymbolicHamiltonian(ham, {"a": 2})
     # Bad symbol map value
     with pytest.raises(TypeError):
-        sh = _SymbolicHamiltonian(ham, {a: 2})
+        sh = SymbolicHamiltonian(ham, {a: 2})
     with pytest.raises(ValueError):
-        sh = _SymbolicHamiltonian(ham, {a: (1, 2, 3)})
+        sh = SymbolicHamiltonian(ham, {a: (1, 2, 3)})
     # Missing symbol
     with pytest.raises(ValueError):
-        sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X)})
+        sh = SymbolicHamiltonian(ham, {a: (0, matrices.X)})
     # Factor that cannot be parsed
     ham = a * b + sympy.cos(a) * b
     with pytest.raises(ValueError):
-        sh = _SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})
+        sh = SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})

@@ -2,70 +2,363 @@ import itertools
 import numpy as np
 import tensorflow as tf
 from qibo import K
-from qibo.config import raise_error, EINSUM_CHARS
+from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.base import hamiltonians
 
 
-class TensorflowHamiltonian(hamiltonians.Hamiltonian):
-    """TensorFlow implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
-    NUMERIC_TYPES = K.numeric_types
-    ARRAY_TYPES = K.tensor_types
-    K = tf
+class Hamiltonian(hamiltonians.Hamiltonian):
+    """Backend implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
 
-    def _calculate_exp(self, a):
-        if self._eigenvectors is None:
-            return tf.linalg.expm(-1j * a * self.matrix)
+    def __new__(cls, nqubits, matrix, numpy=False):
+        if not isinstance(matrix, K.tensor_types):
+            raise_error(TypeError, "Matrix of invalid type {} given during "
+                                   "Hamiltonian initialization"
+                                   "".format(type(matrix)))
+        if numpy:
+            return NumpyHamiltonian(nqubits, matrix, numpy=True)
         else:
-            expd = tf.linalg.diag(tf.exp(-1j * a * self._eigenvalues))
-            ud = tf.transpose(tf.math.conj(self._eigenvectors))
-            return tf.matmul(self._eigenvectors, tf.matmul(expd, ud))
+            return super().__new__(cls)
+
+    def __init__(self, nqubits, matrix, numpy=False):
+        assert not numpy
+        self.K = K
+        super().__init__(nqubits, self.K.cast(matrix), numpy=numpy)
+
+    def eigenvalues(self):
+        if self._eigenvalues is None:
+            self._eigenvalues = self.K.eigvalsh(self.matrix)
+        return self._eigenvalues
+
+    def eigenvectors(self):
+        if self._eigenvectors is None:
+            self._eigenvalues, self._eigenvectors = self.K.eigh(self.matrix)
+        return self._eigenvectors
+
+    def exp(self, a):
+        """Computes a tensor corresponding to exp(-1j * a * H).
+
+        Args:
+            a (complex): Complex number to multiply Hamiltonian before
+                exponentiation.
+        """
+        if self._exp.get("a") != a:
+            self._exp["a"] = a
+            if self._eigenvectors is None:
+                self._exp["result"] = self.K.expm(-1j * a * self.matrix)
+            else:
+                expd = self.K.diag(self.K.exp(-1j * a * self._eigenvalues))
+                ud = self.K.transpose(self.K.conj(self._eigenvectors))
+                self._exp["result"] = self.K.matmul(
+                    self._eigenvectors, self.K.matmul(expd, ud))
+        return self._exp.get("result")
 
     def expectation(self, state, normalize=False):
-        statec = tf.math.conj(state)
+        statec = self.K.conj(state)
         hstate = self @ state
-        ev = tf.math.real(tf.reduce_sum(statec * hstate))
+        ev = self.K.real(self.K.sum(statec * hstate))
         if normalize:
-            norm = tf.reduce_sum(tf.square(tf.abs(state)))
+            norm = self.K.sum(self.K.square(self.K.abs(state)))
             return ev / norm
         return ev
 
+    def eye(self, n=None):
+        if n is None:
+            n = int(self.matrix.shape[0])
+        return self.K.eye(n, dtype=self.matrix.dtype)
+
+    def __add__(self, o):
+        """Add operator."""
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_matrix = self.matrix + o.matrix
+        elif isinstance(o, K.numeric_types):
+            new_matrix = self.matrix + o * self.eye()
+        else:
+            raise_error(NotImplementedError, "Hamiltonian addition to {} not "
+                                             "implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
+    def __sub__(self, o):
+        """Subtraction operator."""
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be subtracted.")
+            new_matrix = self.matrix - o.matrix
+        elif isinstance(o, K.numeric_types):
+            new_matrix = self.matrix - o * self.eye()
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
+    def __rsub__(self, o):
+        """Right subtraction operator."""
+        if isinstance(o, self.__class__): # pragma: no cover
+            # impractical case because it will be handled by `__sub__`
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_matrix = o.matrix - self.matrix
+        elif isinstance(o, K.numeric_types):
+            new_matrix = o * self.eye() - self.matrix
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return self.__class__(self.nqubits, new_matrix)
+
     def _real(self, o):
+        # TODO: Remove this
         if isinstance(o, tf.Tensor):
             return np.array(o).real
-        return super(TensorflowHamiltonian, self)._real(o)
+        return o.real
 
     def __mul__(self, o):
-        if isinstance(o, tf.Tensor):
-            o = tf.cast(o, dtype=self.matrix.dtype)
-        return super(TensorflowHamiltonian, self).__mul__(o)
-
-
-class NumpyHamiltonian(TensorflowHamiltonian):
-    """Numpy implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
-    import scipy
-    K = np
-
-    def _calculate_exp(self, a):
-        if self._eigenvectors is None:
-            return self.scipy.linalg.expm(-1j * a * self.matrix)
+        """Multiplication to scalar operator."""
+        if isinstance(o, self.K.Tensor):
+            o = self.K.cast(o, dtype=self.matrix.dtype)
+        if isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types):
+            new_matrix = self.matrix * o
+            r = self.__class__(self.nqubits, new_matrix)
+            if self._eigenvalues is not None:
+                if self._real(o) >= 0:
+                    r._eigenvalues = o * self._eigenvalues
+                else:
+                    r._eigenvalues = o * self._eigenvalues[::-1]
+            if self._eigenvectors is not None:
+                if self._real(o) > 0:
+                    r._eigenvectors = self._eigenvectors
+                elif o == 0:
+                    r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+            return r
         else:
-            expd = np.diag(np.exp(-1j * a * self._eigenvalues))
-            ud = np.transpose(np.conj(self._eigenvectors))
-            return self._eigenvectors @ (expd @ ud)
+            raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
+                                             "not implemented.".format(type(o)))
 
-    def expectation(self, state, normalize=False):
-        statec = np.conj(state)
-        hstate = self @ state
-        ev = np.sum(statec * hstate).real
-        if normalize:
-            return ev / (np.abs(state) ** 2).sum()
-        return ev
+    def __matmul__(self, o):
+        """Matrix multiplication with other Hamiltonians or state vectors."""
+        if isinstance(o, self.__class__):
+            new_matrix = self.K.matmul(self.matrix, o.matrix)
+            return self.__class__(self.nqubits, new_matrix)
+        elif isinstance(o, K.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
+            elif rank == 2: # matrix
+                return self.K.matmul(self.matrix, o)
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+        else:
+            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                             "implemented.".format(type(o)))
 
 
-class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
-    """TensorFlow implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+class NumpyHamiltonian(Hamiltonian):
 
-    def _calculate_dense_matrix(self):
+    def __new__(cls, nqubits, matrix, numpy=True):
+        return hamiltonians.Hamiltonian.__new__(cls)
+
+    def __init__(self, nqubits, matrix, numpy=True):
+        assert numpy
+        from qibo import numpy as bk
+        self.K = bk
+        hamiltonians.Hamiltonian.__init__(self, nqubits, self.K.cast(matrix),
+                                          numpy=numpy)
+
+
+class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
+
+    @staticmethod
+    def multikron(matrix_list):
+        h = 1
+        for m in matrix_list:
+            h = np.kron(h, m)
+        return h
+
+    def dense_matrix(self):
+        matrix = sum(self.full_matrices())
+        eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
+        return matrix + self.constant * eye
+
+    def reduce_pairs(self, pair_sets, pair_map, free_targets):
+        """Helper method for ``merge_one_qubit``.
+
+        Finds the one and two qubit term merge map using an recursive procedure.
+
+        Args:
+            pair_sets (dict): Dictionary that maps each qubit id to a set of
+                pairs that contain this qubit.
+            pair_map (dict): Map from qubit id to the pair that this qubit will
+                be merged with.
+            free_targets (set): Set of qubit ids that are still not mapped to
+                a pair in the ``pair_map``.
+
+        Returns:
+            pair_map (dict): The final map from qubit ids to pairs once the
+                recursion finishes. If the returned map is ``None`` then the
+                procedure failed and the merging is aborted.
+        """
+        def assign_target(target):
+            """Assigns a pair to a qubit.
+
+            This moves ``target`` from ``free_targets`` to ``pair_map``.
+            """
+            pair = pair_sets[target].pop()
+            pair_map[target] = pair
+            pair_sets.pop(target)
+            target2 = pair[1] if pair[0] == target else pair[0]
+            if target2 in pair_sets:
+                pair_sets[target2].remove(pair)
+
+        # Assign pairs to qubits that have a single available pair
+        flag = True
+        for target in set(free_targets):
+            if target not in pair_sets or not pair_sets[target]:
+                return None
+            if len(pair_sets[target]) == 1:
+                assign_target(target)
+                free_targets.remove(target)
+                flag = False
+        # If all qubits were mapped to pairs return the result
+        if not free_targets:
+            return pair_map
+        # If no qubits with a single available pair were found above, then
+        # assign a pair randomly (not sure about this step!)
+        if flag:
+            target = free_targets.pop()
+            assign_target(target)
+        # Recurse
+        return self.reduce_pairs(pair_sets, pair_map, free_targets)
+
+    def merge_one_qubit(self, terms):
+        one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
+        for targets, matrix in terms.items():
+            assert len(targets) in {1, 2}
+            if len(targets) == 1:
+                one_qubit[targets[0]] = matrix
+            else:
+                two_qubit[targets] = matrix
+                for t in targets:
+                    if t in pair_sets:
+                        pair_sets[t].add(targets)
+                    else:
+                        pair_sets[t] = {targets}
+
+        free_targets = set(one_qubit.keys())
+        pair_map = self.reduce_pairs(pair_sets, dict(), free_targets)
+        if pair_map is None:
+            log.info("Aborting merge of one and two-qubit terms during "
+                     "TrotterHamiltonian creation because the two-qubit "
+                     "terms are not sufficiently many.")
+            return terms
+
+        merged = dict()
+        for target, pair in pair_map.items():
+            two_qubit.pop(pair)
+            if target == pair[0]:
+                matrix = terms[pair]
+            else:
+                c, m1, m2 = self.terms[pair]
+                pair = (pair[1], pair[0])
+                matrix = c * np.kron(m2, m1)
+            eye = np.eye(2, dtype=matrix.dtype)
+            merged[pair] = np.kron(one_qubit[target], eye) + matrix
+        merged.update(two_qubit)
+        return merged
+
+
+class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
+    """Backend implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+
+    def __init__(self, *parts, ground_state=None):
+        self.K = K
+        super().__init__(*parts, ground_state=ground_state)
+
+    @staticmethod
+    def construct_terms(terms):
+        """Helper method for `from_symbolic`.
+
+        Constructs the term dictionary by using the same
+        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        have equal matrix representation. This is done for efficiency during
+        the exponentiation of terms.
+
+        Args:
+            terms (dict): Dictionary that maps tuples of targets to the matrix
+                          that acts on these on targets.
+
+        Returns:
+            terms (dict): Dictionary that maps tuples of targets to the
+                          Hamiltonian term that acts on these on targets.
+        """
+        from qibo.hamiltonians import Hamiltonian
+        unique_matrices = []
+        hterms = {}
+        for targets, matrix in terms.items():
+            flag = True
+            for m, h in unique_matrices:
+                if np.array_equal(matrix, m):
+                    ham = h
+                    flag = False
+                    break
+            if flag:
+                ham = Hamiltonian(len(targets), matrix, numpy=True)
+                unique_matrices.append((matrix, ham))
+            hterms[targets] = ham
+        return hterms
+
+    def make_compatible(self, o):
+        if not isinstance(o, self.__class__):
+            raise TypeError("Only ``TrotterHamiltonians`` can be made "
+                            "compatible but {} was given.".format(type(o)))
+        if self.is_compatible(o):
+            return o
+
+        normalizer = {}
+        for targets in o.targets_map.keys():
+            if len(targets) > 1:
+                raise_error(NotImplementedError,
+                            "Only non-interacting Hamiltonians can be "
+                            "transformed using the `make_compatible` "
+                            "method but the given Hamiltonian contains "
+                            "a {} qubit term.".format(len(targets)))
+            normalizer[targets[0]] = 0
+
+        term_matrices = {}
+        for targets in self.targets_map.keys():
+            mats = []
+            for target in targets:
+                if target in normalizer:
+                    normalizer[target] += 1
+                    mats.append(o.targets_map[(target,)].matrix)
+                else:
+                    mats.append(None)
+            term_matrices[targets] = tuple(mats)
+
+        for v in normalizer.values():
+            if v == 0:
+                raise_error(ValueError, "Given non-interacting Hamiltonian "
+                                        "cannot be made compatible.")
+
+        new_terms = {}
+        for targets, matrices in term_matrices.items():
+            n = len(targets)
+            s = np.zeros(2 * (2 ** n,), dtype=self.dtype)
+            for i, (t, m) in enumerate(zip(targets, matrices)):
+                matlist = n * [np.eye(2, dtype=self.dtype)]
+                if m is not None:
+                    matlist[i] = m / normalizer[t]
+                    s += SymbolicHamiltonian.multikron(matlist)
+            new_terms[targets] = self.term_class(n, s, numpy=True)
+
+        new_parts = [{t: new_terms[t] for t in part.keys()}
+                     for part in self.parts]
+        return self.__class__(*new_parts, ground_state=o.ground_state_func)
+
+    def calculate_dense_matrix(self):
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -83,7 +376,7 @@ class TensorflowTrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         return matrix.reshape(2 * (2 ** self.nqubits,))
 
     def expectation(self, state, normalize=False):
-        return TensorflowHamiltonian.expectation(self, state, normalize)
+        return Hamiltonian.expectation(self, state, normalize)
 
     def __matmul__(self, state):
         if isinstance(state, tf.Tensor):
