@@ -4,7 +4,7 @@ import math
 import sys
 import tensorflow as tf
 from qibo import K
-from qibo.base import cache, gates
+from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.tensorflow import cgates
 from qibo.config import raise_error
@@ -34,6 +34,7 @@ class TensorflowGate(BackendGate):
         self.matrix = K.reshape(matrix, 2 * rank * (2,))
 
     def prepare(self):
+        from qibo.tensorflow import einsum
         self.is_prepared = True
         self.reprepare()
         if self.is_controlled_by:
@@ -41,9 +42,8 @@ class TensorflowGate(BackendGate):
                 # fall back to the 'defaulteinsum' backend when using
                 # density matrices with `controlled_by` gates because
                 # 'matmuleinsum' is not properly implemented for this case
-                from qibo.tensorflow import einsum
                 self.einsum = einsum.DefaultEinsum()
-            self.control_cache = cache.ControlCache(self)
+            self.control_cache = einsum.ControlCache(self)
             nactive = self.nqubits - len(self.control_qubits)
             targets = self.control_cache.targets
             self.calculation_cache = self.einsum.create_cache(
