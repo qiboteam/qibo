@@ -1,7 +1,5 @@
-from qibo.config import BACKEND_NAME, raise_error, get_backend
-if BACKEND_NAME != "tensorflow": # pragma: no cover
-    # case not tested because backend is preset to TensorFlow
-    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
+from qibo import get_backend
+from qibo.config import raise_error
 from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
 from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
 from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit

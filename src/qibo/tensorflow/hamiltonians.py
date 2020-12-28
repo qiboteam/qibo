@@ -1,14 +1,15 @@
 import itertools
 import numpy as np
 import tensorflow as tf
-from qibo.config import raise_error, EINSUM_CHARS, NUMERIC_TYPES, ARRAY_TYPES
+from qibo import K
+from qibo.config import raise_error, EINSUM_CHARS
 from qibo.base import hamiltonians
 
 
 class TensorflowHamiltonian(hamiltonians.Hamiltonian):
     """TensorFlow implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
-    NUMERIC_TYPES = NUMERIC_TYPES
-    ARRAY_TYPES = ARRAY_TYPES
+    NUMERIC_TYPES = K.numeric_types
+    ARRAY_TYPES = K.tensor_types
     K = tf
 
     def _calculate_exp(self, a):

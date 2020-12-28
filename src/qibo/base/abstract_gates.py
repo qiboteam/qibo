@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
-from qibo import config
+from qibo import get_device, config
 from qibo.config import raise_error
 from collections.abc import Iterable
 from typing import List, Sequence, Tuple
@@ -314,7 +314,7 @@ class BackendGate(Gate, ABC):
         self._unitary = None
         self.is_prepared = False
         # Cast gate matrices to the proper device
-        self.device = config.get_device()
+        self.device = get_device()
         # Reference to copies of this gate that are casted in devices when
         # a distributed circuit is used
         self.device_gates = set()

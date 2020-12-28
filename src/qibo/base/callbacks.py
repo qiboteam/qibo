@@ -12,7 +12,7 @@ class Callback(ABC):
     Results of a callback can be accessed by indexing the corresponding object.
     """
     # FIXME: Remove this because base should be independent of backends
-    from qibo.config import K
+    from qibo import K
 
     def __init__(self):
         self._results = []

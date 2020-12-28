@@ -1305,7 +1305,7 @@ def test_variational_layer_dagger(backend, nqubits):
                           (6, [1, 3], np.ones(2, dtype=np.int), True),
                           (4, [0, 2], np.zeros(2, dtype=np.int32)[0], True)])
 def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
-    from qibo.config import NUMERIC_TYPES
+    from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
@@ -1324,7 +1324,7 @@ def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
             final_state = collapse(np.copy(initial_state).reshape(new_shape))
             final_state = final_state.numpy().reshape(original_shape)
 
-    if isinstance(results, int) or isinstance(results, NUMERIC_TYPES):
+    if isinstance(results, int) or isinstance(results, K.numeric_types):
         results = nqubits * [results]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):

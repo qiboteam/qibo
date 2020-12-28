@@ -1,11 +1,13 @@
+import os
 from qibo.backends import numpy
-from qibo.config import raise_error
+from qibo.config import LOG_LEVEL, raise_error
 
 
 class TensorflowBackend(numpy.NumpyBackend):
 
     def __init__(self):
         super().__init__()
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
         import tensorflow as tf
         self.backend = tf
         self.name = "tensorflow"
