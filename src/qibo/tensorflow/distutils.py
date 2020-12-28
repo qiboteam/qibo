@@ -1,7 +1,6 @@
 import copy
-import numpy as np
-import tensorflow as tf
 from qibo import K
+from qibo import numpy as qnp
 from qibo.base import gates
 from qibo.tensorflow import custom_operators as op
 from qibo.config import raise_error, get_threads
@@ -190,7 +189,7 @@ class DistributedQueues(DistributedBase):
             Array of integers with shape (nqubits,) with the number of gates
             for each qubit id.
         """
-        counter = np.zeros(nqubits, dtype=np.int32)
+        counter = qnp.zeros(nqubits, dtype='DTYPEINT')
         for gate in queue:
             for qubit in gate.target_qubits:
                 counter[qubit] += 1
@@ -198,7 +197,7 @@ class DistributedQueues(DistributedBase):
 
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
-                   counter: np.ndarray) -> List[gates.Gate]:
+                   counter: qnp.Tensor) -> List[gates.Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
@@ -257,7 +256,7 @@ class DistributedQueues(DistributedBase):
         return self._transform(queue, new_remaining_queue, counter)
 
     def transform(self, queue: List[gates.Gate],
-                  counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
+                  counter: Optional[qnp.Tensor] = None) -> List[gates.Gate]:
         """Transforms gate queue to be compatible with distributed simulation.
 
         Adds SWAP gates between global and local qubits so that no gates are
@@ -385,7 +384,7 @@ class DistributedState(DistributedBase):
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
         with K.device(self.device):
-            self.pieces = [tf.Variable(K.zeros(n, dtype=self.dtype))
+            self.pieces = [K.optimization.Variable(K.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
         self.shapes = {
@@ -395,8 +394,8 @@ class DistributedState(DistributedBase):
             }
 
         self.bintodec = {
-            "global": 2 ** np.arange(self.nglobal - 1, -1, -1),
-            "local": 2 ** np.arange(self.nlocal - 1, -1, -1)
+            "global": 2 ** qnp.range(self.nglobal - 1, -1, -1),
+            "local": 2 ** qnp.range(self.nlocal - 1, -1, -1)
             }
 
     @classmethod
@@ -413,7 +412,7 @@ class DistributedState(DistributedBase):
       state = cls(circuit)
       with K.device(state.device):
           norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
-          state.pieces = [tf.Variable(K.ones_like(p) / norm)
+          state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
                           for p in state.pieces]
       return state
 
@@ -477,7 +476,7 @@ class DistributedState(DistributedBase):
 
       elif isinstance(key, int):
           binary_index = bin(key)[2:].zfill(self.nqubits)
-          binary_index = np.array([int(x) for x in binary_index])
+          binary_index = qnp.cast([int(x) for x in binary_index], 'DTYPEINT')
 
           global_ids = binary_index[self.qubits.list]
           global_ids = global_ids.dot(self.bintodec["global"])
@@ -488,8 +487,8 @@ class DistributedState(DistributedBase):
       else:
           raise_error(TypeError, "Unknown index type {}.".format(type(key)))
 
-    def __array__(self) -> np.ndarray:
+    def __array__(self):
         return self.vector.numpy()
 
-    def numpy(self) -> np.ndarray:
+    def numpy(self):
         return self.vector.numpy()
