@@ -5,10 +5,11 @@ using namespace tensorflow;
 
 // Register op that generates initial state
 REGISTER_OP("InitialState")
-    .Input("in: int64")
-    .Attr("T: {complex64, complex128}")
+    .Attr("nqubits: int")
+    .Attr("dtype: {complex64, complex128}")
+    .Attr("is_matrix: bool")
     .Attr("omp_num_threads: int")
-    .Output("out: T");
+    .Output("out: dtype");
 
 
 // Register op that changes qubit order for multi-GPU

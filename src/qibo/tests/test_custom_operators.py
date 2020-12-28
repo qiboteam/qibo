@@ -25,13 +25,14 @@ def test_initial_state(dtype, compile):
   """Check that initial_state updates first element properly."""
   def apply_operator(dtype):
     """Apply the initial_state operator"""
-    return op.initial_state(10, dtype, get_threads())
+    return op.initial_state(nqubits=4, dtype=dtype,
+                            is_matrix=False, omp_num_threads=get_threads())
 
   func = apply_operator
   if compile:
       func = tf.function(apply_operator)
   final_state = func(dtype)
-  exact_state = np.array([1] + [0]*9, dtype=dtype)
+  exact_state = np.array([1] + [0]*15, dtype=dtype)
   np.testing.assert_allclose(final_state, exact_state)
 
 

@@ -211,7 +211,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     def _default_initial_state(self) -> tf.Tensor:
         """Creates the |000...0> state for default initialization."""
-        return op.initial_state(self.shapes.get('TF_FLAT'), DTYPES.get('DTYPECPX'), get_threads())
+        return op.initial_state(nqubits=self.nqubits,
+                                dtype=DTYPES.get('DTYPECPX'),
+                                is_matrix=self.density_matrix,
+                                omp_num_threads=get_threads())
 
     def get_initial_state(self, state: Optional[InitStateType] = None
                            ) -> tf.Tensor:
