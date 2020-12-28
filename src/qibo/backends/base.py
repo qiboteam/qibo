@@ -198,6 +198,11 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def array_equal(self, x, y):
+        """Used in :meth:`qibo.tensorflow.hamiltonians.TrotterHamiltonian.construct_terms`."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def gather(self, x, indices=None, condition=None, axis=0):
         raise_error(NotImplementedError)
 

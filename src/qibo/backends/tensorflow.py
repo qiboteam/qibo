@@ -50,7 +50,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.concat(x, axis=axis)
 
     def copy(self, x):
-        return self.backend.identity(x)
+        return x + self.backend.zeros_like(x)
 
     def range(self, start, stop, step, dtype=None):
         if isinstance(dtype, str):

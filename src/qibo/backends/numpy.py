@@ -163,6 +163,9 @@ class NumpyBackend(Backend, base.BaseBackend):
     def eigvalsh(self, x):
         return self.backend.linalg.eigvalsh(x)
 
+    def array_equal(self, x, y):
+        return self.np.array_equal(x, y)
+
     def unique(self, x, return_counts=False):
         # Uses numpy backend always (even on Tensorflow)
         return self.np.unique(x, return_counts=return_counts)

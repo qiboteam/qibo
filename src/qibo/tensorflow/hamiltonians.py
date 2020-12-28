@@ -1,7 +1,6 @@
 import itertools
-import numpy as np
-import tensorflow as tf
 from qibo import K
+from qibo import numpy as qnp
 from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.base import hamiltonians
 
@@ -109,12 +108,6 @@ class Hamiltonian(hamiltonians.Hamiltonian):
                                              "not implemented.".format(type(o)))
         return self.__class__(self.nqubits, new_matrix)
 
-    def _real(self, o):
-        # TODO: Remove this
-        if isinstance(o, tf.Tensor):
-            return np.array(o).real
-        return o.real
-
     def __mul__(self, o):
         """Multiplication to scalar operator."""
         if isinstance(o, self.K.Tensor):
@@ -123,12 +116,12 @@ class Hamiltonian(hamiltonians.Hamiltonian):
             new_matrix = self.matrix * o
             r = self.__class__(self.nqubits, new_matrix)
             if self._eigenvalues is not None:
-                if self._real(o) >= 0:
+                if qnp.cast(o).real >= 0:
                     r._eigenvalues = o * self._eigenvalues
                 else:
                     r._eigenvalues = o * self._eigenvalues[::-1]
             if self._eigenvectors is not None:
-                if self._real(o) > 0:
+                if qnp.cast(o).real > 0:
                     r._eigenvectors = self._eigenvectors
                 elif o == 0:
                     r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -175,12 +168,12 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def multikron(matrix_list):
         h = 1
         for m in matrix_list:
-            h = np.kron(h, m)
+            h = qnp.kron(h, m)
         return h
 
     def dense_matrix(self):
         matrix = sum(self.full_matrices())
-        eye = np.eye(matrix.shape[0], dtype=matrix.dtype)
+        eye = qnp.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
 
     def reduce_pairs(self, pair_sets, pair_map, free_targets):
@@ -263,9 +256,9 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             else:
                 c, m1, m2 = self.terms[pair]
                 pair = (pair[1], pair[0])
-                matrix = c * np.kron(m2, m1)
-            eye = np.eye(2, dtype=matrix.dtype)
-            merged[pair] = np.kron(one_qubit[target], eye) + matrix
+                matrix = c * qnp.kron(m2, m1)
+            eye = qnp.eye(2, dtype=matrix.dtype)
+            merged[pair] = qnp.kron(one_qubit[target], eye) + matrix
         merged.update(two_qubit)
         return merged
 
@@ -300,7 +293,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         for targets, matrix in terms.items():
             flag = True
             for m, h in unique_matrices:
-                if np.array_equal(matrix, m):
+                if qnp.array_equal(matrix, m):
                     ham = h
                     flag = False
                     break
@@ -346,9 +339,9 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         new_terms = {}
         for targets, matrices in term_matrices.items():
             n = len(targets)
-            s = np.zeros(2 * (2 ** n,), dtype=self.dtype)
+            s = qnp.zeros(2 * (2 ** n,), dtype=self.dtype)
             for i, (t, m) in enumerate(zip(targets, matrices)):
-                matlist = n * [np.eye(2, dtype=self.dtype)]
+                matlist = n * [qnp.eye(2, dtype=self.dtype)]
                 if m is not None:
                     matlist[i] = m / normalizer[t]
                     s += SymbolicHamiltonian.multikron(matlist)
@@ -363,36 +356,32 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
-        matrix = np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
+        matrix = qnp.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
         chars = EINSUM_CHARS[:2 * self.nqubits]
         for targets, term in self:
             tmat = term.matrix.reshape(2 * term.nqubits * (2,))
             n = self.nqubits - len(targets)
-            emat = np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+            emat = qnp.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
             gen = lambda x: (chars[i + x] for i in targets)
             tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
             ec = "".join((c for c in chars if c not in tc))
-            matrix += np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+            matrix += qnp.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         return matrix.reshape(2 * (2 ** self.nqubits,))
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
     def __matmul__(self, state):
-        if isinstance(state, tf.Tensor):
-            copy = lambda x: tf.cast(x.numpy(), dtype=x.dtype)
-        elif isinstance(state, np.ndarray):
-            copy = np.copy
-        else:
+        if not isinstance(state, K.tensor_types):
             raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                              "implemented.".format(type(state)))
         rank = len(tuple(state.shape))
         if rank != 1:
             raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                     "rank-{} tensor.".format(rank))
-        result = tf.zeros_like(state)
+        result = self.K.zeros_like(state)
         for gate in self.terms():
             # Create copy of state so that the original is not modified
-            statec = copy(state)
+            statec = self.K.copy(state)
             result += gate(statec)
         return result

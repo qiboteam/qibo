@@ -13,7 +13,7 @@ class Hamiltonian(ABC):
             computational basis as an array of shape
             ``(2 ** nqubits, 2 ** nqubits)``.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
+            calculation backend, otherwise the selected backend is used.
             Default option is ``numpy = False``.
     """
 
@@ -49,7 +49,7 @@ class Hamiltonian(ABC):
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
             numpy (bool): If ``True`` the Hamiltonian is created using numpy as
-                the calculation backend, otherwise TensorFlow is used.
+                the calculation backend, otherwise the selected backend is used.
                 Default option is ``numpy = False``.
 
         Returns:
