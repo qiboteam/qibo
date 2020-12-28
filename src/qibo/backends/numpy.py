@@ -20,7 +20,7 @@ class NumpyBackend(base.BaseBackend):
         self.Tensor = np.ndarray
         self.random = np.random
         self.newaxis = np.newaxis
-        self.oom_error = None
+        self.oom_error = MemoryError
         self.optimization = None
 
     def cast(self, x, dtype='DTYPECPX'):
@@ -171,5 +171,15 @@ class NumpyBackend(base.BaseBackend):
         return func
 
     def device(self, device_name):
-        raise_error(NotImplementedError, "Device functionality is not "
-                                         "available in the numpy backend.")
+        #raise_error(NotImplementedError, "Device functionality is not "
+        #                                 "available in the numpy backend.")
+        return DummyDevice()
+
+
+class DummyDevice:
+
+    def __enter__(self, *args):
+        pass
+
+    def __exit__(self, *args):
+        pass

@@ -11,6 +11,8 @@ LOG_LEVEL = 3
 
 # Select the default backend engine
 BACKEND_NAME = "tensorflow"
+if "QIBO_BACKEND" in os.environ: # pragma: no cover
+    BACKEND_NAME = os.environ.get("QIBO_BACKEND")
 
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0

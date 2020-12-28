@@ -36,9 +36,16 @@ def set_backend(backend="custom"):
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
 
-    bk = construct_backend("tensorflow")
+    gate_backend = backend.split("_")
+    if len(gate_backend) == 1:
+        calc_backend, gate_backend = BACKEND_NAME, gate_backend[0]
+    elif len(gate_backend) == 2:
+        calc_backend, gate_backend = gate_backend
+    else:
+        raise_error(ValueError, "Unknown backend {}.".format(backend))
+    bk = construct_backend(calc_backend)
     K.assign(bk)
-    K.set_gates(backend)
+    K.set_gates(gate_backend)
 
 
 def get_backend():
