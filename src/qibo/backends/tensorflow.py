@@ -38,7 +38,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
-        from tensorflow.python.framework import errors_impl
+        from tensorflow.python.framework import errors_impl # pylint: disable=E0611
         self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
 
