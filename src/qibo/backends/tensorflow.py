@@ -34,7 +34,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         from qibo.backends import matrices
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
 
-        self.tensor_types = (self.np.ndarray, tf.Tensor)
+        self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
