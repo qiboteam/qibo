@@ -3,11 +3,11 @@
 import sys
 import math
 import tensorflow as tf
-from qibo import K
+from qibo import K, get_threads
 from qibo import numpy as np
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
-from qibo.config import raise_error, get_threads
+from qibo.config import raise_error
 from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
