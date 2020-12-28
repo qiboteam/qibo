@@ -28,8 +28,8 @@ template <typename T>
 struct InitialStateFunctor<GPUDevice, T> {
   void operator()(const GPUDevice& d, T* out, int64 shape, int nthreads) {
 
-    int blockSize = DEFAULT_BLOCK_SIZE;
-    int numBlocks = (shape + blockSize - 1) / blockSize;
+    int64 blockSize = DEFAULT_BLOCK_SIZE;
+    int64 numBlocks = (shape + blockSize - 1) / blockSize;
     if (shape < blockSize) {
       numBlocks = 1;
       blockSize = shape;
