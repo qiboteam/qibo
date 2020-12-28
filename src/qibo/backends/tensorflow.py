@@ -34,15 +34,12 @@ class TensorflowBackend(numpy.NumpyBackend):
         from qibo.backends import matrices
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
 
-        self._optimization = Optimization()
-
-    @property
-    def tensor_types(self):
-        return (self.np.ndarray, self.backend.Tensor, self.backend.Variable)
-
-    @property
-    def Tensor(self):
-        return self.backend.Tensor
+        self.tensor_types = (self.np.ndarray, tf.Tensor)
+        self.Tensor = tf.Tensor
+        self.random = tf.random
+        self.newaxis = tf.newaxis
+        self.oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        self.optimization = Optimization()
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -126,11 +123,3 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def device(self, device_name):
         return self.backend.device(device_name)
-
-    @property
-    def oom_error(self):
-        return self.backend.python.framework.errors_impl.ResourceExhaustedError
-
-    @property
-    def optimization(self):
-        return self._optimization

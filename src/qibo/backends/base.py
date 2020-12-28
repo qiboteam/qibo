@@ -4,30 +4,99 @@ from qibo.config import raise_error
 
 class BaseBackend(ABC):
 
+    base_methods = {"assign", "set_gates", "dtypes",
+                    "set_precision", "set_device"}
+
     def __init__(self):
         self.backend = None
         self.name = "base"
 
-    @property
-    @abstractmethod
-    def numeric_types(self):
-        raise_error(NotImplementedError)
+        self.gates = "custom"
+        self.custom_gates = True
+        self.custom_einsum = None
 
-    @property
-    @abstractmethod
-    def tensor_types(self):
-        raise_error(NotImplementedError)
+        self.precision = 'double'
+        self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
+                        'DTYPECPX': 'complex128'}
 
-    @property
-    @abstractmethod
-    def Tensor(self):
-        """Type of tensor object that is compatible to the backend."""
-        raise_error(NotImplementedError)
+        self.cpu_devices = []
+        self.gpu_devices = []
+        self.default_device = None
 
-    @property
-    @abstractmethod
-    def random(self):
-        raise_error(NotImplementedError)
+        self.matrices = None
+        self.numeric_types = None
+        self.tensor_types = None
+        self.Tensor = None
+        self.random = None
+        self.newaxis = None
+        self.oom_error = None
+        self.optimization = None
+
+    def assign(self, backend):
+        """Assigns backend's methods."""
+        for method in dir(backend):
+            if method[:2] != "__" and method not in self.base_methods:
+                setattr(self, method, getattr(backend, method))
+        self.matrices = backend.matrices
+        self.numeric_types = backend.numeric_types
+        self.tensor_types = backend.tensor_types
+        self.Tensor = backend.Tensor
+        self.random = backend.random
+        self.newaxis = backend.newaxis
+        self.oom_error = backend.oom_error
+        self.optimization = backend.optimization
+
+    def set_gates(self, name):
+        if name == 'custom':
+            self.custom_gates = True
+            self.custom_einsum = None
+        elif name == 'defaulteinsum':
+            from qibo.tensorflow import einsum
+            self.custom_gates = False
+            self.custom_einsum = einsum.DefaultEinsum()
+        elif name == 'matmuleinsum':
+            from qibo.tensorflow import einsum
+            self.custom_gates = False
+            self.custom_einsum = einsum.MatmulEinsum()
+        else:
+            raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
+        self.gates = name
+
+    def dtypes(self, name):
+        if name in self._dtypes:
+            dtype = self._dtypes.get(name)
+        else:
+            dtype = name
+        return getattr(self.backend, dtype)
+
+    def set_precision(self, dtype):
+        if dtype == 'single':
+            self._dtypes['DTYPE'] = 'float32'
+            self._dtypes['DTYPECPX'] = 'complex64'
+        elif dtype == 'double':
+            self._dtypes['DTYPE'] = 'float64'
+            self._dtypes['DTYPECPX'] = 'complex128'
+        else:
+            raise_error(RuntimeError, f'dtype {dtype} not supported.')
+        self.precision = dtype
+        if self.matrices is not None:
+            self.matrices.dtype = self.dtypes('DTYPECPX')
+
+    def set_device(self, name):
+        parts = name[1:].split(":")
+        if name[0] != "/" or len(parts) < 2 or len(parts) > 3:
+            raise_error(ValueError, "Device name should follow the pattern: "
+                             "/{device type}:{device number}.")
+        device_type, device_number = parts[-2], int(parts[-1])
+        if device_type == "CPU":
+            ndevices = len(self.cpu_devices)
+        elif device_type == "GPU":
+            ndevices = len(self.gpu_devices)
+        else:
+            raise_error(ValueError, f"Unknown device type {device_type}.")
+        if device_number >= ndevices:
+            raise_error(ValueError, f"Device {name} does not exist.")
+        self.default_device = name
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'):
@@ -52,18 +121,13 @@ class BaseBackend(ABC):
     def concatenate(self, x, axis=None):
         raise_error(NotImplementedError)
 
-    @property
-    @abstractmethod
-    def newaxis(self):
-        raise_error(NotImplementedError)
-
     @abstractmethod
     def copy(self, x):
         """Creates a copy of the tensor in memory."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def range(start, finish, step, dtype=None):
+    def range(self, start, finish, step, dtype=None):
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -212,15 +276,4 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def device(self, device_name):
-        raise_error(NotImplementedError)
-
-    @property
-    @abstractmethod
-    def oom_error(self):
-        raise_error(NotImplementedError)
-
-    @property
-    @abstractmethod
-    def optimization(self):
-        """Module with attributes useful for optimization."""
         raise_error(NotImplementedError)

@@ -1,37 +1,27 @@
-from qibo.backends import Backend
 from qibo.backends import base
 from qibo.config import raise_error
 
 
-class NumpyBackend(Backend, base.BaseBackend):
+class NumpyBackend(base.BaseBackend):
 
     def __init__(self):
-        Backend.__init__(self)
-        base.BaseBackend.__init__(self)
+        super().__init__()
         import numpy as np
         self.backend = np
         self.name = "numpy"
         self.np = np
+
         from qibo.backends import matrices
         self.matrices = matrices.NumpyMatrices(self.dtypes('DTYPECPX'))
-
-    @property
-    def numeric_types(self):
-        return (self.np.int, self.np.float, self.np.complex,
-                self.np.int32, self.np.int64, self.np.float32,
-                self.np.float64, self.np.complex64, self.np.complex128)
-
-    @property
-    def tensor_types(self):
-        return (self.backend.ndarray,)
-
-    @property
-    def Tensor(self):
-        return self.backend.ndarray
-
-    @property
-    def random(self):
-        return self.backend.random
+        self.numeric_types = (np.int, np.float, np.complex, np.int32,
+                              np.int64, np.float32, np.float64,
+                              np.complex64, np.complex128)
+        self.tensor_types = (np.ndarray,)
+        self.Tensor = np.ndarray
+        self.random = np.random
+        self.newaxis = np.newaxis
+        self.oom_error = None
+        self.optimization = None
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -53,10 +43,6 @@ class NumpyBackend(Backend, base.BaseBackend):
 
     def concatenate(self, x, axis=0):
         return self.backend.concatenate(x, axis=axis)
-
-    @property
-    def newaxis(self):
-        return self.backend.newaxis
 
     def copy(self, x):
         return self.backend.copy(x)
@@ -187,12 +173,3 @@ class NumpyBackend(Backend, base.BaseBackend):
     def device(self, device_name):
         raise_error(NotImplementedError, "Device functionality is not "
                                          "available in the numpy backend.")
-
-    @property
-    def oom_error(self):
-        raise_error(NotImplementedError)
-
-    @property
-    def optimization(self):
-        raise_error(ValueError, "Optimization is not available for numpy "
-                                "backend.")
