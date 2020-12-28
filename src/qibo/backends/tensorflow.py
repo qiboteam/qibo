@@ -38,7 +38,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
-        self.oom_error = tf.python.framework.errors_impl.ResourceExhaustedError
+        from tensorflow.python.framework import errors_impl
+        self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
 
     def cast(self, x, dtype='DTYPECPX'):
