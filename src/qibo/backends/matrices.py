@@ -6,7 +6,7 @@ class NumpyMatrices:
     _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "SWAP", "TOFFOLI"]
 
     def __init__(self, dtype):
-        self.dtype = dtype
+        self._dtype = dtype
         self._I = None
         self._H = None
         self._X = None
@@ -24,6 +24,14 @@ class NumpyMatrices:
     def cast(self, x):
         d = len(x.shape) // 2
         return x.reshape((2 ** d, 2 ** d)) # return it as a matrix for numpy
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, dtype):
+        self._dtype = dtype
 
     @property
     def I(self):
@@ -109,6 +117,14 @@ class TensorflowMatrices(NumpyMatrices):
             super().__init__(np.complex128)
         elif dtype == tf.complex64:
             super().__init__(np.complex64)
+
+    @NumpyMatrices.dtype.setter
+    def dtype(self, dtype):
+        self.tftype = dtype
+        if dtype == self.tf.complex128:
+            self._dtype = np.complex128
+        elif dtype == self.tf.complex64:
+            self._dtype = np.complex64
 
     def cast(self, x):
         return self.tf.cast(x, dtype=self.tftype)

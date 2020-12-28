@@ -16,9 +16,11 @@ class Backend:
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
                         'DTYPECPX': 'complex128'}
 
-        self.cpu_devices = None
-        self.gpu_devices = None
+        self.cpu_devices = []
+        self.gpu_devices = []
         self.default_device = None
+
+        self.matrices = None
 
     def assign(self, backend):
         """Assigns backend's methods."""
@@ -51,9 +53,6 @@ class Backend:
         return getattr(self.backend, dtype)
 
     def set_precision(self, dtype):
-        if not config.ALLOW_SWITCHERS and dtype != self.precision:
-            warnings.warn("Precision should not be changed after allocating gates.",
-                          category=RuntimeWarning)
         if dtype == 'single':
             self._dtypes['DTYPE'] = 'float32'
             self._dtypes['DTYPECPX'] = 'complex64'
@@ -63,20 +62,22 @@ class Backend:
         else:
             raise_error(RuntimeError, f'dtype {dtype} not supported.')
         self.precision = dtype
+        if self.matrices is not None:
+            self.matrices.dtype = self.dtypes('DTYPECPX')
 
     def set_device(self, name):
-        if not config.ALLOW_SWITCHERS and name != self.default_device: # pragma: no cover
-            # no testing is implemented for warnings
-            warnings.warn("Device should not be changed after allocating gates.",
-                          category=RuntimeWarning)
         parts = name[1:].split(":")
         if name[0] != "/" or len(parts) < 2 or len(parts) > 3:
             raise_error(ValueError, "Device name should follow the pattern: "
                              "/{device type}:{device number}.")
         device_type, device_number = parts[-2], int(parts[-1])
-        if device_type not in {"CPU", "GPU"}:
+        if device_type == "CPU":
+            ndevices = len(self.cpu_devices)
+        elif device_type == "GPU":
+            ndevices = len(self.gpu_devices)
+        else:
             raise_error(ValueError, f"Unknown device type {device_type}.")
-        if device_number >= len(self._devices[device_type]):
+        if device_number >= ndevices:
             raise_error(ValueError, f"Device {name} does not exist.")
         self.default_device = name
 
@@ -134,8 +135,12 @@ def set_precision(dtype='double'):
         dtype (str): possible options are 'single' for single precision
             (complex64) and 'double' for double precision (complex128).
     """
-    K.precision = dtype
+    if not config.ALLOW_SWITCHERS and dtype != K.precision:
+        warnings.warn("Precision should not be changed after allocating gates.",
+                      category=RuntimeWarning)
+    K.set_precision(dtype)
     for bk in CONSTRUCTED_BACKENDS.values():
+        bk.set_precision(dtype)
         bk.matrices.allocate_matrices()
 
 
@@ -156,10 +161,16 @@ def set_device(name):
             '/{device type}:{device number}' where device type is one of
             CPU or GPU.
     """
-    K.default_device = name
-    with tf.device(K.default_device):
-        for bk in CONSTRUCTED_BACKENDS.values():
-            bk.matrices.allocate_matrices()
+    if not config.ALLOW_SWITCHERS and name != K.default_device: # pragma: no cover
+        # no testing is implemented for warnings
+        warnings.warn("Device should not be changed after allocating gates.",
+                      category=RuntimeWarning)
+    K.set_device(name)
+    for bk in CONSTRUCTED_BACKENDS.values():
+        if bk.default_device is not None:
+            bk.set_device(name)
+            with bk.device(bk.default_device):
+                bk.matrices.allocate_matrices()
 
 
 def get_device():
