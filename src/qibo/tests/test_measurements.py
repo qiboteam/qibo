@@ -589,7 +589,7 @@ def test_measurements_with_probabilistic_noise():
 def test_post_measurement_bitflips(probs):
     """Check applying bitflips to measurement samples."""
     import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     from qibo.tensorflow import measurements
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
@@ -600,7 +600,7 @@ def test_post_measurement_bitflips(probs):
     tf.random.set_seed(123)
     if isinstance(probs, dict):
         probs = np.array([probs[q] for q in qubits])
-    sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE')).numpy()
+    sprobs = tf.random.uniform(samples.shape, dtype=K.dtypes('DTYPE')).numpy()
     flipper = sprobs < probs
     target_samples = (samples + flipper) % 2
     np.testing.assert_allclose(noisy_result.samples(), target_samples)
@@ -609,7 +609,7 @@ def test_post_measurement_bitflips(probs):
 def test_post_measurement_asymmetric_bitflips():
     """Check applying asymmetric bitflips to measurement samples."""
     import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     from qibo.tensorflow import measurements
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
@@ -621,7 +621,7 @@ def test_post_measurement_asymmetric_bitflips():
     p0 = 0.2 * np.ones(4)
     p1 = np.array([0.2, 0.0, 0.0, 0.1])
     tf.random.set_seed(123)
-    sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE')).numpy()
+    sprobs = tf.random.uniform(samples.shape, dtype=K.dtypes('DTYPE')).numpy()
     target_samples = np.copy(samples).ravel()
     ids = (np.where(target_samples == 0)[0], np.where(target_samples == 1)[0])
     target_samples[ids[0]] = samples.ravel()[ids[0]] + (sprobs < p0).ravel()[ids[0]]
@@ -650,7 +650,7 @@ def test_post_measurement_bitflips_on_circuit(accelerators, probs, target):
 def test_post_measurement_bitflips_on_circuit_result():
     """Check bitflip errors on ``CircuitResult`` objects."""
     import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     thetas = np.random.random(4)
     c = models.Circuit(4)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
@@ -664,7 +664,7 @@ def test_post_measurement_bitflips_on_circuit_result():
 
     samples = result.samples().numpy()
     tf.random.set_seed(123)
-    sprobs = tf.random.uniform(samples.shape, dtype=DTYPES.get('DTYPE'))
+    sprobs = tf.random.uniform(samples.shape, dtype=K.dtypes('DTYPE'))
     flipper = sprobs.numpy() < np.array([0.2, 0.4, 0.3])
     target_samples = (samples + flipper) % 2
     np.testing.assert_allclose(noisy_samples, target_samples)

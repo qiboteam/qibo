@@ -22,7 +22,7 @@ class TensorflowGate(BackendGate):
         # Gate matrices
         self.matrix = None
         # Einsum backend
-        self.einsum = K.einsum
+        self.einsum = K.custom_einsum
 
     @staticmethod
     def control_unitary(unitary):

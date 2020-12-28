@@ -9,7 +9,7 @@ class Backend:
     def __init__(self):
         self.gates = None
         self.custom_gates = True
-        self.einsum = None
+        self.custom_einsum = None
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -29,15 +29,15 @@ class Backend:
     def set_gates(self, name):
         if name == 'custom':
             self.custom_gates = True
-            self.einsum = None
+            self.custom_einsum = None
         elif name == 'defaulteinsum':
             from qibo.tensorflow import einsum
             self.custom_gates = False
-            self.einsum = einsum.DefaultEinsum()
+            self.custom_einsum = einsum.DefaultEinsum()
         elif name == 'matmuleinsum':
             from qibo.tensorflow import einsum
             self.custom_gates = False
-            self.einsum = einsum.MatmulEinsum()
+            self.custom_einsum = einsum.MatmulEinsum()
         else:
             raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
         self.gates = name
