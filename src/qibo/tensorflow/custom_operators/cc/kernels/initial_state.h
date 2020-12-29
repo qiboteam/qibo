@@ -9,7 +9,7 @@ namespace functor {
 
 template <typename Device, typename T>
 struct InitialStateFunctor {
-  void operator()(const Device &d, T *in, int64 shape, int nthreads);
+  void operator()(const Device &d, T *in, int64 shape);
 };
 
 }  // namespace functor
