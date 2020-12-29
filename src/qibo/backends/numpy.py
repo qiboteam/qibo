@@ -2,6 +2,24 @@ from qibo.backends import base
 from qibo.config import raise_error
 
 
+class DummyModule:
+
+    def __init__(self, *names):
+        self.names = set(names)
+
+    def __getattr__(self, name):
+        if name in self.names:
+            return None
+        raise_error(ValueError, "{} is not available in the numpy backend."
+                                "".format(name))
+
+    def __enter__(self, *args):
+        pass
+
+    def __exit__(self, *args):
+        pass
+
+
 class NumpyBackend(base.BaseBackend):
 
     def __init__(self):
@@ -21,8 +39,8 @@ class NumpyBackend(base.BaseBackend):
         self.random = np.random
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
-        self.optimization = None
-        self.op = None
+        self.optimization = DummyModule()
+        self.op = DummyModule("apply_gate")
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -186,13 +204,4 @@ class NumpyBackend(base.BaseBackend):
         return func
 
     def device(self, device_name):
-        return DummyDevice()
-
-
-class DummyDevice:
-
-    def __enter__(self, *args):
-        pass
-
-    def __exit__(self, *args):
-        pass
+        return DummyModule()

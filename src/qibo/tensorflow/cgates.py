@@ -7,7 +7,6 @@ from qibo import numpy as qnp
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
 from qibo.config import raise_error
-from qibo.tensorflow import custom_operators as op
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -30,7 +29,7 @@ class TensorflowGate(BackendGate):
                         "Custom operator gates should not be used in compiled "
                         "mode.")
         super().__init__()
-        self.gate_op = op.apply_gate
+        self.gate_op = K.op.apply_gate
         self.qubits_tensor = None
         self.qubits_tensor_dm = None
         self.target_qubits_dm = None
@@ -122,7 +121,7 @@ class X(TensorflowGate, gates.X):
     def __init__(self, q):
         TensorflowGate.__init__(self)
         gates.X.__init__(self, q)
-        self.gate_op = op.apply_x
+        self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
         return qnp.cast([[0, 1], [1, 0]])
@@ -133,7 +132,7 @@ class Y(TensorflowGate, gates.Y):
     def __init__(self, q):
         TensorflowGate.__init__(self)
         gates.Y.__init__(self, q)
-        self.gate_op = op.apply_y
+        self.gate_op = K.op.apply_y
 
     def construct_unitary(self):
         return qnp.cast([[0, -1j], [1j, 0]])
@@ -147,7 +146,7 @@ class Z(TensorflowGate, gates.Z):
     def __init__(self, q):
         TensorflowGate.__init__(self)
         gates.Z.__init__(self, q)
-        self.gate_op = op.apply_z
+        self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
         return qnp.cast([[1, 0], [0, -1]])
@@ -175,7 +174,7 @@ class Collapse(TensorflowGate, gates.Collapse):
         TensorflowGate.__init__(self)
         gates.Collapse.__init__(self, *q, result=result)
         self.result_tensor = None
-        self.gate_op = op.collapse_state
+        self.gate_op = K.op.collapse_state
 
     def _result_to_list(self, res):
         if isinstance(res, K.tensor_types):
@@ -350,7 +349,7 @@ class U1(MatrixGate, gates.U1):
     def __init__(self, q, theta, trainable=True):
         MatrixGate.__init__(self)
         gates.U1.__init__(self, q, theta, trainable)
-        self.gate_op = op.apply_z_pow
+        self.gate_op = K.op.apply_z_pow
 
     def reprepare(self):
         with K.device(self.device):
@@ -406,7 +405,7 @@ class CNOT(TensorflowGate, gates.CNOT):
     def __init__(self, q0, q1):
         TensorflowGate.__init__(self)
         gates.CNOT.__init__(self, q0, q1)
-        self.gate_op = op.apply_x
+        self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
         return qnp.cast([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -418,7 +417,7 @@ class CZ(TensorflowGate, gates.CZ):
     def __init__(self, q0, q1):
         TensorflowGate.__init__(self)
         gates.CZ.__init__(self, q0, q1)
-        self.gate_op = op.apply_z
+        self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
         return qnp.diag([1, 1, 1, -1])
@@ -467,7 +466,7 @@ class CU1(_CUn_, gates.CU1):
 
     def __init__(self, q0, q1, theta, trainable=True):
         _CUn_.__init__(self, q0, q1, theta=theta, trainable=trainable)
-        self.gate_op = op.apply_z_pow
+        self.gate_op = K.op.apply_z_pow
 
     def reprepare(self):
         U1.reprepare(self)
@@ -503,7 +502,7 @@ class SWAP(TensorflowGate, gates.SWAP):
     def __init__(self, q0, q1):
         TensorflowGate.__init__(self)
         gates.SWAP.__init__(self, q0, q1)
-        self.gate_op = op.apply_swap
+        self.gate_op = K.op.apply_swap
 
     def construct_unitary(self):
         return qnp.cast([[1, 0, 0, 0], [0, 0, 1, 0],
@@ -515,7 +514,7 @@ class fSim(MatrixGate, gates.fSim):
     def __init__(self, q0, q1, theta, phi, trainable=True):
         MatrixGate.__init__(self)
         gates.fSim.__init__(self, q0, q1, theta, phi, trainable)
-        self.gate_op = op.apply_fsim
+        self.gate_op = K.op.apply_fsim
 
     def reprepare(self):
         theta, phi = self.parameters
@@ -540,7 +539,7 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
     def __init__(self, q0, q1, unitary, phi, trainable=True):
         TensorflowGate.__init__(self)
         gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi, trainable)
-        self.gate_op = op.apply_fsim
+        self.gate_op = K.op.apply_fsim
 
     def reprepare(self):
         unitary, phi = self.parameters
@@ -572,7 +571,7 @@ class TOFFOLI(TensorflowGate, gates.TOFFOLI):
     def __init__(self, q0, q1, q2):
         TensorflowGate.__init__(self)
         gates.TOFFOLI.__init__(self, q0, q1, q2)
-        self.gate_op = op.apply_x
+        self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
         matrix = qnp.eye(8)
@@ -597,9 +596,9 @@ class Unitary(MatrixGate, gates.Unitary):
         gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
         rank = self.rank
         if rank == 1:
-            self.gate_op = op.apply_gate
+            self.gate_op = K.op.apply_gate
         elif rank == 2:
-            self.gate_op = op.apply_two_qubit_gate
+            self.gate_op = K.op.apply_two_qubit_gate
         else:
             n = len(self.target_qubits)
             raise_error(NotImplementedError, "Unitary gate supports one or two-"
@@ -964,7 +963,7 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
         gates._ThermalRelaxationChannelB.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
-        self.gate_op = op.apply_two_qubit_gate
+        self.gate_op = K.op.apply_two_qubit_gate
 
     def prepare(self):
         super().prepare()
