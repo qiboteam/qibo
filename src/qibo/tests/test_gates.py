@@ -8,7 +8,8 @@ from qibo import gates
 from qibo.models import Circuit
 from qibo.tests import utils
 
-_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
+_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
+             "numpy_defaulteinsum", "numpy_matmuleinsum"]
 _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
                     ("custom", {"/GPU:0": 1, "/GPU:1": 1})]
 
@@ -21,7 +22,7 @@ def test_hadamard(backend):
     c = Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 2
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -35,7 +36,7 @@ def test_flatten(backend):
     target_state = np.ones(4) / 2.0
     c = Circuit(2)
     c.add(gates.Flatten(target_state))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
     gate = gates.Flatten(target_state)
     gate(final_state)
@@ -65,7 +66,7 @@ def test_xgate(backend, accelerators):
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
     c.add(gates.X(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -79,7 +80,7 @@ def test_ygate(backend):
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.Y(1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[1] = 1j
     np.testing.assert_allclose(final_state, target_state)
@@ -95,7 +96,7 @@ def test_zgate(backend, accelerators):
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Z(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 2.0
     target_state[2] *= -1.0
     target_state[3] *= -1.0
@@ -110,14 +111,14 @@ def test_identity_gate(backend, accelerators):
     c = Circuit(2, accelerators)
     c.add((gates.H(i) for i in range(2)))
     c.add(gates.I(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 2.0
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.I(0, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 4.0
     np.testing.assert_allclose(final_state, target_state)
 
@@ -130,23 +131,23 @@ def test_multicontrol_xgate(backend):
     c1 = Circuit(3)
     c1.add(gates.X(0))
     c1.add(gates.X(2).controlled_by(0))
-    final_state = c1.execute().numpy()
+    final_state = c1.execute()
     c2 = Circuit(3)
     c2.add(gates.X(0))
     c2.add(gates.CNOT(0, 2))
-    target_state = c2.execute().numpy()
+    target_state = c2.execute()
     np.testing.assert_allclose(final_state, target_state)
 
     c1 = Circuit(3)
     c1.add(gates.X(0))
     c1.add(gates.X(2))
     c1.add(gates.X(1).controlled_by(0, 2))
-    final_state = c1.execute().numpy()
+    final_state = c1.execute()
     c2 = Circuit(3)
     c2.add(gates.X(0))
     c2.add(gates.X(2))
     c2.add(gates.TOFFOLI(0, 2, 1))
-    target_state = c2.execute().numpy()
+    target_state = c2.execute()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -163,12 +164,12 @@ def test_multicontrol_xgate_more_controls(backend, accelerators):
     c.add(gates.X(3).controlled_by(0, 1, 2))
     c.add(gates.X(0))
     c.add(gates.X(2))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     c = Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(3))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
 
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -183,7 +184,7 @@ def test_rz_phase0(backend):
 
     c = Circuit(2)
     c.add(gates.RZ(0, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.zeros_like(final_state)
     target_state[0] = np.exp(-1j * theta / 2.0)
@@ -201,7 +202,7 @@ def test_rz_phase1(backend):
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.RZ(0, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.zeros_like(final_state)
     target_state[2] = np.exp(1j * theta / 2.0)
@@ -219,7 +220,7 @@ def test_u1(backend):
     c = Circuit(1)
     c.add(gates.X(0))
     c.add(gates.U1(0, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.zeros_like(final_state)
     target_state[1] = np.exp(1j * theta)
@@ -285,7 +286,7 @@ def test_controlled_u1(backend):
     c.add(gates.U1(2, theta).controlled_by(0, 1))
     c.add(gates.X(0))
     c.add(gates.X(1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
@@ -358,7 +359,7 @@ def test_zpow_gate(backend):
     c = Circuit(1)
     c.add(gates.X(0))
     c.add(gates.ZPow(0, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
@@ -367,7 +368,7 @@ def test_zpow_gate(backend):
     c = Circuit(2)
     c.add([gates.X(0), gates.X(1)])
     c.add(gates.CZPow(0, 1, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[-1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
@@ -386,7 +387,7 @@ def test_rx(backend):
     c = Circuit(1)
     c.add(gates.H(0))
     c.add(gates.RX(0, theta=theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     phase = np.exp(1j * theta / 2.0)
     gate = np.array([[phase.real, -1j * phase.imag],
@@ -406,7 +407,7 @@ def test_ry(backend):
     c = Circuit(1)
     c.add(gates.H(0))
     c.add(gates.RY(0, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     phase = np.exp(1j * theta / 2.0)
     gate = np.array([[phase.real, -phase.imag],
@@ -423,7 +424,7 @@ def test_cnot_no_effect(backend):
     qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.CNOT(0, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -438,7 +439,7 @@ def test_cnot(backend):
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.CNOT(0, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[3] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -456,12 +457,12 @@ def test_cz(backend):
     target_state = matrix.dot(init_state)
     c = Circuit(2)
     c.add(gates.CZ(0, 1))
-    final_state = c.execute(np.copy(init_state)).numpy()
+    final_state = c.execute(np.copy(init_state))
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(2)
     c.add(gates.Z(1).controlled_by(0))
-    final_state = c.execute(np.copy(init_state)).numpy()
+    final_state = c.execute(np.copy(init_state))
     assert c.queue[0].name == "cz"
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -478,7 +479,7 @@ def test_cu1(backend, accelerators):
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.CU1(0, 1, theta))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     phase = np.exp(1j * theta)
     target_state = np.zeros_like(final_state)
@@ -499,7 +500,7 @@ def test_fsim(backend):
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.fSim(0, 1, theta, phi))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.ones_like(final_state) / 2.0
     rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
@@ -523,7 +524,7 @@ def test_controlled_by_fsim(backend, accelerators):
     c = Circuit(6, accelerators)
     c.add((gates.H(i) for i in range(6)))
     c.add(gates.fSim(5, 3, theta, phi).controlled_by(0, 2, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.ones_like(final_state) / np.sqrt(2 ** 6)
     rotation = np.array([[np.cos(theta), -1j * np.sin(theta)],
@@ -550,7 +551,7 @@ def test_generalized_fsim(backend, accelerators):
     c = Circuit(3, accelerators)
     c.add((gates.H(i) for i in range(3)))
     c.add(gates.GeneralizedfSim(1, 2, rotation, phi))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.ones_like(final_state) / np.sqrt(8)
     matrix = np.eye(4, dtype=target_state.dtype)
@@ -585,7 +586,7 @@ def test_doubly_controlled_by_rx_no_effect(backend):
     c.add(gates.X(0))
     c.add(gates.RX(2, theta).controlled_by(0, 1))
     c.add(gates.X(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     target_state = np.zeros_like(final_state)
     target_state[0] = 1.0
@@ -602,7 +603,7 @@ def test_doubly_controlled_by_rx(backend, accelerators):
 
     c = Circuit(3, accelerators)
     c.add(gates.RX(2, theta))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
 
     c = Circuit(3)
     c.add(gates.X(0))
@@ -610,7 +611,7 @@ def test_doubly_controlled_by_rx(backend, accelerators):
     c.add(gates.RX(2, theta).controlled_by(0, 1))
     c.add(gates.X(0))
     c.add(gates.X(1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -624,7 +625,7 @@ def test_swap(backend):
     c = Circuit(2)
     c.add(gates.X(1))
     c.add(gates.SWAP(0, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -641,12 +642,12 @@ def test_multiple_swap(backend):
     c.add(gates.X(2))
     c.add(gates.SWAP(0, 1))
     c.add(gates.SWAP(2, 3))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     c = Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(3))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
 
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -661,11 +662,11 @@ def test_controlled_by_swap_small(backend):
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(3)
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(3)
@@ -674,12 +675,12 @@ def test_controlled_by_swap_small(backend):
     c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0))
     c.add(gates.X(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(3)
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -693,11 +694,11 @@ def test_controlled_by_swap(backend):
     c.add(gates.RX(2, theta=0.1234))
     c.add(gates.RY(3, theta=0.4321))
     c.add(gates.SWAP(2, 3).controlled_by(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(4)
     c.add(gates.RX(2, theta=0.1234))
     c.add(gates.RY(3, theta=0.4321))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(4)
@@ -706,12 +707,12 @@ def test_controlled_by_swap(backend):
     c.add(gates.RY(3, theta=0.4321))
     c.add(gates.SWAP(2, 3).controlled_by(0))
     c.add(gates.X(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(4)
     c.add(gates.RX(2, theta=0.1234))
     c.add(gates.RY(3, theta=0.4321))
     c.add(gates.SWAP(2, 3))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -727,11 +728,11 @@ def test_doubly_controlled_by_swap(backend, accelerators):
     c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(4)
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
 
     c = Circuit(4, accelerators)
@@ -742,12 +743,12 @@ def test_doubly_controlled_by_swap(backend, accelerators):
     c.add(gates.SWAP(1, 2).controlled_by(0, 3))
     c.add(gates.X(0))
     c.add(gates.X(3))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     c = Circuit(4)
     c.add(gates.RX(1, theta=0.1234))
     c.add(gates.RY(2, theta=0.4321))
     c.add(gates.SWAP(1, 2))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -760,7 +761,7 @@ def test_toffoli_no_effect(backend):
     c = Circuit(3)
     c.add(gates.X(1))
     c.add(gates.TOFFOLI(0, 1, 2))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[2] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -776,7 +777,7 @@ def test_toffoli(backend):
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.TOFFOLI(0, 1, 2))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.zeros_like(final_state)
     target_state[-1] = 1.0
     np.testing.assert_allclose(final_state, target_state)
@@ -791,11 +792,11 @@ def test_unitary_common_gates(backend):
     c = Circuit(2)
     c.add(gates.X(0))
     c.add(gates.H(1))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     c = Circuit(2)
     c.add(gates.Unitary(np.array([[0, 1], [1, 0]]), 0))
     c.add(gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
 
     thetax = 0.1234
@@ -804,7 +805,7 @@ def test_unitary_common_gates(backend):
     c.add(gates.RX(0, theta=thetax))
     c.add(gates.RY(1, theta=thetay))
     c.add(gates.CNOT(0, 1))
-    target_state = c.execute().numpy()
+    target_state = c.execute()
     c = Circuit(2)
     rx = np.array([[np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
                    [-1j * np.sin(thetax / 2), np.cos(thetax / 2)]])
@@ -814,7 +815,7 @@ def test_unitary_common_gates(backend):
     c.add(gates.Unitary(rx, 0))
     c.add(gates.Unitary(ry, 1))
     c.add(gates.Unitary(cnot, 0, 1))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -832,7 +833,7 @@ def test_unitary_random_onequbit_gate(backend):
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Unitary(matrix, 1, name="random"))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -852,7 +853,7 @@ def test_unitary_random_twoqubit_gate(backend):
     c.add(gates.H(1))
     c.add(gates.H(2))
     c.add(gates.Unitary(matrix, 1, 2, name="random"))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
 
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
@@ -868,7 +869,7 @@ def test_unitary_controlled_by(backend, accelerators):
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.Unitary(matrix, 1).controlled_by(0))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 2.0
     target_state[2:] = matrix.dot(target_state[2:])
     np.testing.assert_allclose(final_state, target_state)
@@ -877,7 +878,7 @@ def test_unitary_controlled_by(backend, accelerators):
     c = Circuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
-    final_state = c.execute().numpy()
+    final_state = c.execute()
     target_state = np.ones_like(final_state) / 4.0
     ids = [10, 11, 14, 15]
     target_state[ids] = matrix.dot(target_state[ids])
@@ -901,10 +902,13 @@ def test_unitary_bad_shape(backend):
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_various_type_initialization(backend):
-    import tensorflow as tf
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    matrix = utils.random_tensorflow_complex((4, 4), dtype=tf.float64)
+    if "numpy" in backend:
+        matrix = utils.random_numpy_complex((4, 4))
+    else:
+        import tensorflow as tf
+        matrix = utils.random_tensorflow_complex((4, 4), dtype=tf.float64)
     gate = gates.Unitary(matrix, 0, 1)
     with pytest.raises(TypeError):
         gate = gates.Unitary("abc", 0, 1)
@@ -979,7 +983,7 @@ def test_construct_unitary_controlled_by(backend):
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)
-    np.testing.assert_allclose(gate.unitary.numpy(), target_matrix)
+    np.testing.assert_allclose(gate.unitary, target_matrix)
 
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
@@ -1012,8 +1016,8 @@ def test_controlled_by_unitary_action(backend):
     gate = gates.Unitary(matrix, 1).controlled_by(0)
     c = Circuit(2)
     c.add(gate)
-    target_state = c(np.copy(init_state)).numpy()
-    final_state = gate.unitary.numpy().dot(init_state)
+    target_state = c(np.copy(init_state))
+    final_state = np.dot(gate.unitary, init_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -1033,8 +1037,8 @@ def test_controlled_rotations_from_un(backend, name, params):
     gate = getattr(gates, name)(0, 1, **params)
     c = Circuit(2)
     c.add(gate)
-    target_state = c(np.copy(init_state)).numpy()
-    final_state = gate.unitary.numpy().dot(init_state)
+    target_state = c(np.copy(init_state))
+    final_state = np.dot(gate.unitary, init_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -1046,14 +1050,14 @@ def test_variational_layer_call(nqubits, density_matrix):
     c = Circuit(nqubits, density_matrix=density_matrix)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    target_state = c().numpy()
+    target_state = c()
 
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ,
                                   theta)
     gate.density_matrix = density_matrix
-    final_state = gate(c._default_initial_state()).numpy()
+    final_state = gate(c._default_initial_state())
     np.testing.assert_allclose(target_state, final_state)
 
 
@@ -1066,14 +1070,14 @@ def test_variational_one_layer(backend, accelerators, nqubits):
     c = Circuit(nqubits)
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    target_state = c().numpy()
+    target_state = c()
 
     c = Circuit(nqubits, accelerators)
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                  gates.RY, gates.CZ,
                                  theta))
-    final_state = c().numpy()
+    final_state = c()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
 
@@ -1091,7 +1095,7 @@ def test_variational_two_layers(backend, accelerators, nqubits):
     c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
     c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
     c.add(gates.CZ(0, nqubits - 1))
-    target_state = c().numpy()
+    target_state = c()
 
     c = Circuit(nqubits, accelerators)
     theta = theta.reshape((2, nqubits))
@@ -1102,7 +1106,7 @@ def test_variational_two_layers(backend, accelerators, nqubits):
                                  gates.RY, gates.CZ, theta[0]))
     c.add(gates.VariationalLayer(range(nqubits), pairs2,
                                  gates.RY, gates.CZ, theta[1]))
-    final_state = c().numpy()
+    final_state = c()
     np.testing.assert_allclose(target_state, final_state)
 
     c = Circuit(nqubits, accelerators)
@@ -1113,7 +1117,7 @@ def test_variational_two_layers(backend, accelerators, nqubits):
                                  theta[0], theta[1]))
     c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
     c.add(gates.CZ(0, nqubits - 1))
-    final_state = c().numpy()
+    final_state = c()
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
 
@@ -1161,7 +1165,7 @@ def test_dagger_one_qubit(backend, gate, params):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(1)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1184,7 +1188,7 @@ def test_dagger_two_qubit(backend, gate, params):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(2)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1205,7 +1209,7 @@ def test_dagger_controlled_by(backend, gate, params):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(4)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1226,11 +1230,11 @@ def test_unitary_dagger(backend, nqubits, tfmatrix):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(nqubits)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     if tfmatrix:
-        matrix = matrix.numpy()
-    target_state = matrix.dot(initial_state)
-    target_state = matrix.conj().T.dot(target_state)
+        matrix = matrix
+    target_state = np.dot(matrix, initial_state)
+    target_state = np.dot(np.conj(matrix).T, target_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -1248,7 +1252,7 @@ def test_unitary_controlled_by_dagger(backend):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(5)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1271,7 +1275,7 @@ def test_generalizedfsim_dagger(backend, tfmatrix):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(2)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1291,7 +1295,7 @@ def test_variational_layer_dagger(backend, nqubits):
     c.add((gate, gate.dagger()))
 
     initial_state = utils.random_numpy_state(nqubits)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
@@ -1313,16 +1317,16 @@ def test_collapse_gate(backend, nqubits, targets, results, oncircuit):
     if oncircuit:
         c = Circuit(nqubits)
         c.add(gates.Collapse(*targets, result=results))
-        final_state = c(np.copy(initial_state)).numpy()
+        final_state = c(np.copy(initial_state))
     else:
         collapse = gates.Collapse(*targets, result=results)
         if backend == "custom":
-            final_state = collapse(np.copy(initial_state)).numpy()
+            final_state = collapse(np.copy(initial_state))
         else:
             original_shape = initial_state.shape
             new_shape = nqubits * (2,)
             final_state = collapse(np.copy(initial_state).reshape(new_shape))
-            final_state = final_state.numpy().reshape(original_shape)
+            final_state = np.reshape(final_state, original_shape)
 
     if isinstance(results, int) or isinstance(results, K.numeric_types):
         results = nqubits * [results]
@@ -1347,7 +1351,7 @@ def test_collapse_gate_distributed(accelerators, nqubits, targets):
     initial_state = utils.random_numpy_state(nqubits)
     c = Circuit(nqubits, accelerators)
     c.add(gates.Collapse(*targets))
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
 
     slicer = nqubits * [slice(None)]
     for t in targets:
@@ -1378,7 +1382,7 @@ def test_collapse_after_measurement(backend):
     final_state = c2(initial_state=c1.final_state)
 
     ct = Circuit(5)
-    for i, r in zip(qubits, bitstring.numpy()):
+    for i, r in zip(qubits, bitstring):
         if r:
             ct.add(gates.X(i))
     ct.add((gates.H(i) for i in qubits))
@@ -1422,7 +1426,7 @@ def test_noise_channel_repeated(backend):
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.add((gates.PauliNoiseChannel(i, px, py, pz, seed=123)
            for i, (px, py, pz) in enumerate(probs)))
-    final_state = c(nshots=40).numpy()
+    final_state = c(nshots=40)
 
     np.random.seed(123)
     target_state = []
@@ -1433,7 +1437,7 @@ def test_noise_channel_repeated(backend):
             for p, gate in zip(ps, gatelist):
                 if np.random.random() < p:
                     noiseless_c.add(gate(i))
-        target_state.append(noiseless_c().numpy())
+        target_state.append(noiseless_c())
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -1446,7 +1450,7 @@ def test_reset_channel_repeated(backend):
     initial_state = utils.random_numpy_state(5)
     c = Circuit(5)
     c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30).numpy()
+    final_state = c(np.copy(initial_state), nshots=30)
 
     np.random.seed(123)
     target_state = []
@@ -1457,7 +1461,7 @@ def test_reset_channel_repeated(backend):
         if np.random.random() < 0.3:
             noiseless_c.add(gates.Collapse(2))
             noiseless_c.add(gates.X(2))
-        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+        target_state.append(noiseless_c(np.copy(initial_state)))
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -1471,7 +1475,7 @@ def test_thermal_relaxation_channel_repeated(backend):
     c = Circuit(5)
     c.add(gates.ThermalRelaxationChannel(4, t1=1.0, t2=0.6, time=0.8,
                                          excited_population=0.8, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30).numpy()
+    final_state = c(np.copy(initial_state), nshots=30)
 
     pz, p0, p1 = c.queue[0].calculate_probabilities(1.0, 0.6, 0.8, 0.8)
     np.random.seed(123)
@@ -1485,6 +1489,6 @@ def test_thermal_relaxation_channel_repeated(backend):
         if np.random.random() < p1:
             noiseless_c.add(gates.Collapse(4))
             noiseless_c.add(gates.X(4))
-        target_state.append(noiseless_c(np.copy(initial_state)).numpy())
+        target_state.append(noiseless_c(np.copy(initial_state)))
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
