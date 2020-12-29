@@ -26,13 +26,13 @@ __global__ void InitializeToZero(T* out) {
 // Define the GPU implementation that launches the CUDA kernel.
 template <typename T>
 struct InitialStateFunctor<GPUDevice, T> {
-  void operator()(const GPUDevice& d, T* out, int64 shape, int nthreads) {
+  void operator()(const GPUDevice& d, T* out, int64 size) {
 
     int64 blockSize = DEFAULT_BLOCK_SIZE;
-    int64 numBlocks = (shape + blockSize - 1) / blockSize;
+    int64 numBlocks = (size + blockSize - 1) / blockSize;
     if (shape < blockSize) {
       numBlocks = 1;
-      blockSize = shape;
+      blockSize = size;
     }
 
     InitializeToZero<T><<<numBlocks, blockSize, 0, d.stream()>>>(out);
