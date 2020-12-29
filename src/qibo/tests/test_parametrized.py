@@ -37,7 +37,7 @@ def test_rx_parameter_setter(backend):
 
 @pytest.mark.parametrize("trainable", [True, False])
 @pytest.mark.parametrize("include_not_trainable", [True, False])
-@pytest.mark.parametrize("format", ["list", "flatlist"])
+@pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
 def test_get_parameters(trainable, include_not_trainable, format):
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))

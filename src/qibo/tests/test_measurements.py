@@ -57,7 +57,7 @@ def assert_register_results(
 
 def test_gate_result_initialization_errors():
     """Check ``ValueError``s during the initialization of ``GateResult`` object."""
-    from qibo.tensorflow import measurements
+    from qibo.core import measurements
     decimal_samples = np.random.randint(0, 4, (100,))
     binary_samples = np.random.randint(0, 2, (100, 2))
     with pytest.raises(ValueError):
@@ -590,7 +590,7 @@ def test_post_measurement_bitflips(probs):
     """Check applying bitflips to measurement samples."""
     import tensorflow as tf
     from qibo import K
-    from qibo.tensorflow import measurements
+    from qibo.core import measurements
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.GateResult(qubits, binary_samples=samples)
@@ -610,7 +610,7 @@ def test_post_measurement_asymmetric_bitflips():
     """Check applying asymmetric bitflips to measurement samples."""
     import tensorflow as tf
     from qibo import K
-    from qibo.tensorflow import measurements
+    from qibo.core import measurements
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.GateResult(qubits, binary_samples=samples)
@@ -675,7 +675,7 @@ def test_post_measurement_bitflips_on_circuit_result():
 
 def test_post_measurement_bitflip_errors():
     """Check errors raised by `GateResult.apply_bitflips` and `gates.M`."""
-    from qibo.tensorflow import measurements
+    from qibo.core import measurements
     samples = np.random.randint(0, 2, (20, 3))
     result = measurements.GateResult((0, 1, 3), binary_samples=samples)
     # Passing wrong qubit ids in bitflip error map

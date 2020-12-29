@@ -6,7 +6,7 @@ import cirq
 import pytest
 import qibo
 from qibo import models, gates
-from qibo.tensorflow import gates as native_gates
+from qibo.core import gates as native_gates
 from qibo.tests import utils
 
 
@@ -57,7 +57,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
                                               np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
 
-    if isinstance(qibo_gate, native_gates.TensorflowGate) and accelerators:
+    if isinstance(qibo_gate, native_gates.BackendGate) and accelerators:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
             c.add(qibo_gate)
