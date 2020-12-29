@@ -277,6 +277,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def initial_state(self, shape):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def sample_measurements(self, probs, nshots):
         raise_error(NotImplementedError)
 

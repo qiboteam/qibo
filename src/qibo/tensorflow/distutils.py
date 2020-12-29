@@ -2,7 +2,6 @@ import copy
 from qibo import K
 from qibo import numpy as qnp
 from qibo.base import gates
-from qibo.tensorflow import custom_operators as op
 from qibo.config import raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -381,6 +380,9 @@ class DistributedState(DistributedBase):
         self.qubits = circuit.queues.qubits
         self.dtype = K.dtypes('DTYPECPX')
 
+        from qibo.tensorflow import custom_operators as op
+        self.op = op
+
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
         with K.device(self.device):
@@ -403,7 +405,9 @@ class DistributedState(DistributedBase):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
       with K.device(state.device):
-          op.initial_state(state.pieces[0])
+          piece = K.initial_state(state.pieces[0].shape)
+          state.pieces[0] = K.optimization.Variable(
+              piece, dtype=K.dtypes('DTYPECPX'))
       return state
 
     @classmethod
@@ -434,9 +438,9 @@ class DistributedState(DistributedBase):
             full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
             new_state = K.zeros(self.shapes["device"])
-            new_state = op.transpose_state(pieces, new_state, self.nqubits,
-                                           self.qubits.transpose_order,
-                                           get_threads())
+            new_state = self.op.transpose_state(pieces, new_state, self.nqubits,
+                                                self.qubits.transpose_order,
+                                                get_threads())
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
 
@@ -458,9 +462,9 @@ class DistributedState(DistributedBase):
         else: # fall back to the transpose op
             with K.device(self.device):
                 state = K.zeros(self.shapes["full"])
-                state = op.transpose_state(self.pieces, state, self.nqubits,
-                                           self.qubits.reverse_transpose_order,
-                                           get_threads())
+                state = self.op.transpose_state(self.pieces, state, self.nqubits,
+                                                self.qubits.reverse_transpose_order,
+                                                get_threads())
         return state
 
     def __len__(self) -> int:

@@ -5,7 +5,6 @@ from qibo import K
 from qibo.base import circuit
 from qibo.config import raise_error
 from qibo.tensorflow import measurements
-from qibo.tensorflow import custom_operators as op
 from typing import List, Tuple
 
 
@@ -207,16 +206,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
-    def _default_initial_state(self):
-        """Creates the |000...0> state for default initialization."""
-        zeros = K.zeros(self.shapes.get('TENSOR_FLAT'))
-        state = op.initial_state(zeros)
-        return state
-
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            return self._default_initial_state()
+            return K.initial_state(self.shapes.get('TENSOR_FLAT'))
         state = self._cast_initial_state(state)
         if self.check_initial_state_shape:
             shape = tuple(state.shape)

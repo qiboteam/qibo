@@ -1,16 +1,23 @@
 """TensorFlow custom operator for Tensor initial state."""
+from qibo.config import BACKEND_NAME, raise_error
 
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import initial_state
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import transpose_state
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import swap_pieces
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_gate
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_x
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_y
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_z
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_z_pow
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_two_qubit_gate
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_fsim
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_swap
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import collapse_state
-# Import gradients
-from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
+
+if BACKEND_NAME == "tensorflow":
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import initial_state
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import transpose_state
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import swap_pieces
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_gate
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_x
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_y
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_z
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_z_pow
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_two_qubit_gate
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_fsim
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_swap
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import collapse_state
+    # Import gradients
+    from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
+
+else:
+    raise_error(RuntimeError, "Custom operators are not available for the "
+                              "{} backend.".format(BACKEND_NAME))

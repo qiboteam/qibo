@@ -69,8 +69,8 @@ def test_custom_circuit(backend):
         o = gates.CU1(0, 1, theta)(l2)
         return o
 
-    init2 = c._default_initial_state()
-    init3 = c._default_initial_state()
+    init2 = c.get_initial_state()
+    init3 = c.get_initial_state()
     if backend != "custom":
         init2 = tf.reshape(init2, (2, 2))
         init3 = tf.reshape(init3, (2, 2))
@@ -117,7 +117,7 @@ def test_compiled_circuit(backend):
     else:
         c2.compile()
         r2 = c2.execute().numpy()
-        init_state = c2._default_initial_state()
+        init_state = c2.get_initial_state()
         r3, _ = c2._execute_for_compile(init_state.numpy().reshape((2, 2)))
         r3 = r3.numpy().ravel()
         np.testing.assert_allclose(r1, r2)

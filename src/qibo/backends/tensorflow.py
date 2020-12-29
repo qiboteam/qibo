@@ -122,6 +122,12 @@ class TensorflowBackend(numpy.NumpyBackend):
     def gather_nd(self, x, indices):
         return self.backend.gather_nd(x, indices)
 
+    def initial_state(self, shape):
+        from qibo.tensorflow import custom_operators as op
+        state = self.zeros(shape)
+        state = op.initial_state(state)
+        return state
+
     def sample_measurements(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(

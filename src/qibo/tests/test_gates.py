@@ -1057,7 +1057,7 @@ def test_variational_layer_call(nqubits, density_matrix):
                                   gates.RY, gates.CZ,
                                   theta)
     gate.density_matrix = density_matrix
-    final_state = gate(c._default_initial_state())
+    final_state = gate(c.get_initial_state())
     np.testing.assert_allclose(target_state, final_state)
 
 
