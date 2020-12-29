@@ -21,7 +21,9 @@ class TensorflowGate(BackendGate):
         # Gate matrices
         self.matrix = None
         # Einsum backend
-        self.einsum = K.custom_einsum
+        from qibo.tensorflow import einsum
+        self.einsum_module = einsum
+        self.einsum = getattr(einsum, K.custom_einsum)()
 
     @staticmethod
     def control_unitary(unitary):
@@ -33,7 +35,6 @@ class TensorflowGate(BackendGate):
         self.matrix = K.reshape(matrix, 2 * rank * (2,))
 
     def prepare(self):
-        from qibo.tensorflow import einsum
         self.is_prepared = True
         self.reprepare()
         if self.is_controlled_by:
@@ -41,8 +42,8 @@ class TensorflowGate(BackendGate):
                 # fall back to the 'defaulteinsum' backend when using
                 # density matrices with `controlled_by` gates because
                 # 'matmuleinsum' is not properly implemented for this case
-                self.einsum = einsum.DefaultEinsum()
-            self.control_cache = einsum.ControlCache(self)
+                self.einsum = self.einsum_module.DefaultEinsum()
+            self.control_cache = self.einsum_module.ControlCache(self)
             nactive = self.nqubits - len(self.control_qubits)
             targets = self.control_cache.targets
             self.calculation_cache = self.einsum.create_cache(

@@ -1,5 +1,5 @@
 from qibo import config
-from qibo.config import raise_error, warnings, BACKEND_NAME
+from qibo.config import raise_error, log, warnings, BACKEND_NAME
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
@@ -46,6 +46,11 @@ def set_backend(backend="custom"):
     bk = construct_backend(calc_backend)
     K.assign(bk)
     K.set_gates(gate_backend)
+
+if BACKEND_NAME != "tensorflow":
+    log.warning("Numpy does not support Qibo custom operators. "
+                "Einsum will be used to apply gates.")
+    set_backend("defaulteinsum")
 
 
 def get_backend():

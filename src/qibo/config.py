@@ -9,11 +9,6 @@ import warnings
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
 
-# Select the default backend engine
-BACKEND_NAME = "tensorflow"
-if "QIBO_BACKEND" in os.environ: # pragma: no cover
-    BACKEND_NAME = os.environ.get("QIBO_BACKEND")
-
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
 
@@ -102,3 +97,16 @@ class CustomColorHandler(logging.StreamHandler):
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 log.addHandler(CustomColorHandler())
+
+
+# Select the default backend engine
+if "QIBO_BACKEND" in os.environ: # pragma: no cover
+    BACKEND_NAME = os.environ.get("QIBO_BACKEND")
+else:
+    try:
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
+        import tensorflow as tf
+        BACKEND_NAME = "tensorflow"
+    except ModuleNotFoundError:
+        log.warning("Tensorflow is not installed. Falling back to numpy.")
+        BACKEND_NAME = "numpy"

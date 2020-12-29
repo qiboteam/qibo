@@ -51,13 +51,11 @@ class BaseBackend(ABC):
             self.custom_gates = True
             self.custom_einsum = None
         elif name == 'defaulteinsum':
-            from qibo.tensorflow import einsum
             self.custom_gates = False
-            self.custom_einsum = einsum.DefaultEinsum()
+            self.custom_einsum = "DefaultEinsum"
         elif name == 'matmuleinsum':
-            from qibo.tensorflow import einsum
             self.custom_gates = False
-            self.custom_einsum = einsum.MatmulEinsum()
+            self.custom_einsum = "MatmulEinsum"
         else:
             raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
         self.gates = name
