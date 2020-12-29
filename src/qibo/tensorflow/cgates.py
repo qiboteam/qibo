@@ -274,14 +274,11 @@ class M(TensorflowGate, gates.M):
         return K.cast(x, dtype='DTYPE')
 
     def sample(self, state, nshots):
+        probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
         probs = getattr(self, self._active_call)(state)
         probs = K.transpose(probs, axes=self.reduced_target_qubits)
-
-        probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
-        logits = K.log(K.reshape(probs, probs_dim))[K.newaxis]
-
-        samples_dec = K.random.categorical(logits, nshots,
-                                           dtype=probs_dim.dtype)[0]
+        probs = K.reshape(probs, probs_dim)
+        samples_dec = K.sample_measurements(probs, nshots)
         result = self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
         # optional bitflip noise

@@ -119,6 +119,12 @@ class TensorflowBackend(numpy.NumpyBackend):
             indices = self.backend.where(condition)
         return self.backend.gather(x, indices, axis=axis)
 
+    def sample_measurements(self, probs, nshots):
+        logits = self.log(probs)[self.newaxis]
+        samples_dec = self.random.categorical(
+            logits, nshots, dtype=self.dtypes('DTYPEINT'))
+        return samples_dec[0]
+
     def compile(self, func):
         return self.backend.function(func)
 

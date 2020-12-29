@@ -271,6 +271,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def sample_measurements(self, probs, nshots):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def compile(self, func):
         raise_error(NotImplementedError)
 

@@ -167,12 +167,13 @@ class NumpyBackend(base.BaseBackend):
         idx = axis * (slice(None),) + (indices,)
         return x[idx]
 
+    def sample_measurements(self, probs, nshots):
+        return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
+
     def compile(self, func):
         return func
 
     def device(self, device_name):
-        #raise_error(NotImplementedError, "Device functionality is not "
-        #                                 "available in the numpy backend.")
         return DummyDevice()
 
 
