@@ -651,7 +651,7 @@ class BaseCircuit(ABC):
             raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
     @abstractmethod
-    def _get_parameters_flatlist(self, parametrized_gates):
+    def _get_parameters_flatlist(self, parametrized_gates): # pragma: no cover
         raise_error(NotImplementedError, "Flat list format not available "
                                          "in the base circuit.")
 

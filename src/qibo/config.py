@@ -107,6 +107,7 @@ else:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
         import tensorflow as tf
         BACKEND_NAME = "tensorflow"
-    except ModuleNotFoundError:
+    except ModuleNotFoundError: # pragma: no cover
+        # case not tested because CI has tf installed
         log.warning("Tensorflow is not installed. Falling back to numpy.")
         BACKEND_NAME = "numpy"

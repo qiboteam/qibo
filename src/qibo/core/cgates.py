@@ -613,7 +613,7 @@ class Unitary(MatrixGate, gates.Unitary):
         unitary = self.parameters
         if isinstance(unitary, qnp.Tensor):
             return qnp.cast(unitary)
-        if isinstance(unitary, K.Tensor):
+        if isinstance(unitary, K.Tensor): # pragma: no cover
             return K.copy(K.cast(unitary))
 
     def _dagger(self) -> "Unitary":

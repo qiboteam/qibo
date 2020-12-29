@@ -66,7 +66,7 @@ class Hamiltonian(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigenvectors(self):
+    def eigenvectors(self): # pragma: no cover
         """Computes a tensor with the eigenvectors for the Hamiltonian."""
         raise_error(NotImplementedError)
 
@@ -79,7 +79,7 @@ class Hamiltonian(ABC):
         return self.eigenvectors()[:, 0]
 
     @abstractmethod
-    def exp(self, a):
+    def exp(self, a): # pragma: no cover
         """Computes a tensor corresponding to exp(-1j * a * H).
 
         Args:
@@ -103,7 +103,7 @@ class Hamiltonian(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __add__(self, o):
+    def __add__(self, o): # pragma: no cover
         """Add operator."""
         raise_error(NotImplementedError)
 
@@ -112,17 +112,17 @@ class Hamiltonian(ABC):
         return self.__add__(o)
 
     @abstractmethod
-    def __sub__(self, o):
+    def __sub__(self, o): # pragma: no cover
         """Subtraction operator."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __rsub__(self, o):
+    def __rsub__(self, o): # pragma: no cover
         """Right subtraction operator."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def __mul__(self, o):
+    def __mul__(self, o): # pragma: no cover
         """Multiplication to scalar operator."""
         raise_error(NotImplementedError)
 
@@ -131,7 +131,7 @@ class Hamiltonian(ABC):
         return self.__mul__(o)
 
     @abstractmethod
-    def __matmul__(self, o):
+    def __matmul__(self, o): # pragma: no cover
         """Matrix multiplication with other Hamiltonians or state vectors."""
         raise_error(NotImplementedError)
 
@@ -218,7 +218,7 @@ class SymbolicHamiltonian(ABC):
 
     @staticmethod
     @abstractmethod
-    def multikron(matrix_list):
+    def multikron(matrix_list): # pragma: no cover
         """Calculates Kronecker product of a list of matrices.
 
         Args:
@@ -264,7 +264,7 @@ class SymbolicHamiltonian(ABC):
             yield targets, matrix
 
     @abstractmethod
-    def dense_matrix(self):
+    def dense_matrix(self): # pragma: no cover
         """Creates the full Hamiltonian matrix.
 
         Useful for creating :class:`qibo.base.hamiltonians.Hamiltonian`
@@ -276,7 +276,7 @@ class SymbolicHamiltonian(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def merge_one_qubit(self, terms):
+    def merge_one_qubit(self, terms): # pragma: no cover
         """Merges one-qubit matrices to the two-qubit terms for efficiency.
 
         This works for Hamiltonians with one and two qubit terms only.
@@ -444,7 +444,7 @@ class TrotterHamiltonian(Hamiltonian):
 
     @staticmethod
     @abstractmethod
-    def construct_terms(terms):
+    def construct_terms(terms): # pragma: no cover
         """Helper method for `from_symbolic`.
 
         Constructs the term dictionary by using the same
@@ -521,7 +521,7 @@ class TrotterHamiltonian(Hamiltonian):
         return False
 
     @abstractmethod
-    def make_compatible(self, o):
+    def make_compatible(self, o): # pragma: no cover
         """Makes given ``TrotterHamiltonian`` compatible to the current one.
 
         See :meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible` for

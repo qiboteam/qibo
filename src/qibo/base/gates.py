@@ -1513,7 +1513,8 @@ class ThermalRelaxationChannel:
 class _ThermalRelaxationChannelA(UnitaryChannel):
     """Implements thermal relaxation when T1 >= T2."""
 
-    def calculate_probabilities(self, t1, t2, time, excited_population):
+    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
+        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelA`
         return ThermalRelaxationChannel.calculate_probabilities(
             self, t1, t2, time, excited_population)
 
@@ -1533,7 +1534,8 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 class _ThermalRelaxationChannelB(Gate):
     """Implements thermal relaxation when T1 < T2."""
 
-    def calculate_probabilities(self, t1, t2, time, excited_population):
+    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
+        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelB`
         return ThermalRelaxationChannel.calculate_probabilities(
             self, t1, t2, time, excited_population)
 
