@@ -122,6 +122,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def expand_dims(self, x, axis):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def copy(self, x):
         """Creates a copy of the tensor in memory."""
         raise_error(NotImplementedError)
@@ -271,6 +275,10 @@ class BaseBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def gather_nd(self, x, indices):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def sample_measurements(self, probs, nshots):
         raise_error(NotImplementedError)
 
@@ -281,3 +289,6 @@ class BaseBackend(ABC):
     @abstractmethod
     def device(self, device_name):
         raise_error(NotImplementedError)
+
+    def executing_eagerly(self):
+        return True

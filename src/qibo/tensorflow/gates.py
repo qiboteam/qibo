@@ -2,7 +2,6 @@
 # @authors: S. Efthymiou
 import math
 import sys
-import tensorflow as tf
 from qibo import K
 from qibo.base import gates
 from qibo.base.abstract_gates import BackendGate, ParametrizedGate
@@ -190,7 +189,7 @@ class Collapse(TensorflowGate, gates.Collapse):
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):
         for q, r in zip(qubits, results):
-            state = tf.expand_dims(state, axis=q)
+            state = K.expand_dims(state, axis=q)
             if r:
                 state = K.concatenate([K.zeros_like(state), state], axis=q)
             else:
@@ -201,14 +200,15 @@ class Collapse(TensorflowGate, gates.Collapse):
         cgates.Collapse.construct_unitary(self)
 
     def state_vector_call(self, state):
-        substate = tf.gather_nd(K.transpose(state, self.order), self.result)
+        print(self.result)
+        substate = K.gather_nd(K.transpose(state, self.order), self.result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
         return self._append_zeros(state, self.sorted_qubits, self.result)
 
     def density_matrix_call(self, state):
-        substate = tf.gather_nd(K.transpose(state, self.order),
-                                self.density_matrix_result)
+        substate = K.gather_nd(K.transpose(state, self.order),
+                               self.density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = K.trace(K.reshape(substate, (n, n)))
         state = substate / norm

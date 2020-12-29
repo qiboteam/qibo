@@ -119,6 +119,9 @@ class TensorflowBackend(numpy.NumpyBackend):
             indices = self.backend.where(condition)
         return self.backend.gather(x, indices, axis=axis)
 
+    def gather_nd(self, x, indices):
+        return self.backend.gather_nd(x, indices)
+
     def sample_measurements(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(
@@ -130,3 +133,6 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def device(self, device_name):
         return self.backend.device(device_name)
+
+    def executing_eagerly(self):
+        return self.backend.executing_eagerly()

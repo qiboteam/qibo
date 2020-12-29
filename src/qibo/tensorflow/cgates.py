@@ -2,7 +2,6 @@
 # @authors: S. Efthymiou
 import sys
 import math
-import tensorflow as tf
 from qibo import K, get_threads
 from qibo import numpy as qnp
 from qibo.base import gates
@@ -26,7 +25,7 @@ class TensorflowGate(BackendGate):
 
     def __init__(self):
         # TODO: Move this check somewhere else
-        if not tf.executing_eagerly():
+        if not K.executing_eagerly():
             raise_error(NotImplementedError,
                         "Custom operator gates should not be used in compiled "
                         "mode.")

@@ -44,6 +44,9 @@ class NumpyBackend(base.BaseBackend):
     def concatenate(self, x, axis=0):
         return self.backend.concatenate(x, axis=axis)
 
+    def expand_dims(self, x, axis):
+        return self.backend.expand_dims(x, axis)
+
     def copy(self, x):
         return self.backend.copy(x)
 
@@ -166,6 +169,9 @@ class NumpyBackend(base.BaseBackend):
             axis += len(x.shape)
         idx = axis * (slice(None),) + (indices,)
         return x[idx]
+
+    def gather_nd(self, x, indices):
+        return x[tuple(indices)]
 
     def sample_measurements(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
