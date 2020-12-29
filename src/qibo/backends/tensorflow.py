@@ -42,6 +42,9 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
 
+        from qibo.tensorflow import custom_operators as op
+        self.op = op
+
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
@@ -123,9 +126,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.gather_nd(x, indices)
 
     def initial_state(self, shape):
-        from qibo.tensorflow import custom_operators as op
         state = self.zeros(shape)
-        state = op.initial_state(state)
+        state = self.op.initial_state(state)
         return state
 
     def sample_measurements(self, probs, nshots):

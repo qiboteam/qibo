@@ -31,6 +31,7 @@ class BaseBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
+        self.op = None
 
     def assign(self, backend):
         """Assigns backend's methods."""
@@ -45,6 +46,7 @@ class BaseBackend(ABC):
         self.newaxis = backend.newaxis
         self.oom_error = backend.oom_error
         self.optimization = backend.optimization
+        self.op = backend.op
 
     def set_gates(self, name):
         if name == 'custom':

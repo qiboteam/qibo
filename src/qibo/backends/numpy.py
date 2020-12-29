@@ -22,6 +22,7 @@ class NumpyBackend(base.BaseBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = None
+        self.op = None
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):

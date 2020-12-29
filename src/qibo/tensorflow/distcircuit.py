@@ -54,9 +54,6 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         super(TensorflowDistributedCircuit, self).__init__(nqubits)
         self.init_kwargs.update({"accelerators": accelerators,
                                  "memory_device": memory_device})
-        from qibo.tensorflow import custom_operators as op
-        self.op = op
-
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(math.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
@@ -152,8 +149,8 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.qubits.reduced_local[local_qubit]
             with K.device(self.memory_device):
-                self.op.swap_pieces(state.pieces[i], state.pieces[i + t],
-                                    local_eff, self.nlocal, get_threads())
+                K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
+                                 local_eff, self.nlocal, get_threads())
 
     def _normalize(self, state: utils.DistributedState):
         """Normalizes state by summing the norms of each state piece.
