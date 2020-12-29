@@ -404,9 +404,10 @@ class DistributedState(DistributedBase):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
       with tf.device(state.device):
-          state.pieces[0] = op.initial_state(nqubits=state.nlocal,
-                                             dtype=DTYPES.get('DTYPECPX'),
-                                             is_matrix=False, omp_num_threads=get_threads())
+          piece = op.initial_state(nqubits=state.nlocal,
+                                   dtype=DTYPES.get('DTYPECPX'),
+                                   is_matrix=False, omp_num_threads=get_threads())
+          state.pieces[0] = tf.Variable(piece, dtype=piece.dtype)
       return state
 
     @classmethod
@@ -441,7 +442,7 @@ class DistributedState(DistributedBase):
                                            self.qubits.transpose_order,
                                            get_threads())
             for i in range(self.ndevices):
-                self.pieces[i] = new_state[i]
+                self.pieces[i].assign(new_state[i])
 
     @property
     def vector(self) -> tf.Tensor:
