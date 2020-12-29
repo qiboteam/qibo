@@ -30,7 +30,7 @@ struct InitialStateFunctor<GPUDevice, T> {
 
     int64 blockSize = DEFAULT_BLOCK_SIZE;
     int64 numBlocks = (size + blockSize - 1) / blockSize;
-    if (shape < blockSize) {
+    if (size < blockSize) {
       numBlocks = 1;
       blockSize = size;
     }
