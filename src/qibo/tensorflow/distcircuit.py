@@ -7,13 +7,13 @@ from qibo import gates as gate_module
 from qibo.base import gates
 from qibo.base import circuit as base_circuit
 from qibo.config import raise_error, get_threads
-from qibo.tensorflow import callbacks, circuit, measurements
+from qibo.core import callbacks, circuit, measurements
 from qibo.tensorflow import distutils as utils
 from typing import Dict, List, Optional, Set, Tuple, Union
 OutputType = Union[utils.DistributedState, measurements.CircuitResult]
 
 
-class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
+class DistributedCircuit(circuit.Circuit):
     """Distributed implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
 
     Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
@@ -51,7 +51,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                  nqubits: int,
                  accelerators: Dict[str, int],
                  memory_device: str = "/CPU:0"):
-        super(TensorflowDistributedCircuit, self).__init__(nqubits)
+        super().__init__(nqubits)
         self.init_kwargs.update({"accelerators": accelerators,
                                  "memory_device": memory_device})
         self.ndevices = sum(accelerators.values())
@@ -73,22 +73,22 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         if self.queues.queues:
             raise_error(RuntimeError, "Cannot use distributed circuit as a "
                                       "subroutine after it was executed.")
-        return super(TensorflowDistributedCircuit, self).on_qubits(*q)
+        return super().on_qubits(*q)
 
-    def copy(self, deep: bool = True) -> "TensorflowDistributedCircuit":
+    def copy(self, deep: bool = True):
         if not deep:
             raise_error(ValueError, "Non-deep copy is not allowed for distributed "
                                     "circuits because they modify gate objects.")
-        return super(TensorflowDistributedCircuit, self).copy(deep)
+        return super().copy(deep)
 
-    def _fuse_copy(self) -> "TensorflowDistributedCircuit":
+    def _fuse_copy(self):
         return self.copy(deep=True)
 
-    def fuse(self) -> "TensorflowDistributedCircuit":
+    def fuse(self):
         if self.queues.queues:
             raise_error(RuntimeError, "Cannot fuse distributed circuit after "
                                       "its first execution.")
-        return super(TensorflowDistributedCircuit, self).fuse()
+        return super().fuse()
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise_error(NotImplementedError, "Distributed circuit does not support "
@@ -99,7 +99,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if not isinstance(gate, gate_module.TensorflowGate):
+        if not isinstance(gate, gate_module.BackendGate):
             raise_error(NotImplementedError, "Distributed circuit does not "
                                              "support native tensorflow gates.")
         if isinstance(gate, gates.KrausChannel):
@@ -109,7 +109,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
               not isinstance(gate, (gates.M, gates.VariationalLayer))):
             raise_error(ValueError, "Insufficient qubits to use for global in "
                                     "distributed circuit.")
-        super(TensorflowDistributedCircuit, self)._add(gate)
+        super()._add(gate)
 
     def compile(self):
         """"""
@@ -121,7 +121,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
         return state
 
     def _joblib_execute(self, state: utils.DistributedState,
-                        queues: List[List["TensorflowGate"]]):
+                        queues: List[List["BackendGate"]]):
         """Executes gates in ``accelerators`` in parallel.
 
         Args:
@@ -174,7 +174,7 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             self._swap(state, q1, q2)
 
     def _special_gate_execute(self, state: utils.DistributedState,
-                              gate: Union["TensorflowGate"]):
+                              gate: Union["BackendGate"]):
         """Executes special gates on ``memory_device``.
 
         Currently special gates are ``Flatten`` or ``CallbackGate``.
@@ -229,15 +229,14 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
                                       "different device configuration and try again.")
 
     def execute(self, initial_state=None, nshots=None) -> OutputType:
-        """Equivalent to :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute`.
+        """Equivalent to :meth:`qibo.core.circuit.Circuit.execute`.
 
         If measurements are not specified this returns a
         :class:`qibo.tensorflow.distutils.DistributedState` instead of a
         tensor. This avoids creating multiple copies of large states in
         the CPU memory.
         """
-        return super(TensorflowDistributedCircuit, self).execute(
-            initial_state=initial_state, nshots=nshots)
+        return super().execute(initial_state=initial_state, nshots=nshots)
 
     def get_initial_state(self, state=None):
         """"""
@@ -249,6 +248,5 @@ class TensorflowDistributedCircuit(circuit.TensorflowCircuit):
             return getattr(utils.DistributedState, state)(self)
         elif isinstance(state, utils.DistributedState):
             return state
-        full_state = super(TensorflowDistributedCircuit,
-                           self).get_initial_state(state)
+        full_state = super().get_initial_state(state)
         return utils.DistributedState.from_vector(full_state, self)

@@ -1,5 +1,5 @@
 """
-Testing Tensorflow circuits.
+Testing backend circuits.
 """
 import numpy as np
 import pytest
@@ -14,7 +14,6 @@ _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_addition_result(backend, accelerators):
-    """Check if circuit addition works properly on Tensorflow circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c1 = Circuit(2, accelerators)
@@ -127,7 +126,7 @@ def test_compiled_circuit(backend):
 
 def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
-    from qibo.tensorflow import gates
+    from qibo.core import gates
     original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = Circuit(2)

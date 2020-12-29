@@ -1,1 +1,1 @@
-from qibo.tensorflow.cgates import *
+from qibo.core.cgates import *

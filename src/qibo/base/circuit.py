@@ -64,12 +64,12 @@ class BaseCircuit(ABC):
 
     Qibo provides the following circuits:
     A state vector simulation circuit:
-    :class:`qibo.tensorflow.circuit.TensorflowCircuit`,
+    :class:`qibo.core.circuit.Circuit`,
     a density matrix simulation circuit:
-    :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+    :class:`qibo.core.circuit.DensityMatrixCircuit`
     and a circuit that distributes state vector simulation on multiple devices:
-    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`.
-    All circuits use Tensorflow as the computation backend.
+    :class:`qibo.core.distcircuit.DistributedCircuit`.
+    All circuits use core as the computation backend.
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
@@ -707,7 +707,7 @@ class BaseCircuit(ABC):
     def execute(self, initial_state=None, nshots=None): # pragma: no cover
         """Executes the circuit. Exact implementation depends on the backend.
 
-        See :meth:`qibo.tensorflow.circuit.TensorflowCircuit.execute` for more
+        See :meth:`qibo.core.circuit.Circuit.execute` for more
         details.
         """
         raise_error(NotImplementedError)

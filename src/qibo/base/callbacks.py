@@ -75,7 +75,7 @@ class Callback(ABC):
 class PartialTrace(Callback):
     """Calculates reduced density matrix of a state.
 
-    This is used by the :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+    This is used by the :class:`qibo.core.callbacks.EntanglementEntropy`
     callback. It can also be used as a standalone callback in order to access
     a reduced density matrix in the middle of a circuit execution.
 
@@ -110,7 +110,7 @@ class PartialTrace(Callback):
                       measuring: bool = False) -> str:
         """Generates einsum string for partial trace of density matrices.
 
-        This method is also used in :meth:`qibo.tensorflow.cgates.M.prepare`.
+        This method is also used in :meth:`qibo.core.cgates.M.prepare`.
 
         Args:
             qubits (list): Set of qubit ids that are traced out.

@@ -2,7 +2,7 @@
 from qibo import matrices
 from qibo import numpy as qnp
 from qibo.config import raise_error
-from qibo.tensorflow.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
+from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 
 
 def _build_spin_model(nqubits, matrix, condition):

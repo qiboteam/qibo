@@ -290,7 +290,7 @@ class ParametrizedGate(Gate):
             devgate.parameters = x
 
 
-class BackendGate(Gate, ABC):
+class BaseBackendGate(Gate, ABC):
     """Abstract class for gate objects that can be used in calculations.
 
     Attributes:
@@ -365,7 +365,7 @@ class BackendGate(Gate, ABC):
                 return I(*self.qubits)
         return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
 
-    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
+    def __rmatmul__(self, other): # pragma: no cover
         # always falls back to left ``__matmul__``
         return self.__matmul__(other)
 

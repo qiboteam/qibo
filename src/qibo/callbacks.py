@@ -1,1 +1,1 @@
-from qibo.tensorflow.callbacks import *
+from qibo.core.callbacks import *

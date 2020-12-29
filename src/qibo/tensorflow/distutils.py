@@ -354,7 +354,7 @@ class DistributedState(DistributedBase):
     """Data structure that holds the pieces of a state vector.
 
     This is created automatically by
-    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+    :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
     which uses state pieces instead of the full state vector tensor to allow
     distribution to multiple devices.
     Using the ``DistributedState`` instead of the full state vector as a tensor

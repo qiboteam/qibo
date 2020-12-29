@@ -5,21 +5,21 @@ import math
 from qibo import K, get_threads
 from qibo import numpy as qnp
 from qibo.base import gates
-from qibo.base.abstract_gates import BackendGate, ParametrizedGate
+from qibo.base.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
-class TensorflowGate(BackendGate):
+class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
         # TODO: Move these to a different file and refactor
         if K.custom_gates or cls.__name__ in cgate_only:
-            return super(TensorflowGate, cls).__new__(cls)
+            return super(BackendGate, cls).__new__(cls)
         else:
-            from qibo.tensorflow import gates
+            from qibo.core import gates
             return getattr(gates, cls.__name__)(*args, **kwargs) # pylint: disable=E0110
 
     def __init__(self):
@@ -78,7 +78,7 @@ class TensorflowGate(BackendGate):
         return state
 
 
-class MatrixGate(TensorflowGate):
+class MatrixGate(BackendGate):
     """Gate that uses matrix multiplication to be applied to states."""
 
     def __init__(self):
@@ -116,10 +116,10 @@ class H(MatrixGate, gates.H):
         return qnp.cast([[1, 1], [1, -1]]) / qnp.sqrt(2)
 
 
-class X(TensorflowGate, gates.X):
+class X(BackendGate, gates.X):
 
     def __init__(self, q):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.X.__init__(self, q)
         self.gate_op = K.op.apply_x
 
@@ -127,10 +127,10 @@ class X(TensorflowGate, gates.X):
         return qnp.cast([[0, 1], [1, 0]])
 
 
-class Y(TensorflowGate, gates.Y):
+class Y(BackendGate, gates.Y):
 
     def __init__(self, q):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.Y.__init__(self, q)
         self.gate_op = K.op.apply_y
 
@@ -138,13 +138,13 @@ class Y(TensorflowGate, gates.Y):
         return qnp.cast([[0, -1j], [1j, 0]])
 
     def density_matrix_call(self, state):
-        return -TensorflowGate.density_matrix_call(self, state)
+        return -BackendGate.density_matrix_call(self, state)
 
 
-class Z(TensorflowGate, gates.Z):
+class Z(BackendGate, gates.Z):
 
     def __init__(self, q):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.Z.__init__(self, q)
         self.gate_op = K.op.apply_z
 
@@ -152,10 +152,10 @@ class Z(TensorflowGate, gates.Z):
         return qnp.cast([[1, 0], [0, -1]])
 
 
-class I(TensorflowGate, gates.I):
+class I(BackendGate, gates.I):
 
     def __init__(self, *q):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.I.__init__(self, *q)
 
     def construct_unitary(self):
@@ -168,10 +168,10 @@ class I(TensorflowGate, gates.I):
         return state
 
 
-class Collapse(TensorflowGate, gates.Collapse):
+class Collapse(BackendGate, gates.Collapse):
 
     def __init__(self, *q: int, result: List[int] = 0):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.Collapse.__init__(self, *q, result=result)
         self.result_tensor = None
         self.gate_op = K.op.collapse_state
@@ -195,7 +195,7 @@ class Collapse(TensorflowGate, gates.Collapse):
         self.result_tensor = K.cast(result, dtype='DTYPEINT')
 
     def prepare(self):
-        TensorflowGate.prepare(self)
+        BackendGate.prepare(self)
         self.reprepare()
 
     def construct_unitary(self):
@@ -214,13 +214,14 @@ class Collapse(TensorflowGate, gates.Collapse):
         return state / K.trace(state)
 
 
-class M(TensorflowGate, gates.M):
-    from qibo.tensorflow import distutils, measurements
+class M(BackendGate, gates.M):
+    from qibo.core import measurements
+    from qibo.tensorflow import distutils
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.M.__init__(self, *q, register_name=register_name, p0=p0, p1=p1)
         self.traceout = None
         self.unmeasured_qubits = None # Tuple
@@ -396,14 +397,14 @@ class ZPow(gates.ZPow):
       if K.custom_gates:
           return U1(q, theta, trainable)
       else:
-          from qibo.tensorflow import gates
+          from qibo.core import gates
           return gates.U1(q, theta, trainable)
 
 
-class CNOT(TensorflowGate, gates.CNOT):
+class CNOT(BackendGate, gates.CNOT):
 
     def __init__(self, q0, q1):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.CNOT.__init__(self, q0, q1)
         self.gate_op = K.op.apply_x
 
@@ -412,10 +413,10 @@ class CNOT(TensorflowGate, gates.CNOT):
                          [0, 0, 0, 1], [0, 0, 1, 0]])
 
 
-class CZ(TensorflowGate, gates.CZ):
+class CZ(BackendGate, gates.CZ):
 
     def __init__(self, q0, q1):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.CZ.__init__(self, q0, q1)
         self.gate_op = K.op.apply_z
 
@@ -493,14 +494,14 @@ class CZPow(gates.CZPow):
       if K.custom_gates:
           return CU1(q0, q1, theta, trainable)
       else:
-          from qibo.tensorflow import gates
+          from qibo.core import gates
           return gates.CU1(q0, q1, theta, trainable)
 
 
-class SWAP(TensorflowGate, gates.SWAP):
+class SWAP(BackendGate, gates.SWAP):
 
     def __init__(self, q0, q1):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.SWAP.__init__(self, q0, q1)
         self.gate_op = K.op.apply_swap
 
@@ -537,7 +538,7 @@ class fSim(MatrixGate, gates.fSim):
 class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def __init__(self, q0, q1, unitary, phi, trainable=True):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.GeneralizedfSim.__init__(self, q0, q1, unitary, phi, trainable)
         self.gate_op = K.op.apply_fsim
 
@@ -566,10 +567,10 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
         return self.__class__(q0, q1, ud, -phi)
 
 
-class TOFFOLI(TensorflowGate, gates.TOFFOLI):
+class TOFFOLI(BackendGate, gates.TOFFOLI):
 
     def __init__(self, q0, q1, q2):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.TOFFOLI.__init__(self, q0, q1, q2)
         self.gate_op = K.op.apply_x
 
@@ -605,7 +606,7 @@ class Unitary(MatrixGate, gates.Unitary):
                                              "qubit gates when using custom "
                                              "operators, but {} target qubits "
                                              "were given. Please switch to a "
-                                             "Tensorflow backend to execute "
+                                             "different backend to execute "
                                              "this operation.".format(n))
 
     def construct_unitary(self):
@@ -638,7 +639,7 @@ class Unitary(MatrixGate, gates.Unitary):
                                     "".format(shape, self.rank))
 
 
-class VariationalLayer(TensorflowGate, gates.VariationalLayer):
+class VariationalLayer(BackendGate, gates.VariationalLayer):
 
     def _calculate_unitaries(self):
         matrices = qnp.stack([qnp.kron(
@@ -672,7 +673,7 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
                  params: List[float], params2: Optional[List[float]] = None,
                  trainable: bool = True,
                  name: Optional[str] = None):
-        self.module.TensorflowGate.__init__(self)
+        self.module.BackendGate.__init__(self)
         gates.VariationalLayer.__init__(self, qubits, pairs,
                                         one_qubit_gate, two_qubit_gate,
                                         params, params2,
@@ -690,9 +691,9 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
         else:
             self.additional_unitary = None
 
-    @BackendGate.density_matrix.setter
+    @BaseBackendGate.density_matrix.setter
     def density_matrix(self, x: bool):
-        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        BaseBackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
         for unitary in self.unitaries:
             unitary.density_matrix = x
         if self.additional_unitary is not None:
@@ -733,10 +734,10 @@ class VariationalLayer(TensorflowGate, gates.VariationalLayer):
         return self.state_vector_call(state)
 
 
-class Flatten(TensorflowGate, gates.Flatten):
+class Flatten(BackendGate, gates.Flatten):
 
     def __init__(self, coefficients):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.Flatten.__init__(self, coefficients)
         self.swap_reset = []
 
@@ -753,16 +754,16 @@ class Flatten(TensorflowGate, gates.Flatten):
         return self.state_vector_call(state)
 
 
-class CallbackGate(TensorflowGate, gates.CallbackGate):
+class CallbackGate(BackendGate, gates.CallbackGate):
 
     def __init__(self, callback):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.CallbackGate.__init__(self, callback)
         self.swap_reset = []
 
-    @BackendGate.density_matrix.setter
+    @BaseBackendGate.density_matrix.setter
     def density_matrix(self, x):
-        BackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        BaseBackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
         self.callback.density_matrix = x
 
     def construct_unitary(self):
@@ -777,10 +778,10 @@ class CallbackGate(TensorflowGate, gates.CallbackGate):
         return self.state_vector_call(state)
 
 
-class KrausChannel(TensorflowGate, gates.KrausChannel):
+class KrausChannel(BackendGate, gates.KrausChannel):
 
     def __init__(self, ops):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.KrausChannel.__init__(self, ops)
         # create inversion gates to rest to the original state vector
         # because of the in-place updates used in custom operators
@@ -830,7 +831,7 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
     def __init__(self, p: List[float], ops: List["Gate"],
                  seed: Optional[int] = None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.UnitaryChannel.__init__(self, p, ops, seed=seed)
         self.inv_gates = tuple()
 
@@ -866,7 +867,7 @@ class PauliNoiseChannel(UnitaryChannel, gates.PauliNoiseChannel):
 
     def __init__(self, q: int, px: float = 0, py: float = 0, pz: float = 0,
                  seed: Optional[int] = None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
         self.inv_gates = tuple()
 
@@ -880,7 +881,7 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     def __init__(self, q: int, p0: float = 0.0, p1: float = 0.0,
                  seed: Optional[int] = None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
         self.inv_gates = tuple()
 
@@ -909,7 +910,7 @@ class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):
             cls_a = _ThermalRelaxationChannelA
             cls_b = _ThermalRelaxationChannelB
         else:
-            from qibo.tensorflow import gates
+            from qibo.core import gates
             cls_a = gates._ThermalRelaxationChannelA
             cls_b = gates._ThermalRelaxationChannelB
         if t2 > t1:
@@ -940,7 +941,7 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
             self, t1, t2, time, excited_population)
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates._ThermalRelaxationChannelA.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
@@ -959,7 +960,7 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
             self, t1, t2, time, excited_population)
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        TensorflowGate.__init__(self)
+        BackendGate.__init__(self)
         gates._ThermalRelaxationChannelB.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)

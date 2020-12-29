@@ -1,7 +1,7 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
 from qibo.base import hamiltonians
-from qibo.tensorflow import circuit
+from qibo.core import circuit
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
 
@@ -17,7 +17,7 @@ class StateEvolution:
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
         memory_device (str): Name of device where the full state will be saved.
@@ -128,8 +128,7 @@ class StateEvolution:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
         if self.accelerators is None:
-            return circuit.TensorflowCircuit._cast_initial_state(
-                self, state)
+            return circuit.Circuit._cast_initial_state(self, state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
             return c.get_initial_state(state)
@@ -154,7 +153,7 @@ class AdiabaticEvolution(StateEvolution):
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
         memory_device (str): Name of device where the full state will be saved.
@@ -273,7 +272,7 @@ class AdiabaticEvolution(StateEvolution):
         return self.solver.hamiltonian(t)
 
     def get_initial_state(self, state=None):
-        """Casts initial state as a Tensorflow tensor.
+        """Casts initial state as a tensor.
 
         If initial state is not given the ground state of ``h0`` is used, which
         is the common practice in adiabatic evolution.

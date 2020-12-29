@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 """
-Tensorflow gates use ``einsum`` to apply gates to state vectors. The einsum string that
+Gates use ``einsum`` to apply gates to state vectors. The einsum string that
 specifies the contraction indices is created and cached when a gate is created
 so that it is not recalculated every time the gate is called on a state. This
-functionality is implemented in :class:`qibo.tensorflow.einsum.DefaultEinsum`.
+functionality is implemented in :class:`qibo.core.einsum.DefaultEinsum`.
 
 Due to an `issue <https://github.com/tensorflow/tensorflow/issues/37307>`_
 with automatic differentiation and complex numbers in ``einsum``, we have
 implemented an alternative calculation backend based on ``matmul`` in
-:class:`qibo.tensorflow.einsum.MatmulEinsum`. Note that this is slower than
+:class:`qibo.core.einsum.MatmulEinsum`. Note that this is slower than
 the default ``einsum`` on GPU but slightly faster on CPU.
 
 The user can switch the default einsum used by the gates by changing the
@@ -91,7 +91,7 @@ class BaseCache:
 
 
 class DefaultEinsumCache(BaseCache):
-    """Cache object required by the :class:`qibo.tensorflow.einsum.DefaultEinsum` backend.
+    """Cache object required by the :class:`qibo.core.einsum.DefaultEinsum` backend.
 
     The ``vector``, ``left``, ``right``, ``left0``, ``right0`` properties are
     strings that hold the einsum indices.
@@ -142,14 +142,14 @@ class DefaultEinsumCache(BaseCache):
 
 
 class MatmulEinsumCache(BaseCache):
-    """Cache object required by the :class:`qibo.tensorflow.einsum.MatmulEinsum` backend.
+    """Cache object required by the :class:`qibo.core.einsum.MatmulEinsum` backend.
 
     The ``vector``, ``left``, ``right``, ``left0``, ``right0`` properties are dictionaries
     that hold the following keys:
 
     * ``ids``: Indices for the transposition before matmul.
     * ``inverse_ids``: Indices for the transposition after matmul.
-    * ``shapes``: Tuple with four shapes that are required for ``tf.reshape`` in the ``__call__`` method of :class:`qibo.tensorflow.einsum.MatmulEinsum`.
+    * ``shapes``: Tuple with four shapes that are required for ``tf.reshape`` in the ``__call__`` method of :class:`qibo.core.einsum.MatmulEinsum`.
 
     Args:
         qubits (list): List with the qubit indices that the gate is applied to.
@@ -225,7 +225,7 @@ class DefaultEinsum:
 
     This is the most efficient implementation for GPU, however its
     backpropagation is not working properly for complex numbers.
-    The user should switch to :class:`qibo.tensorflow.einsum.MatmulEinsum`
+    The user should switch to :class:`qibo.core.einsum.MatmulEinsum`
     if automatic differentiation is required.
     """
 

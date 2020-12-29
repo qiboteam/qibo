@@ -1,9 +1,9 @@
 import math
 from qibo import get_backend
 from qibo.config import raise_error
-from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
-from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
-from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
+from qibo.core.circuit import Circuit as StateCircuit
+from qibo.core.circuit import DensityMatrixCircuit
+from qibo.tensorflow.distcircuit import DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
@@ -198,9 +198,9 @@ class VQE(object):
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.tensorflow.gates import TensorflowGate
+            from qibo.core.gates import CustomOpGate
             for gate in self.circuit.queue:
-                if not isinstance(gate, TensorflowGate):
+                if not isinstance(gate, CustomOpGate):
                     raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')
@@ -229,7 +229,7 @@ class QAOA(object):
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
             is a :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.

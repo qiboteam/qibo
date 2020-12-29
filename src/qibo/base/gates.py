@@ -198,7 +198,7 @@ class Collapse(Gate):
         self.sorted_qubits = sorted(q)
         self.result = result
         # Flag that is turned ``False`` automatically if this gate is used in a
-        # ``TensorflowDistributedCircuit`` in order to skip the normalization.
+        # ``DistributedCircuit`` in order to skip the normalization.
         self.normalize = True
 
     @property
@@ -881,7 +881,7 @@ class CZPow(Gate): # pragma: no cover
             (default is ``True``).
     """
     def __new__(cls, q0, q1, theta, trainable=True): # pragma: no cover
-        # code is not tested as it is substituted in `tensorflow` gates
+        # code is not tested as it is substituted in backend gates
         return CU1(q0, q1, theta, trainable=trainable)
 
 
@@ -1219,12 +1219,12 @@ class Flatten(SpecialGate):
 
 
 class CallbackGate(SpecialGate):
-    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
+    """Calculates a :class:`qibo.core.callbacks.Callback` at a specific point in the circuit.
 
     This gate performs the callback calulation without affecting the state vector.
 
     Args:
-        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
+        callback (:class:`qibo.core.callbacks.Callback`): Callback object to calculate.
     """
 
     def __init__(self, callback: "Callback"):

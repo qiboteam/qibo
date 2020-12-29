@@ -4,12 +4,12 @@ import collections
 from qibo import K
 from qibo.base import circuit
 from qibo.config import raise_error
-from qibo.tensorflow import measurements
+from qibo.core import measurements
 from typing import List, Tuple
 
 
-class TensorflowCircuit(circuit.BaseCircuit):
-    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+class Circuit(circuit.BaseCircuit):
+    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
 
     Performs simulation using state vectors.
 
@@ -23,10 +23,10 @@ class TensorflowCircuit(circuit.BaseCircuit):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-    from qibo.tensorflow import fusion
+    from qibo.core import fusion
 
     def __init__(self, nqubits):
-        super(TensorflowCircuit, self).__init__(nqubits)
+        super(Circuit, self).__init__(nqubits)
         self._compiled_execute = None
         self.check_initial_state_shape = True
         self.shapes = {
@@ -174,7 +174,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
             If ``nshots`` is given and the circuit contains measurements
                 A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
+                The final state vector as a tensor of shape ``(2 ** nqubits,)``.
         """
         if nshots is not None and self.repeated_execution:
             self._final_state = None
@@ -189,7 +189,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
     @property
     def final_state(self):
-        """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
+        """Final state as a tensor of shape ``(2 ** nqubits,)``.
 
         The circuit has to be executed at least once before accessing this
         property, otherwise a ``ValueError`` is raised. If the circuit is
@@ -220,8 +220,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return state
 
 
-class TensorflowDensityMatrixCircuit(TensorflowCircuit):
-    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+class DensityMatrixCircuit(Circuit):
+    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
 
     Performs simulation using density matrices. Can be initialized using the
     ``density_matrix=True`` flag and supports the use of channels.
@@ -241,7 +241,7 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
     """
 
     def __init__(self, nqubits):
-        super(TensorflowDensityMatrixCircuit, self).__init__(nqubits)
+        super(DensityMatrixCircuit, self).__init__(nqubits)
         self.density_matrix = True
         self.shapes = {
             'TENSOR': 2 * self.nqubits * (2,),
@@ -256,4 +256,4 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
         # to the equivalent density matrix
         if tuple(state.shape) == self.shapes['VECTOR']:
             state = K.outer(state, K.conj(state))
-        return TensorflowCircuit._cast_initial_state(self, state)
+        return Circuit._cast_initial_state(self, state)
