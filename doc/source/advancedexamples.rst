@@ -135,13 +135,13 @@ specific applications (such as the QFT) the multi-GPU scheme can be faster than
 using only CPU.
 
 For more details in the distributed implementation one can look in the related
-code: :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. When
+code: :class:`qibo.tensorflow.distcircuit.DistributedCircuit`. When
 ``models.Circuit`` is called then this distributed implementation is used automatically
 if the ``accelerators`` dictionary is passed, otherwise the standard single device
-:class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
+:class:`qibo.core.circuit.Circuit` is used.
 
 Unlike the standard circuit, executing a
-:class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit` without
+:class:`qibo.tensorflow.distcircuit.DistributedCircuit` without
 measurements will return a
 :class:`qibo.tensorflow.distutils.DistributedState` instead of the final
 state vector as a ``tf.Tensor``. This is done because the distributed circuit
@@ -845,7 +845,7 @@ As described in the previous sections, if
 :meth:`qibo.base.circuit.BaseCircuit.with_noise()` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
-initializing a :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+initializing a :class:`qibo.core.circuit.DensityMatrixCircuit`
 using the ``density_matrix=True`` flag during initialization and call
 ``.with_noise`` on this circuit.
 
@@ -1027,7 +1027,7 @@ Below is an example of how to use this object in practice:
     circuit = ham.circuit(dt=1e-2)
 
 
-This is a standard :class:`qibo.tensorflow.circuit.TensorflowCircuit` that
+This is a standard :class:`qibo.core.circuit.Circuit` that
 contains :class:`qibo.base.gates.Unitary` gates corresponding to the
 exponentials of the Trotter decomposition and can be executed on any state.
 

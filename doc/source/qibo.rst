@@ -29,8 +29,9 @@ inherit the :class:`qibo.base.circuit.BaseCircuit` which implements basic
 properties of the circuit, such as the list of gates and the number of qubits.
 
 In order to perform calculations and apply gates to a state vector a backend
-has to be used. Our current backend of choice is `Tensorflow <http://tensorflow.org/>`_
-and the corresponding ``Circuit`` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
+has to be used. The main ``Circuit`` used for simulation is defined in
+:class:`qibo.core.circuit.Circuit`. This uses an abstract backend object ``K``
+to perform calculation which can be one of the backends defined in ``qibo/backends``.
 
 .. _generalpurpose:
 
@@ -40,13 +41,13 @@ General circuit models
 .. autoclass:: qibo.base.circuit.BaseCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.circuit.TensorflowCircuit
+.. autoclass:: qibo.core.circuit.Circuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit
+.. autoclass:: qibo.core.circuit.DensityMatrixCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.distcircuit.TensorflowDistributedCircuit
+.. autoclass:: qibo.tensorflow.distcircuit.DistributedCircuit
     :members:
     :member-order: bysource
 .. autoclass:: qibo.tensorflow.distutils.DistributedState
@@ -329,18 +330,26 @@ variational model.
 Backends
 --------
 
-Qibo currently uses two different backends for applying gates to vectors.
-The default backend uses custom Tensorflow operators defined under
-``tensorflow/custom_operators`` to apply gates to state vectors. These
-operators are much faster than implementations based on Tensorflow.
-Currently custom operators do not support the following:
+The main calculation engine is defined in the abstract backend object
+:class:`qibo.backends.base.BaseBackend`. This object defines the methods
+required by all Qibo models to perform simulation.
 
-* Density matrices, channels and noise.
-* Automatic differentiation for backpropagation of variational circuits.
+Qibo currently provides two different calculation backends, one based on
+numpy and one based on Tensorflow. It is possible to define new backends by
+ineriting :class:`qibo.backends.base.BaseBackend` and implementing its abstract
+methods. Tensorflow is the default backend, however Qibo will automatically
+fall back to numpy if Tensorflow is not found installed in the system.
 
-It is possible to use these features in Qibo by using a backend that uses
-Tensorflow primitives. There are two such backends available: the ``"defaulteinsum"``
-backend based on ``tf.einsum`` and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
+The Tensorflow backend is supplemented by custom operators defined under
+``tensorflow/custom_operators``, which can be used to efficiently apply gates
+to state vectors or density matrices.
+These operators are much faster than implementations based on Tensorflow
+primitives (such as ``tf.einsum``) but do not support the following
+automatic differentiation for backpropagation of variational circuits.
+It is possible to use these features in Qibo by using a backend based on
+Tensorflow primitives. There are two such backends available:
+the ``"defaulteinsum"`` backend based on ``tf.einsum``
+and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
 The user can switch backends using
 
 .. code-block::  python
@@ -349,4 +358,17 @@ The user can switch backends using
     qibo.set_backend("matmuleinsum")
 
 before creating any circuits or gates. The default backend is ``"custom"`` and
-uses the custom Tensorflow operators.
+uses the custom Tensorflow operators. One can switch to a numpy backend using
+the same approach:
+
+.. code-block::  python
+
+    import qibo
+    qibo.set_backend("numpy_defaulteinsum")
+
+
+Note that custom operators are only supported by the Tensorflow backend.
+
+.. autoclass:: qibo.backends.base.BaseBackend
+    :members:
+    :member-order: bysource
