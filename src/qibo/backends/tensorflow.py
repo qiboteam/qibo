@@ -64,10 +64,10 @@ class TensorflowBackend(numpy.NumpyBackend):
     def copy(self, x):
         return x + self.backend.zeros_like(x)
 
-    def range(self, start, stop, step, dtype=None):
+    def range(self, start, finish, step, dtype=None):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
-        return self.backend.range(start, stop, step, dtype=dtype)
+        return self.backend.range(start, finish, step, dtype=dtype)
 
     def real(self, x):
         return self.backend.math.real(x)
@@ -108,10 +108,12 @@ class TensorflowBackend(numpy.NumpyBackend):
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
 
-    def kron(self, x, y):
+    def kron(self, x, y): # pragma: no cover
+        # not used in Qibo code
         raise_error(NotImplementedError)
 
-    def inv(self, x):
+    def inv(self, x): # pragma: no cover
+        # not used in Qibo code
         raise_error(NotImplementedError)
 
     def gather(self, x, indices=None, condition=None, axis=0):

@@ -69,10 +69,10 @@ class NumpyBackend(base.BaseBackend):
     def copy(self, x):
         return self.backend.copy(x)
 
-    def range(self, start, stop, step, dtype=None):
+    def range(self, start, finish, step, dtype=None):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
-        return self.backend.arange(start, stop, step, dtype=dtype)
+        return self.backend.arange(start, finish, step, dtype=dtype)
 
     def eye(self, dim, dtype='DTYPECPX'):
         if isinstance(dtype, str):

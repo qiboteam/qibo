@@ -20,7 +20,8 @@ numpy_matrices = numpy_backend.matrices
 
 if BACKEND_NAME == "tensorflow":
     K = TensorflowBackend()
-else:
+else: # pragma: no cover
+    # CI uses tensorflow as default backend
     K = NumpyBackend()
 
 def set_backend(backend="custom"):
@@ -47,7 +48,8 @@ def set_backend(backend="custom"):
     K.assign(bk)
     K.set_gates(gate_backend)
 
-if BACKEND_NAME != "tensorflow":
+if BACKEND_NAME != "tensorflow": # pragma: no cover
+    # CI uses tensorflow as default backend
     log.warning("Numpy does not support Qibo custom operators. "
                 "Einsum will be used to apply gates.")
     set_backend("defaulteinsum")

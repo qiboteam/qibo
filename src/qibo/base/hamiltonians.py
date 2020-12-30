@@ -388,7 +388,7 @@ class TrotterHamiltonian(Hamiltonian):
                                 "given.".format(term, self.term_class))
                 if self.dtype is None:
                     self.dtype = term.matrix.dtype
-                elif term.matrix.dtype != self.dtype:
+                elif term.matrix.dtype != self.dtype: # pragma: no cover
                     raise_error(TypeError,
                                 "Terms of different types {} and {} were "
                                 "given.".format(term.matrix.dtype, self.dtype))

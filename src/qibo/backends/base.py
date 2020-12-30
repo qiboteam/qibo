@@ -99,199 +99,240 @@ class BaseBackend(ABC):
         self.default_device = name
 
     @abstractmethod
-    def cast(self, x, dtype='DTYPECPX'):
+    def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
         """Casts tensor to the given dtype."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def diag(self, x, dtype='DTYPECPX'):
+    def diag(self, x, dtype='DTYPECPX'): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def reshape(self, x, shape):
+    def reshape(self, x, shape): # pragma: no cover
         """Reshapes tensor in the given shape."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def stack(self, x, axis=None):
+    def stack(self, x, axis=None): # pragma: no cover
         """Stacks a list of tensors to a single tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def concatenate(self, x, axis=None):
+    def concatenate(self, x, axis=None): # pragma: no cover
+        """Concatenates a list of tensor along a given axis."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def expand_dims(self, x, axis):
+    def expand_dims(self, x, axis): # pragma: no cover
+        """Creates a new axis of dimension one."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def copy(self, x):
+    def copy(self, x): # pragma: no cover
         """Creates a copy of the tensor in memory."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def range(self, start, finish, step, dtype=None):
+    def range(self, start, finish, step, dtype=None): # pragma: no cover
+        """Creates a tensor of integers from start to finish."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eye(self, dim, dtype='DTYPECPX'):
+    def eye(self, dim, dtype='DTYPECPX'): # pragma: no cover
+        """Creates the identity matrix as a tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def zeros(self, shape, dtype='DTYPECPX'):
+    def zeros(self, shape, dtype='DTYPECPX'): # pragma: no cover
         """Creates tensor of zeros with the given shape and dtype."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def ones(self, shape, dtype='DTYPECPX'):
+    def ones(self, shape, dtype='DTYPECPX'): # pragma: no cover
+        """Creates tensor of ones with the given shape and dtype."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def zeros_like(self, x):
+    def zeros_like(self, x): # pragma: no cover
+        """Creates tensor of zeros with shape and dtype of the given tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def ones_like(self, x):
+    def ones_like(self, x): # pragma: no cover
+        """Creates tensor of ones with shape and dtype of the given tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def real(self, x):
+    def real(self, x): # pragma: no cover
+        """Real part of a given complex tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def imag(self, x):
+    def imag(self, x): # pragma: no cover
+        """Imaginary part of a given complex tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def conj(self, x):
+    def conj(self, x): # pragma: no cover
         """Elementwise complex conjugate of a tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def mod(self, x):
+    def mod(self, x): # pragma: no cover
+        """Elementwise mod operation."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def right_shift(self, x, y):
+    def right_shift(self, x, y): # pragma: no cover
+        """Elementwise bitwise right shift."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def exp(self, x):
+    def exp(self, x): # pragma: no cover
+        """Elementwise exponential."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sin(self, x):
+    def sin(self, x): # pragma: no cover
+        """Elementwise sin."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def cos(self, x):
+    def cos(self, x): # pragma: no cover
+        """Elementwise cos."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def pow(self, base, exponent):
+    def pow(self, base, exponent): # pragma: no cover
+        """Elementwise power."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def square(self, x):
+    def square(self, x): # pragma: no cover
+        """Elementwise square."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sqrt(self, x):
+    def sqrt(self, x): # pragma: no cover
+        """Elementwise square root."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def log(self, x):
+    def log(self, x): # pragma: no cover
+        """Elementwise natural logarithm."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def abs(self, x):
+    def abs(self, x): # pragma: no cover
+        """Elementwise absolute value."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def expm(self, x):
+    def expm(self, x): # pragma: no cover
+        """Matrix exponential."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def trace(self, x):
+    def trace(self, x): # pragma: no cover
+        """Matrix trace."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sum(self, x, axis=None):
+    def sum(self, x, axis=None): # pragma: no cover
         """Sum of tensor elements."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def matmul(self, x, y):
+    def matmul(self, x, y): # pragma: no cover
         """Matrix multiplication of two tensors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def outer(self, x, y):
+    def outer(self, x, y): # pragma: no cover
         """Outer (Kronecker) product of two tensors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def kron(self, x, y):
+    def kron(self, x, y): # pragma: no cover
+        """Outer (Kronecker) product of two tensors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def einsum(self, *args):
+    def einsum(self, *args): # pragma: no cover
         """Generic tensor operation based on Einstein's summation convention."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def tensordot(self, x, y, axes=None):
+    def tensordot(self, x, y, axes=None): # pragma: no cover
         """Generalized tensor product of two tensors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def transpose(self, x, axes=None):
+    def transpose(self, x, axes=None): # pragma: no cover
+        """Tensor transpose."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def inv(self, x):
+    def inv(self, x): # pragma: no cover
+        """Matrix inversion."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigh(self, x):
+    def eigh(self, x): # pragma: no cover
+        """Hermitian matrix eigenvalues and eigenvectors."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def eigvalsh(self, x):
+    def eigvalsh(self, x): # pragma: no cover
+        """Hermitian matrix eigenvalues."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def unique(self, x, return_counts=False):
+    def unique(self, x, return_counts=False): # pragma: no cover
+        """Identifies unique elements in a tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def array_equal(self, x, y):
-        """Used in :meth:`qibo.tensorflow.hamiltonians.TrotterHamiltonian.construct_terms`."""
+    def array_equal(self, x, y): # pragma: no cover
+        """Checks if two arrays are equal elementwise.
+
+        Used in :meth:`qibo.tensorflow.hamiltonians.TrotterHamiltonian.construct_terms`.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def gather(self, x, indices=None, condition=None, axis=0):
+    def gather(self, x, indices=None, condition=None, axis=0): # pragma: no cover
+        """Indexing of one-dimensional tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def gather_nd(self, x, indices):
+    def gather_nd(self, x, indices): # pragma: no cover
+        """Indexing of multi-dimensional tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def initial_state(self, shape):
+    def initial_state(self, shape): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sample_measurements(self, probs, nshots):
+    def sample_measurements(self, probs, nshots): # pragma: no cover
+        """Samples measurements from a given probability distribution.
+
+        Measurements are returned in decimal as a tensor of shape ``(nshots,)``.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def compile(self, func):
+    def compile(self, func): # pragma: no cover
+        """Compiles the graph of a given function.
+
+        Relevant for Tensorflow, not numpy.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def device(self, device_name):
+    def device(self, device_name): # pragma: no cover
+        """Used to execute code in specific device if supported by backend."""
         raise_error(NotImplementedError)
 
     def executing_eagerly(self):
