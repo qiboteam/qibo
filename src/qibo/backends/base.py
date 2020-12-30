@@ -312,6 +312,7 @@ class BaseBackend(ABC):
 
     @abstractmethod
     def initial_state(self, shape): # pragma: no cover
+        """Creates the default initial state |00...0> as a tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod

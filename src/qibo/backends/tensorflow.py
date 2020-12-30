@@ -23,7 +23,8 @@ class TensorflowBackend(numpy.NumpyBackend):
 
         self.cpu_devices = tf.config.list_logical_devices("CPU")
         self.gpu_devices = tf.config.list_logical_devices("GPU")
-        if self.gpu_devices:
+        if self.gpu_devices: # pragma: no cover
+            # CI does not use GPUs
             self.default_device = self.gpu_devices[0].name
         elif self.cpu_devices:
             self.default_device = self.cpu_devices[0].name

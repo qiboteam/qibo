@@ -10,8 +10,9 @@ class DummyModule:
     def __getattr__(self, name):
         if name in self.names:
             return None
-        raise_error(ValueError, "{} is not available in the numpy backend."
-                                "".format(name))
+        else: # pragma: no cover
+            raise_error(ValueError, "{} is not available in the numpy backend."
+                                    "".format(name))
 
     def __enter__(self, *args):
         pass

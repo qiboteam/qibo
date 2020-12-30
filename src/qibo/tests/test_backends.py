@@ -95,6 +95,10 @@ def test_backend_gather():
     result1 = np_backend.gather(x, condition=[True, False, True])
     result2 = tf_backend.gather(x, condition=[True, False, True])
     np.testing.assert_allclose(result1, result2[:, 0])
+    with pytest.raises(ValueError):
+        result1 = np_backend.gather(x)
+    with pytest.raises(ValueError):
+        result2 = tf_backend.gather(x)
 
 
 @pytest.mark.parametrize("name,dtype",
