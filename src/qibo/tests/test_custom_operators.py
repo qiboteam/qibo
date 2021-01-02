@@ -4,6 +4,7 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 import tensorflow as tf
+from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
 from qibo.config import get_threads
 from qibo.tensorflow import custom_operators as op
 from qibo.tests import utils
@@ -378,7 +379,7 @@ def test_custom_op_toy_callback(gate, compile):
 
 def check_unimplemented_error(func, *args): # pragma: no cover
     # method not tested by GitHub workflows because it requires GPU
-    error = tf.python.framework.errors_impl.UnimplementedError
+    error = errors_impl.UnimplementedError
     with pytest.raises(error):
         func(*args)
 

@@ -135,13 +135,13 @@ specific applications (such as the QFT) the multi-GPU scheme can be faster than
 using only CPU.
 
 For more details in the distributed implementation one can look in the related
-code: :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`. When
+code: :class:`qibo.tensorflow.distcircuit.DistributedCircuit`. When
 ``models.Circuit`` is called then this distributed implementation is used automatically
 if the ``accelerators`` dictionary is passed, otherwise the standard single device
-:class:`qibo.tensorflow.circuit.TensorflowCircuit` is used.
+:class:`qibo.core.circuit.Circuit` is used.
 
 Unlike the standard circuit, executing a
-:class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit` without
+:class:`qibo.tensorflow.distcircuit.DistributedCircuit` without
 measurements will return a
 :class:`qibo.tensorflow.distutils.DistributedState` instead of the final
 state vector as a ``tf.Tensor``. This is done because the distributed circuit
@@ -176,7 +176,7 @@ How to use callbacks?
 Callbacks allow the user to apply additional functions on the state vector
 during circuit execution. An example use case of this is the calculation of
 entanglement entropy as the state propagates through a circuit. This can be
-implemented easily using :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+implemented easily using :class:`qibo.base.callbacks.EntanglementEntropy`
 and the :class:`qibo.base.gates.CallbackGate` gate. For example:
 
 .. code-block::  python
@@ -318,10 +318,31 @@ The following gates support parameter setting:
     # rotations and five additional RX rotations are added afterwards.
 
 Note that a ``np.ndarray`` or a ``tf.Tensor`` may also be used in the place of
-a flat list.
+a flat list. Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more
+efficient than recreating a new circuit with new parameter values. The inverse
+method :meth:`qibo.base.circuit.BaseCircuit.get_parameters` is also available
+and returns a list, dictionary or flat list with the current parameter values
+of all parametrized gates in the circuit.
 
-Using :meth:`qibo.base.circuit.BaseCircuit.set_parameters` is more efficient than
-recreating a new circuit with new parameter values.
+It is possible to hide a parametrized gate from the action of
+:meth:`qibo.base.circuit.BaseCircuit.get_parameters` and
+:meth:`qibo.base.circuit.BaseCircuit.set_parameters` by setting
+the ``trainable=False`` during gate creation. For example:
+
+.. code-block::  python
+
+    c = Circuit(3)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(1, theta=0.456, trainable=False))
+    c.add(gates.fSim(0, 2, theta=0.789, phi=0.567))
+
+    print(c.get_parameters())
+    # prints [0.123, (0.789, 0.567)] ignoring the parameters of the RY gate
+
+
+This is useful when the user wants to freeze the parameters of specific
+gates during optimization.
+Note that ``trainable`` defaults to ``True`` for all parametrized gates.
 
 
 How to invert a circuit?
@@ -444,6 +465,51 @@ be written using :class:`qibo.base.gates.VariationalLayer` as follows:
         circuit.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
         circuit.add(gates.CZ(0, nqubits - 1))
     circuit.add((gates.RY(i, theta) for i in range(nqubits)))
+
+.. _vqc-example:
+
+How to write a custom variational circuit optimization?
+-------------------------------------------------------
+
+Similarly to the VQE, a custom implementation of a Variational Quantum Circuit
+(VQC) model can be achieved by defining a custom loss function and calling the
+:meth:`qibo.optimizers.optimize` method.
+
+Here is a simple example using a custom loss function:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo import models, gates
+    from qibo.optimizers import optimize
+
+    # custom loss function, computes fidelity
+    def myloss(parameters, circuit, target):
+        circuit.set_parameters(parameters)
+        return 1 - np.abs(np.conj(target).dot(circuit()))
+
+    nqubits = 6
+    nlayers  = 4
+
+    # Create variational circuit
+    c = models.Circuit(nqubits)
+    for l in range(nlayers):
+        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        c.add((gates.CZ(q, q+1) for q in range(0, nqubits-1, 2)))
+        c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+        c.add((gates.CZ(q, q+1) for q in range(1, nqubits-2, 2)))
+        c.add(gates.CZ(0, nqubits-1))
+    c.add((gates.RY(q, theta=0) for q in range(nqubits)))
+
+    # Optimize starting from a random guess for the variational parameters
+    x0 = np.random.uniform(0, 2*np.pi, 2*nqubits*nlayers + nqubits)
+    data = np.random.normal(0, 1, size=2**nqubits)
+
+    # perform optimization
+    best, params = optimize(myloss, x0, args=(c, data), method='BFGS')
+
+    # set final solution to circuit instance
+    c.set_parameters(params)
 
 
 .. _qaoa-example:
@@ -779,7 +845,7 @@ As described in the previous sections, if
 :meth:`qibo.base.circuit.BaseCircuit.with_noise()` is used in a circuit
 that uses state vectors then noise will be simulated with repeated execution.
 If the user wishes to use density matrices instead, this is possible by
-initializing a :class:`qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit`
+initializing a :class:`qibo.core.circuit.DensityMatrixCircuit`
 using the ``density_matrix=True`` flag during initialization and call
 ``.with_noise`` on this circuit.
 
@@ -961,7 +1027,7 @@ Below is an example of how to use this object in practice:
     circuit = ham.circuit(dt=1e-2)
 
 
-This is a standard :class:`qibo.tensorflow.circuit.TensorflowCircuit` that
+This is a standard :class:`qibo.core.circuit.Circuit` that
 contains :class:`qibo.base.gates.Unitary` gates corresponding to the
 exponentials of the Trotter decomposition and can be executed on any state.
 
@@ -1049,7 +1115,7 @@ of the ``AdiabaticEvolution`` model. In this case the default initial state is
 |++...+> (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
-(:class:`qibo.tensorflow.callbacks.Gap`) is available for calculating the
+(:class:`qibo.base.callbacks.Gap`) is available for calculating the
 energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
 similar to other callbacks:
 

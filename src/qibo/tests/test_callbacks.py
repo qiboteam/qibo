@@ -23,15 +23,11 @@ def test_entropy_product_state():
 
 def test_entropy_singlet_state():
     """Check that the singlet state has maximum entropy."""
+    from qibo import K
     entropy = callbacks.EntanglementEntropy([0])
     state = np.zeros(4)
     state[0], state[-1] = 1, 1
-    state = state / np.sqrt(2)
-    # Pass the state as `tf.Tensor` to test this functionality as well
-    import tensorflow as tf
-    from qibo.config import DTYPES
-    state = tf.convert_to_tensor(state, dtype=DTYPES.get('DTYPECPX'))
-
+    state = K.cast(state / np.sqrt(2))
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, 1.0)
 
@@ -47,7 +43,7 @@ def test_entropy_random_state():
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
     callback = callbacks.EntanglementEntropy(compute_spectrum=True)
-    result = callback._entropy(rho)
+    result = callback.entropy(rho)
     target = - (s * np.log2(s)).sum()
     np.testing.assert_allclose(result.numpy(), target)
 
@@ -79,14 +75,13 @@ def test_state_invalid_type():
 
 def test_entropy_numerical():
     """Check that entropy calculation does not fail for tiny eigenvalues."""
-    import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     eigvals = np.array([-1e-10, -1e-15, -2e-17, -1e-18, -5e-60, 1e-48, 4e-32,
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
                         1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
-    rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPES.get('DTYPECPX'))
+    rho = K.cast(np.diag(eigvals))
     callback = callbacks.EntanglementEntropy()
-    result = callback._entropy(rho).numpy()
+    result = callback.entropy(rho).numpy()
 
     mask = eigvals > 0
     target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
@@ -305,9 +300,10 @@ def test_norm():
     target_norm = np.sqrt((np.abs(state) ** 2).sum())
     np.testing.assert_allclose(norm(state), target_norm)
 
+    norm.density_matrix = True
     state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
     target_norm = np.trace(state)
-    np.testing.assert_allclose(norm(state, True), target_norm)
+    np.testing.assert_allclose(norm(state), target_norm)
 
 
 def test_overlap():
@@ -318,8 +314,9 @@ def test_overlap():
     target_overlap = np.abs((state0.conj() * state1).sum())
     np.testing.assert_allclose(overlap(state1), target_overlap)
 
+    overlap.density_matrix = True
     with pytest.raises(NotImplementedError):
-        overlap(state1, is_density_matrix=True)
+        overlap(state1)
 
 
 def test_energy():
@@ -333,9 +330,10 @@ def test_energy():
     target_energy = state.conj().dot(matrix.dot(state))
     np.testing.assert_allclose(energy(state), target_energy)
 
+    energy.density_matrix = True
     state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
     target_energy = np.trace(matrix.dot(state))
-    np.testing.assert_allclose(energy(state, True), target_energy)
+    np.testing.assert_allclose(energy(state), target_energy)
 
 
 @pytest.mark.parametrize("trotter", [False, True])
@@ -360,12 +358,17 @@ def test_gap(trotter):
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
 
+    print(ground[:])
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])
     # check not implemented for density matrices
+    gap.density_matrix = True
     with pytest.raises(NotImplementedError):
-        gap(np.zeros(8), is_density_matrix=True)
+        gap(np.zeros(8))
+    # for coverage
+    _ = gap.density_matrix
+    gap.density_matrix = False
 
 
 def test_gap_errors():

@@ -1,9 +1,8 @@
 """Models for time evolution of state vectors."""
-import numpy as np
-from qibo import solvers, optimizers
+from qibo import solvers, optimizers, K
 from qibo.base import hamiltonians
-from qibo.tensorflow import circuit
-from qibo.config import log, raise_error, K
+from qibo.core import circuit
+from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
 
 
@@ -18,7 +17,7 @@ class StateEvolution:
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
         memory_device (str): Name of device where the full state will be saved.
@@ -88,7 +87,7 @@ class StateEvolution:
 
         def calculate_callbacks_distributed(state):
             with K.device(memory_device):
-                if not isinstance(state, (np.ndarray, K.Tensor)):
+                if not isinstance(state, K.tensor_types):
                     state = state.vector
                 calculate_callbacks(state)
 
@@ -129,8 +128,7 @@ class StateEvolution:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
         if self.accelerators is None:
-            return circuit.TensorflowCircuit._cast_initial_state(
-                self, state)
+            return circuit.Circuit._cast_initial_state(self, state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
             return c.get_initial_state(state)
@@ -155,7 +153,7 @@ class AdiabaticEvolution(StateEvolution):
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
         memory_device (str): Name of device where the full state will be saved.
@@ -218,10 +216,10 @@ class AdiabaticEvolution(StateEvolution):
     def schedule(self, f):
         """Sets scheduling s(t) function."""
         s0 = f(0)
-        if np.abs(s0) > self.ATOL:
+        if abs(s0) > self.ATOL:
             raise_error(ValueError, f"s(0) should be 0 but is {s0}.")
         s1 = f(1)
-        if np.abs(s1 - 1) > self.ATOL:
+        if abs(s1 - 1) > self.ATOL:
             raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
@@ -274,7 +272,7 @@ class AdiabaticEvolution(StateEvolution):
         return self.solver.hamiltonian(t)
 
     def get_initial_state(self, state=None):
-        """Casts initial state as a Tensorflow tensor.
+        """Casts initial state as a tensor.
 
         If initial state is not given the ground state of ``h0`` is used, which
         is the common practice in adiabatic evolution.
@@ -319,16 +317,16 @@ class AdiabaticEvolution(StateEvolution):
             messages (bool): If ``True`` the loss evolution is shown during
                 optimization.
         """
-        import numpy as np
         self.opt_messages = messages
         if method == "sgd":
             loss = self._loss
         else:
             loss = lambda p, ae, h1, msg, hist: self._loss(p, ae, h1, msg, hist).numpy()
 
-        result, parameters = optimizers.optimize(loss, initial_parameters, method, options,
-                                                 args=(self, self.h1, self.opt_messages, self.opt_history))
-        if isinstance(parameters, np.ndarray) and not len(parameters.shape): # pragma: no cover
+        result, parameters = optimizers.optimize(loss, initial_parameters,
+                                                 args=(self, self.h1, self.opt_messages, self.opt_history),
+                                                 method=method, options=options)
+        if isinstance(parameters, K.tensor_types) and not len(parameters.shape): # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]
         self.set_parameters(parameters)

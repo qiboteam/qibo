@@ -13,8 +13,8 @@ def test_variable_backpropagation(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
-    from qibo.config import DTYPES
-    theta = tf.Variable(0.1234, dtype=DTYPES.get('DTYPE'))
+    from qibo import K
+    theta = tf.Variable(0.1234, dtype=K.dtypes('DTYPE'))
 
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape
@@ -39,8 +39,8 @@ def test_two_variables_backpropagation(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import tensorflow as tf
-    from qibo.config import DTYPES
-    theta = tf.Variable([0.1234, 0.4321], dtype=DTYPES.get('DTYPE'))
+    from qibo import K
+    theta = tf.Variable([0.1234, 0.4321], dtype=K.dtypes('DTYPE'))
 
     # TODO: Fix parametrized gates so that `Circuit` can be defined outside
     # of the gradient tape

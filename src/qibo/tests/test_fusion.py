@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from qibo.models import Circuit
 from qibo import gates
-from qibo.tensorflow import fusion
+from qibo.core import fusion
 
 
 @pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])

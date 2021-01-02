@@ -1,9 +1,8 @@
 import copy
-import numpy as np
-import tensorflow as tf
+from qibo import K
+from qibo import numpy as qnp
 from qibo.base import gates
-from qibo.tensorflow import custom_operators as op
-from qibo.config import DTYPES, raise_error, get_threads
+from qibo.config import raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
 
 
@@ -178,7 +177,7 @@ class DistributedQueues(DistributedBase):
         return devgate
 
     @staticmethod
-    def count(queue: List[gates.Gate], nqubits: int) -> np.ndarray:
+    def count(queue: List[gates.Gate], nqubits: int):
         """Counts how many gates target each qubit.
 
         Args:
@@ -189,7 +188,7 @@ class DistributedQueues(DistributedBase):
             Array of integers with shape (nqubits,) with the number of gates
             for each qubit id.
         """
-        counter = np.zeros(nqubits, dtype=np.int32)
+        counter = qnp.zeros(nqubits, dtype='DTYPEINT')
         for gate in queue:
             for qubit in gate.target_qubits:
                 counter[qubit] += 1
@@ -197,7 +196,7 @@ class DistributedQueues(DistributedBase):
 
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
-                   counter: np.ndarray) -> List[gates.Gate]:
+                   counter: qnp.Tensor) -> List[gates.Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
@@ -256,7 +255,7 @@ class DistributedQueues(DistributedBase):
         return self._transform(queue, new_remaining_queue, counter)
 
     def transform(self, queue: List[gates.Gate],
-                  counter: Optional[np.ndarray] = None) -> List[gates.Gate]:
+                  counter: Optional[qnp.Tensor] = None) -> List[gates.Gate]:
         """Transforms gate queue to be compatible with distributed simulation.
 
         Adds SWAP gates between global and local qubits so that no gates are
@@ -355,12 +354,12 @@ class DistributedState(DistributedBase):
     """Data structure that holds the pieces of a state vector.
 
     This is created automatically by
-    :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+    :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
     which uses state pieces instead of the full state vector tensor to allow
     distribution to multiple devices.
-    Using the ``DistributedState`` instead of the full state vector as a
-    ``tf.Tensor`` avoids creating two copies of the state in the CPU memory
-    and allows simulation of one more qubit.
+    Using the ``DistributedState`` instead of the full state vector as a tensor
+    avoids creating two copies of the state in the CPU memory and allows
+    simulation of one more qubit.
 
     The full state vector can be accessed using the ``state.vector`` or
     ``state.numpy()`` methods of the ``DistributedState``.
@@ -379,89 +378,90 @@ class DistributedState(DistributedBase):
         super(DistributedState, self).__init__(circuit)
         self.device = circuit.memory_device
         self.qubits = circuit.queues.qubits
-        self.dtype = DTYPES.get('DTYPECPX')
+        self.dtype = K.dtypes('DTYPECPX')
 
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
-        with tf.device(self.device):
-            self.pieces = [tf.Variable(tf.zeros(n, dtype=self.dtype))
+        with K.device(self.device):
+            self.pieces = [K.optimization.Variable(K.zeros(n, dtype=self.dtype))
                            for _ in range(self.ndevices)]
 
-        dtype = DTYPES.get('DTYPEINT')
         self.shapes = {
-            "full": tf.cast((2 ** self.nqubits,), dtype=dtype),
-            "device": tf.cast((len(self.pieces), n), dtype=dtype),
+            "full": K.cast((2 ** self.nqubits,), dtype='DTYPEINT'),
+            "device": K.cast((len(self.pieces), n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
         self.bintodec = {
-            "global": 2 ** np.arange(self.nglobal - 1, -1, -1),
-            "local": 2 ** np.arange(self.nlocal - 1, -1, -1)
+            "global": 2 ** qnp.range(self.nglobal - 1, -1, -1),
+            "local": 2 ** qnp.range(self.nlocal - 1, -1, -1)
             }
 
     @classmethod
     def default(cls, circuit: "DistributedCircuit"):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
-      with tf.device(state.device):
-          op.initial_state(state.pieces[0])
+      with K.device(state.device):
+          piece = K.initial_state(state.pieces[0].shape)
+          state.pieces[0] = K.optimization.Variable(
+              piece, dtype=K.dtypes('DTYPECPX'))
       return state
 
     @classmethod
     def ones(cls, circuit: "DistributedCircuit"):
       """Creates the |+++...+> state for adiabatic evolution initialization."""
       state = cls(circuit)
-      with tf.device(state.device):
-          norm = tf.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
-          state.pieces = [tf.Variable(tf.ones_like(p) / norm)
+      with K.device(state.device):
+          norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
+          state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
                           for p in state.pieces]
       return state
 
     @classmethod
-    def from_vector(cls, full_state: tf.Tensor, circuit: "DistributedCircuit"):
+    def from_vector(cls, full_state, circuit):
         """Initializes pieces from a given full state vector."""
         state = cls(circuit)
         state.assign_vector(full_state)
         return state
 
-    def assign_vector(self, full_state: tf.Tensor):
+    def assign_vector(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
         Args:
-            full_state (tf.Tensor): Full state vector as a tensor of shape
+            full_state (array): Full state vector as a tensor of shape
                 ``(2 ** nqubits)``.
         """
-        with tf.device(self.device):
-            full_state = tf.reshape(full_state, self.shapes["device"])
+        with K.device(self.device):
+            full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
-            new_state = tf.zeros(self.shapes["device"], dtype=self.dtype)
-            new_state = op.transpose_state(pieces, new_state, self.nqubits,
-                                           self.qubits.transpose_order,
-                                           get_threads())
+            new_state = K.zeros(self.shapes["device"])
+            new_state = K.op.transpose_state(pieces, new_state, self.nqubits,
+                                             self.qubits.transpose_order,
+                                             get_threads())
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
 
     @property
-    def vector(self) -> tf.Tensor:
-        """Returns the full state vector as a ``tf.Tensor`` of shape ``(2 ** nqubits,)``.
+    def vector(self):
+        """Returns the full state vector as a tensor of shape ``(2 ** nqubits,)``.
 
         This is done by merging the state pieces to a single tensor.
         Using this method will double memory usage.
         """
         if self.qubits.list == list(range(self.nglobal)):
-            with tf.device(self.device):
-                state = tf.concat([x[tf.newaxis] for x in self.pieces], axis=0)
-                state = tf.reshape(state, self.shapes["full"])
+            with K.device(self.device):
+                state = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
+                state = K.reshape(state, self.shapes["full"])
         elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
-            with tf.device(self.device):
-                state = tf.concat([x[:, tf.newaxis] for x in self.pieces], axis=1)
-                state = tf.reshape(state, self.shapes["full"])
+            with K.device(self.device):
+                state = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
+                state = K.reshape(state, self.shapes["full"])
         else: # fall back to the transpose op
-            with tf.device(self.device):
-                state = tf.zeros(self.shapes["full"], dtype=self.dtype)
-                state = op.transpose_state(self.pieces, state, self.nqubits,
-                                           self.qubits.reverse_transpose_order,
-                                           get_threads())
+            with K.device(self.device):
+                state = K.zeros(self.shapes["full"])
+                state = K.op.transpose_state(self.pieces, state, self.nqubits,
+                                             self.qubits.reverse_transpose_order,
+                                             get_threads())
         return state
 
     def __len__(self) -> int:
@@ -477,7 +477,7 @@ class DistributedState(DistributedBase):
 
       elif isinstance(key, int):
           binary_index = bin(key)[2:].zfill(self.nqubits)
-          binary_index = np.array([int(x) for x in binary_index])
+          binary_index = qnp.cast([int(x) for x in binary_index], 'DTYPEINT')
 
           global_ids = binary_index[self.qubits.list]
           global_ids = global_ids.dot(self.bintodec["global"])
@@ -488,8 +488,8 @@ class DistributedState(DistributedBase):
       else:
           raise_error(TypeError, "Unknown index type {}.".format(type(key)))
 
-    def __array__(self) -> np.ndarray:
+    def __array__(self):
         return self.vector.numpy()
 
-    def numpy(self) -> np.ndarray:
+    def numpy(self):
         return self.vector.numpy()

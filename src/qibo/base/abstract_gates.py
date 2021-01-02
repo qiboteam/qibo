@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from abc import ABC, abstractmethod
-from qibo import config
+from qibo import get_device, config
 from qibo.config import raise_error
 from collections.abc import Iterable
 from typing import List, Sequence, Tuple
@@ -272,10 +272,11 @@ class ParametrizedGate(Gate):
     Implements the basic functionality of parameter setters and getters.
     """
 
-    def __init__(self):
+    def __init__(self, trainable=True):
         super(ParametrizedGate, self).__init__()
         self.parameter_names = "theta"
         self.nparams = 1
+        self.trainable = trainable
         self._parameters = None
 
     @property
@@ -306,7 +307,7 @@ class ParametrizedGate(Gate):
         # I could not find a cleaner way to write this so that the
         # ``circuit.set_parameters`` method works properly.
         # pylint: disable=E1101
-        if isinstance(self, BackendGate):
+        if isinstance(self, BaseBackendGate):
             self._unitary = None
             if self.is_prepared:
                 self.reprepare()
@@ -314,7 +315,7 @@ class ParametrizedGate(Gate):
                 devgate.parameters = x
 
 
-class BackendGate(Gate, ABC):
+class BaseBackendGate(Gate, ABC):
     """Abstract class for gate objects that can be used in calculations.
 
     Attributes:
@@ -338,7 +339,7 @@ class BackendGate(Gate, ABC):
         self._unitary = None
         self.is_prepared = False
         # Cast gate matrices to the proper device
-        self.device = config.get_device()
+        self.device = get_device()
         # Reference to copies of this gate that are casted in devices when
         # a distributed circuit is used
         self.device_gates = set()
@@ -368,7 +369,7 @@ class BackendGate(Gate, ABC):
                 return I(*self.qubits)
         return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
 
-    def __rmatmul__(self, other: "TensorflowGate") -> "TensorflowGate": # pragma: no cover
+    def __rmatmul__(self, other): # pragma: no cover
         # always falls back to left ``__matmul__``
         return self.__matmul__(other)
 
