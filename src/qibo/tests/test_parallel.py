@@ -30,7 +30,7 @@ def test_parallel_circuit_evaluation():
     set_threads(original_threads)
 
 
-def test_parallel_reuploading_circuit():
+def test_parallel_parametrized_circuit():
     """Evaluate circuit for multiple parameters."""
     if 'GPU' in get_device(): # pragma: no cover
         pytest.skip("unsupported configuration")
