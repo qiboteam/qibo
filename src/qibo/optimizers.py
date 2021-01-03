@@ -99,14 +99,8 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
         processes (int): number of processes when using the parallel BFGS method.
     """
     if method == 'parallel_L-BFGS-B':
-        import psutil
-        from qibo.config import raise_error, get_device, get_threads, log
-        if "GPU" in get_device(): # pragma: no cover
-            raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
-        if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
-            (processes is None and get_threads() != 1)): # pragma: no cover
-            log.warning('Please consider using a lower number of threads per process,'
-                        ' or reduce the number of processes for better performance')
+        from qibo.parallel import _check_parallel_configuration
+        _check_parallel_configuration(processes)
         o = ParallelBFGS(loss, args=args, options=options, processes=processes)
         m = o.run(initial_parameters)
     else:
@@ -180,63 +174,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     return loss(vparams, *args).numpy(), vparams.numpy()
 
 
-class ParallelBFGSResources: # pragma: no cover
-    """Auxiliary singleton class for sharing memory objects in a
-    multiprocessing environment when performing a parallel_L-BFGS-B
-    minimization procedure.
-
-    This class takes care of duplicating resources for each process
-    and calling the respective loss function.
-    """
-    import multiprocessing as mp
-    mp.set_start_method('fork') # enforce on Darwin
-
-    # private objects holding the state
-    _instance = None
-    # dict with of shared objects
-    _objects_per_process = {}
-    custom_loss = None
-    lock = None
-    args = ()
-
-    def __new__(cls, *args, **kwargs):
-        """Creates singleton instance."""
-        if cls._instance is None:
-            cls._instance = super(ParallelBFGSResources, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    def loss(self, params=None):
-        """Computes loss (custom_loss) for a specific set of parameters.
-        This class performs the lock mechanism to duplicate objects
-        for each process.
-        """
-        # lock to avoid race conditions
-        self.lock.acquire()
-        # get process name
-        pname = self.mp.current_process().name
-        # check if there are objects already stored
-        args = self._objects_per_process.get(pname, None)
-        if args is None:
-            args = []
-            for obj in self.args:
-                try:
-                    # copy object if copy method is available
-                    copy = obj.copy(deep=True)
-                except AttributeError:
-                    # if copy is not implemented just use the original object
-                    copy = obj
-                except Exception as e:
-                    # use print otherwise the message will not appear
-                    print('Exception in ParallelBFGSResources', str(e))
-                args.append(copy)
-            args = tuple(args)
-            self._objects_per_process[pname] = args
-        # unlock
-        self.lock.release()
-        # finally compute the loss function
-        return self.custom_loss(params, *args)
-
-
+from qibo.parallel import ParallelResources, _executor
 class ParallelBFGS: # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
@@ -257,8 +195,8 @@ class ParallelBFGS: # pragma: no cover
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
-        ParallelBFGSResources().args = args
-        ParallelBFGSResources().custom_loss = function
+        ParallelResources().arguments = args
+        ParallelResources().custom_function = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
@@ -276,18 +214,14 @@ class ParallelBFGS: # pragma: no cover
         Returns:
             scipy.minimize result object
         """
-        ParallelBFGSResources().lock = self.mp.Lock()
+        ParallelResources().lock = self.mp.Lock()
         with self.mp.Pool(processes=self.processes) as self.pool:
             from scipy.optimize import minimize
             out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
                            bounds=self.bounds, callback=self.callback, options=self.options)
+        ParallelResources().reset()
         out.hess_inv = out.hess_inv * self.np.identity(len(x0))
         return out
-
-    @staticmethod
-    def loss(params):
-        """Returns singleton loss."""
-        return ParallelBFGSResources().loss(params)
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -306,7 +240,7 @@ class ParallelBFGS: # pragma: no cover
             eps_at = range(len(x)+1)
             self.xval = x.copy()
             ret = self.pool.starmap(self._eval_approx, zip(eps_at,
-                                    self.itertools.repeat(self.loss),
+                                    self.itertools.repeat(_executor),
                                     self.itertools.repeat(x),
                                     self.itertools.repeat(eps)))
             self.function_value = ret[0]
