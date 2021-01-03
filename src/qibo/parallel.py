@@ -122,14 +122,14 @@ def parallel_execution(circuit, states, processes=None):
     return results
 
 
-def parallel_reuploading_execution(circuit, parameters, initial_state=None, processes=None):
+def parallel_parametrized_execution(circuit, parameters, initial_state=None, processes=None):
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
         ::
 
             from qibo import models, gates, set_threads
-            from qibo.parallel import parallel_reuploading_execution
+            from qibo.parallel import parallel_parametrized_execution
             import numpy as np
             # create circuit
             nqubits = 6
@@ -148,7 +148,7 @@ def parallel_reuploading_execution(circuit, parameters, initial_state=None, proc
             # set threads to 1 per process (optional, requires tuning)
             set_threads(1)
             # execute in parallel
-            results = parallel_reuploading_execution(circuit, parameters, processes=2)
+            results = parallel_parametrized_execution(circuit, parameters, processes=2)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.

@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from qibo import get_threads, set_threads, gates, get_device
 from qibo.models import Circuit, QFT
-from qibo.parallel import parallel_reuploading_execution, parallel_execution
+from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
 def test_parallel_circuit_evaluation():
@@ -58,6 +58,6 @@ def test_parallel_reuploading_circuit():
         c.set_parameters(params)
         r1.append(c(state))
 
-    r2 = parallel_reuploading_execution(c, parameters=parameters, initial_state=state, processes=2)
+    r2 = parallel_parametrized_execution(c, parameters=parameters, initial_state=state, processes=2)
     np.testing.assert_allclose(r1, r2)
     set_threads(original_threads)
