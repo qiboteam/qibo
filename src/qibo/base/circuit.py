@@ -625,8 +625,10 @@ class BaseCircuit(ABC):
                 params = [0.123, 0.456, (0.789, 0.321)]
                 c.set_parameters(params)
         """
-        if isinstance(parameters, (list, tuple) + self.param_tensor_types):
+        if isinstance(parameters, (list, tuple)):
             self._set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, self.param_tensor_types):
+            self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
                 raise_error(TypeError, "Cannot accept new parameters as dictionary "
