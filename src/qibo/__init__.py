@@ -6,4 +6,4 @@ from qibo.backends import numpy_backend as numpy
 from qibo.backends import numpy_matrices as matrices
 from qibo.backends import K
 from qibo import callbacks, evolution, gates, hamiltonians, models
-from qibo import optimizers, solvers
+from qibo import parallel, optimizers, solvers
