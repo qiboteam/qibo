@@ -213,7 +213,8 @@ class Circuit(circuit.BaseCircuit):
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            return K.initial_state(self.shapes.get('TENSOR_FLAT'))
+            is_matrix = isinstance(self, DensityMatrixCircuit)
+            return K.initial_state(self.nqubits, is_matrix)
         state = self._cast_initial_state(state)
         if self.check_initial_state_shape:
             shape = tuple(state.shape)

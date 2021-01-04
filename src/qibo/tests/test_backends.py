@@ -35,7 +35,7 @@ _METHODS = [
     ("unique", [np.random.randint(10, size=(10,))]),
     ("array_equal", [rand(10), rand(10)]),
     ("gather_nd", [rand((5, 3)), [0, 1]]),
-    ("initial_state", [(32,)]),
+    ("initial_state", [5, True]), ("initial_state", [3, False])
 ]
 @pytest.mark.parametrize("names", [("numpy", "tensorflow")])
 @pytest.mark.parametrize("method,kwargs", _METHODS)

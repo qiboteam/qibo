@@ -402,9 +402,8 @@ class DistributedState(DistributedBase):
       """Creates the |000...0> state for default initialization."""
       state = cls(circuit)
       with K.device(state.device):
-          piece = K.initial_state(state.pieces[0].shape)
-          state.pieces[0] = K.optimization.Variable(
-              piece, dtype=K.dtypes('DTYPECPX'))
+          piece = K.initial_state(nqubits=state.nlocal)
+          state.pieces[0] = K.optimization.Variable(piece, dtype=piece.dtype)
       return state
 
     @classmethod

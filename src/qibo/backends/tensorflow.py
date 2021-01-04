@@ -128,10 +128,11 @@ class TensorflowBackend(numpy.NumpyBackend):
     def gather_nd(self, x, indices):
         return self.backend.gather_nd(x, indices)
 
-    def initial_state(self, shape):
-        state = self.zeros(shape)
-        state = self.op.initial_state(state)
-        return state
+    def initial_state(self, nqubits, is_matrix=False):
+        from qibo.config import get_threads
+        return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
+                                     is_matrix=is_matrix,
+                                     omp_num_threads=get_threads())
 
     def sample_measurements(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
