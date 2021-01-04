@@ -463,8 +463,10 @@ class BaseCircuit(ABC):
         new_circuit = self._fuse_copy()
         new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
             new_circuit.queue)
-        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
-                                 for gate in group.gates)
+        new_circuit.queue = _Queue(self.nqubits)
+        for group in new_circuit.fusion_groups:
+            for gate in group.gates:
+                new_circuit.queue.append(gate)
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:

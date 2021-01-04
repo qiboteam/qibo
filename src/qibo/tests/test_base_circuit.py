@@ -7,6 +7,9 @@ from qibo.base.circuit import BaseCircuit
 class Circuit(BaseCircuit): # pragma: no-cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
+    def _get_parameters_flatlist(self):
+        raise_error(NotImplementedError)
+
     def execute(self):
         raise_error(NotImplementedError)
 
@@ -120,7 +123,8 @@ def test_gate_types():
     c.add(gates.CNOT(1, 2))
     c.add(gates.TOFFOLI(0, 1, 2))
     target_counter = collections.Counter({"h": 2, "x": 1, "cx": 2, "ccx": 1})
-    assert target_counter == c.gate_types
+    assert c.ngates == 6
+    assert c.gate_types == target_counter
 
 
 def test_gates_of_type():
@@ -156,21 +160,28 @@ def test_summary():
     assert c.summary() == target_summary
 
 
-def test_circuit_addition():
+@pytest.mark.parametrize("measurements", [False, True])
+def test_circuit_addition(measurements):
     c1 = Circuit(2)
-    g1, g2 = gates.H(0), gates.H(1)
+    g1, g2 = gates.H(0), gates.CNOT(0, 1)
     c1.add(g1)
     c1.add(g2)
+    if measurements:
+        c1.add(gates.M(0, register_name="a"))
 
     c2 = Circuit(2)
-    g3 = gates.CNOT(0, 1)
+    g3 = gates.H(1)
     c2.add(g3)
+    if measurements:
+        c2.add(gates.M(1, register_name="b"))
 
     c3 = c1 + c2
-    assert c3.depth == 2
+    assert c3.depth == 3
     assert list(c3.queue) == [g1, g2, g3]
+    if measurements:
+        assert c3.measurement_tuples == {"a": (0,), "b": (1,)}
+        assert c3.measurement_gate.target_qubits == (0, 1)
 
-# TODO: Test addition with measurements
 
 def test_circuit_addition_errors():
     c1 = Circuit(2)
@@ -182,6 +193,20 @@ def test_circuit_addition_errors():
 
     with pytest.raises(ValueError):
         c3 = c1 + c2
+
+
+def test_circuit_on_qubits():
+    c = Circuit(3)
+    c.add([gates.H(0), gates.X(1), gates.Y(2)])
+    c.add([gates.CNOT(0, 1), gates.CZ(1, 2)])
+    new_gates = list(c.on_qubits(2, 5, 4))
+    assert new_gates[0].target_qubits == (2,)
+    assert new_gates[1].target_qubits == (5,)
+    assert new_gates[2].target_qubits == (4,)
+    assert new_gates[3].target_qubits == (5,)
+    assert new_gates[3].control_qubits == (2,)
+    assert new_gates[4].target_qubits == (4,)
+    assert new_gates[4].control_qubits == (5,)
 
 
 @pytest.mark.parametrize("deep", [False, True])
@@ -207,8 +232,35 @@ def test_circuit_copy_with_measurements():
     c1.add(gates.M(0, 1, register_name="a"))
     c1.add(gates.M(3, register_name="b"))
     c2 = c1.copy()
-
     assert c2.measurement_gate is c1.measurement_gate
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
-# TODO: Continue with `invert` and move on
+
+@pytest.mark.parametrize("measurements", [False, True])
+def test_circuit_invert(measurements):
+    c = Circuit(3)
+    gatelist = [gates.H(0), gates.X(1), gates.Y(2),
+                gates.CNOT(0, 1), gates.CZ(1, 2)]
+    c.add(gatelist)
+    if measurements:
+        c.add(gates.M(0, 2))
+    invc = c.invert()
+    for g1, g2 in zip(invc.queue, gatelist[::-1]):
+        g2 = g2.dagger()
+        assert isinstance(g1, g2.__class__)
+        assert g1.target_qubits == g2.target_qubits
+        assert g1.control_qubits == g2.control_qubits
+    if measurements:
+        assert invc.measurement_gate.target_qubits == (0, 2)
+        assert invc.measurement_tuples == {"register0": (0, 2)}
+
+
+@pytest.mark.parametrize("measurements", [False, True])
+def test_circuit_fuse(measurements):
+    from qibo.base import fusion
+    c = Circuit(4)
+    c.add((gates.H(i) for i in range(4)))
+    c.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
+    fusedc = c.fuse()
+    assert isinstance(fusedc, fusion.FusionGroup)
+    assert fusedc.depth == 1
