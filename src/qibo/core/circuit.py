@@ -27,6 +27,7 @@ class Circuit(circuit.BaseCircuit):
 
     def __init__(self, nqubits):
         super(Circuit, self).__init__(nqubits)
+        self.param_tensor_types = K.tensor_types
         self._compiled_execute = None
         self.check_initial_state_shape = True
         self.shapes = {
@@ -45,23 +46,6 @@ class Circuit(circuit.BaseCircuit):
         gate.nqubits = self.nqubits
         gate.prepare()
 
-    def set_parameters(self, parameters):
-        if isinstance(parameters, K.tensor_types):
-            super()._set_parameters_list(parameters, int(parameters.shape[0]))
-        else:
-            super().set_parameters(parameters)
-
-    def _get_parameters_flatlist(self, parametrized_gates):
-        params = []
-        for gate in parametrized_gates:
-            if isinstance(gate.parameters, K.tensor_types):
-                params.extend(gate.parameters.ravel())
-            elif isinstance(gate.parameters, collections.abc.Iterable):
-                params.extend(gate.parameters)
-            else:
-                params.append(gate.parameters)
-        return params
-
     def _fuse_copy(self) -> "BaseCircuit":
         """Helper method for ``circuit.fuse``.
 
@@ -70,9 +54,10 @@ class Circuit(circuit.BaseCircuit):
         For distributed circuits a fully deep copy should be created.
         """
         import copy
+        from qibo.base.abstract_gates import ParametrizedGate
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
-            if isinstance(gate, gates.ParametrizedGate):
+            if isinstance(gate, ParametrizedGate):
                 if gate.trainable:
                     new_gate = copy.copy(gate)
                     new_circuit.queue.append(new_gate)
@@ -107,6 +92,7 @@ class Circuit(circuit.BaseCircuit):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
+        from qibo.base.circuit import _Queue
         new_circuit = self._fuse_copy()
         new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
             new_circuit.queue)

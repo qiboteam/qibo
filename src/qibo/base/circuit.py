@@ -102,6 +102,8 @@ class BaseCircuit(ABC):
         self.density_matrix = False
         self.repeated_execution = False
 
+        self.param_tensor_types = (None.__class__,)
+
     def add(self, gate):
         """Add a gate to a given queue.
 
@@ -150,6 +152,8 @@ class BaseCircuit(ABC):
                 self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
+            if gate.trainable:
+                self.trainable_gates.append(gate)
 
     def set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.
@@ -527,7 +531,46 @@ class BaseCircuit(ABC):
     def fuse(self): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def _set_parameters_list(self, parameters: List, n: int):
+    def get_parameters(self, format: str = "list",
+                       include_not_trainable: bool = False
+                       ) -> Union[List, Dict]: # pylint: disable=W0622
+        """Returns the parameters of all parametrized gates in the circuit.
+
+        Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
+
+        Args:
+            format (str): How to return the variational parameters.
+                Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
+                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for
+                more details on each format. Default is ``'list'``.
+            include_not_trainable (bool): If ``True`` it includes the parameters
+                of non-trainable parametrized gates in the returned list or
+                dictionary. Default is ``False``.
+        """
+        if include_not_trainable:
+            parametrized_gates = self.parametrized_gates
+        else:
+            parametrized_gates = self.trainable_gates
+
+        if format == "list":
+            params = [gate.parameters for gate in parametrized_gates]
+        elif format == "dict":
+            params = {gate: gate.parameters for gate in parametrized_gates}
+        elif format == "flatlist":
+            params = []
+            for gate in parametrized_gates:
+                if isinstance(gate.parameters, self.param_tensor_types):
+                    params.extend((p for p in gate.parameters))
+                elif isinstance(gate.parameters, collections.abc.Iterable):
+                    params.extend(gate.parameters)
+                else:
+                    params.append(gate.parameters)
+        else:
+            raise_error(ValueError, "Unknown format {} given in "
+                                    "``get_parameters``.".format(format))
+        return params
+
+    def _set_parameters_list(self, parameters, n: int):
         """Helper method for ``set_parameters`` when a list is given.
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
@@ -582,7 +625,7 @@ class BaseCircuit(ABC):
                 params = [0.123, 0.456, (0.789, 0.321)]
                 c.set_parameters(params)
         """
-        if isinstance(parameters, (list, tuple)):
+        if isinstance(parameters, (list, tuple) + self.param_tensor_types):
             self._set_parameters_list(parameters, len(parameters))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
@@ -598,40 +641,6 @@ class BaseCircuit(ABC):
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
-
-    def get_parameters(self, format: str = "list",
-                       include_not_trainable: bool = False
-                       ) -> Union[List, Dict]: # pylint: disable=W0622
-        """Returns the parameters of all parametrized gates in the circuit.
-
-        Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
-
-        Args:
-            format (str): How to return the variational parameters.
-                Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
-                See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for
-                more details on each format. Default is ``'list'``.
-            include_not_trainable (bool): If ``True`` it includes the parameters
-                of non-trainable parametrized gates in the returned list or
-                dictionary. Default is ``False``.
-        """
-        if include_not_trainable:
-            parametrized_gates = self.parametrized_gates
-        else:
-            parametrized_gates = self.trainable_gates
-        if format == "list":
-            return [gate.parameters for gate in parametrized_gates]
-        elif format == "dict":
-            return {gate: gate.parameters for gate in parametrized_gates}
-        elif format == "flatlist":
-            return self._get_parameters_flatlist(parametrized_gates)
-        else:
-            raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
-
-    @abstractmethod
-    def _get_parameters_flatlist(self, parametrized_gates): # pragma: no cover
-        raise_error(NotImplementedError, "Flat list format not available "
-                                         "in the base circuit.")
 
     @property
     @abstractmethod

@@ -3,14 +3,13 @@ from qibo.base import gates
 from qibo.config import raise_error
 from qibo.base.circuit import BaseCircuit
 
+# TODO: Move all commented tests in core circuit tests
+
 
 class Circuit(BaseCircuit): # pragma: no-cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
     def fuse(self):
-        raise_error(NotImplementedError)
-
-    def _get_parameters_flatlist(self):
         raise_error(NotImplementedError)
 
     def execute(self):
@@ -256,3 +255,187 @@ def test_circuit_invert(measurements):
     if measurements:
         assert invc.measurement_gate.target_qubits == (0, 2)
         assert invc.measurement_tuples == {"register0": (0, 2)}
+
+
+@pytest.mark.parametrize("measurements", [False, True])
+def test_circuit_decompose(measurements):
+    c = Circuit(4)
+    c.add([gates.H(0), gates.X(1), gates.Y(2)])
+    c.add([gates.CZ(0, 1), gates.CNOT(2, 3), gates.TOFFOLI(0, 1, 3)])
+    if measurements:
+        c.add(gates.M(0, 2))
+    decompc = c.decompose()
+
+    dgates = []
+    for gate in c.queue:
+        dgates.extend(gate.decompose())
+    for g1, g2 in zip(decompc.queue, dgates):
+        assert isinstance(g1, g2.__class__)
+        assert g1.target_qubits == g2.target_qubits
+        assert g1.control_qubits == g2.control_qubits
+    if measurements:
+        assert decompc.measurement_gate.target_qubits == (0, 2)
+        assert decompc.measurement_tuples == {"register0": (0, 2)}
+
+
+@pytest.mark.parametrize("measurements", [False, True])
+@pytest.mark.parametrize("noise_map",
+                         [(0.1, 0.2, 0.3),
+                          {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}])
+def test_circuit_with_noise(measurements, noise_map):
+    c = Circuit(2)
+    c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+    if measurements:
+        c.add(gates.M(0, 1))
+    noisyc = c.with_noise(noise_map)
+
+    if not isinstance(noise_map, dict):
+        noise_map = {0: noise_map, 1: noise_map}
+    targetc = Circuit(2)
+    targetc.add(gates.H(0))
+    targetc.add(gates.PauliNoiseChannel(0, *noise_map[0]))
+    targetc.add(gates.H(1))
+    targetc.add(gates.PauliNoiseChannel(1, *noise_map[1]))
+    targetc.add(gates.CNOT(0, 1))
+    targetc.add(gates.PauliNoiseChannel(0, *noise_map[0]))
+    targetc.add(gates.PauliNoiseChannel(1, *noise_map[1]))
+    for g1, g2 in zip(noisyc.queue, targetc.queue):
+        assert isinstance(g1, g2.__class__)
+        assert g1.target_qubits == g2.target_qubits
+        assert g1.control_qubits == g2.control_qubits
+    if measurements:
+        assert noisyc.measurement_gate.target_qubits == (0, 1)
+        assert noisyc.measurement_tuples == {"register0": (0, 1)}
+
+
+@pytest.mark.parametrize("trainable", [True, False])
+@pytest.mark.parametrize("include_not_trainable", [True, False])
+@pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
+def test_get_parameters(trainable, include_not_trainable, format):
+    c = Circuit(3)
+    c.add(gates.RX(0, theta=0.123))
+    c.add(gates.RY(1, theta=0.456, trainable=trainable))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
+    c.add(gates.H(2))
+
+    params = c.get_parameters(format, include_not_trainable)
+    if trainable or include_not_trainable:
+        target_params = {
+            "list": [0.123, 0.456, (0.789, 0.987)],
+            "dict": {c.queue[0]: 0.123, c.queue[1]: 0.456,
+                     c.queue[3]: (0.789, 0.987)},
+            "flatlist": [0.123, 0.456, 0.789, 0.987]
+            }
+    else:
+        target_params = {
+            "list": [0.123],
+            "dict": {c.queue[0]: 0.123},
+            "flatlist": [0.123]
+            }
+    assert params == target_params[format]
+    with pytest.raises(ValueError):
+        c.get_parameters("test")
+
+# TODO: Test `get_parameters` with flatlist when a Unitary gate is in the circuit
+
+@pytest.mark.parametrize("trainable", [True, False])
+def test_circuit_set_parameters_with_list(trainable):
+    """Check updating parameters of circuit with list."""
+    params = [0.123, 0.456, (0.789, 0.321)]
+
+    c = Circuit(3)
+    if trainable:
+        c.add(gates.RX(0, theta=0, trainable=trainable))
+    else:
+        c.add(gates.RX(0, theta=params[0], trainable=trainable))
+    c.add(gates.RY(1, theta=0))
+    c.add(gates.CZ(1, 2))
+    c.add(gates.fSim(0, 2, theta=0, phi=0))
+    c.add(gates.H(2))
+    # execute once
+    #final_state = c()
+
+    if trainable:
+        c.set_parameters(params)
+        assert c.queue[0].parameters == params[0]
+    else:
+        c.set_parameters(params[1:])
+    assert c.queue[1].parameters == params[1]
+    assert c.queue[3].parameters == params[2]
+
+    # TODO: Do these tests when using backends
+    #np.testing.assert_allclose(c(), target_c())
+    # Attempt using a flat np.ndarray/list
+    #for new_params in (np.random.random(4), list(np.random.random(4))):
+    #    if trainable:
+    #        c.set_parameters(new_params)
+    #    else:
+    #        new_params[0] = params[0]
+    #        c.set_parameters(new_params[1:])
+    #    target_params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
+    #    target_c.set_parameters(target_params)
+    #    np.testing.assert_allclose(c(), target_c())
+
+
+@pytest.mark.parametrize("trainable", [True, False])
+def test_circuit_set_parameters_with_dictionary(trainable):
+    """Check updating parameters of circuit with list."""
+    params = [0.123, 0.456, 0.789]
+
+    c1 = Circuit(3)
+    c1.add(gates.X(0))
+    c1.add(gates.X(2))
+    if trainable:
+        c1.add(gates.U1(0, theta=0, trainable=trainable))
+    else:
+        c1.add(gates.U1(0, theta=params[0], trainable=trainable))
+    c2 = Circuit(3)
+    c2.add(gates.RZ(1, theta=0))
+    c2.add(gates.CZ(1, 2))
+    c2.add(gates.CU1(0, 2, theta=0))
+    c2.add(gates.H(2))
+    c = c1 + c2
+
+    if trainable:
+        params_dict = {c.queue[i]: p for i, p in zip([2, 3, 5], params)}
+        c.set_parameters(params_dict)
+        assert c.queue[2].parameters == params[0]
+    else:
+        params_dict = {c.queue[3]: params[1], c.queue[5]: params[2]}
+        c.set_parameters(params_dict)
+    assert c.queue[3].parameters == params[1]
+    assert c.queue[5].parameters == params[2]
+
+    # test not passing all parametrized gates
+    c.set_parameters({c.queue[5]: 0.7891})
+    if trainable:
+        assert c.queue[2].parameters == params[0]
+    assert c.queue[3].parameters == params[1]
+    assert c.queue[5].parameters == 0.7891
+
+
+def test_circuit_set_parameters_errors():
+    """Check updating parameters errors."""
+    c = Circuit(2)
+    c.add(gates.RX(0, theta=0.789))
+    c.add(gates.RX(1, theta=0.789))
+    c.add(gates.fSim(0, 1, theta=0.123, phi=0.456))
+
+    with pytest.raises(KeyError):
+        c.set_parameters({gates.RX(0, theta=1.0): 0.568})
+    with pytest.raises(ValueError):
+        c.set_parameters([0.12586])
+    # TODO: Move commented tests to core circuit tests
+    #with pytest.raises(ValueError):
+    #    c.set_parameters(np.random.random(5))
+    #with pytest.raises(ValueError):
+    #    import tensorflow as tf
+    #    c.set_parameters(tf.random.uniform((6,), dtype=tf.float64))
+    with pytest.raises(TypeError):
+        c.set_parameters({0.3568})
+    with pytest.raises(ValueError):
+        c.queue[2].parameters = [0.1234, 0.4321, 0.156]
+    #fused_c = c.fuse()
+    #with pytest.raises(TypeError):
+    #    fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})
