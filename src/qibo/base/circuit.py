@@ -74,7 +74,6 @@ class BaseCircuit(ABC):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-    from qibo.base import fusion
 
     def __init__(self, nqubits):
         if not isinstance(nqubits, int):
@@ -415,59 +414,24 @@ class BaseCircuit(ABC):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
-    def _fuse_copy(self) -> "BaseCircuit":
-        """Helper method for ``circuit.fuse``.
+    def decompose(self, *free: int) -> "BaseCircuit":
+        """Decomposes circuit's gates to gates supported by OpenQASM.
 
-        For standard (non-distributed) circuits this creates a copy of the
-        circuit with deep-copying the parametrized gates only.
-        For distributed circuits a fully deep copy should be created.
-        """
-        import copy
-        new_circuit = self.__class__(**self.init_kwargs)
-        for gate in self.queue:
-            if isinstance(gate, gates.ParametrizedGate):
-                if gate.trainable:
-                    new_gate = copy.copy(gate)
-                    new_circuit.queue.append(new_gate)
-                    new_circuit.parametrized_gates.append(new_gate)
-                    new_circuit.trainable_gates.append(new_gate)
-                else:
-                    new_circuit.queue.append(gate)
-                    new_circuit.parametrized_gates.append(gate)
-            else:
-                new_circuit.queue.append(gate)
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        return new_circuit
-
-    def fuse(self) -> "BaseCircuit":
-        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+        Args:
+            free: Ids of free (work) qubits to use for gate decomposition.
 
         Returns:
-            The equivalent ``Circuit`` object where the gates are fused.
-
-        Example:
-            ::
-
-                from qibo import models, gates
-                c = models.Circuit(2)
-                c.add([gates.H(0), gates.H(1)])
-                c.add(gates.CNOT(0, 1))
-                c.add([gates.Y(0), gates.Y(1)])
-                # create circuit with fused gates
-                fused_c = c.fuse()
-                # now ``fused_c`` contains only one ``gates.Unitary`` gate
-                # that is equivalent to applying the five gates of the original
-                # circuit.
+            Circuit that contains only gates that are supported by OpenQASM
+            and has the same effect as the original circuit.
         """
-        new_circuit = self._fuse_copy()
-        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
-            new_circuit.queue)
-        new_circuit.queue = _Queue(self.nqubits)
-        for group in new_circuit.fusion_groups:
-            for gate in group.gates:
-                new_circuit.queue.append(gate)
-        return new_circuit
+        # FIXME: This method is not completed until the ``decompose`` is
+        # implemented for all gates not supported by OpenQASM.
+        decomp_circuit = self.__class__(self.nqubits)
+        for gate in self.queue:
+            decomp_circuit.add(gate.decompose(*free))
+        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
+        decomp_circuit.measurement_gate = self.measurement_gate
+        return decomp_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
         if isinstance(noise_map, tuple) or isinstance(noise_map, list):
@@ -487,25 +451,6 @@ class BaseCircuit(ABC):
 
         raise_error(TypeError, "Type {} of noise map is not recognized."
                                "".format(type(noise_map)))
-
-    def decompose(self, *free: int) -> "BaseCircuit":
-        """Decomposes circuit's gates to gates supported by OpenQASM.
-
-        Args:
-            free: Ids of free (work) qubits to use for gate decomposition.
-
-        Returns:
-            Circuit that contains only gates that are supported by OpenQASM
-            and has the same effect as the original circuit.
-        """
-        # FIXME: This method is not completed until the ``decompose`` is
-        # implemented for all gates not supported by OpenQASM.
-        decomp_circuit = self.__class__(self.nqubits)
-        for gate in self.queue:
-            decomp_circuit.add(gate.decompose(*free))
-        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
-        decomp_circuit.measurement_gate = self.measurement_gate
-        return decomp_circuit
 
     def with_noise(self, noise_map: NoiseMapType) -> "BaseCircuit":
         """Creates a copy of the circuit with noise gates after each gate.
@@ -577,6 +522,10 @@ class BaseCircuit(ABC):
         noisy_circuit.measurement_tuples = dict(self.measurement_tuples)
         noisy_circuit.measurement_gate = self.measurement_gate
         return noisy_circuit
+
+    @abstractmethod
+    def fuse(self): # pragma: no cover
+        raise_error(NotImplementedError)
 
     def _set_parameters_list(self, parameters: List, n: int):
         """Helper method for ``set_parameters`` when a list is given.

@@ -7,6 +7,9 @@ from qibo.base.circuit import BaseCircuit
 class Circuit(BaseCircuit): # pragma: no-cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
+    def fuse(self):
+        raise_error(NotImplementedError)
+
     def _get_parameters_flatlist(self):
         raise_error(NotImplementedError)
 
@@ -253,14 +256,3 @@ def test_circuit_invert(measurements):
     if measurements:
         assert invc.measurement_gate.target_qubits == (0, 2)
         assert invc.measurement_tuples == {"register0": (0, 2)}
-
-
-@pytest.mark.parametrize("measurements", [False, True])
-def test_circuit_fuse(measurements):
-    from qibo.base import fusion
-    c = Circuit(4)
-    c.add((gates.H(i) for i in range(4)))
-    c.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
-    fusedc = c.fuse()
-    assert isinstance(fusedc, fusion.FusionGroup)
-    assert fusedc.depth == 1
