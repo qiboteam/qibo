@@ -292,7 +292,7 @@ class CNOT(BackendGate, gates.CNOT):
         gates.CNOT.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        return K.reshape(K.matrices.CNOT, (4, 4))
+        return K.matrices.CNOT
 
 
 class CZ(BackendGate, gates.CZ):
@@ -302,7 +302,7 @@ class CZ(BackendGate, gates.CZ):
         gates.CZ.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        return K.reshape(K.matrices.CZ, (4, 4))
+        return K.matrices.CZ
 
 
 class _CUn_(BackendGate):
@@ -401,7 +401,7 @@ class TOFFOLI(BackendGate, gates.TOFFOLI):
         gates.TOFFOLI.__init__(self, q0, q1, q2)
 
     def construct_unitary(self):
-        return K.reshape(K.matrices.TOFFOLI, (8, 8))
+        return K.matrices.TOFFOLI
 
     @property
     def unitary(self):

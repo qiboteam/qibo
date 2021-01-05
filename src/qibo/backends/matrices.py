@@ -23,8 +23,7 @@ class NumpyMatrices:
             getattr(self, f"_set{name}")()
 
     def cast(self, x):
-        d = len(x.shape) // 2
-        return x.reshape((2 ** d, 2 ** d)) # return it as a matrix for numpy
+        return x.astype(self.dtype)
 
     @property
     def dtype(self):
@@ -97,23 +96,23 @@ class NumpyMatrices:
         m = np.eye(4, dtype=self.dtype)
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
-        self._CNOT = self.cast(m.reshape(4 * (2,)))
+        self._CNOT = self.cast(m)
 
     def _setCZ(self):
-        m = np.diag([1, 1, 1, -1]).astype(self.dtype)
-        self._CZ = self.cast(m.reshape(4 * (2,)))
+        m = np.diag([1, 1, 1, -1])
+        self._CZ = self.cast(m)
 
     def _setSWAP(self):
         m = np.eye(4, dtype=self.dtype)
         m[1, 1], m[1, 2] = 0, 1
         m[2, 1], m[2, 2] = 1, 0
-        self._SWAP = self.cast(m.reshape(4 * (2,)))
+        self._SWAP = self.cast(m)
 
     def _setTOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
         m[-2, -2], m[-2, -1] = 0, 1
         m[-1, -2], m[-1, -1] = 1, 0
-        self._TOFFOLI = self.cast(m.reshape(6 * (2,)))
+        self._TOFFOLI = self.cast(m)
 
 
 class TensorflowMatrices(NumpyMatrices):
