@@ -3,7 +3,7 @@ import numpy as np
 
 class NumpyMatrices:
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "SWAP", "TOFFOLI"]
+    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "TOFFOLI"]
 
     def __init__(self, dtype):
         self._dtype = dtype
@@ -13,6 +13,7 @@ class NumpyMatrices:
         self._Y = None
         self._Z = None
         self._CNOT = None
+        self._CZ = None
         self._SWAP = None
         self._TOFFOLI = None
         self.allocate_matrices()
@@ -58,6 +59,10 @@ class NumpyMatrices:
         return self._CNOT
 
     @property
+    def CZ(self):
+        return self._CZ
+
+    @property
     def SWAP(self):
         return self._SWAP
 
@@ -93,6 +98,10 @@ class NumpyMatrices:
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
         self._CNOT = self.cast(m.reshape(4 * (2,)))
+
+    def _setCZ(self):
+        m = np.diag([1, 1, 1, -1]).astype(self.dtype)
+        self._CZ = self.cast(m.reshape(4 * (2,)))
 
     def _setSWAP(self):
         m = np.eye(4, dtype=self.dtype)

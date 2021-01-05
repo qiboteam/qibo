@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import sys
 import math
-from qibo import K, get_threads
+from qibo import K, get_threads, matrices
 from qibo import numpy as qnp
 from qibo.base import gates
 from qibo.base.abstract_gates import BaseBackendGate, ParametrizedGate
@@ -113,7 +113,7 @@ class H(MatrixGate, gates.H):
         gates.H.__init__(self, q)
 
     def construct_unitary(self):
-        return qnp.cast([[1, 1], [1, -1]]) / qnp.sqrt(2)
+        return matrices.H
 
 
 class X(BackendGate, gates.X):
@@ -124,7 +124,7 @@ class X(BackendGate, gates.X):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return qnp.cast([[0, 1], [1, 0]])
+        return matrices.X
 
 
 class Y(BackendGate, gates.Y):
@@ -135,7 +135,7 @@ class Y(BackendGate, gates.Y):
         self.gate_op = K.op.apply_y
 
     def construct_unitary(self):
-        return qnp.cast([[0, -1j], [1j, 0]])
+        return matrices.Y
 
     def density_matrix_call(self, state):
         return -BackendGate.density_matrix_call(self, state)
@@ -149,7 +149,7 @@ class Z(BackendGate, gates.Z):
         self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
-        return qnp.cast([[1, 0], [0, -1]])
+        return matrices.Z
 
 
 class I(BackendGate, gates.I):
@@ -409,8 +409,7 @@ class CNOT(BackendGate, gates.CNOT):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return qnp.cast([[1, 0, 0, 0], [0, 1, 0, 0],
-                         [0, 0, 0, 1], [0, 0, 1, 0]])
+        return matrices.CNOT
 
 
 class CZ(BackendGate, gates.CZ):
@@ -421,7 +420,7 @@ class CZ(BackendGate, gates.CZ):
         self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
-        return qnp.diag([1, 1, 1, -1])
+        return matrices.CZ
 
 
 class _CUn_(MatrixGate):
@@ -506,8 +505,7 @@ class SWAP(BackendGate, gates.SWAP):
         self.gate_op = K.op.apply_swap
 
     def construct_unitary(self):
-        return qnp.cast([[1, 0, 0, 0], [0, 0, 1, 0],
-                         [0, 1, 0, 0], [0, 0, 0, 1]])
+        return matrices.SWAP
 
 
 class fSim(MatrixGate, gates.fSim):
@@ -575,10 +573,7 @@ class TOFFOLI(BackendGate, gates.TOFFOLI):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        matrix = qnp.eye(8)
-        matrix[-2, -2], matrix[-2, -1] = 0, 1
-        matrix[-1, -2], matrix[-1, -1] = 1, 0
-        return matrix
+        return matrices.TOFFOLI
 
     @property
     def unitary(self):

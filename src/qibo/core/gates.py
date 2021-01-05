@@ -302,8 +302,7 @@ class CZ(BackendGate, gates.CZ):
         gates.CZ.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        diag = K.cast(K.concatenate([K.ones(3), [-1]], axis=0))
-        return K.diag(diag)
+        return K.reshape(K.matrices.CZ, (4, 4))
 
 
 class _CUn_(BackendGate):
