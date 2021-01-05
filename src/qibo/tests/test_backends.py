@@ -40,8 +40,8 @@ _METHODS = [
 @pytest.mark.parametrize("names", [("numpy", "tensorflow")])
 @pytest.mark.parametrize("method,kwargs", _METHODS)
 def test_backend_methods(names, method, kwargs):
-    backend1 = backends.construct_backend(names[0])
-    backend2 = backends.construct_backend(names[1])
+    backend1 = backends._construct_backend(names[0])
+    backend2 = backends._construct_backend(names[1])
     if isinstance(kwargs, dict):
         result1 = getattr(backend1, method)(**kwargs)
         result2 = getattr(backend2, method)(**kwargs)
@@ -53,15 +53,15 @@ def test_backend_methods(names, method, kwargs):
 
 def test_backend_errors():
     with pytest.raises(ValueError):
-        bk = backends.construct_backend("test")
+        bk = backends._construct_backend("test")
     with pytest.raises(ValueError):
         backends.set_backend("a_b_c")
 
 
 @pytest.mark.parametrize("names", [("numpy", "tensorflow")])
 def test_backend_eigh(names):
-    backend1 = backends.construct_backend(names[0])
-    backend2 = backends.construct_backend(names[1])
+    backend1 = backends._construct_backend(names[0])
+    backend2 = backends._construct_backend(names[1])
     m = rand((5, 5))
     eigvals1, eigvecs1 = backend1.eigh(m)
     eigvals2, eigvecs2 = backend2.eigh(m)
@@ -71,8 +71,8 @@ def test_backend_eigh(names):
 
 @pytest.mark.parametrize("names", [("numpy", "tensorflow")])
 def test_backend_compile(names):
-    backend1 = backends.construct_backend(names[0])
-    backend2 = backends.construct_backend(names[1])
+    backend1 = backends._construct_backend(names[0])
+    backend2 = backends._construct_backend(names[1])
     func = lambda x: x + 1
     x = rand(5)
     cfunc1 = backend1.compile(func)
@@ -81,8 +81,8 @@ def test_backend_compile(names):
 
 
 def test_backend_gather():
-    np_backend = backends.construct_backend("numpy")
-    tf_backend = backends.construct_backend("tensorflow")
+    np_backend = backends._construct_backend("numpy")
+    tf_backend = backends._construct_backend("tensorflow")
     x = rand(5)
     result1 = np_backend.gather(x, indices=[0, 1, 3])
     result2 = tf_backend.gather(x, indices=[0, 1, 3])

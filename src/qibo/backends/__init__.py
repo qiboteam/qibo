@@ -4,18 +4,18 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
 
-CONSTRUCTED_BACKENDS = {}
-def construct_backend(name):
-    if name not in CONSTRUCTED_BACKENDS:
+_CONSTRUCTED_BACKENDS = {}
+def _construct_backend(name):
+    if name not in _CONSTRUCTED_BACKENDS:
         if name == "numpy":
-            CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
+            _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
         elif name == "tensorflow":
-            CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
+            _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
         else:
             raise_error(ValueError, "Unknown backend name {}.".format(name))
-    return CONSTRUCTED_BACKENDS.get(name)
+    return _CONSTRUCTED_BACKENDS.get(name)
 
-numpy_backend = construct_backend("numpy")
+numpy_backend = _construct_backend("numpy")
 numpy_matrices = numpy_backend.matrices
 
 if BACKEND_NAME == "tensorflow":
@@ -44,7 +44,7 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = gate_backend
     else:
         raise_error(ValueError, "Unknown backend {}.".format(backend))
-    bk = construct_backend(calc_backend)
+    bk = _construct_backend(calc_backend)
     K.assign(bk)
     K.set_gates(gate_backend)
 
@@ -75,7 +75,7 @@ def set_precision(dtype='double'):
         warnings.warn("Precision should not be changed after allocating gates.",
                       category=RuntimeWarning)
     K.set_precision(dtype)
-    for bk in CONSTRUCTED_BACKENDS.values():
+    for bk in _CONSTRUCTED_BACKENDS.values():
         bk.set_precision(dtype)
         bk.matrices.allocate_matrices()
 
@@ -102,7 +102,7 @@ def set_device(name):
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     K.set_device(name)
-    for bk in CONSTRUCTED_BACKENDS.values():
+    for bk in _CONSTRUCTED_BACKENDS.values():
         if bk.default_device is not None:
             bk.set_device(name)
             with bk.device(bk.default_device):
