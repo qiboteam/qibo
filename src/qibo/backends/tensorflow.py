@@ -148,3 +148,6 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
+
+    def set_seed(self, seed):
+        self.backend.random.set_seed(seed)

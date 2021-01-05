@@ -338,3 +338,9 @@ class BaseBackend(ABC):
 
     def executing_eagerly(self):
         return True
+
+    def set_seed(self, seed): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def assert_allclose(self, actual, desired, atol=0): # pragma: no cover
+        raise_error(NotImplementedError)
