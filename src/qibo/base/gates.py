@@ -253,7 +253,6 @@ class M(Gate):
             If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
             1->0 bitflips.
     """
-    from qibo.base import measurements
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
@@ -271,12 +270,38 @@ class M(Gate):
         self.bitflip_map = (self._get_bitflip_map(p0),
                             self._get_bitflip_map(p1))
 
+    @staticmethod
+    def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType"
+                           ) -> Tuple[float]:
+        if isinstance(probs, float):
+            if probs < 0 or probs > 1:
+                raise_error(ValueError, "Invalid bitflip probability {}."
+                                        "".format(probs))
+            return len(qubits) * (probs,)
+
+        if isinstance(probs, (tuple, list)):
+            if len(probs) != len(qubits):
+                raise_error(ValueError, "{} qubits were measured but the given "
+                                        "bitflip probability list contains {} "
+                                        "values.".format(
+                                            len(qubits), len(probs)))
+            return tuple(probs)
+
+        if isinstance(probs, dict):
+            diff = set(probs.keys()) - set(qubits)
+            if diff:
+                raise_error(KeyError, "Bitflip map contains {} qubits that are "
+                                      "not measured.".format(diff))
+            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
+
+        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+
     def _get_bitflip_map(self, p: Optional["ProbsType"] = None
                          ) -> Dict[int, float]:
         """Creates dictionary with bitflip probabilities."""
         if p is None:
             return {q: 0 for q in self.qubits}
-        pt = self.measurements.GateResult._get_bitflip_tuple(self.qubits, p)
+        pt = self._get_bitflip_tuple(self.qubits, p)
         return {q: p for q, p in zip(self.qubits, pt)}
 
     def add(self, gate: "M"):
