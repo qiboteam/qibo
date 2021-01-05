@@ -97,17 +97,3 @@ class CustomColorHandler(logging.StreamHandler):
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
 log.addHandler(CustomColorHandler())
-
-
-# Select the default backend engine
-if "QIBO_BACKEND" in os.environ: # pragma: no cover
-    BACKEND_NAME = os.environ.get("QIBO_BACKEND")
-else:
-    try:
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
-        import tensorflow as tf
-        BACKEND_NAME = "tensorflow"
-    except ModuleNotFoundError: # pragma: no cover
-        # case not tested because CI has tf installed
-        log.warning("Tensorflow is not installed. Falling back to numpy.")
-        BACKEND_NAME = "numpy"

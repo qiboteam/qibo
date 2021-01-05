@@ -1,5 +1,6 @@
+import os
 from qibo import config
-from qibo.config import raise_error, log, warnings, BACKEND_NAME
+from qibo.config import raise_error, log, warnings
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
@@ -18,11 +19,31 @@ def _construct_backend(name):
 numpy_backend = _construct_backend("numpy")
 numpy_matrices = numpy_backend.matrices
 
-if BACKEND_NAME == "tensorflow":
-    K = TensorflowBackend()
-else: # pragma: no cover
+
+# Select the default backend engine
+if "QIBO_BACKEND" in os.environ: # pragma: no cover
+    if os.environ.get("QIBO_BACKEND") == "tensorflow":
+        K = TensorflowBackend()
+    else: # pragma: no cover
+        # CI uses tensorflow as default backend
+        K = NumpyBackend()
+else:
+    try:
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
+        import tensorflow as tf
+        K = TensorflowBackend()
+    except ModuleNotFoundError: # pragma: no cover
+        # case not tested because CI has tf installed
+        log.warning("Tensorflow is not installed. Falling back to numpy.")
+        K = NumpyBackend()
+
+_BACKEND_NAME = K.name
+if _BACKEND_NAME != "tensorflow": # pragma: no cover
     # CI uses tensorflow as default backend
-    K = NumpyBackend()
+    log.warning("Numpy does not support Qibo custom operators. "
+                "Einsum will be used to apply gates.")
+    set_backend("defaulteinsum")
+
 
 def set_backend(backend="custom"):
     """Sets backend used to implement gates.
@@ -39,20 +60,17 @@ def set_backend(backend="custom"):
 
     gate_backend = backend.split("_")
     if len(gate_backend) == 1:
-        calc_backend, gate_backend = BACKEND_NAME, gate_backend[0]
+        calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
     elif len(gate_backend) == 2:
         calc_backend, gate_backend = gate_backend
     else:
         raise_error(ValueError, "Unknown backend {}.".format(backend))
     bk = _construct_backend(calc_backend)
     K.assign(bk)
+    if K.name != "tensorflow" and gate_backend == "custom":
+        raise_error(ValueError, "Custom gates cannot be used with {} backend."
+                                "".format(K.name))
     K.set_gates(gate_backend)
-
-if BACKEND_NAME != "tensorflow": # pragma: no cover
-    # CI uses tensorflow as default backend
-    log.warning("Numpy does not support Qibo custom operators. "
-                "Einsum will be used to apply gates.")
-    set_backend("defaulteinsum")
 
 
 def get_backend():
@@ -61,7 +79,10 @@ def get_backend():
     Returns:
         A string with the backend name.
     """
-    return K.gates
+    if K.name == "tensorflow":
+        return K.gates
+    else:
+        return "_".join([K.name, K.gates])
 
 
 def set_precision(dtype='double'):

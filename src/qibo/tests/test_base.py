@@ -356,6 +356,9 @@ def test_set_backend(backend):
         h = gates.H(0)
         assert isinstance(h, native_gates.BackendGate)
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
+
+    with pytest.raises(ValueError):
+        qibo.set_backend("numpy_custom")
     qibo.set_backend(original_backend)
 
 
