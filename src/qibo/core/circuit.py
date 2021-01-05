@@ -58,6 +58,59 @@ class Circuit(circuit.BaseCircuit):
                 params.append(gate.parameters)
         return params
 
+    def _fuse_copy(self):
+        """Helper method for :meth:`qibo.core.circuit.Circuit.fuse``.
+
+        For standard (non-distributed) circuits this creates a copy of the
+        circuit with deep-copying the parametrized gates only.
+        For distributed circuits a fully deep copy should be created.
+        """
+        import copy
+        from qibo.base.abstract_gates import ParametrizedGate
+        new_circuit = self.__class__(**self.init_kwargs)
+        for gate in self.queue:
+            if isinstance(gate, ParametrizedGate):
+                if gate.trainable:
+                    new_gate = copy.copy(gate)
+                    new_circuit.queue.append(new_gate)
+                    new_circuit.parametrized_gates.append(new_gate)
+                    new_circuit.trainable_gates.append(new_gate)
+                else:
+                    new_circuit.queue.append(gate)
+                    new_circuit.parametrized_gates.append(gate)
+            else:
+                new_circuit.queue.append(gate)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def fuse(self):
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
+        new_circuit = self._fuse_copy()
+        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
+            new_circuit.queue)
+        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
+                                 for gate in group.gates)
+        return new_circuit
+
     def _eager_execute(self, state):
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
