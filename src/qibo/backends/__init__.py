@@ -76,7 +76,7 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = gate_backend
     bk = _construct_backend(calc_backend)
     K.assign(bk)
-    if K.name != "tensorflow" and gate_backend == "custom":
+    if K.name != "tensorflow" and gate_backend == "custom": # pragma: no cover
         raise_error(ValueError, "Custom gates cannot be used with {} backend."
                                 "".format(K.name))
     K.set_gates(gate_backend)
