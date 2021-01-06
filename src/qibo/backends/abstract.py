@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+_AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
+                       "numpy_defaulteinsum", "numpy_matmuleinsum"]
+
 
 class AbstractBackend(ABC):
 
     base_methods = {"assign", "set_gates", "dtypes",
-                    "set_precision", "set_device"}
+                    "set_precision"}
 
     def __init__(self):
         self.backend = None
@@ -62,7 +65,7 @@ class AbstractBackend(ABC):
         elif name == 'matmuleinsum':
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
-        else:
+        else: # pragma: no cover
             raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
         self.gates = name
 
@@ -81,7 +84,7 @@ class AbstractBackend(ABC):
             self._dtypes['DTYPE'] = 'float64'
             self._dtypes['DTYPECPX'] = 'complex128'
         else:
-            raise_error(RuntimeError, f'dtype {dtype} not supported.')
+            raise_error(ValueError, f'dtype {dtype} not supported.')
         self.precision = dtype
         if self.matrices is not None:
             self.matrices.dtype = self.dtypes('DTYPECPX')

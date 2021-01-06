@@ -44,10 +44,8 @@ class NumpyBackend(abstract.AbstractBackend):
         self.op = DummyModule("apply_gate")
 
     def set_device(self, name): # pragma: no cover
-        if "GPU" in name:
-            log.warning("Numpy does not support GPU. Aborting device change.")
-        else:
-            super().set_device(name)
+        log.warning("Numpy does not support device placement. "
+                    "Aborting device change.")
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):

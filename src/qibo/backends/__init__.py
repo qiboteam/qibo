@@ -1,6 +1,7 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
+from qibo.backends.abstract import _AVAILABLE_BACKENDS
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
@@ -12,7 +13,7 @@ def _construct_backend(name):
             _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
         elif name == "tensorflow":
             _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
-        else:
+        else: # pragma: no cover
             raise_error(ValueError, "Unknown backend name {}.".format(name))
     return _CONSTRUCTED_BACKENDS.get(name)
 
@@ -59,6 +60,11 @@ def set_backend(backend="custom"):
     Args:
         backend (str): A backend from the above options.
     """
+    if backend not in _AVAILABLE_BACKENDS:
+        available = ", ".join(_AVAILABLE_BACKENDS)
+        raise_error(ValueError, "Unknown backend {}. Please select one of the "
+                                "available backends: {}."
+                                "".format(backend, available))
     if not config.ALLOW_SWITCHERS and backend != K.gates:
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
@@ -68,8 +74,6 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
     elif len(gate_backend) == 2:
         calc_backend, gate_backend = gate_backend
-    else:
-        raise_error(ValueError, "Unknown backend {}.".format(backend))
     bk = _construct_backend(calc_backend)
     K.assign(bk)
     if K.name != "tensorflow" and gate_backend == "custom":

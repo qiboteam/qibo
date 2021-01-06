@@ -376,9 +376,9 @@ def test_set_backend_print_string():
 def test_switcher_errors():
     """Check set precision and backend errors."""
     import qibo
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         qibo.set_precision('test')
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         qibo.set_backend('test')
 
 
