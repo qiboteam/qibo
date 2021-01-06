@@ -153,7 +153,7 @@ def test_bad_circuit_addition():
 
 
 def test_gate_types():
-    """Check ``BaseCircuit.gate_types`` property."""
+    """Check ``AbstractCircuit.gate_types`` property."""
     import collections
     c = Circuit(3)
     c.add(H(0))
@@ -167,7 +167,7 @@ def test_gate_types():
 
 
 def test_gates_of_type():
-    """Check ``BaseCircuit.gates_of_type`` method."""
+    """Check ``AbstractCircuit.gates_of_type`` method."""
     c = Circuit(3)
     c.add(H(0))
     c.add(H(1))
@@ -185,7 +185,7 @@ def test_gates_of_type():
 
 
 def test_summary():
-    """Check ``BaseCircuit.summary()`` method."""
+    """Check ``AbstractCircuit.summary()`` method."""
     c = Circuit(3)
     c.add(H(0))
     c.add(H(1))
@@ -231,8 +231,7 @@ def test_circuit_copy_with_measurements():
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 
-def test_base_gate_errors():
-    """Check errors in ``base.gates.Gate`` for coverage."""
+def test_abstract_gate_errors():
     gate = H(0)
     with pytest.raises(ValueError):
         nqubits = gate.nqubits

@@ -2,14 +2,14 @@
 # @authors: S. Efthymiou
 import collections
 from qibo import K
-from qibo.base import circuit
+from qibo.abstractions import circuit
 from qibo.config import raise_error
 from qibo.core import measurements
 from typing import List, Tuple
 
 
-class Circuit(circuit.BaseCircuit):
-    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
+class Circuit(circuit.AbstractCircuit):
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using state vectors.
 
@@ -66,7 +66,7 @@ class Circuit(circuit.BaseCircuit):
         For distributed circuits a fully deep copy should be created.
         """
         import copy
-        from qibo.base.abstract_gates import ParametrizedGate
+        from qibo.abstractions.abstract_gates import ParametrizedGate
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
             if isinstance(gate, ParametrizedGate):
@@ -209,7 +209,7 @@ class Circuit(circuit.BaseCircuit):
         If the circuit is created with the ``density_matrix = True`` flag and
         contains channels, then density matrices will be used instead of
         repeated execution.
-        Note that some channels (:class:`qibo.base.gates.KrausChannel`) can
+        Note that some channels (:class:`qibo.abstractions.gates.KrausChannel`) can
         only be simulated using density matrices and not repeated execution.
         For more details on noise simulation with and without density matrices
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
@@ -225,7 +225,7 @@ class Circuit(circuit.BaseCircuit):
 
         Returns:
             If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
+                A :class:`qibo.core.measurements.CircuitResult` object that contains the measured bitstrings.
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a tensor of shape ``(2 ** nqubits,)``.
         """
@@ -275,7 +275,7 @@ class Circuit(circuit.BaseCircuit):
 
 
 class DensityMatrixCircuit(Circuit):
-    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using density matrices. Can be initialized using the
     ``density_matrix=True`` flag and supports the use of channels.

@@ -14,7 +14,7 @@ class Gate:
     Attributes:
         name: Name of the gate.
         is_controlled_by: ``True`` if the gate was created using the
-            :meth:`qibo.base.abstract_gates.Gate.controlled_by` method,
+            :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
             otherwise ``False``.
         init_args: Arguments used to initialize the gate.
         init_kwargs: Arguments used to initialize the gate.
@@ -168,7 +168,7 @@ class Gate:
         return self.__class__(*q, **self.init_kwargs)
 
     def _dagger(self) -> "Gate":
-        """Helper method for :meth:`qibo.base.gates.Gate.dagger`."""
+        """Helper method for :meth:`qibo.abstractions.gates.Gate.dagger`."""
         # By default the ``_dagger`` method creates an equivalent gate, assuming
         # that the gate is Hermitian (true for common gates like H or Paulis).
         # If the gate is not Hermitian the ``_dagger`` method should be modified.
@@ -178,7 +178,7 @@ class Gate:
         """Returns the dagger (conjugate transpose) of the gate.
 
         Returns:
-            A :class:`qibo.base.gates.Gate` object representing the dagger of
+            A :class:`qibo.abstractions.gates.Gate` object representing the dagger of
             the original gate.
         """
         new_gate = self._dagger()
@@ -193,7 +193,7 @@ class Gate:
             *qubits (int): Ids of the qubits that the gate will be controlled on.
 
         Returns:
-            A :class:`qibo.base.gates.Gate` object in with the corresponding
+            A :class:`qibo.abstractions.gates.Gate` object in with the corresponding
             gate being controlled in the given qubits.
         """
         if self.control_qubits:
@@ -230,8 +230,8 @@ class Gate:
 class SpecialGate(Gate):
     """Abstract class for special gates.
 
-    Current special gates are :class:`qibo.base.gates.CallbackGate` and
-    :class:`qibo.base.gates.Flatten`.
+    Current special gates are :class:`qibo.abstractions.gates.CallbackGate` and
+    :class:`qibo.abstractions.gates.Flatten`.
     """
 
     def commutes(self, gate):
@@ -299,7 +299,7 @@ class BaseBackendGate(Gate, ABC):
         is_prepared: ``True`` if the gate is prepared for action to states.
             A gate is prepared when its matrix and/or other tensors required
             in the computation are calculated.
-            See :meth:`qibo.base.abstract_gates.BackendGate.prepare` for more
+            See :meth:`qibo.abstractions.abstract_gates.BackendGate.prepare` for more
             details.
             Note that gate preparation is triggered automatically when a gate
             is added to a circuit or when it acts on a state.

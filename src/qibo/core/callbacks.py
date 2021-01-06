@@ -1,6 +1,6 @@
 import math
 from qibo import K
-from qibo.base import callbacks
+from qibo.abstractions import callbacks
 from qibo.config import EIGVAL_CUTOFF, raise_error
 
 

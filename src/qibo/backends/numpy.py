@@ -43,7 +43,7 @@ class NumpyBackend(base.BaseBackend):
         self.optimization = DummyModule()
         self.op = DummyModule("apply_gate")
 
-    def set_device(self, name):
+    def set_device(self, name): # pragma: no cover
         if "GPU" in name:
             log.warning("Numpy does not support GPU. Aborting device change.")
         else:

@@ -4,8 +4,8 @@ import sys
 import math
 from qibo import K, get_threads, matrices
 from qibo import numpy as qnp
-from qibo.base import gates
-from qibo.base.abstract_gates import BaseBackendGate, ParametrizedGate
+from qibo.abstractions import gates
+from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -246,7 +246,7 @@ class M(BackendGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
         if self.density_matrix:
-            from qibo.base.callbacks import PartialTrace
+            from qibo.abstractions.callbacks import PartialTrace
             qubits = set(self.unmeasured_qubits)
             self.traceout = PartialTrace.einsum_string(
                 qubits, self.nqubits, measuring=True)

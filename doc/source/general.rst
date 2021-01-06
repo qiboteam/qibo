@@ -3,7 +3,7 @@ Code Overview
 
 The Qibo framework in this repository implements a common system to deal with classical hardware and future quantum hardware.
 
-The code abstraction is located in ``qibo/base`` and the core simulation engine is located in ``qibo/core``.
+The code abstraction is located in ``qibo/abstractions`` and the core simulation engine is located in ``qibo/core``.
 This simulation engine uses an abstract backend object ``K`` to perform calculation the structure of which is defined in ``qibo/backends/base.py``.
 
 Currently two calculation backends are implemented, one based in numpy and one based in `Tensorflow <http://tensorflow.org/>`_.

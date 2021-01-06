@@ -3,8 +3,8 @@
 import math
 import sys
 from qibo import K
-from qibo.base import gates
-from qibo.base.abstract_gates import BaseBackendGate, ParametrizedGate
+from qibo.abstractions import gates
+from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.core import cgates
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple

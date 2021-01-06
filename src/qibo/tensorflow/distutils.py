@@ -1,7 +1,7 @@
 import copy
 from qibo import K
 from qibo import numpy as qnp
-from qibo.base import gates
+from qibo.abstractions import gates
 from qibo.config import raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
 
@@ -158,10 +158,10 @@ class DistributedQueues(DistributedBase):
         the circuit when this gate will be applied.
 
         Args:
-            gate: The :class:`qibo.base.gates.Gate` object of the gate to copy.
+            gate: The :class:`qibo.abstractions.gates.Gate` object of the gate to copy.
 
         Returns:
-            A :class:`qibo.base.gates.Gate` object with the proper target and
+            A :class:`qibo.abstractions.gates.Gate` object with the proper target and
             control qubit indices for device-specific application.
         """
         devgate = copy.copy(gate)

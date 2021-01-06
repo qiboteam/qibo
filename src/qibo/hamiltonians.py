@@ -26,8 +26,8 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
 
     Example:
         ::
@@ -77,8 +77,8 @@ def X(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     from qibo import K
     def ground_state():
@@ -100,8 +100,8 @@ def Y(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Y, numpy, trotter)
 
@@ -118,8 +118,8 @@ def Z(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Z, numpy, trotter)
 
@@ -137,8 +137,8 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     if trotter:
         term_matrix = -qnp.kron(matrices.Z, matrices.Z)

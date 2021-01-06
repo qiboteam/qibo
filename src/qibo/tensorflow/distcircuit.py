@@ -4,8 +4,8 @@ import math
 import joblib
 from qibo import K
 from qibo import gates as gate_module
-from qibo.base import gates
-from qibo.base import circuit as base_circuit
+from qibo.abstractions import gates
+from qibo.abstractions.circuit import AbstractCircuit
 from qibo.config import raise_error, get_threads
 from qibo.core import callbacks, circuit, measurements
 from qibo.tensorflow import distutils as utils
@@ -14,7 +14,7 @@ OutputType = Union[utils.DistributedState, measurements.CircuitResult]
 
 
 class DistributedCircuit(circuit.Circuit):
-    """Distributed implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+    """Distributed implementation of :class:`qibo.abstractions.circuit.AbstractCircuit` in Tensorflow.
 
     Uses multiple `accelerator` devices (GPUs) for applying gates to the state vector.
     The full state vector is saved in the given `memory device` (usually the CPU)
@@ -67,7 +67,7 @@ class DistributedCircuit(circuit.Circuit):
         self.queues = utils.DistributedQueues(self, gate_module)
 
     def set_nqubits(self, gate):
-        base_circuit.BaseCircuit.set_nqubits(self, gate)
+        AbstractCircuit.set_nqubits(self, gate)
 
     def on_qubits(self, *q):
         if self.queues.queues:
@@ -95,7 +95,7 @@ class DistributedCircuit(circuit.Circuit):
                                          "density matrices yet.")
 
     def _add(self, gate: gates.Gate):
-        """Adds a gate in the circuit (inherited from :class:`qibo.base.circuit.BaseCircuit`).
+        """Adds a gate in the circuit (inherited from :class:`qibo.abstractions.circuit.AbstractCircuit`).
 
         Also checks that there are sufficient qubits to use as global.
         """

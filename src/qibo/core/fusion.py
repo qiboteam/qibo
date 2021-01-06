@@ -2,7 +2,7 @@ import functools
 import operator
 from qibo import K, gates
 from qibo.config import raise_error
-from qibo.base.abstract_gates import ParametrizedGate
+from qibo.abstractions.abstract_gates import ParametrizedGate
 from typing import List, Optional, Set, Tuple
 
 

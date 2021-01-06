@@ -2,11 +2,11 @@ import itertools
 from qibo import K
 from qibo import numpy as qnp
 from qibo.config import log, raise_error, EINSUM_CHARS
-from qibo.base import hamiltonians
+from qibo.abstractions import hamiltonians
 
 
 class Hamiltonian(hamiltonians.Hamiltonian):
-    """Backend implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
 
     def __new__(cls, nqubits, matrix, numpy=False):
         if not isinstance(matrix, K.tensor_types):
@@ -264,7 +264,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
-    """Backend implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`."""
 
     def __init__(self, *parts, ground_state=None):
         self.K = K
@@ -275,7 +275,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         """Helper method for `from_symbolic`.
 
         Constructs the term dictionary by using the same
-        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        :class:`qibo.abstractions.hamiltonians.Hamiltonian` object for terms that
         have equal matrix representation. This is done for efficiency during
         the exponentiation of terms.
 
