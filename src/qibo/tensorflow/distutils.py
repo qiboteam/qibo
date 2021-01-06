@@ -1,6 +1,5 @@
 import copy
 from qibo import K
-from qibo import numpy as qnp
 from qibo.abstractions import gates
 from qibo.config import raise_error, get_threads
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -188,7 +187,7 @@ class DistributedQueues(DistributedBase):
             Array of integers with shape (nqubits,) with the number of gates
             for each qubit id.
         """
-        counter = qnp.zeros(nqubits, dtype='DTYPEINT')
+        counter = K.np.zeros(nqubits, dtype=K.np.int64)
         for gate in queue:
             for qubit in gate.target_qubits:
                 counter[qubit] += 1
@@ -196,7 +195,7 @@ class DistributedQueues(DistributedBase):
 
     def _transform(self, queue: List[gates.Gate],
                    remaining_queue: List[gates.Gate],
-                   counter: qnp.Tensor) -> List[gates.Gate]:
+                   counter) -> List[gates.Gate]:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
@@ -254,8 +253,7 @@ class DistributedQueues(DistributedBase):
 
         return self._transform(queue, new_remaining_queue, counter)
 
-    def transform(self, queue: List[gates.Gate],
-                  counter: Optional[qnp.Tensor] = None) -> List[gates.Gate]:
+    def transform(self, queue, counter=None):
         """Transforms gate queue to be compatible with distributed simulation.
 
         Adds SWAP gates between global and local qubits so that no gates are
@@ -393,8 +391,8 @@ class DistributedState(DistributedBase):
             }
 
         self.bintodec = {
-            "global": 2 ** qnp.range(self.nglobal - 1, -1, -1),
-            "local": 2 ** qnp.range(self.nlocal - 1, -1, -1)
+            "global": 2 ** K.np.arange(self.nglobal - 1, -1, -1),
+            "local": 2 ** K.np.arange(self.nlocal - 1, -1, -1)
             }
 
     @classmethod
@@ -476,7 +474,8 @@ class DistributedState(DistributedBase):
 
       elif isinstance(key, int):
           binary_index = bin(key)[2:].zfill(self.nqubits)
-          binary_index = qnp.cast([int(x) for x in binary_index], 'DTYPEINT')
+          binary_index = K.np.array([int(x) for x in binary_index],
+                                    dtype=K.np.int64)
 
           global_ids = binary_index[self.qubits.list]
           global_ids = global_ids.dot(self.bintodec["global"])

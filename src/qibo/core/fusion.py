@@ -49,8 +49,7 @@ class FusionGroup:
         self.special_gate = None
         self._fused_gates = None
         if K.custom_gates:
-            from qibo import numpy as qnp
-            self.K = qnp
+            self.K = K.np
         else:
             self.K = K
 

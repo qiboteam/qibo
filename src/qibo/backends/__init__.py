@@ -39,6 +39,7 @@ else:
         log.warning("Numpy does not support custom operators and GPU.")
         K = NumpyBackend()
 
+K.qnp = numpy_backend
 _BACKEND_NAME = K.name
 if _BACKEND_NAME != "tensorflow": # pragma: no cover
     # CI uses tensorflow as default backend
@@ -76,6 +77,7 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = gate_backend
     bk = _construct_backend(calc_backend)
     K.assign(bk)
+    K.qnp = numpy_backend
     if K.name != "tensorflow" and gate_backend == "custom": # pragma: no cover
         raise_error(ValueError, "Custom gates cannot be used with {} backend."
                                 "".format(K.name))

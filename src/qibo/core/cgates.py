@@ -3,7 +3,6 @@
 import sys
 import math
 from qibo import K, get_threads, matrices
-from qibo import numpy as qnp
 from qibo.abstractions import gates
 from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.config import raise_error
@@ -50,8 +49,8 @@ class BackendGate(BaseBackendGate):
     def prepare(self):
         """Prepares the gate for application to state vectors."""
         self.is_prepared = True
-        targets = qnp.cast(self.target_qubits, dtype="int32")
-        controls = qnp.cast(self.control_qubits, dtype="int32")
+        targets = K.qnp.cast(self.target_qubits, dtype="int32")
+        controls = K.qnp.cast(self.control_qubits, dtype="int32")
         qubits = list(self.nqubits - controls - 1)
         qubits.extend(self.nqubits - targets - 1)
         qubits = sorted(qubits)
@@ -158,7 +157,7 @@ class I(BackendGate, gates.I):
         gates.I.__init__(self, *q)
 
     def construct_unitary(self):
-        return qnp.eye(2 ** len(self.target_qubits))
+        return K.qnp.eye(2 ** len(self.target_qubits))
 
     def state_vector_call(self, state):
         return state
@@ -177,7 +176,7 @@ class Collapse(BackendGate, gates.Collapse):
 
     def _result_to_list(self, res):
         if isinstance(res, K.tensor_types):
-            return list(qnp.cast(res, dtype='DTYPEINT'))
+            return list(K.qnp.cast(res, dtype='DTYPEINT'))
         if isinstance(res, int) or isinstance(res, K.numeric_types):
             return len(self.target_qubits) * [res]
         return list(res)
@@ -317,8 +316,8 @@ class RX(MatrixGate, gates.RX):
 
     def construct_unitary(self):
         theta = self.parameters
-        cos, isin = qnp.cos(theta / 2.0), -1j * qnp.sin(theta / 2.0)
-        return qnp.cast([[cos, isin], [isin, cos]])
+        cos, isin = K.qnp.cos(theta / 2.0), -1j * K.qnp.sin(theta / 2.0)
+        return K.qnp.cast([[cos, isin], [isin, cos]])
 
 
 class RY(MatrixGate, gates.RY):
@@ -329,8 +328,8 @@ class RY(MatrixGate, gates.RY):
 
     def construct_unitary(self):
         theta = self.parameters
-        cos, sin = qnp.cos(theta / 2.0), qnp.sin(theta / 2.0)
-        return qnp.cast([[cos, -sin], [sin, cos]])
+        cos, sin = K.qnp.cos(theta / 2.0), K.qnp.sin(theta / 2.0)
+        return K.qnp.cast([[cos, -sin], [sin, cos]])
 
 
 class RZ(MatrixGate, gates.RZ):
@@ -340,8 +339,8 @@ class RZ(MatrixGate, gates.RZ):
         gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self):
-        phase = qnp.exp(1j * self.parameters / 2.0)
-        return qnp.diag([qnp.conj(phase), phase])
+        phase = K.qnp.exp(1j * self.parameters / 2.0)
+        return K.qnp.diag([K.qnp.conj(phase), phase])
 
 
 class U1(MatrixGate, gates.U1):
@@ -353,11 +352,11 @@ class U1(MatrixGate, gates.U1):
 
     def reprepare(self):
         with K.device(self.device):
-            self.matrix = K.cast(qnp.exp(1j * self.parameters),
+            self.matrix = K.cast(K.qnp.exp(1j * self.parameters),
                                  dtype='DTYPECPX')
 
     def construct_unitary(self):
-        return qnp.diag([1, qnp.exp(1j * self.parameters)])
+        return K.qnp.diag([1, K.qnp.exp(1j * self.parameters)])
 
 
 class U2(MatrixGate, gates.U2):
@@ -368,10 +367,10 @@ class U2(MatrixGate, gates.U2):
 
     def construct_unitary(self):
         phi, lam = self.parameters
-        eplus = qnp.exp(1j * (phi + lam) / 2.0)
-        eminus = qnp.exp(1j * (phi - lam) / 2.0)
-        return qnp.cast([[eplus.conj(), - eminus.conj()],
-                         [eminus, eplus]]) / qnp.sqrt(2)
+        eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
+        eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
+        return K.qnp.cast([[eplus.conj(), - eminus.conj()],
+                         [eminus, eplus]]) / K.qnp.sqrt(2)
 
 
 class U3(MatrixGate, gates.U3):
@@ -382,11 +381,11 @@ class U3(MatrixGate, gates.U3):
 
     def construct_unitary(self):
         theta, phi, lam = self.parameters
-        cost = qnp.cos(theta / 2)
-        sint = qnp.sin(theta / 2)
-        eplus = qnp.exp(1j * (phi + lam) / 2.0)
-        eminus = qnp.exp(1j * (phi - lam) / 2.0)
-        return qnp.cast([[eplus.conj() * cost, - eminus.conj() * sint],
+        cost = K.qnp.cos(theta / 2)
+        sint = K.qnp.sin(theta / 2)
+        eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
+        eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
+        return K.qnp.cast([[eplus.conj() * cost, - eminus.conj() * sint],
                          [eminus * sint, eplus * cost]])
 
 
@@ -516,19 +515,19 @@ class fSim(MatrixGate, gates.fSim):
 
     def reprepare(self):
         theta, phi = self.parameters
-        cos, isin = qnp.cos(theta), -1j * qnp.sin(theta)
-        phase = qnp.exp(-1j * phi)
-        matrix = qnp.cast([cos, isin, isin, cos, phase])
+        cos, isin = K.qnp.cos(theta), -1j * K.qnp.sin(theta)
+        phase = K.qnp.exp(-1j * phi)
+        matrix = K.qnp.cast([cos, isin, isin, cos, phase])
         with K.device(self.device):
             self.matrix = K.cast(matrix)
 
     def construct_unitary(self):
         theta, phi = self.parameters
-        cos, isin = qnp.cos(theta), -1j * qnp.sin(theta)
-        matrix = qnp.eye(4)
+        cos, isin = K.qnp.cos(theta), -1j * K.qnp.sin(theta)
+        matrix = K.qnp.eye(4)
         matrix[1, 1], matrix[2, 2] = cos, cos
         matrix[1, 2], matrix[2, 1] = isin, isin
-        matrix[3, 3] = qnp.exp(-1j * phi)
+        matrix[3, 3] = K.qnp.exp(-1j * phi)
         return matrix
 
 
@@ -541,17 +540,17 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def reprepare(self):
         unitary, phi = self.parameters
-        matrix = qnp.zeros(5)
-        matrix[:4] = qnp.reshape(unitary, (4,))
-        matrix[4] = qnp.exp(-1j * phi)
+        matrix = K.qnp.zeros(5)
+        matrix[:4] = K.qnp.reshape(unitary, (4,))
+        matrix[4] = K.qnp.exp(-1j * phi)
         with K.device(self.device):
             self.matrix = K.cast(matrix)
 
     def construct_unitary(self):
         unitary, phi = self.parameters
-        matrix = qnp.eye(4)
-        matrix[1:3, 1:3] = qnp.reshape(unitary, (2, 2))
-        matrix[3, 3] = qnp.exp(-1j * phi)
+        matrix = K.qnp.eye(4)
+        matrix[1:3, 1:3] = K.qnp.reshape(unitary, (2, 2))
+        matrix[3, 3] = K.qnp.exp(-1j * phi)
         return matrix
 
     def _dagger(self) -> "GenerelizedfSim":
@@ -605,8 +604,8 @@ class Unitary(MatrixGate, gates.Unitary):
 
     def construct_unitary(self):
         unitary = self.parameters
-        if isinstance(unitary, qnp.Tensor):
-            return qnp.cast(unitary)
+        if isinstance(unitary, K.qnp.Tensor):
+            return K.qnp.cast(unitary)
         if isinstance(unitary, K.Tensor): # pragma: no cover
             return K.copy(K.cast(unitary))
 
@@ -620,7 +619,7 @@ class Unitary(MatrixGate, gates.Unitary):
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):
-        x = qnp.cast(x)
+        x = K.qnp.cast(x)
         shape = tuple(x.shape)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
@@ -636,7 +635,7 @@ class Unitary(MatrixGate, gates.Unitary):
 class VariationalLayer(BackendGate, gates.VariationalLayer):
 
     def _calculate_unitaries(self):
-        matrices = qnp.stack([qnp.kron(
+        matrices = K.qnp.stack([K.qnp.kron(
             self.one_qubit_gate(q1, theta=self.params[q1]).unitary,
             self.one_qubit_gate(q2, theta=self.params[q2]).unitary)
                              for q1, q2 in self.pairs], axis=0)
@@ -650,7 +649,7 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
                 q, theta=self.params[q]).unitary
 
         if self.params2:
-            matrices2 = qnp.stack([qnp.kron(
+            matrices2 = K.qnp.stack([K.qnp.kron(
                 self.one_qubit_gate(q1, theta=self.params2[q1]).unitary,
                 self.one_qubit_gate(q2, theta=self.params2[q2]).unitary)
                                 for q1, q2 in self.pairs], axis=0)
@@ -741,7 +740,7 @@ class Flatten(BackendGate, gates.Flatten):
 
     def state_vector_call(self, state):
         shape = tuple(state.shape)
-        _state = qnp.reshape(qnp.cast(self.coefficients), shape)
+        _state = K.qnp.reshape(K.qnp.cast(self.coefficients), shape)
         return K.cast(_state, dtype="DTYPECPX")
 
     def density_matrix_call(self, state):
@@ -786,7 +785,7 @@ class KrausChannel(BackendGate, gates.KrausChannel):
         """Creates invert gates of each Ak to reset to the original state."""
         matrix = gate.parameters
         if isinstance(matrix, K.tensor_types):
-            inv_matrix = qnp.inv(matrix)
+            inv_matrix = K.qnp.inv(matrix)
         return Unitary(inv_matrix, *gate.target_qubits)
 
     def prepare(self):
@@ -835,7 +834,7 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
     def set_seed(self):
         if self.seed is not None:
-            qnp.random.seed(self.seed)
+            K.qnp.random.seed(self.seed)
 
     def prepare(self):
         KrausChannel.prepare(self)
@@ -843,7 +842,7 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
     def state_vector_call(self, state):
         for p, gate in zip(self.probs, self.gates):
-            if qnp.random.random() < p:
+            if K.qnp.random.random() < p:
                 state = gate(state)
         return state
 
@@ -887,10 +886,10 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     def state_vector_call(self, state):
         not_collapsed = True
-        if qnp.random.random() < self.probs[-2]:
+        if K.qnp.random.random() < self.probs[-2]:
             state = self.gates[-2](state)
             not_collapsed = False
-        if qnp.random.random() < self.probs[-1]:
+        if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
                 state = self.gates[-2](state)
             state = self.gates[-1](state)
@@ -917,14 +916,14 @@ class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):
     def calculate_probabilities(self, t1, t2, time, excited_population):
         cls = gates.ThermalRelaxationChannel
         cls.calculate_probabilities(self, t1, t2, time, excited_population)
-        p_reset = 1 - qnp.exp(-time / t1)
+        p_reset = 1 - K.qnp.exp(-time / t1)
         p0 = p_reset * (1 - excited_population)
         p1 = p_reset * excited_population
         if t1 < t2:
-            exp = qnp.exp(-time / t2)
+            exp = K.qnp.exp(-time / t2)
         else:
             rate1, rate2 = 1 / t1, 1 / t2
-            exp = (1 - p_reset) * (1 - qnp.exp(-time * (rate2 - rate1))) / 2
+            exp = (1 - p_reset) * (1 - K.qnp.exp(-time * (rate2 - rate1))) / 2
         return (exp, p0, p1)
 
 
@@ -942,7 +941,7 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
         self.inv_gates = tuple()
 
     def state_vector_call(self, state):
-        if qnp.random.random() < self.probs[0]:
+        if K.qnp.random.random() < self.probs[0]:
             state = self.gates[0](state)
         return ResetChannel.state_vector_call(self, state)
 
@@ -962,18 +961,18 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
 
     def prepare(self):
         super().prepare()
-        targets = qnp.cast(self.target_qubits, dtype="int32")
-        controls = qnp.cast(self.control_qubits, dtype="int32")
+        targets = K.qnp.cast(self.target_qubits, dtype="int32")
+        controls = K.qnp.cast(self.control_qubits, dtype="int32")
         qubits = sorted(list(self.nqubits - controls - 1))
         qubits = self.nqubits - targets - 1
-        qubits = qnp.concatenate([qubits, qubits + self.nqubits], axis=0)
+        qubits = K.qnp.concatenate([qubits, qubits + self.nqubits], axis=0)
         qubits = sorted(list(qubits))
         self.qubits_tensor = K.cast(qubits, dtype="int32")
         self.target_qubits_dm = (self.target_qubits +
                                  tuple(targets + self.nqubits))
 
     def construct_unitary(self):
-        matrix = qnp.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
+        matrix = K.qnp.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
                            1 - self.preset0])
         matrix[0, -1] = self.preset1
         matrix[-1, 0] = self.preset0
