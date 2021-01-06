@@ -11,8 +11,6 @@ class Callback(ABC):
 
     Results of a callback can be accessed by indexing the corresponding object.
     """
-    # FIXME: Remove this because base should be independent of backends
-    from qibo import K
 
     def __init__(self):
         self._results = []
@@ -51,7 +49,8 @@ class Callback(ABC):
                                         "".format(k, len(self._results)))
             return self._results[k]
         if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
-            return self.K.stack(self._results[k])
+            from qibo import K
+            return K.stack(self._results[k])
         raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     def append(self, x):
@@ -327,20 +326,3 @@ class Gap(Callback):
             t = type(ev)
             raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
         self._evolution = ev
-
-    def state_vector_call(self, state):
-        if self.evolution is None:
-            raise_error(ValueError, "Gap callback can only be used in "
-                                    "adiabatic evolution models.")
-        hamiltonian = self.evolution.hamiltonian()
-        # Call the eigenvectors so that they are cached for the ``exp`` call
-        hamiltonian.eigenvectors()
-        if isinstance(self.mode, int):
-            return self.K.real(hamiltonian.eigenvalues()[self.mode])
-        # case: self.mode == "gap"
-        return self.K.real(hamiltonian.eigenvalues()[1] -
-                           hamiltonian.eigenvalues()[0])
-
-    def density_matrix_call(self, state):
-        raise_error(NotImplementedError, "Gap callback is not implemented for "
-                                         "density matrices.")

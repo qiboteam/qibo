@@ -73,4 +73,19 @@ class Energy(callbacks.Energy):
 
 
 class Gap(callbacks.Gap):
-    pass
+
+    def state_vector_call(self, state):
+        if self.evolution is None:
+            raise_error(ValueError, "Gap callback can only be used in "
+                                    "adiabatic evolution models.")
+        hamiltonian = self.evolution.hamiltonian()
+        # Call the eigenvectors so that they are cached for the ``exp`` call
+        hamiltonian.eigenvectors()
+        if isinstance(self.mode, int):
+            return K.real(hamiltonian.eigenvalues()[self.mode])
+        # case: self.mode == "gap"
+        return K.real(hamiltonian.eigenvalues()[1] - hamiltonian.eigenvalues()[0])
+
+    def density_matrix_call(self, state):
+        raise_error(NotImplementedError, "Gap callback is not implemented for "
+                                         "density matrices.")
