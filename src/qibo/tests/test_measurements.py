@@ -66,6 +66,8 @@ def test_gate_result_initialization_errors():
     binary_samples = np.random.randint(0, 2, (100, 4))
     with pytest.raises(ValueError):
         res = measurements.GateResult((0, 1), binary_samples=binary_samples)
+    with pytest.raises(ValueError):
+        res = measurements.GateResult((0, 1))
 
 
 def test_convert_to_binary():

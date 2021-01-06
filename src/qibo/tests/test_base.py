@@ -355,7 +355,19 @@ def test_set_backend(backend):
         h = gates.H(0)
         assert isinstance(h, native_gates.BackendGate)
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
+    qibo.set_backend(original_backend)
 
+
+def test_set_backend_print_string():
+    import qibo
+    from qibo import K
+    original_backend = qibo.get_backend()
+    qibo.set_backend("numpy_defaulteinsum")
+    assert qibo.get_backend() == "numpy_defaulteinsum"
+    assert str(K) == "numpy"
+    qibo.set_backend("custom")
+    assert qibo.get_backend() == "custom"
+    assert str(K) == "tensorflow"
     with pytest.raises(ValueError):
         qibo.set_backend("numpy_custom")
     qibo.set_backend(original_backend)
