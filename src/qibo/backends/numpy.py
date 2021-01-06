@@ -1,4 +1,4 @@
-from qibo.backends import base
+from qibo.backends import abstract
 from qibo.config import raise_error, log
 
 
@@ -21,7 +21,7 @@ class DummyModule:
         pass
 
 
-class NumpyBackend(base.BaseBackend):
+class NumpyBackend(abstract.AbstractBackend):
 
     def __init__(self):
         super().__init__()

@@ -8,7 +8,7 @@ This simulation engine uses an abstract backend object ``K`` to perform calculat
 
 Currently two calculation backends are implemented, one based in numpy and one based in `Tensorflow <http://tensorflow.org/>`_.
 The Tensorflow backend is supplemented by custom operators for efficient application of quantum gates to state vectors and density matrices.
-Other backends can be implemented by inheriting the ``BaseBackend`` and implementing its abstract methods.
+Other backends can be implemented by inheriting the :class:`qibo.backends.abstract.AbstractBackend` and implementing its abstract methods.
 
 Regression tests, which are run by the continous integration workflow are stored in ``qibo/tests``. These tests contain several examples about how to use qibo.
 

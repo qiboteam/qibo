@@ -358,12 +358,12 @@ Backends
 --------
 
 The main calculation engine is defined in the abstract backend object
-:class:`qibo.backends.abstractions.BaseBackend`. This object defines the methods
+:class:`qibo.backends.abstract.AbstractBackend`. This object defines the methods
 required by all Qibo models to perform simulation.
 
 Qibo currently provides two different calculation backends, one based on
 numpy and one based on Tensorflow. It is possible to define new backends by
-ineriting :class:`qibo.backends.abstractions.BaseBackend` and implementing its abstract
+ineriting :class:`qibo.backends.abstract.AbstractBackend` and implementing its abstract
 methods. Tensorflow is the default backend, however Qibo will automatically
 fall back to numpy if Tensorflow is not found installed in the system.
 
@@ -396,6 +396,6 @@ the same approach:
 
 Note that custom operators are only supported by the Tensorflow backend.
 
-.. autoclass:: qibo.backends.abstractions.BaseBackend
+.. autoclass:: qibo.backends.abstract.AbstractBackend
     :members:
     :member-order: bysource

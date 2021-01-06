@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
 
-class BaseBackend(ABC):
+class AbstractBackend(ABC):
 
     base_methods = {"assign", "set_gates", "dtypes",
                     "set_precision", "set_device"}

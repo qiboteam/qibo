@@ -1,5 +1,5 @@
 import os
-from qibo.backends import base, numpy
+from qibo.backends import abstract, numpy
 from qibo.config import LOG_LEVEL, raise_error
 
 
@@ -47,7 +47,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.op = op
 
     def set_device(self, name):
-        base.BaseBackend.set_device(self, name)
+        abstract.AbstractBackend.set_device(self, name)
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
