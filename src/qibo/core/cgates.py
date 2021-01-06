@@ -23,7 +23,6 @@ class BackendGate(BaseBackendGate):
             return getattr(gates, cls.__name__)(*args, **kwargs) # pylint: disable=E0110
 
     def __init__(self):
-        # TODO: Move this check somewhere else
         if not K.executing_eagerly():
             raise_error(NotImplementedError,
                         "Custom operator gates should not be used in compiled "

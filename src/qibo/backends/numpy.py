@@ -1,5 +1,5 @@
 from qibo.backends import base
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 
 
 class DummyModule:
@@ -42,6 +42,12 @@ class NumpyBackend(base.BaseBackend):
         self.oom_error = MemoryError
         self.optimization = DummyModule()
         self.op = DummyModule("apply_gate")
+
+    def set_device(self, name):
+        if "GPU" in name:
+            log.warning("Numpy does not support GPU. Aborting device change.")
+        else:
+            super().set_device(name)
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):

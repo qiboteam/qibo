@@ -90,7 +90,7 @@ class BaseBackend(ABC):
         parts = name[1:].split(":")
         if name[0] != "/" or len(parts) < 2 or len(parts) > 3:
             raise_error(ValueError, "Device name should follow the pattern: "
-                             "/{device type}:{device number}.")
+                                    "/{device type}:{device number}.")
         device_type, device_number = parts[-2], int(parts[-1])
         if device_type == "CPU":
             ndevices = len(self.cpu_devices)

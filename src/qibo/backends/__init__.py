@@ -35,6 +35,7 @@ else:
     except ModuleNotFoundError: # pragma: no cover
         # case not tested because CI has tf installed
         log.warning("Tensorflow is not installed. Falling back to numpy.")
+        log.warning("Numpy does not support custom operators and GPU.")
         K = NumpyBackend()
 
 _BACKEND_NAME = K.name
@@ -46,13 +47,17 @@ if _BACKEND_NAME != "tensorflow": # pragma: no cover
 
 
 def set_backend(backend="custom"):
-    """Sets backend used to implement gates.
+    """Sets backend used for mathematical operations and applying gates.
+
+    The following backends are available:
+    'custom': Tensorflow backend with custom operators for applying gates,
+    'defaulteinsum': Tensorflow backend that applies gates using ``tf.einsum``,
+    'matmuleinsum': Tensorflow backend that applies gates using ``tf.matmul``,
+    'numpy_defaulteinsum': Numpy backend that applies gates using ``np.einsum``,
+    'numpy_matmuleinsum': Numpy backend that applies gates using ``np.matmul``,
 
     Args:
-        backend (str): possible options are 'custom' for the gates that use
-            custom tensorflow operator and 'defaulteinsum' or 'matmuleinsum'
-            for the gates that use tensorflow primitives (``tf.einsum`` or
-            ``tf.matmul`` respectively).
+        backend (str): A backend from the above options.
     """
     if not config.ALLOW_SWITCHERS and backend != K.gates:
         warnings.warn("Backend should not be changed after allocating gates.",
