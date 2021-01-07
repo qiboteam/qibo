@@ -1,10 +1,9 @@
-from qibo.config import BACKEND_NAME, raise_error, get_backend
-if BACKEND_NAME != "tensorflow": # pragma: no cover
-    # case not tested because backend is preset to TensorFlow
-    raise_error(NotImplementedError, "Only Tensorflow backend is implemented.")
-from qibo.tensorflow.circuit import TensorflowCircuit as StateCircuit
-from qibo.tensorflow.circuit import TensorflowDensityMatrixCircuit as DensityMatrixCircuit
-from qibo.tensorflow.distcircuit import TensorflowDistributedCircuit as DistributedCircuit
+import math
+from qibo import get_backend
+from qibo.config import raise_error
+from qibo.core.circuit import Circuit as StateCircuit
+from qibo.core.circuit import DensityMatrixCircuit
+from qibo.tensorflow.distcircuit import DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
@@ -90,14 +89,13 @@ def QFT(nqubits: int, with_swaps: bool = True,
                                              "with SWAPs.")
         return _DistributedQFT(nqubits, accelerators, memory_device)
 
-    import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits)
     for i1 in range(nqubits):
         circuit.add(gates.H(i1))
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (i2 - i1)
+            theta = math.pi / 2 ** (i2 - i1)
             circuit.add(gates.CU1(i2, i1, theta))
 
     if with_swaps:
@@ -132,7 +130,7 @@ def _DistributedQFT(nqubits: int,
 
         circuit.add(gates.H(i1eff))
         for i2 in range(i1 + 1, nqubits):
-            theta = np.pi / 2 ** (i2 - i1)
+            theta = math.pi / 2 ** (i2 - i1)
             circuit.add(gates.CU1(i2, i1eff, theta))
 
     return circuit
@@ -142,7 +140,7 @@ class VQE(object):
     """This class implements the variational quantum eigensolver algorithm.
 
     Args:
-        circuit (:class:`qibo.base.circuit.BaseCircuit`): Circuit that
+        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): Circuit that
             implements the variaional ansatz.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object.
 
@@ -196,13 +194,13 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
-            loss = K.function(_loss)
+            loss = K.compile(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.tensorflow.gates import TensorflowGate
+            from qibo.core.gates import BackendGate
             for gate in self.circuit.queue:
-                if not isinstance(gate, TensorflowGate):
+                if not isinstance(gate, BackendGate):
                     raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
                                               'gates because gradients are not '
                                               'supported in the custom kernels.')
@@ -223,17 +221,17 @@ class QAOA(object):
     The QAOA is introduced in `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_.
 
     Args:
-        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): problem Hamiltonian
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
-        mixer (:class:`qibo.base.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.TensorflowDistributedCircuit`
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
@@ -252,9 +250,8 @@ class QAOA(object):
             initial_parameters = 0.01 * np.random.random(4)
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
-    from qibo import hamiltonians, optimizers
-    from qibo.config import K, DTYPES
-    from qibo.base.hamiltonians import HAMILTONIAN_TYPES
+    from qibo import hamiltonians, optimizers, K
+    from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
@@ -353,10 +350,9 @@ class QAOA(object):
 
         if state is None:
             # Generate |++...+> state
-            dtype = self.DTYPES.get('DTYPECPX')
-            n = self.K.cast(2 ** self.nqubits, dtype=self.DTYPES.get('DTYPEINT'))
-            state = self.K.ones(n, dtype=dtype)
-            norm = self.K.cast(2 ** float(self.nqubits / 2.0), dtype=dtype)
+            n = self.K.cast(2 ** self.nqubits, dtype='DTYPEINT')
+            state = self.K.ones(n)
+            norm = self.K.cast(2 ** float(self.nqubits / 2.0))
             return state / norm
         return StateCircuit._cast_initial_state(self, state)
 
@@ -386,9 +382,8 @@ class QAOA(object):
             return hamiltonian.expectation(state)
 
         if method == "sgd":
-            import tensorflow as tf
-            loss = lambda p, c, h: _loss(tf.cast(
-                p, dtype=self.DTYPES.get('DTYPECPX')), c, h)
+            from qibo import K
+            loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
             import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()

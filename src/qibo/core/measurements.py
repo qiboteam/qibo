@@ -1,14 +1,15 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import collections
-from abc import ABC, abstractmethod
-from typing import Any, Optional, Dict, List, Set, Tuple, Union
+from qibo import K
 from qibo.config import raise_error
+from qibo.abstractions.gates import M
+from typing import Any, Optional, Dict, List, Set, Tuple, Union
 TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
 
 
-class GateResult(ABC):
+class GateResult:
     """Object returned when user uses a `gates.M` on a state.
 
     Implements tools to convert samples from decimal to binary representation
@@ -33,6 +34,9 @@ class GateResult(ABC):
             raise_error(ValueError, "Measurement result object cannot be created "
                                     "when samples are given both in decimal and "
                                     "binary. Use one of the two.")
+        if decimal_samples is None and binary_samples is None:
+            raise_error(ValueError, "Measurement result cannot be created if "
+                                    "no samples are given.")
         if binary_samples is not None and binary_samples.shape[-1] != self.nqubits:
             raise_error(ValueError, "Binary samples are for {} qubits but the given "
                                     "qubits are {}.".format(binary_samples.shape[-1], qubits))
@@ -48,6 +52,17 @@ class GateResult(ABC):
     @property
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
+
+    @staticmethod
+    def _convert_to_binary(x, n):
+        _range = K.range(n - 1, -1, -1, dtype=x.dtype)
+        return K.mod(K.right_shift(x[:, K.newaxis], _range), 2)
+
+    @staticmethod
+    def _convert_to_decimal(x, n):
+        _range = K.range(n - 1, -1, -1, dtype=x.dtype)
+        _range = K.pow(2, _range)[:, K.newaxis]
+        return K.matmul(x, _range)[:, 0]
 
     def samples(self, binary: bool = True) -> TensorType:
         if binary:
@@ -77,7 +92,8 @@ class GateResult(ABC):
             measured shots.
         """
         if self._frequencies is None:
-            res, cnts = self._calculate_counts(self.samples(binary=False))
+            dsamples = self.samples(binary=False)
+            res, cnts = K.unique(dsamples, return_counts=True)
             self._frequencies = collections.Counter(
                 {k: v for k, v in zip(res, cnts)})
         if binary:
@@ -85,31 +101,6 @@ class GateResult(ABC):
                 {"{0:b}".format(k).zfill(self.nqubits): v
                  for k, v in self._frequencies.items()})
         return self._frequencies
-
-    @staticmethod
-    def _get_bitflip_tuple(qubits: Tuple[int], probs: ProbsType) -> Tuple[float]:
-        if isinstance(probs, float):
-            if probs < 0 or probs > 1:
-                raise_error(ValueError, "Invalid bitflip probability {}."
-                                        "".format(probs))
-            return len(qubits) * (probs,)
-
-        if isinstance(probs, (tuple, list)):
-            if len(probs) != len(qubits):
-                raise_error(ValueError, "{} qubits were measured but the given "
-                                        "bitflip probability list contains {} "
-                                        "values.".format(
-                                            len(qubits), len(probs)))
-            return tuple(probs)
-
-        if isinstance(probs, dict):
-            diff = set(probs.keys()) - set(qubits)
-            if diff:
-                raise_error(KeyError, "Bitflip map contains {} qubits that are "
-                                      "not measured.".format(diff))
-            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
-
-        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
 
     def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
                        ) -> "GateResult":
@@ -128,37 +119,25 @@ class GateResult(ABC):
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.base.measurements.GateResult` object that holds
+            A new :class:`qibo.core.measurements.GateResult` object that holds
             the noisy samples.
         """
         if p1 is None:
-            probs = 2 * (self._get_bitflip_tuple(self.qubits, p0),)
+            probs = 2 * (M._get_bitflip_tuple(self.qubits, p0),)
         else:
-            probs = (self._get_bitflip_tuple(self.qubits, p0),
-                     self._get_bitflip_tuple(self.qubits, p1))
-        noisy = self._apply_bitflips(self.samples(), probs)
-        return self.__class__(self.qubits, binary_samples=noisy)
+            probs = (M._get_bitflip_tuple(self.qubits, p0),
+                     M._get_bitflip_tuple(self.qubits, p1))
 
-    @staticmethod
-    @abstractmethod
-    def _convert_to_binary(x: TensorType, n: int) -> TensorType: # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @staticmethod
-    @abstractmethod
-    def _convert_to_decimal(x: TensorType, n: int) -> TensorType: # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @staticmethod
-    @abstractmethod
-    def _calculate_counts(decimal_samples: TensorType) -> Tuple[List[int]]: # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @staticmethod
-    @abstractmethod
-    def _apply_bitflips(noiselss_samples: TensorType, probs: Dict[int, float]
-                        ) -> TensorType: # pragma: no cover
-        raise_error(NotImplementedError)
+        # Calculate noisy samples
+        noiseless_samples = self.samples()
+        fprobs = K.cast(probs, dtype='DTYPE')
+        sprobs = K.random.uniform(noiseless_samples.shape,
+                                  dtype=K.dtypes('DTYPE'))
+        flip0 = K.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
+        flip1 = K.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
+        noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
+        noisy_samples = noisy_samples - noiseless_samples * flip1
+        return self.__class__(self.qubits, binary_samples=noisy_samples)
 
 
 class CircuitResult:
@@ -173,7 +152,7 @@ class CircuitResult:
     Args:
         register_qubits: Dictionary that maps register names to the
             corresponding tuples of qubit ids. This is created in the
-            `measurement_tuples` variable of :class:`qibo.base.circuit.BaseCircuit`.
+            `measurement_tuples` variable of :class:`qibo.abstractions.circuit.AbstractCircuit`.
         measurement_gate_result: The `GateResult` resulting from the circuit's
             global measurement gate.
     """
@@ -184,6 +163,20 @@ class CircuitResult:
         self.register_qubits = register_qubits
         self.result = measurement_gate_result
         self.__register_results = None
+
+    @staticmethod
+    def _calculate_register_results(register_qubits, gate_result):
+        """Calculates the individual register `GateResults`.
+
+        This uses the `register_qubits` map to divide the bitstrings to their
+        appropriate registers.
+        """
+        results = {}
+        for name, qubit_tuple in register_qubits.items():
+            slicer = tuple(gate_result.qubit_map[q] for q in qubit_tuple)
+            samples = K.gather(gate_result.samples(True), slicer, axis=-1)
+            results[name] = GateResult(qubit_tuple, binary_samples=samples)
+        return results
 
     @property
     def _register_results(self) -> Dict[str, GateResult]:
@@ -265,20 +258,8 @@ class CircuitResult:
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.base.measurements.CircuitResult` object that
+            A new :class:`qibo.core.measurements.CircuitResult` object that
             holds the noisy samples.
         """
         noisy_result = self.result.apply_bitflips(p0, p1)
         return self.__class__(self.register_qubits, noisy_result)
-
-    @staticmethod
-    @abstractmethod
-    def _calculate_register_results(register_qubits: Dict[str, Set[int]],
-                                    gate_result: GateResult
-                                    ) -> Dict[str, GateResult]: # pragma: no cover
-        """Calculates the individual register `GateResults`.
-
-        This uses the `register_qubits` map to divide the bitstrings to their
-        appropriate registers.
-        """
-        raise_error(NotImplementedError)

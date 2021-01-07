@@ -378,10 +378,8 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                   [0, 0, 0, 1], [0, 0, 1, 0]])
     if tfmatrices:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
-        a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
+        from qibo import K
+        a1, a2 = K.cast(a1), K.cast(a2)
 
     gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
@@ -721,8 +719,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     c.add(gate)
     final_rho = c(np.copy(initial_rho))
 
-    exp, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
-        t1, t2, time, excpop)
+    exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
     if t2 > t1:
         matrix = np.diag([1 - p1, p0, p1, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp

@@ -1,5 +1,5 @@
 """
-Testing Tensorflow circuits.
+Testing backend circuits.
 """
 import numpy as np
 import pytest
@@ -14,7 +14,6 @@ _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
 
 @pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
 def test_circuit_addition_result(backend, accelerators):
-    """Check if circuit addition works properly on Tensorflow circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c1 = Circuit(2, accelerators)
@@ -69,8 +68,8 @@ def test_custom_circuit(backend):
         o = gates.CU1(0, 1, theta)(l2)
         return o
 
-    init2 = c._default_initial_state()
-    init3 = c._default_initial_state()
+    init2 = c.get_initial_state()
+    init3 = c.get_initial_state()
     if backend != "custom":
         init2 = tf.reshape(init2, (2, 2))
         init3 = tf.reshape(init3, (2, 2))
@@ -117,7 +116,7 @@ def test_compiled_circuit(backend):
     else:
         c2.compile()
         r2 = c2.execute().numpy()
-        init_state = c2._default_initial_state()
+        init_state = c2.get_initial_state()
         r3, _ = c2._execute_for_compile(init_state.numpy().reshape((2, 2)))
         r3 = r3.numpy().ravel()
         np.testing.assert_allclose(r1, r2)
@@ -127,7 +126,7 @@ def test_compiled_circuit(backend):
 
 def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
-    from qibo.tensorflow import gates
+    from qibo.core import gates
     original_backend = qibo.get_backend()
     qibo.set_backend("matmuleinsum")
     c = Circuit(2)
@@ -140,12 +139,11 @@ def test_compiling_twice_exception():
 
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_custom_compilation(backend):
-    import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    init_state = tf.cast(np.ones(4) / 2.0, dtype=DTYPES.get('DTYPECPX'))
+    init_state = K.ones(4) / 2.0
 
     def run_circuit(initial_state):
         c = Circuit(2)
@@ -155,7 +153,7 @@ def test_circuit_custom_compilation(backend):
         return c.execute(initial_state)
 
     r1 = run_circuit(init_state).numpy()
-    compiled_circuit = tf.function(run_circuit)
+    compiled_circuit = K.compile(run_circuit)
     if backend == "custom":
         with pytest.raises(NotImplementedError):
             r2 = compiled_circuit(init_state)

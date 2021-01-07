@@ -130,13 +130,13 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
                 a message of the loss function.
     """
     # check if gates are using the MatmulEinsum backend
-    from qibo.tensorflow.gates import TensorflowGate
-    from qibo.tensorflow.circuit import TensorflowCircuit
+    from qibo.core.gates import BackendGate
+    from qibo.core.circuit import Circuit
     for argument in args:
-        if isinstance(argument, TensorflowCircuit):
+        if isinstance(argument, Circuit):
             circuit = argument
             for gate in circuit.queue:
-                if not isinstance(gate, TensorflowGate): # pragma: no cover
+                if not isinstance(gate, BackendGate): # pragma: no cover
                     from qibo.config import raise_error
                     raise_error(RuntimeError, 'SGD requires native Tensorflow '
                                               'gates because gradients are not '
@@ -152,19 +152,19 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         sgd_options.update(options)
 
     # proceed with the training
-    vparams = K.Variable(initial_parameters)
-    optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+    vparams = K.optimization.Variable(initial_parameters)
+    optimizer = getattr(K.optimization.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"])
 
     def opt_step():
-        with K.GradientTape() as tape:
+        with K.optimization.GradientTape() as tape:
             l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
 
     if compile:
-        opt_step = K.function(opt_step)
+        opt_step = K.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
@@ -191,16 +191,16 @@ class ParallelBFGS: # pragma: no cover
     import numpy as np
     import functools
     import itertools
-    from qibo.config import DTYPES
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
+        from qibo import K
         ParallelResources().arguments = args
         ParallelResources().custom_function = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo(self.DTYPES.get("DTYPE").as_numpy_dtype).eps
+        self.precision = self.np.finfo(K.dtypes("DTYPE").as_numpy_dtype).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options

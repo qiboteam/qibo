@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Carrazza and A. Garcia
+import math
 from abc import abstractmethod
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
-from qibo.base.abstract_gates import Gate, ParametrizedGate, SpecialGate
+from qibo.abstractions.abstract_gates import Gate, ParametrizedGate, SpecialGate
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -60,7 +61,7 @@ class X(Gate):
             free: Ids of free qubits to use for the gate decomposition.
             use_toffolis: If ``True`` the decomposition contains only ``TOFFOLI`` gates.
                 If ``False`` a congruent representation is used for ``TOFFOLI`` gates.
-                See :class:`qibo.base.gates.TOFFOLI` for more details on this representation.
+                See :class:`qibo.abstractions.gates.TOFFOLI` for more details on this representation.
 
         Returns:
             List with one-qubit, ``CNOT`` and ``TOFFOLI`` gates that have the
@@ -197,7 +198,7 @@ class Collapse(Gate):
         self.sorted_qubits = sorted(q)
         self.result = result
         # Flag that is turned ``False`` automatically if this gate is used in a
-        # ``TensorflowDistributedCircuit`` in order to skip the normalization.
+        # ``DistributedCircuit`` in order to skip the normalization.
         self.normalize = True
 
     @property
@@ -252,7 +253,6 @@ class M(Gate):
             If ``p1`` is ``None`` then ``p0`` will be used both for 0->1 and
             1->0 bitflips.
     """
-    from qibo.base import measurements
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
@@ -270,12 +270,38 @@ class M(Gate):
         self.bitflip_map = (self._get_bitflip_map(p0),
                             self._get_bitflip_map(p1))
 
+    @staticmethod
+    def _get_bitflip_tuple(qubits: Tuple[int], probs: "ProbsType"
+                           ) -> Tuple[float]:
+        if isinstance(probs, float):
+            if probs < 0 or probs > 1:
+                raise_error(ValueError, "Invalid bitflip probability {}."
+                                        "".format(probs))
+            return len(qubits) * (probs,)
+
+        if isinstance(probs, (tuple, list)):
+            if len(probs) != len(qubits):
+                raise_error(ValueError, "{} qubits were measured but the given "
+                                        "bitflip probability list contains {} "
+                                        "values.".format(
+                                            len(qubits), len(probs)))
+            return tuple(probs)
+
+        if isinstance(probs, dict):
+            diff = set(probs.keys()) - set(qubits)
+            if diff:
+                raise_error(KeyError, "Bitflip map contains {} qubits that are "
+                                      "not measured.".format(diff))
+            return tuple(probs[q] if q in probs else 0.0 for q in qubits)
+
+        raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+
     def _get_bitflip_map(self, p: Optional["ProbsType"] = None
                          ) -> Dict[int, float]:
         """Creates dictionary with bitflip probabilities."""
         if p is None:
             return {q: 0 for q in self.qubits}
-        pt = self.measurements.GateResult._get_bitflip_tuple(self.qubits, p)
+        pt = self._get_bitflip_tuple(self.qubits, p)
         return {q: p for q, p in zip(self.qubits, pt)}
 
     def add(self, gate: "M"):
@@ -306,7 +332,7 @@ class _Rn_(ParametrizedGate):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "n"
@@ -351,7 +377,7 @@ class RX(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "x"
@@ -374,7 +400,7 @@ class RY(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "y"
@@ -395,7 +421,7 @@ class RZ(_Rn_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "z"
@@ -407,7 +433,7 @@ class _Un_(ParametrizedGate):
     Args:
         q (int): the qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 0
@@ -445,7 +471,7 @@ class U1(_Un_):
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 1
@@ -477,7 +503,7 @@ class U2(_Un_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 2
@@ -491,9 +517,8 @@ class U2(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        import numpy as np
         phi, lam = self.parameters
-        phi, lam = np.pi - lam, - np.pi - phi
+        phi, lam = math.pi - lam, - math.pi - phi
         return self.__class__(self.target_qubits[0], phi, lam)
 
 
@@ -514,7 +539,7 @@ class U3(_Un_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 3
@@ -534,7 +559,7 @@ class U3(_Un_):
 
 
 class ZPow(Gate): # pragma: no cover
-    """Equivalent to :class:`qibo.base.gates.U1`.
+    """Equivalent to :class:`qibo.abstractions.gates.U1`.
 
     Implemented to maintain compatibility with previous versions.
     Corresponds to the following unitary matrix
@@ -549,7 +574,7 @@ class ZPow(Gate): # pragma: no cover
         q (int): the qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     # This class exists only for documentation purposes.
@@ -621,7 +646,7 @@ class _CRn_(ParametrizedGate):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "n"
@@ -661,7 +686,7 @@ class CRX(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "x"
@@ -680,14 +705,14 @@ class CRY(_CRn_):
         0 & 0 & \\sin \\frac{\\theta }{2}  & \\cos \\frac{\\theta }{2} \\\\
         \\end{pmatrix}
 
-    Note that this differs from the :class:`qibo.base.gates.RZ` gate.
+    Note that this differs from the :class:`qibo.abstractions.gates.RZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "y"
@@ -711,7 +736,7 @@ class CRZ(_CRn_):
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     axis = "z"
@@ -724,7 +749,7 @@ class _CUn_(ParametrizedGate):
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 0
@@ -752,14 +777,14 @@ class CU1(_CUn_):
         0 & 0 & 0 & e^{i \\theta } \\\\
         \\end{pmatrix}
 
-    Note that this differs from the :class:`qibo.base.gates.CRZ` gate.
+    Note that this differs from the :class:`qibo.abstractions.gates.CRZ` gate.
 
     Args:
         q0 (int): the control qubit id number.
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 1
@@ -796,7 +821,7 @@ class CU2(_CUn_):
         phi (float): first rotation angle.
         lamb (float): second rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 2
@@ -810,11 +835,10 @@ class CU2(_CUn_):
 
     def _dagger(self) -> "Gate":
         """"""
-        import numpy as np
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
         phi, lam = self.parameters
-        phi, lam = np.pi - lam, - np.pi - phi
+        phi, lam = math.pi - lam, - math.pi - phi
         return self.__class__(q0, q1, phi, lam)
 
 
@@ -838,7 +862,7 @@ class CU3(_CUn_):
         phi (float): second rotation angle.
         lamb (float): third rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     order = 3
@@ -860,7 +884,7 @@ class CU3(_CUn_):
 
 
 class CZPow(Gate): # pragma: no cover
-    """Equivalent to :class:`qibo.base.gates.CU1`.
+    """Equivalent to :class:`qibo.abstractions.gates.CU1`.
 
     Implemented to maintain compatibility with previous versions.
     Corresponds to the following unitary matrix
@@ -878,11 +902,11 @@ class CZPow(Gate): # pragma: no cover
         q1 (int): the target qubit id number.
         theta (float): the rotation angle.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     def __new__(cls, q0, q1, theta, trainable=True): # pragma: no cover
-        # code is not tested as it is substituted in `tensorflow` gates
+        # code is not tested as it is substituted in backend gates
         return CU1(q0, q1, theta, trainable=trainable)
 
 
@@ -930,7 +954,7 @@ class fSim(ParametrizedGate):
         theta (float): Angle for the one-qubit rotation.
         phi (float): Angle for the |11> phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
     # TODO: Check how this works with QASM.
@@ -972,7 +996,7 @@ class GeneralizedfSim(ParametrizedGate):
         unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
         phi (float): Angle for the |11> phase.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
     """
 
@@ -1045,15 +1069,14 @@ class TOFFOLI(Gate):
             return self.decompose()
 
         import importlib
-        import numpy as np
         control0, control1 = self.control_qubits
         target = self.target_qubits[0]
         RY = self.module.RY
         CNOT = self.module.CNOT
-        return [RY(target, -np.pi / 4), CNOT(control1, target),
-                RY(target, -np.pi / 4), CNOT(control0, target),
-                RY(target, np.pi / 4), CNOT(control1, target),
-                RY(target, np.pi / 4)]
+        return [RY(target, -math.pi / 4), CNOT(control1, target),
+                RY(target, -math.pi / 4), CNOT(control0, target),
+                RY(target, math.pi / 4), CNOT(control1, target),
+                RY(target, math.pi / 4)]
 
 
 class Unitary(ParametrizedGate):
@@ -1065,7 +1088,7 @@ class Unitary(ParametrizedGate):
             unitary. This allows the user to create non-unitary gates.
         *q (int): Qubit id numbers that the gate acts on.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
         name (str): Optional name for the gate.
     """
@@ -1096,19 +1119,6 @@ class Unitary(ParametrizedGate):
         """"""
         raise_error(NotImplementedError)
 
-    @ParametrizedGate.parameters.setter
-    def parameters(self, x):
-        shape = tuple(x.shape)
-        true_shape = (2 ** self.rank, 2 ** self.rank)
-        if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
-        elif shape == (2 ** (2 * self.rank),):
-            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
-        else:
-            raise_error(ValueError, "Invalid shape {} of unitary matrix "
-                                    "acting on {} target qubits."
-                                    "".format(shape, self.rank))
-
 
 class VariationalLayer(ParametrizedGate):
     """Layer of one-qubit parametrized gates followed by two-qubit entangling gates.
@@ -1129,7 +1139,7 @@ class VariationalLayer(ParametrizedGate):
             has the same length as ``qubits``. These gates act after the layer
             of entangling gates.
         trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.base.circuit.BaseCircuit.set_parameters`
+            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
         name (str): Optional name for the gate.
             If ``None`` the name ``"VariationalLayer"`` will be used.
@@ -1234,12 +1244,12 @@ class Flatten(SpecialGate):
 
 
 class CallbackGate(SpecialGate):
-    """Calculates a :class:`qibo.tensorflow.callbacks.Callback` at a specific point in the circuit.
+    """Calculates a :class:`qibo.core.callbacks.Callback` at a specific point in the circuit.
 
     This gate performs the callback calulation without affecting the state vector.
 
     Args:
-        callback (:class:`qibo.tensorflow.callbacks.Callback`): Callback object to calculate.
+        callback (:class:`qibo.core.callbacks.Callback`): Callback object to calculate.
     """
 
     def __init__(self, callback: "Callback"):
@@ -1338,7 +1348,7 @@ class UnitaryChannel(KrausChannel):
                                 \\sum _k p_k U_k \\rho U_k^\\dagger
 
     where U are arbitrary unitary operators and p are floats between 0 and 1.
-    Note that unlike :class:`qibo.base.gates.KrausChannel` which requires
+    Note that unlike :class:`qibo.abstractions.gates.KrausChannel` which requires
     density matrices, it is possible to simulate the unitary channel using
     state vectors and probabilistic sampling. For more information on this
     approach we refer to :ref:`Using repeated execution <repeatedexec-example>`.
@@ -1430,7 +1440,7 @@ class ResetChannel(UnitaryChannel):
     .. math::
         \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
 
-    using :class:`qibo.base.gates.Collapse`.
+    using :class:`qibo.abstractions.gates.Collapse`.
 
     Args:
         q (int): Qubit id that the channel acts on.
@@ -1508,9 +1518,7 @@ class ThermalRelaxationChannel:
         self.init_kwargs = {"excited_population": excited_population,
                             "seed": seed}
 
-    @staticmethod
-    def _calculate_probs(t1, t2, time, excited_population):
-        import numpy as np
+    def calculate_probabilities(self, t1, t2, time, excited_population):
         if excited_population < 0 or excited_population > 1:
             raise_error(ValueError, "Invalid excited state population {}."
                                     "".format(excited_population))
@@ -1526,23 +1534,17 @@ class ThermalRelaxationChannel:
             raise_error(ValueError, "Invalid T_2 relaxation time parameter: "
                                     "T_2 greater than 2 * T_1.")
 
-        p_reset = 1 - np.exp(-time / t1)
-        p0 = p_reset * (1 - excited_population)
-        p1 = p_reset * excited_population
-        if t1 < t2:
-            exp = np.exp(-time / t2)
-        else:
-            rate1, rate2 = 1 / t1, 1 / t2
-            exp = (1 - p_reset) * (1 - np.exp(-time * (rate2 - rate1))) / 2
-        return (exp, p0, p1)
-
 
 class _ThermalRelaxationChannelA(UnitaryChannel):
     """Implements thermal relaxation when T1 >= T2."""
 
+    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
+        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelA`
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
+
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = ThermalRelaxationChannel._calculate_probs(
-            t1, t2, time, excited_population)
+        probs = self.calculate_probabilities(t1, t2, time, excited_population)
         gates = [self.module.Z(q), self.module.Collapse(q),
                  self.module.X(q)]
 
@@ -1557,9 +1559,13 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 class _ThermalRelaxationChannelB(Gate):
     """Implements thermal relaxation when T1 < T2."""
 
+    def calculate_probabilities(self, t1, t2, time, excited_population): # pragma: no cover
+        # function not tested because it is redefined in `qibo.core.cgates._ThermalRelaxationChannelB`
+        return ThermalRelaxationChannel.calculate_probabilities(
+            self, t1, t2, time, excited_population)
+
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
-        probs = ThermalRelaxationChannel._calculate_probs(
-            t1, t2, time, excited_population)
+        probs = self.calculate_probabilities(t1, t2, time, excited_population)
         self.exp_t2, self.preset0, self.preset1 = probs
 
         super(_ThermalRelaxationChannelB, self).__init__()

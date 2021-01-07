@@ -1,19 +1,15 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
-import numpy as np
-import tensorflow as tf
-from tensorflow.python.framework import errors_impl # pylint: disable=no-name-in-module
-from qibo.base import circuit
-from qibo.config import DTYPES, DEVICES, BACKEND, raise_error, get_threads
-from qibo.tensorflow import measurements
-from qibo.tensorflow import custom_operators as op
-from typing import List, Optional, Tuple, Union
-InitStateType = Union[np.ndarray, tf.Tensor]
-OutputType = Union[tf.Tensor, measurements.CircuitResult]
+import collections
+from qibo import K
+from qibo.abstractions import circuit
+from qibo.config import raise_error
+from qibo.core import measurements
+from typing import List, Tuple
 
 
-class TensorflowCircuit(circuit.BaseCircuit):
-    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+class Circuit(circuit.AbstractCircuit):
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using state vectors.
 
@@ -27,18 +23,18 @@ class TensorflowCircuit(circuit.BaseCircuit):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-    from qibo.tensorflow import fusion
+    from qibo.core import fusion
 
     def __init__(self, nqubits):
-        super(TensorflowCircuit, self).__init__(nqubits)
+        super(Circuit, self).__init__(nqubits)
         self._compiled_execute = None
         self.check_initial_state_shape = True
         self.shapes = {
             'TENSOR': self.nqubits * (2,),
             'FLAT': (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
-                                         dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                            dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
         super().set_nqubits(gate)
@@ -46,13 +42,76 @@ class TensorflowCircuit(circuit.BaseCircuit):
         gate.prepare()
 
     def set_parameters(self, parameters):
-        if isinstance(parameters, (np.ndarray, tf.Tensor, tf.Variable)):
-            super(TensorflowCircuit, self)._set_parameters_list(
-                parameters, int(parameters.shape[0]))
+        if isinstance(parameters, K.tensor_types):
+            super()._set_parameters_list(parameters, int(parameters.shape[0]))
         else:
-            super(TensorflowCircuit, self).set_parameters(parameters)
+            super().set_parameters(parameters)
 
-    def _eager_execute(self, state: tf.Tensor) -> tf.Tensor:
+    def _get_parameters_flatlist(self, parametrized_gates):
+        params = []
+        for gate in parametrized_gates:
+            if isinstance(gate.parameters, K.tensor_types):
+                params.extend(gate.parameters.ravel())
+            elif isinstance(gate.parameters, collections.abc.Iterable):
+                params.extend(gate.parameters)
+            else:
+                params.append(gate.parameters)
+        return params
+
+    def _fuse_copy(self):
+        """Helper method for :meth:`qibo.core.circuit.Circuit.fuse``.
+
+        For standard (non-distributed) circuits this creates a copy of the
+        circuit with deep-copying the parametrized gates only.
+        For distributed circuits a fully deep copy should be created.
+        """
+        import copy
+        from qibo.abstractions.abstract_gates import ParametrizedGate
+        new_circuit = self.__class__(**self.init_kwargs)
+        for gate in self.queue:
+            if isinstance(gate, ParametrizedGate):
+                if gate.trainable:
+                    new_gate = copy.copy(gate)
+                    new_circuit.queue.append(new_gate)
+                    new_circuit.parametrized_gates.append(new_gate)
+                    new_circuit.trainable_gates.append(new_gate)
+                else:
+                    new_circuit.queue.append(gate)
+                    new_circuit.parametrized_gates.append(gate)
+            else:
+                new_circuit.queue.append(gate)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def fuse(self):
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
+        new_circuit = self._fuse_copy()
+        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
+            new_circuit.queue)
+        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
+                                 for gate in group.gates)
+        return new_circuit
+
+    def _eager_execute(self, state):
         """Simulates the circuit gates in eager mode."""
         for gate in self.queue:
             state = gate(state)
@@ -77,18 +136,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if BACKEND['GATES'] == 'custom':
+        if K.custom_gates:
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
-        self._compiled_execute = tf.function(self._execute_for_compile)
+        self._compiled_execute = K.compile(self._execute_for_compile)
 
-    def _execute(self, initial_state: Optional[InitStateType] = None
-                 ) -> tf.Tensor:
+    def _execute(self, initial_state=None):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if BACKEND['GATES'] != 'custom':
-            state = tf.reshape(state, self.shapes.get('TENSOR'))
+        if not K.custom_gates:
+            state = K.reshape(state, self.shapes.get('TENSOR'))
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -97,29 +155,25 @@ class TensorflowCircuit(circuit.BaseCircuit):
             for callback, results in callback_results.items():
                 callback.extend(results)
 
-        if BACKEND['GATES'] != 'custom':
-            state = tf.reshape(state, self.shapes.get('TF_FLAT'))
+        if not K.custom_gates:
+            state = K.reshape(state, self.shapes.get('TENSOR_FLAT'))
 
         self._final_state = state
         return state
 
-    def _device_execute(self, initial_state: Optional[InitStateType] = None
-                        ) -> tf.Tensor:
+    def _device_execute(self, initial_state=None):
         """Executes circuit on the specified device and checks for OOM errors."""
-        oom_error = errors_impl.ResourceExhaustedError
-        device = DEVICES['DEFAULT']
+        device = K.default_device
         try:
-            with tf.device(device):
+            with K.device(device):
                 state = self._execute(initial_state=initial_state)
-        except oom_error:
+        except K.oom_error:
             raise_error(RuntimeError, f"State does not fit in {device} memory."
                                        "Please switch the execution device to a "
                                        "different one using ``qibo.set_device``.")
         return state
 
-    def _repeated_execute(self, nreps: int,
-                          initial_state: Optional[InitStateType] = None
-                          ) -> tf.Tensor:
+    def _repeated_execute(self, nreps, initial_state=None):
         results = []
         for _ in range(nreps):
             state = self._device_execute(initial_state)
@@ -127,8 +181,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 results.append(self.measurement_gate(state, nshots=1)[0])
                 del(state)
             else:
-                results.append(tf.identity(state))
-        results = tf.stack(results, axis=0)
+                results.append(K.copy(state))
+        results = K.stack(results, axis=0)
 
         if self.measurement_gate is None:
             return results
@@ -137,8 +191,7 @@ class TensorflowCircuit(circuit.BaseCircuit):
                 self.measurement_gate.qubits, decimal_samples=results)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
-    def execute(self, initial_state: Optional[InitStateType] = None,
-                nshots: Optional[int] = None) -> OutputType:
+    def execute(self, initial_state=None, nshots=None):
         """Propagates the state through the circuit applying the corresponding gates.
 
         In default usage the full final state vector is returned.
@@ -156,13 +209,13 @@ class TensorflowCircuit(circuit.BaseCircuit):
         If the circuit is created with the ``density_matrix = True`` flag and
         contains channels, then density matrices will be used instead of
         repeated execution.
-        Note that some channels (:class:`qibo.base.gates.KrausChannel`) can
+        Note that some channels (:class:`qibo.abstractions.gates.KrausChannel`) can
         only be simulated using density matrices and not repeated execution.
         For more details on noise simulation with and without density matrices
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
 
         Args:
-            initial_state (np.ndarray): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
+            initial_state (array): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
                 A Tensorflow tensor with shape ``nqubits * (2,)`` is also allowed
                 allowed as an initial state but must have the `dtype` of the circuit.
                 If ``initial_state`` is ``None`` the |000...0> state will be used.
@@ -172,9 +225,9 @@ class TensorflowCircuit(circuit.BaseCircuit):
 
         Returns:
             If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
+                A :class:`qibo.core.measurements.CircuitResult` object that contains the measured bitstrings.
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
+                The final state vector as a tensor of shape ``(2 ** nqubits,)``.
         """
         if nshots is not None and self.repeated_execution:
             self._final_state = None
@@ -188,8 +241,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
 
     @property
-    def final_state(self) -> tf.Tensor:
-        """Final state as a Tensorflow tensor of shape ``(2 ** nqubits,)``.
+    def final_state(self):
+        """Final state as a tensor of shape ``(2 ** nqubits,)``.
 
         The circuit has to be executed at least once before accessing this
         property, otherwise a ``ValueError`` is raised. If the circuit is
@@ -200,27 +253,17 @@ class TensorflowCircuit(circuit.BaseCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
-        if isinstance(state, tf.Tensor):
-            return state
-        elif isinstance(state, np.ndarray):
-            return tf.cast(state.astype(DTYPES.get('NPTYPECPX')),
-                           dtype=DTYPES.get('DTYPECPX'))
+    def _cast_initial_state(self, state):
+        if isinstance(state, K.tensor_types):
+            return K.cast(state)
         raise_error(TypeError, "Initial state type {} is not recognized."
                                 "".format(type(state)))
 
-    def _default_initial_state(self) -> tf.Tensor:
-        """Creates the |000...0> state for default initialization."""
-        return op.initial_state(nqubits=self.nqubits,
-                                dtype=DTYPES.get('DTYPECPX'),
-                                is_matrix=self.density_matrix,
-                                omp_num_threads=get_threads())
-
-    def get_initial_state(self, state: Optional[InitStateType] = None
-                           ) -> tf.Tensor:
+    def get_initial_state(self, state=None):
         """"""
         if state is None:
-            return self._default_initial_state()
+            is_matrix = isinstance(self, DensityMatrixCircuit)
+            return K.initial_state(self.nqubits, is_matrix)
         state = self._cast_initial_state(state)
         if self.check_initial_state_shape:
             shape = tuple(state.shape)
@@ -231,8 +274,8 @@ class TensorflowCircuit(circuit.BaseCircuit):
         return state
 
 
-class TensorflowDensityMatrixCircuit(TensorflowCircuit):
-    """Implementation of :class:`qibo.base.circuit.BaseCircuit` in Tensorflow.
+class DensityMatrixCircuit(Circuit):
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using density matrices. Can be initialized using the
     ``density_matrix=True`` flag and supports the use of channels.
@@ -252,22 +295,19 @@ class TensorflowDensityMatrixCircuit(TensorflowCircuit):
     """
 
     def __init__(self, nqubits):
-        super(TensorflowDensityMatrixCircuit, self).__init__(nqubits)
+        super(DensityMatrixCircuit, self).__init__(nqubits)
         self.density_matrix = True
         self.shapes = {
             'TENSOR': 2 * self.nqubits * (2,),
             'VECTOR': (2 ** nqubits,),
             'FLAT': 2 * (2 ** self.nqubits,)
         }
-        self.shapes['TF_FLAT'] = tf.cast(self.shapes.get('FLAT'),
-                                         dtype=DTYPES.get('DTYPEINT'))
+        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
+                                            dtype='DTYPEINT')
 
-    def _cast_initial_state(self, state: InitStateType) -> tf.Tensor:
+    def _cast_initial_state(self, state):
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
         if tuple(state.shape) == self.shapes['VECTOR']:
-            if isinstance(state, tf.Tensor):
-                state = tf.tensordot(state, tf.math.conj(state), axes=0)
-            elif isinstance(state, np.ndarray):
-                state = np.outer(state, state.conj())
-        return TensorflowCircuit._cast_initial_state(self, state)
+            state = K.outer(state, K.conj(state))
+        return Circuit._cast_initial_state(self, state)

@@ -1,19 +1,19 @@
 import numpy as np
-import tensorflow as tf
-from qibo.config import DTYPES, raise_error
 
 
 class NumpyMatrices:
 
-    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "SWAP", "TOFFOLI"]
+    _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "TOFFOLI"]
 
-    def __init__(self):
+    def __init__(self, dtype):
+        self._dtype = dtype
         self._I = None
         self._H = None
         self._X = None
         self._Y = None
         self._Z = None
         self._CNOT = None
+        self._CZ = None
         self._SWAP = None
         self._TOFFOLI = None
         self.allocate_matrices()
@@ -22,20 +22,16 @@ class NumpyMatrices:
         for name in self._NAMES:
             getattr(self, f"_set{name}")()
 
-    def cast(self, x: np.ndarray) -> tf.Tensor:
-        d = len(x.shape) // 2
-        return x.reshape((2 ** d, 2 ** d)) # return it as a matrix for numpy
+    def cast(self, x):
+        return x.astype(self.dtype)
 
     @property
     def dtype(self):
-        if DTYPES.get("DTYPECPX") == tf.complex128:
-            return np.complex128
-        elif DTYPES.get("DTYPECPX") == tf.complex64:
-            return np.complex64
-        else: # pragma: no cover
-            # case not tested because DTYPECPX is preset to a valid type
-            raise_error(TypeError, "Unknown complex type {}."
-                                   "".format(DTYPES.get("DTYPECPX")))
+        return self._dtype
+
+    @dtype.setter
+    def dtype(self, dtype):
+        self._dtype = dtype
 
     @property
     def I(self):
@@ -60,6 +56,10 @@ class NumpyMatrices:
     @property
     def CNOT(self):
         return self._CNOT
+
+    @property
+    def CZ(self):
+        return self._CZ
 
     @property
     def SWAP(self):
@@ -96,22 +96,43 @@ class NumpyMatrices:
         m = np.eye(4, dtype=self.dtype)
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
-        self._CNOT = self.cast(m.reshape(4 * (2,)))
+        self._CNOT = self.cast(m)
+
+    def _setCZ(self):
+        m = np.diag([1, 1, 1, -1])
+        self._CZ = self.cast(m)
 
     def _setSWAP(self):
         m = np.eye(4, dtype=self.dtype)
         m[1, 1], m[1, 2] = 0, 1
         m[2, 1], m[2, 2] = 1, 0
-        self._SWAP = self.cast(m.reshape(4 * (2,)))
+        self._SWAP = self.cast(m)
 
     def _setTOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
         m[-2, -2], m[-2, -1] = 0, 1
         m[-1, -2], m[-1, -1] = 1, 0
-        self._TOFFOLI = self.cast(m.reshape(6 * (2,)))
+        self._TOFFOLI = self.cast(m)
 
 
 class TensorflowMatrices(NumpyMatrices):
 
-    def cast(self, x: np.ndarray) -> tf.Tensor:
-        return tf.convert_to_tensor(x, dtype=DTYPES.get('DTYPECPX'))
+    def __init__(self, dtype):
+        import tensorflow as tf
+        self.tf = tf
+        self.tftype = dtype
+        if dtype == tf.complex128:
+            super().__init__(np.complex128)
+        elif dtype == tf.complex64:
+            super().__init__(np.complex64)
+
+    @NumpyMatrices.dtype.setter
+    def dtype(self, dtype):
+        self.tftype = dtype
+        if dtype == self.tf.complex128:
+            self._dtype = np.complex128
+        elif dtype == self.tf.complex64:
+            self._dtype = np.complex64
+
+    def cast(self, x):
+        return self.tf.cast(x, dtype=self.tftype)

@@ -153,7 +153,7 @@ def test_bad_circuit_addition():
 
 
 def test_gate_types():
-    """Check ``BaseCircuit.gate_types`` property."""
+    """Check ``AbstractCircuit.gate_types`` property."""
     import collections
     c = Circuit(3)
     c.add(H(0))
@@ -167,7 +167,7 @@ def test_gate_types():
 
 
 def test_gates_of_type():
-    """Check ``BaseCircuit.gates_of_type`` method."""
+    """Check ``AbstractCircuit.gates_of_type`` method."""
     c = Circuit(3)
     c.add(H(0))
     c.add(H(1))
@@ -185,7 +185,7 @@ def test_gates_of_type():
 
 
 def test_summary():
-    """Check ``BaseCircuit.summary()`` method."""
+    """Check ``AbstractCircuit.summary()`` method."""
     c = Circuit(3)
     c.add(H(0))
     c.add(H(1))
@@ -231,8 +231,7 @@ def test_circuit_copy_with_measurements():
     assert c2.measurement_tuples == {"a": (0, 1), "b": (3,)}
 
 
-def test_base_gate_errors():
-    """Check errors in ``base.gates.Gate`` for coverage."""
+def test_abstract_gate_errors():
     gate = H(0)
     with pytest.raises(ValueError):
         nqubits = gate.nqubits
@@ -299,13 +298,12 @@ def test_precision_dictionary(precision):
     """Check if ``set_precision`` changes the ``DTYPES`` dictionary."""
     import qibo
     import tensorflow as tf
-    from qibo.config import DTYPES
     original_precision = qibo.get_precision()
     qibo.set_precision(precision)
     if precision == "single":
-        assert DTYPES.get("DTYPECPX") == tf.complex64
+        assert qibo.K.dtypes("DTYPECPX") == tf.complex64
     else:
-        assert DTYPES.get("DTYPECPX") == tf.complex128
+        assert qibo.K.dtypes("DTYPECPX") == tf.complex128
     qibo.set_precision(original_precision)
 
 
@@ -347,25 +345,40 @@ def test_set_backend(backend):
     from qibo import gates
     assert qibo.get_backend() == backend
     if backend == "custom":
-        from qibo.tensorflow import cgates as custom_gates
-        assert isinstance(gates.H(0), custom_gates.TensorflowGate)
+        from qibo.core import cgates as custom_gates
+        assert isinstance(gates.H(0), custom_gates.BackendGate)
     else:
-        from qibo.tensorflow import gates as native_gates
-        from qibo.tensorflow import einsum
+        from qibo.core import gates as native_gates
+        from qibo.core import einsum
         einsums = {"defaulteinsum": einsum.DefaultEinsum,
                    "matmuleinsum": einsum.MatmulEinsum}
         h = gates.H(0)
-        assert isinstance(h, native_gates.TensorflowGate)
+        assert isinstance(h, native_gates.BackendGate)
         assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
+    qibo.set_backend(original_backend)
+
+
+def test_set_backend_print_string():
+    import qibo
+    from qibo import K
+    original_backend = qibo.get_backend()
+    qibo.set_backend("numpy_defaulteinsum")
+    assert qibo.get_backend() == "numpy_defaulteinsum"
+    assert str(K) == "numpy"
+    qibo.set_backend("custom")
+    assert qibo.get_backend() == "custom"
+    assert str(K) == "tensorflow"
+    with pytest.raises(ValueError):
+        qibo.set_backend("numpy_custom")
     qibo.set_backend(original_backend)
 
 
 def test_switcher_errors():
     """Check set precision and backend errors."""
     import qibo
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         qibo.set_precision('test')
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ValueError):
         qibo.set_backend('test')
 
 

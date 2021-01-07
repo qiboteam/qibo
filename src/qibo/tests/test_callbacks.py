@@ -23,15 +23,11 @@ def test_entropy_product_state():
 
 def test_entropy_singlet_state():
     """Check that the singlet state has maximum entropy."""
+    from qibo import K
     entropy = callbacks.EntanglementEntropy([0])
     state = np.zeros(4)
     state[0], state[-1] = 1, 1
-    state = state / np.sqrt(2)
-    # Pass the state as `tf.Tensor` to test this functionality as well
-    import tensorflow as tf
-    from qibo.config import DTYPES
-    state = tf.convert_to_tensor(state, dtype=DTYPES.get('DTYPECPX'))
-
+    state = K.cast(state / np.sqrt(2))
     result = entropy(state).numpy()
     np.testing.assert_allclose(result, 1.0)
 
@@ -79,12 +75,11 @@ def test_state_invalid_type():
 
 def test_entropy_numerical():
     """Check that entropy calculation does not fail for tiny eigenvalues."""
-    import tensorflow as tf
-    from qibo.config import DTYPES
+    from qibo import K
     eigvals = np.array([-1e-10, -1e-15, -2e-17, -1e-18, -5e-60, 1e-48, 4e-32,
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
                         1e-11, 1e-10, 1e-9, 1e-7, 1, 4, 10])
-    rho = tf.convert_to_tensor(np.diag(eigvals), dtype=DTYPES.get('DTYPECPX'))
+    rho = K.cast(np.diag(eigvals))
     callback = callbacks.EntanglementEntropy()
     result = callback.entropy(rho).numpy()
 
@@ -363,6 +358,7 @@ def test_gap(trotter):
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
 
+    print(ground[:])
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])

@@ -11,7 +11,6 @@ class Callback(ABC):
 
     Results of a callback can be accessed by indexing the corresponding object.
     """
-    from qibo.config import K
 
     def __init__(self):
         self._results = []
@@ -50,7 +49,8 @@ class Callback(ABC):
                                         "".format(k, len(self._results)))
             return self._results[k]
         if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
-            return self.K.stack(self._results[k])
+            from qibo import K
+            return K.stack(self._results[k])
         raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     def append(self, x):
@@ -74,7 +74,7 @@ class Callback(ABC):
 class PartialTrace(Callback):
     """Calculates reduced density matrix of a state.
 
-    This is used by the :class:`qibo.tensorflow.callbacks.EntanglementEntropy`
+    This is used by the :class:`qibo.core.callbacks.EntanglementEntropy`
     callback. It can also be used as a standalone callback in order to access
     a reduced density matrix in the middle of a circuit execution.
 
@@ -109,7 +109,7 @@ class PartialTrace(Callback):
                       measuring: bool = False) -> str:
         """Generates einsum string for partial trace of density matrices.
 
-        This method is also used in :meth:`qibo.tensorflow.cgates.M.prepare`.
+        This method is also used in :meth:`qibo.core.cgates.M.prepare`.
 
         Args:
             qubits (list): Set of qubit ids that are traced out.
@@ -326,20 +326,3 @@ class Gap(Callback):
             t = type(ev)
             raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
         self._evolution = ev
-
-    def state_vector_call(self, state):
-        if self.evolution is None:
-            raise_error(ValueError, "Gap callback can only be used in "
-                                    "adiabatic evolution models.")
-        hamiltonian = self.evolution.hamiltonian()
-        # Call the eigenvectors so that they are cached for the ``exp`` call
-        hamiltonian.eigenvectors()
-        if isinstance(self.mode, int):
-            return self.K.math.real(hamiltonian.eigenvalues()[self.mode])
-        # case: self.mode == "gap"
-        return self.K.math.real(hamiltonian.eigenvalues()[1] -
-                                hamiltonian.eigenvalues()[0])
-
-    def density_matrix_call(self, state):
-        raise_error(NotImplementedError, "Gap callback is not implemented for "
-                                         "density matrices.")
