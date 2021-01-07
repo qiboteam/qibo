@@ -66,7 +66,7 @@ class qPDF:
         if len(parameters) != self.nparams: # pragma: no cover
             raise_error(
                 RuntimeError, 'Mismatch between number of parameters and model size.')
-        pdf = K.np.zeros(shape=(len(x), len(self.hamiltonian)))
+        pdf = K.qnp.zeros(shape=(len(x), len(self.hamiltonian)), dtype='DTYPE')
         for i, x_value in enumerate(x):
             params = self.rotation(parameters, x_value)
             self.circuit.set_parameters(params)
