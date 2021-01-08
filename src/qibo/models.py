@@ -109,7 +109,6 @@ def _DistributedQFT(nqubits: int,
                     accelerators: Optional[Dict[str, int]] = None,
                     memory_device: str = "/CPU:0") -> DistributedCircuit:
     """QFT with the order of gates optimized for reduced multi-device communication."""
-    import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits, accelerators, memory_device)
@@ -385,7 +384,6 @@ class QAOA(object):
             from qibo import K
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()
 
         result, parameters = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
