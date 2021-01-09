@@ -102,6 +102,8 @@ class AbstractCircuit(ABC):
         self.density_matrix = False
         self.repeated_execution = False
 
+        self.param_tensor_types = (None.__class__,)
+
     def __add__(self, circuit):
         """Add circuits.
 
@@ -553,6 +555,8 @@ class AbstractCircuit(ABC):
         """
         if isinstance(parameters, (list, tuple)):
             self._set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, self.param_tensor_types):
+            self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
                 raise_error(TypeError, "Cannot accept new parameters as dictionary "
@@ -588,19 +592,24 @@ class AbstractCircuit(ABC):
             parametrized_gates = self.parametrized_gates
         else:
             parametrized_gates = self.trainable_gates
-        if format == "list":
-            return [gate.parameters for gate in parametrized_gates]
-        elif format == "dict":
-            return {gate: gate.parameters for gate in parametrized_gates}
-        elif format == "flatlist":
-            return self._get_parameters_flatlist(parametrized_gates)
-        else:
-            raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
-    @abstractmethod
-    def _get_parameters_flatlist(self, parametrized_gates): # pragma: no cover
-        raise_error(NotImplementedError, "Flat list format not available "
-                                         "in the abstract circuit.")
+        if format == "list":
+            params = [gate.parameters for gate in parametrized_gates]
+        elif format == "dict":
+            params = {gate: gate.parameters for gate in parametrized_gates}
+        elif format == "flatlist":
+            params = []
+            for gate in parametrized_gates:
+                if isinstance(gate.parameters, self.param_tensor_types):
+                    params.extend((p for p in gate.parameters))
+                elif isinstance(gate.parameters, collections.abc.Iterable):
+                    params.extend(gate.parameters)
+                else:
+                    params.append(gate.parameters)
+        else:
+            raise_error(ValueError, "Unknown format {} given in "
+                                    "``get_parameters``.".format(format))
+        return params
 
     def summary(self) -> str:
         """Generates a summary of the circuit.

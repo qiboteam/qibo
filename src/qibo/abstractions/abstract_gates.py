@@ -42,6 +42,7 @@ class Gate:
         self._nstates = None
         config.ALLOW_SWITCHERS = False
 
+        self.is_prepared = False
         # Using density matrices or state vectors
         self._density_matrix = False
         self._active_call = "state_vector_call"
@@ -337,7 +338,6 @@ class BaseBackendGate(Gate, ABC):
     def __init__(self):
         Gate.__init__(self)
         self._unitary = None
-        self.is_prepared = False
         # Cast gate matrices to the proper device
         self.device = get_device()
         # Reference to copies of this gate that are casted in devices when

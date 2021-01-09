@@ -46,7 +46,7 @@ class Circuit(circuit.AbstractCircuit):
         gate.nqubits = self.nqubits
         gate.prepare()
 
-    def _fuse_copy(self) -> "BaseCircuit":
+    def _fuse_copy(self):
         """Helper method for ``circuit.fuse``.
 
         For standard (non-distributed) circuits this creates a copy of the
@@ -54,7 +54,7 @@ class Circuit(circuit.AbstractCircuit):
         For distributed circuits a fully deep copy should be created.
         """
         import copy
-        from qibo.base.abstract_gates import ParametrizedGate
+        from qibo.abstractions.abstract_gates import ParametrizedGate
         new_circuit = self.__class__(**self.init_kwargs)
         for gate in self.queue:
             if isinstance(gate, ParametrizedGate):
@@ -70,36 +70,6 @@ class Circuit(circuit.AbstractCircuit):
                 new_circuit.queue.append(gate)
         new_circuit.measurement_gate = copy.copy(self.measurement_gate)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        return new_circuit
-
-    def fuse(self):
-        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
-
-        Returns:
-            The equivalent ``Circuit`` object where the gates are fused.
-
-        Example:
-            ::
-
-                from qibo import models, gates
-                c = models.Circuit(2)
-                c.add([gates.H(0), gates.H(1)])
-                c.add(gates.CNOT(0, 1))
-                c.add([gates.Y(0), gates.Y(1)])
-                # create circuit with fused gates
-                fused_c = c.fuse()
-                # now ``fused_c`` contains only one ``gates.Unitary`` gate
-                # that is equivalent to applying the five gates of the original
-                # circuit.
-        """
-        from qibo.base.circuit import _Queue
-        new_circuit = self._fuse_copy()
-        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
-            new_circuit.queue)
-        new_circuit.queue = _Queue(self.nqubits)
-        for group in new_circuit.fusion_groups:
-            for gate in group.gates:
-                new_circuit.queue.append(gate)
         return new_circuit
 
     def _fuse_copy(self):
@@ -148,11 +118,14 @@ class Circuit(circuit.AbstractCircuit):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
+        from qibo.abstractions.circuit import _Queue
         new_circuit = self._fuse_copy()
         new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
             new_circuit.queue)
-        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
-                                 for gate in group.gates)
+        new_circuit.queue = _Queue(self.nqubits)
+        for group in new_circuit.fusion_groups:
+            for gate in group.gates:
+                new_circuit.queue.append(gate)
         return new_circuit
 
     def _eager_execute(self, state):
