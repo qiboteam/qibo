@@ -14,7 +14,7 @@ class Gate:
     Attributes:
         name (str): Name of the gate.
         is_controlled_by (bool): ``True`` if the gate was created using the
-            :meth:`qibo.base.abstract_gates.Gate.controlled_by` method,
+            :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
             otherwise ``False``.
         init_args (list): Arguments used to initialize the gate.
         init_kwargs (dict): Arguments used to initialize the gate.
@@ -26,7 +26,7 @@ class Gate:
         density_matrix (bool): Controls if the gate acts on state vectors or
             density matrices.
     """
-    from qibo.base import gates as module
+    from qibo.abstractions import gates as module
 
     def __init__(self):
         self.name = None

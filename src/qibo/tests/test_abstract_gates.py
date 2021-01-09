@@ -1,10 +1,10 @@
 import pytest
-from qibo.base import gates
+from qibo.abstractions import gates
 
 # Gate methods not tested here because they require a calculation backend:
 # * dagger
 # * parameter getter and setters
-# * all methods of :class:`qibo.base.abstract_gates.BackendGate`
+# * all methods of :class:`qibo.abstractions.abstract_gates.BackendGate`
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "I"])
 def test_one_qubit_gates_init(gatename):
@@ -152,7 +152,7 @@ def test_cnot_and_cz_init():
     assert gate.target_qubits == (2,)
     assert gate.control_qubits == (3,)
 
-# :meth:`qibo.base.gates.CNOT.decompose` is tested in
+# :meth:`qibo.abstractions.gates.CNOT.decompose` is tested in
 # ``test_x_decompose_with_cirq`` above
 
 @pytest.mark.parametrize("gatename,params",
@@ -189,8 +189,8 @@ def test_toffoli_init():
     assert gate.target_qubits == (1,)
     assert gate.control_qubits == (0, 2)
 
-# :meth:`qibo.base.gates.TOFFOLI.decompose` and
-# :meth:`qibo.base.gates.TOFFOLI.congruent` are tested in
+# :meth:`qibo.abstractions.gates.TOFFOLI.decompose` and
+# :meth:`qibo.abstractions.gates.TOFFOLI.congruent` are tested in
 # `test_x_decompose_with_cirq`
 
 @pytest.mark.parametrize("targets", [(0,), (2, 0), (1, 3, 2)])
@@ -229,7 +229,7 @@ def test_flatten():
 
 
 def test_callbackgate():
-    # TODO: Complete this test once you create `qibo.base.callbacks`
+    # TODO: Complete this test once you create `qibo.abstractions.callbacks`
     pass
 
 
@@ -285,7 +285,7 @@ def test_reset_channel_init():
 # TODO: Add thermal relaxation channel init test
 
 def test_qubit_getter_and_setter():
-    from qibo.base import abstract_gates
+    from qibo.abstractions import abstract_gates
     gate = abstract_gates.Gate()
     gate.target_qubits = (0, 3)
     gate.control_qubits = (1, 4, 2)
@@ -304,7 +304,7 @@ def test_qubit_getter_and_setter():
 
 
 def test_nqubits_getter_and_setter():
-    from qibo.base import abstract_gates
+    from qibo.abstractions import abstract_gates
     gate = abstract_gates.Gate()
     gate.target_qubits = (0, 1)
     gate.control_qubits = (2,)
@@ -314,7 +314,7 @@ def test_nqubits_getter_and_setter():
 
 
 def test_density_matrix_getter_and_setter():
-    from qibo.base import abstract_gates
+    from qibo.abstractions import abstract_gates
     gate = abstract_gates.Gate()
     gate.target_qubits = (0, 1)
     gate.control_qubits = (2,)
@@ -361,7 +361,7 @@ def test_decompose():
 
 
 def test_special_gate():
-    from qibo.base import abstract_gates
+    from qibo.abstractions import abstract_gates
     gate = abstract_gates.SpecialGate()
     assert not gate.commutes(gates.H(0))
     with pytest.raises(NotImplementedError):

@@ -1,12 +1,12 @@
 import pytest
-from qibo.base import gates
+from qibo.abstractions import gates
 from qibo.config import raise_error
-from qibo.base.circuit import BaseCircuit
+from qibo.abstractions.circuit import AbstractCircuit
 
 # TODO: Move all commented tests in core circuit tests
 
 
-class Circuit(BaseCircuit): # pragma: no-cover
+class Circuit(AbstractCircuit): # pragma: no-cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
     def fuse(self):
@@ -21,7 +21,7 @@ class Circuit(BaseCircuit): # pragma: no-cover
 
 
 def test_parametrizedgates_class():
-    from qibo.base.circuit import _ParametrizedGates
+    from qibo.abstractions.circuit import _ParametrizedGates
     paramgates = _ParametrizedGates()
     paramgates.append(gates.RX(0, 0.1234))
     paramgates.append(gates.fSim(0, 1, 0.1234, 0.4321))
@@ -30,7 +30,7 @@ def test_parametrizedgates_class():
 
 
 def test_queue_class():
-    from qibo.base.circuit import _Queue
+    from qibo.abstractions.circuit import _Queue
     queue = _Queue(4)
     gatelist = [gates.H(0), gates.H(1), gates.X(0),
                 gates.H(2), gates.CNOT(1, 2), gates.Y(3)]
