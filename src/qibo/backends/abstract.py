@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
+_AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
+                       "numpy_defaulteinsum", "numpy_matmuleinsum"]
 
-class BaseBackend(ABC):
+
+class AbstractBackend(ABC):
 
     base_methods = {"assign", "set_gates", "dtypes",
-                    "set_precision", "set_device"}
+                    "set_precision"}
 
     def __init__(self):
         self.backend = None
@@ -33,11 +36,15 @@ class BaseBackend(ABC):
         self.optimization = None
         self.op = None
 
+    def __str__(self):
+        return self.name
+
     def assign(self, backend):
         """Assigns backend's methods."""
         for method in dir(backend):
             if method[:2] != "__" and method not in self.base_methods:
                 setattr(self, method, getattr(backend, method))
+        self.name = backend.name
         self.matrices = backend.matrices
         self.numeric_types = backend.numeric_types
         self.tensor_types = backend.tensor_types
@@ -58,7 +65,7 @@ class BaseBackend(ABC):
         elif name == 'matmuleinsum':
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
-        else:
+        else: # pragma: no cover
             raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
         self.gates = name
 
@@ -77,7 +84,7 @@ class BaseBackend(ABC):
             self._dtypes['DTYPE'] = 'float64'
             self._dtypes['DTYPECPX'] = 'complex128'
         else:
-            raise_error(RuntimeError, f'dtype {dtype} not supported.')
+            raise_error(ValueError, f'dtype {dtype} not supported.')
         self.precision = dtype
         if self.matrices is not None:
             self.matrices.dtype = self.dtypes('DTYPECPX')
@@ -86,7 +93,7 @@ class BaseBackend(ABC):
         parts = name[1:].split(":")
         if name[0] != "/" or len(parts) < 2 or len(parts) > 3:
             raise_error(ValueError, "Device name should follow the pattern: "
-                             "/{device type}:{device number}.")
+                                    "/{device type}:{device number}.")
         device_type, device_number = parts[-2], int(parts[-1])
         if device_type == "CPU":
             ndevices = len(self.cpu_devices)

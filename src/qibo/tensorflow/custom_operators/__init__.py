@@ -1,8 +1,9 @@
 """TensorFlow custom operator for Tensor initial state."""
-from qibo.config import BACKEND_NAME, raise_error
+from qibo.config import log
 
 
-if BACKEND_NAME == "tensorflow":
+try:
+    import tensorflow as tf
     from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import initial_state
     from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import transpose_state
     from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import swap_pieces
@@ -18,7 +19,6 @@ if BACKEND_NAME == "tensorflow":
     # Import gradients
     from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
 
-else: # pragma: no cover
+except ModuleNotFoundError: # pragma: no cover
     # case not tested because CI has tf installed
-    raise_error(RuntimeError, "Custom operators are not available for the "
-                              "{} backend.".format(BACKEND_NAME))
+    log.warning("Tensorflow is not installed. Skipping custom operators load.")

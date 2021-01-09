@@ -1,5 +1,5 @@
-from qibo.backends import base
-from qibo.config import raise_error
+from qibo.backends import abstract
+from qibo.config import raise_error, log
 
 
 class DummyModule:
@@ -21,7 +21,7 @@ class DummyModule:
         pass
 
 
-class NumpyBackend(base.BaseBackend):
+class NumpyBackend(abstract.AbstractBackend):
 
     def __init__(self):
         super().__init__()
@@ -42,6 +42,10 @@ class NumpyBackend(base.BaseBackend):
         self.oom_error = MemoryError
         self.optimization = DummyModule()
         self.op = DummyModule("apply_gate")
+
+    def set_device(self, name): # pragma: no cover
+        log.warning("Numpy does not support device placement. "
+                    "Aborting device change.")
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):

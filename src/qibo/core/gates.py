@@ -3,8 +3,8 @@
 import math
 import sys
 from qibo import K
-from qibo.base import gates
-from qibo.base.abstract_gates import BaseBackendGate, ParametrizedGate
+from qibo.abstractions import gates
+from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.core import cgates
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple
@@ -292,7 +292,7 @@ class CNOT(BackendGate, gates.CNOT):
         gates.CNOT.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        return K.reshape(K.matrices.CNOT, (4, 4))
+        return K.matrices.CNOT
 
 
 class CZ(BackendGate, gates.CZ):
@@ -302,8 +302,7 @@ class CZ(BackendGate, gates.CZ):
         gates.CZ.__init__(self, q0, q1)
 
     def construct_unitary(self):
-        diag = K.cast(K.concatenate([K.ones(3), [-1]], axis=0))
-        return K.diag(diag)
+        return K.matrices.CZ
 
 
 class _CUn_(BackendGate):
@@ -402,7 +401,7 @@ class TOFFOLI(BackendGate, gates.TOFFOLI):
         gates.TOFFOLI.__init__(self, q0, q1, q2)
 
     def construct_unitary(self):
-        return K.reshape(K.matrices.TOFFOLI, (8, 8))
+        return K.matrices.TOFFOLI
 
     @property
     def unitary(self):

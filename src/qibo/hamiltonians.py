@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
-from qibo import matrices
-from qibo import numpy as qnp
+from qibo import matrices, K
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
 
@@ -26,8 +25,8 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
 
     Example:
         ::
@@ -36,9 +35,9 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
             h = XXZ(3) # initialized XXZ model with 3 qubits
     """
     if trotter:
-        hx = qnp.kron(matrices.X, matrices.X)
-        hy = qnp.kron(matrices.Y, matrices.Y)
-        hz = qnp.kron(matrices.Z, matrices.Z)
+        hx = K.np.kron(matrices.X, matrices.X)
+        hy = K.np.kron(matrices.Y, matrices.Y)
+        hz = K.np.kron(matrices.Z, matrices.Z)
         term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
         terms = {(i, i + 1): term for i in range(nqubits - 1)}
         terms[(nqubits - 1, 0)] = term
@@ -77,8 +76,8 @@ def X(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     from qibo import K
     def ground_state():
@@ -100,8 +99,8 @@ def Y(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Y, numpy, trotter)
 
@@ -118,8 +117,8 @@ def Z(nqubits, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     return _OneBodyPauli(nqubits, matrices.Z, numpy, trotter)
 
@@ -137,12 +136,12 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
         trotter (bool): If ``True`` it creates the Hamiltonian as a
-            :class:`qibo.base.hamiltonians.TrotterHamiltonian` object, otherwise
-            it creates a :class:`qibo.base.hamiltonians.Hamiltonian` object.
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     if trotter:
-        term_matrix = -qnp.kron(matrices.Z, matrices.Z)
-        term_matrix -= h * qnp.kron(matrices.X, matrices.I)
+        term_matrix = - K.np.kron(matrices.Z, matrices.Z)
+        term_matrix -= h * K.np.kron(matrices.X, matrices.I)
         term = Hamiltonian(2, term_matrix, numpy=True)
         terms = {(i, i + 1): term for i in range(nqubits - 1)}
         terms[(nqubits - 1, 0)] = term

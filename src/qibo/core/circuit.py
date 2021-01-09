@@ -2,14 +2,14 @@
 # @authors: S. Efthymiou
 import collections
 from qibo import K
-from qibo.base import circuit
+from qibo.abstractions import circuit
 from qibo.config import raise_error
 from qibo.core import measurements
 from typing import List, Tuple
 
 
-class Circuit(circuit.BaseCircuit):
-    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
+class Circuit(circuit.AbstractCircuit):
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using state vectors.
 
@@ -100,6 +100,59 @@ class Circuit(circuit.BaseCircuit):
         for group in new_circuit.fusion_groups:
             for gate in group.gates:
                 new_circuit.queue.append(gate)
+        return new_circuit
+
+    def _fuse_copy(self):
+        """Helper method for :meth:`qibo.core.circuit.Circuit.fuse``.
+
+        For standard (non-distributed) circuits this creates a copy of the
+        circuit with deep-copying the parametrized gates only.
+        For distributed circuits a fully deep copy should be created.
+        """
+        import copy
+        from qibo.abstractions.abstract_gates import ParametrizedGate
+        new_circuit = self.__class__(**self.init_kwargs)
+        for gate in self.queue:
+            if isinstance(gate, ParametrizedGate):
+                if gate.trainable:
+                    new_gate = copy.copy(gate)
+                    new_circuit.queue.append(new_gate)
+                    new_circuit.parametrized_gates.append(new_gate)
+                    new_circuit.trainable_gates.append(new_gate)
+                else:
+                    new_circuit.queue.append(gate)
+                    new_circuit.parametrized_gates.append(gate)
+            else:
+                new_circuit.queue.append(gate)
+        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
+    def fuse(self):
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
+        new_circuit = self._fuse_copy()
+        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
+            new_circuit.queue)
+        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
+                                 for gate in group.gates)
         return new_circuit
 
     def _eager_execute(self, state):
@@ -200,7 +253,7 @@ class Circuit(circuit.BaseCircuit):
         If the circuit is created with the ``density_matrix = True`` flag and
         contains channels, then density matrices will be used instead of
         repeated execution.
-        Note that some channels (:class:`qibo.base.gates.KrausChannel`) can
+        Note that some channels (:class:`qibo.abstractions.gates.KrausChannel`) can
         only be simulated using density matrices and not repeated execution.
         For more details on noise simulation with and without density matrices
         we refer to :ref:`How to perform noisy simulation? <noisy-example>`
@@ -216,7 +269,7 @@ class Circuit(circuit.BaseCircuit):
 
         Returns:
             If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.base.measurements.CircuitResult` object that contains the measured bitstrings.
+                A :class:`qibo.core.measurements.CircuitResult` object that contains the measured bitstrings.
             If ``nshots`` is ``None`` or the circuit does not contain measurements.
                 The final state vector as a tensor of shape ``(2 ** nqubits,)``.
         """
@@ -266,7 +319,7 @@ class Circuit(circuit.BaseCircuit):
 
 
 class DensityMatrixCircuit(Circuit):
-    """Backend implementation of :class:`qibo.base.circuit.BaseCircuit`.
+    """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
     Performs simulation using density matrices. Can be initialized using the
     ``density_matrix=True`` flag and supports the use of channels.

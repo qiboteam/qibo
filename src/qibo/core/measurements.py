@@ -3,7 +3,7 @@
 import collections
 from qibo import K
 from qibo.config import raise_error
-from qibo.base.gates import M
+from qibo.abstractions.gates import M
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
@@ -119,7 +119,7 @@ class GateResult:
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.base.measurements.GateResult` object that holds
+            A new :class:`qibo.core.measurements.GateResult` object that holds
             the noisy samples.
         """
         if p1 is None:
@@ -152,7 +152,7 @@ class CircuitResult:
     Args:
         register_qubits: Dictionary that maps register names to the
             corresponding tuples of qubit ids. This is created in the
-            `measurement_tuples` variable of :class:`qibo.base.circuit.BaseCircuit`.
+            `measurement_tuples` variable of :class:`qibo.abstractions.circuit.AbstractCircuit`.
         measurement_gate_result: The `GateResult` resulting from the circuit's
             global measurement gate.
     """
@@ -258,7 +258,7 @@ class CircuitResult:
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.base.measurements.CircuitResult` object that
+            A new :class:`qibo.core.measurements.CircuitResult` object that
             holds the noisy samples.
         """
         noisy_result = self.result.apply_bitflips(p0, p1)

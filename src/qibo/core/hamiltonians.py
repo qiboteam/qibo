@@ -1,12 +1,11 @@
 import itertools
 from qibo import K
-from qibo import numpy as qnp
 from qibo.config import log, raise_error, EINSUM_CHARS
-from qibo.base import hamiltonians
+from qibo.abstractions import hamiltonians
 
 
 class Hamiltonian(hamiltonians.Hamiltonian):
-    """Backend implementation of :class:`qibo.base.hamiltonians.Hamiltonian`."""
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
 
     def __new__(cls, nqubits, matrix, numpy=False):
         if not isinstance(matrix, K.tensor_types):
@@ -116,12 +115,12 @@ class Hamiltonian(hamiltonians.Hamiltonian):
             new_matrix = self.matrix * o
             r = self.__class__(self.nqubits, new_matrix)
             if self._eigenvalues is not None:
-                if qnp.cast(o).real >= 0:
+                if K.qnp.cast(o).real >= 0:
                     r._eigenvalues = o * self._eigenvalues
                 else:
                     r._eigenvalues = o * self._eigenvalues[::-1]
             if self._eigenvectors is not None:
-                if qnp.cast(o).real > 0:
+                if K.qnp.cast(o).real > 0:
                     r._eigenvectors = self._eigenvectors
                 elif o == 0:
                     r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
@@ -156,8 +155,7 @@ class NumpyHamiltonian(Hamiltonian):
 
     def __init__(self, nqubits, matrix, numpy=True):
         assert numpy
-        from qibo import numpy as bk
-        self.K = bk
+        self.K = K.qnp
         hamiltonians.Hamiltonian.__init__(self, nqubits, self.K.cast(matrix),
                                           numpy=numpy)
 
@@ -168,12 +166,12 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def multikron(matrix_list):
         h = 1
         for m in matrix_list:
-            h = qnp.kron(h, m)
+            h = K.np.kron(h, m)
         return h
 
     def dense_matrix(self):
         matrix = sum(self.full_matrices())
-        eye = qnp.eye(matrix.shape[0], dtype=matrix.dtype)
+        eye = K.np.eye(matrix.shape[0], dtype=matrix.dtype)
         return matrix + self.constant * eye
 
     def reduce_pairs(self, pair_sets, pair_map, free_targets):
@@ -256,15 +254,15 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             else:
                 c, m1, m2 = self.terms[pair]
                 pair = (pair[1], pair[0])
-                matrix = c * qnp.kron(m2, m1)
-            eye = qnp.eye(2, dtype=matrix.dtype)
-            merged[pair] = qnp.kron(one_qubit[target], eye) + matrix
+                matrix = c * K.np.kron(m2, m1)
+            eye = K.np.eye(2, dtype=matrix.dtype)
+            merged[pair] = K.np.kron(one_qubit[target], eye) + matrix
         merged.update(two_qubit)
         return merged
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
-    """Backend implementation of :class:`qibo.base.hamiltonians.TrotterHamiltonian`."""
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`."""
 
     def __init__(self, *parts, ground_state=None):
         self.K = K
@@ -275,7 +273,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         """Helper method for `from_symbolic`.
 
         Constructs the term dictionary by using the same
-        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        :class:`qibo.abstractions.hamiltonians.Hamiltonian` object for terms that
         have equal matrix representation. This is done for efficiency during
         the exponentiation of terms.
 
@@ -293,7 +291,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         for targets, matrix in terms.items():
             flag = True
             for m, h in unique_matrices:
-                if qnp.array_equal(matrix, m):
+                if K.np.array_equal(matrix, m):
                     ham = h
                     flag = False
                     break
@@ -339,9 +337,9 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         new_terms = {}
         for targets, matrices in term_matrices.items():
             n = len(targets)
-            s = qnp.zeros(2 * (2 ** n,), dtype=self.dtype)
+            s = K.np.zeros(2 * (2 ** n,), dtype=self.dtype)
             for i, (t, m) in enumerate(zip(targets, matrices)):
-                matlist = n * [qnp.eye(2, dtype=self.dtype)]
+                matlist = n * [K.np.eye(2, dtype=self.dtype)]
                 if m is not None:
                     matlist[i] = m / normalizer[t]
                     s += SymbolicHamiltonian.multikron(matlist)
@@ -356,16 +354,16 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
-        matrix = qnp.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
+        matrix = K.np.zeros(2 * self.nqubits * (2,), dtype=self.dtype)
         chars = EINSUM_CHARS[:2 * self.nqubits]
         for targets, term in self:
             tmat = term.matrix.reshape(2 * term.nqubits * (2,))
             n = self.nqubits - len(targets)
-            emat = qnp.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
+            emat = K.np.eye(2 ** n, dtype=self.dtype).reshape(2 * n * (2,))
             gen = lambda x: (chars[i + x] for i in targets)
             tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
             ec = "".join((c for c in chars if c not in tc))
-            matrix += qnp.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+            matrix += K.np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         return matrix.reshape(2 * (2 ** self.nqubits,))
 
     def expectation(self, state, normalize=False):

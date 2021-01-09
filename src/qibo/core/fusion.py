@@ -2,7 +2,7 @@ import functools
 import operator
 from qibo import K, gates
 from qibo.config import raise_error
-from qibo.base.abstract_gates import ParametrizedGate
+from qibo.abstractions.abstract_gates import ParametrizedGate
 from typing import List, Optional, Set, Tuple
 
 
@@ -48,10 +48,8 @@ class FusionGroup:
         self.completed = False
         self.special_gate = None
         self._fused_gates = None
-
         if K.custom_gates:
-            from qibo import numpy as qnp
-            self.K = qnp
+            self.K = K.np
         else:
             self.K = K
 

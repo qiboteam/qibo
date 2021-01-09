@@ -1,6 +1,6 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
-from qibo.base import hamiltonians
+from qibo.abstractions import hamiltonians
 from qibo.core import circuit
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
@@ -10,7 +10,7 @@ class StateEvolution:
     """Unitary time evolution of a state vector under a Hamiltonian.
 
     Args:
-        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Hamiltonian
             to evolve under.
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
@@ -141,8 +141,8 @@ class AdiabaticEvolution(StateEvolution):
         H(t) = (1 - s(t)) H_0 + s(t) H_1
 
     Args:
-        h0 (:class:`qibo.base.hamiltonians.Hamiltonian`): Easy Hamiltonian.
-        h1 (:class:`qibo.base.hamiltonians.Hamiltonian`): Problem Hamiltonian.
+        h0 (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Easy Hamiltonian.
+        h1 (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Problem Hamiltonian.
             These Hamiltonians should be time-independent.
         s (callable): Function of time that defines the scheduling of the
             adiabatic evolution. Can be either a function of time s(t) or a
@@ -257,7 +257,7 @@ class AdiabaticEvolution(StateEvolution):
                 executing the model.
 
         Returns:
-            A :class:`qibo.base.hamiltonians.Hamiltonian` object representing
+            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object representing
             the adiabatic evolution Hamiltonian at time ``t``.
         """
         if total_time is not None:

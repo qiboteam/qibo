@@ -109,7 +109,6 @@ def _DistributedQFT(nqubits: int,
                     accelerators: Optional[Dict[str, int]] = None,
                     memory_device: str = "/CPU:0") -> DistributedCircuit:
     """QFT with the order of gates optimized for reduced multi-device communication."""
-    import numpy as np
     from qibo import gates
 
     circuit = Circuit(nqubits, accelerators, memory_device)
@@ -140,7 +139,7 @@ class VQE(object):
     """This class implements the variational quantum eigensolver algorithm.
 
     Args:
-        circuit (:class:`qibo.base.circuit.BaseCircuit`): Circuit that
+        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): Circuit that
             implements the variaional ansatz.
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object.
 
@@ -221,9 +220,9 @@ class QAOA(object):
     The QAOA is introduced in `arXiv:1411.4028 <https://arxiv.org/abs/1411.4028>`_.
 
     Args:
-        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): problem Hamiltonian
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
             whose ground state is sought.
-        mixer (:class:`qibo.base.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
             If ``None``, :class:`qibo.hamiltonians.X` is used.
         solver (str): solver used to apply the exponential operators.
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
@@ -231,7 +230,7 @@ class QAOA(object):
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
@@ -251,7 +250,7 @@ class QAOA(object):
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers, K
-    from qibo.base.hamiltonians import HAMILTONIAN_TYPES
+    from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
@@ -385,7 +384,6 @@ class QAOA(object):
             from qibo import K
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            import numpy as np
             loss = lambda p, c, h: _loss(p, c, h).numpy()
 
         result, parameters = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),

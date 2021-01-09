@@ -53,7 +53,7 @@ class Hamiltonian(ABC):
                 Default option is ``numpy = False``.
 
         Returns:
-            A :class:`qibo.base.hamiltonians.Hamiltonian` object that
+            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
         from qibo.hamiltonians import SymbolicHamiltonian as scls
@@ -141,11 +141,11 @@ class SymbolicHamiltonian(ABC):
 
     This class should not be used by users.
     It is used internally to help creating
-    :class:`qibo.base.hamiltonians.Hamiltonian` and
-    :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects for Hamiltonians
+    :class:`qibo.abstractions.hamiltonians.Hamiltonian` and
+    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` objects for Hamiltonians
     defined using symbols. For more information we refer to the
-    :meth:`qibo.base.hamiltonians.Hamiltonian.from_symbolic`
-    and :meth:`qibo.base.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
+    :meth:`qibo.abstractions.hamiltonians.Hamiltonian.from_symbolic`
+    and :meth:`qibo.abstractions.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
 
     Args:
         symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written with
@@ -267,7 +267,7 @@ class SymbolicHamiltonian(ABC):
     def dense_matrix(self): # pragma: no cover
         """Creates the full Hamiltonian matrix.
 
-        Useful for creating :class:`qibo.base.hamiltonians.Hamiltonian`
+        Useful for creating :class:`qibo.abstractions.hamiltonians.Hamiltonian`
         object equivalent to the given symbolic Hamiltonian.
 
         Returns:
@@ -296,7 +296,7 @@ class SymbolicHamiltonian(ABC):
     def trotter_terms(self):
         """Creates a dictionary of targets and matrices.
 
-        Useful for creating :class:`qibo.base.hamiltonians.TrotterHamiltonian`
+        Useful for creating :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`
         objects.
 
         Returns:
@@ -318,7 +318,7 @@ class TrotterHamiltonian(Hamiltonian):
 
     Args:
         *parts (dict): Dictionary whose values are
-            :class:`qibo.base.hamiltonians.Hamiltonian` objects representing
+            :class:`qibo.abstractions.hamiltonians.Hamiltonian` objects representing
             the h operators of Eq. (58) in the reference. The keys of the
             dictionary are tuples of qubit ids (int) that represent the targets
             of each h term.
@@ -430,11 +430,11 @@ class TrotterHamiltonian(Hamiltonian):
                 the Hamiltonian to a pair of (target, matrix).
             ground_state (Callable): Optional callable with no arguments that
                 returns the ground state of this ``TrotterHamiltonian``.
-                See :class:`qibo.base.hamiltonians.TrotterHamiltonian` for more
+                See :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` for more
                 details.
 
         Returns:
-            A :class:`qibo.base.hamiltonians.TrotterHamiltonian` object that
+            A :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
         from qibo.hamiltonians import SymbolicHamiltonian as scls
@@ -448,7 +448,7 @@ class TrotterHamiltonian(Hamiltonian):
         """Helper method for `from_symbolic`.
 
         Constructs the term dictionary by using the same
-        :class:`qibo.base.hamiltonians.Hamiltonian` object for terms that
+        :class:`qibo.abstractions.hamiltonians.Hamiltonian` object for terms that
         have equal matrix representation. This is done for efficiency during
         the exponentiation of terms.
 
@@ -468,7 +468,7 @@ class TrotterHamiltonian(Hamiltonian):
 
         Each qubit should not appear in more that one terms in each
         part to ensure commutation relations in the definition of
-        :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+        :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
 
         Args:
             terms (dict): Dictionary that maps tuples of targets to the matrix
@@ -499,7 +499,7 @@ class TrotterHamiltonian(Hamiltonian):
 
         By part structure we mean that the target keys of the dictionaries
         contained in the ``self.parts`` list are the same for both Hamiltonians.
-        Two :class:`qibo.base.hamiltonians.TrotterHamiltonian` objects can be
+        Two :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` objects can be
         added only when they are compatible (have the same part structure).
         When using Trotter decomposition to simulate adiabatic evolution then
         ``h0`` and ``h1`` should be compatible.
@@ -524,7 +524,7 @@ class TrotterHamiltonian(Hamiltonian):
     def make_compatible(self, o): # pragma: no cover
         """Makes given ``TrotterHamiltonian`` compatible to the current one.
 
-        See :meth:`qibo.base.hamiltonians.TrotterHamiltonian.is_compatible` for
+        See :meth:`qibo.abstractions.hamiltonians.TrotterHamiltonian.is_compatible` for
         more details on how compatibility is defined in this context.
         The current method will be used automatically by
         :class:`qibo.evolution.AdiabaticEvolution` to make the ``h0`` and ``h1``
@@ -538,7 +538,7 @@ class TrotterHamiltonian(Hamiltonian):
                Should be non-interacting (contain only one-qubit terms).
 
         Returns:
-            A new :class:`qibo.base.hamiltonians.TrotterHamiltonian` object
+            A new :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object
             that is equivalent to ``o`` but has the same part structure as
             ``self``.
         """
@@ -553,7 +553,7 @@ class TrotterHamiltonian(Hamiltonian):
         """Creates an equivalent Hamiltonian model that holds the full matrix.
 
         Returns:
-            A :class:`qibo.base.hamiltonians.Hamiltonian` object that is
+            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that is
             equivalent to this local Hamiltonian.
         """
         if self._dense is None:
@@ -651,7 +651,7 @@ class TrotterHamiltonian(Hamiltonian):
             dt (float): Time step to use for Trotterization.
 
         Returns:
-            :class:`qibo.base.circuit.BaseCircuit` that implements a single
+            :class:`qibo.abstractions.circuit.AbstractCircuit` that implements a single
             time step of the second order Trotterized evolution.
         """
         if self._circuit is None:
@@ -692,7 +692,7 @@ class TrotterHamiltonian(Hamiltonian):
 
         Args:
             op (str): String that defines the operation, such as '__add__'.
-            o (:class:`qibo.base.hamiltonians.TrotterHamiltonian`): Other local
+            o (:class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`): Other local
                 Hamiltonian to perform the operation.
         """
         if len(self.parts) != len(o.parts):

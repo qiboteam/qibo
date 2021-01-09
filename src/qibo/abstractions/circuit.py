@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 import collections
 from abc import ABC, abstractmethod
-from qibo.base import gates
+from qibo.abstractions import gates
 from qibo import gates as gate_module
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Tuple, Union
@@ -55,12 +55,12 @@ class _Queue(list):
             self.moment_index[q] = idx + 1
 
 
-class BaseCircuit(ABC):
+class AbstractCircuit(ABC):
     """Circuit object which holds a list of gates.
 
     This circuit is symbolic and cannot perform calculations.
     A specific backend has to be used for performing calculations.
-    All backend-based circuits should inherit ``BaseCircuit``.
+    All backend-based circuits should inherit ``AbstractCircuit``.
 
     Qibo provides the following circuits:
     A state vector simulation circuit:
@@ -102,6 +102,7 @@ class BaseCircuit(ABC):
         self.density_matrix = False
         self.repeated_execution = False
 
+<<<<<<< HEAD:src/qibo/base/circuit.py
         self.param_tensor_types = (None.__class__,)
 
     def add(self, gate):
@@ -288,6 +289,9 @@ class BaseCircuit(ABC):
         return "\n".join(logs)
 
     def __add__(self, circuit) -> "BaseCircuit":
+=======
+    def __add__(self, circuit):
+>>>>>>> master:src/qibo/abstractions/circuit.py
         """Add circuits.
 
         Args:
@@ -365,7 +369,7 @@ class BaseCircuit(ABC):
         for gate in self.queue:
             yield gate.on_qubits(*(q[i] for i in gate.qubits))
 
-    def copy(self, deep: bool = False) -> "BaseCircuit":
+    def copy(self, deep: bool = False):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
         Args:
@@ -400,7 +404,7 @@ class BaseCircuit(ABC):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
-    def invert(self) -> "BaseCircuit":
+    def invert(self):
         """Creates a new ``Circuit`` that is the inverse of the original.
 
         Inversion is obtained by taking the dagger of all gates in reverse order.
@@ -418,6 +422,7 @@ class BaseCircuit(ABC):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
+<<<<<<< HEAD:src/qibo/base/circuit.py
     def decompose(self, *free: int) -> "BaseCircuit":
         """Decomposes circuit's gates to gates supported by OpenQASM.
 
@@ -437,6 +442,8 @@ class BaseCircuit(ABC):
         decomp_circuit.measurement_gate = self.measurement_gate
         return decomp_circuit
 
+=======
+>>>>>>> master:src/qibo/abstractions/circuit.py
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
         if isinstance(noise_map, tuple) or isinstance(noise_map, list):
             if len(noise_map) != 3:
@@ -456,7 +463,30 @@ class BaseCircuit(ABC):
         raise_error(TypeError, "Type {} of noise map is not recognized."
                                "".format(type(noise_map)))
 
+<<<<<<< HEAD:src/qibo/base/circuit.py
     def with_noise(self, noise_map: NoiseMapType) -> "BaseCircuit":
+=======
+    def decompose(self, *free: int):
+        """Decomposes circuit's gates to gates supported by OpenQASM.
+
+        Args:
+            free: Ids of free (work) qubits to use for gate decomposition.
+
+        Returns:
+            Circuit that contains only gates that are supported by OpenQASM
+            and has the same effect as the original circuit.
+        """
+        # FIXME: This method is not completed until the ``decompose`` is
+        # implemented for all gates not supported by OpenQASM.
+        decomp_circuit = self.__class__(self.nqubits)
+        for gate in self.queue:
+            decomp_circuit.add(gate.decompose(*free))
+        decomp_circuit.measurement_tuples = dict(self.measurement_tuples)
+        decomp_circuit.measurement_gate = self.measurement_gate
+        return decomp_circuit
+
+    def with_noise(self, noise_map: NoiseMapType):
+>>>>>>> master:src/qibo/abstractions/circuit.py
         """Creates a copy of the circuit with noise gates after each gate.
 
         If the original circuit uses state vectors then noise simulation will
@@ -539,6 +569,7 @@ class BaseCircuit(ABC):
         Inverse method of :meth:`qibo.base.circuit.BaseCircuit.set_parameters`.
 
         Args:
+<<<<<<< HEAD:src/qibo/base/circuit.py
             format (str): How to return the variational parameters.
                 Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
                 See :meth:`qibo.base.circuit.BaseCircuit.set_parameters` for
@@ -546,6 +577,13 @@ class BaseCircuit(ABC):
             include_not_trainable (bool): If ``True`` it includes the parameters
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
+=======
+            gate (:class:`qibo.abstractions.gates.Gate`): the gate object to add.
+                See :ref:`Gates` for a list of available gates.
+                `gate` can also be an iterable or generator of gates.
+                In this case all gates in the iterable will be added in the
+                circuit.
+>>>>>>> master:src/qibo/abstractions/circuit.py
         """
         if include_not_trainable:
             parametrized_gates = self.parametrized_gates
@@ -644,6 +682,104 @@ class BaseCircuit(ABC):
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
 
+<<<<<<< HEAD:src/qibo/base/circuit.py
+=======
+    def get_parameters(self, format: str = "list",
+                       include_not_trainable: bool = False
+                       ) -> Union[List, Dict]: # pylint: disable=W0622
+        """Returns the parameters of all parametrized gates in the circuit.
+
+        Inverse method of :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`.
+
+        Args:
+            format (str): How to return the variational parameters.
+                Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
+                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` for
+                more details on each format. Default is ``'list'``.
+            include_not_trainable (bool): If ``True`` it includes the parameters
+                of non-trainable parametrized gates in the returned list or
+                dictionary. Default is ``False``.
+        """
+        if include_not_trainable:
+            parametrized_gates = self.parametrized_gates
+        else:
+            parametrized_gates = self.trainable_gates
+        if format == "list":
+            return [gate.parameters for gate in parametrized_gates]
+        elif format == "dict":
+            return {gate: gate.parameters for gate in parametrized_gates}
+        elif format == "flatlist":
+            return self._get_parameters_flatlist(parametrized_gates)
+        else:
+            raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
+
+    @abstractmethod
+    def _get_parameters_flatlist(self, parametrized_gates): # pragma: no cover
+        raise_error(NotImplementedError, "Flat list format not available "
+                                         "in the abstract circuit.")
+
+    def summary(self) -> str:
+        """Generates a summary of the circuit.
+
+        The summary contains the circuit depths, total number of qubits and
+        the all gates sorted in decreasing number of appearance.
+
+        Example:
+            ::
+
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(3)
+                c.add(gates.H(0))
+                c.add(gates.H(1))
+                c.add(gates.CNOT(0, 2))
+                c.add(gates.CNOT(1, 2))
+                c.add(gates.H(2))
+                c.add(gates.TOFFOLI(0, 1, 2))
+                print(c.summary())
+                # Prints
+                '''
+                Circuit depth = 5
+                Total number of gates = 7
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
+        """
+        logs = [f"Circuit depth = {self.depth}",
+                f"Total number of gates = {self.ngates}",
+                f"Number of qubits = {self.nqubits}",
+                "Most common gates:"]
+        common_gates = self.gate_types.most_common()
+        logs.extend("{}: {}".format(g, n) for g, n in common_gates)
+        return "\n".join(logs)
+
+    @abstractmethod
+    def fuse(self): # pragma: no cover
+        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+
+        Returns:
+            The equivalent ``Circuit`` object where the gates are fused.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(2)
+                c.add([gates.H(0), gates.H(1)])
+                c.add(gates.CNOT(0, 1))
+                c.add([gates.Y(0), gates.Y(1)])
+                # create circuit with fused gates
+                fused_c = c.fuse()
+                # now ``fused_c`` contains only one ``gates.Unitary`` gate
+                # that is equivalent to applying the five gates of the original
+                # circuit.
+        """
+        raise_error(NotImplementedError)
+
+>>>>>>> master:src/qibo/abstractions/circuit.py
     @property
     @abstractmethod
     def final_state(self): # pragma: no cover
@@ -712,14 +848,14 @@ class BaseCircuit(ABC):
         return "\n".join(code)
 
     @classmethod
-    def from_qasm(cls, qasm_code: str, **kwargs) -> "BaseCircuit":
+    def from_qasm(cls, qasm_code: str, **kwargs):
         """Constructs a circuit from QASM code.
 
         Args:
             qasm_code (str): String with the QASM script.
 
         Returns:
-            A :class:`qibo.base.circuit.BaseCircuit` that contains the gates
+            A :class:`qibo.abstractions.circuit.AbstractCircuit` that contains the gates
             specified by the given QASM script.
 
         Example:

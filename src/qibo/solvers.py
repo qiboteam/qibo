@@ -1,5 +1,5 @@
 from qibo import K
-from qibo.base import hamiltonians
+from qibo.abstractions import hamiltonians
 from qibo.config import raise_error
 
 
@@ -8,7 +8,7 @@ class BaseSolver:
 
     Args:
         dt (float): Time step size.
-        hamiltonian (:class:`qibo.base.hamiltonians.Hamiltonian`): Hamiltonian object
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): Hamiltonian object
             that the state evolves under.
     """
 
@@ -41,7 +41,7 @@ class TrotterizedExponential(BaseSolver):
 
     Created automatically from the :class:`qibo.solvers.Exponential` if the
     given Hamiltonian object is a
-    :class:`qibo.base.hamiltonians.TrotterHamiltonian`.
+    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
     """
 
     def __call__(self, state):

@@ -146,7 +146,7 @@ using the ``--type`` flag. This accepts one of the following options:
     Supports the following options:
         - ``--nlayers``: Total number of layers.
 
-* ``opt-variational``: Same as ``variational`` using the :class:`qibo.base.gates.VariationalLayer`.
+* ``opt-variational``: Same as ``variational`` using the :class:`qibo.abstractions.gates.VariationalLayer`.
     This gate optimizes execution by fusing the parametrized with the entangling
     gates before applying them to the state vector.
     Supports the following options:
@@ -186,7 +186,7 @@ supports the following options:
 * ``--method`` (``str``): Optimization method.
 * ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
 * ``--varlayer``: If used the circuit will be created using the
-  :class:`qibo.base.gates.VariationalLayer` gate which fuses one and two qubits
+  :class:`qibo.abstractions.gates.VariationalLayer` gate which fuses one and two qubits
   for efficiency.
 
 The script will perform the VQE minimization and will print the optimal energy

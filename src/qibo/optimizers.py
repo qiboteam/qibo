@@ -188,19 +188,18 @@ class ParallelBFGS: # pragma: no cover
         processes (int): number of processes when using the paralle BFGS method.
     """
     import multiprocessing as mp
-    import numpy as np
     import functools
     import itertools
+    from qibo import K
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
-        from qibo import K
         ParallelResources().arguments = args
         ParallelResources().custom_function = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo(K.dtypes("DTYPE").as_numpy_dtype).eps
+        self.precision = self.K.np.finfo(self.K.dtypes("DTYPE").as_numpy_dtype).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
@@ -220,7 +219,7 @@ class ParallelBFGS: # pragma: no cover
             out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
                            bounds=self.bounds, callback=self.callback, options=self.options)
         ParallelResources().reset()
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+        out.hess_inv = out.hess_inv * self.K.np.identity(len(x0))
         return out
 
     @staticmethod
