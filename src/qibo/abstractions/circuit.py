@@ -913,7 +913,7 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self):
+    def draw(self) -> str: # pragma: no cover
         """Draw text circuit using unicode symbols.
         """
         # build string representation of gates
@@ -957,7 +957,7 @@ class AbstractCircuit(ABC):
                             if gate.name in ('id', 'collapse'):
                                 matrix[iq][column] = f"{gate.name}"
                             elif gate.name in ('swap', 'fsim', 'generalizedfsim'):
-                                matrix[iq][column] = '⨯'
+                                matrix[iq][column] = 'X'
                             elif iq == c1:
                                 matrix[iq][column] = '⏺'
                             else:
@@ -989,5 +989,7 @@ class AbstractCircuit(ABC):
                 matrix[row][column] += '─' * (1 + maxlen - len(matrix[row][column]))
 
         # Print to terminal
+        output = ""
         for q in range(self.nqubits):
-            print(f'q{q}:', '─' + ''.join(matrix[q]))
+            output += f"q{q}: ─" + "".join(matrix[q]) + "\n"
+        return output.rstrip("\n")
