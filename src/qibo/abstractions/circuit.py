@@ -912,3 +912,82 @@ class AbstractCircuit(ABC):
                 gate_list[i] = ("M", qubit_list, register)
 
         return len(qubits), gate_list
+
+    def draw(self):
+        """Draw text circuit using unicode symbols.
+        """
+        # build string representation of gates
+        matrix = [[] for _ in range(self.nqubits)]
+
+        idx = [0] * self.nqubits
+        for gate in self.queue:
+            targets = gate.target_qubits
+            controls = gate.control_qubits
+            for iq in range(self.nqubits):
+                matrix[iq].append("")
+            if len(targets) == 2 or len(controls) >= 1:
+                if gate.name == "ccx":
+                    t1 = targets[0]
+                    c1 = controls[0]
+                    c2 = controls[1]
+                    qi = min(t1, c1, c2)
+                    qf = max(t1, c1, c2)
+                    column = max(idx)
+                    for iq in range(qi, qf + 1):
+                        if iq == t1:
+                            matrix[iq][column] = f"{gate.name}"
+                        elif iq in (c1, c2):
+                            matrix[iq][column] = "⏺"
+                        else:
+                            matrix[iq][column] = "|"
+                        idx[iq] = column + 1
+                else:
+                    t1 = targets[0]
+                    if len(targets) == 2:
+                        c1 = targets[1]
+                    elif len(controls) >= 1:
+                        c1 = controls[0]
+                    else:
+                        raise_error(RuntimeError, "Gate target/controls not supported.")
+                    qi = min(t1, c1)
+                    qf = max(t1, c1)
+                    column = max(idx)
+                    for iq in range(qi, qf + 1):
+                        if iq in (qi, qf):
+                            if gate.name in ('id', 'collapse'):
+                                matrix[iq][column] = f"{gate.name}"
+                            elif gate.name in ('swap', 'fsim', 'generalizedfsim'):
+                                matrix[iq][column] = '⨯'
+                            elif iq == c1:
+                                matrix[iq][column] = '⏺'
+                            else:
+                                matrix[iq][column] = f"{gate.name}"
+                        else:
+                            matrix[iq][column] = "|"
+                        idx[iq] = column + 1
+            else:
+                t1 = targets[0]
+                matrix[t1][idx[t1]] = f"{gate.name}"
+                idx[t1] += 1
+
+        # Include measurement gates
+        if self.measurement_gate:
+            for iq in range(self.nqubits):
+                if iq in self.measurement_gate.target_qubits:
+                    matrix[iq].append('M')
+                else:
+                    matrix[iq].append('')
+
+        # Add some spacers
+        for column in range(len(matrix[0])):
+            maxlen = 0
+            for row in range(self.nqubits):
+                lenrc = len(matrix[row][column])
+                if lenrc > maxlen:
+                    maxlen = lenrc
+            for row in range(self.nqubits):
+                matrix[row][column] += '─' * (1 + maxlen - len(matrix[row][column]))
+
+        # Print to terminal
+        for q in range(self.nqubits):
+            print(f'q{q}:', '─' + ''.join(matrix[q]))
