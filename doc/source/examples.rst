@@ -277,3 +277,29 @@ Note that `qibo.set_precision` must be called before allocating circuits:
         qibo.set_precision("double") # re-enables complex128
 
         # ... continue with circuit creation and execution
+
+
+.. _visualize-example:
+
+How to visualize a circuit?
+---------------------------
+
+It is possible to print a schematic diagram of the circuit using ``circuit.draw()``.
+This will print an unicode text based representation of the circuit, including gates,
+and qubits lines.
+For example
+
+.. code-block:: python
+
+    from qibo.models import QFT
+
+    c = QFT(5)
+    print(c.draw())
+    # Prints
+    '''
+    q0: ─H─U1─U1─U1─U1───────────────────────────x───
+    q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
+    q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
+    q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
+    q4: ────────────o──────────o───────o────o──H─x───
+    '''
