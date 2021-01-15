@@ -954,25 +954,25 @@ class AbstractCircuit(ABC):
                     gate_name = labels.get(gate.name)
                     t1 = targets[0]
                     if len(targets) == 2:
-                        c1 = targets[1]
+                        c1 = [targets[1]]
                     elif len(controls) >= 1:
-                        c1 = controls[0]
-                        gate_name = gate_name.lstrip("C")
-                    else:
-                        raise_error(RuntimeError, "Gate target/controls not supported.")
-                    qi = min(t1, c1)
-                    qf = max(t1, c1)
+                        c1 = [c for c in controls]
+                    qi = min(t1, *c1)
+                    qf = max(t1, *c1)
                     column = max(idx)
                     for iq in range(qi, qf + 1):
                         if iq in (qi, qf):
                             if gate.name in ('swap', 'id', 'collapse', 'fsim', 'generalizedfsim'):
                                 matrix[iq][column] = f"{gate_name}"
-                            elif iq == c1:
+                            elif iq in c1:
                                 matrix[iq][column] = 'o'
                             else:
                                 matrix[iq][column] = f"{gate_name}"
                         else:
-                            matrix[iq][column] = "|"
+                            if iq in c1:
+                                matrix[iq][column] = 'o'
+                            else:
+                                matrix[iq][column] = "|"
                         idx[iq] = column + 1
             else:
                 t1 = targets[0]
