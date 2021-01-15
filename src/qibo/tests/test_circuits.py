@@ -493,3 +493,15 @@ def test_memory_error(accelerators):
     c.add((gates.H(i) for i in range(0, 40, 5)))
     with pytest.raises(RuntimeError):
         final_state = c()
+
+
+def test_circuit_draw():
+    """Test circuit text draw."""
+    ref = 'q0: ─H─U1─U1─U1─U1───────────────────────────x───\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n' \
+          'q4: ────────────o──────────o───────o────o──H─x───'
+    from qibo.models import QFT
+    circuit = QFT(5)
+    assert circuit.draw() == ref
