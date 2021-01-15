@@ -927,14 +927,14 @@ class AbstractCircuit(ABC):
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
-
         idx = [0] * self.nqubits
+
         for gate in self.queue:
             targets = gate.target_qubits
             controls = gate.control_qubits
+            gate_name = labels.get(gate.name)
 
             if len(targets) == 2 or len(controls) >= 1:
-                gate_name = labels.get(gate.name)
                 t1 = targets[0]
                 if len(targets) == 2:
                     c1 = [targets[1]]
@@ -971,16 +971,16 @@ class AbstractCircuit(ABC):
                     if len(matrix[iq]) <= idx[t1]:
                         matrix[iq].append("")
 
-                matrix[t1][idx[t1]] = f"{labels.get(gate.name)}"
+                matrix[t1][idx[t1]] = f"{gate_name}"
                 idx[t1] += 1
 
         # Include measurement gates
         if self.measurement_gate:
             for iq in range(self.nqubits):
                 if iq in self.measurement_gate.target_qubits:
-                    matrix[iq].append('M')
+                    matrix[iq].append("M")
                 else:
-                    matrix[iq].append('')
+                    matrix[iq].append("")
 
         # Add some spacers
         for column in range(len(matrix[0])):
@@ -990,7 +990,7 @@ class AbstractCircuit(ABC):
                 if lenrc > maxlen:
                     maxlen = lenrc
             for row in range(self.nqubits):
-                matrix[row][column] += '─' * (1 + maxlen - len(matrix[row][column]))
+                matrix[row][column] += "─" * (1 + maxlen - len(matrix[row][column]))
 
         # Print to terminal
         output = ""
