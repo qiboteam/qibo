@@ -916,6 +916,15 @@ class AbstractCircuit(ABC):
     def draw(self) -> str: # pragma: no cover
         """Draw text circuit using unicode symbols.
         """
+        labels = {"h": "H", "x": "X", "y": "Y", "z": "Z",
+                  "rx": "RX", "ry": "RY", "rz": "RZ",
+                  "u1": "U1", "u2": "U2", "u3": "U3",
+                  "cx": "NOT", "swap": "x", "cz": "Z",
+                  "crx": "RX", "cry": "RY", "crz": "RZ",
+                  "cu1": "U1", "cu3": "U3", "ccx": "X",
+                  "id": "I", "collapse": "M", "fsim": "f",
+                  "generalizedfsim": "gf"}
+
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
 
@@ -935,18 +944,20 @@ class AbstractCircuit(ABC):
                     column = max(idx)
                     for iq in range(qi, qf + 1):
                         if iq == t1:
-                            matrix[iq][column] = f"{gate.name}"
+                            matrix[iq][column] = f"{labels.get(gate.name)}"
                         elif iq in (c1, c2):
-                            matrix[iq][column] = "⏺"
+                            matrix[iq][column] = "o"
                         else:
                             matrix[iq][column] = "|"
                         idx[iq] = column + 1
                 else:
+                    gate_name = labels.get(gate.name)
                     t1 = targets[0]
                     if len(targets) == 2:
                         c1 = targets[1]
                     elif len(controls) >= 1:
                         c1 = controls[0]
+                        gate_name = gate_name.lstrip("C")
                     else:
                         raise_error(RuntimeError, "Gate target/controls not supported.")
                     qi = min(t1, c1)
@@ -954,20 +965,18 @@ class AbstractCircuit(ABC):
                     column = max(idx)
                     for iq in range(qi, qf + 1):
                         if iq in (qi, qf):
-                            if gate.name in ('id', 'collapse'):
-                                matrix[iq][column] = f"{gate.name}"
-                            elif gate.name in ('swap', 'fsim', 'generalizedfsim'):
-                                matrix[iq][column] = 'X'
+                            if gate.name in ('swap', 'id', 'collapse', 'fsim', 'generalizedfsim'):
+                                matrix[iq][column] = f"{gate_name}"
                             elif iq == c1:
-                                matrix[iq][column] = '⏺'
+                                matrix[iq][column] = 'o'
                             else:
-                                matrix[iq][column] = f"{gate.name}"
+                                matrix[iq][column] = f"{gate_name}"
                         else:
                             matrix[iq][column] = "|"
                         idx[iq] = column + 1
             else:
                 t1 = targets[0]
-                matrix[t1][idx[t1]] = f"{gate.name}"
+                matrix[t1][idx[t1]] = f"{labels.get(gate.name)}"
                 idx[t1] += 1
 
         # Include measurement gates

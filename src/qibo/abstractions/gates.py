@@ -12,7 +12,7 @@ QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "cx": "CNOT", "swap": "SWAP", "cz": "CZ",
               "crx": "CRX", "cry": "CRY", "crz": "CRZ",
               "cu1": "CU1", "cu3": "CU3",
-              "ccx": "TOFFOLI", "id": "identity"}
+              "ccx": "TOFFOLI", "id": "I"}
 PARAMETRIZED_GATES = {"rx", "ry", "rz", "u1", "u2", "u3",
                       "crx", "cry", "crz", "cu1", "cu3"}
 
