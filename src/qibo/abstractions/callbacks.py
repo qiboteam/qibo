@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
 from qibo.config import raise_error
 from typing import List, Optional, Set, Union
 
 
-class Callback(ABC):
+class Callback:
     """Base callback class.
 
     Callbacks should inherit this class and implement its
@@ -41,34 +40,11 @@ class Callback(ABC):
         else:
             self._active_call = "state_vector_call"
 
-    def __getitem__(self, k):
-        if isinstance(k, int):
-            if k >= len(self._results):
-                raise_error(IndexError, "Attempting to access callbacks {} run but "
-                                        "the callback has been used in {} executions."
-                                        "".format(k, len(self._results)))
-            return self._results[k]
-        if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
-            from qibo import K
-            return K.stack(self._results[k])
-        raise_error(IndexError, "Unrecognized type for index {}.".format(k))
-
     def append(self, x):
         self._results.append(x)
 
     def extend(self, x):
         self._results.extend(x)
-
-    @abstractmethod
-    def state_vector_call(self, state): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def density_matrix_call(self, state): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def __call__(self, state):
-        return getattr(self, self._active_call)(state)
 
 
 class PartialTrace(Callback):
@@ -188,29 +164,9 @@ class EntanglementEntropy(Callback):
 
     def __init__(self, partition: Optional[List[int]] = None,
                  compute_spectrum: bool = False):
-        from qibo import callbacks
         super().__init__()
         self.compute_spectrum = compute_spectrum
         self.spectrum = list()
-        self.partial_trace = callbacks.PartialTrace(partition)
-
-    @Callback.nqubits.setter
-    def nqubits(self, n: int):
-        self._nqubits = n
-        self.partial_trace.nqubits = n
-
-    @abstractmethod
-    def entropy(self, rho): # pragma: no cover
-        """Calculates entropy of a density matrix via exact diagonalization."""
-        raise_error(NotImplementedError)
-
-    def state_vector_call(self, state):
-        rho = self.partial_trace.state_vector_call(state)
-        return self.entropy(rho)
-
-    def density_matrix_call(self, state):
-        rho = self.partial_trace.density_matrix_call(state)
-        return self.entropy(rho)
 
 
 class Norm(Callback):
@@ -259,9 +215,6 @@ class Energy(Callback):
     def __init__(self, hamiltonian: "hamiltonians.Hamiltonian"):
         super().__init__()
         self.hamiltonian = hamiltonian
-
-    def state_vector_call(self, state):
-        return self.hamiltonian.expectation(state)
 
 
 class Gap(Callback):

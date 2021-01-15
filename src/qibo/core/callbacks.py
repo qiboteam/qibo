@@ -1,7 +1,34 @@
 import math
+from abc import ABC, abstractmethod
 from qibo import K
 from qibo.abstractions import callbacks
 from qibo.config import EIGVAL_CUTOFF, raise_error
+
+
+class BackendCallback(callbacks.Callback, ABC):
+
+    def __getitem__(self, k):
+        if isinstance(k, int):
+            if k >= len(self._results):
+                raise_error(IndexError, "Attempting to access callbacks {} run but "
+                                        "the callback has been used in {} executions."
+                                        "".format(k, len(self._results)))
+            return self._results[k]
+        if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
+            from qibo import K
+            return K.stack(self._results[k])
+        raise_error(IndexError, "Unrecognized type for index {}.".format(k))
+
+    @abstractmethod
+    def state_vector_call(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_call(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def __call__(self, state):
+        return getattr(self, self._active_call)(state)
 
 
 class PartialTrace(callbacks.PartialTrace):
@@ -27,10 +54,21 @@ class PartialTrace(callbacks.PartialTrace):
         return K.reshape(rho, (self.rho_dim, self.rho_dim))
 
 
-class EntanglementEntropy(callbacks.EntanglementEntropy):
+class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
     _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
+    def __init__(self, partition=None, compute_spectrum=False):
+        callbacks.EntanglementEntropy.__init__(
+            self, partition, compute_spectrum)
+        self.partial_trace = PartialTrace(partition)
+
+    @callbacks.Callback.nqubits.setter
+    def nqubits(self, n: int):
+        self._nqubits = n
+        self.partial_trace.nqubits = n
+
     def entropy(self, rho):
+        """Calculates entropy of a density matrix via exact diagonalization."""
         # Diagonalize
         eigvals = K.real(K.eigvalsh(rho))
         # Treating zero and negative eigenvalues
@@ -42,8 +80,16 @@ class EntanglementEntropy(callbacks.EntanglementEntropy):
         entropy = K.sum(masked_eigvals * spectrum)
         return entropy / self._log2
 
+    def state_vector_call(self, state):
+        rho = self.partial_trace.state_vector_call(state)
+        return self.entropy(rho)
 
-class Norm(callbacks.Norm):
+    def density_matrix_call(self, state):
+        rho = self.partial_trace.density_matrix_call(state)
+        return self.entropy(rho)
+
+
+class Norm(BackendCallback, callbacks.Norm):
 
     def state_vector_call(self, state):
         return K.sqrt(K.sum(K.square(K.abs(state))))
@@ -52,7 +98,7 @@ class Norm(callbacks.Norm):
         return K.trace(state)
 
 
-class Overlap(callbacks.Overlap):
+class Overlap(BackendCallback, callbacks.Overlap):
 
     def __init__(self, state):
         super().__init__()
@@ -66,13 +112,16 @@ class Overlap(callbacks.Overlap):
                                           "for density matrices.")
 
 
-class Energy(callbacks.Energy):
+class Energy(BackendCallback, callbacks.Energy):
+
+    def state_vector_call(self, state):
+        return self.hamiltonian.expectation(state)
 
     def density_matrix_call(self, state):
         return K.trace(K.matmul(self.hamiltonian.matrix, state))
 
 
-class Gap(callbacks.Gap):
+class Gap(BackendCallback, callbacks.Gap):
 
     def state_vector_call(self, state):
         if self.evolution is None:
