@@ -932,50 +932,45 @@ class AbstractCircuit(ABC):
         for gate in self.queue:
             targets = gate.target_qubits
             controls = gate.control_qubits
-            for iq in range(self.nqubits):
-                matrix[iq].append("")
+
             if len(targets) == 2 or len(controls) >= 1:
-                if gate.name == "ccx":
-                    t1 = targets[0]
-                    c1 = controls[0]
-                    c2 = controls[1]
-                    qi = min(t1, c1, c2)
-                    qf = max(t1, c1, c2)
-                    column = max(idx)
-                    for iq in range(qi, qf + 1):
-                        if iq == t1:
-                            matrix[iq][column] = f"{labels.get(gate.name)}"
-                        elif iq in (c1, c2):
-                            matrix[iq][column] = "o"
+                gate_name = labels.get(gate.name)
+                t1 = targets[0]
+                if len(targets) == 2:
+                    c1 = [targets[1]]
+                elif len(controls) >= 1:
+                    c1 = [c for c in controls]
+                else:
+                    raise_error(RuntimeError, "Gate target/controls not supported.")
+                qi = min(t1, *c1)
+                qf = max(t1, *c1)
+                column = max(idx)
+
+                for iq in range(self.nqubits):
+                    if len(matrix[iq]) <= column:
+                        matrix[iq].append("")
+
+                for iq in range(qi, qf + 1):
+                    if iq in (qi, qf):
+                        if gate.name in ('swap', 'id', 'collapse', 'fsim', 'generalizedfsim'):
+                            matrix[iq][column] = f"{gate_name}"
+                        elif iq in c1:
+                            matrix[iq][column] = 'o'
+                        else:
+                            matrix[iq][column] = f"{gate_name}"
+                    else:
+                        if iq in c1:
+                            matrix[iq][column] = 'o'
                         else:
                             matrix[iq][column] = "|"
-                        idx[iq] = column + 1
-                else:
-                    gate_name = labels.get(gate.name)
-                    t1 = targets[0]
-                    if len(targets) == 2:
-                        c1 = [targets[1]]
-                    elif len(controls) >= 1:
-                        c1 = [c for c in controls]
-                    qi = min(t1, *c1)
-                    qf = max(t1, *c1)
-                    column = max(idx)
-                    for iq in range(qi, qf + 1):
-                        if iq in (qi, qf):
-                            if gate.name in ('swap', 'id', 'collapse', 'fsim', 'generalizedfsim'):
-                                matrix[iq][column] = f"{gate_name}"
-                            elif iq in c1:
-                                matrix[iq][column] = 'o'
-                            else:
-                                matrix[iq][column] = f"{gate_name}"
-                        else:
-                            if iq in c1:
-                                matrix[iq][column] = 'o'
-                            else:
-                                matrix[iq][column] = "|"
-                        idx[iq] = column + 1
+                    idx[iq] = column + 1
             else:
                 t1 = targets[0]
+
+                for iq in range(self.nqubits):
+                    if len(matrix[iq]) <= idx[t1]:
+                        matrix[iq].append("")
+
                 matrix[t1][idx[t1]] = f"{labels.get(gate.name)}"
                 idx[t1] += 1
 
