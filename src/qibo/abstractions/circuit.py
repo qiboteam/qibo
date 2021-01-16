@@ -926,7 +926,7 @@ class AbstractCircuit(ABC):
         labels = {"h": "H", "x": "X", "y": "Y", "z": "Z",
                   "rx": "RX", "ry": "RY", "rz": "RZ",
                   "u1": "U1", "u2": "U2", "u3": "U3",
-                  "cx": "NOT", "swap": "x", "cz": "Z",
+                  "cx": "X", "swap": "x", "cz": "Z",
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
                   "id": "I", "collapse": "M", "fsim": "f",
@@ -937,6 +937,8 @@ class AbstractCircuit(ABC):
         idx = [0] * self.nqubits
 
         for gate in self.queue:
+            if gate.name not in labels:
+                raise_error(NotImplementedError, f"{gamte.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
             targets = list(gate.target_qubits)
             controls = list(gate.control_qubits)
@@ -952,7 +954,7 @@ class AbstractCircuit(ABC):
 
             # extend matrix
             for iq in range(self.nqubits):
-                matrix[iq] += [ '' for _ in range(1 + col - len(matrix[iq]))]
+                matrix[iq].extend((1 + col - len(matrix[iq]))* [''])
 
             # fill
             for iq in range(min_qubits_id, max_qubits_id + 1):
@@ -990,19 +992,20 @@ class AbstractCircuit(ABC):
             output = output.splitlines()
             def chunkstring(string, length):
                 return (string[i:length+i] for i in range(0, len(string), length))
-
             for row in range(self.nqubits):
                 chunks = chunkstring(output[row], line_wrap)
                 for i, c in enumerate(chunks):
                     output += ['' for _ in range(self.nqubits)]
+                    suffix = ' ...\n'
                     if i == 0:
                         prefix = ''
                     elif row == 0:
                         prefix = '\n... '
                     else:
                         prefix = '... '
-
-                    output[row + i * self.nqubits ] = prefix + c + '...\n'
+                    if i == len(range(0, len(output[row]), line_wrap))-1:
+                        suffix = '\n'
+                    output[row + i * self.nqubits] = prefix + c + suffix
             output = ''.join(output)
 
         return output.rstrip('\n')
