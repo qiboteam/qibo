@@ -508,6 +508,7 @@ def test_circuit_draw():
 
 
 def test_circuit_draw_line_wrap():
+    """Test circuit text draw with line wrap."""
     ref = 'q0: ─H─U1─U1─U1─U1───────────────────────────x───I ...\n' \
           'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─I ...\n' \
           'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|── ...\n' \
@@ -531,3 +532,11 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.X(4).controlled_by(1,2,3))
     circuit.add(gates.M(*range(3)))
     assert circuit.draw(line_wrap=50) == ref
+
+
+def test_circuit_draw_not_supported_gates():
+    """Check that ``NotImplementedError`` is raised if gate is not supported."""
+    c = Circuit(2)
+    c.add(gates.Flatten(1))
+    with pytest.raises(NotImplementedError):
+        c.draw()

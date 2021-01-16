@@ -913,7 +913,7 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self, line_wrap=None) -> str: # pragma: no cover
+    def draw(self, line_wrap=None) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -938,7 +938,7 @@ class AbstractCircuit(ABC):
 
         for gate in self.queue:
             if gate.name not in labels:
-                raise_error(NotImplementedError, f"{gamte.name} gate is not supported by `circuit.draw`")
+                raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
             gate_name = labels.get(gate.name)
             targets = list(gate.target_qubits)
             controls = list(gate.control_qubits)
