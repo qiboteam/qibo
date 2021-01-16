@@ -505,3 +505,29 @@ def test_circuit_draw():
     from qibo.models import QFT
     circuit = QFT(5)
     assert circuit.draw() == ref
+
+
+def test_circuit_draw_line_wrap():
+    ref = 'q0: ─H─U1─U1─U1─U1───────────────────────────x───I ...\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─I ...\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|── ...\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x── ...\n' \
+          'q4: ────────────o──────────o───────o────o──H─x──── ...\n' \
+          '\n' \
+          '... ───f─o────gf───M─\n' \
+          '... ───|─U3───|──o─M─\n' \
+          '... ───|────X─gf─o─M─\n' \
+          '... ─M─|────o────o───\n' \
+          '... ───f────o────X───'
+
+    from qibo.models import QFT
+    circuit = QFT(5)
+    circuit.add(gates.I(*range(2)))
+    circuit.add(gates.Collapse(3))
+    circuit.add(gates.fSim(0,4,0,0))
+    circuit.add(gates.CU3(0,1,0,0,0))
+    circuit.add(gates.TOFFOLI(4,3,2))
+    circuit.add(gates.GeneralizedfSim(0,2,np.eye(2), 0))
+    circuit.add(gates.X(4).controlled_by(1,2,3))
+    circuit.add(gates.M(*range(3)))
+    assert circuit.draw(line_wrap=50) == ref
