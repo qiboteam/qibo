@@ -31,7 +31,7 @@ class BackendCallback(callbacks.Callback, ABC):
         return getattr(self, self._active_call)(state)
 
 
-class PartialTrace(callbacks.PartialTrace):
+class PartialTrace(BackendCallback, callbacks.PartialTrace):
 
     def set_nqubits(self, state):
         if not isinstance(state, K.tensor_types):

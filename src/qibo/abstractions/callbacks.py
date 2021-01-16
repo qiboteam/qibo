@@ -40,6 +40,10 @@ class Callback:
         else:
             self._active_call = "state_vector_call"
 
+    @property
+    def results(self):
+        return self._results
+
     def append(self, x):
         self._results.append(x)
 
