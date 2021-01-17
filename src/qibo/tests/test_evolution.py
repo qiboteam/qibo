@@ -1,7 +1,6 @@
 import pytest
 import numpy as np
 from qibo import callbacks, hamiltonians, models
-from qibo.abstractions.callbacks import Callback
 from qibo.config import raise_error
 from qibo.tests import utils
 from scipy.linalg import expm
@@ -13,7 +12,7 @@ def assert_states_equal(state, target_state, atol=0):
     np.testing.assert_allclose(state, phase * target_state, atol=atol)
 
 
-class TimeStepChecker(Callback):
+class TimeStepChecker(callbacks.BackendCallback):
     """Callback that checks each evolution time step."""
 
     def __init__(self, target_states, atol=0):

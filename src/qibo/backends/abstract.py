@@ -39,6 +39,9 @@ class AbstractBackend(ABC):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return "{}Backend".format(self.name.capitalize())
+
     def assign(self, backend):
         """Assigns backend's methods."""
         for method in dir(backend):
@@ -65,8 +68,8 @@ class AbstractBackend(ABC):
         elif name == 'matmuleinsum':
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
-        else: # pragma: no cover
-            raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
+        else:
+            raise_error(ValueError, f"Gate backend '{name}' not supported.")
         self.gates = name
 
     def dtypes(self, name):

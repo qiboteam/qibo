@@ -104,50 +104,6 @@ def test_matrices_dtype():
     qibo.set_precision(original_precision)
 
 
-def test_modifying_matrices_error():
-    """Check that modifying matrices raises ``AttributeError``."""
-    from qibo import matrices
-    with pytest.raises(AttributeError):
-        matrices.I = np.zeros((2, 2))
-
-
-@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
-def test_set_backend(backend):
-    """Check ``set_backend`` for switching gate backends."""
-    import qibo
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    from qibo import gates
-    assert qibo.get_backend() == backend
-    if backend == "custom":
-        from qibo.core import cgates as custom_gates
-        assert isinstance(gates.H(0), custom_gates.BackendGate)
-    else:
-        from qibo.core import gates as native_gates
-        from qibo.core import einsum
-        einsums = {"defaulteinsum": einsum.DefaultEinsum,
-                   "matmuleinsum": einsum.MatmulEinsum}
-        h = gates.H(0)
-        assert isinstance(h, native_gates.BackendGate)
-        assert isinstance(h.einsum, einsums[backend]) # pylint: disable=no-member
-    qibo.set_backend(original_backend)
-
-
-def test_set_backend_print_string():
-    import qibo
-    from qibo import K
-    original_backend = qibo.get_backend()
-    qibo.set_backend("numpy_defaulteinsum")
-    assert qibo.get_backend() == "numpy_defaulteinsum"
-    assert str(K) == "numpy"
-    qibo.set_backend("custom")
-    assert qibo.get_backend() == "custom"
-    assert str(K) == "tensorflow"
-    with pytest.raises(ValueError):
-        qibo.set_backend("numpy_custom")
-    qibo.set_backend(original_backend)
-
-
 def test_switcher_errors():
     """Check set precision and backend errors."""
     import qibo

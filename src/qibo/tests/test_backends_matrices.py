@@ -34,3 +34,9 @@ def test_matrices(name, dtype):
     mobj = getattr(matrices, name)(dtype)
     for matrixname, target in TARGET_MATRICES.items():
         np.testing.assert_allclose(getattr(mobj, matrixname), target)
+
+
+def test_modifying_matrices_error():
+    from qibo import matrices
+    with pytest.raises(AttributeError):
+        matrices.I = np.zeros((2, 2))
