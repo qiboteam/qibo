@@ -912,3 +912,101 @@ class AbstractCircuit(ABC):
                 gate_list[i] = ("M", qubit_list, register)
 
         return len(qubits), gate_list
+
+    def draw(self, line_wrap=None) -> str:
+        """Draw text circuit using unicode symbols.
+
+        Args:
+            line_wrap (int): maximum number of characters per line. This option
+                split the circuit text diagram in chunks of line_wrap characters.
+
+        Return:
+            String containing text circuit diagram.
+        """
+        labels = {"h": "H", "x": "X", "y": "Y", "z": "Z",
+                  "rx": "RX", "ry": "RY", "rz": "RZ",
+                  "u1": "U1", "u2": "U2", "u3": "U3",
+                  "cx": "X", "swap": "x", "cz": "Z",
+                  "crx": "RX", "cry": "RY", "crz": "RZ",
+                  "cu1": "U1", "cu3": "U3", "ccx": "X",
+                  "id": "I", "collapse": "M", "fsim": "f",
+                  "generalizedfsim": "gf"}
+
+        # build string representation of gates
+        matrix = [[] for _ in range(self.nqubits)]
+        idx = [0] * self.nqubits
+
+        for gate in self.queue:
+            if gate.name not in labels:
+                raise_error(NotImplementedError, f"{gate.name} gate is not supported by `circuit.draw`")
+            gate_name = labels.get(gate.name)
+            targets = list(gate.target_qubits)
+            controls = list(gate.control_qubits)
+
+            # identify boundaries
+            qubits = targets + controls
+            qubits.sort()
+            min_qubits_id = qubits[0]
+            max_qubits_id = qubits[-1]
+
+            # identify column
+            col = idx[targets[0]] if not controls and len(targets) == 1 else max(idx)
+
+            # extend matrix
+            for iq in range(self.nqubits):
+                matrix[iq].extend((1 + col - len(matrix[iq]))* [''])
+
+            # fill
+            for iq in range(min_qubits_id, max_qubits_id + 1):
+                if iq in targets:
+                    matrix[iq][col] = gate_name
+                elif iq in controls:
+                    matrix[iq][col] = 'o'
+                else:
+                    matrix[iq][col] = '|'
+
+            # update indexes
+            if not controls and len(targets) == 1:
+                idx[targets[0]] += 1
+            else:
+                idx = [col + 1] * self.nqubits
+
+        # Include measurement gates
+        if self.measurement_gate:
+            for iq in range(self.nqubits):
+                matrix[iq].append('M' if iq in self.measurement_gate.target_qubits else '')
+
+        # Add some spacers
+        for col in range(len(matrix[0])):
+            maxlen = max([len(matrix[l][col]) for l in range(self.nqubits)])
+            for row in range(self.nqubits):
+                matrix[row][col] += '─' * (1 + maxlen - len(matrix[row][col]))
+
+        # Print to terminal
+        output = ""
+        for q in range(self.nqubits):
+            output += f'q{q}: ─' + ''.join(matrix[q]) + '\n'
+
+        # line wrap
+        if line_wrap:
+            output = output.splitlines()
+            def chunkstring(string, length):
+                nchunks = range(0, len(string), length)
+                return (string[i:length+i] for i in nchunks), len(nchunks)
+            for row in range(self.nqubits):
+                chunks, nchunks = chunkstring(output[row], line_wrap)
+                for i, c in enumerate(chunks):
+                    output += ['' for _ in range(self.nqubits)]
+                    suffix = ' ...\n'
+                    if i == 0:
+                        prefix = ''
+                    elif row == 0:
+                        prefix = '\n... '
+                    else:
+                        prefix = '... '
+                    if i == nchunks-1:
+                        suffix = '\n'
+                    output[row + i * self.nqubits] = prefix + c + suffix
+            output = ''.join(output)
+
+        return output.rstrip('\n')

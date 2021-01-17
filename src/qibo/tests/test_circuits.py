@@ -493,3 +493,71 @@ def test_memory_error(accelerators):
     c.add((gates.H(i) for i in range(0, 40, 5)))
     with pytest.raises(RuntimeError):
         final_state = c()
+
+
+def test_circuit_draw():
+    """Test circuit text draw."""
+    ref = 'q0: ─H─U1─U1─U1─U1───────────────────────────x───\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n' \
+          'q4: ────────────o──────────o───────o────o──H─x───'
+    from qibo.models import QFT
+    circuit = QFT(5)
+    assert circuit.draw() == ref
+
+
+def test_circuit_draw_line_wrap():
+    """Test circuit text draw with line wrap."""
+    ref_line_wrap_50 = \
+          'q0: ─H─U1─U1─U1─U1───────────────────────────x───I ...\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─I ...\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|── ...\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x── ...\n' \
+          'q4: ────────────o──────────o───────o────o──H─x──── ...\n' \
+          '\n' \
+          '... ───f─o────gf───M─\n' \
+          '... ───|─U3───|──o─M─\n' \
+          '... ───|────X─gf─o─M─\n' \
+          '... ─M─|────o────o───\n' \
+          '... ───f────o────X───'
+
+    ref_line_wrap_30 = \
+           'q0: ─H─U1─U1─U1─U1──────────── ...\n' \
+           'q1: ───o──|──|──|──H─U1─U1─U1─ ...\n' \
+           'q2: ──────o──|──|────o──|──|── ...\n' \
+           'q3: ─────────o──|───────o──|── ...\n' \
+           'q4: ────────────o──────────o── ...\n' \
+           '\n' \
+           '... ───────────────x───I───f─o──── ...\n' \
+           '... ───────────────|─x─I───|─U3─── ...\n' \
+           '... H─U1─U1────────|─|─────|────X─ ...\n' \
+           '... ──o──|──H─U1───|─x───M─|────o─ ...\n' \
+           '... ─────o────o──H─x───────f────o─ ...\n' \
+           '\n' \
+           '... gf───M─\n' \
+           '... |──o─M─\n' \
+           '... gf─o─M─\n' \
+           '... ───o───\n' \
+           '... ───X───'
+
+    from qibo.models import QFT
+    circuit = QFT(5)
+    circuit.add(gates.I(*range(2)))
+    circuit.add(gates.Collapse(3))
+    circuit.add(gates.fSim(0,4,0,0))
+    circuit.add(gates.CU3(0,1,0,0,0))
+    circuit.add(gates.TOFFOLI(4,3,2))
+    circuit.add(gates.GeneralizedfSim(0,2,np.eye(2), 0))
+    circuit.add(gates.X(4).controlled_by(1,2,3))
+    circuit.add(gates.M(*range(3)))
+    assert circuit.draw(line_wrap=50) == ref_line_wrap_50
+    assert circuit.draw(line_wrap=30) == ref_line_wrap_30
+
+
+def test_circuit_draw_not_supported_gates():
+    """Check that ``NotImplementedError`` is raised if gate is not supported."""
+    c = Circuit(2)
+    c.add(gates.Flatten(1))
+    with pytest.raises(NotImplementedError):
+        c.draw()
