@@ -107,7 +107,7 @@ def test_backend_gather(tested_backend, target_backend):
     x = rand(3)
     target_result = target_backend.gather(x, condition=[True, False, True])
     test_result = tested_backend.gather(x, condition=[True, False, True])
-    np.testing.assert_allclose(test_result[:, 0], target_result)
+    np.testing.assert_allclose(test_result, target_result)
 
     with pytest.raises(ValueError):
         result1 = target_backend.gather(x)

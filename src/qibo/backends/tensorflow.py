@@ -121,12 +121,14 @@ class TensorflowBackend(numpy.NumpyBackend):
         raise_error(NotImplementedError)
 
     def gather(self, x, indices=None, condition=None, axis=0):
-        if indices is None:
-            if condition is None:
-                raise_error(ValueError, "Gather call is missing indices or "
-                                        "condition.")
-            indices = self.backend.where(condition)
-        return self.backend.gather(x, indices, axis=axis)
+        if indices is not None:
+            return self.backend.gather(x, indices, axis=axis)
+
+        if condition is None:
+            raise_error(ValueError, "Gather call is missing indices and "
+                                    "condition.")
+        indices = self.backend.where(condition)
+        return self.backend.gather(x, indices, axis=axis)[:, 0]
 
     def gather_nd(self, x, indices):
         return self.backend.gather_nd(x, indices)

@@ -199,12 +199,10 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def initial_state(self, nqubits, is_matrix=False):
         if is_matrix:
-            shape = 2 * (2 ** nqubits,)
-            state = self.zeros(shape)
+            state = self.zeros(2 * (2 ** nqubits,))
             state[0, 0] = 1
         else:
-            shape = (2 ** nqubits,)
-            state = self.zeros(shape)
+            state = self.zeros((2 ** nqubits,))
             state[0] = 1
         return state
 
