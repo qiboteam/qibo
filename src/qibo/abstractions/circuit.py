@@ -991,9 +991,10 @@ class AbstractCircuit(ABC):
         if line_wrap:
             output = output.splitlines()
             def chunkstring(string, length):
-                return (string[i:length+i] for i in range(0, len(string), length))
+                nchunks = range(0, len(string), length)
+                return (string[i:length+i] for i in nchunks), len(nchunks)
             for row in range(self.nqubits):
-                chunks = chunkstring(output[row], line_wrap)
+                chunks, nchunks = chunkstring(output[row], line_wrap)
                 for i, c in enumerate(chunks):
                     output += ['' for _ in range(self.nqubits)]
                     suffix = ' ...\n'
@@ -1003,7 +1004,7 @@ class AbstractCircuit(ABC):
                         prefix = '\n... '
                     else:
                         prefix = '... '
-                    if i == len(range(0, len(output[row]), line_wrap))-1:
+                    if i == nchunks-1:
                         suffix = '\n'
                     output[row + i * self.nqubits] = prefix + c + suffix
             output = ''.join(output)
