@@ -123,6 +123,24 @@ class Energy(BackendCallback, callbacks.Energy):
 
 class Gap(BackendCallback, callbacks.Gap):
 
+    def __init__(self, mode="gap"):
+        callbacks.Gap.__init__(self, mode)
+        self._evolution = None
+
+    @property
+    def evolution(self):
+        """:class:`qibo.evolution.AdiabaticEvolution` model used by the callback."""
+        return self._evolution
+
+    @evolution.setter
+    def evolution(self, ev: "models.AdiabaticEvolution"):
+        """Sets the :class:`qibo.evolution.AdiabaticEvolution` model."""
+        from qibo.models import AdiabaticEvolution
+        if not isinstance(ev, AdiabaticEvolution):
+            t = type(ev)
+            raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
+        self._evolution = ev
+
     def state_vector_call(self, state):
         if self.evolution is None:
             raise_error(ValueError, "Gap callback can only be used in "

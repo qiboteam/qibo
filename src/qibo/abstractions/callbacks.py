@@ -77,7 +77,7 @@ class PartialTrace(Callback):
         if self.partition is None: # pragma: no cover
             self.partition = list(range(n // 2 + n % 2))
 
-        if len(self.partition) < n // 2:
+        if len(self.partition) <= n // 2:
             # Revert parition so that we diagonalize a smaller matrix
             self.partition = [i for i in range(n)
                               if i not in set(self.partition)]
@@ -267,19 +267,4 @@ class Gap(Callback):
         elif not isinstance(mode, int):
             raise_error(TypeError, "Gap callback mode should be integer or "
                                    "string but is {}.".format(type(mode)))
-        self._evolution = None
         self.mode = mode
-
-    @property
-    def evolution(self):
-        """:class:`qibo.evolution.AdiabaticEvolution` model used by the callback."""
-        return self._evolution
-
-    @evolution.setter
-    def evolution(self, ev: "models.AdiabaticEvolution"):
-        """Sets the :class:`qibo.evolution.AdiabaticEvolution` model."""
-        from qibo.models import AdiabaticEvolution
-        if not isinstance(ev, AdiabaticEvolution):
-            t = type(ev)
-            raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
-        self._evolution = ev

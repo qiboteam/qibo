@@ -777,7 +777,7 @@ def test_entanglement_entropy(backend):
     rho = u.dot(np.diag(5 * np.random.random(u.shape[0]))).dot(u.conj().T)
     # this is a positive rho
 
-    entropy = callbacks.EntanglementEntropy([0, 2])
+    entropy = callbacks.EntanglementEntropy([1, 3])
     entropy.density_matrix = True
     final_ent = entropy(rho)
 
