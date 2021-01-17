@@ -346,8 +346,10 @@ class AbstractBackend(ABC):
     def executing_eagerly(self):
         return True
 
+    @abstractmethod
     def set_seed(self, seed): # pragma: no cover
         raise_error(NotImplementedError)
 
+    @abstractmethod
     def assert_allclose(self, actual, desired, atol=0): # pragma: no cover
         raise_error(NotImplementedError)
