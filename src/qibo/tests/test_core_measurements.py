@@ -4,7 +4,11 @@ import qibo
 from qibo import K
 from qibo.core import measurements
 
-BACKENDS = ["custom", "numpy_defaulteinsum"]
+try:
+    import tensorflow as tf
+    BACKENDS = ["custom", "numpy_defaulteinsum"]
+except ModuleNotFoundError: # pragma: no cover
+    BACKENDS = ["numpy_defaulteinsum"]
 
 
 def test_gateresult_init():
