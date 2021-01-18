@@ -153,3 +153,40 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         condition = lambda i, j: i == j % nqubits
         ham -= h * _build_spin_model(nqubits, matrices.X, condition)
     return Hamiltonian(nqubits, ham, numpy=numpy)
+
+
+def MaxCut(nqubits, random_graph=False, numpy=False):
+    """Max Cut Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i,j=0}^N  \frac{1-\sigma^z_i \sigma^z_j}{2}.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        random_graph (bool): enable random connections between qubits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+    """
+    if random_graph:
+        import networkx as nx
+        aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
+        graph = nx.random_graphs.dense_gnm_random_graph(nqubits, aa)
+        V = nx.adjacency_matrix(graph).toarray()
+    size = 2 ** nqubits
+    ham = K.qnp.zeros((size, size))
+    for i in range(nqubits):
+        for j in range(nqubits):
+            h = K.qnp.eye(1)
+            for k in range(nqubits):
+                if (k == i) ^ (k == j):
+                    h = K.np.kron(h, matrices.Z)
+                else:
+                    h = K.np.kron(h, matrices.I)
+            M = K.qnp.eye(size) - h
+            if random_graph:
+                ham += V[i,j] * M
+            else:
+                ham += M
+    ham = -1 * ham
+    return Hamiltonian(nqubits, ham, numpy=numpy)
