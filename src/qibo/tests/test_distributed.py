@@ -1,3 +1,4 @@
+# pylint: disable=E1101
 import pytest
 import numpy as np
 import qibo
@@ -20,13 +21,13 @@ def test_invalid_devices():
     """Check if error is raised if total devices is not a power of 2."""
     devices = {"/GPU:0": 2, "/GPU:1": 1}
     with pytest.raises(ValueError):
-        c = models.DistributedCircuit(4, devices)
+        c = models.Circuit(4, devices)
 
 
 def test_ndevices():
     """Check that ``ndevices`` and ``nglobal`` is set properly."""
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(5, devices)
+    c = models.Circuit(5, devices)
     assert c.ndevices == 4
     assert c.nglobal == 2
 
@@ -35,7 +36,7 @@ def test_transform_queue_simple():
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     devices = {"/GPU:0": 1, "/GPU:1": 1}
-    c = models.DistributedCircuit(4, devices)
+    c = models.Circuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
     c.queues.qubits = distutils.DistributedQubits([0], c.nqubits)
     tqueue = c.queues.transform(c.queue)
@@ -56,7 +57,7 @@ def test_transform_queue_more_gates():
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(4, devices)
+    c = models.Circuit(4, devices)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.CNOT(2, 3))
@@ -92,7 +93,7 @@ def test_transform_queue_more_gates():
 
 def test_set_gates_simple():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(6, devices)
+    c = models.Circuit(6, devices)
     c.add((gates.H(i) for i in range(4)))
     c.queues.set(c.queue)
 
@@ -105,7 +106,7 @@ def test_set_gates_simple():
 
 def test_set_gates_with_global_swap():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(6, devices)
+    c = models.Circuit(6, devices)
     c.add([gates.H(0), gates.H(2), gates.H(3)])
     c.add(gates.SWAP(3, 4))
     c.add([gates.X(1), gates.X(2)])
@@ -126,7 +127,7 @@ def test_set_gates_with_global_swap():
 
 def test_set_gates_controlled():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(6, devices)
+    c = models.Circuit(6, devices)
     c.add([gates.H(0), gates.H(2), gates.H(3)])
     c.add(gates.CNOT(4, 5))
     c.add(gates.Z(1).controlled_by(0))
@@ -146,7 +147,7 @@ def test_set_gates_controlled():
 
 def test_default_initialization():
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(6, devices)
+    c = models.Circuit(6, devices)
     c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
     state = c.get_initial_state()
 
@@ -162,7 +163,7 @@ def test_user_initialization(nqubits):
     target_state = utils.random_numpy_state(nqubits)
 
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c = models.DistributedCircuit(nqubits, devices)
+    c = models.Circuit(nqubits, devices)
     c.queues.qubits = distutils.DistributedQubits(range(c.nglobal), c.nqubits)
     state = c.get_initial_state(target_state)
     np.testing.assert_allclose(state.numpy(), target_state)
@@ -216,7 +217,7 @@ def test_simple_execution(ndevices):
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
-    dist_c = models.DistributedCircuit(6, devices)
+    dist_c = models.Circuit(6, devices)
     dist_c.add((gates.H(i) for i in range(dist_c.nlocal)))
     dist_c.global_qubits = range(dist_c.nlocal, dist_c.nqubits)
 
@@ -235,7 +236,7 @@ def test_execution_pretransformed_circuit(ndevices):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
-    dist_c = models.DistributedCircuit(4, devices)
+    dist_c = models.Circuit(4, devices)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     dist_c.add(gates.SWAP(0, 2))
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
@@ -258,7 +259,7 @@ def test_simple_execution_global(ndevices):
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
-    dist_c = models.DistributedCircuit(6, devices)
+    dist_c = models.Circuit(6, devices)
     dist_c.add((gates.H(i) for i in range(6)))
 
     c = models.Circuit(6)
@@ -276,7 +277,7 @@ def test_execution_with_global_swap():
     qibo.set_backend("custom")
     devices = {"/GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}
 
-    dist_c = models.DistributedCircuit(6, devices)
+    dist_c = models.Circuit(6, devices)
     dist_c.add((gates.H(i) for i in range(6)))
     dist_c.add((gates.SWAP(i, i + 1) for i in range(5)))
     dist_c.global_qubits = [0, 1]
@@ -298,7 +299,7 @@ def test_execution_special_gate(ndevices):
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
-    dist_c = models.DistributedCircuit(6, devices)
+    dist_c = models.Circuit(6, devices)
     initial_state = utils.random_numpy_state(dist_c.nqubits)
     dist_c.add(gates.Flatten(np.copy(initial_state)))
     dist_c.add((gates.H(i) for i in range(dist_c.nlocal)))
@@ -319,7 +320,7 @@ def test_controlled_execution(ndevices):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     devices = {"/GPU:0": ndevices}
-    dist_c = models.DistributedCircuit(4, devices)
+    dist_c = models.Circuit(4, devices)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
     dist_c.add(gates.CNOT(0, 2))
 
@@ -337,7 +338,7 @@ def test_controlled_execution(ndevices):
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_controlled_execution_large(ndevices):
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
-    dist_c = models.DistributedCircuit(6, devices)
+    dist_c = models.Circuit(6, devices)
     dist_c.add([gates.H(0), gates.H(2), gates.H(3)])
     dist_c.add(gates.CNOT(4, 5))
     dist_c.add(gates.Z(1).controlled_by(0))
@@ -362,12 +363,12 @@ def test_distributed_circuit_addition():
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
-    c1 = models.DistributedCircuit(6, devices)
-    c2 = models.DistributedCircuit(6, {"/GPU:0": 2})
+    c1 = models.Circuit(6, devices)
+    c2 = models.Circuit(6, {"/GPU:0": 2})
     with pytest.raises(ValueError):
         c = c1 + c2
 
-    c2 = models.DistributedCircuit(6, devices)
+    c2 = models.Circuit(6, devices)
     c1.add([gates.H(i) for i in range(6)])
     c2.add([gates.CNOT(i, i + 1) for i in range(5)])
     c2.add([gates.Z(i) for i in range(6)])
@@ -414,7 +415,7 @@ def test_distributed_qft_execution(nqubits, accelerators):
 
 def test_distributed_state_getitem():
     theta = np.random.random(4)
-    c = models.DistributedCircuit(4, {"/GPU:0": 2})
+    c = models.Circuit(4, {"/GPU:0": 2})
     c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
     state = c()
     c = models.Circuit(4)

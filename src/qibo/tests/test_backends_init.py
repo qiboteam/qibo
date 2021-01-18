@@ -1,6 +1,5 @@
 import pytest
 from qibo import K, backends, models, gates
-from qibo.backends.abstract import _AVAILABLE_BACKENDS
 
 
 def test_construct_backend():
@@ -12,7 +11,8 @@ def test_construct_backend():
         bk = backends._construct_backend("test")
 
 
-@pytest.mark.parametrize("backend", _AVAILABLE_BACKENDS)
+@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum",
+                                     "numpy_defaulteinsum", "numpy_matmuleinsum"])
 def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()

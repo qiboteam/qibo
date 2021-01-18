@@ -3,12 +3,11 @@ from qibo import get_backend
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit as StateCircuit
 from qibo.core.circuit import DensityMatrixCircuit
-from qibo.tensorflow.distcircuit import DistributedCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
 
 
-class Circuit(DistributedCircuit):
+class Circuit(StateCircuit):
     """"""
 
     @classmethod
@@ -24,6 +23,12 @@ class Circuit(DistributedCircuit):
             circuit_cls = StateCircuit
             kwargs = {}
         else:
+            try:
+                from qibo.tensorflow.distcircuit import DistributedCircuit
+            except ModuleNotFoundError:
+                raise_error(ModuleNotFoundError,
+                            "Cannot create distributed circuit because some "
+                            "required libraries are missing.")
             circuit_cls = DistributedCircuit
             kwargs.pop("density_matrix")
         return circuit_cls, args, kwargs
@@ -107,18 +112,18 @@ def QFT(nqubits: int, with_swaps: bool = True,
 
 def _DistributedQFT(nqubits: int,
                     accelerators: Optional[Dict[str, int]] = None,
-                    memory_device: str = "/CPU:0") -> DistributedCircuit:
+                    memory_device: str = "/CPU:0"):
     """QFT with the order of gates optimized for reduced multi-device communication."""
     from qibo import gates
 
     circuit = Circuit(nqubits, accelerators, memory_device)
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
-        circuit.global_qubits = range(circuit.nlocal, nqubits)
-        if icrit < circuit.nglobal:
+        circuit.global_qubits = range(circuit.nlocal, nqubits) # pylint: disable=E1101
+        if icrit < circuit.nglobal: # pylint: disable=E1101
             raise_error(NotImplementedError, "Cannot implement QFT for {} qubits "
                                              "using {} global qubits."
-                                             "".format(nqubits, circuit.nglobal))
+                                             "".format(nqubits, circuit.nglobal)) # pylint: disable=E1101
 
     for i1 in range(nqubits):
         if i1 < icrit:

@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
-_AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                       "numpy_defaulteinsum", "numpy_matmuleinsum"]
-
 
 class AbstractBackend(ABC):
 

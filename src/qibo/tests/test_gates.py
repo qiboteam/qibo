@@ -15,20 +15,6 @@ _DEVICE_BACKENDS = [("custom", None), ("matmuleinsum", None),
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_hadamard(backend):
-    """Check Hadamard gate is working properly."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(2)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    final_state = c.execute()
-    target_state = np.ones_like(final_state) / 2
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_flatten(backend):
     """Check ``Flatten`` gate works in circuits ."""
     original_backend = qibo.get_backend()
@@ -56,51 +42,6 @@ def test_flatten_errors(backend):
         gate.reprepare()
     with pytest.raises(NotImplementedError):
         gate.on_qubits(0, 2)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_xgate(backend, accelerators):
-    """Check X gate is working properly."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(2, accelerators)
-    c.add(gates.X(0))
-    final_state = c.execute()
-    target_state = np.zeros_like(final_state)
-    target_state[2] = 1.0
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_ygate(backend):
-    """Check Y gate is working properly."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(2)
-    c.add(gates.Y(1))
-    final_state = c.execute()
-    target_state = np.zeros_like(final_state)
-    target_state[1] = 1j
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_zgate(backend, accelerators):
-    """Check Z gate is working properly."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(2, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.Z(0))
-    final_state = c.execute()
-    target_state = np.ones_like(final_state) / 2.0
-    target_state[2] *= -1.0
-    target_state[3] *= -1.0
-    np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
 
