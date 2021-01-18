@@ -13,7 +13,7 @@ def _construct_backend(name):
             _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
         elif name == "tensorflow":
             _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
-        else: # pragma: no cover
+        else:
             raise_error(ValueError, "Unknown backend name {}.".format(name))
     return _CONSTRUCTED_BACKENDS.get(name)
 
@@ -129,8 +129,7 @@ def set_device(name):
             '/{device type}:{device number}' where device type is one of
             CPU or GPU.
     """
-    if not config.ALLOW_SWITCHERS and name != K.default_device: # pragma: no cover
-        # no testing is implemented for warnings
+    if not config.ALLOW_SWITCHERS and name != K.default_device:
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     K.set_device(name)
