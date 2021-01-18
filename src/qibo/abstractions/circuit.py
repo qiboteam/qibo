@@ -454,11 +454,6 @@ class AbstractCircuit(ABC):
             self.queue.append(gate.additional_unitary)
 
     @property
-    def size(self) -> int:
-        """Total number of qubits in the circuit."""
-        return self.nqubits
-
-    @property
     def ngates(self) -> int:
         """Total number of gates/operations in the circuit."""
         return len(self.queue)
@@ -601,7 +596,14 @@ class AbstractCircuit(ABC):
             params = []
             for gate in parametrized_gates:
                 if isinstance(gate.parameters, self.param_tensor_types):
-                    params.extend((p for p in gate.parameters))
+                    def traverse(x):
+                        if isinstance(x, self.param_tensor_types):
+                            for v1 in x:
+                                for v2 in traverse(v1):
+                                    yield v2
+                        else:
+                            yield x
+                    params.extend(traverse(gate.parameters))
                 elif isinstance(gate.parameters, collections.abc.Iterable):
                     params.extend(gate.parameters)
                 else:

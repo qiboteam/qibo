@@ -65,7 +65,8 @@ class AbstractBackend(ABC):
         elif name == 'matmuleinsum':
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
-        else:
+        else: # pragma: no cover
+            # this case is captured by `backends.__init__.set_backend` checks
             raise_error(ValueError, f"Gate backend '{name}' not supported.")
         self.gates = name
 
@@ -348,8 +349,4 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def set_seed(self, seed): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def assert_allclose(self, actual, desired, atol=0): # pragma: no cover
         raise_error(NotImplementedError)

@@ -1,7 +1,7 @@
 import pytest
 from qibo.abstractions import gates
 
-# Gate methods not tested here because they require a calculation backend:
+# TODO: Test the following in `test_core_gates.py`:
 # * dagger
 # * parameter getter and setters
 # * all methods of :class:`qibo.abstractions.abstract_gates.BackendGate`
@@ -190,8 +190,8 @@ def test_toffoli_init():
     assert gate.control_qubits == (0, 2)
 
 # :meth:`qibo.abstractions.gates.TOFFOLI.decompose` and
-# :meth:`qibo.abstractions.gates.TOFFOLI.congruent` are tested in
-# `test_x_decompose_with_cirq`
+# :meth:`qibo.abstractions.gates.TOFFOLI.congruent`
+# are tested in `test_x_decompose_with_cirq`
 
 @pytest.mark.parametrize("targets", [(0,), (2, 0), (1, 3, 2)])
 def test_unitary_init(targets):
@@ -200,11 +200,6 @@ def test_unitary_init(targets):
     gate = gates.Unitary(matrix, *targets)
     assert gate.target_qubits == targets
     assert gate.nparams == 4 ** len(targets)
-
-    # TODO: Check what happens with this check
-    #matrix = np.random.random(2 * (2 ** len(targets) + 1,))
-    #with pytest.raises(ValueError):
-    #    gate = gates.Unitary(matrix, *targets)
 
 
 @pytest.mark.parametrize("targets", [range(5), range(6)])
@@ -227,10 +222,8 @@ def test_flatten():
     gate = gates.Flatten([1, 2, 3, 4])
     assert gate.coefficients == [1, 2, 3, 4]
 
-
-def test_callbackgate():
-    # TODO: Complete this test once you create `qibo.abstractions.callbacks`
-    pass
+# TODO: Test :class:`qibo.abstractions.gates.CallbackGate` in
+# `test_core_gates.py`
 
 
 def test_kraus_channel_init():
@@ -313,6 +306,18 @@ def test_nqubits_getter_and_setter():
     assert gate.nstates == 1024
 
 
+def test_nqubits_getter_and_setter_errors():
+    from qibo.abstractions import abstract_gates
+    gate = abstract_gates.Gate()
+    with pytest.raises(ValueError):
+        nqubits = gate.nqubits
+    with pytest.raises(ValueError):
+        nstates = gate.nstates
+    gate.nqubits = 4
+    with pytest.raises(ValueError):
+        gate.nqubits = 5
+
+
 def test_density_matrix_getter_and_setter():
     from qibo.abstractions import abstract_gates
     gate = abstract_gates.Gate()
@@ -352,6 +357,14 @@ def test_controlled_by():
     assert gate.control_qubits == (1, 2, 3)
     assert gate.is_controlled_by
     assert isinstance(gate, gates.RX)
+
+    with pytest.raises(RuntimeError):
+        gate = gates.CNOT(0, 1).controlled_by(2)
+
+    gate = gates.RY(0, 0.1234)
+    gate.nqubits = 5
+    with pytest.raises(RuntimeError):
+        gate = gate.controlled_by(2)
 
 
 def test_decompose():

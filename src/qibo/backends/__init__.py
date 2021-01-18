@@ -80,9 +80,6 @@ def set_backend(backend="custom"):
     bk = _construct_backend(calc_backend)
     K.assign(bk)
     K.qnp = numpy_backend
-    if K.name != "tensorflow" and gate_backend == "custom":
-        raise_error(ValueError, "Custom gates cannot be used with {} backend."
-                                "".format(K.name))
     K.set_gates(gate_backend)
 
 

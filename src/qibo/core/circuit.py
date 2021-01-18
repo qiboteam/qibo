@@ -72,32 +72,6 @@ class Circuit(circuit.AbstractCircuit):
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
-    def _fuse_copy(self):
-        """Helper method for :meth:`qibo.core.circuit.Circuit.fuse``.
-
-        For standard (non-distributed) circuits this creates a copy of the
-        circuit with deep-copying the parametrized gates only.
-        For distributed circuits a fully deep copy should be created.
-        """
-        import copy
-        from qibo.abstractions.abstract_gates import ParametrizedGate
-        new_circuit = self.__class__(**self.init_kwargs)
-        for gate in self.queue:
-            if isinstance(gate, ParametrizedGate):
-                if gate.trainable:
-                    new_gate = copy.copy(gate)
-                    new_circuit.queue.append(new_gate)
-                    new_circuit.parametrized_gates.append(new_gate)
-                    new_circuit.trainable_gates.append(new_gate)
-                else:
-                    new_circuit.queue.append(gate)
-                    new_circuit.parametrized_gates.append(gate)
-            else:
-                new_circuit.queue.append(gate)
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        return new_circuit
-
     def fuse(self):
         """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
 

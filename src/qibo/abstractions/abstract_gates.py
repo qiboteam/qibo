@@ -211,6 +211,11 @@ class Gate:
         new_gate.control_qubits = self.control_qubits
         return new_gate
 
+    def _controlled_by_error(self):
+        if self._nqubits is not None:
+            raise_error(RuntimeError, "Cannot use controlled_by on a gate for "
+                                      "which the number of qubits is set.")
+
     def controlled_by(self, *qubits: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
@@ -225,10 +230,7 @@ class Gate:
             raise_error(RuntimeError, "Cannot use `controlled_by` method on gate {} "
                                       "because it is already controlled by {}."
                                       "".format(self, self.control_qubits))
-        if self._nqubits is not None:
-            raise_error(RuntimeError, "Cannot use controlled_by on a gate that is "
-                                      "part of a Circuit or has been called on a "
-                                      "state.")
+        self._controlled_by_error()
         if qubits:
             self.is_controlled_by = True
             self.control_qubits = qubits

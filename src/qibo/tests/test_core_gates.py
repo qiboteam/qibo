@@ -10,7 +10,7 @@ try:
     import tensorflow as tf
     BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
                 "numpy_defaulteinsum", "numpy_matmuleinsum"]
-except ModuleNotFoundError:
+except ModuleNotFoundError: # pragma: no cover
     BACKENDS = ["defaulteinsum", "matmuleinsum"]
 
 
@@ -20,8 +20,12 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
         state[0] = 1
         if qibo.get_backend() != "custom":
             state = K.qnp.reshape(state, nqubits * (2,))
+    else:
+        state = K.np.copy(initial_state)
+
     for gate in gatelist:
         state = gate(state)
+
     if qibo.get_backend() != "custom":
         state = np.array(state).ravel()
     return state

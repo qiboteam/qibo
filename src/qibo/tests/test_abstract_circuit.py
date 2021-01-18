@@ -3,10 +3,8 @@ from qibo.abstractions import gates
 from qibo.config import raise_error
 from qibo.abstractions.circuit import AbstractCircuit
 
-# TODO: Move all commented tests in core circuit tests
 
-
-class Circuit(AbstractCircuit): # pragma: no-cover
+class Circuit(AbstractCircuit): # pragma: no cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
     def fuse(self):
@@ -68,6 +66,9 @@ def test_circuit_add_errors():
         c.add(0)
     with pytest.raises(ValueError):
         c.add(gates.H(2))
+    c._final_state = 0
+    with pytest.raises(RuntimeError):
+        c.add(gates.H(1))
 
 
 def test_circuit_add_iterable():
@@ -111,6 +112,15 @@ def test_circuit_add_nested_generator():
     assert isinstance(c.queue[2], gates.CNOT)
     assert isinstance(c.queue[5], gates.CNOT)
     assert isinstance(c.queue[7], gates.H)
+
+
+def test_set_nqubits():
+    c = Circuit(2)
+    gate = gates.H(0)
+    gate.nqubits = 3
+    gate.is_prepared = True
+    with pytest.raises(RuntimeError):
+        c.add(gate)
 
 # TODO: Test `_add_measurement`
 # TODO: Test `_add_layer`
@@ -312,32 +322,42 @@ def test_circuit_with_noise(measurements, noise_map):
 @pytest.mark.parametrize("include_not_trainable", [True, False])
 @pytest.mark.parametrize("format", ["list", "dict", "flatlist"])
 def test_get_parameters(trainable, include_not_trainable, format):
+    import numpy as np
+    matrix = np.random.random((2, 2))
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
     c.add(gates.RY(1, theta=0.456, trainable=trainable))
     c.add(gates.CZ(1, 2))
+    c.add(gates.Unitary(matrix, 2))
     c.add(gates.fSim(0, 2, theta=0.789, phi=0.987, trainable=trainable))
     c.add(gates.H(2))
-
+    c.param_tensor_types = (np.ndarray,)
     params = c.get_parameters(format, include_not_trainable)
     if trainable or include_not_trainable:
         target_params = {
             "list": [0.123, 0.456, (0.789, 0.987)],
             "dict": {c.queue[0]: 0.123, c.queue[1]: 0.456,
-                     c.queue[3]: (0.789, 0.987)},
-            "flatlist": [0.123, 0.456, 0.789, 0.987]
+                     c.queue[4]: (0.789, 0.987)},
+            "flatlist": [0.123, 0.456]
             }
+        target_params["flatlist"].extend(list(matrix.ravel()))
+        target_params["flatlist"].extend([0.789, 0.987])
     else:
         target_params = {
             "list": [0.123],
             "dict": {c.queue[0]: 0.123},
             "flatlist": [0.123]
             }
+        target_params["flatlist"].extend(list(matrix.ravel()))
+    if format == "list":
+        i = len(target_params["list"]) // 2 + 1
+        np.testing.assert_allclose(params.pop(i), matrix)
+    elif format == "dict":
+        np.testing.assert_allclose(params.pop(c.queue[3]), matrix)
     assert params == target_params[format]
     with pytest.raises(ValueError):
         c.get_parameters("test")
 
-# TODO: Test `get_parameters` with flatlist when a Unitary gate is in the circuit
 
 @pytest.mark.parametrize("trainable", [True, False])
 def test_circuit_set_parameters_with_list(trainable):
@@ -364,7 +384,7 @@ def test_circuit_set_parameters_with_list(trainable):
     assert c.queue[1].parameters == params[1]
     assert c.queue[3].parameters == params[2]
 
-    # TODO: Do these tests when using backends
+    # TODO: Move the tests below to `test_core_circuit.py`
     #np.testing.assert_allclose(c(), target_c())
     # Attempt using a flat np.ndarray/list
     #for new_params in (np.random.random(4), list(np.random.random(4))):
@@ -426,7 +446,8 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({gates.RX(0, theta=1.0): 0.568})
     with pytest.raises(ValueError):
         c.set_parameters([0.12586])
-    # TODO: Move commented tests to core circuit tests
+
+    # TODO: Move the tests below to `test_core_circuit.py`
     #with pytest.raises(ValueError):
     #    c.set_parameters(np.random.random(5))
     #with pytest.raises(ValueError):
@@ -436,9 +457,84 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({0.3568})
     with pytest.raises(ValueError):
         c.queue[2].parameters = [0.1234, 0.4321, 0.156]
-    #fused_c = c.fuse()
-    #with pytest.raises(TypeError):
-    #    fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})
+    c.fusion_groups = ["test"]
+    with pytest.raises(TypeError):
+        c.set_parameters({gates.RX(0, theta=1.0): 0.568})
 
 
-# TODO: Test ``circuit.draw()``
+def test_circuit_draw():
+    """Test circuit text draw."""
+    ref = 'q0: ─H─U1─U1─U1─U1───────────────────────────x───\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x─\n' \
+          'q4: ────────────o──────────o───────o────o──H─x───'
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    assert circuit.draw() == ref
+
+
+def test_circuit_draw_line_wrap():
+    """Test circuit text draw with line wrap."""
+    ref_line_wrap_50 = \
+          'q0: ─H─U1─U1─U1─U1───────────────────────────x───I ...\n' \
+          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─I ...\n' \
+          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|── ...\n' \
+          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x── ...\n' \
+          'q4: ────────────o──────────o───────o────o──H─x──── ...\n' \
+          '\n' \
+          '... ───f─o────gf───M─\n' \
+          '... ───|─U3───|──o─M─\n' \
+          '... ───|────X─gf─o─M─\n' \
+          '... ─M─|────o────o───\n' \
+          '... ───f────o────X───'
+
+    ref_line_wrap_30 = \
+           'q0: ─H─U1─U1─U1─U1──────────── ...\n' \
+           'q1: ───o──|──|──|──H─U1─U1─U1─ ...\n' \
+           'q2: ──────o──|──|────o──|──|── ...\n' \
+           'q3: ─────────o──|───────o──|── ...\n' \
+           'q4: ────────────o──────────o── ...\n' \
+           '\n' \
+           '... ───────────────x───I───f─o──── ...\n' \
+           '... ───────────────|─x─I───|─U3─── ...\n' \
+           '... H─U1─U1────────|─|─────|────X─ ...\n' \
+           '... ──o──|──H─U1───|─x───M─|────o─ ...\n' \
+           '... ─────o────o──H─x───────f────o─ ...\n' \
+           '\n' \
+           '... gf───M─\n' \
+           '... |──o─M─\n' \
+           '... gf─o─M─\n' \
+           '... ───o───\n' \
+           '... ───X───'
+    import numpy as np
+    circuit = Circuit(5)
+    for i1 in range(5):
+        circuit.add(gates.H(i1))
+        for i2 in range(i1 + 1, 5):
+            circuit.add(gates.CU1(i2, i1, theta=0))
+    circuit.add(gates.SWAP(0, 4))
+    circuit.add(gates.SWAP(1, 3))
+    circuit.add(gates.I(*range(2)))
+    circuit.add(gates.Collapse(3))
+    circuit.add(gates.fSim(0,4,0,0))
+    circuit.add(gates.CU3(0,1,0,0,0))
+    circuit.add(gates.TOFFOLI(4,3,2))
+    circuit.add(gates.GeneralizedfSim(0, 2, np.eye(2), 0))
+    circuit.add(gates.X(4).controlled_by(1,2,3))
+    circuit.add(gates.M(*range(3)))
+    assert circuit.draw(line_wrap=50) == ref_line_wrap_50
+    assert circuit.draw(line_wrap=30) == ref_line_wrap_30
+
+
+def test_circuit_draw_not_supported_gates():
+    """Check that ``NotImplementedError`` is raised if gate is not supported."""
+    c = Circuit(2)
+    c.add(gates.Flatten(1))
+    with pytest.raises(NotImplementedError):
+        c.draw()

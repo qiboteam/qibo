@@ -217,6 +217,3 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
-
-    def assert_allclose(self, actual, desired, atol=0):
-        self.np.testing.assert_allclose(actual, desired, atol=atol)

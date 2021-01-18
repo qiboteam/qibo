@@ -1,4 +1,6 @@
 import pytest
+import numpy as np
+import qibo
 from qibo import K
 from qibo.core import measurements
 
@@ -24,6 +26,7 @@ def test_gateresult_init_errors():
         result = measurements.GateResult((0, 1), binary_samples=bsamples)
 
 
+
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("dsamples,bsamples",
                          [([0, 3, 2, 3, 1],
@@ -36,13 +39,13 @@ def test_gateresult_binary_decimal_conversions(binary, dsamples, bsamples):
     qubits = tuple(range(int(binsamples.shape[-1])))
     result1 = measurements.GateResult(qubits, decimal_samples=decsamples)
     result2 = measurements.GateResult(qubits, binary_samples=binsamples)
-    K.assert_allclose(result1.samples(binary=True), binsamples)
-    K.assert_allclose(result2.samples(binary=True), binsamples)
-    K.assert_allclose(result1.samples(binary=False), decsamples)
-    K.assert_allclose(result2.samples(binary=False), decsamples)
+    np.testing.assert_allclose(result1.samples(binary=True), binsamples)
+    np.testing.assert_allclose(result2.samples(binary=True), binsamples)
+    np.testing.assert_allclose(result1.samples(binary=False), decsamples)
+    np.testing.assert_allclose(result2.samples(binary=False), decsamples)
     # test ``__getitem__``
     for i, target in enumerate(dsamples):
-        K.assert_allclose(result1[i], target)
+        np.testing.assert_allclose(result1[i], target)
 
 
 def test_gateresult_frequencies():
@@ -71,7 +74,7 @@ def test_gateresult_apply_bitflips(i, p0, p1):
         [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
         [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
     ]
-    K.assert_allclose(noisy_result.samples(binary=False), targets[i])
+    np.testing.assert_allclose(noisy_result.samples(binary=False), targets[i])
 
 
 # TODO: Test ``CircuitResult``

@@ -25,7 +25,8 @@ class Circuit(StateCircuit):
         else:
             try:
                 from qibo.tensorflow.distcircuit import DistributedCircuit
-            except ModuleNotFoundError:
+            except ModuleNotFoundError: # pragma: no cover
+                # CI installs all required libraries by default
                 raise_error(ModuleNotFoundError,
                             "Cannot create distributed circuit because some "
                             "required libraries are missing.")
