@@ -324,6 +324,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def random_uniform(self, shape, dtype='DTYPE'): # pragma: no cover
+        """Samples array of given shape from a uniform distribution in [0, 1]."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def sample_measurements(self, probs, nshots): # pragma: no cover
         """Samples measurements from a given probability distribution.
 

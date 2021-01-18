@@ -20,7 +20,7 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
         state[0] = 1
         if qibo.get_backend() != "custom":
             state = K.qnp.reshape(state, nqubits * (2,))
-    else:
+    else: # pragma: no cover
         state = K.np.copy(initial_state)
 
     for gate in gatelist:

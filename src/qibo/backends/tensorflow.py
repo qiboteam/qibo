@@ -139,6 +139,9 @@ class TensorflowBackend(numpy.NumpyBackend):
                                      is_matrix=is_matrix,
                                      omp_num_threads=get_threads())
 
+    def random_uniform(self, shape, dtype='DTYPE'):
+        return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
+
     def sample_measurements(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(

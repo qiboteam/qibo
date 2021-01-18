@@ -206,6 +206,9 @@ class NumpyBackend(abstract.AbstractBackend):
             state[0] = 1
         return state
 
+    def random_uniform(self, shape, dtype='DTYPE'):
+        return self.backend.random.random(shape).astype(self.dtypes(dtype))
+
     def sample_measurements(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
 
