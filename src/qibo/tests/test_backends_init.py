@@ -1,5 +1,5 @@
 import pytest
-from qibo import K, backends, gates
+from qibo import K, backends, models, gates
 from qibo.backends.abstract import _AVAILABLE_BACKENDS
 
 
@@ -55,5 +55,78 @@ def test_set_backend_errors():
     backends.set_backend(original_backend)
 
 
-# TODO: Add set_precision test (move it from base)
-# TODO: Add set_device test (move it from base)
+@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
+@pytest.mark.parametrize("precision", ["single", "double"])
+def test_set_precision(backend, precision):
+    original_backend = backends.get_backend()
+    original_precision = backends.get_precision()
+    backends.set_backend(backend)
+    backends.set_precision(precision)
+    if precision == "single":
+        expected_dtype = K.backend.complex64
+    else:
+        expected_dtype = K.backend.complex128
+    assert backends.get_precision() == precision
+    assert K.dtypes('DTYPECPX') == expected_dtype
+    # Test that circuits use proper precision
+    circuit = models.Circuit(2)
+    circuit.add([gates.H(0), gates.H(1)])
+    final_state = circuit()
+    assert final_state.dtype == expected_dtype
+    backends.set_precision(original_precision)
+    backends.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
+@pytest.mark.parametrize("precision", ["single", "double"])
+def test_set_precision_matrices(backend, precision):
+    import numpy as np
+    from qibo import matrices
+    original_backend = backends.get_backend()
+    original_precision = backends.get_precision()
+    backends.set_backend(backend)
+    backends.set_precision(precision)
+    if precision == "single":
+        assert matrices.dtype == np.complex64
+        assert matrices.H.dtype == np.complex64
+        assert K.matrices.dtype == K.backend.complex64
+        assert K.matrices.X.dtype == K.backend.complex64
+    else:
+        assert matrices.dtype == np.complex128
+        assert matrices.H.dtype == np.complex128
+        assert K.matrices.dtype == K.backend.complex128
+        assert K.matrices.X.dtype == K.backend.complex128
+    backends.set_precision(original_precision)
+    backends.set_backend(original_backend)
+
+
+def test_set_precision_errors():
+    original_precision = backends.get_precision()
+    gate = gates.H(0)
+    with pytest.warns(RuntimeWarning):
+        backends.set_precision("single")
+    with pytest.raises(ValueError):
+        backends.set_precision("test")
+    backends.set_precision(original_precision)
+
+
+@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
+def test_set_device(backend):
+    original_backend = backends.get_backend()
+    backends.set_backend(backend)
+    original_device = backends.get_device()
+    if "numpy" in backend:
+        with pytest.warns(RuntimeWarning):
+            backends.set_device("/CPU:0")
+    else:
+        backends.set_device("/CPU:0")
+        with pytest.raises(ValueError):
+            backends.set_device("test")
+        with pytest.raises(ValueError):
+            backends.set_device("/TPU:0")
+        with pytest.raises(ValueError):
+            backends.set_device("/gpu:10")
+        with pytest.raises(ValueError):
+            backends.set_device("/GPU:10")
+        backends.set_device(original_device)
+    backends.set_backend(original_backend)

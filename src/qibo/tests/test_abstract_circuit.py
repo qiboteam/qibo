@@ -439,3 +439,6 @@ def test_circuit_set_parameters_errors():
     #fused_c = c.fuse()
     #with pytest.raises(TypeError):
     #    fused_c.set_parameters({gates.RX(0, theta=1.0): 0.568})
+
+
+# TODO: Test ``circuit.draw()``

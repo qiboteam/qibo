@@ -8,7 +8,6 @@ from qibo.models import *
 from qibo.gates import *
 
 
-
 def test_importing_full_qibo():
     """Checks accessing `models` and `gates` from `qibo`."""
     import qibo
@@ -48,96 +47,3 @@ def test_base_gate_errors():
         cgate = gate.controlled_by(1)
     with pytest.raises(RuntimeError):
         gate = H(0).controlled_by(1).controlled_by(2)
-
-
-@pytest.mark.parametrize("precision", ["single", "double"])
-def test_state_precision(precision):
-    """Check ``set_precision`` in state dtype."""
-    import qibo
-    import tensorflow as tf
-    original_precision = qibo.get_precision()
-    qibo.set_precision(precision)
-    c1 = Circuit(2)
-    c1.add([H(0), H(1)])
-    final_state = c1()
-    if precision == "single":
-        expected_dtype = tf.complex64
-    else:
-        expected_dtype = tf.complex128
-    assert final_state.dtype == expected_dtype
-    qibo.set_precision(original_precision)
-
-
-@pytest.mark.parametrize("precision", ["single", "double"])
-def test_precision_dictionary(precision):
-    """Check if ``set_precision`` changes the ``DTYPES`` dictionary."""
-    import qibo
-    import tensorflow as tf
-    original_precision = qibo.get_precision()
-    qibo.set_precision(precision)
-    if precision == "single":
-        assert qibo.K.dtypes("DTYPECPX") == tf.complex64
-    else:
-        assert qibo.K.dtypes("DTYPECPX") == tf.complex128
-    qibo.set_precision(original_precision)
-
-
-def test_matrices_dtype():
-    """Check if ``set_precision`` changes matrices types."""
-    import qibo
-    original_precision = qibo.get_precision()
-    # Check that matrices can be imported
-    from qibo import matrices
-    assert matrices.I.dtype == np.complex128
-    np.testing.assert_allclose(matrices.I, np.eye(2))
-    # Check that matrices precision is succesfully switched
-    qibo.set_precision("single")
-    assert matrices.H.dtype == np.complex64
-    H = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(matrices.H, H)
-    qibo.set_precision("double")
-    # Check that ``qibo.matrices`` also works.
-    np.testing.assert_allclose(qibo.matrices.H, H)
-    CNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                     [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(qibo.matrices.CNOT, CNOT)
-    qibo.set_precision(original_precision)
-
-
-def test_switcher_errors():
-    """Check set precision and backend errors."""
-    import qibo
-    with pytest.raises(ValueError):
-        qibo.set_precision('test')
-    with pytest.raises(ValueError):
-        qibo.set_backend('test')
-
-
-def test_switcher_warnings():
-    """Check set precision and backend warnings."""
-    import qibo
-    from qibo import gates
-    g = gates.H(0)
-    qibo.set_precision("double")
-    with pytest.warns(RuntimeWarning):
-        qibo.set_precision("single")
-        qibo.set_precision("double")
-    with pytest.warns(RuntimeWarning):
-        qibo.set_backend("matmuleinsum")
-        qibo.set_backend("custom")
-
-
-def test_set_device():
-    """Check device switcher and errors in device name."""
-    import qibo
-    original_device = qibo.get_device()
-    qibo.set_device("/CPU:0")
-    with pytest.raises(ValueError):
-        qibo.set_device("test")
-    with pytest.raises(ValueError):
-        qibo.set_device("/TPU:0")
-    with pytest.raises(ValueError):
-        qibo.set_device("/gpu:10")
-    with pytest.raises(ValueError):
-        qibo.set_device("/GPU:10")
-    qibo.set_device(original_device)

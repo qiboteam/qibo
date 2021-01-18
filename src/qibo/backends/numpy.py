@@ -43,7 +43,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.optimization = DummyModule()
         self.op = DummyModule("apply_gate")
 
-    def set_device(self, name): # pragma: no cover
+    def set_device(self, name):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
 
