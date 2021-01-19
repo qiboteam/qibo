@@ -47,7 +47,7 @@ class Circuit(circuit.AbstractCircuit):
         gate.prepare()
 
     def _add_layer(self, gate):
-        self.set_nqubits(gate)
+        gate.prepare()
         for unitary in gate.unitaries:
             self.set_nqubits(unitary)
             self.queue.append(unitary)
