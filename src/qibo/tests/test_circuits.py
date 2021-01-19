@@ -47,6 +47,17 @@ def test_adding_gate_with_bad_nqubits(backend):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_circuit_add_layer(nqubits):
+    c = Circuit(nqubits)
+    qubits = list(range(nqubits))
+    pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
+    params = nqubits * [0.1]
+    c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
+    assert len(c.queue) == nqubits // 2 + nqubits % 2
+    for gate in c.queue:
+        assert isinstance(gate, gates.Unitary)
+
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_custom_circuit(backend):
     """Check consistency between Circuit and custom circuits"""

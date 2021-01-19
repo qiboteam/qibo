@@ -7,6 +7,9 @@ from qibo.abstractions.circuit import AbstractCircuit
 class Circuit(AbstractCircuit): # pragma: no cover
     """``BaseCircuit`` implementation without abstract methods for testing."""
 
+    def _add_layer(self, gate):
+        raise_error(NotImplementedError)
+
     def fuse(self):
         raise_error(NotImplementedError)
 
@@ -122,8 +125,22 @@ def test_set_nqubits():
     with pytest.raises(RuntimeError):
         c.add(gate)
 
-# TODO: Test `_add_measurement`
-# TODO: Test `_add_layer`
+
+def test_add_measurement():
+    c = Circuit(5)
+    g1 = gates.M(0, 2, register_name="a")
+    g2 = gates.M(3, register_name="b")
+    c.add([g1, g2])
+    assert c.measurement_gate is g1
+    assert c.measurement_tuples == {"a": (0, 2), "b": (3,)}
+    assert g1.target_qubits == (0, 2, 3)
+    assert g2.target_qubits == (3,)
+    with pytest.raises(KeyError):
+        c.add(gates.M(4, register_name="b"))
+
+
+# TODO: Test `_add_layer` in `test_core_circuit.py`
+
 
 def test_gate_types():
     import collections

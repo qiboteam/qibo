@@ -46,6 +46,15 @@ class Circuit(circuit.AbstractCircuit):
         gate.nqubits = self.nqubits
         gate.prepare()
 
+    def _add_layer(self, gate):
+        self.set_nqubits(gate)
+        for unitary in gate.unitaries:
+            self.set_nqubits(unitary)
+            self.queue.append(unitary)
+        if gate.additional_unitary is not None:
+            self.set_nqubits(gate.additional_unitary)
+            self.queue.append(gate.additional_unitary)
+
     def _fuse_copy(self):
         """Helper method for ``circuit.fuse``.
 

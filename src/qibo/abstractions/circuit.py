@@ -443,15 +443,10 @@ class AbstractCircuit(ABC):
             self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
-    def _add_layer(self, gate: gates.Gate):
+    @abstractmethod
+    def _add_layer(self, gate: gates.Gate): # pragma: no cover
         """Called automatically by `add` when `gate` is measurement."""
-        gate.prepare()
-        for unitary in gate.unitaries:
-            self.set_nqubits(unitary)
-            self.queue.append(unitary)
-        if gate.additional_unitary is not None:
-            self.set_nqubits(gate.additional_unitary)
-            self.queue.append(gate.additional_unitary)
+        raise_error(NotImplementedError)
 
     @property
     def ngates(self) -> int:
