@@ -52,7 +52,7 @@ def test_set_parameters_with_list(backend, trainable):
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_circuit_set_parameters_ungates(backend, trainable, accelerators=None):
+def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
     """Check updating parameters of circuit with list."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -109,7 +109,7 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators=None):
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators=None):
+def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -148,7 +148,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators=No
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_set_parameters_with_variationallayer(backend, nqubits, accelerators=None):
+def test_set_parameters_with_variationallayer(backend, nqubits, accelerators):
     """Check updating parameters of variational layer."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -180,7 +180,7 @@ def test_set_parameters_with_variationallayer(backend, nqubits, accelerators=Non
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("trainable", [True, False])
-def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable, accelerators=None):
+def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable, accelerators):
     """Check updating parameters of variational layer."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -213,7 +213,7 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_set_parameters_with_gate_fusion(backend, trainable, accelerators=None):
+def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
     """Check updating parameters of fused circuit."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

@@ -5,8 +5,9 @@ from qibo import gates
 from qibo.models import Circuit
 
 
-def test_circuit_init(backend, accelerators=None):
+def test_circuit_init(backend, accelerators):
     from qibo import K
+    print(accelerators)
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
@@ -15,7 +16,7 @@ def test_circuit_init(backend, accelerators=None):
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
-def test_circuit_add_layer(backend, nqubits, accelerators=None):
+def test_circuit_add_layer(backend, nqubits, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(nqubits, accelerators)
@@ -35,7 +36,7 @@ def test_circuit_add_layer(backend, nqubits, accelerators=None):
 # TODO: Test `_fuse_copy`
 # TODO: Test `fuse`
 
-def test_eager_execute(backend, accelerators=None):
+def test_eager_execute(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4, accelerators)
@@ -95,7 +96,7 @@ def test_compiling_twice_exception():
 # TODO: Test compiled circuit execution with measurements
 
 @pytest.mark.linux
-def test_memory_error(backend, accelerators=None):
+def test_memory_error(backend, accelerators):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -106,7 +107,7 @@ def test_memory_error(backend, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-def test_repeated_execute(backend, accelerators=None):
+def test_repeated_execute(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(4, accelerators)
