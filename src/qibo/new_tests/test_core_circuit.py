@@ -5,27 +5,15 @@ from qibo import gates
 from qibo.models import Circuit
 
 
-try:
-    import tensorflow as tf
-    BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                "numpy_defaulteinsum", "numpy_matmuleinsum"]
-except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
-
-
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_circuit_init(backend, accelerators=None):
+    from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
-    if "numpy" in backend:
-        assert c.param_tensor_types == (np.ndarray,)
-    else:
-        assert c.param_tensor_types == (np.ndarray, tf.Tensor, tf.Variable)
+    assert c.param_tensor_types == K.tensor_types
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_circuit_add_layer(backend, nqubits, accelerators=None):
     original_backend = qibo.get_backend()
@@ -47,7 +35,6 @@ def test_circuit_add_layer(backend, nqubits, accelerators=None):
 # TODO: Test `_fuse_copy`
 # TODO: Test `fuse`
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_eager_execute(backend, accelerators=None):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -58,7 +45,6 @@ def test_eager_execute(backend, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_compiled_execute(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -109,7 +95,6 @@ def test_compiling_twice_exception():
 # TODO: Test compiled circuit execution with measurements
 
 @pytest.mark.linux
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_memory_error(backend, accelerators=None):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
     original_backend = qibo.get_backend()
@@ -121,7 +106,6 @@ def test_memory_error(backend, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_repeated_execute(backend, accelerators=None):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -135,7 +119,6 @@ def test_repeated_execute(backend, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_repeated_execute_with_noise_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -165,7 +148,6 @@ def test_repeated_execute_with_noise_channel(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend"), BACKENDS)
 def test_final_state_property(backend):
     """Check accessing final state using the circuit's property."""
     original_backend = qibo.get_backend()
@@ -182,7 +164,6 @@ def test_final_state_property(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_get_initial_state(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

@@ -11,8 +11,6 @@ def test_construct_backend():
         bk = backends._construct_backend("test")
 
 
-@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum",
-                                     "numpy_defaulteinsum", "numpy_matmuleinsum"])
 def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
@@ -55,7 +53,6 @@ def test_set_backend_errors():
     backends.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_set_precision(backend, precision):
     original_backend = backends.get_backend()
@@ -77,7 +74,6 @@ def test_set_precision(backend, precision):
     backends.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
 @pytest.mark.parametrize("precision", ["single", "double"])
 def test_set_precision_matrices(backend, precision):
     import numpy as np
@@ -110,7 +106,6 @@ def test_set_precision_errors():
     backends.set_precision(original_precision)
 
 
-@pytest.mark.parametrize("backend", ["custom", "numpy_defaulteinsum"])
 def test_set_device(backend):
     original_backend = backends.get_backend()
     backends.set_backend(backend)

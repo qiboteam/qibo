@@ -4,12 +4,6 @@ import qibo
 from qibo import K
 from qibo.core import measurements
 
-try:
-    import tensorflow as tf
-    BACKENDS = ["custom", "numpy_defaulteinsum"]
-except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["numpy_defaulteinsum"]
-
 
 def test_gateresult_init():
     samples = K.zeros(10, dtype='DTYPEINT')
@@ -33,7 +27,6 @@ def test_gateresult_init_errors():
 
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("dsamples,bsamples",
                          [([0, 3, 2, 3, 1],
@@ -58,7 +51,6 @@ def test_gateresult_binary_decimal_conversions(backend, binary, dsamples, bsampl
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_gateresult_frequencies(backend):
     import collections
     original_backend = qibo.get_backend()
@@ -73,7 +65,6 @@ def test_gateresult_frequencies(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("i,p0,p1",
                          [(0, 0.2, None), (1, 0.2, 0.1),
                           (2, (0.1, 0.0, 0.2), None),

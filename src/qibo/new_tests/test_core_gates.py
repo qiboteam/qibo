@@ -31,7 +31,6 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
     return state
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_h(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -41,7 +40,6 @@ def test_h(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_x(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -52,7 +50,6 @@ def test_x(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_y(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -63,7 +60,6 @@ def test_y(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_z(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -75,7 +71,6 @@ def test_z(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_rx_parameter_setter(backend):
     """Check that the parameter setter of RX gate is working properly."""
     def exact_state(theta):

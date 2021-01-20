@@ -1,7 +1,7 @@
 import inspect
 import pytest
 from qibo.config import raise_error
-from qibo.tests import test_core_circuit, test_core_circuit_parametrized
+from qibo.new_tests import test_core_circuit, test_core_circuit_parametrized
 
 
 ACCELERATORS = [{"/GPU:0": 2}, {"/GPU:0": 1, "/GPU:1": 1},
@@ -23,6 +23,7 @@ def get_names(arg_names=["backend", "accelerators"],
                 fargs = inspect.getfullargspec(func).args
                 if fargs == arg_names:
                     yield func
+
 
 @pytest.mark.linux
 @pytest.mark.parametrize("accelerators", ACCELERATORS)

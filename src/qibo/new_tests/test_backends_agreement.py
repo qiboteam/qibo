@@ -4,9 +4,6 @@ from qibo import backends
 from numpy.random import random as rand
 
 
-TARGET_BACKENDS = ["numpy"]
-TESTED_BACKENDS = ["tensorflow"]
-
 METHODS = [
     ("cast", [rand(4)]),
     ("diag", [rand(4)]),
@@ -53,8 +50,6 @@ METHODS = [
     ("initial_state", [5, True]),
     ("initial_state", [3, False])
 ]
-@pytest.mark.parametrize("tested_backend", TESTED_BACKENDS)
-@pytest.mark.parametrize("target_backend", TARGET_BACKENDS)
 @pytest.mark.parametrize("method,kwargs", METHODS)
 def test_backend_methods(tested_backend, target_backend, method, kwargs):
     tested_backend = backends._construct_backend(tested_backend)
@@ -67,8 +62,6 @@ def test_backend_methods(tested_backend, target_backend, method, kwargs):
         np.testing.assert_allclose(tested_func(*kwargs), target_func(*kwargs))
 
 
-@pytest.mark.parametrize("tested_backend", TESTED_BACKENDS)
-@pytest.mark.parametrize("target_backend", TARGET_BACKENDS)
 def test_backend_eigh(tested_backend, target_backend):
     tested_backend = backends._construct_backend(tested_backend)
     target_backend = backends._construct_backend(target_backend)
@@ -79,8 +72,6 @@ def test_backend_eigh(tested_backend, target_backend):
     np.testing.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2))
 
 
-@pytest.mark.parametrize("tested_backend", TESTED_BACKENDS)
-@pytest.mark.parametrize("target_backend", TARGET_BACKENDS)
 def test_backend_compile(tested_backend, target_backend):
     tested_backend = backends._construct_backend(tested_backend)
     target_backend = backends._construct_backend(target_backend)
@@ -91,8 +82,6 @@ def test_backend_compile(tested_backend, target_backend):
     np.testing.assert_allclose(cfunc1(x), cfunc2(x))
 
 
-@pytest.mark.parametrize("tested_backend", TESTED_BACKENDS)
-@pytest.mark.parametrize("target_backend", TARGET_BACKENDS)
 def test_backend_gather(tested_backend, target_backend):
     tested_backend = backends._construct_backend(tested_backend)
     target_backend = backends._construct_backend(target_backend)

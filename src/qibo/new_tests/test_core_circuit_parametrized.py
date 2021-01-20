@@ -13,7 +13,6 @@ except ModuleNotFoundError: # pragma: no cover
     BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_list(backend, trainable):
     """Check updating parameters of circuit with list."""
@@ -52,7 +51,6 @@ def test_set_parameters_with_list(backend, trainable):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("trainable", [True, False])
 def test_circuit_set_parameters_ungates(backend, trainable, accelerators=None):
     """Check updating parameters of circuit with list."""
@@ -110,7 +108,6 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("trainable", [True, False])
 def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators=None):
     """Check updating parameters of circuit that contains ``Unitary`` gate."""
@@ -150,7 +147,6 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators=No
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_set_parameters_with_variationallayer(backend, nqubits, accelerators=None):
     """Check updating parameters of variational layer."""
@@ -182,7 +178,6 @@ def test_set_parameters_with_variationallayer(backend, nqubits, accelerators=Non
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable, accelerators=None):
@@ -217,7 +212,6 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_gate_fusion(backend, trainable, accelerators=None):
     """Check updating parameters of fused circuit."""
@@ -257,7 +251,6 @@ def test_set_parameters_with_gate_fusion(backend, trainable, accelerators=None):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
 def test_variable_theta(backend):
     """Check that parametrized gates accept `tf.Variable` parameters."""
     from qibo import K
