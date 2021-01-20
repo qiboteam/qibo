@@ -10,7 +10,7 @@ try:
     BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
                 "numpy_defaulteinsum", "numpy_matmuleinsum"]
 except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["defaulteinsum", "matmuleinsum"]
+    BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
@@ -260,23 +260,24 @@ def test_set_parameters_with_gate_fusion(backend, trainable, accelerators=None):
 @pytest.mark.parametrize("backend", BACKENDS)
 def test_variable_theta(backend):
     """Check that parametrized gates accept `tf.Variable` parameters."""
-    if "numpy" in backend:
-        pytest.skip("Variable test is not relevant for numpy backend.")
-
     from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
-    theta2 = K.optimization.Variable(0.4321, dtype=K.dtypes('DTYPE'))
+    if "numpy" in backend:
+        with pytest.raises(ValueError):
+            theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
+    else:
+        theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
+        theta2 = K.optimization.Variable(0.4321, dtype=K.dtypes('DTYPE'))
 
-    cvar = Circuit(2)
-    cvar.add(gates.RX(0, theta1))
-    cvar.add(gates.RY(1, theta2))
-    final_state = cvar()
+        cvar = Circuit(2)
+        cvar.add(gates.RX(0, theta1))
+        cvar.add(gates.RY(1, theta2))
+        final_state = cvar()
 
-    c = Circuit(2)
-    c.add(gates.RX(0, 0.1234))
-    c.add(gates.RY(1, 0.4321))
-    target_state = c()
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
+        c = Circuit(2)
+        c.add(gates.RX(0, 0.1234))
+        c.add(gates.RY(1, 0.4321))
+        target_state = c()
+        np.testing.assert_allclose(final_state, target_state)
+        qibo.set_backend(original_backend)

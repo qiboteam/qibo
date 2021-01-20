@@ -28,14 +28,21 @@ def test_circuit_init(backend, accelerators=None):
 @pytest.mark.parametrize("backend", BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_circuit_add_layer(backend, nqubits, accelerators=None):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c = Circuit(nqubits, accelerators)
     qubits = list(range(nqubits))
     pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
     params = nqubits * [0.1]
     c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
     assert len(c.queue) == nqubits // 2 + nqubits % 2
+    if backend == "custom":
+        target_gate_cls = gates.Unitary
+    else:
+        from qibo.core.gates import Unitary as target_gate_cls
     for gate in c.queue:
-        assert isinstance(gate, gates.Unitary)
+        assert isinstance(gate, target_gate_cls)
+    qibo.set_backend(original_backend)
 
 # TODO: Test `_fuse_copy`
 # TODO: Test `fuse`
@@ -163,7 +170,6 @@ def test_final_state_property(backend):
     """Check accessing final state using the circuit's property."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    import tensorflow as tf
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
 
