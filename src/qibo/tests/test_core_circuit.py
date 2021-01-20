@@ -26,16 +26,16 @@ def test_circuit_init(backend, accelerators=None):
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_circuit_add_layer(backend, accelerators=None):
-    for nqubits in [5, 6]:
-        c = Circuit(nqubits, accelerators)
-        qubits = list(range(nqubits))
-        pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
-        params = nqubits * [0.1]
-        c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
-        assert len(c.queue) == nqubits // 2 + nqubits % 2
-        for gate in c.queue:
-            assert isinstance(gate, gates.Unitary)
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_circuit_add_layer(backend, nqubits, accelerators=None):
+    c = Circuit(nqubits, accelerators)
+    qubits = list(range(nqubits))
+    pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
+    params = nqubits * [0.1]
+    c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
+    assert len(c.queue) == nqubits // 2 + nqubits % 2
+    for gate in c.queue:
+        assert isinstance(gate, gates.Unitary)
 
 # TODO: Test `_fuse_copy`
 # TODO: Test `fuse`
