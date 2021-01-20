@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
-import tensorflow as tf
 from qibo.backends import matrices
+from qibo.config import raise_error
 
 TARGET_MATRICES = {
     "I": np.array([[1, 0], [0, 1]]),
@@ -26,12 +26,15 @@ TARGET_MATRICES = {
 }
 
 
-@pytest.mark.parametrize("name,dtype", [("NumpyMatrices", np.complex64),
-                                        ("NumpyMatrices", np.complex128),
-                                        ("TensorflowMatrices", tf.complex64),
-                                        ("TensorflowMatrices", tf.complex128)])
-def test_matrices(name, dtype):
-    mobj = getattr(matrices, name)(dtype)
+@pytest.mark.parametrize("dtype", ["complex64", "complex128"])
+def test_matrices(engine, dtype):
+    if engine == "numpy":
+        mobj = matrices.NumpyMatrices(getattr(np, dtype))
+    elif engine == "tensorflow":
+        import tensorflow as tf
+        mobj = matrices.TensorflowMatrices(getattr(tf, dtype))
+    else:
+        raise_error(ValueError, "Unknown engine {}.".format(engine))
     for matrixname, target in TARGET_MATRICES.items():
         np.testing.assert_allclose(getattr(mobj, matrixname), target)
 

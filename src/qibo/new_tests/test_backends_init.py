@@ -2,11 +2,9 @@ import pytest
 from qibo import K, backends, models, gates
 
 
-def test_construct_backend():
-    backend = backends._construct_backend("numpy")
-    assert backend.name == "numpy"
-    backend = backends._construct_backend("tensorflow")
-    assert backend.name == "tensorflow"
+def test_construct_backend(engine):
+    backend = backends._construct_backend(engine)
+    assert backend.name == engine
     with pytest.raises(ValueError):
         bk = backends._construct_backend("test")
 
