@@ -1,7 +1,6 @@
 """
 Testing Tensorflow gates.
 """
-import pytest
 import numpy as np
 import qibo
 from qibo import K, gates

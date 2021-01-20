@@ -43,24 +43,28 @@ def pytest_addoption(parser):
 
 
 def pytest_generate_tests(metafunc):
+    engines = metafunc.config.option.engines.split(",")
+    backends = metafunc.config.option.backends.split(",")
+    accelerators = metafunc.config.option.accelerators
+    if "tensorflow" not in engines:
+        accelerators = None
+        for x in ["custom", "defaulteinsum", "matmuleinsum"]:
+            if x in backends:
+                backends.remove(x)
+
     # for `test_backends_matrices.py`
     if "engine" in metafunc.fixturenames:
-        engines = metafunc.config.option.engines.split(",")
         metafunc.parametrize("engine", engines)
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
-        engines = metafunc.config.option.engines.split(",")
         target = metafunc.config.option.target_backend
-        engines = [x for x in engines if x != target]
-        metafunc.parametrize("tested_backend", engines)
+        metafunc.parametrize("tested_backend", [x for x in engines if x != target])
         metafunc.parametrize("target_backend", [target])
 
     # for `test_core_*.py`
     if "backend" in metafunc.fixturenames:
-        backends = metafunc.config.option.backends.split(",")
         if "accelerators" in metafunc.fixturenames:
-            accelerators = metafunc.config.option.accelerators
             if accelerators is None:
                 metafunc.parametrize("backend", backends)
                 metafunc.parametrize("accelerators", [None])
