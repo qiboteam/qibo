@@ -1,10 +1,10 @@
-import os
+from io import BytesIO
 import numpy as np
 import paramiko
-
+from static_config import sample_size, n_channels
 
 class IcarusQ:
-    def __init__(self, address, username, password, n_channels):
+    def __init__(self, address, username, password):
         self.n_channels = n_channels
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -13,7 +13,7 @@ class IcarusQ:
     def clock(self):
         self.ssh.exec_command('clk-control')
 
-    def start(self, adc_delay=0.0, verbose=True):
+    def start(self, adc_delay=0.0, verbose=False):
         stdin, stdout, stderr = self.ssh.exec_command(
             'cd /tmp; ./cqtaws 1 {:.06f}'.format(adc_delay * 1e6))  # delay in us
         if verbose:
@@ -25,22 +25,28 @@ class IcarusQ:
 
     def upload(self, waveform):
         sftp = self.ssh.open_sftp()
-        local = './tmp/'
-        if not os.path.exists(local):
-            os.makedirs(local)
+        dump = BytesIO()
         for i in range(self.n_channels):
-            np.savetxt(local + 'wave_ch{}.csv'.format(i + 1), waveform[i], fmt='%d', newline=',')
-            sftp.put(local + 'wave_ch{}.csv'.format(i + 1), '/tmp/wave_ch{}.csv'.format(i + 1))
+            dump.seek(0)
+            np.savetxt(dump, waveform[i], fmt='%d', newline=',')
+            dump.seek(0)
+            sftp.putfo(dump, '/tmp/wave_ch{}.csv'.format(i + 1))
         sftp.close()
+        dump.close()
 
     def download(self):
-        waveform = []
+        waveform = np.zeros((n_channels, sample_size))
         sftp = self.ssh.open_sftp()
-        local = './tmp/'
-        if not os.path.exists(local):
-            os.makedirs(local)
+        dump = BytesIO()
         for i in range(self.n_channels):
-            sftp.get('/tmp/ADC_CH{}.txt'.format(i + 1), local + 'ADC_CH{}.txt'.format(i + 1))
-            waveform.append(np.genfromtxt(local + 'ADC_CH{}.txt', delimiter=',')[:-1])
+            dump.seek(0)
+            #sftp.get('/tmp/ADC_CH{}.txt'.format(i + 1), local + 'ADC_CH{}.txt'.format(i + 1))
+            sftp.getfo('/tmp/ADC_CH{}.txt'.format(i + 1), dump)
+            dump.seek(0)
+            #waveform.append(np.genfromtxt(local + 'ADC_CH{}.txt', delimiter=',')[:-1])
+            waveform[i] = np.genfromtxt(dump, delimiter=',')[:-1]
+
         sftp.close()
-        return np.array(waveform)
+        dump.close()
+
+        return waveform
