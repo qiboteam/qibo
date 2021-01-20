@@ -14,10 +14,10 @@ except ModuleNotFoundError: # pragma: no cover
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_circuit_init(backend):
+def test_circuit_init(backend, accelerators=None):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    c = Circuit(2)
+    c = Circuit(2, accelerators)
     if "numpy" in backend:
         assert c.param_tensor_types == (np.ndarray,)
     else:
@@ -25,27 +25,28 @@ def test_circuit_init(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("nqubits", [5, 6])
-def test_circuit_add_layer(nqubits):
-    c = Circuit(nqubits)
-    qubits = list(range(nqubits))
-    pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
-    params = nqubits * [0.1]
-    c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
-    assert len(c.queue) == nqubits // 2 + nqubits % 2
-    for gate in c.queue:
-        assert isinstance(gate, gates.Unitary)
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_circuit_add_layer(backend, accelerators=None):
+    for nqubits in [5, 6]:
+        c = Circuit(nqubits, accelerators)
+        qubits = list(range(nqubits))
+        pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
+        params = nqubits * [0.1]
+        c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
+        assert len(c.queue) == nqubits // 2 + nqubits % 2
+        for gate in c.queue:
+            assert isinstance(gate, gates.Unitary)
 
 # TODO: Test `_fuse_copy`
 # TODO: Test `fuse`
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_eager_execute(backend):
+def test_eager_execute(backend, accelerators=None):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    target_state = np.ones(4) / 2.0
+    c = Circuit(4, accelerators)
+    c.add((gates.H(i) for i in range(4)))
+    target_state = np.ones(16) / 4.0
     np.testing.assert_allclose(c(), target_state)
     qibo.set_backend(original_backend)
 
@@ -102,11 +103,11 @@ def test_compiling_twice_exception():
 
 @pytest.mark.linux
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_memory_error(backend):
+def test_memory_error(backend, accelerators=None):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    c = Circuit(40)
+    c = Circuit(40, accelerators)
     c.add((gates.H(i) for i in range(0, 40, 5)))
     with pytest.raises(RuntimeError):
         final_state = c()
@@ -114,10 +115,10 @@ def test_memory_error(backend):
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
-def test_repeated_execute(backend):
+def test_repeated_execute(backend, accelerators=None):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    c = Circuit(4)
+    c = Circuit(4, accelerators)
     thetas = np.random.random(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
     c.repeated_execution = True
