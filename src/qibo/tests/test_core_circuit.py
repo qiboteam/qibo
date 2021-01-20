@@ -10,7 +10,7 @@ try:
     BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
                 "numpy_defaulteinsum", "numpy_matmuleinsum"]
 except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["defaulteinsum", "matmuleinsum"]
+    BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
 
 
 @pytest.mark.parametrize("backend", BACKENDS)
@@ -101,13 +101,16 @@ def test_compiling_twice_exception():
 # TODO: Test compiled circuit execution with measurements
 
 @pytest.mark.linux
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
-def test_memory_error(accelerators):
+@pytest.mark.parametrize("backend", BACKENDS)
+def test_memory_error(backend):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
-    c = Circuit(40, accelerators=accelerators)
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = Circuit(40)
     c.add((gates.H(i) for i in range(0, 40, 5)))
     with pytest.raises(RuntimeError):
         final_state = c()
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("backend", BACKENDS)

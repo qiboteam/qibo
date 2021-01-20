@@ -139,9 +139,6 @@ def test_add_measurement():
         c.add(gates.M(4, register_name="b"))
 
 
-# TODO: Test `_add_layer` in `test_core_circuit.py`
-
-
 def test_gate_types():
     import collections
     c = Circuit(3)
@@ -390,9 +387,6 @@ def test_circuit_set_parameters_with_list(trainable):
     c.add(gates.CZ(1, 2))
     c.add(gates.fSim(0, 2, theta=0, phi=0))
     c.add(gates.H(2))
-    # execute once
-    #final_state = c()
-
     if trainable:
         c.set_parameters(params)
         assert c.queue[0].parameters == params[0]
@@ -400,19 +394,6 @@ def test_circuit_set_parameters_with_list(trainable):
         c.set_parameters(params[1:])
     assert c.queue[1].parameters == params[1]
     assert c.queue[3].parameters == params[2]
-
-    # TODO: Move the tests below to `test_core_circuit.py`
-    #np.testing.assert_allclose(c(), target_c())
-    # Attempt using a flat np.ndarray/list
-    #for new_params in (np.random.random(4), list(np.random.random(4))):
-    #    if trainable:
-    #        c.set_parameters(new_params)
-    #    else:
-    #        new_params[0] = params[0]
-    #        c.set_parameters(new_params[1:])
-    #    target_params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
-    #    target_c.set_parameters(target_params)
-    #    np.testing.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("trainable", [True, False])
