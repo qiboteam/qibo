@@ -1,3 +1,4 @@
+"""Test :meth:`qibo.core.circuit.Circuit.get_parameters` and :meth:`qibo.core.circuit.Circuit.set_parameters`."""
 import numpy as np
 import pytest
 import qibo

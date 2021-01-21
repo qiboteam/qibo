@@ -1,3 +1,4 @@
+"""Test all methods defined in `qibo/core/circuit.py`."""
 import numpy as np
 import pytest
 import qibo
@@ -119,35 +120,6 @@ def test_repeated_execute(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
-def test_repeated_execute_with_noise_channel(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    thetas = np.random.random(4)
-    c = Circuit(4)
-    c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-
-    c.add((gates.PauliNoiseChannel(i, px=0.1, py=0.2, pz=0.3, seed=1234)
-          for i in range(4)))
-    final_state = c(nshots=20)
-
-    np.random.seed(1234)
-    target_state = []
-    for _ in range(20):
-        noiseless_c = Circuit(4)
-        noiseless_c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
-        for i in range(4):
-            if np.random.random() < 0.1:
-                noiseless_c.add(gates.X(i))
-            if np.random.random() < 0.2:
-                noiseless_c.add(gates.Y(i))
-            if np.random.random() < 0.3:
-                noiseless_c.add(gates.Z(i))
-        target_state.append(noiseless_c())
-    target_state = np.stack(target_state)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
 def test_final_state_property(backend):
     """Check accessing final state using the circuit's property."""
     original_backend = qibo.get_backend()
@@ -185,5 +157,6 @@ def test_get_initial_state(backend):
     with pytest.raises(TypeError):
         final_state = c.get_initial_state(0)
     qibo.set_backend(original_backend)
+
 
 # TODO: Test `DensityMatrixCircuit`

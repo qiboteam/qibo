@@ -1,3 +1,4 @@
+"""Test all methods defined in `qibo/abstractions/circuit.py`."""
 import pytest
 from qibo.abstractions import gates
 from qibo.config import raise_error
@@ -233,6 +234,24 @@ def test_circuit_on_qubits():
     assert new_gates[3].control_qubits == (2,)
     assert new_gates[4].target_qubits == (4,)
     assert new_gates[4].control_qubits == (5,)
+
+
+def test_circuit_on_qubits_errors():
+    smallc = Circuit(2)
+    smallc.add((gates.H(i) for i in range(2)))
+    with pytest.raises(ValueError):
+        next(smallc.on_qubits(0, 1, 2))
+
+    smallc = Circuit(2)
+    smallc.add(gates.Flatten(4 * [0.5]))
+    with pytest.raises(NotImplementedError):
+        next(smallc.on_qubits(0, 1))
+
+    from qibo.abstractions.callbacks import Callback
+    smallc = Circuit(4)
+    smallc.add(gates.CallbackGate(Callback()))
+    with pytest.raises(NotImplementedError):
+        next(smallc.on_qubits(0, 1, 2, 3))
 
 
 @pytest.mark.parametrize("deep", [False, True])
