@@ -5,14 +5,6 @@ from qibo import gates
 from qibo.models import Circuit
 
 
-try:
-    import tensorflow as tf
-    BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                "numpy_defaulteinsum", "numpy_matmuleinsum"]
-except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
-
-
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_list(backend, trainable):
     """Check updating parameters of circuit with list."""

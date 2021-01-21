@@ -26,7 +26,6 @@ def test_gateresult_init_errors():
         result = measurements.GateResult((0, 1), binary_samples=bsamples)
 
 
-
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("dsamples,bsamples",
                          [([0, 3, 2, 3, 1],

@@ -5,13 +5,6 @@ import numpy as np
 import qibo
 from qibo import K, gates
 
-try:
-    import tensorflow as tf
-    BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                "numpy_defaulteinsum", "numpy_matmuleinsum"]
-except ModuleNotFoundError: # pragma: no cover
-    BACKENDS = ["numpy_defaulteinsum", "numpy_matmuleinsum"]
-
 
 def apply_gates(gatelist, nqubits=None, initial_state=None):
     if initial_state is None:

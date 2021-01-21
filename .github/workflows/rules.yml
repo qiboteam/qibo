@@ -33,9 +33,6 @@ jobs:
     - name: Test with pytest core
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
-    - name: Test with pytest using the new tests
-      run: |
-        pytest src/qibo/new_tests/
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
       run: |
