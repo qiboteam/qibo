@@ -30,12 +30,12 @@ jobs:
     - name: Test with pylint
       run: |
         pylint src -E -d E1123,E1120
-    - name: Test with pytest using the new tests
-      run: |
-        pytest src/qibo/new_tests/
     - name: Test with pytest core
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
+    - name: Test with pytest using the new tests
+      run: |
+        pytest src/qibo/new_tests/
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
       run: |
