@@ -7,7 +7,6 @@ from qibo.models import Circuit
 
 def test_circuit_init(backend, accelerators):
     from qibo import K
-    print(accelerators)
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = Circuit(2, accelerators)
