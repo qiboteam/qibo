@@ -776,9 +776,7 @@ def test_variational_layer(backend, nqubits):
     c.add((gates.RY(i, t) for i, t in enumerate(theta)))
     c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     target_state = c()
-
     pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
-
     c = models.Circuit(nqubits, density_matrix=True)
     c.add(gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ, theta))

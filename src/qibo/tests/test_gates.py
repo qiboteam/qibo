@@ -27,41 +27,6 @@ def test_generalized_fsim_error(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend,accelerators", _DEVICE_BACKENDS)
-def test_doubly_controlled_by_swap(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(4, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
-    c.add(gates.SWAP(1, 2).controlled_by(0, 3))
-    c.add(gates.X(0))
-    final_state = c.execute()
-    c = Circuit(4)
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
-    target_state = c.execute()
-    np.testing.assert_allclose(final_state, target_state)
-
-    c = Circuit(4, accelerators)
-    c.add(gates.X(0))
-    c.add(gates.X(3))
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
-    c.add(gates.SWAP(1, 2).controlled_by(0, 3))
-    c.add(gates.X(0))
-    c.add(gates.X(3))
-    final_state = c.execute()
-    c = Circuit(4)
-    c.add(gates.RX(1, theta=0.1234))
-    c.add(gates.RY(2, theta=0.4321))
-    c.add(gates.SWAP(1, 2))
-    target_state = c.execute()
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
 @pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_common_gates(backend):
     """Check that `Unitary` gate can create common gates."""
@@ -94,33 +59,6 @@ def test_unitary_common_gates(backend):
     c.add(gates.Unitary(ry, 1))
     c.add(gates.Unitary(cnot, 0, 1))
     final_state = c.execute()
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize(("backend", "accelerators"), _DEVICE_BACKENDS)
-def test_unitary_controlled_by(backend, accelerators):
-    """Check that `controlled_by` works as expected with `Unitary`."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    matrix = np.random.random([2, 2])
-    c = Circuit(2, accelerators)
-    c.add(gates.H(0))
-    c.add(gates.H(1))
-    c.add(gates.Unitary(matrix, 1).controlled_by(0))
-    final_state = c.execute()
-    target_state = np.ones_like(final_state) / 2.0
-    target_state[2:] = matrix.dot(target_state[2:])
-    np.testing.assert_allclose(final_state, target_state)
-
-    matrix = np.random.random([4, 4])
-    c = Circuit(4, accelerators)
-    c.add((gates.H(i) for i in range(4)))
-    c.add(gates.Unitary(matrix, 1, 3).controlled_by(0, 2))
-    final_state = c.execute()
-    target_state = np.ones_like(final_state) / 4.0
-    ids = [10, 11, 14, 15]
-    target_state[ids] = matrix.dot(target_state[ids])
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -243,21 +181,6 @@ def test_construct_unitary_errors(backend):
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
         gate.construct_unitary()
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-def test_controlled_by_unitary_action(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    init_state = utils.random_numpy_state(2)
-    matrix = utils.random_numpy_complex((2, 2))
-    gate = gates.Unitary(matrix, 1).controlled_by(0)
-    c = Circuit(2)
-    c.add(gate)
-    target_state = c(np.copy(init_state))
-    final_state = np.dot(gate.unitary, init_state)
-    np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
 
@@ -412,28 +335,6 @@ def test_variational_layer_dagger(backend, nqubits):
     final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("accelerators",
-                         [None, {"/GPU:0": 1, "/GPU:1": 1},
-                          {"GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}])
-@pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
-def test_collapse_gate_distributed(accelerators, nqubits, targets):
-    initial_state = utils.random_numpy_state(nqubits)
-    c = Circuit(nqubits, accelerators)
-    c.add(gates.Collapse(*targets))
-    final_state = c(np.copy(initial_state))
-
-    slicer = nqubits * [slice(None)]
-    for t in targets:
-        slicer[t] = 0
-    slicer = tuple(slicer)
-    initial_state = initial_state.reshape(nqubits * (2,))
-    target_state = np.zeros_like(initial_state)
-    target_state[slicer] = initial_state[slicer]
-    norm = (np.abs(target_state) ** 2).sum()
-    target_state = target_state.ravel() / np.sqrt(norm)
-    np.testing.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
