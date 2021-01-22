@@ -2,7 +2,8 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import K, gates
+from qibo import gates
+from qibo.config import raise_error
 
 
 def random_state(nqubits):
@@ -12,6 +13,7 @@ def random_state(nqubits):
 
 
 def apply_gates(gatelist, nqubits=None, initial_state=None):
+    from qibo import K
     if initial_state is None:
         state = K.qnp.zeros(2 ** nqubits)
         state[0] = 1
@@ -25,6 +27,7 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
         raise_error(TypeError, "Invalid initial state type {}."
                                "".format(type(initial_state)))
 
+    state = K.cast(state)
     if qibo.get_backend() != "custom":
         state = K.qnp.reshape(state, nqubits * (2,))
     for gate in gatelist:
@@ -95,6 +98,7 @@ def test_identity(backend):
                           (6, [1, 3], np.ones(2, dtype=np.int)),
                           (4, [0, 2], np.zeros(2, dtype=np.int32)[0])])
 def test_collapse_gate(backend, nqubits, targets, results):
+    from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
