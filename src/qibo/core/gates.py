@@ -495,12 +495,10 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
     def prepare(self):
         cgates.VariationalLayer.prepare(self)
 
-    def state_vector_call(self, state): # pragma: no cover
-        # impractical case because VariationalLayer is not called by circuits
+    def state_vector_call(self, state):
         return cgates.VariationalLayer.state_vector_call(self, state)
 
-    def density_matrix_call(self, state): # pragma: no cover
-        # impractical case because VariationalLayer is not called by circuits
+    def density_matrix_call(self, state):
         return cgates.VariationalLayer.density_matrix_call(self, state)
 
 

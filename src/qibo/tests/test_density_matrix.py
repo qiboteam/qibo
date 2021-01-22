@@ -782,6 +782,16 @@ def test_variational_layer(backend, nqubits):
                                   gates.RY, gates.CZ, theta))
     final_state = c()
     np.testing.assert_allclose(target_state, final_state)
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta)
+    gate.density_matrix = True
+    initial_state = c.get_initial_state()
+    if backend != "custom":
+        initial_state = np.reshape(initial_state, 2 * nqubits * (2,))
+    final_state = gate(initial_state)
+    if backend != "custom":
+        final_state = np.reshape(final_state, 2 * (2 ** nqubits,))
+    np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
 
 
