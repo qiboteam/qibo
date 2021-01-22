@@ -380,7 +380,7 @@ def test_toffoli(backend, applyx):
 
 
 @pytest.mark.parametrize("nqubits", [2, 3])
-def test_unitary_random(backend, nqubits):
+def test_unitary(backend, nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
@@ -389,6 +389,33 @@ def test_unitary_random(backend, nqubits):
     gatelist = [gates.H(i) for i in range(nqubits)]
     gatelist.append(gates.Unitary(matrix, *range(1, nqubits), name="random"))
     final_state = apply_gates(gatelist, nqubits=nqubits)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+def test_unitary_common_gates(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    target_state = apply_gates([gates.X(0), gates.H(1)], nqubits=2)
+    gatelist = [gates.Unitary(np.array([[0, 1], [1, 0]]), 0),
+                gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1)]
+    final_state = apply_gates(gatelist, nqubits=2)
+    np.testing.assert_allclose(final_state, target_state)
+
+    thetax = 0.1234
+    thetay = 0.4321
+    gatelist = [gates.RX(0, theta=thetax), gates.RY(1, theta=thetay),
+                gates.CNOT(0, 1)]
+    target_state = apply_gates(gatelist, nqubits=2)
+
+    rx = np.array([[np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
+                   [-1j * np.sin(thetax / 2), np.cos(thetax / 2)]])
+    ry = np.array([[np.cos(thetay / 2), -np.sin(thetay / 2)],
+                   [np.sin(thetay / 2), np.cos(thetay / 2)]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    gatelist = [gates.Unitary(rx, 0), gates.Unitary(ry, 1),
+                gates.Unitary(cnot, 0, 1)]
+    final_state = apply_gates(gatelist, nqubits=2)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 

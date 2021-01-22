@@ -28,42 +28,6 @@ def test_generalized_fsim_error(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_unitary_common_gates(backend):
-    """Check that `Unitary` gate can create common gates."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.H(1))
-    target_state = c.execute()
-    c = Circuit(2)
-    c.add(gates.Unitary(np.array([[0, 1], [1, 0]]), 0))
-    c.add(gates.Unitary(np.array([[1, 1], [1, -1]]) / np.sqrt(2), 1))
-    final_state = c.execute()
-    np.testing.assert_allclose(final_state, target_state)
-
-    thetax = 0.1234
-    thetay = 0.4321
-    c = Circuit(2)
-    c.add(gates.RX(0, theta=thetax))
-    c.add(gates.RY(1, theta=thetay))
-    c.add(gates.CNOT(0, 1))
-    target_state = c.execute()
-    c = Circuit(2)
-    rx = np.array([[np.cos(thetax / 2), -1j * np.sin(thetax / 2)],
-                   [-1j * np.sin(thetax / 2), np.cos(thetax / 2)]])
-    ry = np.array([[np.cos(thetay / 2), -np.sin(thetay / 2)],
-                   [np.sin(thetay / 2), np.cos(thetay / 2)]])
-    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    c.add(gates.Unitary(rx, 0))
-    c.add(gates.Unitary(ry, 1))
-    c.add(gates.Unitary(cnot, 0, 1))
-    final_state = c.execute()
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_bad_shape(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -100,57 +64,6 @@ def test_control_unitary_error():
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_construct_unitary(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    target_matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    np.testing.assert_allclose(gates.H(0).unitary, target_matrix)
-    target_matrix = np.array([[0, 1], [1, 0]])
-    np.testing.assert_allclose(gates.X(0).unitary, target_matrix)
-    target_matrix = np.array([[0, -1j], [1j, 0]])
-    np.testing.assert_allclose(gates.Y(0).unitary, target_matrix)
-    target_matrix = np.array([[1, 0], [0, -1]])
-    np.testing.assert_allclose(gates.Z(1).unitary, target_matrix)
-
-    target_matrix = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                              [0, 0, 0, 1], [0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.CNOT(0, 1).unitary, target_matrix)
-    target_matrix = np.diag([1, 1, 1, -1])
-    np.testing.assert_allclose(gates.CZ(1, 3).unitary, target_matrix)
-    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0],
-                              [0, 1, 0, 0], [0, 0, 0, 1]])
-    np.testing.assert_allclose(gates.SWAP(2, 4).unitary, target_matrix)
-    target_matrix = np.array([[1, 0, 0, 0, 0, 0, 0, 0],
-                              [0, 1, 0, 0, 0, 0, 0, 0],
-                              [0, 0, 1, 0, 0, 0, 0, 0],
-                              [0, 0, 0, 1, 0, 0, 0, 0],
-                              [0, 0, 0, 0, 1, 0, 0, 0],
-                              [0, 0, 0, 0, 0, 1, 0, 0],
-                              [0, 0, 0, 0, 0, 0, 0, 1],
-                              [0, 0, 0, 0, 0, 0, 1, 0]])
-    np.testing.assert_allclose(gates.TOFFOLI(1, 2, 3).unitary, target_matrix)
-
-    theta = 0.1234
-    target_matrix = np.array([[np.cos(theta / 2.0), -1j * np.sin(theta / 2.0)],
-                              [-1j * np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RX(0, theta).unitary, target_matrix)
-    target_matrix = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
-                              [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
-    np.testing.assert_allclose(gates.RY(0, theta).unitary, target_matrix)
-    target_matrix = np.diag([np.exp(-1j * theta / 2.0), np.exp(1j * theta / 2.0)])
-    np.testing.assert_allclose(gates.RZ(0, theta).unitary, target_matrix)
-    target_matrix = np.diag([1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.U1(0, theta).unitary, target_matrix)
-    target_matrix = np.diag([1, 1, 1, np.exp(1j * theta)])
-    np.testing.assert_allclose(gates.CU1(0, 1, theta).unitary, target_matrix)
-    from qibo import matrices
-    target_matrix = np.array([[1, 0, 0, 0], [0, 0, 1, 0], [0, 1, 0, 0],
-                              [0, 0, 0, 1]])
-    np.testing.assert_allclose(matrices.SWAP, target_matrix)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_construct_unitary_controlled_by(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -181,73 +94,6 @@ def test_construct_unitary_errors(backend):
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
         gate.construct_unitary()
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("gate,params",
-                         [("H", {}), ("X", {}), ("Z", {}),
-                          ("RX", {"theta": 0.1}),
-                          ("RY", {"theta": 0.2}),
-                          ("RZ", {"theta": 0.3}),
-                          ("U1", {"theta": 0.1}),
-                          ("U2", {"phi": 0.2, "lam": 0.3}),
-                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
-def test_dagger_one_qubit(backend, gate, params):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
-    c = Circuit(1)
-    gate = getattr(gates, gate)(0, **params)
-    c.add((gate, gate.dagger()))
-
-    initial_state = utils.random_numpy_state(1)
-    final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("gate,params",
-                         [("CNOT", {}),
-                          ("CRX", {"theta": 0.1}),
-                          ("CRZ", {"theta": 0.3}),
-                          ("CU1", {"theta": 0.1}),
-                          ("CU2", {"phi": 0.2, "lam": 0.3}),
-                          ("CU3", {"theta": 0.1, "phi": 0.2, "lam": 0.3}),
-                          ("fSim", {"theta": 0.1, "phi": 0.2})])
-def test_dagger_two_qubit(backend, gate, params):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
-    c = Circuit(2)
-    gate = getattr(gates, gate)(0, 1, **params)
-    c.add((gate, gate.dagger()))
-
-    initial_state = utils.random_numpy_state(2)
-    final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
-@pytest.mark.parametrize("gate,params",
-                         [("H", {}), ("X", {}),
-                          ("RX", {"theta": 0.1}),
-                          ("RZ", {"theta": 0.2}),
-                          ("U2", {"phi": 0.2, "lam": 0.3}),
-                          ("U3", {"theta": 0.1, "phi": 0.2, "lam": 0.3})])
-def test_dagger_controlled_by(backend, gate, params):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
-    c = Circuit(4)
-    gate = getattr(gates, gate)(3, **params).controlled_by(0, 1, 2)
-    c.add((gate, gate.dagger()))
-
-    initial_state = utils.random_numpy_state(4)
-    final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
 
 
