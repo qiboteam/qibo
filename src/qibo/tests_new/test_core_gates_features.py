@@ -160,3 +160,67 @@ def test_controlled_dagger(backend, gate, args):
     final_state = c(np.copy(initial_state))
     np.testing.assert_allclose(final_state, initial_state)
     qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("nqubits", [1, 2])
+def test_unitary_dagger(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = np.random.random((2 ** nqubits, 2 ** nqubits))
+    gate = gates.Unitary(matrix, *range(nqubits))
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+    initial_state = random_state(nqubits)
+    final_state = c(np.copy(initial_state))
+    target_state = np.dot(matrix, initial_state)
+    target_state = np.dot(np.conj(matrix).T, target_state)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
+
+
+def test_controlled_unitary_dagger(backend):
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.Unitary(matrix, 0).controlled_by(1, 2, 3, 4)
+    c = Circuit(5)
+    c.add((gate, gate.dagger()))
+    initial_state = random_state(5)
+    final_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+def test_generalizedfsim_dagger(backend):
+    from scipy.linalg import expm
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    phi = 0.2
+    matrix = np.random.random((2, 2))
+    matrix = expm(1j * (matrix + matrix.T))
+    gate = gates.GeneralizedfSim(0, 1, matrix, phi)
+    c = Circuit(2)
+    c.add((gate, gate.dagger()))
+    initial_state = random_state(2)
+    final_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5])
+def test_variational_layer_dagger(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 2 * np.pi * np.random.random((2, nqubits))
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ,
+                                  theta[0], theta[1])
+    c = Circuit(nqubits)
+    c.add((gate, gate.dagger()))
+    initial_state = random_state(nqubits)
+    final_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(final_state, initial_state)
+    qibo.set_backend(original_backend)
