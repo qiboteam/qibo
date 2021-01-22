@@ -393,6 +393,21 @@ def test_unitary(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
+def test_unitary_parameter_setter(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = np.random.random((4, 4))
+    gate = gates.Unitary(matrix, 0, 1)
+    np.testing.assert_allclose(gate.parameters, matrix)
+    matrix = np.random.random((8, 8))
+    with pytest.raises(ValueError):
+        gate = gates.Unitary(matrix, 0, 1)
+    if backend == "custom":
+        with pytest.raises(NotImplementedError):
+            gate = gates.Unitary(matrix, 0, 1, 2)
+    qibo.set_backend(original_backend)
+
+
 def test_unitary_common_gates(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

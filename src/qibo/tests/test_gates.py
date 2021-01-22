@@ -28,20 +28,6 @@ def test_generalized_fsim_error(backend):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
-def test_unitary_bad_shape(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    matrix = np.random.random((8, 8))
-    with pytest.raises(ValueError):
-        gate = gates.Unitary(matrix, 0, 1)
-
-    if backend == "custom":
-        with pytest.raises(NotImplementedError):
-            gate = gates.Unitary(matrix, 0, 1, 2)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_unitary_various_type_initialization(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
