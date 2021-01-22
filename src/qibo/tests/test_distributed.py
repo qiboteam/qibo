@@ -194,6 +194,9 @@ def test_distributed_circuit_errors():
     # Attempt to use ``.with_noise``
     with pytest.raises(NotImplementedError):
         noisy_c = c.with_noise((0.1, 0.2, 0.1))
+    # Attempt adding noise channel
+    with pytest.raises(NotImplementedError):
+        c.add(gates.PauliNoiseChannel(0, px=0.1, pz=0.1))
 
 
 def test_unsupported_gates_errors():

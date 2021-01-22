@@ -15,6 +15,20 @@ def test_circuit_init(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+def test_set_nqubits(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = Circuit(4)
+    c.add(gates.H(0))
+    assert c.queue[0].nqubits == 4
+    gate = gates.H(1)
+    gate.nqubits = 3
+    gate.prepare()
+    with pytest.raises(RuntimeError):
+        c.add(gate)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_circuit_add_layer(backend, nqubits, accelerators):
     original_backend = qibo.get_backend()

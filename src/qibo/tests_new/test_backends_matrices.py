@@ -33,7 +33,9 @@ def test_matrices(engine, dtype):
     elif engine == "tensorflow":
         import tensorflow as tf
         mobj = matrices.TensorflowMatrices(getattr(tf, dtype))
-    else:
+    else: # pragma: no cover
+        # this case exists only for test consistency checking and
+        # should never execute
         raise_error(ValueError, "Unknown engine {}.".format(engine))
     for matrixname, target in TARGET_MATRICES.items():
         np.testing.assert_allclose(getattr(mobj, matrixname), target)

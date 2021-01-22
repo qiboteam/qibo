@@ -46,7 +46,8 @@ def pytest_generate_tests(metafunc):
     engines = metafunc.config.option.engines.split(",")
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
-    if "tensorflow" not in engines:
+    if "tensorflow" not in engines: # pragma: no cover
+        # CI uses Tensorflow engine for test execution
         accelerators = None
         for x in ["custom", "defaulteinsum", "matmuleinsum"]:
             if x in backends:
@@ -65,7 +66,8 @@ def pytest_generate_tests(metafunc):
     # for `test_core_*.py`
     if "backend" in metafunc.fixturenames:
         if "accelerators" in metafunc.fixturenames:
-            if accelerators is None:
+            if accelerators is None: # pragma: no cover
+                # `accelerators` is never run in CI test execution
                 metafunc.parametrize("backend", backends)
                 metafunc.parametrize("accelerators", [None])
             else:
