@@ -479,6 +479,14 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
                                          params, params2,
                                          trainable=trainable, name=name)
 
+    @BaseBackendGate.density_matrix.setter
+    def density_matrix(self, x: bool):
+        BaseBackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
+        for unitary in self.unitaries:
+            unitary.density_matrix = x
+        if self.additional_unitary is not None:
+            self.additional_unitary.density_matrix = x
+
     def _dagger(self):
         return cgates.VariationalLayer._dagger(self)
 
