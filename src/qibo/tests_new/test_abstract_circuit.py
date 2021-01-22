@@ -463,13 +463,6 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({gates.RX(0, theta=1.0): 0.568})
     with pytest.raises(ValueError):
         c.set_parameters([0.12586])
-
-    # TODO: Move the tests below to `test_core_circuit.py`
-    #with pytest.raises(ValueError):
-    #    c.set_parameters(np.random.random(5))
-    #with pytest.raises(ValueError):
-    #    import tensorflow as tf
-    #    c.set_parameters(tf.random.uniform((6,), dtype=tf.float64))
     with pytest.raises(TypeError):
         c.set_parameters({0.3568})
     with pytest.raises(ValueError):

@@ -218,13 +218,33 @@ def test_variational_layer_init(targets):
         gate = gates.VariationalLayer(targets, pairs, gates.RY, gates.CZ, params)
 
 
+def test_variational_layer_errors():
+    import numpy as np
+    pairs = [(i, i + 1) for i in range(0, 5, 2)]
+    with pytest.raises(ValueError):
+        gate = gates.VariationalLayer(range(6), pairs,                                     gates.RY, gates.CZ,
+                                      np.zeros(6), np.zeros(7))
+    #with pytest.raises(ValueError):
+    #    gate = gates.VariationalLayer(range(7), pairs,
+    #                                  gates.RY, gates.CZ,
+    #                                  np.zeros(7), np.zeros(7))
+    with pytest.raises(ValueError):
+        gate = gates.VariationalLayer(range(10), pairs,
+                                      gates.RY, gates.CZ,
+                                      np.zeros(10), np.zeros(10))
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ,
+                                  np.zeros(6), np.zeros(6))
+    np.testing.assert_allclose(gate.parameters, np.zeros(12))
+
+
 def test_flatten():
     gate = gates.Flatten([1, 2, 3, 4])
     assert gate.coefficients == [1, 2, 3, 4]
+    with pytest.raises(NotImplementedError):
+        gate.on_qubits(0, 2)
 
 # TODO: Test :class:`qibo.abstractions.gates.CallbackGate` in
 # `test_core_gates.py`
-
 
 def test_kraus_channel_init():
     import numpy as np
