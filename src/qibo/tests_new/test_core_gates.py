@@ -109,8 +109,8 @@ def test_identity(backend):
                           (3, [1], 0),
                           (4, [1, 3], [0, 1]),
                           (5, [0, 3, 4], [1, 1, 0]),
-                          (6, [1, 3], np.ones(2, dtype=np.int)),
-                          (4, [0, 2], np.zeros(2, dtype=np.int32)[0])])
+                          (6, [1, 3], np.ones(2, dtype=int)),
+                          (4, [0, 2], np.zeros(2, dtype=int)[0])])
 def test_collapse_gate(backend, nqubits, targets, results):
     from qibo import K
     original_backend = qibo.get_backend()
@@ -150,7 +150,7 @@ def test_collapse_gate_errors(backend):
     gate = gates.Collapse(2, 0, result=[0, 0])
     gate.nqubits = 4
     gate.prepare()
-    gate.result = np.ones(2, dtype=np.int)
+    gate.result = np.ones(2, dtype=int)
     qibo.set_backend(original_backend)
 
 # TODO: Test :class:`qibo.core.cgates.M`
