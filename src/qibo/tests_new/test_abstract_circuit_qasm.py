@@ -1,3 +1,4 @@
+"""Tests creating abstract Qibo circuits from OpenQASM code."""
 import pytest
 from qibo import __version__
 from qibo.abstractions import gates

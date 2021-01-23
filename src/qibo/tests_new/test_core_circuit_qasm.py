@@ -1,3 +1,4 @@
+"""Tests executing Qibo circuits created from OpenQASM code."""
 import pytest
 import numpy as np
 import cirq
@@ -10,19 +11,27 @@ from cirq.contrib.qasm_import import circuit_from_qasm, exception
 _atol = 1e-7
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
-def test_from_qasm_simple(accelerators):
-    # TODO: Move this to test_models.py
+def test_from_qasm_simple(backend, accelerators):
     target = f"""OPENQASM 2.0;
 include "qelib1.inc";
-qreg q[2];
+qreg q[5];
 h q[0];
-h q[1];"""
+h q[1];
+h q[2];
+h q[3];
+h q[4];"""
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c = Circuit.from_qasm(target, accelerators)
-    assert c.nqubits == 2
+    assert c.nqubits == 5
     assert c.depth == 1
-    assert isinstance(c.queue[0], gates.H)
-    assert isinstance(c.queue[1], gates.H)
+    for i, gate in enumerate(c.queue):
+        assert gate.__class__.__name__ == "H"
+        assert gate.qubits == (i,)
+    target_state = np.ones(32) / np.sqrt(32)
+    np.testing.assert_allclose(c(), target_state)
+    qibo.set_backend(original_backend)
 
 
 def test_simple_cirq():
