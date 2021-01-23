@@ -112,12 +112,10 @@ class TensorflowBackend(numpy.NumpyBackend):
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
 
-    def kron(self, x, y): # pragma: no cover
-        # not used in Qibo code
+    def kron(self, x, y):
         raise_error(NotImplementedError)
 
-    def inv(self, x): # pragma: no cover
-        # not used in Qibo code
+    def inv(self, x):
         raise_error(NotImplementedError)
 
     def gather(self, x, indices=None, condition=None, axis=0):

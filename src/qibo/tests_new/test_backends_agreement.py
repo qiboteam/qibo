@@ -38,11 +38,11 @@ METHODS = [
     ("sum", {"x": rand((4, 4, 3)), "axis": 1}),
     ("matmul", [rand((4, 6)), rand((6, 5))]),
     ("outer", [rand((4,)), rand((3,))]),
-    # ("kron", [rand((4, 4)), rand((5, 5))]),
+    ("kron", [rand((4, 4)), rand((5, 5))]),
     ("einsum", ["xy,axby->ab", rand((2, 2)), rand(4 * (2,))]),
     ("tensordot", [rand((2, 2)), rand(4 * (2,)), [[0, 1], [1, 3]]]),
     ("transpose", [rand((3, 3, 3)), [0, 2, 1]]),
-    # ("inv", [rand((4, 4))]),
+    ("inv", [rand((4, 4))]),
     ("eigvalsh", [rand((4, 4))]),
     ("unique", [np.random.randint(10, size=(10,))]),
     ("array_equal", [rand(10), rand(10)]),
@@ -59,7 +59,11 @@ def test_backend_methods(tested_backend, target_backend, method, kwargs):
     if isinstance(kwargs, dict):
         np.testing.assert_allclose(tested_func(**kwargs), target_func(**kwargs))
     else:
-        np.testing.assert_allclose(tested_func(*kwargs), target_func(*kwargs))
+        if method in {"kron", "inv"} and tested_backend.name == "tensorflow":
+            with pytest.raises(NotImplementedError):
+                tested_func(*kwargs)
+        else:
+            np.testing.assert_allclose(tested_func(*kwargs), target_func(*kwargs))
 
 
 def test_backend_eigh(tested_backend, target_backend):

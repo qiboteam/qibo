@@ -36,14 +36,37 @@ def pytest_configure(config):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--engines", type=str, default=_ENGINES)
-    parser.addoption("--backends", type=str, default=_BACKENDS)
-    parser.addoption("--accelerators", type=str, default=_ACCELERATORS)
-    parser.addoption("--target-backend", type=str, default="numpy")
+    parser.addoption("--engines", type=str, default=_ENGINES,
+                     help="Backend libaries (eg. numpy, tensorflow, etc.) to test.")
+    parser.addoption("--backends", type=str, default=_BACKENDS,
+                     help="Calculation schemes (eg. custom, defaulteinsum, etc.) to test.")
+    parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
+                     help="Accelerator configurations for testing the distributed circuit.")
+    # see `_ACCELERATORS` for the string format of the `--accelerators` flag
+    parser.addoption("--target-backend", type=str, default="numpy",
+                     help="Base backend that other backends are tested against.")
+    # `test_backends_agreement.py` tests that backend methods agree between
+    # different backends by testing each backend in `--engines` with the
+    # `--target-backend`
 
 
 def pytest_generate_tests(metafunc):
+    """Generates all tests defined under `src/qibo/tests_new`.
 
+    Test functions may have one or more of the following arguments:
+        engine: Backend library (eg. numpy, tensorflow, etc.),
+        backend: Calculation backend (eg. custom, defaulteinsum,
+            numpy_defaulteinsum, etc.),
+        accelerators: Dictionary with the accelerator configuration for
+            distributed circuits, for example: {'/GPU:0': 1, '/GPU:1': 1},
+        tested_backend: The first backend when testing agreement between
+            backend methods (in `test_backends_agreement.py`)
+        target_backend: The second backend when testing agreement between
+            backend methods (in `test_backends_agreement.py`)
+
+    This function parametrizes the above arguments using the values given by
+    the user when calling `pytest`.
+    """
     engines = metafunc.config.option.engines.split(",")
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
