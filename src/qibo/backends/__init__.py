@@ -80,6 +80,8 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
     elif len(gate_backend) == 2:
         calc_backend, gate_backend = gate_backend
+    if gate_backend == "custom":
+        calc_backend = "tensorflow"
     bk = _construct_backend(calc_backend)
     K.assign(bk)
     K.qnp = numpy_backend
