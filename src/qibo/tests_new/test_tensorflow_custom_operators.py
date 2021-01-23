@@ -475,3 +475,29 @@ def test_swap_pieces(nqubits):
                            nqubits - 1, get_threads())
             np.testing.assert_allclose(target_state[0], piece0.numpy())
             np.testing.assert_allclose(target_state[1], piece1.numpy())
+
+
+@pytest.mark.skip("tf.tensor_scatter_nd_update bug on GPU (tensorflow#42581)")
+@pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
+@pytest.mark.parametrize("compile", [False, True])
+def test_initial_state_gradient(dtype, compile): # pragma: no cover
+    # Test skipped due to `tf.tensor_scatter_nd_update` bug on GPU
+    def grad_default(var):
+        update = np.array([1]).astype(dtype)
+        with K.optimization.GradientTape() as tape:
+            loss = K.backend.tensor_scatter_nd_update(var, [[0]], update)
+        return tape.gradient(loss, var)
+
+    def grad_custom(var):
+        with K.optimization.GradientTape() as tape:
+            loss = op.initial_state(var)
+        return tape.gradient(loss, var)
+
+    if compile:
+        grad_default = K.compile(grad_default)
+        grad_custom = K.compile(grad_custom)
+
+    zeros = K.optimization.Variable(K.zeros(10, dtype=dtype))
+    grad_reference = grad_default(zeros)
+    grad_custom_op = grad_custom(zeros)
+    np.testing.assert_allclose(grad_reference, grad_custom_op)
