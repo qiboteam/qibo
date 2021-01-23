@@ -67,7 +67,7 @@ def pytest_generate_tests(metafunc):
     if "backend" in metafunc.fixturenames:
         if "accelerators" in metafunc.fixturenames:
             if accelerators is None: # pragma: no cover
-                # `accelerators` is never run in CI test execution
+                # `accelerators` is never `None` in CI test execution
                 metafunc.parametrize("backend", backends)
                 metafunc.parametrize("accelerators", [None])
             else:
