@@ -180,6 +180,7 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     np.testing.assert_allclose(final_state, target_state, atol=1e-6)
     qibo.set_backend(original_backend)
 
+###############################################################################
 
 ################################# Test dagger #################################
 GATES = [
