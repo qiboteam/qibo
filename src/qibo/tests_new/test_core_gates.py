@@ -37,6 +37,20 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
     return state
 
 
+def test_control_unitary(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    matrix = np.random.random((2, 2))
+    gate = gates.Unitary(matrix, 0)
+    unitary = np.array(gate.control_unitary(matrix))
+    target_unitary = np.eye(4, dtype=unitary.dtype)
+    target_unitary[2:, 2:] = matrix
+    np.testing.assert_allclose(unitary, target_unitary)
+    with pytest.raises(ValueError):
+        unitary = gate.control_unitary(np.random.random((16, 16)))
+    qibo.set_backend(original_backend)
+
+
 def test_h(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -140,6 +154,12 @@ def test_collapse_gate_errors(backend):
     qibo.set_backend(original_backend)
 
 # TODO: Test :class:`qibo.core.cgates.M`
+
+def test_m_construct_unitary():
+    gate = gates.M(0)
+    with pytest.raises(ValueError):
+        matrix = gate.unitary
+
 
 def test_rx(backend):
     original_backend = qibo.get_backend()
@@ -361,6 +381,20 @@ def test_generalized_fsim(backend):
     qibo.set_backend(original_backend)
 
 
+def test_generalized_fsim_parameter_setter(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    phi = np.random.random()
+    matrix = np.random.random((2, 2))
+    gate = gates.GeneralizedfSim(0, 1, matrix, phi)
+    np.testing.assert_allclose(gate.parameters[0], matrix)
+    assert gate.parameters[1] == phi
+    matrix = np.random.random((4, 4))
+    with pytest.raises(ValueError):
+        gate = gates.GeneralizedfSim(0, 1, matrix, phi)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("applyx", [False, True])
 def test_toffoli(backend, applyx):
     original_backend = qibo.get_backend()
@@ -393,7 +427,7 @@ def test_unitary(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-def test_unitary_parameter_setter(backend):
+def test_unitary_initialization(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     matrix = np.random.random((4, 4))
@@ -402,6 +436,8 @@ def test_unitary_parameter_setter(backend):
     matrix = np.random.random((8, 8))
     with pytest.raises(ValueError):
         gate = gates.Unitary(matrix, 0, 1)
+    with pytest.raises(TypeError):
+        gate = gates.Unitary("abc", 0, 1)
     if backend == "custom":
         with pytest.raises(NotImplementedError):
             gate = gates.Unitary(matrix, 0, 1, 2)
@@ -450,6 +486,17 @@ def test_variational_layer(backend, nqubits):
                                   theta)
     final_state = apply_gates([gate], nqubits=nqubits)
     np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
+
+
+def test_variational_layer_construct_unitary(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    pairs = list((i, i + 1) for i in range(0, 5, 2))
+    theta = 2 * np.pi * np.random.random(6)
+    gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
     qibo.set_backend(original_backend)
 
 
