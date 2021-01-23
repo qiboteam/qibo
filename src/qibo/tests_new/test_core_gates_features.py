@@ -156,6 +156,31 @@ def test_rx_parameter_setter(backend):
 
 ###############################################################################
 
+########################### Test gate decomposition ###########################
+@pytest.mark.parametrize(("target", "controls", "free"),
+                         [(0, (1,), ()), (2, (0, 1), ()),
+                          (3, (0, 1, 4), (2, 5)),
+                          (7, (0, 1, 2, 3, 4), (5, 6)),
+                          (5, (0, 2, 4, 6, 7), (1, 3)),
+                          (8, (0, 2, 4, 6, 9), (3, 5, 7))])
+@pytest.mark.parametrize("use_toffolis", [True, False])
+def test_x_decomposition_execution(backend, target, controls, free, use_toffolis):
+    """Check that applying the decomposition is equivalent to applying the multi-control gate."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gate = gates.X(target).controlled_by(*controls)
+    nqubits = max((target,) + controls + free) + 1
+    initial_state = random_state(nqubits)
+    targetc = Circuit(nqubits)
+    targetc.add(gate)
+    target_state = targetc(np.copy(initial_state))
+    c = Circuit(nqubits)
+    c.add(gate.decompose(*free, use_toffolis=use_toffolis))
+    final_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(final_state, target_state, atol=1e-6)
+    qibo.set_backend(original_backend)
+
+
 ################################# Test dagger #################################
 GATES = [
     ("H", (0,)),

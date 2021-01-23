@@ -236,6 +236,20 @@ def test_circuit_on_qubits_with_varlayer_execution(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+def test_circuit_decompose_execution(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = Circuit(6)
+    c.add(gates.RX(0, 0.1234))
+    c.add(gates.RY(1, 0.4321))
+    c.add((gates.H(i) for i in range(2, 6)))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.X(3).controlled_by(0, 1, 2, 4))
+    decomp_c = c.decompose(5)
+    np.testing.assert_allclose(c(), decomp_c(), atol=1e-6)
+    qibo.set_backend(original_backend)
+
+
 def test_repeated_execute_pauli_noise_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

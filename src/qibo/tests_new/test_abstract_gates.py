@@ -1,10 +1,7 @@
+"""Tests methods defined in `qibo/abstractions/gates.py` and `qibo/abstractions/abstract_gates.py`."""
 import pytest
 from qibo.abstractions import gates
 
-# TODO: Test the following in `test_core_gates.py`:
-# * dagger
-# * parameter getter and setters
-# * all methods of :class:`qibo.abstractions.abstract_gates.BackendGate`
 
 @pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "I"])
 def test_one_qubit_gates_init(gatename):

@@ -1,3 +1,4 @@
+"""Test all methods defined in `qibo/abstractions/callbacks.py`."""
 import pytest
 from qibo.abstractions import callbacks
 
