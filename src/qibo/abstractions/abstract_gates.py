@@ -157,7 +157,7 @@ class Gate:
     @density_matrix.setter
     def density_matrix(self, x: bool):
         """Density matrix flag switcher."""
-        if self._nqubits is not None:
+        if self.is_prepared:
             raise_error(RuntimeError,
                         "Density matrix mode cannot be switched after "
                         "preparing the gate for execution.")

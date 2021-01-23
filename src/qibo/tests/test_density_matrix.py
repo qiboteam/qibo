@@ -826,6 +826,7 @@ def test_density_matrix_circuit_errors():
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
+    gate.prepare()
     with pytest.raises(RuntimeError):
         gate.density_matrix = True
     # Attempt to distribute density matrix circuit

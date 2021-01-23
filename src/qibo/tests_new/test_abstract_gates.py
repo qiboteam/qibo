@@ -341,9 +341,9 @@ def test_density_matrix_getter_and_setter():
     assert gate._active_call == "density_matrix_call"
 
     gate.nqubits = 4
+    gate.is_prepared = True
     with pytest.raises(RuntimeError):
         gate.density_matrix = False
-
 
 def test_gates_commute():
     assert gates.H(0).commutes(gates.X(1))
