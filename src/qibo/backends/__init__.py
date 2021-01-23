@@ -26,14 +26,17 @@ AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
 
 # Select the default backend engine
 if "QIBO_BACKEND" in os.environ: # pragma: no cover
-    if os.environ.get("QIBO_BACKEND") == "tensorflow":
+    _BACKEND_NAME = os.environ.get("QIBO_BACKEND")
+    if _BACKEND_NAME == "tensorflow":
         K = TensorflowBackend()
-    else: # pragma: no cover
+    elif _BACKEND_NAME == "numpy": # pragma: no cover
         # CI uses tensorflow as default backend
         K = NumpyBackend()
-        AVAILABLE_BACKENDS = [b for b in AVAILABLE_BACKENDS
-                              if "tensorflow" not in b]
-        AVAILABLE_BACKENDS.remove("custom")
+    else: # pragma: no cover
+        raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
+                                "unknown value {}. Please select either "
+                                "`tensorflow` or `numpy`."
+                                "".format(_BACKEND_NAME))
 else:
     try:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
@@ -97,8 +100,9 @@ def get_backend():
 
 if _BACKEND_NAME != "tensorflow": # pragma: no cover
     # CI uses tensorflow as default backend
-    log.warning("Numpy does not support Qibo custom operators and GPU. "
-                "Einsum will be used to apply gates on CPU.")
+    log.warning("{} does not support Qibo custom operators and GPU. "
+                "Einsum will be used to apply gates on CPU."
+                "".format(_BACKEND_NAME))
     set_backend("defaulteinsum")
 
 
