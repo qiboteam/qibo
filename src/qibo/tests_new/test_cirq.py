@@ -56,8 +56,13 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     initial_state = random_state(nqubits)
     target_state, target_depth = execute_cirq(cirq_gates, nqubits,
                                               np.copy(initial_state))
-    accelerators = None if ndevices is None else {"/GPU:0": ndevices}
-    if qibo.get_backend() != "custom" and accelerators:
+    backend = qibo.get_backend()
+    if ndevices is None or "numpy" in backend:
+        accelerators = None
+    else:
+        accelerators = {"/GPU:0": ndevices}
+
+    if backend != "custom" and accelerators:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
             c.add(qibo_gate)
