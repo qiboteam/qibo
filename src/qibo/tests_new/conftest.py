@@ -43,6 +43,7 @@ def pytest_addoption(parser):
 
 
 def pytest_generate_tests(metafunc):
+
     engines = metafunc.config.option.engines.split(",")
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
@@ -52,6 +53,11 @@ def pytest_generate_tests(metafunc):
         for x in ["custom", "defaulteinsum", "matmuleinsum"]:
             if x in backends:
                 backends.remove(x)
+
+        # for `test_tensorflow_custom_operators.py`
+        module_name = "qibo.tests_new.test_tensorflow_custom_operators"
+        if metafunc.module.__name__ == module_name:
+            pytest.skip("Custom operator tests require Tensorflow engine.")
 
     # for `test_backends_matrices.py`
     if "engine" in metafunc.fixturenames:
