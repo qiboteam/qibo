@@ -44,9 +44,9 @@ class X(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if there is one or two controls."""
-        self._controlled_by_error()
         if len(q) == 1:
             gate = getattr(self.module, "CNOT")(q[0], self.target_qubits[0])
         elif len(q) == 2:
@@ -152,9 +152,9 @@ class Z(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CZ if there is only one control."""
-        self._controlled_by_error()
         if len(q) == 1:
             gate = getattr(self.module, "CZ")(q[0], self.target_qubits[0])
         else:
@@ -348,9 +348,9 @@ class _Rn_(ParametrizedGate):
         """"""
         return self.__class__(self.target_qubits[0], -self.parameters)
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
-        self._controlled_by_error()
         if len(q) == 1:
             gate = getattr(self.module, "CR{}".format(self.axis.capitalize()))(
               q[0], self.target_qubits[0], **self.init_kwargs)
@@ -445,9 +445,9 @@ class _Un_(ParametrizedGate):
         self.init_args = [q]
         self.init_kwargs = {"trainable": trainable}
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
-        self._controlled_by_error()
         if len(q) == 1:
             gate = getattr(self.module, "CU{}".format(self.order))(
               q[0], self.target_qubits[0], **self.init_kwargs)

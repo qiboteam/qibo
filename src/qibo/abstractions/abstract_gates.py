@@ -211,11 +211,21 @@ class Gate:
         new_gate.control_qubits = self.control_qubits
         return new_gate
 
-    def _controlled_by_error(self):
-        if self._nqubits is not None:
-            raise_error(RuntimeError, "Cannot use controlled_by on a gate for "
-                                      "which the number of qubits is set.")
+    def check_controls(func): # pylint: disable=E0213
+        def wrapper(self, *args):
+            if self.control_qubits:
+                raise_error(RuntimeError, "Cannot use `controlled_by` method "
+                                          "on gate {} because it is already "
+                                          "controlled by {}."
+                                          "".format(self, self.control_qubits))
+            if self._nqubits is not None:
+                raise_error(RuntimeError, "Cannot use controlled_by on a gate "
+                                          "for which the number of qubits is "
+                                          "set.")
+            return func(self, *args) # pylint: disable=E1102
+        return wrapper
 
+    @check_controls
     def controlled_by(self, *qubits: int) -> "Gate":
         """Controls the gate on (arbitrarily many) qubits.
 
@@ -226,11 +236,6 @@ class Gate:
             A :class:`qibo.abstractions.gates.Gate` object in with the corresponding
             gate being controlled in the given qubits.
         """
-        if self.control_qubits:
-            raise_error(RuntimeError, "Cannot use `controlled_by` method on gate {} "
-                                      "because it is already controlled by {}."
-                                      "".format(self, self.control_qubits))
-        self._controlled_by_error()
         if qubits:
             self.is_controlled_by = True
             self.control_qubits = qubits
