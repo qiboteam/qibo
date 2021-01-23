@@ -40,7 +40,7 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None):
         c.append(gate(*[q[i] for i in targets]))
     result = cirq.Simulator().simulate(c, initial_state=initial_state)
     depth = len(cirq.Circuit(c.all_operations()))
-    return result.final_state, depth - 1
+    return result.final_state_vector, depth - 1
 
 
 def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
@@ -241,7 +241,7 @@ def test_qft(backend, accelerators, nqubits):
     c = models.QFT(nqubits, accelerators=accelerators)
     initial_state = random_state(nqubits)
     final_state = c(np.copy(initial_state))
-    cirq_gates = [(cirq.QFT, list(range(nqubits)))]
+    cirq_gates = [(cirq.qft, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=1e-6)
     qibo.set_backend(original_backend)
