@@ -1,16 +1,17 @@
-"""
-Testing that Tensorflow gates' action agrees with Cirq.
-"""
+"""Test that Qibo gate execution agrees with Cirq."""
 import numpy as np
 import cirq
 import pytest
 import qibo
 from qibo import models, gates
-from qibo.core import gates as native_gates
-from qibo.tests import utils
 
 
-_BACKENDS = ['custom', 'defaulteinsum', 'matmuleinsum']
+def random_state(nqubits):
+    """Generates a random normalized state of shape (2^nqubits,)."""
+    n = 2 ** nqubits
+    state = np.random.random(n) + 1j * np.random.random(n)
+    return state / np.sqrt((np.abs(state) ** 2).sum())
+
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):
     """Generates a random unitary matrix of shape (2^nqubits, 2^nqubits)."""
@@ -29,7 +30,7 @@ def random_active_qubits(nqubits, nmin=None, nactive=None):
     return list(all_qubits[:nactive])
 
 
-def execute_cirq(cirq_gates, nqubits, initial_state=None) -> np.ndarray:
+def execute_cirq(cirq_gates, nqubits, initial_state=None):
     """Executes a Cirq circuit with the given list of gates."""
     c = cirq.Circuit()
     q = [cirq.LineQubit(i) for i in range(nqubits)]
@@ -52,24 +53,22 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         nqubits: Total number of qubits in the circuit.
         atol: Absolute tolerance in state vector comparsion.
     """
-    initial_state = utils.random_numpy_state(nqubits)
+    initial_state = random_state(nqubits)
     target_state, target_depth = execute_cirq(cirq_gates, nqubits,
                                               np.copy(initial_state))
     accelerators = None if ndevices is None else {"/GPU:0": ndevices}
-
-    if isinstance(qibo_gate, native_gates.BackendGate) and accelerators:
+    if qibo.get_backend() != "custom" and accelerators:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
             c.add(qibo_gate)
     else:
         c = models.Circuit(nqubits, accelerators)
         c.add(qibo_gate)
-        final_state = c(np.copy(initial_state)).numpy()
+        final_state = c(np.copy(initial_state))
         assert c.depth == target_depth
         np.testing.assert_allclose(final_state, target_state, atol=atol)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
                          [("H", 3, None), ("H", 3, 2),
                           ("X", 2, None), ("X", 2, 2),
@@ -85,7 +84,6 @@ def test_one_qubit_gates(backend, gate_name, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
                          [("RX", 3, None), ("RX", 3, 4),
                           ("RY", 2, None), ("RY", 2, 2),
@@ -102,7 +100,6 @@ def test_one_qubit_parametrized_gates(backend, gate_name, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(2, None), (3, 4), (2, 2)])
 def test_u1_gate(backend, nqubits, ndevices):
@@ -117,7 +114,6 @@ def test_u1_gate(backend, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("gate_name", ["CNOT", "SWAP", "CZ"])
 @pytest.mark.parametrize("nqubits", [3, 4, 5])
 @pytest.mark.parametrize("ndevices", [None, 2])
@@ -132,7 +128,6 @@ def test_two_qubit_gates(backend, gate_name, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(2, None), (6, None), (6, 2),
                           (7, None), (7, 4)])
@@ -155,7 +150,6 @@ def test_two_qubit_parametrized_gates(backend, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(5, None), (6, None), (9, None),
                           (5, 2), (6, 4), (9, 8)])
@@ -178,7 +172,6 @@ def test_unitary_matrix_gate(backend, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),
                          [("H", 3, None), ("Z", 4, None), ("Y", 5, 4),
                           ("X", 6, None), ("H", 7, 2), ("Z", 8, 8),
@@ -196,7 +189,6 @@ def test_one_qubit_gates_controlled_by(backend, gate_name, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize(("nqubits", "ndevices"),
                          [(4, None), (5, None), (8, None),
                           (12, None), (15, None), (17, None),
@@ -220,7 +212,6 @@ def test_two_qubit_gates_controlled_by(backend, nqubits, ndevices):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 12, 13, 14])
 @pytest.mark.parametrize("ntargets", [1, 2])
 @pytest.mark.parametrize("ndevices", [None, 2, 8])
@@ -238,16 +229,13 @@ def test_unitary_matrix_gate_controlled_by(backend, nqubits, ntargets, ndevices)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize(("backend", "accelerators"),
-                         [("custom", None), ("custom", {"/GPU:0": 4}),
-                          ("defaulteinsum", None), ("matmuleinsum", None)])
 @pytest.mark.parametrize("nqubits", [5, 6, 7, 11, 12])
-def test_qft(backend, nqubits, accelerators):
+def test_qft(backend, accelerators, nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_state = utils.random_numpy_state(nqubits)
     c = models.QFT(nqubits, accelerators=accelerators)
-    final_state = c(np.copy(initial_state)).numpy()
+    initial_state = random_state(nqubits)
+    final_state = c(np.copy(initial_state))
     cirq_gates = [(cirq.QFT, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
     np.testing.assert_allclose(target_state, final_state, atol=1e-6)
