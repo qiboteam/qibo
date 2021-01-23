@@ -169,6 +169,5 @@ qreg q[2];
 h q[0];
 h q[1];"""
     c = Circuit.from_qasm(target)
-    final_state = c().numpy()
     target_state = np.ones(4) / 2.0
-    np.testing.assert_allclose(target_state, final_state)
+    np.testing.assert_allclose(c(), target_state)

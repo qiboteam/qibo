@@ -266,4 +266,4 @@ def test_variable_theta(backend):
         c.add(gates.RY(1, 0.4321))
         target_state = c()
         np.testing.assert_allclose(final_state, target_state)
-        qibo.set_backend(original_backend)
+    qibo.set_backend(original_backend)
