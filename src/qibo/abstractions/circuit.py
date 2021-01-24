@@ -513,18 +513,25 @@ class AbstractCircuit(ABC):
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 
-    def set_parameters(self, parameters: Union[Dict, List]):
+    def set_parameters(self, parameters):
         """Updates the parameters of the circuit's parametrized gates.
 
         For more information on how to use this method we refer to the
         :ref:`How to use parametrized gates?<params-examples>` example.
 
         Args:
-            parameters: List or dictionary with the new parameter values.
-                If a list is given its length and elements of this list
-                should be compatible with the circuit's parametrized gates.
-                If a dictionary is given its keys should be references to the
-                parametrized gates.
+            parameters: Container holding the new parameter values.
+                It can have one of the following types:
+                List with length equal to the number of parametrized gates and
+                each of its elements compatible with the corresponding gate.
+                Dictionary with keys that are references to the parametrized
+                gates and values that correspond to the new parameters for
+                each gate.
+                Flat list with length equal to the total number of free
+                parameters in the circuit.
+                A backend supported tensor (for example ``np.ndarray`` or
+                ``tf.Tensor``) may also be given instead of a flat list.
+
 
         Example:
             ::
@@ -539,8 +546,15 @@ class AbstractCircuit(ABC):
                 c.add(gates.fSim(0, 2, theta=0, phi=0))
                 c.add(gates.H(2))
 
-                # set new values to the circuit's parameters
+                # set new values to the circuit's parameters using list
                 params = [0.123, 0.456, (0.789, 0.321)]
+                c.set_parameters(params)
+                # or using dictionary
+                params = {c.queue[0]: 0.123, c.queue[1]: 0.456
+                          c.queue[3]: (0.789, 0.321)}
+                c.set_parameters(params)
+                # or using flat list (or an equivalent `np.array`/`tf.Tensor`)
+                params = [0.123, 0.456, 0.789, 0.321]
                 c.set_parameters(params)
         """
         if isinstance(parameters, (list, tuple)):
@@ -572,8 +586,8 @@ class AbstractCircuit(ABC):
         Args:
             format (str): How to return the variational parameters.
                 Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
-                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` for
-                more details on each format. Default is ``'list'``.
+                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+                for more details on each format. Default is ``'list'``.
             include_not_trainable (bool): If ``True`` it includes the parameters
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
