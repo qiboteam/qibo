@@ -479,6 +479,10 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
                                          params, params2,
                                          trainable=trainable, name=name)
 
+    @BaseBackendGate.density_matrix.setter
+    def density_matrix(self, x: bool):
+        cgates.VariationalLayer.density_matrix.fset(self, x) # pylint: disable=no-member
+
     def _dagger(self):
         return cgates.VariationalLayer._dagger(self)
 
@@ -491,12 +495,10 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
     def prepare(self):
         cgates.VariationalLayer.prepare(self)
 
-    def state_vector_call(self, state): # pragma: no cover
-        # impractical case because VariationalLayer is not called by circuits
+    def state_vector_call(self, state):
         return cgates.VariationalLayer.state_vector_call(self, state)
 
-    def density_matrix_call(self, state): # pragma: no cover
-        # impractical case because VariationalLayer is not called by circuits
+    def density_matrix_call(self, state):
         return cgates.VariationalLayer.density_matrix_call(self, state)
 
 

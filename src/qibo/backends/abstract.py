@@ -1,9 +1,6 @@
 from abc import ABC, abstractmethod
 from qibo.config import raise_error
 
-_AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                       "numpy_defaulteinsum", "numpy_matmuleinsum"]
-
 
 class AbstractBackend(ABC):
 
@@ -39,6 +36,9 @@ class AbstractBackend(ABC):
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return "{}Backend".format(self.name.capitalize())
+
     def assign(self, backend):
         """Assigns backend's methods."""
         for method in dir(backend):
@@ -66,7 +66,8 @@ class AbstractBackend(ABC):
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
         else: # pragma: no cover
-            raise_error(RuntimeError, f"Gate backend '{name}' not supported.")
+            # this case is captured by `backends.__init__.set_backend` checks
+            raise_error(ValueError, f"Gate backend '{name}' not supported.")
         self.gates = name
 
     def dtypes(self, name):
@@ -323,6 +324,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def random_uniform(self, shape, dtype='DTYPE'): # pragma: no cover
+        """Samples array of given shape from a uniform distribution in [0, 1]."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def sample_measurements(self, probs, nshots): # pragma: no cover
         """Samples measurements from a given probability distribution.
 
@@ -345,3 +351,7 @@ class AbstractBackend(ABC):
 
     def executing_eagerly(self):
         return True
+
+    @abstractmethod
+    def set_seed(self, seed): # pragma: no cover
+        raise_error(NotImplementedError)

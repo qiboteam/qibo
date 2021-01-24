@@ -1,9 +1,8 @@
-from abc import ABC, abstractmethod
 from qibo.config import raise_error
 from typing import List, Optional, Set, Union
 
 
-class Callback(ABC):
+class Callback:
     """Base callback class.
 
     Callbacks should inherit this class and implement its
@@ -41,34 +40,15 @@ class Callback(ABC):
         else:
             self._active_call = "state_vector_call"
 
-    def __getitem__(self, k):
-        if isinstance(k, int):
-            if k >= len(self._results):
-                raise_error(IndexError, "Attempting to access callbacks {} run but "
-                                        "the callback has been used in {} executions."
-                                        "".format(k, len(self._results)))
-            return self._results[k]
-        if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
-            from qibo import K
-            return K.stack(self._results[k])
-        raise_error(IndexError, "Unrecognized type for index {}.".format(k))
+    @property
+    def results(self):
+        return self._results
 
     def append(self, x):
         self._results.append(x)
 
     def extend(self, x):
         self._results.extend(x)
-
-    @abstractmethod
-    def state_vector_call(self, state): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def density_matrix_call(self, state): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def __call__(self, state):
-        return getattr(self, self._active_call)(state)
 
 
 class PartialTrace(Callback):
@@ -97,7 +77,7 @@ class PartialTrace(Callback):
         if self.partition is None: # pragma: no cover
             self.partition = list(range(n // 2 + n % 2))
 
-        if len(self.partition) < n // 2:
+        if len(self.partition) <= n // 2:
             # Revert parition so that we diagonalize a smaller matrix
             self.partition = [i for i in range(n)
                               if i not in set(self.partition)]
@@ -188,29 +168,9 @@ class EntanglementEntropy(Callback):
 
     def __init__(self, partition: Optional[List[int]] = None,
                  compute_spectrum: bool = False):
-        from qibo import callbacks
         super().__init__()
         self.compute_spectrum = compute_spectrum
         self.spectrum = list()
-        self.partial_trace = callbacks.PartialTrace(partition)
-
-    @Callback.nqubits.setter
-    def nqubits(self, n: int):
-        self._nqubits = n
-        self.partial_trace.nqubits = n
-
-    @abstractmethod
-    def entropy(self, rho): # pragma: no cover
-        """Calculates entropy of a density matrix via exact diagonalization."""
-        raise_error(NotImplementedError)
-
-    def state_vector_call(self, state):
-        rho = self.partial_trace.state_vector_call(state)
-        return self.entropy(rho)
-
-    def density_matrix_call(self, state):
-        rho = self.partial_trace.density_matrix_call(state)
-        return self.entropy(rho)
 
 
 class Norm(Callback):
@@ -260,9 +220,6 @@ class Energy(Callback):
         super().__init__()
         self.hamiltonian = hamiltonian
 
-    def state_vector_call(self, state):
-        return self.hamiltonian.expectation(state)
-
 
 class Gap(Callback):
     """Callback for calculating the gap of adiabatic evolution Hamiltonians.
@@ -310,19 +267,4 @@ class Gap(Callback):
         elif not isinstance(mode, int):
             raise_error(TypeError, "Gap callback mode should be integer or "
                                    "string but is {}.".format(type(mode)))
-        self._evolution = None
         self.mode = mode
-
-    @property
-    def evolution(self):
-        """:class:`qibo.evolution.AdiabaticEvolution` model used by the callback."""
-        return self._evolution
-
-    @evolution.setter
-    def evolution(self, ev: "models.AdiabaticEvolution"):
-        """Sets the :class:`qibo.evolution.AdiabaticEvolution` model."""
-        from qibo.models import AdiabaticEvolution
-        if not isinstance(ev, AdiabaticEvolution):
-            t = type(ev)
-            raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
-        self._evolution = ev

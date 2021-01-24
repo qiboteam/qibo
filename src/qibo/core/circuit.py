@@ -27,6 +27,7 @@ class Circuit(circuit.AbstractCircuit):
 
     def __init__(self, nqubits):
         super(Circuit, self).__init__(nqubits)
+        self.param_tensor_types = K.tensor_types
         self._compiled_execute = None
         self.check_initial_state_shape = True
         self.shapes = {
@@ -37,29 +38,25 @@ class Circuit(circuit.AbstractCircuit):
                                             dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
-        super().set_nqubits(gate)
+        if gate.is_prepared and gate.nqubits != self.nqubits:
+            raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
+                                      "qubits to circuit that contains {}"
+                                      "qubits.".format(
+                                            gate, gate.nqubits, self.nqubits))
         gate.nqubits = self.nqubits
         gate.prepare()
 
-    def set_parameters(self, parameters):
-        if isinstance(parameters, K.tensor_types):
-            super()._set_parameters_list(parameters, int(parameters.shape[0]))
-        else:
-            super().set_parameters(parameters)
-
-    def _get_parameters_flatlist(self, parametrized_gates):
-        params = []
-        for gate in parametrized_gates:
-            if isinstance(gate.parameters, K.tensor_types):
-                params.extend(gate.parameters.ravel())
-            elif isinstance(gate.parameters, collections.abc.Iterable):
-                params.extend(gate.parameters)
-            else:
-                params.append(gate.parameters)
-        return params
+    def _add_layer(self, gate):
+        gate.prepare()
+        for unitary in gate.unitaries:
+            self.set_nqubits(unitary)
+            self.queue.append(unitary)
+        if gate.additional_unitary is not None:
+            self.set_nqubits(gate.additional_unitary)
+            self.queue.append(gate.additional_unitary)
 
     def _fuse_copy(self):
-        """Helper method for :meth:`qibo.core.circuit.Circuit.fuse``.
+        """Helper method for ``circuit.fuse``.
 
         For standard (non-distributed) circuits this creates a copy of the
         circuit with deep-copying the parametrized gates only.
@@ -104,11 +101,14 @@ class Circuit(circuit.AbstractCircuit):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
+        from qibo.abstractions.circuit import _Queue
         new_circuit = self._fuse_copy()
         new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
             new_circuit.queue)
-        new_circuit.queue = list(gate for group in new_circuit.fusion_groups
-                                 for gate in group.gates)
+        new_circuit.queue = _Queue(self.nqubits)
+        for group in new_circuit.fusion_groups:
+            for gate in group.gates:
+                new_circuit.queue.append(gate)
         return new_circuit
 
     def _eager_execute(self, state):

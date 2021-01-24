@@ -43,7 +43,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.optimization = DummyModule()
         self.op = DummyModule("apply_gate")
 
-    def set_device(self, name): # pragma: no cover
+    def set_device(self, name):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
 
@@ -199,14 +199,15 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def initial_state(self, nqubits, is_matrix=False):
         if is_matrix:
-            shape = 2 * (2 ** nqubits,)
-            state = self.zeros(shape)
+            state = self.zeros(2 * (2 ** nqubits,))
             state[0, 0] = 1
         else:
-            shape = (2 ** nqubits,)
-            state = self.zeros(shape)
+            state = self.zeros((2 ** nqubits,))
             state[0] = 1
         return state
+
+    def random_uniform(self, shape, dtype='DTYPE'):
+        return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
     def sample_measurements(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
@@ -216,3 +217,6 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def device(self, device_name):
         return DummyModule()
+
+    def set_seed(self, seed):
+        self.backend.random.seed(seed)

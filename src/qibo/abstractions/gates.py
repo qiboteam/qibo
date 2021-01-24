@@ -44,6 +44,7 @@ class X(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CNOT and Toffoli if there is one or two controls."""
         if len(q) == 1:
@@ -151,6 +152,7 @@ class Z(Gate):
         self.target_qubits = (q,)
         self.init_args = [q]
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CZ if there is only one control."""
         if len(q) == 1:
@@ -206,10 +208,6 @@ class Collapse(Gate):
         """Returns the result list in proper order after sorting the qubits."""
         return self._result
 
-    def _result_to_list(self, res): # pragma: no cover
-        # abstract method
-        raise_error(NotImplementedError)
-
     @result.setter
     def result(self, res):
         if len(self.target_qubits) != len(res):
@@ -226,7 +224,7 @@ class Collapse(Gate):
         self._result = [resdict[q] for q in self.sorted_qubits]
         self.init_kwargs = {"result": res}
 
-    def controlled_by(self, *q): # pragma: no cover
+    def controlled_by(self, *q):
         """"""
         raise_error(NotImplementedError, "Collapse gates cannot be controlled.")
 
@@ -350,6 +348,7 @@ class _Rn_(ParametrizedGate):
         """"""
         return self.__class__(self.target_qubits[0], -self.parameters)
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CRn if there is only one control."""
         if len(q) == 1:
@@ -446,6 +445,7 @@ class _Un_(ParametrizedGate):
         self.init_args = [q]
         self.init_kwargs = {"trainable": trainable}
 
+    @Gate.check_controls
     def controlled_by(self, *q):
         """Fall back to CUn if there is only one control."""
         if len(q) == 1:

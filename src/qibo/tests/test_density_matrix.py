@@ -767,6 +767,35 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 2 * np.pi * np.random.random(nqubits)
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    target_state = c()
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta))
+    final_state = c()
+    np.testing.assert_allclose(target_state, final_state)
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta)
+    gate.density_matrix = True
+    initial_state = c.get_initial_state()
+    if backend != "custom":
+        initial_state = np.reshape(initial_state, 2 * nqubits * (2,))
+    final_state = gate(initial_state)
+    if backend != "custom":
+        final_state = np.reshape(final_state, 2 * (2 ** nqubits,))
+    np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()
@@ -777,7 +806,7 @@ def test_entanglement_entropy(backend):
     rho = u.dot(np.diag(5 * np.random.random(u.shape[0]))).dot(u.conj().T)
     # this is a positive rho
 
-    entropy = callbacks.EntanglementEntropy([0, 2])
+    entropy = callbacks.EntanglementEntropy([1, 3])
     entropy.density_matrix = True
     final_ent = entropy(rho)
 
@@ -797,6 +826,7 @@ def test_density_matrix_circuit_errors():
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
+    gate.prepare()
     with pytest.raises(RuntimeError):
         gate.density_matrix = True
     # Attempt to distribute density matrix circuit

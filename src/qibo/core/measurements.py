@@ -131,8 +131,7 @@ class GateResult:
         # Calculate noisy samples
         noiseless_samples = self.samples()
         fprobs = K.cast(probs, dtype='DTYPE')
-        sprobs = K.random.uniform(noiseless_samples.shape,
-                                  dtype=K.dtypes('DTYPE'))
+        sprobs = K.random_uniform(noiseless_samples.shape)
         flip0 = K.cast(sprobs < fprobs[0], dtype=noiseless_samples.dtype)
         flip1 = K.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0

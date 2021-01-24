@@ -112,21 +112,21 @@ class TensorflowBackend(numpy.NumpyBackend):
     def outer(self, x, y):
         return self.tensordot(x, y, axes=0)
 
-    def kron(self, x, y): # pragma: no cover
-        # not used in Qibo code
+    def kron(self, x, y):
         raise_error(NotImplementedError)
 
-    def inv(self, x): # pragma: no cover
-        # not used in Qibo code
+    def inv(self, x):
         raise_error(NotImplementedError)
 
     def gather(self, x, indices=None, condition=None, axis=0):
-        if indices is None:
-            if condition is None:
-                raise_error(ValueError, "Gather call is missing indices or "
-                                        "condition.")
-            indices = self.backend.where(condition)
-        return self.backend.gather(x, indices, axis=axis)
+        if indices is not None:
+            return self.backend.gather(x, indices, axis=axis)
+
+        if condition is None:
+            raise_error(ValueError, "Gather call is missing indices and "
+                                    "condition.")
+        indices = self.backend.where(condition)
+        return self.backend.gather(x, indices, axis=axis)[:, 0]
 
     def gather_nd(self, x, indices):
         return self.backend.gather_nd(x, indices)
@@ -136,6 +136,9 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                      is_matrix=is_matrix,
                                      omp_num_threads=get_threads())
+
+    def random_uniform(self, shape, dtype='DTYPE'):
+        return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
     def sample_measurements(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
@@ -151,3 +154,6 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
+
+    def set_seed(self, seed):
+        self.backend.random.set_seed(seed)

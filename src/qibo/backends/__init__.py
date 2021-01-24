@@ -1,7 +1,6 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.abstract import _AVAILABLE_BACKENDS
 from qibo.backends.numpy import NumpyBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
@@ -13,21 +12,31 @@ def _construct_backend(name):
             _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
         elif name == "tensorflow":
             _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
-        else: # pragma: no cover
+        else:
             raise_error(ValueError, "Unknown backend name {}.".format(name))
     return _CONSTRUCTED_BACKENDS.get(name)
 
 numpy_backend = _construct_backend("numpy")
 numpy_matrices = numpy_backend.matrices
 
+AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
+                      "tensorflow_defaulteinsum", "tensorflow_matmuleinsum",
+                      "numpy_defaulteinsum", "numpy_matmuleinsum"]
+
 
 # Select the default backend engine
 if "QIBO_BACKEND" in os.environ: # pragma: no cover
-    if os.environ.get("QIBO_BACKEND") == "tensorflow":
+    _BACKEND_NAME = os.environ.get("QIBO_BACKEND")
+    if _BACKEND_NAME == "tensorflow":
         K = TensorflowBackend()
-    else: # pragma: no cover
+    elif _BACKEND_NAME == "numpy": # pragma: no cover
         # CI uses tensorflow as default backend
         K = NumpyBackend()
+    else: # pragma: no cover
+        raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
+                                "unknown value {}. Please select either "
+                                "`tensorflow` or `numpy`."
+                                "".format(_BACKEND_NAME))
 else:
     try:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
@@ -36,18 +45,14 @@ else:
     except ModuleNotFoundError: # pragma: no cover
         # case not tested because CI has tf installed
         log.warning("Tensorflow is not installed. Falling back to numpy.")
-        log.warning("Numpy does not support custom operators and GPU.")
         K = NumpyBackend()
+        AVAILABLE_BACKENDS = [b for b in AVAILABLE_BACKENDS
+                              if "tensorflow" not in b]
+        AVAILABLE_BACKENDS.remove("custom")
+
 
 K.qnp = numpy_backend
 _BACKEND_NAME = K.name
-if _BACKEND_NAME != "tensorflow": # pragma: no cover
-    # CI uses tensorflow as default backend
-    log.warning("Numpy does not support Qibo custom operators. "
-                "Einsum will be used to apply gates.")
-    set_backend("defaulteinsum")
-
-
 def set_backend(backend="custom"):
     """Sets backend used for mathematical operations and applying gates.
 
@@ -61,8 +66,8 @@ def set_backend(backend="custom"):
     Args:
         backend (str): A backend from the above options.
     """
-    if backend not in _AVAILABLE_BACKENDS:
-        available = ", ".join(_AVAILABLE_BACKENDS)
+    if backend not in AVAILABLE_BACKENDS:
+        available = ", ".join(AVAILABLE_BACKENDS)
         raise_error(ValueError, "Unknown backend {}. Please select one of the "
                                 "available backends: {}."
                                 "".format(backend, available))
@@ -75,12 +80,11 @@ def set_backend(backend="custom"):
         calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
     elif len(gate_backend) == 2:
         calc_backend, gate_backend = gate_backend
+    if gate_backend == "custom":
+        calc_backend = "tensorflow"
     bk = _construct_backend(calc_backend)
     K.assign(bk)
     K.qnp = numpy_backend
-    if K.name != "tensorflow" and gate_backend == "custom": # pragma: no cover
-        raise_error(ValueError, "Custom gates cannot be used with {} backend."
-                                "".format(K.name))
     K.set_gates(gate_backend)
 
 
@@ -94,6 +98,14 @@ def get_backend():
         return K.gates
     else:
         return "_".join([K.name, K.gates])
+
+
+if _BACKEND_NAME != "tensorflow": # pragma: no cover
+    # CI uses tensorflow as default backend
+    log.warning("{} does not support Qibo custom operators and GPU. "
+                "Einsum will be used to apply gates on CPU."
+                "".format(_BACKEND_NAME))
+    set_backend("defaulteinsum")
 
 
 def set_precision(dtype='double'):
@@ -129,8 +141,7 @@ def set_device(name):
             '/{device type}:{device number}' where device type is one of
             CPU or GPU.
     """
-    if not config.ALLOW_SWITCHERS and name != K.default_device: # pragma: no cover
-        # no testing is implemented for warnings
+    if not config.ALLOW_SWITCHERS and name != K.default_device:
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     K.set_device(name)

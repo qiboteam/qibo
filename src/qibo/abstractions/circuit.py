@@ -102,6 +102,8 @@ class AbstractCircuit(ABC):
         self.density_matrix = False
         self.repeated_execution = False
 
+        self.param_tensor_types = (None.__class__,)
+
     def __add__(self, circuit):
         """Add circuits.
 
@@ -441,20 +443,10 @@ class AbstractCircuit(ABC):
             self.measurement_gate.add(gate)
             self.measurement_tuples[name] = gate.target_qubits
 
-    def _add_layer(self, gate: gates.Gate):
+    @abstractmethod
+    def _add_layer(self, gate: gates.Gate): # pragma: no cover
         """Called automatically by `add` when `gate` is measurement."""
-        gate.prepare()
-        for unitary in gate.unitaries:
-            self.set_nqubits(unitary)
-            self.queue.append(unitary)
-        if gate.additional_unitary is not None:
-            self.set_nqubits(gate.additional_unitary)
-            self.queue.append(gate.additional_unitary)
-
-    @property
-    def size(self) -> int:
-        """Total number of qubits in the circuit."""
-        return self.nqubits
+        raise_error(NotImplementedError)
 
     @property
     def ngates(self) -> int:
@@ -521,18 +513,25 @@ class AbstractCircuit(ABC):
         for fusion_group in self.fusion_groups:
             fusion_group.update()
 
-    def set_parameters(self, parameters: Union[Dict, List]):
+    def set_parameters(self, parameters):
         """Updates the parameters of the circuit's parametrized gates.
 
         For more information on how to use this method we refer to the
         :ref:`How to use parametrized gates?<params-examples>` example.
 
         Args:
-            parameters: List or dictionary with the new parameter values.
-                If a list is given its length and elements of this list
-                should be compatible with the circuit's parametrized gates.
-                If a dictionary is given its keys should be references to the
-                parametrized gates.
+            parameters: Container holding the new parameter values.
+                It can have one of the following types:
+                List with length equal to the number of parametrized gates and
+                each of its elements compatible with the corresponding gate.
+                Dictionary with keys that are references to the parametrized
+                gates and values that correspond to the new parameters for
+                each gate.
+                Flat list with length equal to the total number of free
+                parameters in the circuit.
+                A backend supported tensor (for example ``np.ndarray`` or
+                ``tf.Tensor``) may also be given instead of a flat list.
+
 
         Example:
             ::
@@ -547,12 +546,21 @@ class AbstractCircuit(ABC):
                 c.add(gates.fSim(0, 2, theta=0, phi=0))
                 c.add(gates.H(2))
 
-                # set new values to the circuit's parameters
+                # set new values to the circuit's parameters using list
                 params = [0.123, 0.456, (0.789, 0.321)]
+                c.set_parameters(params)
+                # or using dictionary
+                params = {c.queue[0]: 0.123, c.queue[1]: 0.456
+                          c.queue[3]: (0.789, 0.321)}
+                c.set_parameters(params)
+                # or using flat list (or an equivalent `np.array`/`tf.Tensor`)
+                params = [0.123, 0.456, 0.789, 0.321]
                 c.set_parameters(params)
         """
         if isinstance(parameters, (list, tuple)):
             self._set_parameters_list(parameters, len(parameters))
+        elif isinstance(parameters, self.param_tensor_types):
+            self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
             if self.fusion_groups:
                 raise_error(TypeError, "Cannot accept new parameters as dictionary "
@@ -578,8 +586,8 @@ class AbstractCircuit(ABC):
         Args:
             format (str): How to return the variational parameters.
                 Available formats are ``'list'``, ``'dict'`` and ``'flatlist'``.
-                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` for
-                more details on each format. Default is ``'list'``.
+                See :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
+                for more details on each format. Default is ``'list'``.
             include_not_trainable (bool): If ``True`` it includes the parameters
                 of non-trainable parametrized gates in the returned list or
                 dictionary. Default is ``False``.
@@ -588,19 +596,31 @@ class AbstractCircuit(ABC):
             parametrized_gates = self.parametrized_gates
         else:
             parametrized_gates = self.trainable_gates
-        if format == "list":
-            return [gate.parameters for gate in parametrized_gates]
-        elif format == "dict":
-            return {gate: gate.parameters for gate in parametrized_gates}
-        elif format == "flatlist":
-            return self._get_parameters_flatlist(parametrized_gates)
-        else:
-            raise_error(ValueError, f"Unknown format {format} given in ``get_parameters``.")
 
-    @abstractmethod
-    def _get_parameters_flatlist(self, parametrized_gates): # pragma: no cover
-        raise_error(NotImplementedError, "Flat list format not available "
-                                         "in the abstract circuit.")
+        if format == "list":
+            params = [gate.parameters for gate in parametrized_gates]
+        elif format == "dict":
+            params = {gate: gate.parameters for gate in parametrized_gates}
+        elif format == "flatlist":
+            params = []
+            for gate in parametrized_gates:
+                if isinstance(gate.parameters, self.param_tensor_types):
+                    def traverse(x):
+                        if isinstance(x, self.param_tensor_types):
+                            for v1 in x:
+                                for v2 in traverse(v1):
+                                    yield v2
+                        else:
+                            yield x
+                    params.extend(traverse(gate.parameters))
+                elif isinstance(gate.parameters, collections.abc.Iterable):
+                    params.extend(gate.parameters)
+                else:
+                    params.append(gate.parameters)
+        else:
+            raise_error(ValueError, "Unknown format {} given in "
+                                    "``get_parameters``.".format(format))
+        return params
 
     def summary(self) -> str:
         """Generates a summary of the circuit.
