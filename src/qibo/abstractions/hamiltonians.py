@@ -189,8 +189,13 @@ class SymbolicHamiltonian(ABC):
             for factor in term.as_ordered_factors():
                 if factor.is_symbol:
                     self._check_symbolmap(factor)
-                    targets.append(self.map[factor][0])
-                    matrices.append(self.map[factor][1])
+                    itarget = self.map[factor][0]
+                    ivalues = self.map[factor][1]
+                    if hasattr(ivalues, '__len__'):
+                        targets.append(itarget)
+                        matrices.append(ivalues)
+                    else:
+                        matrices[0] *= ivalues
                 elif isinstance(factor, self.sympy.Pow):
                     base, pow = factor.args
                     assert isinstance(pow, self.sympy.Integer)
