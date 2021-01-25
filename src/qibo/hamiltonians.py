@@ -155,11 +155,11 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
     return Hamiltonian(nqubits, ham, numpy=numpy)
 
 
-def MaxCut(nqubits, random_graph=False, numpy=False):
+def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
     """Max Cut Hamiltonian.
 
     .. math::
-        H = - \\sum _{i,j=0}^N  \frac{1-\sigma^z_i \sigma^z_j}{2}.
+        H = - \\sum _{i,j=0}^N  \\frac{1 - Z_i Z_j}{2}.
 
     Args:
         nqubits (int): number of quantum bits.
@@ -167,26 +167,30 @@ def MaxCut(nqubits, random_graph=False, numpy=False):
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
+    import sympy as sp
+
+    Z = sp.symbols(f'Z:{nqubits}')
+    V = sp.symbols(f'V:{nqubits**2}')
+    sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
+    sham /= 2
+
     if random_graph:
         import networkx as nx
         aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
         graph = nx.random_graphs.dense_gnm_random_graph(nqubits, aa)
-        V = nx.adjacency_matrix(graph).toarray()
-    size = 2 ** nqubits
-    ham = K.qnp.zeros((size, size))
-    for i in range(nqubits):
-        for j in range(nqubits):
-            h = K.qnp.eye(1)
-            for k in range(nqubits):
-                if (k == i) ^ (k == j):
-                    h = K.np.kron(h, matrices.Z)
-                else:
-                    h = K.np.kron(h, matrices.I)
-            M = K.qnp.eye(size) - h
-            if random_graph:
-                ham += V[i,j] * M
-            else:
-                ham += M
-    ham = -1 * ham
-    return Hamiltonian(nqubits, ham, numpy=numpy)
+        v = nx.adjacency_matrix(graph).toarray().flatten()
+    else:
+        v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
+
+    smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
+    smap.update({s: (i, v[i]) for i, s in enumerate(V)})
+
+    if trotter:
+        ham = TrotterHamiltonian.from_symbolic(sham, smap)
+    else:
+        ham = Hamiltonian.from_symbolic(sham, smap, numpy=numpy)
+    return ham
