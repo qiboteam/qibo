@@ -179,10 +179,10 @@ def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
     sham /= 2
 
     if random_graph:
-        import networkx as nx
+        from networkx import random_graphs, adjacency_matrix # pylint: disable=no-name-in-module
         aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
-        graph = nx.random_graphs.dense_gnm_random_graph(nqubits, aa)
-        v = nx.adjacency_matrix(graph).toarray().flatten()
+        graph = random_graphs.dense_gnm_random_graph(nqubits, aa)
+        v = adjacency_matrix(graph).toarray().flatten()
     else:
         v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
 
