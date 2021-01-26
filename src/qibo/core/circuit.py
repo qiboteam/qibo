@@ -4,7 +4,7 @@ import collections
 from qibo import K
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.core import measurements
+from qibo.core import states, measurements
 from typing import List, Tuple
 
 
@@ -253,25 +253,19 @@ class Circuit(circuit.AbstractCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, state):
-        if isinstance(state, K.tensor_types):
-            return K.cast(state)
-        raise_error(TypeError, "Initial state type {} is not recognized."
-                                "".format(type(state)))
-
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            is_matrix = isinstance(self, DensityMatrixCircuit)
-            return K.initial_state(self.nqubits, is_matrix)
-        state = self._cast_initial_state(state)
-        if self.check_initial_state_shape:
-            shape = tuple(state.shape)
-            if shape != self.shapes.get('FLAT'):
-                raise_error(ValueError, "Invalid initial state shape {} for "
-                                        "circuit with {} qubits."
-                                        "".format(shape, self.nqubits))
-        return state
+            state = states.State.default(self.nqubits, is_matrix=False)
+        else:
+            state = states.State.from_vector(state, self.nqubits)
+            if self.check_initial_state_shape:
+                shape = tuple(state.shape)
+                if shape != self.shapes.get('FLAT'):
+                    raise_error(ValueError, "Invalid initial state shape {} "
+                                            "for circuit with {} qubits."
+                                            "".format(shape, self.nqubits))
+        return state.tensor
 
 
 class DensityMatrixCircuit(Circuit):
@@ -305,9 +299,20 @@ class DensityMatrixCircuit(Circuit):
         self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
                                             dtype='DTYPEINT')
 
-    def _cast_initial_state(self, state):
+    def get_initial_state(self, state=None):
+        if state is None:
+            state = states.State.default(self.nqubits, is_matrix=True)
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
-        if tuple(state.shape) == self.shapes['VECTOR']:
-            state = K.outer(state, K.conj(state))
-        return Circuit._cast_initial_state(self, state)
+        elif tuple(state.shape) == self.shapes['VECTOR']:
+            state = states.State.from_vector(state, self.nqubits)
+            state.to_matrix()
+        else:
+            state = states.State.from_matrix(state, self.nqubits)
+            if self.check_initial_state_shape:
+                shape = tuple(state.shape)
+                if shape != self.shapes.get('FLAT'):
+                    raise_error(ValueError, "Invalid initial state shape {} "
+                                            "for circuit with {} qubits."
+                                            "".format(shape, self.nqubits))
+        return state.tensor

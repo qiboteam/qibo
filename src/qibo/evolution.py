@@ -63,6 +63,7 @@ class StateEvolution:
             ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
+        self.check_initial_state_shape = False
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = self._create_normalize_state(solver)
@@ -128,7 +129,7 @@ class StateEvolution:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
         if self.accelerators is None:
-            return circuit.Circuit._cast_initial_state(self, state)
+            return circuit.Circuit.get_initial_state(self, state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
             return c.get_initial_state(state)
