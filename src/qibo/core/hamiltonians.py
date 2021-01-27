@@ -399,9 +399,11 @@ class SymbolicHamiltonian:
             if target == pair[0]:
                 matrix = terms[pair]
             else:
-                c, m1, m2 = self.terms[pair]
+                matrices = self.terms[pair]
                 pair = (pair[1], pair[0])
-                matrix = c * K.np.kron(m2, m1)
+                matrix = 0
+                for i in range(0, len(matrices), 3):
+                    matrix += matrices[i] * self.multikron(matrices[i + 2: i:-1])
             eye = K.np.eye(2, dtype=matrix.dtype)
             merged[pair] = K.np.kron(one_qubit[target], eye) + matrix
         merged.update(two_qubit)
@@ -419,6 +421,10 @@ class SymbolicHamiltonian:
             constant (float): The overall constant term of the Hamiltonian.
         """
         terms = {t: m for t, m in self.partial_matrices()}
+        if tuple() in terms:
+            constant = terms.pop(tuple()) + self.constant
+        else:
+            constant = self.constant
         if set(len(t) for t in terms.keys()) == {1, 2}:
             terms = self.merge_one_qubit(terms)
         return terms, self.constant
