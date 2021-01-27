@@ -272,7 +272,7 @@ def test_trotter_hamiltonian_to_dense(nqubits, model):
     local_ham = model(nqubits, trotter=True)
     target_ham = model(nqubits, numpy=True)
     final_ham = local_ham.dense
-    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix)
+    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
 
 def test_trotter_hamiltonian_scalar_mul(nqubits=3):

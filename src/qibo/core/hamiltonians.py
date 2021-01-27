@@ -427,7 +427,7 @@ class SymbolicHamiltonian:
             constant = self.constant
         if set(len(t) for t in terms.keys()) == {1, 2}:
             terms = self.merge_one_qubit(terms)
-        return terms, self.constant
+        return terms, constant
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
