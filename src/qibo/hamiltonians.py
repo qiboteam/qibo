@@ -153,3 +153,44 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
         condition = lambda i, j: i == j % nqubits
         ham -= h * _build_spin_model(nqubits, matrices.X, condition)
     return Hamiltonian(nqubits, ham, numpy=numpy)
+
+
+def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
+    """Max Cut Hamiltonian.
+
+    .. math::
+        H = - \\sum _{i,j=0}^N  \\frac{1 - Z_i Z_j}{2}.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        random_graph (bool): enable random connections between qubits.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise TensorFlow is used.
+            Default option is ``numpy = False``.
+        trotter (bool): If ``True`` it creates the Hamiltonian as a
+            :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object, otherwise
+            it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
+    """
+    import sympy as sp
+
+    Z = sp.symbols(f'Z:{nqubits}')
+    V = sp.symbols(f'V:{nqubits**2}')
+    sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
+    sham /= 2
+
+    if random_graph: # pragma: no cover
+        from networkx import random_graphs, adjacency_matrix # pylint: disable=no-name-in-module
+        aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
+        graph = random_graphs.dense_gnm_random_graph(nqubits, aa)
+        v = adjacency_matrix(graph).toarray().flatten()
+    else:
+        v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
+
+    smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
+    smap.update({s: (i, v[i]) for i, s in enumerate(V)})
+
+    if trotter:
+        ham = TrotterHamiltonian.from_symbolic(sham, smap)
+    else:
+        ham = Hamiltonian.from_symbolic(sham, smap, numpy=numpy)
+    return ham

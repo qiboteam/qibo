@@ -9,3 +9,4 @@ joblib
 matplotlib
 blessings
 psutil
+networkx
