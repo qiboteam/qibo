@@ -178,7 +178,7 @@ def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
     sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
     sham /= 2
 
-    if random_graph:
+    if random_graph: # pragma: no cover
         from networkx import random_graphs, adjacency_matrix # pylint: disable=no-name-in-module
         aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
         graph = random_graphs.dense_gnm_random_graph(nqubits, aa)
