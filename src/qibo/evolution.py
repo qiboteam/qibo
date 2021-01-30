@@ -1,7 +1,7 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
 from qibo.abstractions import hamiltonians
-from qibo.core import circuit
+from qibo.core import circuit, states
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
 
@@ -65,6 +65,7 @@ class StateEvolution:
 
         self.callbacks = callbacks
         self.accelerators = accelerators
+        self.state_cls = states.VectorState
         self.normalize_state = self._create_normalize_state(solver)
         self.calculate_callbacks = self._create_calculate_callbacks(
             accelerators, memory_device)

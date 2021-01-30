@@ -29,6 +29,7 @@ class Circuit(circuit.AbstractCircuit):
         super(Circuit, self).__init__(nqubits)
         self.param_tensor_types = K.tensor_types
         self._compiled_execute = None
+        self.state_cls = states.VectorState
         self.tensor_shape = K.cast(nqubits * (2,), dtype='DTYPEINT')
         self.flat_shape = K.cast((2 ** nqubits,), dtype='DTYPEINT')
 
@@ -231,10 +232,7 @@ class Circuit(circuit.AbstractCircuit):
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
             return state
-            #if self.density_matrix:
-            #    return states.State.from_matrix(state)
-            #else:
-            #    return states.State.from_vector(state)
+            return self.state_cls.from_tensor(state)
 
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
@@ -255,9 +253,9 @@ class Circuit(circuit.AbstractCircuit):
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            state = states.VectorState.zstate(self.nqubits)
+            state = self.state_cls.zstate(self.nqubits)
         else:
-            state = states.VectorState.from_tensor(state, self.nqubits)
+            state = self.state_cls.from_tensor(state, self.nqubits)
         return state.tensor
 
 
@@ -284,17 +282,14 @@ class DensityMatrixCircuit(Circuit):
     def __init__(self, nqubits):
         super(DensityMatrixCircuit, self).__init__(nqubits)
         self.density_matrix = True
+        self.state_cls = states.MatrixState
         self.tensor_shape = K.cast(2 * nqubits * (2,), dtype='DTYPEINT')
         self.flat_shape = K.cast(2 * (2 ** nqubits,), dtype='DTYPEINT')
 
     def get_initial_state(self, state=None):
-        if state is None:
-            state = states.MatrixState.zstate(self.nqubits)
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
-        elif tuple(state.shape) == (2 ** self.nqubits,):
+        if state is not None and tuple(state.shape) == (2 ** self.nqubits,):
             state = states.VectorState.from_tensor(state, self.nqubits)
-            state = state.to_density_matrix()
-        else:
-            state = states.MatrixState.from_tensor(state, self.nqubits)
-        return state.tensor
+            return state.to_density_matrix().tensor
+        return super().get_initial_state(state)
