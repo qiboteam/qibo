@@ -89,7 +89,7 @@ class StateEvolution:
         def calculate_callbacks_distributed(state):
             with K.device(memory_device):
                 if not isinstance(state, K.tensor_types):
-                    state = state.vector
+                    state = state.tensor
                 calculate_callbacks(state)
 
         return calculate_callbacks_distributed
@@ -282,8 +282,9 @@ class AdiabaticEvolution(StateEvolution):
             if self.accelerators is None:
                 return self.h0.ground_state()
             else:
-                c = self.hamiltonian(0).circuit(self.solver.dt)
-                return c.get_initial_state("ones")
+                from qibo.core.states import DistributedState
+                circuit = self.hamiltonian(0).circuit(self.solver.dt)
+                return DistributedState.xstate(circuit)
         return super(AdiabaticEvolution, self).get_initial_state(state)
 
     @staticmethod

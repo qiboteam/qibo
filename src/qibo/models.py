@@ -256,6 +256,7 @@ class QAOA(object):
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers, K
+    from qibo.core import states
     from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
@@ -297,6 +298,7 @@ class QAOA(object):
         self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
         self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
 
+        self.state_cls = self.states.VectorState
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = StateEvolution._create_normalize_state(
@@ -348,18 +350,14 @@ class QAOA(object):
     def get_initial_state(self, state=None):
         """"""
         if self.accelerators is not None:
-            if state is None:
-                state = "ones"
             c = self.hamiltonian.circuit(self.params[0])
+            if state is None:
+                return self.states.DistributedState.xstate(c)
             return c.get_initial_state(state)
 
         if state is None:
-            # Generate |++...+> state
-            n = self.K.cast(2 ** self.nqubits, dtype='DTYPEINT')
-            state = self.K.ones(n)
-            norm = self.K.cast(2 ** float(self.nqubits / 2.0))
-            return state / norm
-        return StateCircuit._cast_initial_state(self, state)
+            return self.state_cls.xstate(self.nqubits).tensor
+        return StateCircuit.get_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell', options=None):
         """Optimizes the variational parameters of the QAOA.

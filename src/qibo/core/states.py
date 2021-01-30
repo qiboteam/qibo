@@ -14,10 +14,17 @@ class VectorState(AbstractState):
         if not isinstance(x, K.tensor_types):
             raise_error(TypeError, "Initial state type {} is not recognized."
                                     "".format(type(x)))
-        AbstractState.tensor.fset(self, x) # pylint: disable=no-member
-        if x.shape != self.shape:
+
+        if self._nqubits is None:
+            self.nqubits = int(np.log2(tuple(x.shape)[0]))
+
+        try:
+            shape = tuple(x.shape)
+        except ValueError:
+            shape = None
+        if shape is not None and shape != self.shape:
             raise_error(ValueError, "Invalid tensor shape {} for state of {} "
-                                    "qubits.".format(x.shape, self.nqubits))
+                                    "qubits.".format(shape, self.nqubits))
         self._tensor = K.cast(x)
 
     def __array__(self):
@@ -36,8 +43,8 @@ class VectorState(AbstractState):
     @classmethod
     def xstate(cls, nqubits):
         state = cls(nqubits)
-        shape = K.cast(self.nstates, dtype='DTYPEINT')
-        state.tensor = K.ones(shape) / K.cast(K.sqrt(shape))
+        shape = K.cast(state.nstates, dtype='DTYPEINT')
+        state.tensor = K.ones(shape) / K.cast(K.qnp.sqrt(state.nstates))
         return state
 
     @classmethod
@@ -93,10 +100,13 @@ class DistributedState(VectorState):
     """
 
     def __init__(self, circuit):
+        from qibo.tensorflow.distcircuit import DistributedCircuit
         super().__init__(circuit.nqubits)
+        self.circuit_cls = DistributedCircuit
+        self._circuit = None
+        self.device = None
+        self.qubits = None
         self.circuit = circuit
-        self.device = circuit.memory_device
-        self.qubits = circuit.queues.qubits
 
         # Create pieces
         n = 2 ** (self.nqubits - self.nglobal)
@@ -114,6 +124,19 @@ class DistributedState(VectorState):
             "global": 2 ** K.np.arange(self.nglobal - 1, -1, -1),
             "local": 2 ** K.np.arange(self.nlocal - 1, -1, -1)
             }
+
+    @property
+    def circuit(self):
+        return self._circuit
+
+    @circuit.setter
+    def circuit(self, c):
+        if not isinstance(c, self.circuit_cls):
+            raise_error(TypeError, "Circuit of unsupported type {} was given to "
+                                   "distributed state.")
+        self._circuit = c
+        self.device = c.memory_device
+        self.qubits = c.queues.qubits
 
     @property
     def nglobal(self):

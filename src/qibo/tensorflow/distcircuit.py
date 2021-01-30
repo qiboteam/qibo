@@ -243,6 +243,7 @@ class DistributedCircuit(circuit.Circuit):
         if state is None:
             return states.DistributedState.zstate(self)
         elif isinstance(state, states.DistributedState):
+            state.circuit = self
             return state
         elif isinstance(state, K.tensor_types):
             state = super().get_initial_state(state)

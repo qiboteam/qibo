@@ -1,7 +1,7 @@
 import itertools
 from qibo import K
 from qibo.config import log, raise_error, EINSUM_CHARS
-from qibo.abstractions import hamiltonians
+from qibo.abstractions import hamiltonians, states
 
 
 class Hamiltonian(hamiltonians.Hamiltonian):
@@ -51,6 +51,8 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         return self._exp.get("result")
 
     def expectation(self, state, normalize=False):
+        if isinstance(state, states.AbstractState):
+            state = state.tensor
         statec = self.K.conj(state)
         hstate = self @ state
         ev = self.K.real(self.K.sum(statec * hstate))
@@ -134,7 +136,10 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         if isinstance(o, self.__class__):
             new_matrix = self.K.matmul(self.matrix, o.matrix)
             return self.__class__(self.nqubits, new_matrix)
-        elif isinstance(o, K.tensor_types):
+
+        if isinstance(o, states.AbstractState):
+            o = o.tensor
+        if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
                 return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
@@ -143,9 +148,9 @@ class Hamiltonian(hamiltonians.Hamiltonian):
             else:
                 raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                         "rank-{} tensor.".format(rank))
-        else:
-            raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
-                                             "implemented.".format(type(o)))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
 
 class NumpyHamiltonian(Hamiltonian):
@@ -370,6 +375,8 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
         return Hamiltonian.expectation(self, state, normalize)
 
     def __matmul__(self, state):
+        if isinstance(state, states.AbstractState):
+            state = state.tensor
         if not isinstance(state, K.tensor_types):
             raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                              "implemented.".format(type(state)))
