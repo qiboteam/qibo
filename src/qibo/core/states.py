@@ -1,71 +1,69 @@
 import math
 from qibo import K
-from qibo.abstractions import states
 from qibo.config import raise_error
+from qibo.abstractions.states import AbstractState
 
 
-class State(states.AbstractState):
-
-    @states.AbstractState.vector.setter
-    def vector(self, x):
-        if not isinstance(x, K.tensor_types):
-            raise_error(TypeError, "Initial state type {} is not recognized."
-                                    "".format(type(x)))
-        states.AbstractState.vector.fset(self, x) # pylint: disable=no-member
-        self._vector = K.cast(self._vector)
-
-    @states.AbstractState.matrix.setter
-    def matrix(self, x):
-        if not isinstance(x, K.tensor_types):
-            raise_error(TypeError, "Initial state type {} is not recognized."
-                                    "".format(type(x)))
-        states.AbstractState.matrix.fset(self, x) # pylint: disable=no-member
-        self._matrix = K.cast(self._matrix)
-
-    def to_matrix(self):
-        self.matrix = K.outer(self.vector, K.conj(self.vector))
-        return self
-
-    @classmethod
-    def from_vector(cls, x, nqubits=None):
-        state = cls()
-        state.vector = x
-        return state
-
-    @classmethod
-    def from_matrix(cls, x, nqubits=None):
-        state = cls()
-        state.matrix = x
-        return state
-
-    @classmethod
-    def default(cls, nqubits, is_matrix=False):
-        state = cls(nqubits)
-        if is_matrix:
-            state.matrix = K.initial_state(nqubits, is_matrix)
-        else:
-            state.vector = K.initial_state(nqubits, is_matrix)
-        return state
-
-    @classmethod
-    def ones(cls, nqubits, is_matrix=False):
-        state = cls(nqubits)
-        shape = K.cast(self.nstates, dtype='DTYPEINT')
-        state.vector = K.ones(shape) / K.cast(K.sqrt(shape))
-        if is_matrix:
-            state.to_matrix()
-        return state
-
-    @classmethod
-    def random(cls, nqubits, is_matrix=False):
-        raise_error(NotImplementedError)
+class VectorState(AbstractState):
 
     @property
     def shape(self):
-        return tuple(self.tensor.shape)
+        return (self.nstates,)
+
+    @AbstractState.tensor.setter
+    def tensor(self, x):
+        if not isinstance(x, K.tensor_types):
+            raise_error(TypeError, "Initial state type {} is not recognized."
+                                    "".format(type(x)))
+        AbstractState.tensor.fset(self, x) # pylint: disable=no-member
+        if x.shape != self.shape:
+            raise_error(ValueError, "Invalid tensor shape {} for state of {} "
+                                    "qubits.".format(x.shape, self.nqubits))
+        self._tensor = K.cast(x)
 
     def __array__(self):
         return K.qnp.cast(self.tensor)
 
     def numpy(self):
         return self.__array__()
+
+    @classmethod
+    def zstate(cls, nqubits):
+        state = cls(nqubits)
+        is_matrix = isinstance(state, MatrixState)
+        state.tensor = K.initial_state(nqubits, is_matrix)
+        return state
+
+    @classmethod
+    def xstate(cls, nqubits):
+        state = cls(nqubits)
+        shape = K.cast(self.nstates, dtype='DTYPEINT')
+        state.tensor = K.ones(shape) / K.cast(K.sqrt(shape))
+        return state
+
+    @classmethod
+    def random(cls, nqubits):
+        raise_error(NotImplementedError)
+
+    def to_density_matrix(self):
+        matrix = K.outer(self.tensor, K.conj(self.tensor))
+        return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
+
+
+class MatrixState(VectorState):
+
+    @property
+    def shape(self):
+        return (self.nstates, self.nstates)
+
+    @classmethod
+    def xstate(cls, nqubits):
+        state = VectorState.xstate(nqubits)
+        return state.to_density_matrix()
+
+    @classmethod
+    def random(cls, nqubits):
+        raise_error(NotImplementedError)
+
+    def to_density_matrix(self):
+        raise_error(RuntimeError, "State is already a density matrix.")

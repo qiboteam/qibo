@@ -231,10 +231,11 @@ class Circuit(circuit.AbstractCircuit):
 
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
-            if self.density_matrix:
-                return states.State.from_matrix(state)
-            else:
-                return states.State.from_vector(state)
+            return state
+            #if self.density_matrix:
+            #    return states.State.from_matrix(state)
+            #else:
+            #    return states.State.from_vector(state)
 
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
@@ -255,15 +256,15 @@ class Circuit(circuit.AbstractCircuit):
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            state = states.State.default(self.nqubits, is_matrix=False)
+            state = states.VectorState.zstate(self.nqubits)
         else:
-            state = states.State.from_vector(state, self.nqubits)
-            if self.check_initial_state_shape:
-                shape = tuple(state.shape)
-                if shape != (2 ** self.nqubits,):
-                    raise_error(ValueError, "Invalid initial state shape {} "
-                                            "for circuit with {} qubits."
-                                            "".format(shape, self.nqubits))
+            state = states.VectorState.from_tensor(state, self.nqubits)
+            #if self.check_initial_state_shape:
+            #    shape = tuple(state.shape)
+            #    if shape != (2 ** self.nqubits,):
+            #        raise_error(ValueError, "Invalid initial state shape {} "
+            #                                "for circuit with {} qubits."
+            #                                "".format(shape, self.nqubits))
         return state.tensor
 
 
@@ -295,18 +296,18 @@ class DensityMatrixCircuit(Circuit):
 
     def get_initial_state(self, state=None):
         if state is None:
-            state = states.State.default(self.nqubits, is_matrix=True)
+            state = states.MatrixState.zstate(self.nqubits)
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
         elif tuple(state.shape) == (2 ** self.nqubits,):
-            state = states.State.from_vector(state, self.nqubits)
-            state.to_matrix()
+            state = states.VectorState.from_tensor(state, self.nqubits)
+            state = state.to_density_matrix()
         else:
-            state = states.State.from_matrix(state, self.nqubits)
-            if self.check_initial_state_shape:
-                shape = tuple(state.shape)
-                if shape != 2 * (2 ** self.nqubits,):
-                    raise_error(ValueError, "Invalid initial state shape {} "
-                                            "for circuit with {} qubits."
-                                            "".format(shape, self.nqubits))
+            state = states.MatrixState.from_tensor(state, self.nqubits)
+            #if self.check_initial_state_shape:
+            #    shape = tuple(state.shape)
+            #    if shape != 2 * (2 ** self.nqubits,):
+            #        raise_error(ValueError, "Invalid initial state shape {} "
+            #                                "for circuit with {} qubits."
+            #                                "".format(shape, self.nqubits))
         return state.tensor

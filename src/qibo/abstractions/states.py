@@ -7,9 +7,9 @@ class AbstractState(ABC):
 
     def __init__(self, nqubits=None):
         self._nqubits = None
-        self._vector = None
-        self._matrix = None
+        self._tensor = None
         self.nstates = None
+        self.nqubits = nqubits
 
     @property
     def nqubits(self):
@@ -22,90 +22,36 @@ class AbstractState(ABC):
             raise_error(AttributeError, "State number of qubits not available.")
         return self.nstates
 
+    @property
+    @abstractmethod
+    def shape(self):
+        raise_error(NotImplementedError)
+
     @nqubits.setter
     def nqubits(self, n):
         self._nqubits = n
         self.nstates = 2 ** n
 
     @property
-    def vector(self):
-        if self._vector is None:
-            raise_error(AttributeError, "State vector not available.")
-        return self._vector
-
-    @property
-    def matrix(self):
-        if self._matrix is None:
-            raise_error(AttributeError, "Density matrix not available.")
-        return self._matrix
-
-    @vector.setter
-    def vector(self, x):
-        nqubits = int(math.log2(len(x)))
-        if self._nqubits is None:
-            self.nqubits = nqubits
-        elif self._nqubits != nqubits:
-            raise_error(ValueError, "Cannot assign vector of length {} to "
-                                    "state with {} qubits."
-                                    "".format(len(x), self.nqubits))
-        self._vector = x
-
-    @matrix.setter
-    def matrix(self, x):
-        nqubits = int(math.log2(len(x)))
-        if self._nqubits is None:
-            self.nqubits = nqubits
-        elif self._nqubits != nqubits:
-            raise_error(ValueError, "Cannot assign matrix of length {} to "
-                                    "state with {} qubits."
-                                    "".format(len(x), self.nqubits))
-        self._matrix = x
-
-    @abstractmethod
-    def to_matrix(self):
-        raise_error(NotImplementedError)
-
-    @classmethod
-    def from_vector(cls, x, nqubits=None):
-        obj = cls()
-        obj.vector = x
-        return obj
-
-    @classmethod
-    def from_matrix(cls, x, nqubits=None):
-        obj = cls()
-        obj.matrix = x
-        return obj
-
-    @classmethod
-    @abstractmethod
-    def default(cls, nqubits, is_matrix=False):
-        raise_error(NotImplementedError)
-
-    @classmethod
-    @abstractmethod
-    def ones(cls, nqubits, is_matrix=False):
-        raise_error(NotImplementedError)
-
-    @classmethod
-    @abstractmethod
-    def random(cls, nqubits, is_matrix=False):
-        raise_error(NotImplementedError)
-
-    @property
     def tensor(self):
-        if self._matrix is not None:
-            return self.matrix
-        return self.vector
+        if self._tensor is None:
+            raise_error(AttributeError, "State tensor not available.")
+        return self._tensor
+
+    @tensor.setter
+    def tensor(self, x):
+        nqubits = int(math.log2(len(x)))
+        if self._nqubits is None:
+            self.nqubits = nqubits
+        elif self._nqubits != nqubits:
+            raise_error(ValueError, "Cannot assign tensor of length {} to "
+                                    "state with {} qubits."
+                                    "".format(len(x), self.nqubits))
+        self._tensor = x
 
     @property
     def dtype(self):
         return self.tensor.dtype
-
-    @property
-    @abstractmethod
-    def shape(self):
-        raise_error(NotImplementedError)
 
     @abstractmethod
     def __array__(self):
@@ -119,3 +65,28 @@ class AbstractState(ABC):
         if isinstance(i, int) and i >= self.nstates:
             raise_error(IndexError, "State index {} out of range.".format(i))
         return self.tensor[i]
+
+    @classmethod
+    def from_tensor(cls, x, nqubits=None):
+        obj = cls(nqubits)
+        obj.tensor = x
+        return obj
+
+    @classmethod
+    @abstractmethod
+    def zstate(cls, nqubits):
+        raise_error(NotImplementedError)
+
+    @classmethod
+    @abstractmethod
+    def xstate(cls, nqubits):
+        raise_error(NotImplementedError)
+
+    @classmethod
+    @abstractmethod
+    def random(cls, nqubits):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def to_density_matrix(self):
+        raise_error(NotImplementedError)
