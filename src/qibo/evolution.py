@@ -63,7 +63,6 @@ class StateEvolution:
             ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
-        self.check_initial_state_shape = True
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.normalize_state = self._create_normalize_state(solver)
