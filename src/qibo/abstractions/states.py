@@ -99,9 +99,23 @@ class AbstractState(ABC):
         return self.vector
 
     @property
+    def dtype(self):
+        return self.tensor.dtype
+
+    @property
     @abstractmethod
     def shape(self):
         raise_error(NotImplementedError)
 
+    @abstractmethod
+    def __array__(self):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def numpy(self):
+        raise_error(NotImplementedError)
+
     def __getitem__(self, i):
+        if isinstance(i, int) and i >= self.nstates:
+            raise_error(IndexError, "State index {} out of range.".format(i))
         return self.tensor[i]

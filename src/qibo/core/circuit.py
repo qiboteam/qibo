@@ -231,7 +231,10 @@ class Circuit(circuit.AbstractCircuit):
 
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
-            return state
+            if self.density_matrix:
+                return states.State.from_matrix(state)
+            else:
+                return states.State.from_vector(state)
 
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)

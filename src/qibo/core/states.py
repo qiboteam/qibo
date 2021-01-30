@@ -63,3 +63,9 @@ class State(states.AbstractState):
     @property
     def shape(self):
         return tuple(self.tensor.shape)
+
+    def __array__(self):
+        return K.qnp.cast(self.tensor)
+
+    def numpy(self):
+        return self.__array__()
