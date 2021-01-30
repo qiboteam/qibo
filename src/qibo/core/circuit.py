@@ -154,8 +154,8 @@ class Circuit(circuit.AbstractCircuit):
         if not K.custom_gates:
             state = K.reshape(state, self.flat_shape)
 
-        self._final_state = state
-        return state
+        self._final_state = self.state_cls.from_tensor(state, self.nqubits)
+        return self._final_state
 
     def _device_execute(self, initial_state=None):
         """Executes circuit on the specified device and checks for OOM errors."""
@@ -172,7 +172,7 @@ class Circuit(circuit.AbstractCircuit):
     def _repeated_execute(self, nreps, initial_state=None):
         results = []
         for _ in range(nreps):
-            state = self._device_execute(initial_state)
+            state = self._device_execute(initial_state).tensor
             if self.measurement_gate is not None:
                 results.append(self.measurement_gate(state, nshots=1)[0])
                 del(state)
@@ -232,7 +232,6 @@ class Circuit(circuit.AbstractCircuit):
         state = self._device_execute(initial_state)
         if self.measurement_gate is None or nshots is None:
             return state
-            return self.state_cls.from_tensor(state)
 
         mgate_result = self.measurement_gate(state, nshots)
         return measurements.CircuitResult(self.measurement_tuples, mgate_result)
@@ -254,7 +253,7 @@ class Circuit(circuit.AbstractCircuit):
         """"""
         if state is None:
             state = self.state_cls.zstate(self.nqubits)
-        else:
+        elif not isinstance(state, self.state_cls):
             state = self.state_cls.from_tensor(state, self.nqubits)
         return state.tensor
 

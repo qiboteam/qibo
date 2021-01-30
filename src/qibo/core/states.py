@@ -1,6 +1,5 @@
-import math
 from qibo import K
-from qibo.config import raise_error
+from qibo.config import raise_error, get_threads
 from qibo.abstractions.states import AbstractState
 
 
@@ -67,3 +66,158 @@ class MatrixState(VectorState):
 
     def to_density_matrix(self):
         raise_error(RuntimeError, "State is already a density matrix.")
+
+
+class DistributedState(VectorState):
+    """Data structure that holds the pieces of a state vector.
+
+    This is created automatically by
+    :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+    which uses state pieces instead of the full state vector tensor to allow
+    distribution to multiple devices.
+    Using the ``DistributedState`` instead of the full state vector as a tensor
+    avoids creating two copies of the state in the CPU memory and allows
+    simulation of one more qubit.
+
+    The full state vector can be accessed using the ``state.vector`` or
+    ``state.numpy()`` methods of the ``DistributedState``.
+    The ``DistributedState`` supports indexing as a standard array.
+
+    Holds the following data:
+    * self.pieces: List of length ``ndevices`` holding ``tf.Variable``s with
+      the state pieces.
+    * self.qubits: The ``DistributedQubits`` object created by the
+      ``DistributedQueues`` of the circuit.
+    * self.shapes: Dictionary containing tensors that are useful for reshaping
+      the state when splitting/merging the pieces.
+    """
+
+    def __init__(self, circuit):
+        super().__init__(circuit.nqubits)
+        self.circuit = circuit
+        self.device = circuit.memory_device
+        self.qubits = circuit.queues.qubits
+
+        # Create pieces
+        n = 2 ** (self.nqubits - self.nglobal)
+        with K.device(self.device):
+            self.pieces = [K.optimization.Variable(K.zeros(n))
+                           for _ in range(self.ndevices)]
+
+        self.shapes = {
+            "full": K.cast((2 ** self.nqubits,), dtype='DTYPEINT'),
+            "device": K.cast((len(self.pieces), n), dtype='DTYPEINT'),
+            "tensor": self.nqubits * (2,)
+            }
+
+        self.bintodec = {
+            "global": 2 ** K.np.arange(self.nglobal - 1, -1, -1),
+            "local": 2 ** K.np.arange(self.nlocal - 1, -1, -1)
+            }
+
+    @property
+    def nglobal(self):
+        return self.circuit.nglobal
+
+    @property
+    def nlocal(self):
+        return self.circuit.nlocal
+
+    @property
+    def ndevices(self):
+        return self.circuit.ndevices
+
+    @property
+    def tensor(self):
+        """Returns the full state vector as a tensor of shape ``(2 ** nqubits,)``.
+
+        This is done by merging the state pieces to a single tensor.
+        Using this method will double memory usage.
+        """
+        if self.qubits.list == list(range(self.nglobal)):
+            with K.device(self.device):
+                state = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
+                state = K.reshape(state, self.shapes["full"])
+        elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
+            with K.device(self.device):
+                state = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
+                state = K.reshape(state, self.shapes["full"])
+        else: # fall back to the transpose op
+            with K.device(self.device):
+                state = K.zeros(self.shapes["full"])
+                state = K.op.transpose_state(self.pieces, state, self.nqubits,
+                                             self.qubits.reverse_transpose_order,
+                                             get_threads())
+        return state
+
+    @tensor.setter
+    def tensor(self, x):
+        raise_error(NotImplementedError, "Tensor setter is not supported by "
+                                         "distributed states for memory "
+                                         "efficiency.")
+
+    @property
+    def dtype(self):
+        return self.pieces[0].dtype
+
+    def assign_pieces(self, full_state):
+        """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
+
+        Args:
+            full_state (array): Full state vector as a tensor of shape
+                ``(2 ** nqubits)``.
+        """
+        with K.device(self.device):
+            full_state = K.reshape(full_state, self.shapes["device"])
+            pieces = [full_state[i] for i in range(self.ndevices)]
+            new_state = K.zeros(self.shapes["device"])
+            new_state = K.op.transpose_state(pieces, new_state, self.nqubits,
+                                             self.qubits.transpose_order,
+                                             get_threads())
+            for i in range(self.ndevices):
+                self.pieces[i].assign(new_state[i])
+
+    def __getitem__(self, key):
+      """Implements indexing of the distributed state without the full vector."""
+      if isinstance(key, slice):
+          return [self[i] for i in range(*key.indices(len(self)))]
+
+      elif isinstance(key, list):
+          return [self[i] for i in key]
+
+      elif isinstance(key, int):
+          binary_index = bin(key)[2:].zfill(self.nqubits)
+          binary_index = K.np.array([int(x) for x in binary_index],
+                                    dtype=K.np.int64)
+
+          global_ids = binary_index[self.qubits.list]
+          global_ids = global_ids.dot(self.bintodec["global"])
+          local_ids = binary_index[self.qubits.local]
+          local_ids = local_ids.dot(self.bintodec["local"])
+          return self.pieces[global_ids][local_ids]
+
+      else:
+          raise_error(TypeError, "Unknown index type {}.".format(type(key)))
+
+    @classmethod
+    def from_tensor(cls, full_state, circuit):
+        state = cls(circuit)
+        state.assign_pieces(full_state)
+        return state
+
+    @classmethod
+    def zstate(cls, circuit):
+      state = cls(circuit)
+      with K.device(state.device):
+          piece = K.initial_state(nqubits=state.nlocal)
+          state.pieces[0] = K.optimization.Variable(piece, dtype=piece.dtype)
+      return state
+
+    @classmethod
+    def xstate(cls, circuit):
+      state = cls(circuit)
+      with K.device(state.device):
+          norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
+          state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
+                          for p in state.pieces]
+      return state

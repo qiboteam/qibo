@@ -214,7 +214,7 @@ class Collapse(BackendGate, gates.Collapse):
 
 class M(BackendGate, gates.M):
     from qibo.core import measurements
-    from qibo.tensorflow import distutils
+    from qibo.core.states import DistributedState
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
@@ -284,9 +284,9 @@ class M(BackendGate, gates.M):
         return result
 
     def __call__(self, state, nshots):
-        if isinstance(state, self.distutils.DistributedState):
+        if isinstance(state, self.DistributedState):
             with K.device(state.device):
-                state = state.vector
+                state = state.tensor
 
         if not self.is_prepared:
             self.set_nqubits(state)

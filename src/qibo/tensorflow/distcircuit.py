@@ -7,10 +7,9 @@ from qibo import gates as gate_module
 from qibo.abstractions import gates
 from qibo.abstractions.circuit import AbstractCircuit
 from qibo.config import raise_error, get_threads
-from qibo.core import callbacks, circuit, measurements
-from qibo.tensorflow import distutils as utils
+from qibo.core import callbacks, circuit, measurements, states
+from qibo.tensorflow.distutils import DistributedQueues
 from typing import Dict, List, Optional, Set, Tuple, Union
-OutputType = Union[utils.DistributedState, measurements.CircuitResult]
 
 
 class DistributedCircuit(circuit.Circuit):
@@ -64,7 +63,7 @@ class DistributedCircuit(circuit.Circuit):
 
         self.memory_device = memory_device
         self.calc_devices = accelerators
-        self.queues = utils.DistributedQueues(self, gate_module)
+        self.queues = DistributedQueues(self, gate_module)
 
     def set_nqubits(self, gate):
         AbstractCircuit.set_nqubits(self, gate)
@@ -120,8 +119,7 @@ class DistributedCircuit(circuit.Circuit):
             state = gate(state)
         return state
 
-    def _joblib_execute(self, state: utils.DistributedState,
-                        queues: List[List["BackendGate"]]):
+    def _joblib_execute(self, state, queues: List[List["BackendGate"]]):
         """Executes gates in ``accelerators`` in parallel.
 
         Args:
@@ -141,7 +139,7 @@ class DistributedCircuit(circuit.Circuit):
         pool(joblib.delayed(device_job)(ids, device)
              for device, ids in self.queues.device_to_ids.items())
 
-    def _swap(self, state: utils.DistributedState, global_qubit: int, local_qubit: int):
+    def _swap(self, state, global_qubit: int, local_qubit: int):
         m = self.queues.qubits.reduced_global[global_qubit]
         m = self.nglobal - m - 1
         t = 1 << m
@@ -152,7 +150,7 @@ class DistributedCircuit(circuit.Circuit):
                 K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
                                  local_eff, self.nlocal, get_threads())
 
-    def _normalize(self, state: utils.DistributedState):
+    def _normalize(self, state):
         """Normalizes state by summing the norms of each state piece.
 
         To be used after ``Collapse`` gates because normalization should be
@@ -167,14 +165,13 @@ class DistributedCircuit(circuit.Circuit):
             for piece in state.pieces:
                 piece.assign(piece / total_norm)
 
-    def _revert_swaps(self, state: utils.DistributedState, swap_pairs: List[Tuple[int, int]]):
+    def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
             if q1 not in self.queues.qubits.set:
                 q1, q2 = q2, q1
             self._swap(state, q1, q2)
 
-    def _special_gate_execute(self, state: utils.DistributedState,
-                              gate: Union["BackendGate"]):
+    def _special_gate_execute(self, state, gate: Union["BackendGate"]):
         """Executes special gates on ``memory_device``.
 
         Currently special gates are ``Flatten`` or ``CallbackGate``.
@@ -184,16 +181,16 @@ class DistributedCircuit(circuit.Circuit):
         with K.device(self.memory_device):
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
-            full_state = state.vector
+            full_state = state.tensor
             if isinstance(gate, gates.CallbackGate):
                 gate(full_state)
             else:
                 full_state = gate(full_state)
-                state.assign_vector(full_state)
+                state.assign_pieces(full_state)
             # Redo all global SWAPs that happened so far
             self._revert_swaps(state, gate.swap_reset)
 
-    def _execute(self, initial_state=None) -> utils.DistributedState:
+    def _execute(self, initial_state=None):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
@@ -219,7 +216,7 @@ class DistributedCircuit(circuit.Circuit):
         self._final_state = state
         return state
 
-    def _device_execute(self, initial_state=None) -> utils.DistributedState:
+    def _device_execute(self, initial_state=None):
         """Executes circuit and checks for OOM errors."""
         try:
             return self._execute(initial_state)
@@ -228,11 +225,11 @@ class DistributedCircuit(circuit.Circuit):
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
 
-    def execute(self, initial_state=None, nshots=None) -> OutputType:
+    def execute(self, initial_state=None, nshots=None):
         """Equivalent to :meth:`qibo.core.circuit.Circuit.execute`.
 
         If measurements are not specified this returns a
-        :class:`qibo.tensorflow.distutils.DistributedState` instead of a
+        :class:`qibo.core.states.DistributedState` instead of a
         tensor. This avoids creating multiple copies of large states in
         the CPU memory.
         """
@@ -242,11 +239,14 @@ class DistributedCircuit(circuit.Circuit):
         """"""
         if not self.queues.queues and self.queue:
             self.queues.set(self.queue)
+
         if state is None:
-            return utils.DistributedState.default(self)
-        elif isinstance(state, str):
-            return getattr(utils.DistributedState, state)(self)
-        elif isinstance(state, utils.DistributedState):
+            return states.DistributedState.zstate(self)
+        elif isinstance(state, states.DistributedState):
             return state
-        full_state = super().get_initial_state(state)
-        return utils.DistributedState.from_vector(full_state, self)
+        elif isinstance(state, K.tensor_types):
+            state = super().get_initial_state(state)
+            return states.DistributedState.from_tensor(state, self)
+
+        raise_error(TypeError, "Initial state type {} is not supported by "
+                               "distributed circuits.".format(type(state)))

@@ -9,7 +9,8 @@ class AbstractState(ABC):
         self._nqubits = None
         self._tensor = None
         self.nstates = None
-        self.nqubits = nqubits
+        if nqubits is not None:
+            self.nqubits = nqubits
 
     @property
     def nqubits(self):
