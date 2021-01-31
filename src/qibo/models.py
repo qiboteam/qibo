@@ -352,7 +352,7 @@ class QAOA(object):
         if self.accelerators is not None:
             c = self.hamiltonian.circuit(self.params[0])
             if state is None:
-                return self.states.DistributedState.xstate(c)
+                state = self.states.DistributedState.xstate(c)
             return c.get_initial_state(state)
 
         if state is None:

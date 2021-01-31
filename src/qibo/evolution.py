@@ -283,8 +283,9 @@ class AdiabaticEvolution(StateEvolution):
                 return self.h0.ground_state()
             else:
                 from qibo.core.states import DistributedState
-                circuit = self.hamiltonian(0).circuit(self.solver.dt)
-                return DistributedState.xstate(circuit)
+                c = self.hamiltonian(0).circuit(self.solver.dt)
+                state = DistributedState.xstate(c)
+                return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)
 
     @staticmethod

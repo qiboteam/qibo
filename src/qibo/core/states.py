@@ -16,7 +16,7 @@ class VectorState(AbstractState):
                                     "".format(type(x)))
 
         if self._nqubits is None:
-            self.nqubits = int(np.log2(tuple(x.shape)[0]))
+            self.nqubits = int(K.np.log2(tuple(x.shape)[0]))
 
         try:
             shape = tuple(x.shape)
