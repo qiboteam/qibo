@@ -94,18 +94,23 @@ class VectorState(AbstractState):
             self.measurements = measurements.CircuitResult(
                     registers, self.measurements)
 
-    def _get_measurements(self, mode="samples", binary=True, registers=False):
-        if isinstance(self.measurements, measurements.GateResult):
-            return getattr(self.measurements, mode)(binary)
-        elif isinstance(self.measurements, measurements.CircuitResult):
-            return getattr(self.measurements, mode)(binary, registers)
-        raise_error(RuntimeError, "Measurements are not available.")
+    def measurement_getter(func):
+        def wrapper(self, binary=True, registers=False):
+            name = func.__name__
+            if isinstance(self.measurements, measurements.GateResult):
+                return getattr(self.measurements, name)(binary)
+            elif isinstance(self.measurements, measurements.CircuitResult):
+                return getattr(self.measurements, name)(binary, registers)
+            raise_error(RuntimeError, "Measurements are not available.")
+        return wrapper
 
+    @measurement_getter
     def samples(self, binary=True, registers=False):
-        return self._get_measurements("samples", binary, registers)
+        pass
 
+    @measurement_getter
     def frequencies(self, binary=True, registers=False):
-        return self._get_measurements("frequencies", binary, registers)
+        pass
 
     def apply_bitflips(self, p0, p1=None):
         if self.measurements is None:
