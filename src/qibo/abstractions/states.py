@@ -9,7 +9,7 @@ class AbstractState(ABC):
         self._nqubits = None
         self._tensor = None
         self.nstates = None
-        self._measurements = None
+        self.measurements = None
         if nqubits is not None:
             self.nqubits = nqubits
 
@@ -93,7 +93,7 @@ class AbstractState(ABC):
         new = self.__class__(self._nqubits)
         if self._tensor is not None:
             new.tensor = self.tensor
-        new._measurements = self._measurements
+        new.measurements = self.measurements
         return new
 
     @abstractmethod

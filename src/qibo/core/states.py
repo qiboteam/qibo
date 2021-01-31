@@ -83,16 +83,22 @@ class VectorState(AbstractState):
         return K.sum(state, axis=unmeasured_qubits)
 
     def measure(self, gate, nshots, registers=None):
-        self._measurements = gate(self, nshots)
+        self.measurements = gate(self, nshots)
         if registers is not None:
-            self._measurements = measurements.CircuitResult(
-                registers, self._measurements)
+            self.measurements = measurements.CircuitResult(
+                registers, self.measurements)
+
+    def set_measurements(self, qubits, samples, registers=None):
+        self.measurements = measurements.GateResult(qubits, decimal_samples=samples)
+        if registers is not None:
+            self.measurements = measurements.CircuitResult(
+                    registers, self.measurements)
 
     def _get_measurements(self, mode="samples", binary=True, registers=False):
-        if isinstance(self._measurements, measurements.GateResult):
-            return getattr(self._measurements, mode)(binary)
-        elif isinstance(self._measurements, measurements.CircuitResult):
-            return getattr(self._measurements, mode)(binary, registers)
+        if isinstance(self.measurements, measurements.GateResult):
+            return getattr(self.measurements, mode)(binary)
+        elif isinstance(self.measurements, measurements.CircuitResult):
+            return getattr(self.measurements, mode)(binary, registers)
         raise_error(RuntimeError, "Measurements are not available.")
 
     def samples(self, binary=True, registers=False):
@@ -102,7 +108,7 @@ class VectorState(AbstractState):
         return self._get_measurements("frequencies", binary, registers)
 
     def apply_bitflips(self, p0, p1=None):
-        self._measurements = self._measurements.apply_bitflips(p0, p1)
+        self.measurements = self.measurements.apply_bitflips(p0, p1)
         return self
 
 

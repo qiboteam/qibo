@@ -172,20 +172,20 @@ class Circuit(circuit.AbstractCircuit):
     def _repeated_execute(self, nreps, initial_state=None):
         results = []
         for _ in range(nreps):
-            state = self._device_execute(initial_state).tensor
-            if self.measurement_gate is not None:
-                results.append(self.measurement_gate(state, nshots=1)[0])
-                del(state)
+            state = self._device_execute(initial_state)
+            if self.measurement_gate is None:
+                results.append(state.tensor)
             else:
-                results.append(K.copy(state))
-        results = K.stack(results, axis=0)
+                state.measure(self.measurement_gate, nshots=1)
+                results.append(state.measurements[0])
+                del(state)
 
+        results = K.stack(results, axis=0)
         if self.measurement_gate is None:
             return results
-
-        mgate_result = measurements.GateResult(
-                self.measurement_gate.qubits, decimal_samples=results)
-        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
+        state = self.state_cls(self.nqubits)
+        state.set_measurements(self.measurement_gate.qubits, results, self.measurement_tuples)
+        return state
 
     def execute(self, initial_state=None, nshots=None):
         """Propagates the state through the circuit applying the corresponding gates.
