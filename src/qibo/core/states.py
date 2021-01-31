@@ -94,9 +94,9 @@ class VectorState(AbstractState):
             self.measurements = measurements.CircuitResult(
                     registers, self.measurements)
 
-    def measurement_getter(func):
+    def measurement_getter(func): # pylint: disable=E0213
         def wrapper(self, binary=True, registers=False):
-            name = func.__name__
+            name = func.__name__ # pylint: disable=E1101
             if isinstance(self.measurements, measurements.GateResult):
                 return getattr(self.measurements, name)(binary)
             elif isinstance(self.measurements, measurements.CircuitResult):

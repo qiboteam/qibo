@@ -43,38 +43,7 @@ class DistributedQubits:
         return i + 1
 
 
-class DistributedBase:
-    """Base class for ``DistributedQueues`` and ``DistributedState``.
-
-    Holds a reference to the parent ``DistributedCircuit`` and reads from it
-    the following properties:
-    * ``nqubits``: Total number of qubits in the circuit.
-    * ``ndevices``: Number of logical accelerator devices.
-    * ``nglobal``: Number of global qubits (= log2(ndevices)).
-    * ``nlocal``: Number of local qubits (= nqubits - nglobal).
-    """
-
-    def __init__(self, circuit):
-        self.circuit = circuit
-
-    @property
-    def nqubits(self):
-        return self.circuit.nqubits
-
-    @property
-    def nglobal(self):
-        return self.circuit.nglobal
-
-    @property
-    def nlocal(self):
-        return self.circuit.nlocal
-
-    @property
-    def ndevices(self):
-        return self.circuit.ndevices
-
-
-class DistributedQueues(DistributedBase):
+class DistributedQueues:
     """Data structure that holds gate queues for each accelerator device.
 
     For a distributed simulation we have to swap global qubits multiple times.
@@ -101,7 +70,7 @@ class DistributedQueues(DistributedBase):
     """
 
     def __init__(self, circuit, gate_module):
-        super(DistributedQueues, self).__init__(circuit)
+        self.circuit = circuit
         self.gate_module = gate_module
         self.queues = []
         self.special_queue = []
@@ -116,6 +85,22 @@ class DistributedQueues(DistributedBase):
         for device, ids in self.device_to_ids.items():
             for i in ids:
                 self.ids_to_device[i] = device
+
+    @property
+    def nqubits(self):
+        return self.circuit.nqubits
+
+    @property
+    def nglobal(self):
+        return self.circuit.nglobal
+
+    @property
+    def nlocal(self):
+        return self.circuit.nlocal
+
+    @property
+    def ndevices(self):
+        return self.circuit.ndevices
 
     def set(self, queue: List[gates.Gate]):
         """Prepares gates for device-specific gate execution.
