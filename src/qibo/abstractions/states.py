@@ -35,7 +35,7 @@ class AbstractState(ABC):
 
     @property
     @abstractmethod
-    def shape(self):
+    def shape(self): # pragma: no cover
         """Shape of the state's tensor representation."""
         raise_error(NotImplementedError)
 
@@ -68,12 +68,12 @@ class AbstractState(ABC):
         return self.tensor.dtype
 
     @abstractmethod
-    def __array__(self):
+    def __array__(self): # pragma: no cover
         """State's tensor representation as an array."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def numpy(self):
+    def numpy(self): # pragma: no cover
         """State's tensor representation as a numpy array."""
         raise_error(NotImplementedError)
 
@@ -98,7 +98,7 @@ class AbstractState(ABC):
 
     @classmethod
     @abstractmethod
-    def zstate(cls, nqubits):
+    def zstate(cls, nqubits): # pragma: no cover
         """Constructs the |00...0> state.
 
         Args:
@@ -108,7 +108,7 @@ class AbstractState(ABC):
 
     @classmethod
     @abstractmethod
-    def xstate(cls, nqubits):
+    def xstate(cls, nqubits): # pragma: no cover
         """Constructs the |++...+> state.
 
         Args:
@@ -129,7 +129,7 @@ class AbstractState(ABC):
         return new
 
     @abstractmethod
-    def to_density_matrix(self):
+    def to_density_matrix(self): # pragma: no cover
         """Transforms a pure quantum state to its density matrix form.
 
         Returns:
@@ -139,7 +139,7 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def probabilities(self, qubits=None, measurement_gate=None):
+    def probabilities(self, qubits=None, measurement_gate=None): # pragma: no cover
         """Calculates measurement probabilities by tracing out qubits.
 
         Exactly one of the following arguments should be given.
@@ -152,20 +152,33 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def measure(self, gate, nshots, registers=None):
-        """Measures the state.
+    def measure(self, gate, nshots, registers=None): # pragma: no cover
+        """Measures the state using a measurement gate.
 
         Args:
             gate (:class:`qibo.abstractions.gates.M`): Measurement gate to use
                 for measuring the state.
             nshots (int): Number of measurement shots.
-            registers (dict): register_qubits: Dictionary that maps register names to the
+            registers (dict): Dictionary that maps register names to the
                 corresponding tuples of qubit ids.
         """
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def samples(self, binary=True, registers=False):
+    def set_measurements(self, qubits, samples, registers=None): # pragma: no cover
+        """Sets the state's measurements using decimal samples.
+
+        Args:
+            qubits (tuple): Measured qubit ids.
+            samples (Tensor): Tensor with decimal samples of the measurement
+                results.
+            registers (dict): Dictionary that maps register names to the
+                corresponding tuples of qubit ids.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def samples(self, binary=True, registers=False): # pragma: no cover
         """Returns raw measurement samples.
 
         Args:
@@ -191,7 +204,7 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def frequencies(self, binary=True, registers=False):
+    def frequencies(self, binary=True, registers=False): # pragma: no cover
         """Returns the frequencies of measured samples.
 
         Args:
@@ -220,7 +233,7 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def apply_bitflips(self, p0, p1=None):
+    def apply_bitflips(self, p0, p1=None): # pragma: no cover
         """Applies bitflip noise to the measured samples.
 
         Args:

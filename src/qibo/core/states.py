@@ -54,13 +54,22 @@ class VectorState(AbstractState):
         matrix = K.outer(self.tensor, K.conj(self.tensor))
         return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
 
-    def traceout(self, qubits=None, measurement_gate=None):
+    def _traceout(self, qubits=None, measurement_gate=None):
+        """Helper method for :meth:`qibo.core.states.VectorState.probabilities`.
+
+        Calculates the trace-out qubit indices or einsum string.
+        """
         if qubits is None and measurement_gate is None:
-            raise_error(ValueError)
+            raise_error(ValueError, "Either ``qubits`` or ``measurement_gates`` "
+                                    "should be given to calculate measurement "
+                                    "probabilities.")
 
         if qubits is not None:
             if measurement_gate is not None:
-                raise_error(ValueError)
+                raise_error(ValueError, "Cannot calculate measurement "
+                                        "probabilities if both ``qubits`` and "
+                                        "``measurement_gate`` are given."
+                                        "Please specify only one of them.")
             unmeasured_qubits = [i for i in range(self.nqubits)
                                  if i not in qubits]
             if isinstance(self, MatrixState):
@@ -77,7 +86,7 @@ class VectorState(AbstractState):
         return measurement_gate.unmeasured_qubits
 
     def probabilities(self, qubits=None, measurement_gate=None):
-        unmeasured_qubits = self.traceout(qubits, measurement_gate)
+        unmeasured_qubits = self._traceout(qubits, measurement_gate)
         shape = self.nqubits * (2,)
         state = K.reshape(K.square(K.abs(self.tensor)), shape)
         return K.sum(state, axis=unmeasured_qubits)
@@ -95,6 +104,7 @@ class VectorState(AbstractState):
                     registers, self.measurements)
 
     def measurement_getter(func): # pylint: disable=E0213
+        """Decorator for defining the ``samples`` and ``frequencies`` methods."""
         def wrapper(self, binary=True, registers=False):
             name = func.__name__ # pylint: disable=E1101
             if isinstance(self.measurements, measurements.GateResult):
@@ -138,7 +148,7 @@ class MatrixState(VectorState):
         raise_error(RuntimeError, "State is already a density matrix.")
 
     def probabilities(self, qubits=None, measurement_gate=None):
-        traceout = self.traceout(qubits, measurement_gate)
+        traceout = self._traceout(qubits, measurement_gate)
         shape = 2 * self.nqubits * (2,)
         state = K.einsum(traceout, K.reshape(self.tensor, shape))
         return K.cast(state, dtype='DTYPE')
