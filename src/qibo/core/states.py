@@ -14,13 +14,11 @@ class VectorState(AbstractState):
         if not isinstance(x, K.tensor_types):
             raise_error(TypeError, "Initial state type {} is not recognized."
                                     "".format(type(x)))
-
-        if self._nqubits is None:
-            self.nqubits = int(K.np.log2(tuple(x.shape)[0]))
-
         try:
             shape = tuple(x.shape)
-        except ValueError:
+            if self._nqubits is None:
+                self.nqubits = int(K.np.log2(shape[0]))
+        except ValueError: # happens when using TensorFlow compiled mode
             shape = None
         if shape is not None and shape != self.shape:
             raise_error(ValueError, "Invalid tensor shape {} for state of {} "
@@ -55,6 +53,30 @@ class VectorState(AbstractState):
         matrix = K.outer(self.tensor, K.conj(self.tensor))
         return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
 
+    def traceout(self, qubits=None, measurement_gate=None):
+        if qubits is None and measurement_gate is None:
+            raise_error(ValueError)
+
+        if qubits is not None:
+            if measurement_gate is not None:
+                raise_error(ValueError)
+            if isinstance(self, MatrixState):
+                return PartialTrace.einsum_string(qubits, self.nqubits,
+                                                  measuring=True)
+            return [i for i in range(self.nqubits) if i not in qubits]
+
+        if not measurement_gate.is_prepared:
+            measurement_gate.set_nqubits(state.tensor)
+        if isinstance(self, MatrixState):
+            return measurement_gate.traceout
+        return measurement_gate.unmeasured_qubits
+
+    def probabilities(self, qubits=None, measurement_gate=None):
+        unmeasured_qubits = self.traceout(qubits, measurement_gate)
+        shape = self.nqubits * (2,)
+        state = K.reshape(K.square(K.abs(self.tensor)), shape)
+        return K.sum(state, axis=unmeasured_qubits)
+
 
 class MatrixState(VectorState):
 
@@ -73,6 +95,12 @@ class MatrixState(VectorState):
 
     def to_density_matrix(self):
         raise_error(RuntimeError, "State is already a density matrix.")
+
+    def probabilities(self, qubits=None, measurement_gate=None):
+        traceout = self.traceout(qubits, measurement_gate)
+        shape = 2 * self.nqubits * (2,)
+        state = K.einsum(traceout, K.reshape(self.tensor, shape))
+        return K.cast(state, dtype='DTYPE')
 
 
 class DistributedState(VectorState):

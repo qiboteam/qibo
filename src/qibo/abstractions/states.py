@@ -91,3 +91,7 @@ class AbstractState(ABC):
     @abstractmethod
     def to_density_matrix(self):
         raise_error(NotImplementedError)
+
+    @abstractmethod
+    def probabilities(self):
+        raise_error(NotImplementedError)
