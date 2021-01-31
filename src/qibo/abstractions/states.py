@@ -9,6 +9,7 @@ class AbstractState(ABC):
         self._nqubits = None
         self._tensor = None
         self.nstates = None
+        self._measurements = None
         if nqubits is not None:
             self.nqubits = nqubits
 
@@ -88,10 +89,33 @@ class AbstractState(ABC):
     def random(cls, nqubits):
         raise_error(NotImplementedError)
 
+    def copy(self):
+        new = self.__class__(self._nqubits)
+        if self._tensor is not None:
+            new.tensor = self.tensor
+        new._measurements = self._measurements
+        return new
+
     @abstractmethod
     def to_density_matrix(self):
         raise_error(NotImplementedError)
 
     @abstractmethod
     def probabilities(self):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def measure(self, gate, nshots, registers=None):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def samples(self, binary=True, registers=False):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def frequencies(self, binary=True, registers=False):
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_bitflips(self, p0, p1=None):
         raise_error(NotImplementedError)

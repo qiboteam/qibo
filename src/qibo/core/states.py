@@ -1,5 +1,6 @@
 from qibo import K
 from qibo.config import raise_error, get_threads
+from qibo.core import measurements
 from qibo.abstractions.states import AbstractState
 
 
@@ -60,10 +61,14 @@ class VectorState(AbstractState):
         if qubits is not None:
             if measurement_gate is not None:
                 raise_error(ValueError)
+            unmeasured_qubits = [i for i in range(self.nqubits)
+                                 if i not in qubits]
             if isinstance(self, MatrixState):
+                from qibo.abstractions.callbacks import PartialTrace
+                qubits = set(unmeasured_qubits)
                 return PartialTrace.einsum_string(qubits, self.nqubits,
                                                   measuring=True)
-            return [i for i in range(self.nqubits) if i not in qubits]
+            return unmeasured_qubits
 
         if not measurement_gate.is_prepared:
             measurement_gate.set_nqubits(state.tensor)
@@ -76,6 +81,29 @@ class VectorState(AbstractState):
         shape = self.nqubits * (2,)
         state = K.reshape(K.square(K.abs(self.tensor)), shape)
         return K.sum(state, axis=unmeasured_qubits)
+
+    def measure(self, gate, nshots, registers=None):
+        self._measurements = gate(self, nshots)
+        if registers is not None:
+            self._measurements = measurements.CircuitResult(
+                registers, self._measurements)
+
+    def _get_measurements(self, mode="samples", binary=True, registers=False):
+        if isinstance(self._measurements, measurements.GateResult):
+            return getattr(self._measurements, mode)(binary)
+        elif isinstance(self._measurements, measurements.CircuitResult):
+            return getattr(self._measurements, mode)(binary, registers)
+        raise_error(RuntimeError, "Measurements are not available.")
+
+    def samples(self, binary=True, registers=False):
+        return self._get_measurements("samples", binary, registers)
+
+    def frequencies(self, binary=True, registers=False):
+        return self._get_measurements("frequencies", binary, registers)
+
+    def apply_bitflips(self, p0, p1=None):
+        self._measurements = self._measurements.apply_bitflips(p0, p1)
+        return self
 
 
 class MatrixState(VectorState):
@@ -272,3 +300,6 @@ class DistributedState(VectorState):
           state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
                           for p in state.pieces]
       return state
+
+    def copy(self):
+        raise_error(NotImplementedError)

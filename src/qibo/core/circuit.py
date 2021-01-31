@@ -230,11 +230,9 @@ class Circuit(circuit.AbstractCircuit):
             return self._repeated_execute(nshots, initial_state)
 
         state = self._device_execute(initial_state)
-        if self.measurement_gate is None or nshots is None:
-            return state
-
-        mgate_result = self.measurement_gate(state, nshots)
-        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
+        if self.measurement_gate is not None and nshots is not None:
+            state.measure(self.measurement_gate, nshots, self.measurement_tuples)
+        return state
 
     @property
     def final_state(self):

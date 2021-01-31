@@ -660,7 +660,7 @@ def test_post_measurement_bitflips_on_circuit_result():
     c.add(gates.M(3, register_name="b"))
     result = c(nshots=30)
     tf.random.set_seed(123)
-    noisy_result = result.apply_bitflips({0: 0.2, 1: 0.4, 3: 0.3})
+    noisy_result = result.copy().apply_bitflips({0: 0.2, 1: 0.4, 3: 0.3})
     noisy_samples = noisy_result.samples(binary=True)
     register_samples = noisy_result.samples(binary=True, registers=True)
 
