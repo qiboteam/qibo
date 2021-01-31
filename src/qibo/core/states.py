@@ -108,6 +108,8 @@ class VectorState(AbstractState):
         return self._get_measurements("frequencies", binary, registers)
 
     def apply_bitflips(self, p0, p1=None):
+        if self.measurements is None:
+            raise_error(RuntimeError, "Measurements are not available.")
         self.measurements = self.measurements.apply_bitflips(p0, p1)
         return self
 

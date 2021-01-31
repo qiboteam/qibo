@@ -130,26 +130,109 @@ class AbstractState(ABC):
 
     @abstractmethod
     def to_density_matrix(self):
-        """Transforms a pure quantum state to its density matrix form."""
+        """Transforms a pure quantum state to its density matrix form.
+
+        Returns:
+            A :class:`qibo.abstractions.states.AbstractState` that contains
+            the state in density matrix form.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def probabilities(self, qubits=None, measurement_gate=None):
-        """"""
+        """Calculates measurement probabilities by tracing out qubits.
+
+        Exactly one of the following arguments should be given.
+
+        Args:
+            qubits (list, set): Set of qubits that are measured.
+            measurement_gate (:class:`qibo.abstractions.gates.M`): Measurement
+                gate that contains the measured qubit details.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def measure(self, gate, nshots, registers=None):
+        """Measures the state.
+
+        Args:
+            gate (:class:`qibo.abstractions.gates.M`): Measurement gate to use
+                for measuring the state.
+            nshots (int): Number of measurement shots.
+            registers (dict): register_qubits: Dictionary that maps register names to the
+                corresponding tuples of qubit ids.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def samples(self, binary=True, registers=False):
+        """Returns raw measurement samples.
+
+        Args:
+            binary (bool): Return samples in binary or decimal form.
+            registers (bool): Group samples according to registers.
+                Can be used only if ``registers`` were given when calling
+                :meth:`qibo.abstractions.states.AbstractState.measure`.
+
+        Returns:
+            If `binary` is `True`
+                samples are returned in binary form as a tensor
+                of shape `(nshots, n_measured_qubits)`.
+            If `binary` is `False`
+                samples are returned in decimal form as a tensor
+                of shape `(nshots,)`.
+            If `registers` is `True`
+                samples are returned in a `dict` where the keys are the register
+                names and the values are the samples tensors for each register.
+            If `registers` is `False`
+                a single tensor is returned which contains samples from all the
+                measured qubits, independently of their registers.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def frequencies(self, binary=True, registers=False):
+        """Returns the frequencies of measured samples.
+
+        Args:
+            binary (bool): Return frequency keys in binary or decimal form.
+            registers (bool): Group frequencies according to registers.
+                Can be used only if ``registers`` were given when calling
+                :meth:`qibo.abstractions.states.AbstractState.measure`.
+
+        Returns:
+            A `collections.Counter` where the keys are the observed values
+            and the values the corresponding frequencies, that is the number
+            of times each measured value/bitstring appears.
+
+            If `binary` is `True`
+                the keys of the `Counter` are in binary form, as strings of
+                0s and 1s.
+            If `binary` is `False`
+                the keys of the `Counter` are integers.
+            If `registers` is `True`
+                a `dict` of `Counter` s is returned where keys are the name of
+                each register.
+            If `registers` is `False`
+                a single `Counter` is returned which contains samples from all
+                the measured qubits, independently of their registers.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_bitflips(self, p0, p1=None):
+        """Applies bitflip noise to the measured samples.
+
+        Args:
+            p0: Bitflip probability map. Can be:
+                A dictionary that maps each measured qubit to the probability
+                that it is flipped, a list or tuple that has the same length
+                as the tuple of measured qubits or a single float number.
+                If a single float is given the same probability will be used
+                for all qubits.
+            p1: Probability of asymmetric bitflip. If ``p1`` is given, ``p0``
+                will be used as the probability for 0->1 and ``p1`` as the
+                probability for 1->0. If ``p1`` is ``None`` the same probability
+                ``p0`` will be used for both bitflips.
+        """
         raise_error(NotImplementedError)
