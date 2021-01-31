@@ -71,7 +71,7 @@ class VectorState(AbstractState):
             return unmeasured_qubits
 
         if not measurement_gate.is_prepared:
-            measurement_gate.set_nqubits(state.tensor)
+            measurement_gate.set_nqubits(self.tensor)
         if isinstance(self, MatrixState):
             return measurement_gate.traceout
         return measurement_gate.unmeasured_qubits

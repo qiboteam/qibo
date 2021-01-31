@@ -4,6 +4,13 @@ from qibo.config import raise_error
 
 
 class AbstractState(ABC):
+    """Abstract class for quantum states returned by model execution.
+
+    Args:
+        nqubits (int): Optional number of qubits in the state.
+            If ``None`` then the number is calculated automatically from the
+            tensor representation of the state.
+    """
 
     def __init__(self, nqubits=None):
         self._nqubits = None
@@ -15,11 +22,13 @@ class AbstractState(ABC):
 
     @property
     def nqubits(self):
+        """Number of qubits in the state."""
         if self._nqubits is None:
             raise_error(AttributeError, "State number of qubits not available.")
         return self._nqubits
 
     def __len__(self):
+        """Number of components in the state's tensor representation."""
         if self._nqubits is None:
             raise_error(AttributeError, "State number of qubits not available.")
         return self.nstates
@@ -27,6 +36,7 @@ class AbstractState(ABC):
     @property
     @abstractmethod
     def shape(self):
+        """Shape of the state's tensor representation."""
         raise_error(NotImplementedError)
 
     @nqubits.setter
@@ -36,6 +46,7 @@ class AbstractState(ABC):
 
     @property
     def tensor(self):
+        """Tensor representation of the state in the computational basis."""
         if self._tensor is None:
             raise_error(AttributeError, "State tensor not available.")
         return self._tensor
@@ -53,14 +64,17 @@ class AbstractState(ABC):
 
     @property
     def dtype(self):
+        """Type of state's tensor representation."""
         return self.tensor.dtype
 
     @abstractmethod
     def __array__(self):
+        """State's tensor representation as an array."""
         raise_error(NotImplementedError)
 
     @abstractmethod
     def numpy(self):
+        """State's tensor representation as a numpy array."""
         raise_error(NotImplementedError)
 
     def __getitem__(self, i):
@@ -70,6 +84,14 @@ class AbstractState(ABC):
 
     @classmethod
     def from_tensor(cls, x, nqubits=None):
+        """Constructs state from a tensor.
+
+        Args:
+            x: Tensor representation of the state in the computational basis.
+            nqubits (int): Optional number of qubits in the state.
+                If ``None`` it is calculated automatically from the tensor
+                representation shape.
+        """
         obj = cls(nqubits)
         obj.tensor = x
         return obj
@@ -77,19 +99,29 @@ class AbstractState(ABC):
     @classmethod
     @abstractmethod
     def zstate(cls, nqubits):
+        """Constructs the |00...0> state.
+
+        Args:
+            nqubits (int): Number of qubits in the state.
+        """
         raise_error(NotImplementedError)
 
     @classmethod
     @abstractmethod
     def xstate(cls, nqubits):
-        raise_error(NotImplementedError)
+        """Constructs the |++...+> state.
 
-    @classmethod
-    @abstractmethod
-    def random(cls, nqubits):
+        Args:
+            nqubits (int): Number of qubits in the state.
+        """
         raise_error(NotImplementedError)
 
     def copy(self):
+        """Creates a copy of the state.
+
+        Note that this does not create a deep copy. The new state references
+        to the same tensor representation for memory efficiency.
+        """
         new = self.__class__(self._nqubits)
         if self._tensor is not None:
             new.tensor = self.tensor
@@ -98,10 +130,12 @@ class AbstractState(ABC):
 
     @abstractmethod
     def to_density_matrix(self):
+        """Transforms a pure quantum state to its density matrix form."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def probabilities(self):
+    def probabilities(self, qubits=None, measurement_gate=None):
+        """"""
         raise_error(NotImplementedError)
 
     @abstractmethod
