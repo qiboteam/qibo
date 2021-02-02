@@ -10,6 +10,10 @@ class VectorState(AbstractState):
     def shape(self):
         return (self.nstates,)
 
+    @property
+    def dtype(self):
+        return self.tensor.dtype
+
     @AbstractState.tensor.setter
     def tensor(self, x):
         if not isinstance(x, K.tensor_types):
@@ -230,6 +234,10 @@ class DistributedState(VectorState):
         return self.circuit.ndevices
 
     @property
+    def dtype(self):
+        return self.pieces[0].dtype
+
+    @property
     def tensor(self):
         """Returns the full state vector as a tensor of shape ``(2 ** nqubits,)``.
 
@@ -257,10 +265,6 @@ class DistributedState(VectorState):
         raise_error(NotImplementedError, "Tensor setter is not supported by "
                                          "distributed states for memory "
                                          "efficiency.")
-
-    @property
-    def dtype(self):
-        return self.pieces[0].dtype
 
     def assign_pieces(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.

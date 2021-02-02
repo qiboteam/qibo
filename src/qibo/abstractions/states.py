@@ -33,16 +33,22 @@ class AbstractState(ABC):
             raise_error(AttributeError, "State number of qubits not available.")
         return self.nstates
 
+    @nqubits.setter
+    def nqubits(self, n):
+        self._nqubits = n
+        self.nstates = 2 ** n
+
     @property
     @abstractmethod
     def shape(self): # pragma: no cover
         """Shape of the state's tensor representation."""
         raise_error(NotImplementedError)
 
-    @nqubits.setter
-    def nqubits(self, n):
-        self._nqubits = n
-        self.nstates = 2 ** n
+    @property
+    @abstractmethod
+    def dtype(self): # pragma: no cover
+        """Type of state's tensor representation."""
+        raise_error(NotImplementedError)
 
     @property
     def tensor(self):
@@ -61,11 +67,6 @@ class AbstractState(ABC):
                                     "state with {} qubits."
                                     "".format(len(x), self.nqubits))
         self._tensor = x
-
-    @property
-    def dtype(self):
-        """Type of state's tensor representation."""
-        return self.tensor.dtype
 
     @abstractmethod
     def __array__(self): # pragma: no cover
