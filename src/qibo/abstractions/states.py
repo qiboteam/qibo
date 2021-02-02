@@ -134,8 +134,8 @@ class AbstractState(ABC):
         """Transforms a pure quantum state to its density matrix form.
 
         Returns:
-            A :class:`qibo.abstractions.states.AbstractState` that contains
-            the state in density matrix form.
+            A :class:`qibo.abstractions.states.AbstractState` object that
+            contains the state in density matrix form.
         """
         raise_error(NotImplementedError)
 

@@ -228,10 +228,13 @@ class DistributedCircuit(circuit.Circuit):
     def execute(self, initial_state=None, nshots=None):
         """Equivalent to :meth:`qibo.core.circuit.Circuit.execute`.
 
-        If measurements are not specified this returns a
-        :class:`qibo.core.states.DistributedState` instead of a
-        tensor. This avoids creating multiple copies of large states in
-        the CPU memory.
+        Returns:
+            A :class:`qibo.core.states.DistributedState` object corresponding
+            to the final state of execution. Note that this state contains the
+            full state vector scattered to pieces and does not create a
+            single tensor unless the user explicitly calls the ``tensor``
+            property. This avoids creating multiple copies of large states in
+            CPU memory.
         """
         return super().execute(initial_state=initial_state, nshots=nshots)
 

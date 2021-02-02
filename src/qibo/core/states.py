@@ -164,14 +164,6 @@ class DistributedState(VectorState):
     The full state vector can be accessed using the ``state.vector`` or
     ``state.numpy()`` methods of the ``DistributedState``.
     The ``DistributedState`` supports indexing as a standard array.
-
-    Holds the following data:
-    * self.pieces: List of length ``ndevices`` holding ``tf.Variable``s with
-      the state pieces.
-    * self.qubits: The ``DistributedQubits`` object created by the
-      ``DistributedQueues`` of the circuit.
-    * self.shapes: Dictionary containing tensors that are useful for reshaping
-      the state when splitting/merging the pieces.
     """
 
     def __init__(self, circuit):
@@ -182,8 +174,12 @@ class DistributedState(VectorState):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
                                    "distributed state.")
         self.circuit = circuit
+        # List of length ``ndevices`` holding ``tf.Variable``s with
+        # the state pieces (created in ``self.create_pieces()``)
         self.pieces = None
 
+        # Dictionaries containing tensors that are useful for reshaping
+        # the state when splitting or merging the pieces.
         n = self.nstates // 2 ** self.nglobal
         self.shapes = {
             "full": K.cast((self.nstates,), dtype='DTYPEINT'),
@@ -198,6 +194,7 @@ class DistributedState(VectorState):
 
     @property
     def qubits(self):
+        # ``DistributedQubits`` object created by the ``DistributedQueues`` of the circuit.
         return self.circuit.queues.qubits
 
     @property
