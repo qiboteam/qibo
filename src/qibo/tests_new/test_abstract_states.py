@@ -5,10 +5,10 @@ from qibo.abstractions.states import AbstractState
 
 def test_abstract_state_init():
     AbstractState.__abstractmethods__ = set()
-    state = AbstractState(5)
+    state = AbstractState(5) # pylint: disable=E0110
     assert state.nqubits == 5
     assert len(state) == 32
-    state = AbstractState()
+    state = AbstractState() # pylint: disable=E0110
     with pytest.raises(AttributeError):
         nqubits = state.nqubits
     with pytest.raises(AttributeError):
@@ -18,7 +18,7 @@ def test_abstract_state_init():
 @pytest.mark.parametrize("nqubits", [None, 2])
 def test_abstract_state_tensor_getter_setter(nqubits):
     AbstractState.__abstractmethods__ = set()
-    state = AbstractState(nqubits)
+    state = AbstractState(nqubits) # pylint: disable=E0110
     with pytest.raises(AttributeError):
         tensor = state.tensor
     state.tensor = [0, 0, 0, 0]
@@ -30,7 +30,7 @@ def test_abstract_state_tensor_getter_setter(nqubits):
 
 def test_abstract_state_from_tensor():
     AbstractState.__abstractmethods__ = set()
-    state = AbstractState.from_tensor([0, 1])
+    state = AbstractState.from_tensor([0, 1]) # pylint: disable=E0110
     assert state.nqubits == 1
     assert state.tensor == [0, 1]
 
