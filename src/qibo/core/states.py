@@ -178,9 +178,9 @@ class DistributedState(VectorState):
         from qibo.tensorflow.distcircuit import DistributedCircuit
         super().__init__(circuit.nqubits)
         self.circuit_cls = DistributedCircuit
-        self._circuit = None
-        self.device = None
-        self.qubits = None
+        if not isinstance(circuit, self.circuit_cls):
+            raise_error(TypeError, "Circuit of unsupported type {} was given to "
+                                   "distributed state.")
         self.circuit = circuit
 
         # Create pieces
@@ -201,17 +201,12 @@ class DistributedState(VectorState):
             }
 
     @property
-    def circuit(self):
-        return self._circuit
+    def qubits(self):
+        return self.circuit.queues.qubits
 
-    @circuit.setter
-    def circuit(self, c):
-        if not isinstance(c, self.circuit_cls):
-            raise_error(TypeError, "Circuit of unsupported type {} was given to "
-                                   "distributed state.")
-        self._circuit = c
-        self.device = c.memory_device
-        self.qubits = c.queues.qubits
+    @property
+    def device(self):
+        return self.circuit.memory_device
 
     @property
     def nglobal(self):

@@ -152,21 +152,53 @@ def test_state_apply_bitflips():
         state.apply_bitflips(0.1)
     # Bitflips are tested in measurement tests
 
+
 def test_distributed_state_init():
-    pass
+    from qibo.models import Circuit
+    circuit = Circuit(4, accelerators={"/GPU:0": 2})
+    state = states.DistributedState(circuit)
+    assert state.circuit == circuit
+    circuit = Circuit(4)
+    with pytest.raises(TypeError):
+        state = states.DistributedState(circuit)
+    with pytest.raises(NotImplementedError):
+        state.tensor = [0, 0]
 
 
-def test_distributed_state_circuit_setter():
-    pass
+@pytest.mark.parametrize("init_type", ["z", "x"])
+def test_distributed_state_constructors(init_type):
+    """Tests `zstate` and `xstate` for `DistributedState`."""
+    from qibo.models import Circuit
+    from qibo.tensorflow.distutils import DistributedQubits
+    c = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
+    c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
+    state = getattr(states.DistributedState, f"{init_type}state")(c)
+
+    final_state = state.numpy()
+    if init_type == "z":
+        target_state = np.zeros_like(final_state)
+        target_state[0] = 1
+    else:
+        target_state = np.ones_like(final_state) / 8
+    np.testing.assert_allclose(final_state, target_state)
 
 
-def test_distributed_state_tensor():
-    pass
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_user_initialization(nqubits):
+    import itertools
+    from qibo.models import Circuit
+    from qibo.tensorflow.distutils import DistributedQubits
+    target_state = (np.random.random(2 ** nqubits) +
+                    1j * np.random.random(2 ** nqubits))
+    c = Circuit(nqubits, {"/GPU:0": 2, "/GPU:1": 2})
+    c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
+    state = states.DistributedState.from_tensor(target_state, c)
+    np.testing.assert_allclose(state.tensor, target_state)
 
-
-def test_distributed_state_constructors():
-    """Tests `from_tensor`, `zstate` and `xstate` for `DistributedState`."""
-    pass
+    target_state = target_state.reshape(nqubits * (2,))
+    for i, s in enumerate(itertools.product([0, 1], repeat=c.nglobal)):
+        target_piece = target_state[s]
+        np.testing.assert_allclose(state.pieces[i], target_piece.ravel())
 
 
 def test_distributed_state_copy():
