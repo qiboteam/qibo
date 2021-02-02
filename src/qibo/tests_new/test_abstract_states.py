@@ -35,6 +35,15 @@ def test_abstract_state_from_tensor():
     assert state.tensor == [0, 1]
 
 
+def test_abstract_state_getitem():
+    AbstractState.__abstractmethods__ = set()
+    state = AbstractState.from_tensor([0, 1, 0, 1]) # pylint: disable=E0110
+    assert state[1] == 1
+    assert state[2] == 0
+    with pytest.raises(IndexError):
+        state[5]
+
+
 def test_abstract_state_copy():
     AbstractState.__abstractmethods__ = set()
     state = AbstractState.from_tensor([0, 1])

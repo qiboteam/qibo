@@ -133,6 +133,9 @@ def test_measurement_gate_errors():
     result = gate(state, nshots=100)
     with pytest.raises(RuntimeError):
         gate.add(gates.M(2))
+    # calling on bad state
+    with pytest.raises(TypeError):
+        gate("test", 100)
 
 
 def test_multiple_qubit_measurement_gate():

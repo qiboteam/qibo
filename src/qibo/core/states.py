@@ -115,11 +115,11 @@ class VectorState(AbstractState):
         return wrapper
 
     @measurement_getter
-    def samples(self, binary=True, registers=False):
+    def samples(self, binary=True, registers=False): # pragma: no cover
         pass
 
     @measurement_getter
-    def frequencies(self, binary=True, registers=False):
+    def frequencies(self, binary=True, registers=False): # pragma: no cover
         pass
 
     def apply_bitflips(self, p0, p1=None):

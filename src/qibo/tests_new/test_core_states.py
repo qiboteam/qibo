@@ -78,6 +78,9 @@ def test_vector_state_to_density_matrix(backend):
     mstate = state.to_density_matrix()
     target_matrix = np.outer(vector, vector.conj())
     np.testing.assert_allclose(mstate.tensor, target_matrix)
+    state = states.MatrixState.from_tensor(target_matrix)
+    with pytest.raises(RuntimeError):
+        state.to_density_matrix()
     qibo.set_backend(original_backend)
 
 
@@ -119,6 +122,8 @@ def test_state_measure(registers):
     state = states.VectorState.zstate(4)
     mgate = gates.M(0, 2)
     assert state.measurements is None
+    with pytest.raises(RuntimeError):
+        samples = state.samples()
     state.measure(mgate, nshots=100, registers=registers)
     target_samples = np.zeros((100, 2))
     np.testing.assert_allclose(state.samples(), target_samples)
