@@ -182,16 +182,12 @@ class DistributedState(VectorState):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
                                    "distributed state.")
         self.circuit = circuit
+        self.pieces = None
 
-        # Create pieces
-        n = 2 ** (self.nqubits - self.nglobal)
-        with K.device(self.device):
-            self.pieces = [K.optimization.Variable(K.zeros(n))
-                           for _ in range(self.ndevices)]
-
+        n = self.nstates // 2 ** self.nglobal
         self.shapes = {
-            "full": K.cast((2 ** self.nqubits,), dtype='DTYPEINT'),
-            "device": K.cast((len(self.pieces), n), dtype='DTYPEINT'),
+            "full": K.cast((self.nstates,), dtype='DTYPEINT'),
+            "device": K.cast((self.ndevices, n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
@@ -253,6 +249,12 @@ class DistributedState(VectorState):
                                          "distributed states for memory "
                                          "efficiency.")
 
+    def create_pieces(self):
+        n = 2 ** (self.nqubits - self.nglobal)
+        with K.device(self.device):
+            self.pieces = [K.optimization.Variable(K.zeros(n))
+                           for _ in range(self.ndevices)]
+
     def assign_pieces(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
@@ -260,6 +262,8 @@ class DistributedState(VectorState):
             full_state (array): Full state vector as a tensor of shape
                 ``(2 ** nqubits)``.
         """
+        if self.pieces is None:
+            self.create_pieces()
         with K.device(self.device):
             full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
@@ -301,6 +305,7 @@ class DistributedState(VectorState):
     @classmethod
     def zstate(cls, circuit):
       state = cls(circuit)
+      state.create_pieces()
       with K.device(state.device):
           piece = K.initial_state(nqubits=state.nlocal)
           state.pieces[0] = K.optimization.Variable(piece, dtype=piece.dtype)
@@ -309,6 +314,7 @@ class DistributedState(VectorState):
     @classmethod
     def xstate(cls, circuit):
       state = cls(circuit)
+      state.create_pieces()
       with K.device(state.device):
           norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
           state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
@@ -316,5 +322,7 @@ class DistributedState(VectorState):
       return state
 
     def copy(self):
-        # TODO: Implement this
-        raise_error(NotImplementedError)
+        new = self.__class__(self.circuit)
+        new.pieces = self.pieces
+        new.measurements = self.measurements
+        return new

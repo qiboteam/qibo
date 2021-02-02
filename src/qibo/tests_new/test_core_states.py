@@ -202,4 +202,10 @@ def test_user_initialization(nqubits):
 
 
 def test_distributed_state_copy():
-    pass
+    from qibo.models import Circuit
+    from qibo.tensorflow.distutils import DistributedQubits
+    c = Circuit(4, {"/GPU:0": 2, "/GPU:1": 2})
+    c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
+    state = states.DistributedState.zstate(c)
+    cstate = state.copy()
+    np.testing.assert_allclose(state.tensor, cstate.tensor)
