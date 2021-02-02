@@ -82,27 +82,75 @@ def test_vector_state_to_density_matrix(backend):
 
 
 def test_vector_state_tracout():
-    pass
+    from qibo import gates
+    state = states.VectorState.zstate(3)
+    mgate = gates.M(0)
+    qubits = [0]
+    assert state._traceout(qubits=qubits) == [1, 2]
+    assert state._traceout(measurement_gate=mgate) == (1, 2)
+    with pytest.raises(ValueError):
+        unmeasured = state._traceout()
+    with pytest.raises(ValueError):
+        unmeasured = state._traceout(qubits, mgate)
 
 
-def test_state_probabilities():
+def test_matrix_state_tracout():
+    from qibo import gates
+    state = states.MatrixState.zstate(2)
+    mgate = gates.M(0)
+    mgate.density_matrix = True
+    qubits = [0]
+    assert state._traceout(qubits=qubits) == "abab->a"
+    assert state._traceout(measurement_gate=mgate) == "abab->a"
+
+
+@pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
+def test_state_probabilities(backend, state_type):
     # TODO: Test this both for `VectorState` and `MatrixState`
-    pass
+    state = getattr(states, state_type).xstate(4)
+    probs = state.probabilities(qubits=[0, 1])
+    target_probs = np.ones((2, 2)) / 4
+    np.testing.assert_allclose(probs, target_probs)
 
 
-def test_state_measure():
-    # TODO: Also test `state.samples` and `state.frequencies` here
-    pass
+@pytest.mark.parametrize("registers", [None, {"a": (0,), "b": (2,)}])
+def test_state_measure(registers):
+    from qibo import gates
+    state = states.VectorState.zstate(4)
+    mgate = gates.M(0, 2)
+    assert state.measurements is None
+    state.measure(mgate, nshots=100, registers=registers)
+    target_samples = np.zeros((100, 2))
+    np.testing.assert_allclose(state.samples(), target_samples)
+    assert state.frequencies() == {"00": 100}
+    if registers is not None:
+        target_freqs = {"a": {"0": 100}, "b": {"0": 100}}
+    else:
+        target_freqs = {"00": 100}
+    assert state.frequencies(registers=True) == target_freqs
 
 
-def test_state_set_measurements():
-    # TODO: Also test `state.samples` and `state.frequencies` here
-    pass
+@pytest.mark.parametrize("registers", [None, {"a": (0,), "b": (2,)}])
+def test_state_set_measurements(registers):
+    from qibo import gates
+    state = states.VectorState.zstate(3)
+    samples = np.array(50 * [0] + 50 * [1])
+    state.set_measurements([0, 2], samples, registers)
+    target_samples = np.array(50 * [[0, 0]] + 50 * [[0, 1]])
+    np.testing.assert_allclose(state.samples(), target_samples)
+    assert state.frequencies() == {"00": 50, "01": 50}
+    if registers is not None:
+        target_freqs = {"a": {"0": 100}, "b": {"0": 50, "1": 50}}
+    else:
+        target_freqs = {"00": 50, "01": 50}
+    assert state.frequencies(registers=True) == target_freqs
 
 
 def test_state_apply_bitflips():
-    pass
-
+    state = states.VectorState.zstate(3)
+    with pytest.raises(RuntimeError):
+        state.apply_bitflips(0.1)
+    # Bitflips are tested in measurement tests
 
 def test_distributed_state_init():
     pass
