@@ -50,10 +50,6 @@ class VectorState(AbstractState):
         state.tensor = K.ones(shape) / K.cast(K.qnp.sqrt(state.nstates))
         return state
 
-    @classmethod
-    def random(cls, nqubits):
-        raise_error(NotImplementedError)
-
     def to_density_matrix(self):
         matrix = K.outer(self.tensor, K.conj(self.tensor))
         return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
@@ -143,10 +139,6 @@ class MatrixState(VectorState):
     def xstate(cls, nqubits):
         state = VectorState.xstate(nqubits)
         return state.to_density_matrix()
-
-    @classmethod
-    def random(cls, nqubits):
-        raise_error(NotImplementedError)
 
     def to_density_matrix(self):
         raise_error(RuntimeError, "State is already a density matrix.")
@@ -329,4 +321,5 @@ class DistributedState(VectorState):
       return state
 
     def copy(self):
+        # TODO: Implement this
         raise_error(NotImplementedError)
