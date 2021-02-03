@@ -1,11 +1,10 @@
-from concurrent.futures import ThreadPoolExecutor, Future
-from typing import Union
-from qibo.config import raise_error
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor, Future
+from qibo.config import raise_error, HW_PARAMS
 import pulse_abstraction as pa
 from fpga_control import IcarusQ
 from login import address, username, password
-from static_config import sampling_rate
+
 
 class TaskScheudler:
     """Scheduler class for organizing FPGA calibration and pulse sequence execution
@@ -16,6 +15,7 @@ class TaskScheudler:
         self._fpga = IcarusQ(address, username, password)
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
+        sampling_rate = HW_PARAMS.sampling_rate
         self._qubit_config = [{ # placeholder, default none
             "id": 0,
             "qubit_frequency": 3.0473825e9,
@@ -36,7 +36,7 @@ class TaskScheudler:
             }
         }]
 
-    def fetch_config(self) -> Union[list, bool]:
+    def fetch_config(self):
         """Fetches the qubit configuration data
 
         Returns:
@@ -49,7 +49,7 @@ class TaskScheudler:
 
     def poll_config(self):
         """Blocking command to wait until qubit calibration is complete
-        
+
         """
         raise_error(NotImplementedError)
 

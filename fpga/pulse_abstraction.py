@@ -1,13 +1,11 @@
-"""Contains the pulse abstraction and pulse shaping for the FPGA
-"""
-
+"""Contains the pulse abstraction and pulse shaping for the FPGA."""
 import numpy as np
-from qibo.config import raise_error
-from static_config import sample_size, sampling_rate, n_channels
+from qibo.config import raise_error, HW_PARAMS
+
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
-    
+
     Current FPGA binary has variable sampling rate but fixed sample size.
     Due to software limitations we need to prepare all 16 DAC channel arrays.
     @see BasicPulse, MultifrequencyPulse and FilePulse for more information about supported pulses.
@@ -17,9 +15,9 @@ class PulseSequence:
     """
     def __init__(self, pulses):
         self.pulses = pulses
-        self.n_channels = n_channels
-        self.sample_size = sample_size
-        self.sampling_rate = sampling_rate
+        self.nchannels = HW_PARAMS.nchannels
+        self.sample_size = HW_PARAMS.sample_size
+        self.sampling_rate = HW_PARAMS.sampling_rate
 
         self.duration = self.sample_size / self.sampling_rate
         self.time = np.linspace(0, self.duration, num=self.sample_size)
@@ -30,9 +28,9 @@ class PulseSequence:
         FPGA binary is currently unable to parse pulse sequences, so this is a temporary workaround to prepare the arrays
 
         Returns:
-            Numpy.ndarray holding waveforms for each channel. Has shape (n_channels, sample_size).
+            Numpy.ndarray holding waveforms for each channel. Has shape (nchannels, sample_size).
         """
-        waveform = np.zeros((self.n_channels, self.sample_size))
+        waveform = np.zeros((self.nchannels, self.sample_size))
         for pulse in self.pulses:
             #if pulse.serial[0] == "P":
             if isinstance(pulse, BasicPulse):
@@ -74,6 +72,7 @@ class PulseSequence:
         """
         return ", ".join([p.serial() for p in self.pulses])
 
+
 class Pulse:
     """Describes a pulse to be added onto the channel waveform
     """
@@ -87,6 +86,7 @@ class Pulse:
 
     def __repr__(self):
         return self.serial()
+
 
 class BasicPulse(Pulse):
     """Describes a single pulse to be added to waveform array.
@@ -112,6 +112,7 @@ class BasicPulse(Pulse):
         return "P({}, {}, {}, {}, {}, {}, {})".format(self.channel, self.start, self.duration,
                                                       self.amplitude, self.frequency, self.phase, self.shape)
 
+
 class MultifrequencyPulse(Pulse):
     """Describes multiple pulses to be added to waveform array.
 
@@ -123,6 +124,7 @@ class MultifrequencyPulse(Pulse):
     def serial(self):
         return "M({})".format(", ".join([m.serial() for m in self.members]))
 
+
 class FilePulse(Pulse):
     """Commands the FPGA to load a file as a waveform array in the specified channel
     """
@@ -133,6 +135,7 @@ class FilePulse(Pulse):
 
     def serial(self):
         return "F({}, {}, {})".format(self.channel, self.start, self.filename)
+
 
 class PulseShape:
     """Describes the pulse shape to be used
@@ -146,8 +149,9 @@ class PulseShape:
     def __repr__(self):
         return "({})".format(self.name)
 
+
 class Rectangular(PulseShape):
-    """Rectangular/square pulse shape    
+    """Rectangular/square pulse shape
     """
     def __init__(self):
         self.name = "rectangular"
@@ -156,6 +160,7 @@ class Rectangular(PulseShape):
         """Constant amplitude envelope
         """
         return amplitude
+
 
 class Gaussian(PulseShape):
     """Gaussian pulse shape
@@ -173,6 +178,7 @@ class Gaussian(PulseShape):
 
     def __repr__(self):
         return "({}, {})".format(self.name, self.sigma)
+
 
 class Drag(PulseShape):
     """Derivative Removal by Adiabatic Gate (DRAG) pulse shape
