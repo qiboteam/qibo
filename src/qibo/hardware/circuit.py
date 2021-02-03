@@ -1,4 +1,5 @@
 import numpy as np
+from qibo.abstractions import circuit
 from qibo.hardware import pulses
 from qibo.config import raise_error, HW_PARAMS
 
@@ -23,7 +24,7 @@ class PulseSequence:
         self.duration = self.sample_size / self.sampling_rate
         self.time = np.linspace(0, self.duration, num=self.sample_size)
 
-    def compile(self) -> np.ndarray:
+    def compile(self):
         """Compiles pulse sequence into waveform arrays
 
         FPGA binary is currently unable to parse pulse sequences, so this is a temporary workaround to prepare the arrays
@@ -71,3 +72,73 @@ class PulseSequence:
     def serialize(self):
         """Returns the serialized pulse sequence."""
         return ", ".join([pulse.serial() for pulse in self.pulses])
+
+
+class Circuit(circuit.AbstractCircuit):
+
+    def __init__(self, nqubits, scheduler=None):
+        super().__init__(nqubits)
+        self.scheduler = scheduler
+
+    @staticmethod
+    def _probability_extraction(data, refer_0, refer_1):
+        move = copy.copy(refer_0)
+        refer_0 = refer_0 - move
+        refer_1 = refer_1 - move
+        data = data - move
+        # Rotate the data so that vector 0-1 is overlapping with Ox
+        angle = copy.copy(np.arccos(refer_1[0]/np.sqrt(refer_1[0]**2 + refer_1[1]**2))*np.sign(refer_1[1]))
+        new_data = np.array([data[0]*np.cos(angle) + data[1]*np.sin(angle),
+                             -data[0]*np.sin(angle) + data[1]*np.cos(angle)])
+        # Rotate refer_1 to get state 1 reference
+        new_refer_1 = np.array([refer_1[0]*np.cos(angle) + refer_1[1]*np.sin(angle),
+                                -refer_1[0]*np.sin(angle) + refer_1[1]*np.cos(angle)])
+        # Condition for data outside bound
+        if new_data[0] < 0:
+            new_data[0] = 0
+        elif new_data[0] > new_refer_1[0]:
+            new_data[0] = new_refer_1[0]
+        return new_data[0]/new_refer_1[0]
+
+    def execute(self, nshots):
+        if self.scheduler is None:
+            raise_error(RuntimeError, "Cannot execute circuit on hardware if "
+                                      "scheduler is not provided.")
+
+        qubit_times = np.zeros(self.nqubits)
+        # Get calibration data
+        self.qubit_config = self.scheduler.fetch_config()
+        # compile pulse sequence
+        pulse_sequence = [
+            pulse for pulse in gate.pulse_sequence(qubit_config, qubit_times)
+            for gate in self.queue
+            ]
+        pulse_sequence = PulseSequence(pulse_sequence)
+        # execute using the scheduler
+        self._final_state = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        return self._final_state
+
+    def __call__(self, nshots):
+        return self.execute(nshots)
+
+    def final_state(self):
+        if self._final_state is None:
+            raise_error(RuntimeError)
+        return self._final_state
+
+    def parse_result(self, q):
+        ADC_time_array = np.arange(0, HW_PARAMS.sample_size / HW_PARAMS.ADC_sampling_rate,
+                                   1 / HW_PARAMS.ADC_sampling_rate)
+        static_data = HW_PARAMS.qubit_static_parameters[self.qubit_config["id"]]
+        ro_channel = static_data["channel"][2]
+        # For now readout is done with mixers
+        IF_frequency = static_data["resonantor_frequency"] - HW_PARAMS.lo_frequency # downconversion
+
+        raw_data = self.final_state.result()
+        cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
+        it = np.sum(self.raw_data[ro_channel[0]] * cos)
+        qt = np.sum(self.raw_data[ro_channel[1]] * cos)
+        data = np.array([it, qt])
+        ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
+        ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
+        return self._probability_extraction(data, ref_zero, ref_one)

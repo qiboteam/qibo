@@ -1,19 +1,17 @@
 import copy
 import numpy as np
-import math
-#import tensorflow as tf
-from qibo.gates import RX, RY, I, M
-from qibo.models import Circuit
-from qibo.config import raise_error
+import matplotlib.pyplot as plt
+from qibo.hardware import scheduler, gates, circuit
 
-X = lambda q: RX(q, np.pi)
-Y = lambda q: RY(q, np.pi)
-X_minus = lambda q: RX(q, -1 * np.pi)
-Y_minus = lambda q: RY(q, -1 * np.pi)
-X_half = lambda q: RX(q, np.pi / 2)
-Y_half = lambda q: RY(q, np.pi / 2)
-X_half_minus = lambda q: RX(q, -1 * np.pi / 2)
-Y_half_minus = lambda q: RY(q, -1 * np.pi / 2)
+
+X = lambda q: gates.RX(q, np.pi)
+Y = lambda q: gates.RY(q, np.pi)
+X_minus = lambda q: gates.RX(q, -1 * np.pi)
+Y_minus = lambda q: gates.RY(q, -1 * np.pi)
+X_half = lambda q: gates.RX(q, np.pi / 2)
+Y_half = lambda q: gates.RY(q, np.pi / 2)
+X_half_minus = lambda q: gates.RX(q, -1 * np.pi / 2)
+Y_half_minus = lambda q: gates.RY(q, -1 * np.pi / 2)
 
 """ clifford_group = [
     [I],
@@ -65,7 +63,7 @@ rotation_group = [
     [Y_minus, X]
 ]
 
-def randomized_benchmark(q: int, gates: int) -> Circuit:
+def randomized_benchmark(q, ngates):
     """Randomized benchmarking of single qubit operations
     Follows the approach in https://arxiv.org/abs/1009.3639 but uses a reduced set of gates, restricted to the XY plane and only dealing with rotations
 
@@ -73,13 +71,13 @@ def randomized_benchmark(q: int, gates: int) -> Circuit:
         q (int): Qubit ID to test
         gates (int): Maximum number of gate sweep to test
 
-    Returns: List of Circuit objects representing random sequence of gates
-
+    Returns:
+        List of Circuit objects representing random sequence of gates
     """
     circuits = []
     identity = np.array([[1, 0], [0, 1]])
 
-    for num_gates in range(1, gates + 1):
+    for num_gates in range(1, ngates + 1):
         s = sum([rotation_group[idx] for idx in np.random.randint(0, len(rotation_group), num_gates)], [])
         s = [g(q) for g in s]
         initial = identity
@@ -99,8 +97,26 @@ def randomized_benchmark(q: int, gates: int) -> Circuit:
         else:
             raise_error(RuntimeError, "Unable to locate inverse gate")
 
-        c = Circuit(q + 1) # Hack to select which qubit we want to check
+        c = Circuit(2)
         c.add(gates)
         circuits.append(c)
 
     return circuits
+
+
+if __name__ == "__main__":
+    qb = 0
+    shots = 1000
+    ngates = 10
+
+    scheduler = scheduler.TaskScheudler()
+    circuits = randomized_benchmark(qb, ngates)
+
+    results = []
+    for circuit in circuits:
+        circuit(nshots)
+        results.append(circuit.parse_result(qb))
+
+    sweep = range(1, gates + 1)
+    plt.plot(sweep, results)
+    plt.show()
