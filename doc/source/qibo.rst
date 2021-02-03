@@ -7,6 +7,10 @@ The Qibo package comes with the following modules:
 * Gates_
 * Hamiltonians_
 * Callbacks_
+* Solvers_
+* Optimizers_
+* Parallel_
+* Backends_
 
 _______________________
 
@@ -25,28 +29,29 @@ of state vectors.
 
 The general purpose model is called ``Circuit`` and holds the list of gates
 that are applied to the state vector or density matrix. All ``Circuit`` models
-inherit the :class:`qibo.base.circuit.BaseCircuit` which implements basic
+inherit the :class:`qibo.abstractions.circuit.AbstractCircuit` which implements basic
 properties of the circuit, such as the list of gates and the number of qubits.
 
 In order to perform calculations and apply gates to a state vector a backend
-has to be used. Our current backend of choice is `Tensorflow <http://tensorflow.org/>`_
-and the corresponding ``Circuit`` model is :class:`qibo.tensorflow.circuit.TensorflowCircuit`.
+has to be used. The main ``Circuit`` used for simulation is defined in
+:class:`qibo.core.circuit.Circuit`. This uses an abstract backend object ``K``
+to perform calculation which can be one of the backends defined in ``qibo/backends``.
 
 .. _generalpurpose:
 
 General circuit models
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.base.circuit.BaseCircuit
+.. autoclass:: qibo.abstractions.circuit.AbstractCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.circuit.TensorflowCircuit
+.. autoclass:: qibo.core.circuit.Circuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.circuit.TensorflowDensityMatrixCircuit
+.. autoclass:: qibo.core.circuit.DensityMatrixCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.distcircuit.TensorflowDistributedCircuit
+.. autoclass:: qibo.tensorflow.distcircuit.DistributedCircuit
     :members:
     :member-order: bysource
 .. autoclass:: qibo.tensorflow.distutils.DistributedState
@@ -97,13 +102,13 @@ Circuit fusion
 ^^^^^^^^^^^^^^
 
 The gates contained in a circuit can be fused up to two-qubits using the
-:meth:`qibo.base.circuit.BaseCircuit.fuse` method. This returns a new circuit
-that contains :class:`qibo.base.gates.Unitary` gates that are less in number
+:meth:`qibo.abstractions.circuit.AbstractCircuit.fuse` method. This returns a new circuit
+that contains :class:`qibo.abstractions.gates.Unitary` gates that are less in number
 than the gates in the original circuit but have equivalent action.
 For some circuits (such as variational), if the number of qubits is large it is
 more efficient to execute the fused instead of the original circuit.
 
-The fusion algorithm starts by creating a :class:`qibo.base.fusion.FusionGroup`.
+The fusion algorithm starts by creating a :class:`qibo.abstractions.fusion.FusionGroup`.
 The first available gates in the circuit's gate queue are added in the group
 until the two qubits of the group are identified. Any subsequent one-qubit gate
 applied in one of these qubits or two-qubit gates applied to these two qubits
@@ -135,10 +140,10 @@ will remain as it is.
 
 Once groups are identified, all gates belonging to a ``FusionGroup`` are fused
 by multiplying their respective unitary matrices. This way each group results
-to a new :class:`qibo.base.gates.Unitary` gate that is equivalent to applying
+to a new :class:`qibo.abstractions.gates.Unitary` gate that is equivalent to applying
 all the gates in the group.
 
-.. autoclass:: qibo.base.fusion.FusionGroup
+.. autoclass:: qibo.abstractions.fusion.FusionGroup
     :members:
     :member-order: bysource
 
@@ -164,7 +169,7 @@ Gates
 -----
 
 All supported gates can be accessed from the ``qibo.gates`` module and inherit
-the base gate object :class:`qibo.base.gates.Gate`. Read below for a complete
+the base gate object :class:`qibo.abstractions.gates.Gate`. Read below for a complete
 list of supported gates.
 
 All gates support the ``controlled_by`` method that allows to control
@@ -174,7 +179,7 @@ the gate on an arbitrary number of qubits. For example
 * ``gates.RY(0, np.pi).controlled_by(1, 2, 3)`` applies the Y-rotation to qubit 0 when qubits 1, 2 and 3 are in the |111> state.
 * ``gates.SWAP(0, 1).controlled_by(3, 4)`` swaps qubits 0 and 1 when qubits 3 and 4 are in the |11> state.
 
-.. automodule:: qibo.base.gates
+.. automodule:: qibo.abstractions.gates
    :members:
    :member-order: bysource
    :exclude-members: KrausChannel, UnitaryChannel, PauliNoiseChannel, ResetChannel, ThermalRelaxationChannel
@@ -188,25 +193,25 @@ Channels
 
 Channels are implemented in Qibo as additional gates and can be accessed from
 the ``qibo.gates`` module. Channels can be used on density matrices to perform
-noisy simulations. Channels that inherit :class:`qibo.base.gates.UnitaryChannel`
+noisy simulations. Channels that inherit :class:`qibo.abstractions.gates.UnitaryChannel`
 can also be applied to state vectors using sampling and repeated execution.
 For more information on the use of channels to simulate noise we refer to
 :ref:`How to perform noisy simulation? <noisy-example>`
 The following channels are currently implemented:
 
-.. autoclass:: qibo.base.gates.KrausChannel
+.. autoclass:: qibo.abstractions.gates.KrausChannel
     :members:
     :member-order: bysource
-.. autoclass:: qibo.base.gates.UnitaryChannel
+.. autoclass:: qibo.abstractions.gates.UnitaryChannel
     :members:
     :member-order: bysource
-.. autoclass:: qibo.base.gates.PauliNoiseChannel
+.. autoclass:: qibo.abstractions.gates.PauliNoiseChannel
     :members:
     :member-order: bysource
-.. autoclass:: qibo.base.gates.ResetChannel
+.. autoclass:: qibo.abstractions.gates.ResetChannel
     :members:
     :member-order: bysource
-.. autoclass:: qibo.base.gates.ThermalRelaxationChannel
+.. autoclass:: qibo.abstractions.gates.ThermalRelaxationChannel
     :members:
     :member-order: bysource
 
@@ -219,7 +224,7 @@ Hamiltonians
 
 The main abstract Hamiltonian object of Qibo is:
 
-.. autoclass:: qibo.base.hamiltonians.Hamiltonian
+.. autoclass:: qibo.abstractions.hamiltonians.Hamiltonian
     :members:
     :member-order: bysource
 
@@ -230,7 +235,7 @@ Trotter decomposition. The Hamiltonians represented by this object are sums of
 commuting terms, following the description of Sec. 4.1 of
 `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 
-.. autoclass:: qibo.base.hamiltonians.TrotterHamiltonian
+.. autoclass:: qibo.abstractions.hamiltonians.TrotterHamiltonian
     :members:
     :member-order: bysource
 
@@ -244,8 +249,8 @@ Hamiltonians:
 
 
 Note that all pre-coded Hamiltonians can be created as either
-:class:`qibo.base.hamiltonians.Hamiltonian` or
-:class:`qibo.base.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+:class:`qibo.abstractions.hamiltonians.Hamiltonian` or
+:class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
 
 
 _______________________
@@ -260,16 +265,16 @@ through the circuit applying the corresponding gates. In the default usage the
 result of executing a circuit is the full final state vector. However for
 specific applications it is useful to have measurement samples from the final
 wave function, instead of its full vector form.
-:class:`qibo.base.measurements.CircuitResult` provides a basic API for this.
+:class:`qibo.core.measurements.CircuitResult` provides a basic API for this.
 
 In order to execute measurements the user has to add the measurement gate
-:class:`qibo.base.gates.M` to the circuit and then execute providing a number
-of shots. This will return a :class:`qibo.base.measurements.CircuitResult`
+:class:`qibo.core.gates.M` to the circuit and then execute providing a number
+of shots. This will return a :class:`qibo.core.measurements.CircuitResult`
 object that is described bellow.
 
 For more information on measurements we refer to the related examples.
 
-.. autoclass:: qibo.base.measurements.CircuitResult
+.. autoclass:: qibo.core.measurements.CircuitResult
     :members:
     :member-order: bysource
 
@@ -282,13 +287,13 @@ Callbacks
 Callbacks provide a way to calculate quantities on the state vector as it
 propagates through the circuit. Example of such quantity is the entanglement
 entropy, which is currently the only callback implemented in
-:class:`qibo.tensorflow.callbacks.EntanglementEntropy`.
+:class:`qibo.abstractions.callbacks.EntanglementEntropy`.
 The user can create custom callbacks by inheriting the
-:class:`qibo.tensorflow.callbacks.Callback` class. The point each callback is
-calculated inside the circuit is defined by adding a :class:`qibo.base.gates.CallbackGate`.
+:class:`qibo.abstractions.callbacks.Callback` class. The point each callback is
+calculated inside the circuit is defined by adding a :class:`qibo.abstractions.gates.CallbackGate`.
 This can be added similarly to a standard gate and does not affect the state vector.
 
-.. automodule:: qibo.tensorflow.callbacks
+.. automodule:: qibo.abstractions.callbacks
    :members:
    :member-order: bysource
 
@@ -322,25 +327,56 @@ variational model.
 .. automodule:: qibo.optimizers
    :members:
    :member-order: bysource
-   :exclude-members: ParallelBFGSResources, ParallelBFGS
+   :exclude-members: ParallelBFGS
+
+.. _Parallel:
+
+Parallelism
+-----------
+
+We provide CPU multi-processing methods for circuit evaluation for multiple
+input states and multiple parameters for fixed input state.
+
+When using the methods below the ``processes`` option controls the number of
+processes used by the parallel algorithms through the ``multiprocessing``
+library. By default ``processes=None``, in this case the total number of logical
+cores are used. Make sure to select the appropriate number of processes for your
+computer specification, taking in consideration memory and physical cores. In
+order to obtain optimal results you can control the number of threads used by
+each process with the ``qibo.set_threads`` method. For example, for small-medium
+size circuits you may benefit from single thread per process, thus set
+``qibo.set_threads(1)`` before running the optimization.
+
+.. automodule:: qibo.parallel
+   :members:
+   :member-order: bysource
+   :exclude-members: ParallelResources
 
 .. _Backends:
 
 Backends
 --------
 
-Qibo currently uses two different backends for applying gates to vectors.
-The default backend uses custom Tensorflow operators defined under
-``tensorflow/custom_operators`` to apply gates to state vectors. These
-operators are much faster than implementations based on Tensorflow.
-Currently custom operators do not support the following:
+The main calculation engine is defined in the abstract backend object
+:class:`qibo.backends.abstract.AbstractBackend`. This object defines the methods
+required by all Qibo models to perform simulation.
 
-* Density matrices, channels and noise.
-* Automatic differentiation for backpropagation of variational circuits.
+Qibo currently provides two different calculation backends, one based on
+numpy and one based on Tensorflow. It is possible to define new backends by
+ineriting :class:`qibo.backends.abstract.AbstractBackend` and implementing its abstract
+methods. Tensorflow is the default backend, however Qibo will automatically
+fall back to numpy if Tensorflow is not found installed in the system.
 
-It is possible to use these features in Qibo by using a backend that uses
-Tensorflow primitives. There are two such backends available: the ``"defaulteinsum"``
-backend based on ``tf.einsum`` and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
+The Tensorflow backend is supplemented by custom operators defined under
+``tensorflow/custom_operators``, which can be used to efficiently apply gates
+to state vectors or density matrices.
+These operators are much faster than implementations based on Tensorflow
+primitives (such as ``tf.einsum``) but do not support the following
+automatic differentiation for backpropagation of variational circuits.
+It is possible to use these features in Qibo by using a backend based on
+Tensorflow primitives. There are two such backends available:
+the ``"defaulteinsum"`` backend based on ``tf.einsum``
+and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
 The user can switch backends using
 
 .. code-block::  python
@@ -349,4 +385,17 @@ The user can switch backends using
     qibo.set_backend("matmuleinsum")
 
 before creating any circuits or gates. The default backend is ``"custom"`` and
-uses the custom Tensorflow operators.
+uses the custom Tensorflow operators. One can switch to a numpy backend using
+the same approach:
+
+.. code-block::  python
+
+    import qibo
+    qibo.set_backend("numpy_defaulteinsum")
+
+
+Note that custom operators are only supported by the Tensorflow backend.
+
+.. autoclass:: qibo.backends.abstract.AbstractBackend
+    :members:
+    :member-order: bysource

@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
 from qibo import callbacks, hamiltonians, models
+from qibo.config import raise_error
 from qibo.tests import utils
 from scipy.linalg import expm
 
@@ -11,7 +12,7 @@ def assert_states_equal(state, target_state, atol=0):
     np.testing.assert_allclose(state, phase * target_state, atol=atol)
 
 
-class TimeStepChecker(callbacks.Callback):
+class TimeStepChecker(callbacks.BackendCallback):
     """Callback that checks each evolution time step."""
 
     def __init__(self, target_states, atol=0):
@@ -19,8 +20,11 @@ class TimeStepChecker(callbacks.Callback):
         self.target_states = iter(target_states)
         self.atol = atol
 
-    def __call__(self, state):
+    def state_vector_call(self, state):
         assert_states_equal(state, next(self.target_states), atol=self.atol)
+
+    def density_matrix_call(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
 
 
 def test_initial_state():

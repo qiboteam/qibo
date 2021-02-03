@@ -1,10 +1,8 @@
 """Use ops in python."""
-import numpy as np
 import tensorflow as tf
-import numpy as np
-from tensorflow.python.framework import load_library
-from tensorflow.python.platform import resource_loader
-from qibo.config import get_device, get_threads
+from tensorflow.python.framework import load_library # pylint: disable=no-name-in-module
+from tensorflow.python.platform import resource_loader # pylint: disable=no-name-in-module
+from qibo.config import get_threads
 
 
 if tf.config.list_physical_devices("GPU"): # pragma: no cover

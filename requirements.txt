@@ -1,14 +1,15 @@
 # Runtime requirements for qibo
 
 # numpy (included in tf)
-tensorflow>=2.2,<=2.3.1
-scipy~=1.5.4
-sympy~=1.7
+tensorflow>=2.2,<=2.4.0
+scipy
+sympy
 cma
-joblib~=0.17.0
-matplotlib~=3.3.3
-blessings~=1.7
-psutil~=5.7.3
+joblib
+matplotlib
+blessings
+psutil
+networkx
 
 # paramiko requirements
 numpy~=1.18.5
