@@ -5,6 +5,7 @@ from qibo.config import HW_PARAMS
 
 
 class IcarusQ:
+
     def __init__(self, address, username, password):
         self.nchannels = HW_PARAMS.nchannels
         self.ssh = paramiko.SSHClient()

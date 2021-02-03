@@ -128,7 +128,27 @@ class StaticHardwareConfig:
         }
     ]
     dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
+
     pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
+    calibration_placeholder = [{
+        "id": 0,
+        "qubit_frequency": 3.0473825e9,
+        "qubit_amplitude": 0.75 / 2,
+        "T1": 5.89e-6,
+        "T2": 1.27e-6,
+        "T2_Spinecho": 3.5e-6,
+        "pi-pulse": 24.78e-9,
+        "drive_channel": 3,
+        "readout_channel": (0, 1),
+        "iq_state": {
+            "0": [0.016901687416102748, -0.006633150376482062],
+            "1": [0.009458352995780546, -0.008570922209494462]
+        },
+        "gates": {
+            "rx": [pa.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, pa.Rectangular())],
+            "ry": [pa.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, pa.Rectangular())],
+        }
+    }]
 
 
 HW_PARAMS = StaticHardwareConfig()
