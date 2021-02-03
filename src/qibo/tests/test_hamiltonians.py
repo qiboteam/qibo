@@ -352,9 +352,9 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
 
     from qibo.core.states import VectorState
     state = VectorState.from_tensor(state)
-    trotter_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(trotter_ev, target_ev)
+    trotter_matmul = local_ham @ state
+    target_matmul = dense_ham @ state
+    np.testing.assert_allclose(trotter_matmul, target_matmul)
 
 
 @pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
