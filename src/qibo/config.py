@@ -128,6 +128,7 @@ class StaticHardwareConfig:
         }
     ]
     dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
+    pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
 
 
 HW_PARAMS = StaticHardwareConfig()

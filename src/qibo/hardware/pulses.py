@@ -1,87 +1,16 @@
 """Contains the pulse abstraction and pulse shaping for the FPGA."""
-import numpy as np
-from qibo.config import raise_error, HW_PARAMS
+from abc import ABC, abstractmethod
+from qibo.config import raise_error
 
 
-class PulseSequence:
-    """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
-
-    Current FPGA binary has variable sampling rate but fixed sample size.
-    Due to software limitations we need to prepare all 16 DAC channel arrays.
-    @see BasicPulse, MultifrequencyPulse and FilePulse for more information about supported pulses.
-
-    Args:
-        pulses: Array of Pulse objects
-    """
-    def __init__(self, pulses):
-        self.pulses = pulses
-        self.nchannels = HW_PARAMS.nchannels
-        self.sample_size = HW_PARAMS.sample_size
-        self.sampling_rate = HW_PARAMS.sampling_rate
-
-        self.duration = self.sample_size / self.sampling_rate
-        self.time = np.linspace(0, self.duration, num=self.sample_size)
-
-    def compile(self) -> np.ndarray:
-        """Compiles pulse sequence into waveform arrays
-
-        FPGA binary is currently unable to parse pulse sequences, so this is a temporary workaround to prepare the arrays
-
-        Returns:
-            Numpy.ndarray holding waveforms for each channel. Has shape (nchannels, sample_size).
-        """
-        waveform = np.zeros((self.nchannels, self.sample_size))
-        for pulse in self.pulses:
-            #if pulse.serial[0] == "P":
-            if isinstance(pulse, BasicPulse):
-                waveform = self._compile_basic(waveform, pulse)
-            #elif pulse.serial[0] == "M":
-            elif isinstance(pulse, MultifrequencyPulse):
-                waveform = self._compile_multi(waveform, pulse)
-            #elif pulse.serial[0] == "F":
-            elif isinstance(pulse, FilePulse):
-                waveform = self._compile_file(waveform, pulse)
-            else:
-                raise Exception("Invalid pulse type \"{}\"".format(pulse))
-        return waveform
-
-    def _compile_basic(self, waveform, pulse):
-        i_start = int((pulse.start / self.duration) * self.sample_size)
-        i_duration = int((pulse.duration / self.duration) * self.sample_size)
-        envelope = pulse.shape.envelope(self.time, pulse.start, pulse.duration, pulse.amplitude)
-        waveform[pulse.channel, i_start:i_start + i_duration] = envelope * np.sin(
-            2 * np.pi * pulse.frequency * self.time[:i_duration] + pulse.phase)
-        return waveform
-
-    def _compile_multi(self, waveform, pulse):
-        for m in pulse.members:
-            if m.serial[0] == "P":
-                waveform += self._compile_basic(waveform, m)
-            elif m.serial[0] == "F":
-                waveform += self._compile_file(waveform, m)
-        return waveform
-
-    def _compile_file(self, waveform, pulse):
-        i_start = int((pulse.start / self.duration) * self.sample_size)
-        arr = np.genfromtxt('C:/fpga_python/fpga/tmp/wave_ch1.csv', delimiter=',')[:-1]
-        waveform[pulse.channel, i_start:i_start + len(arr)] = arr
-        return waveform
-
-    def serialize(self) -> str:
-        """Returns the serialized pulse sequence
-        """
-        return ", ".join([p.serial() for p in self.pulses])
-
-
-class Pulse:
-    """Describes a pulse to be added onto the channel waveform
-    """
+class Pulse(ABC):
+    """Describes a pulse to be added onto the channel waveform."""
     def __init__(self):
         self.channel = None
 
+    @abstractmethod
     def serial(self):
-        """Returns the serialized pulse
-        """
+        """Returns the serialized pulse."""
         raise_error(NotImplementedError)
 
     def __repr__(self):
@@ -163,8 +92,9 @@ class Rectangular(PulseShape):
 
 
 class Gaussian(PulseShape):
-    """Gaussian pulse shape
-    """
+    """Gaussian pulse shape"""
+    import numpy as np
+
     def __init__(self, sigma):
         self.name = "gaussian"
         self.sigma = sigma
@@ -174,15 +104,16 @@ class Gaussian(PulseShape):
         A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
-        return amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
+        return amplitude * self.np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
 
     def __repr__(self):
         return "({}, {})".format(self.name, self.sigma)
 
 
 class Drag(PulseShape):
-    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape
-    """
+    """Derivative Removal by Adiabatic Gate (DRAG) pulse shape"""
+    import numpy as np
+
     def __init__(self, sigma, beta):
         self.name = "drag"
         self.sigma = sigma
@@ -194,7 +125,7 @@ class Drag(PulseShape):
         where Gaussian G = A\exp^{-\frac{1}{2}\frac{(t-\mu)^2}{\sigma^2}}
         """
         mu = start + duration / 2
-        gaussian = amplitude * np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
+        gaussian = amplitude * self.np.exp(-0.5 * (time - mu) ** 2 / self.sigma ** 2)
         return gaussian + 1j * self.beta * (-(time - mu) / self.sigma ** 2) * gaussian
 
     def __repr__(self):
