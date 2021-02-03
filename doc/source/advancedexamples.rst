@@ -140,13 +140,11 @@ code: :class:`qibo.tensorflow.distcircuit.DistributedCircuit`. When
 if the ``accelerators`` dictionary is passed, otherwise the standard single device
 :class:`qibo.core.circuit.Circuit` is used.
 
-Unlike the standard circuit, executing a
-:class:`qibo.tensorflow.distcircuit.DistributedCircuit` without
-measurements will return a
-:class:`qibo.tensorflow.distutils.DistributedState` instead of the final
-state vector as a ``tf.Tensor``. This is done because the distributed circuit
-uses the state partitioned in multiple pieces that are distributed to the
-different devices. Creating the full state as a tensor would require merging
+Note that executing a:class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+will return a :class:`qibo.tensorflow.distutils.DistributedState` which holds
+the state vector partitioned in multiple pieces which are distributed to the
+different devices during the simulation.
+Creating the full state as a single tensor would require merging
 these pieces and using twice as much memory. This is disabled by default,
 however the user may create the full state as follows:
 
@@ -160,14 +158,19 @@ however the user may create the full state as follows:
     final_state = c()
 
     # Access the full state (will double memory usage)
-    full_final_state = final_state.vector
-    # ``full_final_state`` is a ``tf.Tensor``
+    full_final_state = final_state.tensor
+    # ``full_final_state`` is a single ``tf.Tensor``
 
     # ``DistributedState`` supports indexing and slicing
     print(final_state[40])
     # will print the 40th component of the final state vector
     print(final_state[20:25])
     # will print the components from 20 to 24 (inclusive)
+
+
+Note that indexing a class:`qibo.tensorflow.distutils.DistributedState` uses
+the state pieces without requiring to merge and create the single state vector
+tensor.
 
 
 How to use callbacks?
@@ -695,7 +698,7 @@ Qibo circuits can evolve density matrices if they are initialized using the
     c.add(gates.H(1))
     # execute using the default initial state |00><00|
     final_rho = c()
-    # final_rho will be tf.ones(4) / 4 which corresponds to |++><++|
+    # final_rho.tensor will be tf.ones(4) / 4 which corresponds to |++><++|
 
 will perform the transformation
 
@@ -723,7 +726,7 @@ for example:
     c.add(gates.PauliNoiseChannel(0, px=0.3))
     # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
     final_state = c()
-    # will return tf.Tensor(diag([0, 0.7, 0, 0.3]))
+    # final_state.tensor will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
 
 will perform the transformation
 
@@ -855,10 +858,8 @@ using the ``density_matrix=True`` flag during initialization and call
 Measurement errors
 ^^^^^^^^^^^^^^^^^^
 
-As described in the :ref:`How to perform measurements? <measurement-examples>`
-example, simulating a circuit with measurements returns a
-:class:`qibo.core.measurements.CircuitResult` object. This object provides
-the :meth:`qibo.core.measurements.CircuitResult.apply_bitflips` method which
+:class:`qibo.abstractions.states.AbstractState` provides
+the :meth:`qibo.abstractions.states.AbstractState.apply_bitflips` method which
 allows adding bit-flip errors to the sampled bit-strings without having to
 re-execute the simulation. For example:
 
@@ -871,18 +872,32 @@ re-execute the simulation. For example:
       c = models.Circuit(4)
       c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
       c.add([gates.M(0, 1), gates.M(2, 3)])
-      result = c(nshots=100)
+      state = c(nshots=100)
       # add bit-flip errors with probability 0.2 for all qubits
-      noisy_result1 = result.apply_bitflips(0.2)
+      state.apply_bitflips(0.2)
       # add bit-flip errors with different probabilities for each qubit
       error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
-      noisy_result2 = result.apply_bitflips(error_map)
+      state.apply_bitflips(error_map)
 
-
-In this example ``noisy_result1`` and ``noisy_result2`` are new
-:class:`qibo.core.measurements.CircuitResult` objects and therefore
-the corresponding noisy samples and frequencies can be obtained as described
+The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
+
+Note that :meth:`qibo.abstractions.states.AbstractState.apply_bitflips` modifies
+the measurement samples contained in the corresponding state and therefore the
+original noiseless measurement samples are no longer accessible. It is possible
+to keep the original samples by creating a copy of the states before applying
+the bitflips:
+
+.. code-block:: python
+
+      # create a copy of the state containing the noiseless samples
+      noisy_state = state.copy()
+      # perform bitflips in the copy
+      noisy_state.apply_bitflips(0.2)
+
+Creating a copy as shown in the above example does not duplicate the state
+vector for memory efficiency reasons. All copies of the state point to the
+same tensor in memory.
 
 Alternatively, the user may specify a bit-flip error map when defining
 measurement gates:
@@ -898,7 +913,7 @@ measurement gates:
       c.add(gates.M(0, 1, p0=0.2))
       c.add(gates.M(2, 3, p0={2: 0.1, 3: 0.0}))
       c.add(gates.M(4, 5, p0=[0.4, 0.3]))
-      result = c(nshots=100)
+      state = c(nshots=100)
 
 In this case ``result`` will contain noisy samples according to the given
 bit-flip probabilities. The probabilities can be given as a
@@ -910,10 +925,10 @@ incorporated as part of measurement gates it is not possible to access the
 noiseless samples.
 
 Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
-argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
+argument as ``state.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
 probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
 Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
-can be used both in :meth:`qibo.core.measurements.CircuitResult.apply_bitflips`
+can be used both in :meth:`qibo.abstractions.states.AbstractState.apply_bitflips`
 and the measurement gate. If ``p1`` is not specified the value of ``p0`` will
 be used for both errors.
 

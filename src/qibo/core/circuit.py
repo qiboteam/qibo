@@ -190,12 +190,6 @@ class Circuit(circuit.AbstractCircuit):
     def execute(self, initial_state=None, nshots=None):
         """Propagates the state through the circuit applying the corresponding gates.
 
-        In default usage the full final state vector is returned.
-        If the circuit contains measurement gates and ``nshots`` is given, then
-        the final state is sampled and the samples are returned. We refer to
-        the :ref:`How to perform measurements? <measurement-examples>` example
-        for more details on how to perform measurements in Qibo.
-
         If channels are found within the circuits gates then Qibo will perform
         the simulation by repeating the circuit execution ``nshots`` times.
         If the circuit contains measurements the corresponding noisy measurement
@@ -220,10 +214,12 @@ class Circuit(circuit.AbstractCircuit):
                 If ``nshots`` is ``None`` the measurement gates will be ignored.
 
         Returns:
+            A :class:`qibo.abstractions.states.AbstractState` object which
+            holds the final state vector as a tensor of shape ``(2 ** nqubits,)``
+            or the final density matrix as a tensor of shpae
+            ``(2 ** nqubits, 2 ** nqubits)``.
             If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.core.measurements.CircuitResult` object that contains the measured bitstrings.
-            If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a tensor of shape ``(2 ** nqubits,)``.
+            the returned circuit object also contains the measured bitstrings.
         """
         if nshots is not None and self.repeated_execution:
             self._final_state = None

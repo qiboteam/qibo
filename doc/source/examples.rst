@@ -23,6 +23,8 @@ Here is an example of a circuit with 2 qubits:
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
     final_state = c(initial_state) # c.execute(initial_state) also works
+    print(final_state.tensor)
+    # should print `tf.Tensor([1, 0, 0, 0])`
     print(final_state.numpy())
     # should print `np.array([1, 0, 0, 0])`
 
@@ -120,9 +122,9 @@ How to perform measurements?
 
 In order to obtain measurement results from a circuit one has to add measurement
 gates (:class:`qibo.abstractions.gates.M`) and provide a number of shots (``nshots``)
-when executing the circuit. This will return a :class:`qibo.core.measurements.CircuitResult`
-object which contains all the information about the measured samples.
-For example
+when executing the circuit. In this case the returned
+:class:`qibo.abstractions.states.AbstractState` will contain all the
+information about the measured samples. For example
 
 .. code-block:: python
 
@@ -134,15 +136,15 @@ For example
     # Add a measurement register on both qubits
     c.add(gates.M(0, 1))
     # Execute the circuit with the default initial state |00>.
-    result = c(nshots=100)
+    state = c(nshots=100)
 
 Measurements are now accessible using the ``samples`` and ``frequencies`` methods
 on the ``result`` object. In particular
 
-* ``result.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
-* ``result.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
-* ``result.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
-* ``result.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
+* ``state.samples(binary=True)`` will return the array ``tf.Tensor([[1, 0], [1, 0], ..., [1, 0]])`` with shape ``(100, 2)``,
+* ``state.samples(binary=False)`` will return the array ``tf.Tensor([2, 2, ..., 2])``,
+* ``state.frequencies(binary=True)`` will return ``collections.Counter({"10": 100})``,
+* ``state.frequencies(binary=False)`` will return ``collections.Counter({2: 100})``.
 
 In addition to the functionality described above, it is possible to collect
 measurement results grouped according to registers. The registers are defined
@@ -158,14 +160,14 @@ during the addition of measurement gates in the circuit. For example
     c.add(gates.X(4))
     c.add(gates.M(0, 1, register_name="A"))
     c.add(gates.M(3, 4, register_name="B"))
-    result = c(nshots=100)
+    state = c(nshots=100)
 
 creates a circuit with five qubits that has two registers: ``A`` consisting of
 qubits ``0`` and ``1`` and ``B`` consisting of qubits ``3`` and ``4``. Here
 qubit ``2`` remains unmeasured. Measured results can now be accessed as
 
-* ``result.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
-* ``result.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
+* ``state.samples(binary=False, registers=True)`` will return a dictionary with the measured sample tensors for each register: ``{"A": tf.Tensor([2, 2, ...]), "B": tf.Tensor([1, 1, ...])}``,
+* ``state.frequencies(binary=True, registers=True)`` will return a dictionary with the frequencies for each register: ``{"A": collections.Counter({"10": 100}), "B": collections.Counter({"01": 100})}``.
 
 Setting ``registers=False`` (default option) will ignore the registers and return the
 results similarly to the previous example. For example ``result.frequencies(binary=True)``
@@ -181,9 +183,8 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-If the user wishes to access the full state vector of a circuit that was
-measured, this is possible using the
-:py:attr:`qibo.abstractions.circuit.AbstractCircuit.final_state` property of circuits.
+The final state vector is still accessible via the
+:py:attr:`qibo.abstractions.states.AbstractCircuit.tensor` property of states.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not
