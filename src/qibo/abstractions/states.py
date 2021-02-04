@@ -79,7 +79,13 @@ class AbstractState(ABC):
         raise_error(NotImplementedError)
 
     def state(self, numpy=False):
-        """State's tensor representation as an backend tensor."""
+        """State's tensor representation as an backend tensor.
+
+        Args:
+            numpy (bool): If ``True`` the returned tensor will be a numpy array,
+                otherwise it will follow the backend tensor type.
+                Default is ``False``.
+        """
         if numpy:
             return self.numpy()
         return self.tensor

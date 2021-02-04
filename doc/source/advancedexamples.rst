@@ -158,8 +158,8 @@ however the user may create the full state as follows:
     final_state = c()
 
     # Access the full state (will double memory usage)
-    full_final_state = final_state.tensor
-    # ``full_final_state`` is a single ``tf.Tensor``
+    full_final_state = final_state.state()
+    # ``full_final_state`` is a ``tf.Tensor``
 
     # ``DistributedState`` supports indexing and slicing
     print(final_state[40])
@@ -697,8 +697,8 @@ Qibo circuits can evolve density matrices if they are initialized using the
     c.add(gates.H(0))
     c.add(gates.H(1))
     # execute using the default initial state |00><00|
-    final_rho = c()
-    # final_rho.tensor will be tf.ones(4) / 4 which corresponds to |++><++|
+    result = c()
+    # result.state() will be tf.ones(4) / 4 which corresponds to |++><++|
 
 will perform the transformation
 
@@ -725,8 +725,8 @@ for example:
     # transforms |00><00| -> |01><01|
     c.add(gates.PauliNoiseChannel(0, px=0.3))
     # transforms |01><01| -> (1 - px)|01><01| + px |11><11|
-    final_state = c()
-    # final_state.tensor will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
+    result = c()
+    # result.state() will be tf.Tensor(diag([0, 0.7, 0, 0.3]))
 
 will perform the transformation
 
@@ -872,12 +872,12 @@ re-execute the simulation. For example:
       c = models.Circuit(4)
       c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
       c.add([gates.M(0, 1), gates.M(2, 3)])
-      state = c(nshots=100)
+      result = c(nshots=100)
       # add bit-flip errors with probability 0.2 for all qubits
-      state.apply_bitflips(0.2)
+      result.apply_bitflips(0.2)
       # add bit-flip errors with different probabilities for each qubit
       error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
-      state.apply_bitflips(error_map)
+      result.apply_bitflips(error_map)
 
 The corresponding noisy samples and frequencies can then be obtained as described
 in the :ref:`How to perform measurements? <measurement-examples>` example.
@@ -891,9 +891,9 @@ the bitflips:
 .. code-block:: python
 
       # create a copy of the state containing the noiseless samples
-      noisy_state = state.copy()
+      noisy_result = result.copy()
       # perform bitflips in the copy
-      noisy_state.apply_bitflips(0.2)
+      noisy_result.apply_bitflips(0.2)
 
 Creating a copy as shown in the above example does not duplicate the state
 vector for memory efficiency reasons. All copies of the state point to the
@@ -913,7 +913,7 @@ measurement gates:
       c.add(gates.M(0, 1, p0=0.2))
       c.add(gates.M(2, 3, p0={2: 0.1, 3: 0.0}))
       c.add(gates.M(4, 5, p0=[0.4, 0.3]))
-      state = c(nshots=100)
+      result = c(nshots=100)
 
 In this case ``result`` will contain noisy samples according to the given
 bit-flip probabilities. The probabilities can be given as a
@@ -925,7 +925,7 @@ incorporated as part of measurement gates it is not possible to access the
 noiseless samples.
 
 Moreover, it is possible to simulate asymmetric bit-flips using the ``p1``
-argument as ``state.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
+argument as ``result.apply_bitflips(p0=0.2, p1=0.1)``. In this case a
 probability of 0.2 will be used for 0->1 errors but 0.1 for 1->0 errors.
 Similarly to ``p0``, ``p1`` can be a single float number or a dictionary and
 can be used both in :meth:`qibo.abstractions.states.AbstractState.apply_bitflips`
