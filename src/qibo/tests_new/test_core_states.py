@@ -30,6 +30,8 @@ def test_vector_state_tensor_setter(backend, nqubits):
     np.testing.assert_allclose(state.tensor, np.ones(4))
     np.testing.assert_allclose(np.array(state), np.ones(4))
     np.testing.assert_allclose(state.numpy(), np.ones(4))
+    np.testing.assert_allclose(state.state(numpy=True), np.ones(4))
+    np.testing.assert_allclose(state.state(numpy=False), np.ones(4))
     with pytest.raises(ValueError):
         state.tensor = np.zeros(5)
     qibo.set_backend(original_backend)

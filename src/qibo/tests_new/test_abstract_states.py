@@ -42,6 +42,7 @@ def test_abstract_state_getitem():
     assert state[2] == 0
     with pytest.raises(IndexError):
         state[5]
+    assert str(state) == str([0, 1, 0, 1])
 
 
 def test_abstract_state_copy():

@@ -78,6 +78,15 @@ class AbstractState(ABC):
         """State's tensor representation as a numpy array."""
         raise_error(NotImplementedError)
 
+    def state(self, numpy=False):
+        """State's tensor representation as an backend tensor."""
+        if numpy:
+            return self.numpy()
+        return self.tensor
+
+    def __repr__(self):
+        return str(self.tensor)
+
     def __getitem__(self, i):
         if isinstance(i, int) and i >= self.nstates:
             raise_error(IndexError, "State index {} out of range.".format(i))
