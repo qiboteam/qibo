@@ -76,11 +76,11 @@ path.
 
       3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail. You can locate it with ``whereis nvcc`` and eventually link/copy to your ``CUDA_PATH/bin`` folder.
 
-      For example, TensorFlow 2.3 supports CUDA 10.1. After installing
-      TensorFlow proceed with the NVCC 10.1 installation. On linux the
-      installation path is ``/usr/local/cuda-10.1/``.
+      For example, TensorFlow 2.4 supports CUDA 11. After installing
+      TensorFlow proceed with the NVCC 11 installation. On linux the
+      installation path usually is ``/usr/local/cuda-11/``.
 
-      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-10.1``.
+      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-11``.
 
       Note that Qibo will not enable GPU support if points 1 and 2 are not
       performed.

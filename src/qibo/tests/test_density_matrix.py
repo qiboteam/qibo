@@ -378,10 +378,8 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                   [0, 0, 0, 1], [0, 0, 1, 0]])
     if tfmatrices:
-        import tensorflow as tf
-        from qibo.config import DTYPES
-        a1 = tf.cast(a1, dtype=DTYPES.get('DTYPECPX'))
-        a2 = tf.cast(a2, dtype=DTYPES.get('DTYPECPX'))
+        from qibo import K
+        a1, a2 = K.cast(a1), K.cast(a2)
 
     gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
     assert gate.target_qubits == (0, 1)
@@ -721,8 +719,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     c.add(gate)
     final_rho = c(np.copy(initial_rho))
 
-    exp, p0, p1 = gates.ThermalRelaxationChannel._calculate_probs(
-        t1, t2, time, excpop)
+    exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
     if t2 > t1:
         matrix = np.diag([1 - p1, p0, p1, 1 - p0])
         matrix[0, -1], matrix[-1, 0] = exp, exp
@@ -770,6 +767,35 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
 
 
 @pytest.mark.parametrize("backend", _BACKENDS)
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta = 2 * np.pi * np.random.random(nqubits)
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    target_state = c()
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    c = models.Circuit(nqubits, density_matrix=True)
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta))
+    final_state = c()
+    np.testing.assert_allclose(target_state, final_state)
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta)
+    gate.density_matrix = True
+    initial_state = c.get_initial_state()
+    if backend != "custom":
+        initial_state = np.reshape(initial_state, 2 * nqubits * (2,))
+    final_state = gate(initial_state)
+    if backend != "custom":
+        final_state = np.reshape(final_state, 2 * (2 ** nqubits,))
+    np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("backend", _BACKENDS)
 def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()
@@ -780,8 +806,9 @@ def test_entanglement_entropy(backend):
     rho = u.dot(np.diag(5 * np.random.random(u.shape[0]))).dot(u.conj().T)
     # this is a positive rho
 
-    entropy = callbacks.EntanglementEntropy([0, 2])
-    final_ent = entropy(rho, is_density_matrix=True)
+    entropy = callbacks.EntanglementEntropy([1, 3])
+    entropy.density_matrix = True
+    final_ent = entropy(rho)
 
     rho = rho.reshape(8 * (2,))
     reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
@@ -799,6 +826,7 @@ def test_density_matrix_circuit_errors():
     # Switch `gate.density_matrix` to `True` after setting `nqubits`
     gate = gates.X(0)
     gate.nqubits = 2
+    gate.prepare()
     with pytest.raises(RuntimeError):
         gate.density_matrix = True
     # Attempt to distribute density matrix circuit

@@ -1,14 +1,17 @@
-def optimize(loss, initial_parameters, method='Powell',
-             options=None, compile=False, processes=None, args=()):
+def optimize(loss, initial_parameters, args=(), method='Powell',
+             options=None, compile=False, processes=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cma`
         - :meth:`qibo.optimizers.newtonian`
         - :meth:`qibo.optimizers.sgd`
 
     Args:
-        loss (callable): Loss as a function of ``parameters``.
+        loss (callable): Loss as a function of ``parameters`` and optional extra
+            arguments. Make sure the loss function returns a tensor for ``method=sgd``
+            and numpy object for all the other methods.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters that are optimized.
+        args (tuple): optional arguments for the loss function.
         method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
             one of the Newtonian methods supported by
             :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``.
@@ -17,17 +20,40 @@ def optimize(loss, initial_parameters, method='Powell',
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
             This is relevant only for the ``'sgd'`` optimizer.
         processes (int): number of processes when using the parallel BFGS method.
-        args (tuple): optional arguments for the loss function.
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import gates, models
+            from qibo.optimizers import optimize
+
+            # create custom loss function
+            # make sure the return type matches the optimizer requirements.
+            def myloss(parameters, circuit):
+                circuit.set_parameters(parameters)
+                return np.square(np.sum(circuit())) # returns numpy array
+
+            # create circuit ansatz for two qubits
+            circuit = models.Circuit(2)
+            circuit.add(gates.RY(0, theta=0))
+
+            # optimize using random initial variational parameters
+            initial_parameters = np.random.uniform(0, 2, 1)
+            best, params = optimize(myloss, initial_parameters, args=(circuit))
+
+            # set parameters to circuit
+            circuit.set_parameters(params)
     """
     if method == "cma":
-        return cma(loss, initial_parameters, options, args)
+        return cma(loss, initial_parameters, args, options)
     elif method == "sgd":
-        return sgd(loss, initial_parameters, options, compile, args)
+        return sgd(loss, initial_parameters, args, options, compile)
     else:
-        return newtonian(loss, initial_parameters, method, options, processes, args)
+        return newtonian(loss, initial_parameters, args, method, options, processes)
 
 
-def cma(loss, initial_parameters, options=None, args=()):
+def cma(loss, initial_parameters, args=(), options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
@@ -35,17 +61,17 @@ def cma(loss, initial_parameters, options=None, args=()):
             optimized.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
+        args (tuple): optional arguments for the loss function.
         options (dict): Dictionary with options accepted by the ``cma``.
             optimizer. The user can use ``cma.CMAOptions()`` to view the
             available options.
-        args (tuple): optional arguments for the loss function.
     """
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
     return r[1].result.fbest, r[1].result.xbest
 
 
-def newtonian(loss, initial_parameters, method='Powell', options=None, processes=None, args=()):
+def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, processes=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -65,22 +91,16 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
             optimized.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
+        args (tuple): optional arguments for the loss function.
         method (str): Name of method supported by ``scipy.optimize.minimize`` and ``'parallel_L-BFGS-B'`` for
             a parallel version of L-BFGS-B algorithm.
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
         processes (int): number of processes when using the parallel BFGS method.
-        args (tuple): optional arguments for the loss function.
     """
     if method == 'parallel_L-BFGS-B':
-        import psutil
-        from qibo.config import raise_error, get_device, get_threads, log
-        if "GPU" in get_device(): # pragma: no cover
-            raise_error(RuntimeError, "Parallel L-BFGS-B cannot be used with GPU.")
-        if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
-            (processes is None and get_threads() != 1)): # pragma: no cover
-            log.warning('Please consider using a lower number of threads per process,'
-                        ' or reduce the number of processes for better performance')
+        from qibo.parallel import _check_parallel_configuration
+        _check_parallel_configuration(processes)
         o = ParallelBFGS(loss, args=args, options=options, processes=processes)
         m = o.run(initial_parameters)
     else:
@@ -89,7 +109,7 @@ def newtonian(loss, initial_parameters, method='Powell', options=None, processes
     return m.fun, m.x
 
 
-def sgd(loss, initial_parameters, options=None, compile=False, args=()):
+def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     """Stochastic Gradient Descent (SGD) optimizer using Tensorflow backpropagation.
 
     See `tf.keras.Optimizers <https://www.tensorflow.org/api_docs/python/tf/keras/optimizers>`_
@@ -100,6 +120,7 @@ def sgd(loss, initial_parameters, options=None, compile=False, args=()):
             optimized.
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
+        args (tuple): optional arguments for the loss function.
         options (dict): Dictionary with options for the SGD optimizer. Supports
             the following keys:
               - ``'optimizer'`` (str, default: ``'Adagrad'``): Name of optimizer.
@@ -108,6 +129,19 @@ def sgd(loss, initial_parameters, options=None, compile=False, args=()):
               - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
                 a message of the loss function.
     """
+    # check if gates are using the MatmulEinsum backend
+    from qibo.core.gates import BackendGate
+    from qibo.core.circuit import Circuit
+    for argument in args:
+        if isinstance(argument, Circuit):
+            circuit = argument
+            for gate in circuit.queue:
+                if not isinstance(gate, BackendGate): # pragma: no cover
+                    from qibo.config import raise_error
+                    raise_error(RuntimeError, 'SGD requires native Tensorflow '
+                                              'gates because gradients are not '
+                                              'supported in the custom kernels.')
+
     from qibo import K
     from qibo.config import log
     sgd_options = {"nepochs": 1000000,
@@ -118,19 +152,19 @@ def sgd(loss, initial_parameters, options=None, compile=False, args=()):
         sgd_options.update(options)
 
     # proceed with the training
-    vparams = K.Variable(initial_parameters)
-    optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
+    vparams = K.optimization.Variable(initial_parameters)
+    optimizer = getattr(K.optimization.optimizers, sgd_options["optimizer"])(
         learning_rate=sgd_options["learning_rate"])
 
     def opt_step():
-        with K.GradientTape() as tape:
+        with K.optimization.GradientTape() as tape:
             l = loss(vparams, *args)
         grads = tape.gradient(l, [vparams])
         optimizer.apply_gradients(zip(grads, [vparams]))
         return l
 
     if compile:
-        opt_step = K.function(opt_step)
+        opt_step = K.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
         l = opt_step()
@@ -140,63 +174,7 @@ def sgd(loss, initial_parameters, options=None, compile=False, args=()):
     return loss(vparams, *args).numpy(), vparams.numpy()
 
 
-class ParallelBFGSResources: # pragma: no cover
-    """Auxiliary singleton class for sharing memory objects in a
-    multiprocessing environment when performing a parallel_L-BFGS-B
-    minimization procedure.
-
-    This class takes care of duplicating resources for each process
-    and calling the respective loss function.
-    """
-    import multiprocessing as mp
-    mp.set_start_method('fork') # enforce on Darwin
-
-    # private objects holding the state
-    _instance = None
-    # dict with of shared objects
-    _objects_per_process = {}
-    custom_loss = None
-    lock = None
-    args = ()
-
-    def __new__(cls, *args, **kwargs):
-        """Creates singleton instance."""
-        if cls._instance is None:
-            cls._instance = super(ParallelBFGSResources, cls).__new__(cls, *args, **kwargs)
-        return cls._instance
-
-    def loss(self, params=None):
-        """Computes loss (custom_loss) for a specific set of parameters.
-        This class performs the lock mechanism to duplicate objects
-        for each process.
-        """
-        # lock to avoid race conditions
-        self.lock.acquire()
-        # get process name
-        pname = self.mp.current_process().name
-        # check if there are objects already stored
-        args = self._objects_per_process.get(pname, None)
-        if args is None:
-            args = []
-            for obj in self.args:
-                try:
-                    # copy object if copy method is available
-                    copy = obj.copy(deep=True)
-                except AttributeError:
-                    # if copy is not implemented just use the original object
-                    copy = obj
-                except Exception as e:
-                    # use print otherwise the message will not appear
-                    print('Exception in ParallelBFGSResources', str(e))
-                args.append(copy)
-            args = tuple(args)
-            self._objects_per_process[pname] = args
-        # unlock
-        self.lock.release()
-        # finally compute the loss function
-        return self.custom_loss(params, *args)
-
-
+from qibo.parallel import ParallelResources, _executor
 class ParallelBFGS: # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
@@ -210,19 +188,18 @@ class ParallelBFGS: # pragma: no cover
         processes (int): number of processes when using the paralle BFGS method.
     """
     import multiprocessing as mp
-    import numpy as np
     import functools
     import itertools
-    from qibo.config import DTYPES
+    from qibo import K
 
     def __init__(self, function, args=(), bounds=None,
                  callback=None, options=None, processes=None):
-        ParallelBFGSResources().args = args
-        ParallelBFGSResources().custom_loss = function
+        ParallelResources().arguments = args
+        ParallelResources().custom_function = function
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.np.finfo(self.DTYPES.get("DTYPE").as_numpy_dtype).eps
+        self.precision = self.K.np.finfo(self.K.dtypes("DTYPE").as_numpy_dtype).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
@@ -236,18 +213,14 @@ class ParallelBFGS: # pragma: no cover
         Returns:
             scipy.minimize result object
         """
-        ParallelBFGSResources().lock = self.mp.Lock()
+        ParallelResources().lock = self.mp.Lock()
         with self.mp.Pool(processes=self.processes) as self.pool:
             from scipy.optimize import minimize
             out = minimize(fun=self.fun, x0=x0, jac=self.jac, method='L-BFGS-B',
                            bounds=self.bounds, callback=self.callback, options=self.options)
-        out.hess_inv = out.hess_inv * self.np.identity(len(x0))
+        ParallelResources().reset()
+        out.hess_inv = out.hess_inv * self.K.np.identity(len(x0))
         return out
-
-    @staticmethod
-    def loss(params):
-        """Returns singleton loss."""
-        return ParallelBFGSResources().loss(params)
 
     @staticmethod
     def _eval_approx(eps_at, fun, x, eps):
@@ -266,7 +239,7 @@ class ParallelBFGS: # pragma: no cover
             eps_at = range(len(x)+1)
             self.xval = x.copy()
             ret = self.pool.starmap(self._eval_approx, zip(eps_at,
-                                    self.itertools.repeat(self.loss),
+                                    self.itertools.repeat(_executor),
                                     self.itertools.repeat(x),
                                     self.itertools.repeat(eps)))
             self.function_value = ret[0]

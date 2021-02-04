@@ -21,3 +21,8 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "linux: mark test to run only on linux"
     )
+
+
+def pytest_generate_tests(metafunc):
+    import qibo
+    qibo.set_backend("custom")
