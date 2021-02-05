@@ -1,8 +1,8 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
-from qibo.hardware import fpga, pulses
+from qibo.config import raise_error
+from qibo.hardware import fpga, pulses, static
 from qibo.hardware.circuit import PulseSequence
-from qibo.config import raise_error, HW_PARAMS
 
 
 class TaskScheduler:
@@ -12,7 +12,7 @@ class TaskScheduler:
         self._fpga = IcarusQ(address, username, password)
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        sampling_rate = HW_PARAMS.sampling_rate
+        sampling_rate = static.sampling_rate
         self._qubit_config = None
 
     def fetch_config(self):

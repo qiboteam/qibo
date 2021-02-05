@@ -1,13 +1,13 @@
 import numpy as np
 import paramiko
 from io import BytesIO
-from qibo.config import HW_PARAMS
+from qibo.hardware import static
 
 
 class IcarusQ:
 
     def __init__(self, address, username, password):
-        self.nchannels = HW_PARAMS.nchannels
+        self.nchannels = static.nchannels
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         self.ssh.connect(hostname=address, username=username, password=password)
@@ -37,7 +37,7 @@ class IcarusQ:
         dump.close()
 
     def download(self):
-        waveform = np.zeros((self.nchannels, HW_PARAMS.sample_size))
+        waveform = np.zeros((self.nchannels, static.sample_size))
         sftp = self.ssh.open_sftp()
         dump = BytesIO()
         for i in range(self.nchannels):

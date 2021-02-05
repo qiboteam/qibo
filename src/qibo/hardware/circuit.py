@@ -1,7 +1,7 @@
 import numpy as np
 from qibo.abstractions import circuit
-from qibo.hardware import pulses
-from qibo.config import raise_error, HW_PARAMS
+from qibo.config import raise_error
+from qibo.hardware import pulses, static
 
 
 class PulseSequence:
@@ -16,10 +16,10 @@ class PulseSequence:
     """
     def __init__(self, pulses):
         self.pulses = pulses
-        self.nchannels = HW_PARAMS.nchannels
-        self.sample_size = HW_PARAMS.sample_size
-        self.sampling_rate = HW_PARAMS.sampling_rate
-        self.file_dir = HW_PARAMS.pulse_file
+        self.nchannels = static.nchannels
+        self.sample_size = static.sample_size
+        self.sampling_rate = static.sampling_rate
+        self.file_dir = static.pulse_file
 
         self.duration = self.sample_size / self.sampling_rate
         self.time = np.linspace(0, self.duration, num=self.sample_size)
@@ -127,12 +127,12 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def parse_result(self, q):
-        ADC_time_array = np.arange(0, HW_PARAMS.sample_size / HW_PARAMS.ADC_sampling_rate,
-                                   1 / HW_PARAMS.ADC_sampling_rate)
-        static_data = HW_PARAMS.qubit_static_parameters[self.qubit_config["id"]]
+        ADC_time_array = np.arange(0, static.sample_size / static.ADC_sampling_rate,
+                                   1 / static.ADC_sampling_rate)
+        static_data = static.qubit_static_parameters[self.qubit_config["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonantor_frequency"] - HW_PARAMS.lo_frequency # downconversion
+        IF_frequency = static_data["resonantor_frequency"] - static.lo_frequency # downconversion
 
         raw_data = self.final_state.result()
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
