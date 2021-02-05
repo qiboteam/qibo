@@ -1,21 +1,20 @@
 import copy
 import math
 from abc import ABC, abstractmethd
-from qibo.abstractions import abstract_gates, gates
 from qibo.config import raise_error
 
 
-class HardwareGate(ABC, abstract_gates.Gate):
+class HardwareGate(ABC):
+
+    def __init__(self, *q):
+        self.target_qubits = tuple(q)
 
     @abstractmethod
     def pulse_sequence(self, qubit_config, qubit_times):
         raise_error(NotImplementedError)
 
 
-class I(HardwareGate, gates.I):
-
-    def __init__(self, *q):
-        gates.I.__init__(self, *q)
+class I(HardwareGate):
 
     def pulse_sequence(self, qubit_config, qubit_times):
         return []
@@ -45,10 +44,12 @@ class _Rn_(HardwareGate):
 class RX(_Rn_, gates.RX):
 
     def __init__(self, q, theta):
-        gates.RX.__init__(self, q, theta)
+        self.target_qubits = (q,)
+        self.theta = theta
 
 
 class RY(_Rn_, gates.RY):
 
     def __init__(self, q, theta):
-        gates.RY.__init__(self, q, theta)
+        self.target_qubits = (q,)
+        self.theta = theta
