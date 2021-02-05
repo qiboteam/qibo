@@ -1,26 +1,43 @@
 import copy
 import math
-from abc import ABC, abstractmethd
+from abc import ABC, abstractmethod
+from qibo.abstractions import gates
+from qibo.abstractions.abstract_gates import Gate
 from qibo.config import raise_error
 
 
-class HardwareGate(ABC):
-
-    def __init__(self, *q):
-        self.target_qubits = tuple(q)
+class HardwareGate(ABC, Gate):
 
     @abstractmethod
     def pulse_sequence(self, qubit_config, qubit_times):
         raise_error(NotImplementedError)
 
+    @property
+    def unitary(self):
+        """Returns the unitary representation of the gate as a numpy array.
 
-class I(HardwareGate):
+        Not required for hardware execution but required to construct the
+        example circuits.
+        """
+        from qibo import gates
+        backend_gate = getattr(gates, self.__class__.__name__)
+        backend_gate = backend_gate(*self.init_args, **self.init_kwargs)
+        return backend_gate.unitary
+
+
+class I(HardwareGate, gates.I):
+
+    def __init__(self, *q):
+        gates.I.__init__(self, *q)
 
     def pulse_sequence(self, qubit_config, qubit_times):
         return []
 
 
-class _Rn_(HardwareGate):
+class _Rn_(HardwareGate, gates._Rn_):
+
+    def __init__(self, q, theta):
+        gates._Rn_.__init__(self, q, theta)
 
     def pulse_sequence(self, qubit_config, qubit_times):
         if self.theta == 0:
@@ -42,14 +59,8 @@ class _Rn_(HardwareGate):
 
 
 class RX(_Rn_, gates.RX):
-
-    def __init__(self, q, theta):
-        self.target_qubits = (q,)
-        self.theta = theta
+    pass
 
 
 class RY(_Rn_, gates.RY):
-
-    def __init__(self, q, theta):
-        self.target_qubits = (q,)
-        self.theta = theta
+    pass

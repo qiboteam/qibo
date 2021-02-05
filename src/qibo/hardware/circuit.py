@@ -80,6 +80,12 @@ class Circuit(circuit.AbstractCircuit):
         super().__init__(nqubits)
         self.scheduler = scheduler
 
+    def _add_layer(self):
+        raise_error(NotImplementedError)
+
+    def fuse(self):
+        raise_error(NotImplementedError)
+
     @staticmethod
     def _probability_extraction(data, refer_0, refer_1):
         move = copy.copy(refer_0)
