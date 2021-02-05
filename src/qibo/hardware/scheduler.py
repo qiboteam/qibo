@@ -1,15 +1,15 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
 from qibo.config import raise_error
-from qibo.hardware import fpga, pulses, static
+from qibo.hardware import pulses, static
 from qibo.hardware.circuit import PulseSequence
 
 
 class TaskScheduler:
     """Scheduler class for organizing FPGA calibration and pulse sequence execution."""
 
-    def __init__(self, address, username, password):
-        self._fpga = IcarusQ(address, username, password)
+    def __init__(self, qpu=None):
+        self.qpu = qpu
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
         sampling_rate = static.sampling_rate
@@ -38,7 +38,7 @@ class TaskScheduler:
         """
         return self._qubit_config is not None
 
-    def execute_pulse_sequence(self, pulse_sequence, shots):
+    def execute_pulse_sequence(self, pulse_sequence, nshots):
         """Submits a pulse sequence to the queue for execution.
 
         Args:
@@ -51,18 +51,20 @@ class TaskScheduler:
         if not isinstance(pulse_sequence, PulseSequence):
             raise_error(TypeError, "Pulse sequence {} has invalid type."
                                    "".format(pulse_sequence))
-        if not isinstance(shots, int) or shots < 1:
+        if not isinstance(nshots, int) or nshots < 1:
             raise_error(ValueError, "Invalid number of shots {}.".format(nshots))
-        future = self._executor.submit(self._execute_pulse_sequence, args=(pulse_sequence, shots))
+        future = self._executor.submit(self._execute_pulse_sequence,
+                                       pulse_sequence=pulse_sequence,
+                                       nshots=nshots)
         return future
 
-    def _execute_pulse_sequence(self, pulse_sequence, shots):
+    def _execute_pulse_sequence(self, pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
-        self._fpga.upload(wfm)
-        self._fpga.start()
+        self.qpu.upload(wfm)
+        self.qpu.start()
         # NIY
         #self._pi_trig.trigger(shots, delay=50e6)
         # OPC?
-        self._fpga.stop()
-        res = self._fpga.download()
+        self.qpu.stop()
+        res = self.qpu.download()
         return res

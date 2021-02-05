@@ -40,12 +40,12 @@ class _Rn_(HardwareGate, gates._Rn_):
         gates._Rn_.__init__(self, q, theta)
 
     def pulse_sequence(self, qubit_config, qubit_times):
-        if self.theta == 0:
+        if self.parameters == 0:
             return []
 
         q = self.target_qubits[0]
-        time_mod = abs(self.theta / math.pi)
-        phase_mod = 0 if angle > 0 else -180
+        time_mod = abs(self.parameters / math.pi)
+        phase_mod = 0 if self.parameters > 0 else -180
 
         pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
         for p in pulses:
@@ -59,8 +59,12 @@ class _Rn_(HardwareGate, gates._Rn_):
 
 
 class RX(_Rn_, gates.RX):
-    pass
+
+    def __init__(self, q, theta):
+        gates.RX.__init__(self, q, theta)
 
 
 class RY(_Rn_, gates.RY):
-    pass
+
+    def __init__(self, q, theta):
+        gates.RY.__init__(self, q, theta)

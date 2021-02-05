@@ -115,10 +115,8 @@ class Circuit(circuit.AbstractCircuit):
         # Get calibration data
         self.qubit_config = self.scheduler.fetch_config()
         # compile pulse sequence
-        pulse_sequence = [
-            pulse for pulse in gate.pulse_sequence(qubit_config, qubit_times)
-            for gate in self.queue
-            ]
+        pulse_sequence = [pulse for gate in self.queue
+            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
         pulse_sequence = PulseSequence(pulse_sequence)
         # execute using the scheduler
         self._final_state = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
@@ -127,24 +125,25 @@ class Circuit(circuit.AbstractCircuit):
     def __call__(self, nshots):
         return self.execute(nshots)
 
+    @property
     def final_state(self):
         if self._final_state is None:
             raise_error(RuntimeError)
         return self._final_state
 
-    def parse_result(self, q):
+    def parse_result(self, qubit):
         ADC_time_array = np.arange(0, static.sample_size / static.ADC_sampling_rate,
                                    1 / static.ADC_sampling_rate)
-        static_data = static.qubit_static_parameters[self.qubit_config["id"]]
+        static_data = static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonantor_frequency"] - static.lo_frequency # downconversion
+        IF_frequency = static_data["resonator_frequency"] - static.lo_frequency # downconversion
 
         raw_data = self.final_state.result()
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
         it = np.sum(self.raw_data[ro_channel[0]] * cos)
         qt = np.sum(self.raw_data[ro_channel[1]] * cos)
         data = np.array([it, qt])
-        ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
-        ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
+        ref_zero = np.array(self.qubit_config[qubit]["iq_state"]["0"])
+        ref_one = np.array(self.qubit_config[qubit]["iq_state"]["1"])
         return self._probability_extraction(data, ref_zero, ref_one)

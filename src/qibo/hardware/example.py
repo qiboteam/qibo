@@ -3,11 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from qibo.config import log
 from qibo.hardware import gates, circuit
-try:
-    from qibo.hardware.scheduler import TaskScheduler
-except ModuleNotFoundError:
-    log.warning("Hardware not available. Cannot import scheduler.")
-    TaskScheduler = None
+from qibo.hardware.scheduler import TaskScheduler
 
 
 parser = argparse.ArgumentParser()
@@ -125,10 +121,14 @@ def randomized_benchmark(q, ngates, scheduler=None):
 
 
 def main(qubit, ngates, nshots, address, username, password):
-    if TaskScheduler is None:
-        scheduler = None
+    scheduler = TaskScheduler()
+    if address is not None:
+        from qibo.hardware.qpu import IcarusQ
+        scheduler.qpu = IcarusQ(address, username, password)
     else:
-        scheduler = TaskScheduler(address, username, password)
+        # set hard=coded calibration data
+        from qibo.hardware import static
+        scheduler._qubit_config = static.calibration_placeholder
 
     circuits = randomized_benchmark(qubit, ngates, scheduler)
 
