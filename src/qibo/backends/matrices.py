@@ -116,11 +116,6 @@ class NumpyMatrices:
 
 
 class TensorflowMatrices(NumpyMatrices):
-    """Class that holds useful matrices as ``tf.Tensor``.
-
-    See :class:`qibo.numpy.matrices.NumpyMatrices` for a full list of
-    available matrices.
-    """
 
     def __init__(self, dtype):
         import tensorflow as tf
