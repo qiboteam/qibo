@@ -352,11 +352,11 @@ class QAOA(object):
         if self.accelerators is not None:
             c = self.hamiltonian.circuit(self.params[0])
             if state is None:
-                state = self.states.DistributedState.xstate(c)
+                state = self.states.DistributedState.plus_state(c)
             return c.get_initial_state(state)
 
         if state is None:
-            return self.state_cls.xstate(self.nqubits).tensor
+            return self.state_cls.plus_state(self.nqubits).tensor
         return StateCircuit.get_initial_state(self, state)
 
     def minimize(self, initial_p, initial_state=None, method='Powell', options=None):

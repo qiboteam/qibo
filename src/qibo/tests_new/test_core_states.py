@@ -9,10 +9,10 @@ from qibo.core import states
 def test_state_shape_and_dtype(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    state = states.VectorState.zstate(3)
+    state = states.VectorState.zero_state(3)
     assert state.shape == (8,)
     assert state.dtype == K.dtypes('DTYPECPX')
-    state = states.MatrixState.zstate(3)
+    state = states.MatrixState.zero_state(3)
     assert state.shape == (8, 8)
     assert state.dtype == K.dtypes('DTYPECPX')
     qibo.set_backend(original_backend)
@@ -45,27 +45,27 @@ def test_matrix_state_tensor_setter(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-def test_zstate_initialization(backend):
+def test_zero_state_initialization(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    state = states.VectorState.zstate(4)
+    state = states.VectorState.zero_state(4)
     target_state = np.zeros(16)
     target_state[0] = 1
     np.testing.assert_allclose(state.tensor, target_state)
-    state = states.MatrixState.zstate(3)
+    state = states.MatrixState.zero_state(3)
     target_state = np.zeros((8, 8))
     target_state[0, 0] = 1
     np.testing.assert_allclose(state.tensor, target_state)
     qibo.set_backend(original_backend)
 
 
-def test_xstate_initialization(backend):
+def test_plus_state_initialization(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    state = states.VectorState.xstate(4)
+    state = states.VectorState.plus_state(4)
     target_state = np.ones(16) / 4
     np.testing.assert_allclose(state.tensor, target_state)
-    state = states.MatrixState.xstate(3)
+    state = states.MatrixState.plus_state(3)
     target_state = np.ones((8, 8)) / 8
     np.testing.assert_allclose(state.tensor, target_state)
     qibo.set_backend(original_backend)
@@ -88,7 +88,7 @@ def test_vector_state_to_density_matrix(backend):
 
 def test_vector_state_tracout():
     from qibo import gates
-    state = states.VectorState.zstate(3)
+    state = states.VectorState.zero_state(3)
     mgate = gates.M(0)
     qubits = [0]
     assert state._traceout(qubits=qubits) == [1, 2]
@@ -101,7 +101,7 @@ def test_vector_state_tracout():
 
 def test_matrix_state_tracout():
     from qibo import gates
-    state = states.MatrixState.zstate(2)
+    state = states.MatrixState.zero_state(2)
     mgate = gates.M(0)
     mgate.density_matrix = True
     qubits = [0]
@@ -112,7 +112,7 @@ def test_matrix_state_tracout():
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
 def test_state_probabilities(backend, state_type):
     # TODO: Test this both for `VectorState` and `MatrixState`
-    state = getattr(states, state_type).xstate(4)
+    state = getattr(states, state_type).plus_state(4)
     probs = state.probabilities(qubits=[0, 1])
     target_probs = np.ones((2, 2)) / 4
     np.testing.assert_allclose(probs, target_probs)
@@ -121,7 +121,7 @@ def test_state_probabilities(backend, state_type):
 @pytest.mark.parametrize("registers", [None, {"a": (0,), "b": (2,)}])
 def test_state_measure(registers):
     from qibo import gates
-    state = states.VectorState.zstate(4)
+    state = states.VectorState.zero_state(4)
     mgate = gates.M(0, 2)
     assert state.measurements is None
     with pytest.raises(RuntimeError):
@@ -140,7 +140,7 @@ def test_state_measure(registers):
 @pytest.mark.parametrize("registers", [None, {"a": (0,), "b": (2,)}])
 def test_state_set_measurements(registers):
     from qibo import gates
-    state = states.VectorState.zstate(3)
+    state = states.VectorState.zero_state(3)
     samples = np.array(50 * [0] + 50 * [1])
     state.set_measurements([0, 2], samples, registers)
     target_samples = np.array(50 * [[0, 0]] + 50 * [[0, 1]])
@@ -154,7 +154,7 @@ def test_state_set_measurements(registers):
 
 
 def test_state_apply_bitflips():
-    state = states.VectorState.zstate(3)
+    state = states.VectorState.zero_state(3)
     with pytest.raises(RuntimeError):
         state.apply_bitflips(0.1)
     # Bitflips are tested in measurement tests
@@ -172,17 +172,17 @@ def test_distributed_state_init():
         state.tensor = [0, 0]
 
 
-@pytest.mark.parametrize("init_type", ["z", "x"])
+@pytest.mark.parametrize("init_type", ["zero", "plus"])
 def test_distributed_state_constructors(init_type):
-    """Tests `zstate` and `xstate` for `DistributedState`."""
+    """Tests `zero_state` and `plus_state` for `DistributedState`."""
     from qibo.models import Circuit
     from qibo.tensorflow.distutils import DistributedQubits
     c = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
-    state = getattr(states.DistributedState, f"{init_type}state")(c)
+    state = getattr(states.DistributedState, f"{init_type}_state")(c)
 
     final_state = state.numpy()
-    if init_type == "z":
+    if init_type == "zero":
         target_state = np.zeros_like(final_state)
         target_state[0] = 1
     else:
@@ -213,6 +213,6 @@ def test_distributed_state_copy():
     from qibo.tensorflow.distutils import DistributedQubits
     c = Circuit(4, {"/GPU:0": 2, "/GPU:1": 2})
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
-    state = states.DistributedState.zstate(c)
+    state = states.DistributedState.zero_state(c)
     cstate = state.copy()
     np.testing.assert_allclose(state.tensor, cstate.tensor)

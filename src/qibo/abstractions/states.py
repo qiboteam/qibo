@@ -90,7 +90,7 @@ class AbstractState(ABC):
             return self.numpy()
         return self.tensor
 
-    def __repr__(self):
+    def summary(self):
         return str(self.tensor)
 
     def __getitem__(self, i):
@@ -114,7 +114,7 @@ class AbstractState(ABC):
 
     @classmethod
     @abstractmethod
-    def zstate(cls, nqubits): # pragma: no cover
+    def zero_state(cls, nqubits): # pragma: no cover
         """Constructs the |00...0> state.
 
         Args:
@@ -124,7 +124,7 @@ class AbstractState(ABC):
 
     @classmethod
     @abstractmethod
-    def xstate(cls, nqubits): # pragma: no cover
+    def plus_state(cls, nqubits): # pragma: no cover
         """Constructs the |++...+> state.
 
         Args:

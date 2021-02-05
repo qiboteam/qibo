@@ -244,7 +244,7 @@ class DistributedCircuit(circuit.Circuit):
             self.queues.set(self.queue)
 
         if state is None:
-            return states.DistributedState.zstate(self)
+            return states.DistributedState.zero_state(self)
         elif isinstance(state, states.DistributedState):
             state.circuit = self
             return state

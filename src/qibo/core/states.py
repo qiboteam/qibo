@@ -37,14 +37,14 @@ class VectorState(AbstractState):
         return self.__array__()
 
     @classmethod
-    def zstate(cls, nqubits):
+    def zero_state(cls, nqubits):
         state = cls(nqubits)
         is_matrix = isinstance(state, MatrixState)
         state.tensor = K.initial_state(nqubits, is_matrix)
         return state
 
     @classmethod
-    def xstate(cls, nqubits):
+    def plus_state(cls, nqubits):
         state = cls(nqubits)
         shape = K.cast(state.nstates, dtype='DTYPEINT')
         state.tensor = K.ones(shape) / K.cast(K.qnp.sqrt(state.nstates))
@@ -136,8 +136,8 @@ class MatrixState(VectorState):
         return (self.nstates, self.nstates)
 
     @classmethod
-    def xstate(cls, nqubits):
-        state = VectorState.xstate(nqubits)
+    def plus_state(cls, nqubits):
+        state = VectorState.plus_state(nqubits)
         return state.to_density_matrix()
 
     def to_density_matrix(self):
@@ -300,7 +300,7 @@ class DistributedState(VectorState):
         return state
 
     @classmethod
-    def zstate(cls, circuit):
+    def zero_state(cls, circuit):
       state = cls(circuit)
       state.create_pieces()
       with K.device(state.device):
@@ -309,7 +309,7 @@ class DistributedState(VectorState):
       return state
 
     @classmethod
-    def xstate(cls, circuit):
+    def plus_state(cls, circuit):
       state = cls(circuit)
       state.create_pieces()
       with K.device(state.device):

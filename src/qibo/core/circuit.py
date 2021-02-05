@@ -246,7 +246,7 @@ class Circuit(circuit.AbstractCircuit):
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            state = self.state_cls.zstate(self.nqubits)
+            state = self.state_cls.zero_state(self.nqubits)
         elif not isinstance(state, self.state_cls):
             state = self.state_cls.from_tensor(state, self.nqubits)
         return state.tensor
