@@ -1,8 +1,22 @@
-import copy
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-#from qibo.hardware import scheduler, gates, circuit
+from qibo.config import log
 from qibo.hardware import gates, circuit
+try:
+    from qibo.hardware.scheduler import TaskScheduler
+except ModuleNotFoundError:
+    log.warning("Hardware not available. Cannot import scheduler.")
+    TaskScheduler = None
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--qubit", default=0, type=int)
+parser.add_argument("--ngates", default=10, type=int)
+parser.add_argument("--nshots", default=1000, type=int)
+parser.add_argument("--address", default=None, type=str)
+parser.add_argument("--username", default=None, type=str)
+parser.add_argument("--password", default=None, type=str)
 
 
 I = lambda q: gates.I(q)
@@ -110,19 +124,24 @@ def randomized_benchmark(q, ngates, scheduler=None):
     return circuits
 
 
-if __name__ == "__main__":
-    qb = 0
-    ngates = 10
-    nshots = 1000
+def main(qubit, ngates, nshots, address, username, password):
+    if TaskScheduler is None:
+        scheduler = None
+    else:
+        scheduler = TaskScheduler(address, username, password)
 
-    #scheduler = scheduler.TaskScheduler()
-    circuits = randomized_benchmark(qb, ngates)
+    circuits = randomized_benchmark(qubit, ngates, scheduler)
 
     results = []
     for circuit in circuits:
         circuit(nshots)
-        results.append(circuit.parse_result(qb))
+        results.append(circuit.parse_result(qubit))
 
-    sweep = range(1, gates + 1)
+    sweep = range(1, ngates + 1)
     plt.plot(sweep, results)
     plt.show()
+
+
+if __name__ == "__main__":
+    args = vars(parser.parse_args())
+    main(**args)
