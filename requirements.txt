@@ -7,6 +7,5 @@ sympy
 cma
 joblib
 matplotlib
-blessings
 psutil
 networkx
