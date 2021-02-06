@@ -41,6 +41,10 @@ else:
     try:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
         import tensorflow as tf
+        try:
+            import qibo.tensorflow.custom_operators
+        except tf.errors.ModuleNotFoundError:
+            raise ModuleNotFoundError
         K = TensorflowBackend()
     except ModuleNotFoundError: # pragma: no cover
         # case not tested because CI has tf installed
