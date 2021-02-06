@@ -8,6 +8,10 @@ import pytest
 
 try:
     import tensorflow as tf
+    try:
+        import qibo.tensorflow.custom_operators
+    except tf.errors.NotFoundError:
+        raise ModuleNotFoundError
     _BACKENDS = "custom,defaulteinsum,matmuleinsum,"\
                 "numpy_defaulteinsum,numpy_matmuleinsum"
     _ENGINES = "numpy,tensorflow"

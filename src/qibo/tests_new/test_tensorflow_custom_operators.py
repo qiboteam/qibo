@@ -4,7 +4,7 @@ Testing Tensorflow custom operators circuit.
 import pytest
 import numpy as np
 from qibo import K, get_threads
-from qibo.tensorflow import custom_operators as op
+
 
 _atol = 1e-6
 
@@ -29,6 +29,7 @@ def test_initial_state(dtype, compile):
   """Check that initial_state updates first element properly."""
   def apply_operator(dtype):
     """Apply the initial_state operator"""
+    from qibo.tensorflow import custom_operators as op
     return op.initial_state(nqubits=4, dtype=dtype,
                             is_matrix=False, omp_num_threads=get_threads())
 
@@ -48,6 +49,7 @@ def test_initial_state(dtype, compile):
                           (8, 5, np.complex128, False, "abcdefgh,Ff->abcdeFgh")])
 def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
     """Check that ``op.apply_gate`` agrees with einsum gate implementation."""
+    from qibo.tensorflow import custom_operators as op
     def apply_operator(state, gate):
       qubits = qubits_tensor(nqubits, [target])
       return op.apply_gate(state, gate, qubits, nqubits, target, get_threads())
@@ -69,6 +71,7 @@ def test_apply_gate(nqubits, target, dtype, compile, einsum_str):
                          [(2, True), (3, False), (4, True), (5, False)])
 def test_apply_gate_cx(nqubits, compile):
     """Check ``op.apply_gate`` for multiply-controlled X gates."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
 
     target_state = np.array(state)
@@ -98,6 +101,7 @@ def test_apply_gate_cx(nqubits, compile):
                           (6, 3, [0, 2, 4, 5], False, "ab,Bb->aB")])
 def test_apply_gate_controlled(nqubits, target, controls, compile, einsum_str):
     """Check ``op.apply_gate`` for random controlled gates."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
     gate = random_complex((2, 2))
 
@@ -125,6 +129,7 @@ def test_apply_gate_controlled(nqubits, target, controls, compile, einsum_str):
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_pauli_gate(nqubits, target, gate, compile):
     """Check ``apply_x``, ``apply_y`` and ``apply_z`` kernels."""
+    from qibo.tensorflow import custom_operators as op
     matrices = {"x": np.array([[0, 1], [1, 0]], dtype=np.complex128),
                 "y": np.array([[0, -1j], [1j, 0]], dtype=np.complex128),
                 "z": np.array([[1, 0], [0, -1]], dtype=np.complex128)}
@@ -149,6 +154,7 @@ def test_apply_pauli_gate(nqubits, target, gate, compile):
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_zpow_gate(nqubits, target, controls, compile):
     """Check ``apply_zpow`` (including CZPow case)."""
+    from qibo.tensorflow import custom_operators as op
     import itertools
     phase = np.exp(1j * 0.1234)
     qubits = controls[:]
@@ -186,6 +192,7 @@ def test_apply_zpow_gate(nqubits, target, controls, compile):
 def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
                                         compile, einsum_str):
     """Check ``op.apply_twoqubit_gate`` for random gates."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
     gate = random_complex((4, 4))
     gatenp = gate.numpy().reshape(4 * (2,))
@@ -223,6 +230,7 @@ def test_apply_twoqubit_gate_controlled(nqubits, targets, controls,
                           (6, [0, 5], [1, 2, 3], False, "abc,ACac->AbC")])
 def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
     """Check ``op.apply_twoqubit_gate`` for random gates."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
     rotation = random_complex((2, 2))
     phase = random_complex((1,))
@@ -254,6 +262,7 @@ def test_apply_fsim(nqubits, targets, controls, compile, einsum_str):
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_with_matrix(compile):
     """Check ``apply_swap`` for two qubits."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** 2,))
     matrix = np.array([[1, 0, 0, 0],
                        [0, 0, 1, 0],
@@ -277,6 +286,7 @@ def test_apply_swap_with_matrix(compile):
 @pytest.mark.parametrize("compile", [False, True])
 def test_apply_swap_general(nqubits, targets, controls, compile):
     """Check ``apply_swap`` for more general cases."""
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
 
     target0, target1 = targets
@@ -310,6 +320,7 @@ def test_apply_swap_general(nqubits, targets, controls, compile):
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 def test_collapse_state(nqubits, targets, results, dtype):
     """Check ``collapse_state`` kernel."""
+    from qibo.tensorflow import custom_operators as op
     atol = 1e-7 if dtype == np.complex64 else 1e-14
     state = random_complex((2 ** nqubits,), dtype=dtype)
     slicer = nqubits * [slice(None)]
@@ -335,6 +346,7 @@ def test_collapse_state(nqubits, targets, results, dtype):
 @pytest.mark.parametrize("compile", [False])
 def test_custom_op_toy_callback(gate, compile):
     """Check calculating ``callbacks`` using intermediate state values."""
+    from qibo.tensorflow import custom_operators as op
     import functools
     state = random_complex((2 ** 2,))
     mask = random_complex((2 ** 2,))
@@ -392,6 +404,7 @@ def check_unimplemented_error(func, *args): # pragma: no cover
 @pytest.mark.parametrize("nqubits", [3, 4, 7, 8, 9, 10])
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_transpose_state(nqubits, ndevices):
+    from qibo.tensorflow import custom_operators as op
     for _ in range(10):
         # Generate global qubits randomly
         all_qubits = np.arange(nqubits)
@@ -417,6 +430,7 @@ def test_transpose_state(nqubits, ndevices):
 
 @pytest.mark.parametrize("nqubits", [4, 5, 7, 8, 9, 10])
 def test_swap_pieces_zero_global(nqubits):
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
     target_state = K.cast(np.copy(state.numpy()))
     shape = (2, int(state.shape[0]) // 2)
@@ -442,6 +456,7 @@ def test_swap_pieces_zero_global(nqubits):
 
 @pytest.mark.parametrize("nqubits", [5, 7, 8, 9, 10])
 def test_swap_pieces(nqubits):
+    from qibo.tensorflow import custom_operators as op
     state = random_complex((2 ** nqubits,))
     target_state = K.cast(np.copy(state.numpy()), dtype=state.dtype)
     shape = (2, int(state.shape[0]) // 2)
@@ -481,6 +496,7 @@ def test_swap_pieces(nqubits):
 @pytest.mark.parametrize("dtype", [np.complex64, np.complex128])
 @pytest.mark.parametrize("compile", [False, True])
 def test_initial_state_gradient(dtype, compile): # pragma: no cover
+    from qibo.tensorflow import custom_operators as op
     # Test skipped due to `tf.tensor_scatter_nd_update` bug on GPU
     def grad_default(var):
         update = np.array([1]).astype(dtype)

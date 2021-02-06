@@ -43,7 +43,7 @@ else:
         import tensorflow as tf
         try:
             import qibo.tensorflow.custom_operators
-        except tf.errors.ModuleNotFoundError:
+        except tf.errors.NotFoundError:
             raise ModuleNotFoundError
         K = TensorflowBackend()
     except ModuleNotFoundError: # pragma: no cover
