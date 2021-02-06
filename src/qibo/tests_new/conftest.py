@@ -10,7 +10,7 @@ try:
     import tensorflow as tf
     try:
         import qibo.tensorflow.custom_operators
-    except tf.errors.NotFoundError:
+    except tf.errors.NotFoundError: # pragma: no cover
         raise ModuleNotFoundError
     _BACKENDS = "custom,defaulteinsum,matmuleinsum,"\
                 "numpy_defaulteinsum,numpy_matmuleinsum"
