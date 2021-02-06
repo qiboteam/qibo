@@ -197,6 +197,9 @@ def test_distributed_circuit_errors():
     # Attempt adding noise channel
     with pytest.raises(NotImplementedError):
         c.add(gates.PauliNoiseChannel(0, px=0.1, pz=0.1))
+    # Pass an invalid initial state
+    with pytest.raises(TypeError):
+        c("test")
 
 
 def test_unsupported_gates_errors():

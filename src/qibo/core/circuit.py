@@ -4,7 +4,7 @@ import collections
 from qibo import K
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.core import measurements
+from qibo.core import states, measurements
 from typing import List, Tuple
 
 
@@ -29,13 +29,9 @@ class Circuit(circuit.AbstractCircuit):
         super(Circuit, self).__init__(nqubits)
         self.param_tensor_types = K.tensor_types
         self._compiled_execute = None
-        self.check_initial_state_shape = True
-        self.shapes = {
-            'TENSOR': self.nqubits * (2,),
-            'FLAT': (2 ** self.nqubits,)
-        }
-        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
-                                            dtype='DTYPEINT')
+        self.state_cls = states.VectorState
+        self.tensor_shape = K.cast(nqubits * (2,), dtype='DTYPEINT')
+        self.flat_shape = K.cast((2 ** nqubits,), dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
         if gate.is_prepared and gate.nqubits != self.nqubits:
@@ -146,7 +142,7 @@ class Circuit(circuit.AbstractCircuit):
         self._final_state = None
         state = self.get_initial_state(initial_state)
         if not K.custom_gates:
-            state = K.reshape(state, self.shapes.get('TENSOR'))
+            state = K.reshape(state, self.tensor_shape)
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -156,10 +152,10 @@ class Circuit(circuit.AbstractCircuit):
                 callback.extend(results)
 
         if not K.custom_gates:
-            state = K.reshape(state, self.shapes.get('TENSOR_FLAT'))
+            state = K.reshape(state, self.flat_shape)
 
-        self._final_state = state
-        return state
+        self._final_state = self.state_cls.from_tensor(state, self.nqubits)
+        return self._final_state
 
     def _device_execute(self, initial_state=None):
         """Executes circuit on the specified device and checks for OOM errors."""
@@ -177,28 +173,22 @@ class Circuit(circuit.AbstractCircuit):
         results = []
         for _ in range(nreps):
             state = self._device_execute(initial_state)
-            if self.measurement_gate is not None:
-                results.append(self.measurement_gate(state, nshots=1)[0])
-                del(state)
+            if self.measurement_gate is None:
+                results.append(state.tensor)
             else:
-                results.append(K.copy(state))
-        results = K.stack(results, axis=0)
+                state.measure(self.measurement_gate, nshots=1)
+                results.append(state.measurements[0])
+                del(state)
 
+        results = K.stack(results, axis=0)
         if self.measurement_gate is None:
             return results
-
-        mgate_result = measurements.GateResult(
-                self.measurement_gate.qubits, decimal_samples=results)
-        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
+        state = self.state_cls(self.nqubits)
+        state.set_measurements(self.measurement_gate.qubits, results, self.measurement_tuples)
+        return state
 
     def execute(self, initial_state=None, nshots=None):
         """Propagates the state through the circuit applying the corresponding gates.
-
-        In default usage the full final state vector is returned.
-        If the circuit contains measurement gates and ``nshots`` is given, then
-        the final state is sampled and the samples are returned. We refer to
-        the :ref:`How to perform measurements? <measurement-examples>` example
-        for more details on how to perform measurements in Qibo.
 
         If channels are found within the circuits gates then Qibo will perform
         the simulation by repeating the circuit execution ``nshots`` times.
@@ -224,21 +214,21 @@ class Circuit(circuit.AbstractCircuit):
                 If ``nshots`` is ``None`` the measurement gates will be ignored.
 
         Returns:
+            A :class:`qibo.abstractions.states.AbstractState` object which
+            holds the final state vector as a tensor of shape ``(2 ** nqubits,)``
+            or the final density matrix as a tensor of shpae
+            ``(2 ** nqubits, 2 ** nqubits)``.
             If ``nshots`` is given and the circuit contains measurements
-                A :class:`qibo.core.measurements.CircuitResult` object that contains the measured bitstrings.
-            If ``nshots`` is ``None`` or the circuit does not contain measurements.
-                The final state vector as a tensor of shape ``(2 ** nqubits,)``.
+            the returned circuit object also contains the measured bitstrings.
         """
         if nshots is not None and self.repeated_execution:
             self._final_state = None
             return self._repeated_execute(nshots, initial_state)
 
         state = self._device_execute(initial_state)
-        if self.measurement_gate is None or nshots is None:
-            return state
-
-        mgate_result = self.measurement_gate(state, nshots)
-        return measurements.CircuitResult(self.measurement_tuples, mgate_result)
+        if self.measurement_gate is not None and nshots is not None:
+            state.measure(self.measurement_gate, nshots, self.measurement_tuples)
+        return state
 
     @property
     def final_state(self):
@@ -253,25 +243,13 @@ class Circuit(circuit.AbstractCircuit):
                                       "circuit is executed.")
         return self._final_state
 
-    def _cast_initial_state(self, state):
-        if isinstance(state, K.tensor_types):
-            return K.cast(state)
-        raise_error(TypeError, "Initial state type {} is not recognized."
-                                "".format(type(state)))
-
     def get_initial_state(self, state=None):
         """"""
         if state is None:
-            is_matrix = isinstance(self, DensityMatrixCircuit)
-            return K.initial_state(self.nqubits, is_matrix)
-        state = self._cast_initial_state(state)
-        if self.check_initial_state_shape:
-            shape = tuple(state.shape)
-            if shape != self.shapes.get('FLAT'):
-                raise_error(ValueError, "Invalid initial state shape {} for "
-                                        "circuit with {} qubits."
-                                        "".format(shape, self.nqubits))
-        return state
+            state = self.state_cls.zero_state(self.nqubits)
+        elif not isinstance(state, self.state_cls):
+            state = self.state_cls.from_tensor(state, self.nqubits)
+        return state.tensor
 
 
 class DensityMatrixCircuit(Circuit):
@@ -297,17 +275,14 @@ class DensityMatrixCircuit(Circuit):
     def __init__(self, nqubits):
         super(DensityMatrixCircuit, self).__init__(nqubits)
         self.density_matrix = True
-        self.shapes = {
-            'TENSOR': 2 * self.nqubits * (2,),
-            'VECTOR': (2 ** nqubits,),
-            'FLAT': 2 * (2 ** self.nqubits,)
-        }
-        self.shapes['TENSOR_FLAT'] = K.cast(self.shapes.get('FLAT'),
-                                            dtype='DTYPEINT')
+        self.state_cls = states.MatrixState
+        self.tensor_shape = K.cast(2 * nqubits * (2,), dtype='DTYPEINT')
+        self.flat_shape = K.cast(2 * (2 ** nqubits,), dtype='DTYPEINT')
 
-    def _cast_initial_state(self, state):
+    def get_initial_state(self, state=None):
         # Allow using state vectors as initial states but transform them
         # to the equivalent density matrix
-        if tuple(state.shape) == self.shapes['VECTOR']:
-            state = K.outer(state, K.conj(state))
-        return Circuit._cast_initial_state(self, state)
+        if state is not None and tuple(state.shape) == (2 ** self.nqubits,):
+            state = states.VectorState.from_tensor(state, self.nqubits)
+            return state.to_density_matrix().tensor
+        return super().get_initial_state(state)

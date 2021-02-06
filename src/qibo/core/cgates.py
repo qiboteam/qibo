@@ -213,8 +213,7 @@ class Collapse(BackendGate, gates.Collapse):
 
 
 class M(BackendGate, gates.M):
-    from qibo.core import measurements
-    from qibo.tensorflow import distutils
+    from qibo.core import measurements, states
 
     def __init__(self, *q, register_name: Optional[str] = None,
                  p0: Optional["ProbsType"] = None,
@@ -261,18 +260,14 @@ class M(BackendGate, gates.M):
                                 "representation.")
 
     def state_vector_call(self, state):
-        shape = self.nqubits * (2,)
-        x = K.reshape(K.square(K.abs(state)), shape)
-        return K.sum(x, axis=self.unmeasured_qubits)
+        return self.states.VectorState.from_tensor(state)
 
     def density_matrix_call(self, state):
-        shape = 2 * self.nqubits * (2,)
-        x = K.einsum(self.traceout, K.reshape(state, shape))
-        return K.cast(x, dtype='DTYPE')
+        return self.states.MatrixState.from_tensor(state)
 
     def sample(self, state, nshots):
         probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
-        probs = getattr(self, self._active_call)(state)
+        probs = state.probabilities(measurement_gate=self)
         probs = K.transpose(probs, axes=self.reduced_target_qubits)
         probs = K.reshape(probs, probs_dim)
         samples_dec = K.sample_measurements(probs, nshots)
@@ -284,12 +279,15 @@ class M(BackendGate, gates.M):
         return result
 
     def __call__(self, state, nshots):
-        if isinstance(state, self.distutils.DistributedState):
-            with K.device(state.device):
-                state = state.vector
-
-        if not self.is_prepared:
-            self.set_nqubits(state)
+        if isinstance(state, K.tensor_types):
+            if not self.is_prepared:
+                self.set_nqubits(state)
+            state = getattr(self, self._active_call)(state)
+        elif isinstance(state, self.states.AbstractState):
+            if not self.is_prepared:
+                self.set_nqubits(state.tensor)
+        else:
+            raise_error(TypeError)
 
         if math.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example

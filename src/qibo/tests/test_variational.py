@@ -24,7 +24,8 @@ def test_vqc(method, options, compile, filename):
 
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        return 1 - np.abs(np.conj(target).dot(circuit()))
+        state = circuit().tensor
+        return 1 - np.abs(np.dot(np.conj(target), state))
 
     nqubits = 6
     nlayers  = 4

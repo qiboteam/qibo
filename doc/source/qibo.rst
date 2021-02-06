@@ -54,9 +54,6 @@ General circuit models
 .. autoclass:: qibo.tensorflow.distcircuit.DistributedCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.distutils.DistributedState
-    :members:
-    :member-order: bysource
 
 
 .. _applicationspecific:
@@ -143,7 +140,7 @@ by multiplying their respective unitary matrices. This way each group results
 to a new :class:`qibo.abstractions.gates.Unitary` gate that is equivalent to applying
 all the gates in the group.
 
-.. autoclass:: qibo.abstractions.fusion.FusionGroup
+.. autoclass:: qibo.core.fusion.FusionGroup
     :members:
     :member-order: bysource
 
@@ -255,26 +252,36 @@ Note that all pre-coded Hamiltonians can be created as either
 
 _______________________
 
-.. _Measurements:
 
-Measurements
-------------
+.. _States:
 
-Qibo is a wave function simulator in the sense that propagates the state vector
-through the circuit applying the corresponding gates. In the default usage the
-result of executing a circuit is the full final state vector. However for
-specific applications it is useful to have measurement samples from the final
-wave function, instead of its full vector form.
-:class:`qibo.core.measurements.CircuitResult` provides a basic API for this.
+States
+------
 
-In order to execute measurements the user has to add the measurement gate
+Qibo circuits return :class:`qibo.abstractions.states.AbstractState` objects
+when executed. By default, Qibo works as a wave function simulator in the sense
+that propagates the state vector through the circuit applying the
+corresponding gates. In this default usage the result of a circuit execution
+is the full final state vector which can be accessed via the ``tensor``
+property of states.
+However for specific applications it is useful to have measurement samples
+from the final wave function, instead of its full vector form.
+To that end, :class:`qibo.abstractions.states.AbstractState` provides the
+:meth:`qibo.abstractions.states.AbstractState.samples` and
+:meth:`qibo.abstractions.states.AbstractState.frequencies` methods.
+
+In order to perform measurements the user has to add the measurement gate
 :class:`qibo.core.gates.M` to the circuit and then execute providing a number
-of shots. This will return a :class:`qibo.core.measurements.CircuitResult`
-object that is described bellow.
+of shots. If this is done, the :class:`qibo.abstractions.states.AbstractState`
+returned by the circuit will contain the measurement samples.
 
-For more information on measurements we refer to the related examples.
+For more information on measurements we refer to the
+:ref:`How to perform measurements? <measurement-examples>` example.
 
-.. autoclass:: qibo.core.measurements.CircuitResult
+.. autoclass:: qibo.abstractions.states.AbstractState
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.core.states.DistributedState
     :members:
     :member-order: bysource
 
