@@ -7,7 +7,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8]
     runs-on: ${{ matrix.os }}
     steps:
@@ -31,8 +31,13 @@ jobs:
       run: |
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
+      if: startsWith(matrix.os, 'windows') == 0
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
+    - name: Test for Windows
+      if: startsWith(matrix.os, 'windows')
+      run: |
+        pytest src/qibo/tests_new
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
       run: |
