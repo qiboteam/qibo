@@ -24,13 +24,6 @@ jobs:
       uses: mstksg/get-package@v1
       with:
         brew: libomp
-    - name: Patch requirements
-      run: |
-        TFSTRING=`grep "tensorflow" requirements.txt`
-        TFVERSION=`echo $TFSTRING | cut -f2 -d "<" | cut -f2 -d "="`
-        # ugly sed because macos does not accept -i
-        sed "s/$TFSTRING/tensorflow==$TFVERSION/" requirements.txt > new_requirements.txt
-        mv new_requirements.txt requirements.txt
     - name: Build linux wheels
       if: startsWith(matrix.os, 'ubuntu')
       run: docker run --rm -e PYTHON_VERSION -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/.github/scripts/build-linux.sh
