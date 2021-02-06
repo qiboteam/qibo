@@ -154,18 +154,18 @@ however the user may create the full state as follows:
     c = Circuit(32, {"/GPU:0": 1, "/GPU:1": 1})
     # Add gates
     c.add(...)
-    # Execute (``final_state`` will be a ``DistributedState``)
-    final_state = c()
-
-    # Access the full state (will double memory usage)
-    full_final_state = final_state.state()
-    # ``full_final_state`` is a ``tf.Tensor``
+    # Execute (``result`` will be a ``DistributedState``)
+    result = c()
 
     # ``DistributedState`` supports indexing and slicing
-    print(final_state[40])
+    print(result[40])
     # will print the 40th component of the final state vector
-    print(final_state[20:25])
+    print(result[20:25])
     # will print the components from 20 to 24 (inclusive)
+
+    # Access the full state (will double memory usage)
+    final_state = result.state()
+    # ``final_state`` is a ``tf.Tensor``
 
 
 Note that indexing a class:`qibo.tensorflow.distutils.DistributedState` uses

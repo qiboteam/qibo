@@ -90,9 +90,6 @@ class AbstractState(ABC):
             return self.numpy()
         return self.tensor
 
-    def summary(self):
-        return str(self.tensor)
-
     def __getitem__(self, i):
         if isinstance(i, int) and i >= self.nstates:
             raise_error(IndexError, "State index {} out of range.".format(i))
