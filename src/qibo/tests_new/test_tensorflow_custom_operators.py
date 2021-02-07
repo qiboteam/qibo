@@ -135,7 +135,7 @@ def test_apply_pauli_gate(nqubits, target, gate, compile):
 
     def apply_operator(state):
       qubits = qubits_tensor(nqubits, [target])
-      return getattr(op, "apply_{}".format(gate))(state, qubits, nqubits, target, get_threads())
+      return getattr(K.op, "apply_{}".format(gate))(state, qubits, nqubits, target, get_threads())
     if compile:
         apply_operator = K.compile(apply_operator)
     state = apply_operator(state)
