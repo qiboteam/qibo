@@ -12,7 +12,7 @@ try:
                 "numpy_defaulteinsum,numpy_matmuleinsum"
     _ENGINES = "numpy,tensorflow"
     import qibo.tensorflow.custom_operators as op
-    if not op._custom_operators_loaded:
+    if not op._custom_operators_loaded: # pragma: no cover
         _BACKENDS = "defaulteinsum,matmuleinsum,"\
                     "numpy_defaulteinsum,numpy_matmuleinsum"
     _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
@@ -81,7 +81,7 @@ def pytest_generate_tests(metafunc):
             if x in backends:
                 backends.remove(x)
 
-    if "custom" not in backends:
+    if "custom" not in backends: # pragma: no cover
         # for `test_tensorflow_custom_operators.py`
         module_name = "qibo.tests_new.test_tensorflow_custom_operators"
         if metafunc.module.__name__ == module_name:

@@ -135,7 +135,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.gather_nd(x, indices)
 
     def initial_state(self, nqubits, is_matrix=False):
-        if self.op is None:
+        if self.op is None: # pragma: no cover
             dim = 1 + is_matrix
             shape = dim * (2 ** nqubits,)
             idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))

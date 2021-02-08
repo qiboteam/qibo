@@ -20,7 +20,7 @@ try:
         # Import gradients
         from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
         _custom_operators_loaded = True
-    except tf.errors.NotFoundError:
+    except tf.errors.NotFoundError: # pragma: no cover
         log.warning("Custom operators not found, skipping custom operators load.")
 
 except ModuleNotFoundError: # pragma: no cover

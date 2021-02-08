@@ -43,7 +43,7 @@ else:
         import tensorflow as tf
         import qibo.tensorflow.custom_operators as op
         _CUSTOM_OPERATORS_LOADED = op._custom_operators_loaded
-        if not _CUSTOM_OPERATORS_LOADED:
+        if not _CUSTOM_OPERATORS_LOADED: # pragma: no cover
             log.warning("Removing custom operators from available backends.")
             AVAILABLE_BACKENDS.remove("custom")
         K = TensorflowBackend()
