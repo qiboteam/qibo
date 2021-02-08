@@ -27,7 +27,8 @@ class BackendGate(BaseBackendGate):
                         "Custom operator gates should not be used in compiled "
                         "mode.")
         super().__init__()
-        self.gate_op = K.op.apply_gate
+        if K.op:
+            self.gate_op = K.op.apply_gate
         self.qubits_tensor = None
         self.qubits_tensor_dm = None
         self.target_qubits_dm = None

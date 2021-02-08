@@ -41,7 +41,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = DummyModule()
-        self.op = DummyModule("apply_gate")
+        self.op = None#DummyModule("apply_gate")
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "

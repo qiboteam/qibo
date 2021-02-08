@@ -106,8 +106,10 @@ def pytest_generate_tests(metafunc):
                 metafunc.parametrize("accelerators", [None])
             else:
                 config = [(b, None) for b in backends]
-                config.extend([("custom", {dev[1:]: int(dev[0]) for dev in x.split("+")})
-                               for x in accelerators.split(",")])
+                if "custom" in backends:
+                    for x in accelerators.split(","):
+                        devdict = {dev[1:]: int(dev[0]) for dev in x.split("+")}
+                        config.append(("custom", devdict))
                 metafunc.parametrize("backend,accelerators", config)
         else:
             metafunc.parametrize("backend", backends)
