@@ -93,11 +93,11 @@ class MatrixGate(BackendGate):
         self.reprepare()
 
     def state_vector_call(self, state):
-        return self.gate_op(state, self.matrix, self.qubits_tensor,
+        return self.gate_op(state, self.matrix, self.qubits_tensor, # pylint: disable=E1121
                             self.nqubits, *self.target_qubits, get_threads())
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.matrix, self.qubits_tensor_dm,
+        state = self.gate_op(state, self.matrix, self.qubits_tensor_dm, # pylint: disable=E1121
                              2 * self.nqubits, *self.target_qubits, get_threads())
         adjmatrix = K.conj(self.matrix)
         state = self.gate_op(state, adjmatrix, self.qubits_tensor,
