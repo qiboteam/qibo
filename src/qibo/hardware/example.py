@@ -1,7 +1,7 @@
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
-from qibo.config import log
+from qibo.config import log, raise_error
 from qibo.hardware import gates, circuit
 from qibo.hardware.scheduler import TaskScheduler
 

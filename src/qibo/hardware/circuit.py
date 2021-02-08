@@ -1,3 +1,4 @@
+import copy
 import numpy as np
 from qibo.abstractions import circuit
 from qibo.config import raise_error
@@ -141,8 +142,8 @@ class Circuit(circuit.AbstractCircuit):
 
         raw_data = self.final_state.result()
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
-        it = np.sum(self.raw_data[ro_channel[0]] * cos)
-        qt = np.sum(self.raw_data[ro_channel[1]] * cos)
+        it = np.sum(raw_data[ro_channel[0]] * cos)
+        qt = np.sum(raw_data[ro_channel[1]] * cos)
         data = np.array([it, qt])
         ref_zero = np.array(self.qubit_config[qubit]["iq_state"]["0"])
         ref_one = np.array(self.qubit_config[qubit]["iq_state"]["1"])
