@@ -136,11 +136,12 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def initial_state(self, nqubits, is_matrix=False):
         if self.op is None:
-            state = self.backend.zeros(2 ** nqubits, dtype=self.dtypes('DTYPECPX'))
+            dim = 1 + is_matrix
+            shape = dim * (2 ** nqubits,)
+            idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))
+            state = self.backend.zeros(shape, dtype=self.dtypes('DTYPECPX'))
             update = self.backend.constant([1], dtype=self.dtypes('DTYPECPX'))
-            state = self.backend.tensor_scatter_nd_update(state,
-                        self.backend.constant([[0]], dtype=self.dtypes('DTYPEINT')),
-                        update)
+            state = self.backend.tensor_scatter_nd_update(state, idx, update)
             return state
         else:
             from qibo.config import get_threads
