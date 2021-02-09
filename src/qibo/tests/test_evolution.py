@@ -108,7 +108,7 @@ def test_trotterized_evolution(nqubits, solver, dt, accel=None, h=1.0):
 
 def test_trotterized_evolution_distributed():
     import qibo
-    if qibo.get_backend() != "custom":
+    if qibo.get_backend() != "custom": # pragma: no cover
         pytest.skip("Distributed circuit works only with custom backend.")
     test_trotterized_evolution(4, "exp", 1e-2, accel={"/GPU:0": 2})
 
