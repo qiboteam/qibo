@@ -154,8 +154,7 @@ def test_initial_state(accelerators):
                           ("rk45", False),
                           ("exp", True),
                           ("rk4", True),
-                          ("rk45", True),
-                          ("exp", True)])
+                          ("rk45", True)])
 def test_qaoa_execution(solver, trotter, accel=None):
     h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
     m = hamiltonians.X(4, trotter=trotter)
@@ -186,8 +185,8 @@ def test_qaoa_execution(solver, trotter, accel=None):
     np.testing.assert_allclose(final_state, target_state, atol=atol)
 
 
-def test_qaoa_distributed_execution():
-    test_qaoa_execution("exp", True, {"/GPU:0": 1, "/GPU:1": 1})
+def test_qaoa_distributed_execution(accelerators):
+    test_qaoa_execution("exp", True, accelerators)
 
 
 def test_qaoa_callbacks(accelerators):
