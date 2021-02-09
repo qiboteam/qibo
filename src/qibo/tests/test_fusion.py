@@ -11,6 +11,7 @@ from qibo.core import fusion
 def test_one_qubit_gate_multiplication(backend):
     """Check gate multiplication for one-qubit gates."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     gate1 = gates.X(0)
     gate2 = gates.H(0)
@@ -30,6 +31,7 @@ def test_one_qubit_gate_multiplication(backend):
     gate2 = gates.X(1)
     assert (gate1 @ gate2).__class__.__name__ == "I"
     assert (gate2 @ gate1).__class__.__name__ == "I"
+    qibo.set_backend(original_backend)
 
 
 def test_two_qubit_gate_multiplication(backend):
@@ -154,6 +156,8 @@ def test_fused_gate_calculation():
 def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators):
     """Check fused variational layer execution."""
     import qibo
+    if accelerators:
+        backend = "custom"
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
