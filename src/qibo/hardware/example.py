@@ -127,8 +127,7 @@ def main(qubit, ngates, nshots, address, username, password):
         scheduler.qpu = IcarusQ(address, username, password)
     else:
         # set hard=coded calibration data
-        from qibo.hardware import static
-        scheduler._qubit_config = static.calibration_placeholder
+        scheduler._qubit_config = scheduler.calibration_placeholder
 
     circuits = randomized_benchmark(qubit, ngates, scheduler)
 
