@@ -24,8 +24,8 @@ class TaskScheduler:
             "1": [0.009458352995780546, -0.008570922209494462]
         },
         "gates": {
-            "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.static.sampling_rate, 0, pulses.Rectangular())],
-            "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.static.sampling_rate, 90, pulses.Rectangular())],
+            "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.sampling_rate, 0, pulses.Rectangular())],
+            "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.sampling_rate, 90, pulses.Rectangular())],
         }
     }]
 
@@ -33,7 +33,7 @@ class TaskScheduler:
         self.qpu = qpu
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        sampling_rate = IcarusQ.static.sampling_rate
+        sampling_rate = IcarusQ.sampling_rate
         self._qubit_config = None
 
     def fetch_config(self):
