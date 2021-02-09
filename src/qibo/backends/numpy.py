@@ -2,25 +2,6 @@ from qibo.backends import abstract
 from qibo.config import raise_error, log
 
 
-class DummyModule:
-
-    def __init__(self, *names):
-        self.names = set(names)
-
-    def __getattr__(self, name):
-        if name in self.names:
-            return None
-        else: # pragma: no cover
-            raise_error(ValueError, "{} is not available in the numpy backend."
-                                    "".format(name))
-
-    def __enter__(self, *args):
-        pass
-
-    def __exit__(self, *args):
-        pass
-
-
 class NumpyBackend(abstract.AbstractBackend):
 
     def __init__(self):
@@ -40,8 +21,8 @@ class NumpyBackend(abstract.AbstractBackend):
         self.random = np.random
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
-        self.optimization = DummyModule()
-        self.op = DummyModule("apply_gate")
+        self.optimization = None
+        self.op = None
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
@@ -216,6 +197,14 @@ class NumpyBackend(abstract.AbstractBackend):
         return func
 
     def device(self, device_name):
+        class DummyModule:
+
+            def __enter__(self, *args):
+                pass
+
+            def __exit__(self, *args):
+                pass
+
         return DummyModule()
 
     def set_seed(self, seed):
