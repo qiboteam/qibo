@@ -46,7 +46,7 @@ def pytest_generate_tests(metafunc):
             pytest.skip("Distributed circuits require custom operators.")
 
     # skip parallel tests on Windows
-    if os.name == "nt":
+    if os.name == "nt": # pragma: no cover
         module_name = "qibo.tests.test_parallel"
         if metafunc.module.__name__ == module_name:
             pytest.skip("Multiprocessing is not available on Windows.")

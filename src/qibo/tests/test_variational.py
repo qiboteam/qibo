@@ -69,7 +69,7 @@ def test_vqe(method, options, compile, filename):
         if 'GPU' in qibo.get_device(): # pragma: no cover
             pytest.skip("unsupported configuration")
         import os
-        if os.name == 'nt':
+        if os.name == 'nt': # pragma: no cover
             pytest.skip("Parallel L-BFGS-B not supported on Windows.")
         qibo.set_threads(1)
 
@@ -115,7 +115,7 @@ def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
     from qibo.backends import AVAILABLE_BACKENDS
-    if "custom" not in AVAILABLE_BACKENDS:
+    if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
         pytest.skip("Custom backend not available.")
 
     original_backend = qibo.get_backend()
