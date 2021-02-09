@@ -8,7 +8,6 @@ from qibo import gates
 from qibo.core import fusion
 
 
-@pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
 def test_one_qubit_gate_multiplication(backend):
     """Check gate multiplication for one-qubit gates."""
     import qibo
@@ -33,7 +32,6 @@ def test_one_qubit_gate_multiplication(backend):
     assert (gate2 @ gate1).__class__.__name__ == "I"
 
 
-@pytest.mark.parametrize("backend", ["custom", "matmuleinsum"])
 def test_two_qubit_gate_multiplication(backend):
     """Check gate multiplication for two-qubit gates."""
     import qibo
@@ -150,9 +148,6 @@ def test_fused_gate_calculation():
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 4])
-@pytest.mark.parametrize(("backend", "accelerators"),
-                         [("custom", None), ("matmuleinsum", None),
-                          ("custom", {"/GPU:0": 1, "/GPU:1": 1})])
 def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators):
     """Check fused variational layer execution."""
     import qibo
@@ -177,7 +172,6 @@ def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators)
     qibo.set_backend("custom")
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_fuse_with_callback(accelerators):
     """Check entropy calculation in fused circuit."""
     from qibo import callbacks
@@ -199,7 +193,6 @@ def test_fuse_with_callback(accelerators):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("ngates", [10, 20, 40])
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 1, "/GPU:1": 1}])
 def test_fuse_random_circuits(nqubits, ngates, accelerators):
     """Check gate fusion in randomly generated circuits."""
     one_qubit_gates = [gates.RX, gates.RY, gates.RZ]

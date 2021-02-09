@@ -89,10 +89,11 @@ def test_entropy_numerical():
     np.testing.assert_allclose(result, target)
 
 
-@pytest.mark.parametrize("accelerators,dm",
-                         [(None, False), (None, True), (None, {"/GPU:0": 2})])
+@pytest.mark.parametrize("dm", [False, True])
 def test_entropy_in_circuit(accelerators, dm):
     """Check that entropy calculation works in circuit."""
+    if accelerators:
+        dm = False
     entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
     c = Circuit(2, accelerators=accelerators, density_matrix=dm)
     c.add(gates.CallbackGate(entropy))
@@ -110,12 +111,11 @@ def test_entropy_in_circuit(accelerators, dm):
     np.testing.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
 
 
-def test_entropy_in_distributed_circuit():
+def test_entropy_in_distributed_circuit(accelerators):
     """Check that various entropy configurations work in distributed circuit."""
     target_c = Circuit(2)
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
     target_state = target_c().numpy()
-    accelerators = {"/GPU:0": 1, "/GPU:1": 1}
 
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2, accelerators)
@@ -177,14 +177,13 @@ def test_entropy_in_compiled_circuit():
     c.add(gates.CallbackGate(entropy))
     c.compile()
     state = c()
-    qibo.set_backend("custom")
+    qibo.set_backend(original_backend)
 
     target = [0, 0, 1.0]
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_entropy_multiple_executions(accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
     entropy = callbacks.EntanglementEntropy([0])
@@ -222,10 +221,6 @@ def test_entropy_multiple_executions(accelerators):
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2},
-                                          {"/GPU:0": 2, "/GPU:1": 2},
-                                          {"/GPU:0": 3, "/GPU:1": 1,
-                                           "/GPU:2": 4}])
 def test_entropy_large_circuit(accelerators):
     """Check that entropy calculation works for variational like circuit."""
     thetas = np.pi * np.random.random((3, 8))
