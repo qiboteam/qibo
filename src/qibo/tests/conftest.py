@@ -28,13 +28,13 @@ def pytest_generate_tests(metafunc):
     if "accelerators" in metafunc.fixturenames:
         if "custom" in AVAILABLE_BACKENDS:
             accelerators = [None, {"/GPU:0": 1, "/GPU:1": 1}]
-        else:
+        else: # pragma: no cover
             accelerators = [None]
         metafunc.parametrize("accelerators", accelerators)
 
     if "backend" in metafunc.fixturenames:
         backends = ["custom", "defaulteinsum", "matmuleinsum"]
-        if "custom" not in AVAILABLE_BACKENDS:
+        if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
             backends.remove("custom")
         metafunc.parametrize("backend", backends)
 

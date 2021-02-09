@@ -68,8 +68,6 @@ def test_vqe(method, options, compile, filename):
     original_backend = qibo.get_backend()
     if method == "sgd" or compile:
         qibo.set_backend("matmuleinsum")
-    else:
-        qibo.set_backend("custom")
 
     original_threads = get_threads()
     if method == 'parallel_L-BFGS-B':
@@ -113,6 +111,10 @@ def test_vqe(method, options, compile, filename):
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
+    from qibo.backends import AVAILABLE_BACKENDS
+    if "custom" not in AVAILABLE_BACKENDS:
+        pytest.skip("Custom backend not available.")
+
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
 
@@ -137,7 +139,6 @@ def test_vqe_custom_gates_errors():
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_initial_state(accelerators):
     h = hamiltonians.TFIM(3, h=1.0, trotter=True)
     qaoa = models.QAOA(h, accelerators=accelerators)
@@ -147,15 +148,15 @@ def test_initial_state(accelerators):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("solver,trotter,accelerators",
-                         [("exp", False, None),
-                          ("rk4", False, None),
-                          ("rk45", False, None),
-                          ("exp", True, None),
-                          ("rk4", True, None),
-                          ("rk45", True, None),
-                          ("exp", True, {"/GPU:0": 1, "/GPU:1": 1})])
-def test_qaoa_execution(solver, trotter, accelerators):
+@pytest.mark.parametrize("solver,trotter",
+                         [("exp", False),
+                          ("rk4", False),
+                          ("rk45", False),
+                          ("exp", True),
+                          ("rk4", True),
+                          ("rk45", True),
+                          ("exp", True)])
+def test_qaoa_execution(solver, trotter, accel=None):
     h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
     m = hamiltonians.X(4, trotter=trotter)
     # Trotter and RK require small p's!
@@ -185,7 +186,9 @@ def test_qaoa_execution(solver, trotter, accelerators):
     np.testing.assert_allclose(final_state, target_state, atol=atol)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_qaoa_distributed_execution():
+    test_qaoa_execution("exp", True, {"/GPU:0": 1, "/GPU:1": 1})
+
 def test_qaoa_callbacks(accelerators):
     from qibo import callbacks
     # use ``Y`` Hamiltonian so that there are no errors
