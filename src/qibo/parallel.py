@@ -15,10 +15,6 @@ class ParallelResources:  # pragma: no cover
     import multiprocessing as mp
     if platform == 'darwin':
         mp.set_start_method('fork')  # enforce on Darwin
-    if os.name == 'nt':
-        from qibo.config import raise_error
-        raise_error(NotImplementedError, "Multiprocessing is not available "
-                                         "on Windows.")
 
     # private objects holding the state
     _instance = None

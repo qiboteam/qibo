@@ -174,12 +174,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     return loss(vparams, *args).numpy(), vparams.numpy()
 
 
-from qibo.parallel import _executor
-try:
-    from qibo.parallel import ParallelResources, _executor
-except NotImplementedError: # Windows
-    ParallelResources = None
-
+from qibo.parallel import ParallelResources, _executor
 class ParallelBFGS: # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
