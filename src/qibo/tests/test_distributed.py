@@ -399,14 +399,14 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
 
 
 @pytest.mark.parametrize("nqubits", [7, 8, 12, 13])
-@pytest.mark.parametrize("accelerators",
+@pytest.mark.parametrize("accel",
                          [{"/GPU:0": 2},
                           {"/GPU:0": 2, "/GPU:1": 2},
                           {"/GPU:0": 2, "/GPU:1": 5, "/GPU:2": 1}])
-def test_distributed_qft_execution(nqubits, accelerators):
+def test_distributed_qft_execution(nqubits, accel):
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
-    dist_c = models.QFT(nqubits, accelerators=accelerators)
+    dist_c = models.QFT(nqubits, accelerators=accel)
     c = models.QFT(nqubits)
 
     initial_state = utils.random_numpy_state(nqubits)
