@@ -10,10 +10,15 @@ class ParallelResources:  # pragma: no cover
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
     """
+    import os
     from sys import platform
     import multiprocessing as mp
     if platform == 'darwin':
         mp.set_start_method('fork')  # enforce on Darwin
+    if os.name == 'nt':
+        from qibo.config import raise_error
+        raise_error(NotImplementedError, "Multiprocessing is not available "
+                                         "on Windows.")
 
     # private objects holding the state
     _instance = None
