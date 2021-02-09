@@ -64,6 +64,7 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
 @pytest.mark.parametrize(test_names, test_values)
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
+    import qibo
     if method == 'parallel_L-BFGS-B':
         if 'GPU' in qibo.get_device(): # pragma: no cover
             pytest.skip("unsupported configuration")
@@ -72,7 +73,6 @@ def test_vqe(method, options, compile, filename):
             pytest.skip("Parallel L-BFGS-B not supported on Windows.")
         qibo.set_threads(1)
 
-    import qibo
     original_backend = qibo.get_backend()
     if method == "sgd" or compile:
         qibo.set_backend("matmuleinsum")
