@@ -180,7 +180,7 @@ def test_qaoa_execution(solver, trotter, accel=None):
             u = expm(-1j * p * h_matrix)
         target_state = u @ target_state
 
-    qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accelerators)
+    qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accel)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
     np.testing.assert_allclose(final_state, target_state, atol=atol)
@@ -188,6 +188,7 @@ def test_qaoa_execution(solver, trotter, accel=None):
 
 def test_qaoa_distributed_execution():
     test_qaoa_execution("exp", True, {"/GPU:0": 1, "/GPU:1": 1})
+
 
 def test_qaoa_callbacks(accelerators):
     from qibo import callbacks

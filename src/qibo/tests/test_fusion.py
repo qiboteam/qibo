@@ -35,6 +35,7 @@ def test_one_qubit_gate_multiplication(backend):
 def test_two_qubit_gate_multiplication(backend):
     """Check gate multiplication for two-qubit gates."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta, phi = 0.1234, 0.5432
     gate1 = gates.fSim(0, 1, theta=theta, phi=phi)
@@ -52,7 +53,7 @@ def test_two_qubit_gate_multiplication(backend):
     with pytest.raises(NotImplementedError):
         final_gate = gate1 @ gates.SWAP(0, 2)
     # Reset backend for other tests
-    qibo.set_backend("custom")
+    qibo.set_backend(original_backend)
 
 
 def test_from_queue_single_group():
@@ -120,11 +121,13 @@ def test_fusion_errors():
         group.calculate()
 
     # Fuse distributed circuit after gates are set
-    c = Circuit(4, accelerators={"/GPU:0": 2})
-    c.add((gates.H(i) for i in range(4)))
-    final_state = c()
-    with pytest.raises(RuntimeError):
-        fused_c = c.fuse()
+    import qibo
+    if qibo.get_backend() == "custom":
+        c = Circuit(4, accelerators={"/GPU:0": 2})
+        c.add((gates.H(i) for i in range(4)))
+        final_state = c()
+        with pytest.raises(RuntimeError):
+            fused_c = c.fuse()
 
 
 def test_fused_gate_calculation():
@@ -151,6 +154,7 @@ def test_fused_gate_calculation():
 def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators):
     """Check fused variational layer execution."""
     import qibo
+    original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
@@ -167,9 +171,7 @@ def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators)
     target_state = c()
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)
-
-    # Reset backend for next tests
-    qibo.set_backend("custom")
+    qibo.set_backend(original_backend)
 
 
 def test_fuse_with_callback(accelerators):
