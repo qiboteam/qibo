@@ -15,10 +15,6 @@ class ParallelResources:  # pragma: no cover
     import multiprocessing as mp
     if platform == 'darwin':
         mp.set_start_method('fork')  # enforce on Darwin
-    elif platform == 'win32': # pragma: no cover
-        from qibo.config import raise_error
-        raise_error(NotImplementedError,
-            "Parallel evaluation not supported on Windows")
 
     # private objects holding the state
     _instance = None
@@ -30,6 +26,11 @@ class ParallelResources:  # pragma: no cover
 
     def __new__(cls, *args, **kwargs):
         """Creates singleton instance."""
+        if platform == 'win32': # pragma: no cover
+            from qibo.config import raise_error
+            raise_error(NotImplementedError,
+                "Parallel evaluation not supported on Windows")
+
         if cls._instance is None:
             cls._instance = super(ParallelResources, cls).__new__(
                 cls, *args, **kwargs)
