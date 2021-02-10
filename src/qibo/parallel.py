@@ -26,7 +26,7 @@ class ParallelResources:  # pragma: no cover
 
     def __new__(cls, *args, **kwargs):
         """Creates singleton instance."""
-        if platform == 'win32': # pragma: no cover
+        if self.platform == 'win32': # pragma: no cover
             from qibo.config import raise_error
             raise_error(NotImplementedError,
                 "Parallel evaluation not supported on Windows")
