@@ -2,8 +2,7 @@ import copy
 import numpy as np
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses
-from qibo.hardware.qpu import IcarusQ
+from qibo.hardware import pulses, experiment
 
 
 class PulseSequence:
@@ -18,10 +17,10 @@ class PulseSequence:
     """
     def __init__(self, pulses):
         self.pulses = pulses
-        self.nchannels = IcarusQ.nchannels
-        self.sample_size = IcarusQ.sample_size
-        self.sampling_rate = IcarusQ.sampling_rate
-        self.file_dir = IcarusQ.pulse_file
+        self.nchannels = experiment.static.nchannels
+        self.sample_size = experiment.static.sample_size
+        self.sampling_rate = experiment.static.sampling_rate
+        self.file_dir = experiment.static.pulse_file
 
         self.duration = self.sample_size / self.sampling_rate
         self.time = np.linspace(0, self.duration, num=self.sample_size)
@@ -134,14 +133,14 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def parse_result(self, qubit):
-        final = IcarusQ.sample_size / IcarusQ.ADC_sampling_rate
-        step = 1 / IcarusQ.ADC_sampling_rate
+        final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
+        step = 1 / experiment.static.ADC_sampling_rate
         ADC_time_array = np.arange(0, final, step)
 
-        static_data = IcarusQ.qubit_static_parameters[self.qubit_config[qubit]["id"]]
+        static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonator_frequency"] - IcarusQ.lo_frequency # downconversion
+        IF_frequency = static_data["resonator_frequency"] - experiment.static.lo_frequency # downconversion
 
         raw_data = self.final_state.result()
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)

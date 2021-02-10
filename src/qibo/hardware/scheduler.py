@@ -1,39 +1,16 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
 from qibo.config import raise_error
-from qibo.hardware import pulses
-from qibo.hardware.qpu import IcarusQ
+from qibo.hardware import pulses, experiment
 from qibo.hardware.circuit import PulseSequence
 
 
 class TaskScheduler:
     """Scheduler class for organizing FPGA calibration and pulse sequence execution."""
-    # Temporary calibration result placeholder when actual calibration is not available
-    calibration_placeholder = [{
-        "id": 0,
-        "qubit_frequency": 3.0473825e9,
-        "qubit_amplitude": 0.75 / 2,
-        "T1": 5.89e-6,
-        "T2": 1.27e-6,
-        "T2_Spinecho": 3.5e-6,
-        "pi-pulse": 24.78e-9,
-        "drive_channel": 3,
-        "readout_channel": (0, 1),
-        "iq_state": {
-            "0": [0.016901687416102748, -0.006633150376482062],
-            "1": [0.009458352995780546, -0.008570922209494462]
-        },
-        "gates": {
-            "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.sampling_rate, 0, pulses.Rectangular())],
-            "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - IcarusQ.sampling_rate, 90, pulses.Rectangular())],
-        }
-    }]
 
-    def __init__(self, qpu=None):
-        self.qpu = qpu
+    def __init__(self):
         self._executor = ThreadPoolExecutor(max_workers=1)
         self._pi_trig = None # NIY
-        sampling_rate = IcarusQ.sampling_rate
         self._qubit_config = None
 
     def fetch_config(self):
@@ -79,13 +56,14 @@ class TaskScheduler:
                                        nshots=nshots)
         return future
 
-    def _execute_pulse_sequence(self, pulse_sequence, nshots):
+    @staticmethod
+    def _execute_pulse_sequence(pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
-        self.qpu.upload(wfm)
-        self.qpu.start()
+        experiment.upload(wfm)
+        experiment.start()
         # NIY
         #self._pi_trig.trigger(shots, delay=50e6)
         # OPC?
-        self.qpu.stop()
-        res = self.qpu.download()
+        experiment.stop()
+        res = experiment.download()
         return res

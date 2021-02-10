@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from qibo.config import log, raise_error
-from qibo.hardware import gates, circuit
+from qibo.hardware import gates, circuit, experiment
 from qibo.hardware.scheduler import TaskScheduler
 
 
@@ -123,11 +123,10 @@ def randomized_benchmark(q, ngates, scheduler=None):
 def main(qubit, ngates, nshots, address, username, password):
     scheduler = TaskScheduler()
     if address is not None:
-        from qibo.hardware.qpu import IcarusQ
-        scheduler.qpu = IcarusQ(address, username, password)
+        experiment.connect(address, username, password)
     else:
         # set hard=coded calibration data
-        scheduler._qubit_config = scheduler.calibration_placeholder
+        scheduler._qubit_config = experiment.static.calibration_placeholder
 
     circuits = randomized_benchmark(qubit, ngates, scheduler)
 
