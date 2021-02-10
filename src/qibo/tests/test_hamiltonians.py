@@ -357,7 +357,6 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     np.testing.assert_allclose(trotter_matmul, target_matmul)
 
 
-@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
 def test_trotter_hamiltonian_three_qubit_term(backend):
     """Test creating ``TrotterHamiltonian`` with three qubit term."""
     import qibo

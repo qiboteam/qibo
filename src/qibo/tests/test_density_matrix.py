@@ -4,11 +4,10 @@ import qibo
 from qibo import models, gates, callbacks
 from qibo.tests import utils
 
-_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum"]
+
 _atol = 1e-8
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_hgate_application_twoqubit(backend):
     """Check applying H gate to two qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -30,7 +29,6 @@ def test_hgate_application_twoqubit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_rygate_application_twoqubit(backend):
     """Check applying non-hermitian one qubit gate to one qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -50,7 +48,6 @@ def test_rygate_application_twoqubit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("gatename,gatekwargs",
                          [("H", {}), ("X", {}), ("Y", {}), ("Z", {}), ("I", {}),
                           ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
@@ -76,7 +73,6 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("gatename,gatekwargs",
                          [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
                           ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
@@ -103,7 +99,6 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_toffoli_gate(backend):
     """Check applying Toffoli to three qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -122,7 +117,6 @@ def test_toffoli_gate(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [1, 2, 3])
 def test_unitary_gate(backend, nqubits):
     """Check applying `gates.Unitary` to density matrix."""
@@ -148,7 +142,6 @@ def test_unitary_gate(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_cu1gate_application_twoqubit(backend):
     """Check applying two qubit gate to three qubit density matrix."""
     original_backend = qibo.get_backend()
@@ -174,7 +167,6 @@ def test_cu1gate_application_twoqubit(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_flatten_density_matrix(backend):
     """Check ``Flatten`` gate works with density matrices."""
     original_backend = qibo.get_backend()
@@ -188,7 +180,6 @@ def test_flatten_density_matrix(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_dm(backend):
     """Check passing density matrix as initial state to a circuit."""
     original_backend = qibo.get_backend()
@@ -217,7 +208,6 @@ def test_circuit_dm(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_by_no_effect(backend):
     """Check controlled_by SWAP that should not be applied."""
     original_backend = qibo.get_backend()
@@ -239,7 +229,6 @@ def test_controlled_by_no_effect(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_controlled_with_effect(backend):
     """Check controlled_by SWAP that should be applied."""
     original_backend = qibo.get_backend()
@@ -264,7 +253,6 @@ def test_controlled_with_effect(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [4, 5])
 def test_controlled_by_random(backend, nqubits):
     """Check controlled_by method on gate."""
@@ -286,7 +274,6 @@ def test_controlled_by_random(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_density_matrix_circuit_initial_state(backend):
     """Check that circuit transforms state vector initial state to density matrix."""
     import tensorflow as tf
@@ -304,7 +291,6 @@ def test_density_matrix_circuit_initial_state(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_bitflip_noise(backend):
     """Test `gates.PauliNoiseChannel` on random initial density matrix."""
     original_backend = qibo.get_backend()
@@ -324,7 +310,6 @@ def test_bitflip_noise(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_multiple_noise(backend):
     """Test `gates.NoiseChnanel` with multiple noise probabilities."""
     from qibo import matrices
@@ -349,7 +334,6 @@ def test_multiple_noise(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_reexecution(backend):
     """Test re-executing a circuit with `gates.NoiseChnanel`."""
     original_backend = qibo.get_backend()
@@ -365,7 +349,6 @@ def test_circuit_reexecution(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("tfmatrices", [False, True])
 @pytest.mark.parametrize("oncircuit", [False, True])
 def test_general_channel(backend, tfmatrices, oncircuit):
@@ -416,7 +399,6 @@ def test_controlled_by_channel():
         gates.KrausChannel(config).controlled_by(1)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_krauss_channel_errors(backend):
     """Test errors raised by `gates.KrausChannel`."""
     original_backend = qibo.get_backend()
@@ -435,7 +417,6 @@ def test_krauss_channel_errors(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("density_matrix", [True, False])
 def test_unitary_channel(backend, density_matrix):
     """Test creating `gates.UnitaryChannel` from matrices and errors."""
@@ -503,10 +484,9 @@ def test_circuit_with_noise_gates():
     assert noisy_c.depth == 4
     assert noisy_c.ngates == 7
     for i in [1, 3, 5, 6]:
-        assert isinstance(noisy_c.queue[i], gates.PauliNoiseChannel)
+        assert noisy_c.queue[i].__class__.__name__ == "PauliNoiseChannel"
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_with_noise_execution(backend):
     """Check ``circuit.with_noise()`` execution."""
     original_backend = qibo.get_backend()
@@ -527,7 +507,6 @@ def test_circuit_with_noise_execution(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_with_noise_with_measurements(backend):
     """Check ``circuit.with_noise() when using measurement noise."""
     original_backend = qibo.get_backend()
@@ -549,7 +528,6 @@ def test_circuit_with_noise_with_measurements(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_circuit_with_noise_noise_map(backend):
     """Check ``circuit.with_noise() when giving noise map."""
     original_backend = qibo.get_backend()
@@ -597,7 +575,6 @@ def test_circuit_with_noise_exception():
         noisy_c = c.with_noise((0.2, 0.3, 0.0))
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_density_matrix_measurement(backend):
     """Check measurement gate on density matrices."""
     from qibo.tests.test_measurements import assert_results
@@ -620,7 +597,6 @@ def test_density_matrix_measurement(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
     from qibo.tests.test_measurements import assert_results
@@ -660,7 +636,6 @@ def test_density_matrix_circuit_measurement(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits,targets,results",
                          [(2, [1], [0]), (3, [1], 0), (4, [1, 3], [0, 1]),
                           (5, [0, 3, 4], [1, 1, 0])])
@@ -681,7 +656,6 @@ def test_collapse_gate(backend, nqubits, targets, results):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_reset_channel(backend):
     """Check ``gates.ResetChannel`` on a 3-qubit random density matrix."""
     original_backend = qibo.get_backend()
@@ -705,7 +679,6 @@ def test_reset_channel(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("t1,t2,time,excpop",
                          [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)])
 def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
@@ -752,7 +725,6 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("t1,t2,time,excpop",
                          [(1.0, 0.5, 1.5, 1.5), (1.0, 0.5, -0.5, 0.5),
                           (1.0, -0.5, 1.5, 0.5), (-1.0, 0.5, 1.5, 0.5),
@@ -766,7 +738,6 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_variational_layer(backend, nqubits):
     original_backend = qibo.get_backend()
@@ -795,7 +766,6 @@ def test_variational_layer(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("backend", _BACKENDS)
 def test_entanglement_entropy(backend):
     """Check that entanglement entropy calculation works for density matrices."""
     original_backend = qibo.get_backend()

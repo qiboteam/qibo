@@ -2,7 +2,6 @@
 Define the default circuit, constants and types.
 """
 import os
-import blessings
 import logging
 import warnings
 
@@ -70,30 +69,15 @@ def set_threads(num_threads):
 
 
 # Configuration for logging mechanism
-t = blessings.Terminal()
-
-
-class CustomColorHandler(logging.StreamHandler):
-    """Custom color handler for logging algorithm."""
-
-    colors = {
-        logging.DEBUG: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold},
-        logging.INFO: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_green},
-        logging.WARNING: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_yellow},
-        logging.ERROR: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_red, '%(message)s': t.bold},
-        logging.CRITICAL: {'[Qibo|%(levelname)s|%(asctime)s]:': t.bold_white_on_red, '%(message)s': t.bold},
-    }
-
+class CustomHandler(logging.StreamHandler):
+    """Custom handler for logging algorithm."""
     def format(self, record):
-        """Format the record with specific color."""
-        levelcolors = self.colors[record.levelno]
+        """Format the record with specific format."""
         fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
-        for s, subs in levelcolors.items():
-            fmt = fmt.replace(s, subs(s))
         return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
 
 
 # allocate logger object
 log = logging.getLogger(__name__)
 log.setLevel(logging.DEBUG)
-log.addHandler(CustomColorHandler())
+log.addHandler(CustomHandler())

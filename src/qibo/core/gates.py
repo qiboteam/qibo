@@ -56,7 +56,11 @@ class BackendGate(BaseBackendGate):
             lambda x: K.cast(x, dtype='DTYPEINT'))
 
     def set_nqubits(self, state):
-        self.nqubits = len(tuple(state.shape)) // (1 + self.density_matrix)
+        shape = tuple(state.shape)
+        if len(shape) == 1 + self.density_matrix: # pragma: no cover
+            self.nqubits = int(math.log2(shape[0]))
+        else:
+            self.nqubits = len(tuple(state.shape)) // (1 + self.density_matrix)
         self.prepare()
 
     def state_vector_call(self, state):
@@ -108,6 +112,16 @@ class BackendGate(BaseBackendGate):
                                 K.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
         return state
+
+    def __call__(self, state):
+        if not self.is_prepared:
+            self.set_nqubits(state)
+        original_shape = state.shape
+        if len(tuple(original_shape)) == 1 + self.density_matrix: # pragma: no cover
+            tensor_shape = (1 + self.density_matrix) * self.nqubits * (2,)
+            state = K.reshape(state, tensor_shape)
+        state = getattr(self, self._active_call)(state)
+        return K.reshape(state, original_shape)
 
 
 class H(BackendGate, gates.H):

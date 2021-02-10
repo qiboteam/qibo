@@ -14,8 +14,8 @@ Installing with pip
 -------------------
 
 The installation using ``pip`` is the recommended approach to install Qibo.
-We provide precompiled packages for linux x86/64 and macosx 10.15 or greater
-for multiple Python versions.
+We provide precompiled packages for linux x86/64, macosx 10.15 or greater
+and Windows for multiple Python versions.
 
 Make sure you have Python 3.6 or greater, then
 use ``pip`` to install ``qibo`` with:
@@ -30,6 +30,9 @@ dependencies for Qibo.
 .. note::
     The ``pip`` packages for linux are compiled with CUDA support, so if your
     system has a NVIDIA GPU, Qibo will perform calculations on GPU.
+
+.. note::
+    The ``pip`` packages for Windows do not provide the ``custom`` backend.
 
 .. _installing-from-source:
 

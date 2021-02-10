@@ -80,12 +80,11 @@ def test_state_time_dependent_evolution_final_state(nqubits=2, dt=1e-2):
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
 
-@pytest.mark.parametrize("nqubits,solver,accelerators,dt",
-                         [(3, "exp", None, 1e-3),
-                          (4, "exp", None, 1e-3),
-                          (4, "rk45", None, 1e-3),
-                          (4, "exp", {"/GPU:0": 2}, 1e-2)])
-def test_trotterized_evolution(nqubits, solver, accelerators, dt, h=1.0):
+@pytest.mark.parametrize("nqubits,solver,dt",
+                         [(3, "exp", 1e-3),
+                          (4, "exp", 1e-3),
+                          (4, "rk45", 1e-3)])
+def test_trotterized_evolution(nqubits, solver, dt, accel=None, h=1.0):
     """Test state evolution using trotterization of ``TrotterHamiltonian``."""
     atol = 1e-4 if solver == "exp" else 1e-2
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
@@ -98,13 +97,20 @@ def test_trotterized_evolution(nqubits, solver, accelerators, dt, h=1.0):
     checker = TimeStepChecker(target_psi, atol=atol)
     evolution = models.StateEvolution(ham, dt, solver=solver,
                                       callbacks=[checker],
-                                      accelerators=accelerators)
+                                      accelerators=accel)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
     # Change dt
-    evolution = models.StateEvolution(ham, dt / 10, accelerators=accelerators)
+    evolution = models.StateEvolution(ham, dt / 10, accelerators=accel)
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
     assert_states_equal(final_psi, target_psi[-1], atol=atol)
+
+
+def test_trotterized_evolution_distributed():
+    import qibo
+    if qibo.get_backend() != "custom": # pragma: no cover
+        pytest.skip("Distributed circuit works only with custom backend.")
+    test_trotterized_evolution(4, "exp", 1e-2, accel={"/GPU:0": 2})
 
 
 def test_hamiltonian_t():
@@ -268,11 +274,8 @@ def test_trotter_hamiltonian_t(nqubits, h=1.0, dt=1e-3):
         np.testing.assert_allclose(local_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("nqubits,accelerators,dt",
-                         [(3, None, 1e-3),
-                          (4, None, 1e-3),
-                          (4, {"/GPU:0": 2}, 1e-2)])
-def test_trotterized_adiabatic_evolution(nqubits, accelerators, dt):
+@pytest.mark.parametrize("nqubits,dt", [(3, 1e-3), (4, 1e-2)])
+def test_trotterized_adiabatic_evolution(accelerators, nqubits, dt):
     """Test adiabatic evolution using trotterization of ``TrotterHamiltonian``."""
     dense_h0 = hamiltonians.X(nqubits)
     dense_h1 = hamiltonians.TFIM(nqubits)
