@@ -227,7 +227,7 @@ def test_entropy_multiple_executions(accelerators):
 def test_entropy_large_circuit(accel):
     """Check that entropy calculation works for variational like circuit."""
     import qibo
-    if qibo.get_backend() != "custom" and accelerators: # pragma: no cover
+    if qibo.get_backend() != "custom" and accel: # pragma: no cover
         pytest.skip("Distributed circuit requires custom operators.")
 
     thetas = np.pi * np.random.random((3, 8))
