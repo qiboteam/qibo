@@ -65,16 +65,19 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     import qibo
+    if method == 'parallel_L-BFGS-B':
+        if 'GPU' in qibo.get_device(): # pragma: no cover
+            pytest.skip("unsupported configuration")
+        import os
+        if os.name == 'nt': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B not supported on Windows.")
+        qibo.set_threads(1)
+
     original_backend = qibo.get_backend()
     if method == "sgd" or compile:
         qibo.set_backend("matmuleinsum")
 
     original_threads = get_threads()
-    if method == 'parallel_L-BFGS-B':
-        if 'GPU' in qibo.get_device(): # pragma: no cover
-            pytest.skip("unsupported configuration")
-        qibo.set_threads(1)
-
     nqubits = 6
     layers  = 4
 
@@ -112,7 +115,7 @@ def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
     from qibo.backends import AVAILABLE_BACKENDS
-    if "custom" not in AVAILABLE_BACKENDS:
+    if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
         pytest.skip("Custom backend not available.")
 
     original_backend = qibo.get_backend()

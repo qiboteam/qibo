@@ -3,6 +3,7 @@ conftest.py
 
 Pytest fixtures.
 """
+import os
 import sys
 import pytest
 
@@ -43,3 +44,9 @@ def pytest_generate_tests(metafunc):
     if metafunc.module.__name__ == module_name:
         if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
             pytest.skip("Distributed circuits require custom operators.")
+
+    # skip parallel tests on Windows
+    if os.name == "nt": # pragma: no cover
+        module_name = "qibo.tests.test_parallel"
+        if metafunc.module.__name__ == module_name:
+            pytest.skip("Multiprocessing is not available on Windows.")

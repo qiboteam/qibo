@@ -10,6 +10,7 @@ class ParallelResources:  # pragma: no cover
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
     """
+    import os
     from sys import platform
     import multiprocessing as mp
     if platform == 'darwin':

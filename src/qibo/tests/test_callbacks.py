@@ -221,8 +221,15 @@ def test_entropy_multiple_executions(accelerators):
     np.testing.assert_allclose(entropy[:].numpy(), target, atol=_atol)
 
 
-def test_entropy_large_circuit(accelerators):
+@pytest.mark.parametrize("accel", [None, {"/GPU:0": 2},
+                                   {"/GPU:0": 2, "/GPU:1": 2},
+                                   {"/GPU:0": 3, "/GPU:1": 1, "/GPU:2": 4}])
+def test_entropy_large_circuit(accel):
     """Check that entropy calculation works for variational like circuit."""
+    import qibo
+    if qibo.get_backend() != "custom" and accelerators: # pragma: no cover
+        pytest.skip("Distributed circuit requires custom operators.")
+
     thetas = np.pi * np.random.random((3, 8))
     target_entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
     c1 = Circuit(8)
@@ -245,7 +252,7 @@ def test_entropy_large_circuit(accelerators):
     e3 = target_entropy(state3)
 
     entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
-    c = Circuit(8, accelerators)
+    c = Circuit(8, accel)
     c.add(gates.CallbackGate(entropy))
     c.add((gates.RY(i, thetas[0, i]) for i in range(8)))
     c.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
