@@ -65,18 +65,19 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
 def test_vqe(method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     import qibo
-    original_backend = qibo.get_backend()
-    if method == "sgd" or compile:
-        qibo.set_backend("matmuleinsum")
-    else:
-        qibo.set_backend("custom")
-
-    original_threads = get_threads()
     if method == 'parallel_L-BFGS-B':
         if 'GPU' in qibo.get_device(): # pragma: no cover
             pytest.skip("unsupported configuration")
+        import os
+        if os.name == 'nt': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B not supported on Windows.")
         qibo.set_threads(1)
 
+    original_backend = qibo.get_backend()
+    if method == "sgd" or compile:
+        qibo.set_backend("matmuleinsum")
+
+    original_threads = get_threads()
     nqubits = 6
     layers  = 4
 
@@ -113,6 +114,10 @@ def test_vqe(method, options, compile, filename):
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
     import qibo
+    from qibo.backends import AVAILABLE_BACKENDS
+    if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
+        pytest.skip("Custom backend not available.")
+
     original_backend = qibo.get_backend()
     qibo.set_backend("custom")
 
@@ -137,7 +142,6 @@ def test_vqe_custom_gates_errors():
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
 def test_initial_state(accelerators):
     h = hamiltonians.TFIM(3, h=1.0, trotter=True)
     qaoa = models.QAOA(h, accelerators=accelerators)
@@ -147,15 +151,14 @@ def test_initial_state(accelerators):
     np.testing.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("solver,trotter,accelerators",
-                         [("exp", False, None),
-                          ("rk4", False, None),
-                          ("rk45", False, None),
-                          ("exp", True, None),
-                          ("rk4", True, None),
-                          ("rk45", True, None),
-                          ("exp", True, {"/GPU:0": 1, "/GPU:1": 1})])
-def test_qaoa_execution(solver, trotter, accelerators):
+@pytest.mark.parametrize("solver,trotter",
+                         [("exp", False),
+                          ("rk4", False),
+                          ("rk45", False),
+                          ("exp", True),
+                          ("rk4", True),
+                          ("rk45", True)])
+def test_qaoa_execution(solver, trotter, accel=None):
     h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
     m = hamiltonians.X(4, trotter=trotter)
     # Trotter and RK require small p's!
@@ -179,13 +182,16 @@ def test_qaoa_execution(solver, trotter, accelerators):
             u = expm(-1j * p * h_matrix)
         target_state = u @ target_state
 
-    qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accelerators)
+    qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accel)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
     np.testing.assert_allclose(final_state, target_state, atol=atol)
 
 
-@pytest.mark.parametrize("accelerators", [None, {"/GPU:0": 2}])
+def test_qaoa_distributed_execution(accelerators):
+    test_qaoa_execution("exp", True, accelerators)
+
+
 def test_qaoa_callbacks(accelerators):
     from qibo import callbacks
     # use ``Y`` Hamiltonian so that there are no errors
