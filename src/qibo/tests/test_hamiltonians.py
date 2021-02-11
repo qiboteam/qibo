@@ -126,6 +126,10 @@ def test_hamiltonian_matmul(numpy):
     np.testing.assert_allclose(H1 @ v, m1.dot(v))
     np.testing.assert_allclose(H1 @ m, m1 @ m)
 
+    from qibo.core.states import VectorState
+    state = VectorState.from_tensor(v)
+    np.testing.assert_allclose(H1 @ state, m1.dot(v))
+
     with pytest.raises(ValueError):
         H1 @ np.zeros((8, 8, 8), dtype=m1.dtype)
     with pytest.raises(NotImplementedError):
@@ -337,17 +341,22 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     dense_ham = TFIM(nqubits, h=1.0)
 
     state = utils.random_tensorflow_complex((2 ** nqubits,))
-    trotter_ev = dense_ham.expectation(state, normalize)
+    trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(trotter_ev, target_ev)
 
     state = utils.random_numpy_complex((2 ** nqubits,))
-    trotter_ev = dense_ham.expectation(state, normalize)
+    trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(trotter_ev, target_ev)
 
+    from qibo.core.states import VectorState
+    state = VectorState.from_tensor(state)
+    trotter_matmul = local_ham @ state
+    target_matmul = dense_ham @ state
+    np.testing.assert_allclose(trotter_matmul, target_matmul)
 
-@pytest.mark.parametrize("backend", ["custom", "defaulteinsum", "matmuleinsum"])
+
 def test_trotter_hamiltonian_three_qubit_term(backend):
     """Test creating ``TrotterHamiltonian`` with three qubit term."""
     import qibo

@@ -41,6 +41,11 @@ else:
     try:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
         import tensorflow as tf
+        import qibo.tensorflow.custom_operators as op
+        _CUSTOM_OPERATORS_LOADED = op._custom_operators_loaded
+        if not _CUSTOM_OPERATORS_LOADED: # pragma: no cover
+            log.warning("Removing custom operators from available backends.")
+            AVAILABLE_BACKENDS.remove("custom")
         K = TensorflowBackend()
     except ModuleNotFoundError: # pragma: no cover
         # case not tested because CI has tf installed
@@ -105,6 +110,11 @@ if _BACKEND_NAME != "tensorflow": # pragma: no cover
     log.warning("{} does not support Qibo custom operators and GPU. "
                 "Einsum will be used to apply gates on CPU."
                 "".format(_BACKEND_NAME))
+    set_backend("defaulteinsum")
+
+
+if _BACKEND_NAME == "tensorflow" and not _CUSTOM_OPERATORS_LOADED: # pragma: no cover
+    log.warning("Einsum will be used to apply gates with tensorflow.")
     set_backend("defaulteinsum")
 
 

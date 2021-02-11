@@ -10,6 +10,7 @@ class ParallelResources:  # pragma: no cover
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
     """
+    import os
     from sys import platform
     import multiprocessing as mp
     if platform == 'darwin':
@@ -28,6 +29,10 @@ class ParallelResources:  # pragma: no cover
         if cls._instance is None:
             cls._instance = super(ParallelResources, cls).__new__(
                 cls, *args, **kwargs)
+            if cls.platform == 'win32': # pragma: no cover
+                from qibo.config import raise_error
+                raise_error(NotImplementedError,
+                    "Parallel evaluation not supported on Windows")
         return cls._instance
 
     def run(self, params=None):

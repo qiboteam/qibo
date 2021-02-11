@@ -324,6 +324,14 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
+        """Transposes state pieces to the full state.
+
+        Used by :class:`qibo.core.states.DistributedState`.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def random_uniform(self, shape, dtype='DTYPE'): # pragma: no cover
         """Samples array of given shape from a uniform distribution in [0, 1]."""
         raise_error(NotImplementedError)

@@ -2,6 +2,7 @@ import math
 from abc import ABC, abstractmethod
 from qibo import K
 from qibo.abstractions import callbacks
+from qibo.abstractions.states import AbstractState
 from qibo.config import EIGVAL_CUTOFF, raise_error
 
 
@@ -28,6 +29,8 @@ class BackendCallback(callbacks.Callback, ABC):
         raise_error(NotImplementedError)
 
     def __call__(self, state):
+        if isinstance(state, AbstractState):
+            state = state.tensor
         return getattr(self, self._active_call)(state)
 
 

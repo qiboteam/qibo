@@ -24,12 +24,13 @@ def get_version():
 # Custom compilation step
 class Build(_build_py):
     def run(self):
-        commands = [
-            ["make", "-j", "%s" % os.cpu_count(),
-             "-C", "src/qibo/tensorflow/custom_operators/"],]
-        for command in commands:
-            if subprocess.call(command) != 0:
-                sys.exit(-1)
+        if os.name != 'nt': # skip windows
+            commands = [
+                ["make", "-j", "%s" % os.cpu_count(),
+                "-C", "src/qibo/tensorflow/custom_operators/"],]
+            for command in commands:
+                if subprocess.call(command) != 0:
+                    sys.exit(-1)
         _build_py.run(self)
 
 

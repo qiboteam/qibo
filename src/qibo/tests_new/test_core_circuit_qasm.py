@@ -34,7 +34,10 @@ h q[4];"""
     qibo.set_backend(original_backend)
 
 
-def test_simple_cirq():
+def test_simple_cirq(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
@@ -50,9 +53,13 @@ def test_simple_cirq():
     assert c3.depth == c2depth
     final_state_c3 = c3()
     np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
-def test_multiqubit_gates_cirq():
+def test_multiqubit_gates_cirq(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c1 = Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.CNOT(0, 1))
@@ -71,9 +78,13 @@ def test_multiqubit_gates_cirq():
     assert c3.depth == c2depth
     final_state_c3 = c3()
     np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
-def test_toffoli_cirq():
+def test_toffoli_cirq(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c1 = Circuit(3)
     c1.add(gates.Y(0))
     c1.add(gates.TOFFOLI(0, 1, 2))
@@ -93,9 +104,13 @@ def test_toffoli_cirq():
     assert c3.depth == c2depth
     final_state_c3 = c3()
     np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
-def test_parametrized_gate_cirq():
+def test_parametrized_gate_cirq(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c1 = Circuit(2)
     c1.add(gates.Y(0))
     c1.add(gates.RY(1, 0.1234))
@@ -110,6 +125,7 @@ def test_parametrized_gate_cirq():
     c3 = Circuit.from_qasm(c2.to_qasm())
     final_state_c3 = c3()
     np.testing.assert_allclose(final_state_c3, final_state_c2, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
 def test_cu1_cirq():
@@ -122,7 +138,10 @@ def test_cu1_cirq():
         c2 = circuit_from_qasm(c1.to_qasm())
 
 
-def test_ugates_cirq():
+def test_ugates_cirq(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c1 = Circuit(3)
     c1.add(gates.RX(0, 0.1))
     c1.add(gates.RZ(1, 0.4))
@@ -148,6 +167,7 @@ def test_ugates_cirq():
     # catches unknown gate "cu3"
     with pytest.raises(exception.QasmException):
         c2 = circuit_from_qasm(c1.to_qasm())
+    qibo.set_backend(original_backend)
 
 
 def test_crotations_cirq():
@@ -161,7 +181,10 @@ def test_crotations_cirq():
         c2 = circuit_from_qasm(c1.to_qasm())
 
 
-def test_from_qasm_evaluation():
+def test_from_qasm_evaluation(backend):
+    import qibo
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     import numpy as np
     target = f"""OPENQASM 2.0;
 include "qelib1.inc";
@@ -171,3 +194,4 @@ h q[1];"""
     c = Circuit.from_qasm(target)
     target_state = np.ones(4) / 2.0
     np.testing.assert_allclose(c(), target_state)
+    qibo.set_backend(original_backend)

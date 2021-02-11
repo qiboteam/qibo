@@ -11,6 +11,10 @@ try:
     _BACKENDS = "custom,defaulteinsum,matmuleinsum,"\
                 "numpy_defaulteinsum,numpy_matmuleinsum"
     _ENGINES = "numpy,tensorflow"
+    import qibo.tensorflow.custom_operators as op
+    if not op._custom_operators_loaded: # pragma: no cover
+        _BACKENDS = "defaulteinsum,matmuleinsum,"\
+                    "numpy_defaulteinsum,numpy_matmuleinsum"
     _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 except ModuleNotFoundError: # pragma: no cover
     # workflows install Tensorflow automatically so this case is not covered
@@ -77,9 +81,14 @@ def pytest_generate_tests(metafunc):
             if x in backends:
                 backends.remove(x)
 
+    if "custom" not in backends: # pragma: no cover
+        # skip tests that require custom operators
+        tests_to_skip = {
+            "qibo.tests_new.test_tensorflow_custom_operators",
+            "qibo.tests_new.test_core_states_distributed"
+        }
         # for `test_tensorflow_custom_operators.py`
-        module_name = "qibo.tests_new.test_tensorflow_custom_operators"
-        if metafunc.module.__name__ == module_name:
+        if metafunc.module.__name__ in tests_to_skip:
             pytest.skip("Custom operator tests require Tensorflow engine.")
 
     # for `test_backends_matrices.py`
@@ -101,8 +110,10 @@ def pytest_generate_tests(metafunc):
                 metafunc.parametrize("accelerators", [None])
             else:
                 config = [(b, None) for b in backends]
-                config.extend([("custom", {dev[1:]: int(dev[0]) for dev in x.split("+")})
-                               for x in accelerators.split(",")])
+                if "custom" in backends:
+                    for x in accelerators.split(","):
+                        devdict = {dev[1:]: int(dev[0]) for dev in x.split("+")}
+                        config.append(("custom", devdict))
                 metafunc.parametrize("backend,accelerators", config)
         else:
             metafunc.parametrize("backend", backends)
