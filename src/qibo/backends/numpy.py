@@ -187,6 +187,9 @@ class NumpyBackend(abstract.AbstractBackend):
             state[0] = 1
         return state
 
+    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
+        raise_error(NotImplementedError)
+
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
