@@ -82,9 +82,13 @@ def pytest_generate_tests(metafunc):
                 backends.remove(x)
 
     if "custom" not in backends: # pragma: no cover
+        # skip tests that require custom operators
+        tests_to_skip = {
+            "qibo.tests_new.test_tensorflow_custom_operators",
+            "qibo.tests_new.test_core_states_distributed"
+        }
         # for `test_tensorflow_custom_operators.py`
-        module_name = "qibo.tests_new.test_tensorflow_custom_operators"
-        if metafunc.module.__name__ == module_name:
+        if metafunc.module.__name__ in tests_to_skip:
             pytest.skip("Custom operator tests require Tensorflow engine.")
 
     # for `test_backends_matrices.py`
