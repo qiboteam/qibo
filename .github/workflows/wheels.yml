@@ -11,8 +11,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: [3.6, 3.7, 3.8]
+        os: [ubuntu-latest]
+        python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
@@ -57,19 +57,3 @@ jobs:
         pip install -r requirements.txt
         pip install qibo --no-index --find-links ./dist/
         pytest --pyargs qibo
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'release' && github.event.action == 'published'
-    steps:
-    - name: Download wheels from artifact storage
-      uses: actions/download-artifact@v1
-      with:
-        name: wheels
-        path: dist
-    - name: Setup Python
-      uses: actions/setup-python@v1
-    - name: Publish distribution to PyPI
-      uses: pypa/gh-action-pypi-publish@master
-      with:
-        password: ${{ secrets.PYPI_TOKEN }}
