@@ -150,7 +150,7 @@ class TensorflowBackend(numpy.NumpyBackend):
                                         omp_num_threads=get_threads())
 
     def transpose_state(self, pieces, state, nqubits, order):
-        if self.op is None:
+        if self.op is None: # pragma: no cover
             pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
             return self.reshape(self.transpose(pieces, order), state.shape)
         else:
