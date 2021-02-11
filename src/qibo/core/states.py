@@ -89,7 +89,7 @@ class VectorState(AbstractState):
         unmeasured_qubits = self._traceout(qubits, measurement_gate)
         shape = self.nqubits * (2,)
         state = K.reshape(K.square(K.abs(self.tensor)), shape)
-        return K.sum(state, axis=unmeasured_qubits)
+        return K.sum(state, axis=tuple(unmeasured_qubits))
 
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
