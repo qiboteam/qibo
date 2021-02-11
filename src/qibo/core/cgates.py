@@ -288,7 +288,9 @@ class M(BackendGate, gates.M):
             if not self.is_prepared:
                 self.set_nqubits(state.tensor)
         else:
-            raise_error(TypeError)
+            raise_error(TypeError, "Measurement gate called on state of type "
+                                   "{} that is not supported."
+                                   "".format(type(state)))
 
         if math.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example

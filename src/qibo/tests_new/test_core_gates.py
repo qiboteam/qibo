@@ -153,16 +153,7 @@ def test_collapse_gate_errors(backend):
     gate.result = np.ones(2, dtype=int)
     qibo.set_backend(original_backend)
 
-# TODO: Test :class:`qibo.core.cgates.M`
-
-def test_m_construct_unitary(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    gate = gates.M(0)
-    with pytest.raises(ValueError):
-        matrix = gate.unitary
-    qibo.set_backend(original_backend)
-
+# :class:`qibo.core.cgates.M` is tested in `test_core_gates_measurements.py`
 
 def test_rx(backend):
     original_backend = qibo.get_backend()
