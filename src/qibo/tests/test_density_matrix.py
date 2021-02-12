@@ -577,7 +577,7 @@ def test_circuit_with_noise_exception():
 
 def test_density_matrix_measurement(backend):
     """Check measurement gate on density matrices."""
-    from qibo.tests.test_measurements import assert_results
+    from qibo.tests_new.test_measurement_gate import assert_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(4)
@@ -589,18 +589,18 @@ def test_density_matrix_measurement(backend):
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_results(result,
-                   decimal_samples=2 * np.ones((100,)),
-                   binary_samples=target_binary_samples,
-                   decimal_frequencies={2: 100},
-                   binary_frequencies={"10": 100})
+    assert_result(result,
+                  decimal_samples=2 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={2: 100},
+                  binary_frequencies={"10": 100})
     qibo.set_backend(original_backend)
 
 
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
-    from qibo.tests.test_measurements import assert_results
-    from qibo.tests.test_measurements import assert_register_results
+    from qibo.tests_new.test_measurement_gate import assert_result
+    from qibo.tests_new.test_measurement_gate_registers import assert_register_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(16)
@@ -617,11 +617,11 @@ def test_density_matrix_circuit_measurement(backend):
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1
-    assert_results(result,
-                   decimal_samples=6 * np.ones((100,)),
-                   binary_samples=target_binary_samples,
-                   decimal_frequencies={6: 100},
-                   binary_frequencies={"0110": 100})
+    assert_result(result,
+                  decimal_samples=6 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={6: 100},
+                  binary_frequencies={"0110": 100})
 
     target = {}
     target["decimal_samples"] = {"A": np.ones((100,)),
@@ -632,7 +632,7 @@ def test_density_matrix_circuit_measurement(backend):
     target["binary_samples"]["B"][:, 0] = 1
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
-    assert_register_results(result, **target)
+    assert_register_result(result, **target)
     qibo.set_backend(original_backend)
 
 
