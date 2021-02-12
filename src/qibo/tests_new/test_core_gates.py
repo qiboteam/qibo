@@ -153,7 +153,7 @@ def test_collapse_gate_errors(backend):
     gate.result = np.ones(2, dtype=int)
     qibo.set_backend(original_backend)
 
-# :class:`qibo.core.cgates.M` is tested in `test_core_gates_measurements.py`
+# :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
 def test_rx(backend):
     original_backend = qibo.get_backend()

@@ -1,11 +1,11 @@
-"""Test gates defined in `qibo/core/cgates.py` and `qibo/core/gates.py`."""
+"""Test :class:`qibo.abstractions.gates.M` as standalone and as part of circuit."""
 import pytest
 import numpy as np
 import qibo
 from qibo import models, gates
 
 
-def random_state(nqubits):
+def random_state(nqubits): # TODO: Remove this if not used
     nstates = 2 ** nqubits
     initial_state = np.random.random(nstates) + 1j * np.random.random(nstates)
     return initial_state / np.sqrt((np.abs(initial_state) ** 2).sum())

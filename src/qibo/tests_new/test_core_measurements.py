@@ -1,3 +1,4 @@
+"""Test measurement objects defined in `qibo/core/measurements.py`."""
 import pytest
 import numpy as np
 import qibo
