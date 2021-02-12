@@ -92,10 +92,14 @@ class GateResult:
     @decimal.setter
     def decimal(self, x):
         self._decimal = x
+        self._binary = None
+        self._frequencies = None
 
     @binary.setter
     def binary(self, x):
         self._binary = x
+        self._decimal = None
+        self._frequencies = None
 
     def samples(self, binary: bool = True) -> TensorType:
         if binary:
@@ -192,27 +196,17 @@ class CircuitResult:
         self.result = measurement_gate_result
         self._register_results = None
 
-    @staticmethod
-    def _calculate_register_results(register_qubits, gate_result):
-        """Calculates the individual register `GateResults`.
-
-        This uses the `register_qubits` map to divide the bitstrings to their
-        appropriate registers.
-        """
-        results = {}
-        samples = gate_result.samples(True)
-        for name, qubit_tuple in register_qubits.items():
-            slicer = tuple(gate_result.qubit_map[q] for q in qubit_tuple)
-            results[name] = GateResult(qubit_tuple)
-            results[name].binary = K.gather(samples, slicer, axis=-1)
-        return results
-
     @property
     def register_results(self) -> Dict[str, GateResult]:
         """Returns the individual `GateResult`s for each register."""
         if self._register_results is None:
-            self._register_results = self._calculate_register_results(
-                self.register_qubits, self.result)
+            samples = self.result.samples(True)
+            self._register_results = {}
+            for name, qubit_tuple in self.register_qubits.items():
+                slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
+                register_samples = K.gather(samples, slicer, axis=-1)
+                self._register_results[name] = GateResult(qubit_tuple)
+                self._register_results[name].binary = register_samples
         return self._register_results
 
     def samples(self, binary: bool = True, registers: bool = False
