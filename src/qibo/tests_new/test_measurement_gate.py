@@ -5,12 +5,6 @@ import qibo
 from qibo import models, gates
 
 
-def random_state(nqubits): # TODO: Remove this if not used
-    nstates = 2 ** nqubits
-    initial_state = np.random.random(nstates) + 1j * np.random.random(nstates)
-    return initial_state / np.sqrt((np.abs(initial_state) ** 2).sum())
-
-
 def assert_result(result, decimal_samples=None, binary_samples=None,
                   decimal_frequencies=None, binary_frequencies=None):
     if decimal_samples is not None:
