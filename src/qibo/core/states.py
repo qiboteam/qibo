@@ -89,7 +89,7 @@ class VectorState(AbstractState):
         unmeasured_qubits = self._traceout(qubits, measurement_gate)
         shape = self.nqubits * (2,)
         state = K.reshape(K.square(K.abs(self.tensor)), shape)
-        return K.sum(state, axis=unmeasured_qubits)
+        return K.sum(state, axis=tuple(unmeasured_qubits))
 
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
@@ -235,9 +235,8 @@ class DistributedState(VectorState):
         else: # fall back to the transpose op
             with K.device(self.device):
                 state = K.zeros(self.shapes["full"])
-                state = K.op.transpose_state(self.pieces, state, self.nqubits,
-                                             self.qubits.reverse_transpose_order,
-                                             get_threads())
+                state = K.transpose_state(self.pieces, state, self.nqubits,
+                                          self.qubits.reverse_transpose_order)
         return state
 
     @tensor.setter
@@ -265,9 +264,8 @@ class DistributedState(VectorState):
             full_state = K.reshape(full_state, self.shapes["device"])
             pieces = [full_state[i] for i in range(self.ndevices)]
             new_state = K.zeros(self.shapes["device"])
-            new_state = K.op.transpose_state(pieces, new_state, self.nqubits,
-                                             self.qubits.transpose_order,
-                                             get_threads())
+            new_state = K.transpose_state(pieces, new_state, self.nqubits,
+                                          self.qubits.transpose_order)
             for i in range(self.ndevices):
                 self.pieces[i].assign(new_state[i])
 

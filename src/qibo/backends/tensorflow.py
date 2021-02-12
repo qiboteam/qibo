@@ -149,6 +149,15 @@ class TensorflowBackend(numpy.NumpyBackend):
                                         is_matrix=is_matrix,
                                         omp_num_threads=get_threads())
 
+    def transpose_state(self, pieces, state, nqubits, order):
+        if self.op is None: # pragma: no cover
+            pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+            return self.reshape(self.transpose(pieces, order), state.shape)
+        else:
+            from qibo.config import get_threads
+            return self.op.transpose_state(pieces, state, nqubits, order,
+                                           get_threads())
+
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
