@@ -161,6 +161,21 @@ class TensorflowBackend(numpy.NumpyBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
+    def sample_frequencies(self, probs, nshots):
+        frequencies = self.backend.math.round(nshots * probs)
+        frequencies = self.cast(frequencies, dtype='DTYPEINT')
+
+        num_ones = nshots - self.sum(frequencies)
+        sign = self.backend.math.sign(num_ones)
+        num_ones = sign * num_ones
+        num_zeros = tuple(probs.shape)[0] - num_ones
+
+        ones = sign * self.ones(num_ones, dtype='DTYPEINT')
+        zeros = self.zeros(num_zeros, dtype='DTYPEINT')
+        fixer = self.concatenate([ones, zeros])
+        fixer = self.backend.random.shuffle(fixer)
+        return frequencies + fixer
+
     def sample_shots(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(

@@ -193,6 +193,9 @@ class NumpyBackend(abstract.AbstractBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
+    def sample_frequencies(self, probs, nshots):
+        raise_error(NotImplementedError)
+
     def sample_shots(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
 
