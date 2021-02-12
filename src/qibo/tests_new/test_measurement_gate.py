@@ -290,3 +290,13 @@ def test_final_state(backend, accelerators):
 
     np.testing.assert_allclose(c.final_state, target_state)
     qibo.set_backend(original_backend)
+
+
+def test_measurement_gate_bitflip_errors():
+    gate = gates.M(0, 1, p0=2 * [0.1])
+    with pytest.raises(ValueError):
+        gate = gates.M(0, 1, p0=4 * [0.1])
+    with pytest.raises(KeyError):
+        gate = gates.M(0, 1, p0={0: 0.1, 2: 0.2})
+    with pytest.raises(TypeError):
+        gate = gates.M(0, 1, p0="test")
