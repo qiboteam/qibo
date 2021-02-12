@@ -161,7 +161,7 @@ class TensorflowBackend(numpy.NumpyBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
-    def sample_measurements(self, probs, nshots):
+    def sample_shots(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(
             logits, nshots, dtype=self.dtypes('DTYPEINT'))

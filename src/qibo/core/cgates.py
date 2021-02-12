@@ -271,7 +271,7 @@ class M(BackendGate, gates.M):
         probs = state.probabilities(measurement_gate=self)
         probs = K.transpose(probs, axes=self.reduced_target_qubits)
         probs = K.reshape(probs, probs_dim)
-        samples_dec = K.sample_measurements(probs, nshots)
+        samples_dec = K.sample_shots(probs, nshots)
         result = self.measurements.GateResult(
             self.qubits, decimal_samples=samples_dec)
         # optional bitflip noise

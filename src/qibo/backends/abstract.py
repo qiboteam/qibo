@@ -337,8 +337,8 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sample_measurements(self, probs, nshots): # pragma: no cover
-        """Samples measurements from a given probability distribution.
+    def sample_shots(self, probs, nshots): # pragma: no cover
+        """Samples measurement shots from a given probability distribution.
 
         Measurements are returned in decimal as a tensor of shape ``(nshots,)``.
         """
