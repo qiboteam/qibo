@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import math
 import collections
 from qibo import K
 from qibo.config import raise_error
@@ -41,29 +42,56 @@ class GateResult:
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
 
-    def convert_to_binary(self):
+    def _convert_to_binary(self):
         _range = K.range(self.nqubits - 1, -1, -1, dtype=self.decimal.dtype)
         return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
 
-    def convert_to_decimal(self):
+    def _convert_to_decimal(self):
         _range = K.range(self.nqubits - 1, -1, -1, dtype=self.binary.dtype)
         _range = K.pow(2, _range)[:, K.newaxis]
         return K.matmul(self.binary, _range)[:, 0]
+
+    def _get_cpu(self): # pragma: no cover
+        # case not covered by GitHub workflows because it requires OOM
+        if not K.cpu_devices:
+            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
+        return K.cpu_devices[0]
+
+    def _sample_shots(self):
+        if math.log2(self.nshots) + self.nqubits > 31: # pragma: no cover
+            # case not covered by GitHub workflows because it requires large example
+            # Use CPU to avoid "aborted" error
+            with K.device(self._get_cpu()):
+                result = K.sample_shots(self.probabilities, self.nshots)
+        else:
+            try:
+                with K.device(K.default_device):
+                    result = K.sample_shots(self.probabilities, self.nshots)
+            except K.oom_error: # pragma: no cover
+                # case not covered by GitHub workflows because it requires OOM
+                # Force using CPU to perform sampling
+                with K.device(self._get_cpu()):
+                    result = K.sample_shots(self.probabilities, self.nshots)
+        return result
 
     @property
     def decimal(self):
         if self._decimal is None:
             if self._binary is None:
-                self._decimal = K.sample_shots(self.probabilities, self.nshots)
+                self._decimal = self._sample_shots()
             else:
-                self._decimal = self.convert_to_decimal()
+                self._decimal = self._convert_to_decimal()
         return self._decimal
 
     @property
     def binary(self):
         if self._binary is None:
-            self._binary = self.convert_to_binary()
+            self._binary = self._convert_to_binary()
         return self._binary
+
+    @decimal.setter
+    def decimal(self, x):
+        self._decimal = x
 
     @binary.setter
     def binary(self, x):

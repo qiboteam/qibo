@@ -250,12 +250,6 @@ class M(BackendGate, gates.M):
             self.traceout = PartialTrace.einsum_string(
                 qubits, self.nqubits, measuring=True)
 
-    def _get_cpu(self): # pragma: no cover
-        # case not covered by GitHub workflows because it requires OOM
-        if not K.cpu_devices:
-            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
-        return K.cpu_devices[0]
-
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
@@ -265,17 +259,6 @@ class M(BackendGate, gates.M):
 
     def density_matrix_call(self, state):
         return self.states.MatrixState.from_tensor(state)
-
-    def sample(self, state, nshots):
-        probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
-        probs = state.probabilities(measurement_gate=self)
-        probs = K.transpose(probs, axes=self.reduced_target_qubits)
-        probs = K.reshape(probs, probs_dim)
-        result = self.measurements.GateResult(self.qubits, probs, nshots)
-        # optional bitflip noise
-        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            result = result.apply_bitflips(*self.bitflip_map)
-        return result
 
     def __call__(self, state, nshots):
         if isinstance(state, K.tensor_types):
@@ -290,20 +273,14 @@ class M(BackendGate, gates.M):
                                    "{} that is not supported."
                                    "".format(type(state)))
 
-        if math.log2(nshots) + len(self.target_qubits) > 31: # pragma: no cover
-            # case not covered by GitHub workflows because it requires large example
-            # Use CPU to avoid "aborted" error
-            device = self._get_cpu()
-
-        try:
-            with K.device(self.device):
-                result = self.sample(state, nshots)
-        except K.oom_error: # pragma: no cover
-            # case not covered by GitHub workflows because it requires OOM
-            # Force using CPU to perform sampling
-            device = self._get_cpu()
-            with K.device(device):
-                result = self.sample(state, nshots)
+        probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
+        probs = state.probabilities(measurement_gate=self)
+        probs = K.transpose(probs, axes=self.reduced_target_qubits)
+        probs = K.reshape(probs, probs_dim)
+        result = self.measurements.GateResult(self.qubits, probs, nshots)
+        # optional bitflip noise
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
         return result
 
 

@@ -98,7 +98,8 @@ class VectorState(AbstractState):
                 registers, self.measurements)
 
     def set_measurements(self, qubits, samples, registers=None):
-        self.measurements = measurements.GateResult(qubits, decimal_samples=samples)
+        self.measurements = measurements.GateResult(qubits)
+        self.measurements.decimal = samples
         if registers is not None:
             self.measurements = measurements.CircuitResult(
                     registers, self.measurements)
