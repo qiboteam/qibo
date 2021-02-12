@@ -5,35 +5,6 @@ from qibo import gates, models
 from typing import Optional
 
 
-def assert_register_results(
-        result,
-        decimal_samples: Optional[np.ndarray] = None,
-        binary_samples: Optional[np.ndarray] = None,
-        decimal_frequencies: Optional[collections.Counter] = None,
-        binary_frequencies: Optional[collections.Counter] = None):
-    if decimal_samples is not None:
-        register_result = result.samples(binary=False, registers=True)
-        assert register_result.keys() == decimal_samples.keys()
-        for k, v in register_result.items():
-            np.testing.assert_allclose(v.numpy(), decimal_samples[k])
-    if binary_samples is not None:
-        register_result = result.samples(binary=True, registers=True)
-        assert register_result.keys() == binary_samples.keys()
-        for k, v in register_result.items():
-            np.testing.assert_allclose(v.numpy(), binary_samples[k])
-
-    if decimal_frequencies is not None:
-        register_result = result.frequencies(binary=False, registers=True)
-        assert register_result.keys() == decimal_frequencies.keys()
-        for k, v in register_result.items():
-            assert v == collections.Counter(decimal_frequencies[k])
-    if binary_frequencies is not None:
-        register_result = result.frequencies(binary=True, registers=True)
-        assert register_result.keys() == binary_frequencies.keys()
-        for k, v in register_result.items():
-            assert v == collections.Counter(binary_frequencies[k])
-
-
 def test_register_name_error():
     """Check that using the same register name twice results to error."""
     c = models.Circuit(2)
@@ -43,27 +14,7 @@ def test_register_name_error():
         c.add(gates.M(1, register_name="a"))
 
 
-def test_register_measurements():
-    """Check register measurements are split properly."""
-    c = models.Circuit(3)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.M(0, 2))
-    c.add(gates.M(1))
-    result = c(nshots=100)
 
-    target = {}
-    target["decimal_samples"] = {"register0": 2 * np.ones((100,)),
-                                 "register1": np.ones((100,))}
-    target["binary_samples"] = {"register0": np.zeros((100, 2)),
-                                "register1": np.ones((100, 1))}
-    target["binary_samples"]["register0"][:, 0] = 1
-
-    target["decimal_frequencies"] = {"register0": {2: 100},
-                                     "register1": {1: 100}}
-    target["binary_frequencies"] = {"register0": {"10": 100},
-                                    "register1": {"1": 100}}
-    assert_register_results(result, **target)
 
 
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
