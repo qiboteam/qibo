@@ -163,7 +163,9 @@ class GateResult:
         flip1 = K.cast(sprobs < fprobs[1], dtype=noiseless_samples.dtype)
         noisy_samples = noiseless_samples + (1 - noiseless_samples) * flip0
         noisy_samples = noisy_samples - noiseless_samples * flip1
-        return self.__class__(self.qubits, binary_samples=noisy_samples)
+        noisy_result = self.__class__(self.qubits)
+        noisy_result.binary = noisy_samples
+        return noisy_result
 
 
 class CircuitResult:
@@ -188,7 +190,7 @@ class CircuitResult:
                  measurement_gate_result: GateResult):
         self.register_qubits = register_qubits
         self.result = measurement_gate_result
-        self.__register_results = None
+        self._register_results = None
 
     @staticmethod
     def _calculate_register_results(register_qubits, gate_result):
@@ -206,12 +208,12 @@ class CircuitResult:
         return results
 
     @property
-    def _register_results(self) -> Dict[str, GateResult]:
+    def register_results(self) -> Dict[str, GateResult]:
         """Returns the individual `GateResult`s for each register."""
-        if self.__register_results is None:
-            self.__register_results = self._calculate_register_results(
+        if self._register_results is None:
+            self._register_results = self._calculate_register_results(
                 self.register_qubits, self.result)
-        return self.__register_results
+        return self._register_results
 
     def samples(self, binary: bool = True, registers: bool = False
                 ) -> Union[TensorType, Dict[str, TensorType]]:
@@ -237,7 +239,7 @@ class CircuitResult:
         """
         if not registers:
             return self.result.samples(binary)
-        return {k: v.samples(binary) for k, v in self._register_results.items()}
+        return {k: v.samples(binary) for k, v in self.register_results.items()}
 
     def frequencies(self, binary: bool = True, registers: bool = False
                     ) -> Union[collections.Counter, Dict[str, collections.Counter]]:
@@ -266,7 +268,7 @@ class CircuitResult:
         """
         if not registers:
             return self.result.frequencies(binary)
-        return {k: v.frequencies(binary) for k, v in self._register_results.items()}
+        return {k: v.frequencies(binary) for k, v in self.register_results.items()}
 
     def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
                        ) -> "CircuitResult":
