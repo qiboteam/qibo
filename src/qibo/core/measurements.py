@@ -25,24 +25,12 @@ class GateResult:
         create the object.
     """
 
-    def __init__(self, qubits: Tuple[int],
-                 decimal_samples: Optional[TensorType] = None,
-                 binary_samples: Optional[TensorType] = None):
+    def __init__(self, qubits, probabilities=None, nshots=None):
         self.qubits = qubits
-
-        if decimal_samples is not None and binary_samples is not None:
-            raise_error(ValueError, "Measurement result object cannot be created "
-                                    "when samples are given both in decimal and "
-                                    "binary. Use one of the two.")
-        if decimal_samples is None and binary_samples is None:
-            raise_error(ValueError, "Measurement result cannot be created if "
-                                    "no samples are given.")
-        if binary_samples is not None and binary_samples.shape[-1] != self.nqubits:
-            raise_error(ValueError, "Binary samples are for {} qubits but the given "
-                                    "qubits are {}.".format(binary_samples.shape[-1], qubits))
-
-        self._decimal = decimal_samples
-        self._binary = binary_samples
+        self.probabilities = probabilities
+        self.nshots = nshots
+        self._decimal = None
+        self._binary = None
         self._frequencies = None
 
     @property
@@ -53,27 +41,38 @@ class GateResult:
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
 
-    @staticmethod
-    def _convert_to_binary(x, n):
-        _range = K.range(n - 1, -1, -1, dtype=x.dtype)
-        return K.mod(K.right_shift(x[:, K.newaxis], _range), 2)
+    def convert_to_binary(self):
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.decimal.dtype)
+        return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
 
-    @staticmethod
-    def _convert_to_decimal(x, n):
-        _range = K.range(n - 1, -1, -1, dtype=x.dtype)
+    def convert_to_decimal(self):
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.binary.dtype)
         _range = K.pow(2, _range)[:, K.newaxis]
-        return K.matmul(x, _range)[:, 0]
+        return K.matmul(self.binary, _range)[:, 0]
+
+    @property
+    def decimal(self):
+        if self._decimal is None:
+            if self._binary is None:
+                self._decimal = K.sample_shots(self.probabilities, self.nshots)
+            else:
+                self._decimal = self.convert_to_decimal()
+        return self._decimal
+
+    @property
+    def binary(self):
+        if self._binary is None:
+            self._binary = self.convert_to_binary()
+        return self._binary
+
+    @binary.setter
+    def binary(self, x):
+        self._binary = x
 
     def samples(self, binary: bool = True) -> TensorType:
         if binary:
-            if self._binary is None:
-                self._binary = self._convert_to_binary(
-                    self._decimal, self.nqubits)
-            return self._binary
-
-        if self._decimal is None:
-            self._decimal = self._convert_to_decimal(self._binary, self.nqubits)
-        return self._decimal
+            return self.binary
+        return self.decimal
 
     def __getitem__(self, i: int) -> TensorType:
         return self.samples(binary=False)[i]
@@ -171,10 +170,11 @@ class CircuitResult:
         appropriate registers.
         """
         results = {}
+        samples = gate_result.samples(True)
         for name, qubit_tuple in register_qubits.items():
             slicer = tuple(gate_result.qubit_map[q] for q in qubit_tuple)
-            samples = K.gather(gate_result.samples(True), slicer, axis=-1)
-            results[name] = GateResult(qubit_tuple, binary_samples=samples)
+            results[name] = GateResult(qubit_tuple)
+            results[name].binary = K.gather(samples, slicer, axis=-1)
         return results
 
     @property
