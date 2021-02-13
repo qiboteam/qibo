@@ -58,6 +58,11 @@ class GateResult:
         return K.cpu_devices[0]
 
     def _sample_shots(self):
+        self._frequencies = None
+        if self.probabilities is None:
+            raise_error(RuntimeError, "Cannot sample measurement shots if "
+                                      "a probability distribution is not "
+                                      "provided.")
         if math.log2(self.nshots) + self.nqubits > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
@@ -109,6 +114,18 @@ class GateResult:
     def __getitem__(self, i: int) -> TensorType:
         return self.samples(binary=False)[i]
 
+    def _calculate_frequencies(self):
+        if self._binary is not None or self._decimal is not None:
+            res, cnts = K.unique(self.decimal, return_counts=True)
+            return collections.Counter({k: v for k, v in zip(res, cnts)})
+        elif self.probabilities is not None:
+            freqs = K.sample_frequencies(self.probabilities, self.nshots)
+            return collections.Counter({i: int(v) for i, v in enumerate(freqs)
+                                        if int(v) > 0})
+        raise_error(RuntimeError, "Cannot calculate measurement frequencies "
+                                  "without a probability distribution or "
+                                  "samples.")
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
@@ -123,10 +140,7 @@ class GateResult:
             measured shots.
         """
         if self._frequencies is None:
-            dsamples = self.samples(binary=False)
-            res, cnts = K.unique(dsamples, return_counts=True)
-            self._frequencies = collections.Counter(
-                {k: v for k, v in zip(res, cnts)})
+            self._frequencies = self._calculate_frequencies()
         if binary:
             return collections.Counter(
                 {"{0:b}".format(k).zfill(self.nqubits): v
@@ -189,8 +203,7 @@ class CircuitResult:
             global measurement gate.
     """
 
-    def __init__(self,
-                 register_qubits: Dict[str, Tuple[int]],
+    def __init__(self, register_qubits: Dict[str, Tuple[int]],
                  measurement_gate_result: GateResult):
         self.register_qubits = register_qubits
         self.result = measurement_gate_result
@@ -200,6 +213,7 @@ class CircuitResult:
     def register_results(self) -> Dict[str, GateResult]:
         """Returns the individual `GateResult`s for each register."""
         if self._register_results is None:
+            # TODO: Handle the case where we only have frequencies without requiring the sample calculation
             samples = self.result.samples(True)
             self._register_results = {}
             for name, qubit_tuple in self.register_qubits.items():

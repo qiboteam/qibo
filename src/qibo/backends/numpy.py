@@ -96,6 +96,12 @@ class NumpyBackend(abstract.AbstractBackend):
     def right_shift(self, x, y):
         return self.backend.right_shift(x, y)
 
+    def round(self, x):
+        return self.backend.round(x)
+
+    def sign(self, x):
+        return self.backend.sign(x)
+
     def exp(self, x):
         return self.backend.exp(x)
 
@@ -193,8 +199,24 @@ class NumpyBackend(abstract.AbstractBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
+    def shuffle(self, x):
+        self.random.shuffle(x)
+        return x
+
     def sample_frequencies(self, probs, nshots):
-        raise_error(NotImplementedError)
+        frequencies = self.round(nshots * probs)
+        frequencies = self.cast(frequencies, dtype='DTYPEINT')
+
+        num_ones = nshots - self.sum(frequencies)
+        sign = self.sign(num_ones)
+        num_ones = sign * num_ones
+        num_zeros = tuple(probs.shape)[0] - num_ones
+
+        ones = sign * self.ones(num_ones, dtype='DTYPEINT')
+        zeros = self.zeros(num_zeros, dtype='DTYPEINT')
+        fixer = self.concatenate([ones, zeros], axis=0)
+        fixer = self.shuffle(fixer)
+        return frequencies + fixer
 
     def sample_shots(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)

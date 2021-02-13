@@ -7,14 +7,14 @@ from qibo import models, gates
 
 def assert_result(result, decimal_samples=None, binary_samples=None,
                   decimal_frequencies=None, binary_frequencies=None):
-    if decimal_samples is not None:
-        np.testing.assert_allclose(result.samples(False), decimal_samples)
-    if binary_samples is not None:
-        np.testing.assert_allclose(result.samples(True), binary_samples)
     if decimal_frequencies is not None:
         assert result.frequencies(False) == decimal_frequencies
     if binary_frequencies is not None:
         assert result.frequencies(True) == binary_frequencies
+    if decimal_samples is not None:
+        np.testing.assert_allclose(result.samples(False), decimal_samples)
+    if binary_samples is not None:
+        np.testing.assert_allclose(result.samples(True), binary_samples)
 
 
 @pytest.mark.parametrize("n", [0, 1])
@@ -24,8 +24,7 @@ def test_measurement_gate(backend, n):
     state = np.zeros(4)
     state[-n] = 1
     result = gates.M(0)(state, nshots=100)
-    assert_result(result,
-                  n * np.ones(100), n * np.ones((100, 1)),
+    assert_result(result, n * np.ones(100), n * np.ones((100, 1)),
                   {n: 100}, {str(n): 100})
     qibo.set_backend(original_backend)
 
@@ -38,8 +37,7 @@ def test_multiple_qubit_measurement_gate(backend):
     result = gates.M(0, 1)(state, nshots=100)
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_result(result,
-                  2 * np.ones((100,)), target_binary_samples,
+    assert_result(result, 2 * np.ones((100,)), target_binary_samples,
                   {2: 100}, {"10": 100})
     qibo.set_backend(original_backend)
 

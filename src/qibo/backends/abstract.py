@@ -196,6 +196,16 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def round(self, x, y): # pragma: no cover
+        """Elementwise rounding to nearest integer."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def sign(self, x, y): # pragma: no cover
+        """Elementwise sign operator."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def exp(self, x): # pragma: no cover
         """Elementwise exponential."""
         raise_error(NotImplementedError)
@@ -334,6 +344,11 @@ class AbstractBackend(ABC):
     @abstractmethod
     def random_uniform(self, shape, dtype='DTYPE'): # pragma: no cover
         """Samples array of given shape from a uniform distribution in [0, 1]."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def shuffle(self, x): # pragma: no cover
+        """Random shuffling of a tensor's elements."""
         raise_error(NotImplementedError)
 
     @abstractmethod
