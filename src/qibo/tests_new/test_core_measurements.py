@@ -13,6 +13,15 @@ def test_gateresult_init():
     assert result.qubit_map == {0: 0, 1: 1}
 
 
+def test_gateresult_errors():
+    """Try to sample shots and frequencies without probability distribution."""
+    result = measurements.GateResult((0, 1))
+    with pytest.raises(RuntimeError):
+        samples = result.samples()
+    with pytest.raises(RuntimeError):
+        samples = result.frequencies()
+
+
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("dsamples,bsamples",
                          [([0, 3, 2, 3, 1],
