@@ -94,14 +94,14 @@ class VectorState(AbstractState):
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
         if registers is not None:
-            self.measurements = measurements.CircuitResult(
+            self.measurements = measurements.MeasurementRegistersResult(
                 registers, self.measurements)
 
     def set_measurements(self, qubits, samples, registers=None):
         self.measurements = measurements.MeasurementResult(qubits)
         self.measurements.decimal = samples
         if registers is not None:
-            self.measurements = measurements.CircuitResult(
+            self.measurements = measurements.MeasurementRegistersResult(
                     registers, self.measurements)
 
     def measurement_getter(func): # pylint: disable=E0213
@@ -110,7 +110,7 @@ class VectorState(AbstractState):
             name = func.__name__ # pylint: disable=E1101
             if isinstance(self.measurements, measurements.MeasurementResult):
                 return getattr(self.measurements, name)(binary)
-            elif isinstance(self.measurements, measurements.CircuitResult):
+            elif isinstance(self.measurements, measurements.MeasurementRegistersResult):
                 return getattr(self.measurements, name)(binary, registers)
             raise_error(RuntimeError, "Measurements are not available.")
         return wrapper

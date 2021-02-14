@@ -11,7 +11,7 @@ ProbsType = Union[float, List[float], Dict[int, float]]
 
 
 class MeasurementResult:
-    """Object returned when user uses a `gates.M` on a state.
+    """Holds measurement results (shot samples and frequencies).
 
     Implements tools for calculating the frequencies and shot samples from
     a probability distribution and converting samples from decimal to binary
@@ -187,21 +187,19 @@ class MeasurementResult:
         return noisy_result
 
 
-class CircuitResult:
-    """Object returned when user performs measurements using a circuit.
+class MeasurementRegistersResult:
+    """Holds measurement results grouped according to register.
 
-    Implements tools for dividing the global measurements from the circuit's
-    `measurement_gate` to the corresponding registers.
-    This object is created automatically every time a circuit that contains
-    measurement gates is executed. The user does not have to worry about
-    creating this object.
+    Divides a :class:`qibo.core.measurements.MeasurementResult` to multiple
+    registers for easier access of the results by the user.
 
     Args:
-        register_qubits: Dictionary that maps register names to the
-            corresponding tuples of qubit ids. This is created in the
-            `measurement_tuples` variable of :class:`qibo.abstractions.circuit.AbstractCircuit`.
+        register_qubits (dict): Dictionary that maps register names to the
+            corresponding tuples of qubit ids.
+            For :class:`qibo.abstractions.circuit.AbstractCircuit` models, this
+            dictionary is held at the `measurement_tuples` attribute.
         measurement_result (:class:`qibo.core.measurements.MeasurementResult`):
-            The measurement object that should be split to registers
+            The measurement object to split to registers.
     """
 
     def __init__(self, register_qubits: Dict[str, Tuple[int]],
@@ -279,8 +277,7 @@ class CircuitResult:
             return self.result.frequencies(binary)
         return {k: v.frequencies(binary) for k, v in self.register_results.items()}
 
-    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
-                       ) -> "CircuitResult":
+    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None):
         """Applies bitflip noise to the measured samples.
 
         Args:
@@ -296,8 +293,8 @@ class CircuitResult:
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.core.measurements.CircuitResult` object that
-            holds the noisy samples.
+            A new :class:`qibo.core.measurements.MeasurementRegisterResult`
+            object that holds the noisy samples.
         """
         noisy_result = self.result.apply_bitflips(p0, p1)
         return self.__class__(self.register_qubits, noisy_result)

@@ -6,14 +6,14 @@ from qibo import K
 from qibo.core import measurements
 
 
-def test_gateresult_init():
+def test_measurementresult_init():
     result = measurements.MeasurementResult((0, 1))
     assert result.qubits == (0, 1)
     assert result.nqubits == 2
     assert result.qubit_map == {0: 0, 1: 1}
 
 
-def test_gateresult_errors():
+def test_measurementresult_errors():
     """Try to sample shots and frequencies without probability distribution."""
     result = measurements.MeasurementResult((0, 1))
     with pytest.raises(RuntimeError):
@@ -28,7 +28,7 @@ def test_gateresult_errors():
                            [[0, 0], [1, 1], [1, 0], [1, 1], [0, 1]]),
                           ([0, 6, 5, 3, 1],
                            [[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1], [0, 0, 1]])])
-def test_gateresult_binary_decimal_conversions(backend, binary, dsamples, bsamples):
+def test_measurementresult_conversions(backend, binary, dsamples, bsamples):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     qubits = tuple(range(len(bsamples[0])))
@@ -46,7 +46,7 @@ def test_gateresult_binary_decimal_conversions(backend, binary, dsamples, bsampl
     qibo.set_backend(original_backend)
 
 
-def test_gateresult_frequencies(backend):
+def test_measurementresult_frequencies(backend):
     import collections
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -64,7 +64,7 @@ def test_gateresult_frequencies(backend):
                          [(0, 0.2, None), (1, 0.2, 0.1),
                           (2, (0.1, 0.0, 0.2), None),
                           (3, {0: 0.2, 1: 0.1, 2: 0.0}, None)])
-def test_gateresult_apply_bitflips(backend, i, p0, p1):
+def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     result = measurements.MeasurementResult((0, 1, 2))
@@ -90,7 +90,7 @@ def test_gateresult_apply_bitflips(backend, i, p0, p1):
 
 
 @pytest.mark.parametrize("probs", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
-def test_gateresult_apply_bitflips_random_samples(backend, probs):
+def test_measurementresult_apply_bitflips_random_samples(backend, probs):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     qubits = tuple(range(4))
@@ -109,7 +109,7 @@ def test_gateresult_apply_bitflips_random_samples(backend, probs):
     qibo.set_backend(original_backend)
 
 
-def test_gateresult_apply_bitflips_random_samples_asymmetric(backend):
+def test_measurementresult_apply_bitflips_random_samples_asymmetric(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     qubits = tuple(range(4))
@@ -133,7 +133,7 @@ def test_gateresult_apply_bitflips_random_samples_asymmetric(backend):
     qibo.set_backend(original_backend)
 
 
-def test_gateresult_apply_bitflips_errors():
+def test_measurementresult_apply_bitflips_errors():
     """Check errors raised by `MeasurementResult.apply_bitflips`."""
     result = measurements.MeasurementResult((0, 1, 3))
     result.binary = np.random.randint(0, 2, (20, 3))
@@ -148,4 +148,4 @@ def test_gateresult_apply_bitflips_errors():
         noisy_result = result.apply_bitflips(-0.4)
 
 
-# TODO: Test ``CircuitResult``
+# TODO: Test ``MeasurementRegistersResult``
