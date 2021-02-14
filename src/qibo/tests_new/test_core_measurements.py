@@ -148,4 +148,38 @@ def test_measurementresult_apply_bitflips_errors():
         noisy_result = result.apply_bitflips(-0.4)
 
 
-# TODO: Test ``MeasurementRegistersResult``
+def test_measurementregistersresult_samples(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    samples = np.random.randint(0, 2, (20, 4))
+    result = measurements.MeasurementResult((0, 1, 2, 3))
+    result.binary = samples
+    qubits = {"a": (0, 2), "b": (1, 3)}
+    result = measurements.MeasurementRegistersResult(qubits, result)
+    register_samples = result.samples(registers=True)
+    assert register_samples.keys() == qubits.keys()
+    np.testing.assert_allclose(register_samples["a"], samples[:, [0, 2]])
+    np.testing.assert_allclose(register_samples["b"], samples[:, [1, 3]])
+    qibo.set_backend(original_backend)
+
+
+def test_measurementregistersresult_frequencies(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    probs = np.random.random(16)
+    probs = probs / np.sum(probs)
+    result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=100)
+    samples = result.samples() # TODO: Disable this once you fix
+    frequencies = result.frequencies()
+    qubits = {"a": (0, 1), "b": (2, 3)}
+    result = measurements.MeasurementRegistersResult(qubits, result)
+    register_frequencies = result.frequencies(registers=True)
+    assert register_frequencies.keys() == qubits.keys()
+    rkeys = ["00", "01", "10", "11"]
+    target_frequencies_a = {k: sum(frequencies[f"{k}{l}"] for l in rkeys)
+                            for k in rkeys}
+    target_frequencies_b = {k: sum(frequencies[f"{l}{k}"] for l in rkeys)
+                            for k in rkeys}
+    assert register_frequencies["a"] == target_frequencies_a
+    assert register_frequencies["b"] == target_frequencies_b
+    qibo.set_backend(original_backend)
