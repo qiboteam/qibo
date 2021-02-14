@@ -10,20 +10,22 @@ TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
 
 
-class GateResult:
+class MeasurementResult:
     """Object returned when user uses a `gates.M` on a state.
 
-    Implements tools to convert samples from decimal to binary representation
-    (and vice versa) and calculating the frequencies of shots.
+    Implements tools for calculating the frequencies and shot samples from
+    a probability distribution and converting samples from decimal to binary
+    representation and vice versa.
+
+    If ``probabilities`` and ``nshots`` are not given during this object's
+    initialization binary or decimal samples should be added using the
+    corresponding setters.
 
     Args:
-        qubits: Sorted tuple of qubit ids that the measurement gate acts on.
-        decimal_samples: Tensor holding the measured samples in decimal
-            representation. Has shape (nshots,).
-        binary_samples: Tensor holding the measured samples in binary
-            representation. Has shape (nshots, len(qubits)).
-        Exactly one of `decimal_samples`, `binary_samples` should be given to
-        create the object.
+        qubits (tuple): Sorted tuple of qubit ids that are measured.
+        probabilities (Tensor): Tensor of probabilities to use for sampling
+            measurements.
+        nshots (int): Number of shots for the measurement.
     """
 
     def __init__(self, qubits, probabilities=None, nshots=None):
@@ -147,8 +149,7 @@ class GateResult:
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
-    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None
-                       ) -> "GateResult":
+    def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None):
         """Applies bitflip noise to the measured samples.
 
         Args:
@@ -164,8 +165,8 @@ class GateResult:
                 ``p0`` will be used for both bitflips.
 
         Returns:
-            A new :class:`qibo.core.measurements.GateResult` object that holds
-            the noisy samples.
+            A new :class:`qibo.core.measurements.MeasurementResult` object that
+            holds the noisy samples.
         """
         if p1 is None:
             probs = 2 * (M._get_bitflip_tuple(self.qubits, p0),)
@@ -199,19 +200,19 @@ class CircuitResult:
         register_qubits: Dictionary that maps register names to the
             corresponding tuples of qubit ids. This is created in the
             `measurement_tuples` variable of :class:`qibo.abstractions.circuit.AbstractCircuit`.
-        measurement_gate_result: The `GateResult` resulting from the circuit's
-            global measurement gate.
+        measurement_result (:class:`qibo.core.measurements.MeasurementResult`):
+            The measurement object that should be split to registers
     """
 
     def __init__(self, register_qubits: Dict[str, Tuple[int]],
-                 measurement_gate_result: GateResult):
+                 measurement_result: MeasurementResult):
         self.register_qubits = register_qubits
-        self.result = measurement_gate_result
+        self.result = measurement_result
         self._register_results = None
 
     @property
-    def register_results(self) -> Dict[str, GateResult]:
-        """Returns the individual `GateResult`s for each register."""
+    def register_results(self) -> Dict[str, MeasurementResult]:
+        """Returns the measurement object for each individual register."""
         if self._register_results is None:
             # TODO: Handle the case where we only have frequencies without requiring the sample calculation
             samples = self.result.samples(True)
@@ -219,7 +220,7 @@ class CircuitResult:
             for name, qubit_tuple in self.register_qubits.items():
                 slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
                 register_samples = K.gather(samples, slicer, axis=-1)
-                self._register_results[name] = GateResult(qubit_tuple)
+                self._register_results[name] = MeasurementResult(qubit_tuple)
                 self._register_results[name].binary = register_samples
         return self._register_results
 

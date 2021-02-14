@@ -98,7 +98,7 @@ class VectorState(AbstractState):
                 registers, self.measurements)
 
     def set_measurements(self, qubits, samples, registers=None):
-        self.measurements = measurements.GateResult(qubits)
+        self.measurements = measurements.MeasurementResult(qubits)
         self.measurements.decimal = samples
         if registers is not None:
             self.measurements = measurements.CircuitResult(
@@ -108,7 +108,7 @@ class VectorState(AbstractState):
         """Decorator for defining the ``samples`` and ``frequencies`` methods."""
         def wrapper(self, binary=True, registers=False):
             name = func.__name__ # pylint: disable=E1101
-            if isinstance(self.measurements, measurements.GateResult):
+            if isinstance(self.measurements, measurements.MeasurementResult):
                 return getattr(self.measurements, name)(binary)
             elif isinstance(self.measurements, measurements.CircuitResult):
                 return getattr(self.measurements, name)(binary, registers)
