@@ -20,6 +20,9 @@ def test_measurementresult_errors():
         samples = result.samples()
     with pytest.raises(RuntimeError):
         samples = result.frequencies()
+    result.binary = np.random.randint(0, 2, (100, 2))
+    with pytest.raises(RuntimeError):
+        result.set_frequencies({0: 100})
 
 
 @pytest.mark.parametrize("binary", [True, False])

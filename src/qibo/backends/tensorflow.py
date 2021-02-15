@@ -161,9 +161,6 @@ class TensorflowBackend(numpy.NumpyBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
-    def shuffle(self, x):
-        return self.random.shuffle(x)
-
     def sample_shots(self, probs, nshots):
         logits = self.log(probs)[self.newaxis]
         samples_dec = self.random.categorical(
