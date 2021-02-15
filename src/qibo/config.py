@@ -22,6 +22,9 @@ EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # Eigenvalues smaller than this cut-off are ignored in entropy calculation
 EIGVAL_CUTOFF = 1e-14
 
+# Batch size for sampling shots in measurement frequencies calculation
+SHOT_BATCH_SIZE = 2 ** 18
+
 # Flag for raising warning in ``set_precision`` and ``set_backend``
 ALLOW_SWITCHERS = True
 

@@ -169,7 +169,6 @@ def test_measurementregistersresult_frequencies(backend):
     probs = np.random.random(16)
     probs = probs / np.sum(probs)
     result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=100)
-    samples = result.samples() # TODO: Disable this once you fix
     frequencies = result.frequencies()
     qubits = {"a": (0, 1), "b": (2, 3)}
     result = measurements.MeasurementRegistersResult(qubits, result)

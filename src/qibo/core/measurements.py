@@ -3,7 +3,7 @@
 import math
 import collections
 from qibo import K
-from qibo.config import raise_error
+from qibo.config import raise_error, SHOT_BATCH_SIZE
 from qibo.abstractions.gates import M
 from typing import Any, Optional, Dict, List, Set, Tuple, Union
 TensorType = Any
@@ -127,15 +127,17 @@ class MeasurementResult:
         return self.samples(binary=False)[i]
 
     def _calculate_frequencies(self):
-        if self._binary is not None or self._decimal is not None:
-            res, cnts = K.unique(self.decimal, return_counts=True)
-            return collections.Counter({k: v for k, v in zip(res, cnts)})
-        elif self.probabilities is not None:
-            return K.sample_frequencies(self.probabilities, self.nshots)
-        raise_error(RuntimeError, "Cannot calculate measurement frequencies "
-                                  "without a probability distribution or "
-                                  "samples.")
+        if self._binary is None and self._decimal is None:
+            if self.probabilities is None or self.nshots is None:
+                raise_error(RuntimeError, "Cannot calculate measurement "
+                                          "frequencies without a probability "
+                                          "distribution or  samples.")
+            if self.nshots > SHOT_BATCH_SIZE:
+                return K.sample_frequencies(self.probabilities, self.nshots)
 
+        res, cnts = K.unique(self.decimal, return_counts=True)
+        return collections.Counter({k: v for k, v in zip(res, cnts)})
+        
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
