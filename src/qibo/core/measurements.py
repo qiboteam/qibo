@@ -137,7 +137,7 @@ class MeasurementResult:
 
         res, cnts = K.unique(self.decimal, return_counts=True)
         return collections.Counter({k: v for k, v in zip(res, cnts)})
-        
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
@@ -232,10 +232,10 @@ class MeasurementRegistersResult:
                 idx = 0
                 for i, q in enumerate(qubit_tuple):
                     if int(bitstring[qubit_map[q]]):
-                        idx +=  2 ** i
+                        idx +=  2 ** (len(qubit_tuple) - i - 1)
                 register_freqs[idx] += freq
             results[name] = MeasurementResult(qubit_tuple)
-            results[name].frequencies = register_freqs
+            results[name].set_frequencies(register_freqs)
         return results
 
     def _calculate_register_samples(self):

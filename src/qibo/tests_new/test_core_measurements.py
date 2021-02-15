@@ -168,7 +168,7 @@ def test_measurementregistersresult_frequencies(backend):
     qibo.set_backend(backend)
     probs = np.random.random(16)
     probs = probs / np.sum(probs)
-    result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=100)
+    result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=1000000)
     frequencies = result.frequencies()
     qubits = {"a": (0, 1), "b": (2, 3)}
     result = measurements.MeasurementRegistersResult(qubits, result)

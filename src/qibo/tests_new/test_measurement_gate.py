@@ -18,14 +18,15 @@ def assert_result(result, decimal_samples=None, binary_samples=None,
 
 
 @pytest.mark.parametrize("n", [0, 1])
-def test_measurement_gate(backend, n):
+@pytest.mark.parametrize("nshots", [100, 1000000])
+def test_measurement_gate(backend, n, nshots):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(4)
     state[-n] = 1
-    result = gates.M(0)(state, nshots=100)
-    assert_result(result, n * np.ones(100), n * np.ones((100, 1)),
-                  {n: 100}, {str(n): 100})
+    result = gates.M(0)(state, nshots=nshots)
+    assert_result(result, n * np.ones(nshots), n * np.ones((nshots, 1)),
+                  {n: nshots}, {str(n): nshots})
     qibo.set_backend(original_backend)
 
 
@@ -111,20 +112,21 @@ def test_measurement_qubit_order_simple(backend, registers):
     qibo.set_backend(original_backend)
 
 
-def test_measurement_qubit_order(backend, accelerators):
+@pytest.mark.parametrize("nshots", [100, 1000000])
+def test_measurement_qubit_order(backend, accelerators, nshots):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
     c.add(gates.M(1, 5, 2, 0))
-    result = c(nshots=100)
+    result = c(nshots=nshots)
 
-    target_binary_samples = np.zeros((100, 4))
+    target_binary_samples = np.zeros((nshots, 4))
     target_binary_samples[:, 0] = 1
     target_binary_samples[:, 3] = 1
-    assert_result(result, 9 * np.ones(100), target_binary_samples,
-                  {9: 100}, {"1001": 100})
+    assert_result(result, 9 * np.ones(nshots), target_binary_samples,
+                  {9: nshots}, {"1001": nshots})
     qibo.set_backend(original_backend)
 
 
