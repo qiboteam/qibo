@@ -96,6 +96,12 @@ class MeasurementResult:
             self._binary = self._convert_to_binary()
         return self._binary
 
+    def set_frequencies(self, frequencies):
+        if self.has_samples():
+            raise_error(RuntimeError, "Cannot set frequencies for measurement "
+                                      "result that contains shots.")
+        self._frequencies = frequencies
+
     @decimal.setter
     def decimal(self, x):
         self._decimal = x
@@ -208,32 +214,38 @@ class MeasurementRegistersResult:
                  measurement_result: MeasurementResult):
         self.register_qubits = register_qubits
         self.result = measurement_result
-        self._sample_results = None
-        self._frequency_results = None
+        self._samples = None
+        self._frequencies = None
 
-    def _calculate_frequency_results(self):
-        raise_error(NotImplementedError)
+    def _calculate_register_frequencies(self):
+        if self.result.has_samples():
+            return self._calculate_register_samples()
 
-    def _calculate_sample_results(self):
-        samples = self.result.samples(True)
-        self._sample_results = {}
+        qubit_map = self.result.qubit_map
+        frequencies = self.result.frequencies(True)
+        results = {}
         for name, qubit_tuple in self.register_qubits.items():
-            slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
-            register_samples = K.gather(samples, slicer, axis=-1)
-            self._sample_results[name] = MeasurementResult(qubit_tuple)
-            self._sample_results[name].binary = register_samples
+            register_freqs = collections.Counter()
+            for bitstring, freq in frequencies.items():
+                idx = 0
+                for i, q in enumerate(qubit_tuple):
+                    if int(bitstring[qubit_map[q]]):
+                        idx +=  2 ** i
+                register_freqs[idx] += freq
+            results[name] = MeasurementResult(qubit_tuple)
+            results[name].frequencies = register_freqs
+        return results
 
-    @property
-    def register_results(self) -> Dict[str, MeasurementResult]:
-        """Returns the measurement object for each individual register."""
-        if self._sample_results is not None:
-            return self._sample_results
-        elif self.result.has_samples():
-            self._calculate_sample_results()
-            return self._sample_results
-        if self._frequency_results is None:
-            self._calculate_frequency_results()
-        return self._frequency_results
+    def _calculate_register_samples(self):
+        qubit_map = self.result.qubit_map
+        samples = self.result.samples(True)
+        results = {}
+        for name, qubit_tuple in self.register_qubits.items():
+            slicer = tuple(qubit_map[q] for q in qubit_tuple)
+            register_samples = K.gather(samples, slicer, axis=-1)
+            results[name] = MeasurementResult(qubit_tuple)
+            results[name].binary = register_samples
+        return results
 
     def samples(self, binary: bool = True, registers: bool = False
                 ) -> Union[TensorType, Dict[str, TensorType]]:
@@ -259,7 +271,10 @@ class MeasurementRegistersResult:
         """
         if not registers:
             return self.result.samples(binary)
-        return {k: v.samples(binary) for k, v in self.register_results.items()}
+        if self._samples is None:
+            self._frequencies = None
+            self._samples = self._calculate_register_samples()
+        return {k: v.samples(binary) for k, v in self._samples.items()}
 
     def frequencies(self, binary: bool = True, registers: bool = False
                     ) -> Union[collections.Counter, Dict[str, collections.Counter]]:
@@ -288,7 +303,9 @@ class MeasurementRegistersResult:
         """
         if not registers:
             return self.result.frequencies(binary)
-        return {k: v.frequencies(binary) for k, v in self.register_results.items()}
+        if self._frequencies is None:
+            self._frequencies = self._calculate_register_frequencies()
+        return {k: v.frequencies(binary) for k, v in self._frequencies.items()}
 
     def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None):
         """Applies bitflip noise to the measured samples.
