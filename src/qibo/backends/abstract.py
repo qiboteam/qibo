@@ -347,11 +347,6 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def shuffle(self, x): # pragma: no cover
-        """Random shuffling of a tensor's elements."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def sample_shots(self, probs, nshots): # pragma: no cover
         """Samples measurement shots from a given probability distribution.
 

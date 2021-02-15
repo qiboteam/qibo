@@ -199,10 +199,6 @@ class NumpyBackend(abstract.AbstractBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
-    def shuffle(self, x):
-        self.random.shuffle(x)
-        return x
-
     def sample_shots(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
 
