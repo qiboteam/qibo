@@ -91,12 +91,6 @@ class TensorflowBackend(numpy.NumpyBackend):
     def right_shift(self, x, y):
         return self.backend.bitwise.right_shift(x, y)
 
-    def round(self, x):
-        return self.backend.math.round(x)
-
-    def sign(self, x):
-        return self.backend.math.sign(x)
-
     def pow(self, base, exponent):
         return self.backend.math.pow(base, exponent)
 

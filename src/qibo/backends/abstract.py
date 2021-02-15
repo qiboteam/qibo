@@ -196,16 +196,6 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def round(self, x, y): # pragma: no cover
-        """Elementwise rounding to nearest integer."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def sign(self, x, y): # pragma: no cover
-        """Elementwise sign operator."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def exp(self, x): # pragma: no cover
         """Elementwise exponential."""
         raise_error(NotImplementedError)

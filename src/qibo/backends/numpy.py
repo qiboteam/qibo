@@ -96,12 +96,6 @@ class NumpyBackend(abstract.AbstractBackend):
     def right_shift(self, x, y):
         return self.backend.right_shift(x, y)
 
-    def round(self, x):
-        return self.backend.round(x)
-
-    def sign(self, x):
-        return self.backend.sign(x)
-
     def exp(self, x):
         return self.backend.exp(x)
 
