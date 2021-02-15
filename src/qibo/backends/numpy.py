@@ -203,23 +203,22 @@ class NumpyBackend(abstract.AbstractBackend):
         self.random.shuffle(x)
         return x
 
-    def sample_frequencies(self, probs, nshots):
-        frequencies = self.round(nshots * probs)
-        frequencies = self.cast(frequencies, dtype='DTYPEINT')
-
-        num_ones = nshots - self.sum(frequencies)
-        sign = self.sign(num_ones)
-        num_ones = sign * num_ones
-        num_zeros = tuple(probs.shape)[0] - num_ones
-
-        ones = sign * self.ones(num_ones, dtype='DTYPEINT')
-        zeros = self.zeros(num_zeros, dtype='DTYPEINT')
-        fixer = self.concatenate([ones, zeros], axis=0)
-        fixer = self.shuffle(fixer)
-        return frequencies + fixer
-
     def sample_shots(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
+
+    def sample_frequencies(self, probs, nshots, batch_size=10000):
+          import collections
+          frequencies = collections.Counter()
+          def update_frequencies(nsamples):
+              samples = self.sample_shots(probs, nsamples)
+              res, cnts = self.unique(samples, return_counts=True)
+              for k, v in zip(res, cnts):
+                  frequencies[k] += v
+
+          for _ in range(nshots // batch_size):
+              update_frequencies(batch_size)
+          update_frequencies(nshots % batch_size)
+          return frequencies
 
     def compile(self, func):
         return func

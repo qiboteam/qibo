@@ -352,20 +352,6 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sample_frequencies(self, probs, nshots): # pragma: no cover
-        """Samples measurement frequencies from a given probability distribution.
-
-        Args:
-            probs (Tensor): Tensor with the probability distribution on the
-                measured bitsrings.
-            nshots (int): Number of measurement shots to sample.
-
-        Returns:
-            Frequencies as a tensor of shape ``(len(probs),)``.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def sample_shots(self, probs, nshots): # pragma: no cover
         """Samples measurement shots from a given probability distribution.
 
@@ -376,6 +362,20 @@ class AbstractBackend(ABC):
 
         Returns:
             Measurements in decimal as a tensor of shape ``(nshots,)``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def sample_frequencies(self, probs, nshots): # pragma: no cover
+        """Samples measurement frequencies from a given probability distribution.
+
+        Args:
+            probs (Tensor): Tensor with the probability distribution on the
+                measured bitsrings.
+            nshots (int): Number of measurement shots to sample.
+
+        Returns:
+            Frequencies of measurements as a ``collections.Counter``.
         """
         raise_error(NotImplementedError)
 

@@ -108,6 +108,10 @@ class MeasurementResult:
         self._decimal = None
         self._frequencies = None
 
+    def has_samples(self):
+        """Checks if the measurement result has samples calculated."""
+        return self._binary is not None or self._decimal is not None
+
     def samples(self, binary: bool = True) -> TensorType:
         if binary:
             return self.binary
@@ -121,9 +125,7 @@ class MeasurementResult:
             res, cnts = K.unique(self.decimal, return_counts=True)
             return collections.Counter({k: v for k, v in zip(res, cnts)})
         elif self.probabilities is not None:
-            freqs = K.sample_frequencies(self.probabilities, self.nshots)
-            return collections.Counter({i: int(v) for i, v in enumerate(freqs)
-                                        if int(v) > 0})
+            return K.sample_frequencies(self.probabilities, self.nshots)
         raise_error(RuntimeError, "Cannot calculate measurement frequencies "
                                   "without a probability distribution or "
                                   "samples.")
@@ -206,21 +208,32 @@ class MeasurementRegistersResult:
                  measurement_result: MeasurementResult):
         self.register_qubits = register_qubits
         self.result = measurement_result
-        self._register_results = None
+        self._sample_results = None
+        self._frequency_results = None
+
+    def _calculate_frequency_results(self):
+        raise_error(NotImplementedError)
+
+    def _calculate_sample_results(self):
+        samples = self.result.samples(True)
+        self._sample_results = {}
+        for name, qubit_tuple in self.register_qubits.items():
+            slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
+            register_samples = K.gather(samples, slicer, axis=-1)
+            self._sample_results[name] = MeasurementResult(qubit_tuple)
+            self._sample_results[name].binary = register_samples
 
     @property
     def register_results(self) -> Dict[str, MeasurementResult]:
         """Returns the measurement object for each individual register."""
-        if self._register_results is None:
-            # TODO: Handle the case where we only have frequencies without requiring the sample calculation
-            samples = self.result.samples(True)
-            self._register_results = {}
-            for name, qubit_tuple in self.register_qubits.items():
-                slicer = tuple(self.result.qubit_map[q] for q in qubit_tuple)
-                register_samples = K.gather(samples, slicer, axis=-1)
-                self._register_results[name] = MeasurementResult(qubit_tuple)
-                self._register_results[name].binary = register_samples
-        return self._register_results
+        if self._sample_results is not None:
+            return self._sample_results
+        elif self.result.has_samples():
+            self._calculate_sample_results()
+            return self._sample_results
+        if self._frequency_results is None:
+            self._calculate_frequency_results()
+        return self._frequency_results
 
     def samples(self, binary: bool = True, registers: bool = False
                 ) -> Union[TensorType, Dict[str, TensorType]]:

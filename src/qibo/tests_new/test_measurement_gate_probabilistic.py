@@ -15,8 +15,6 @@ def test_probabilistic_measurement(backend, accelerators):
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    # deterministic frequencies
-    assert_result(result, decimal_frequencies={i: 250 for i in range(4)})
     # calculate samples to get statistical noise in measurements
     K.set_seed(1234)
     _ = result.samples()
