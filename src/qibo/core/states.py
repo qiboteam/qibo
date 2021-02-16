@@ -145,10 +145,15 @@ class MatrixState(VectorState):
         raise_error(RuntimeError, "State is already a density matrix.")
 
     def probabilities(self, qubits=None, measurement_gate=None):
-        traceout = self._traceout(qubits, measurement_gate)
-        shape = 2 * self.nqubits * (2,)
-        state = K.einsum(traceout, K.reshape(self.tensor, shape))
-        return K.cast(state, dtype='DTYPE')
+        if qubits is None:
+            qubits = measurement_gate.target_qubits
+        state = K.reshape(self.tensor, 2 * self.nqubits * (2,))
+        order = tuple(sorted(qubits)) + tuple(i for i in range(self.nqubits) if i not in qubits)
+        order = order + tuple(i + self.nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (self.nqubits - len(qubits)))
+        state = K.reshape(K.transpose(state, order), shape)
+        state = K.einsum("abab->a", state)
+        return K.reshape(K.cast(state, dtype='DTYPE'), len(qubits) * (2,))
 
 
 class DistributedState(VectorState):
