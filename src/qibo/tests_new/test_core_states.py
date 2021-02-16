@@ -86,36 +86,23 @@ def test_vector_state_to_density_matrix(backend):
     qibo.set_backend(original_backend)
 
 
-def test_vector_state_tracout():
-    from qibo import gates
-    state = states.VectorState.zero_state(3)
-    mgate = gates.M(0)
-    qubits = [0]
-    assert state._traceout(qubits=qubits) == [1, 2]
-    assert state._traceout(measurement_gate=mgate) == (1, 2)
-    with pytest.raises(ValueError):
-        unmeasured = state._traceout()
-    with pytest.raises(ValueError):
-        unmeasured = state._traceout(qubits, mgate)
-
-
-def test_matrix_state_tracout():
-    from qibo import gates
-    state = states.MatrixState.zero_state(2)
-    mgate = gates.M(0)
-    mgate.density_matrix = True
-    qubits = [0]
-    assert state._traceout(qubits=qubits) == "abab->a"
-    assert state._traceout(measurement_gate=mgate) == "abab->a"
-
-
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
 def test_state_probabilities(backend, state_type):
-    # TODO: Test this both for `VectorState` and `MatrixState`
     state = getattr(states, state_type).plus_state(4)
     probs = state.probabilities(qubits=[0, 1])
     target_probs = np.ones((2, 2)) / 4
     np.testing.assert_allclose(probs, target_probs)
+
+
+def test_state_probabilities_errors():
+    from qibo import gates
+    state = states.VectorState.zero_state(3)
+    mgate = gates.M(0)
+    qubits = [0]
+    with pytest.raises(ValueError):
+        probs = state.probabilities()
+    with pytest.raises(ValueError):
+        probs = state.probabilities(qubits, mgate)
 
 
 @pytest.mark.parametrize("registers", [None, {"a": (0,), "b": (2,)}])
