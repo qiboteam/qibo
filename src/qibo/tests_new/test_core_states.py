@@ -87,9 +87,15 @@ def test_vector_state_to_density_matrix(backend):
 
 
 @pytest.mark.parametrize("state_type", ["VectorState", "MatrixState"])
-def test_state_probabilities(backend, state_type):
+@pytest.mark.parametrize("use_gate", [False, True])
+def test_state_probabilities(backend, state_type, use_gate):
     state = getattr(states, state_type).plus_state(4)
-    probs = state.probabilities(qubits=[0, 1])
+    if use_gate:
+        from qibo import gates
+        mgate = gates.M(0, 1)
+        probs = state.probabilities(measurement_gate=mgate)
+    else:
+        probs = state.probabilities(qubits=[0, 1])
     target_probs = np.ones((2, 2)) / 4
     np.testing.assert_allclose(probs, target_probs)
 
