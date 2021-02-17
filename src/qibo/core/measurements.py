@@ -135,7 +135,6 @@ class MeasurementResult:
             if self.nshots > SHOT_BATCH_SIZE:
                 freqs = K.sample_frequencies(self.probabilities, self.nshots)
                 freqs = K.np.array(freqs)
-                print(freqs)
                 return collections.Counter(
                         {k: v for k, v in enumerate(freqs) if v > 0})
 
