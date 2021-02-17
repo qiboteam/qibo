@@ -54,42 +54,31 @@ class VectorState(AbstractState):
         matrix = K.outer(self.tensor, K.conj(self.tensor))
         return MatrixState.from_tensor(matrix, nqubits=self.nqubits)
 
-    def _traceout(self, qubits=None, measurement_gate=None):
-        """Helper method for :meth:`qibo.core.states.VectorState.probabilities`.
-
-        Calculates the trace-out qubit indices or einsum string.
-        """
-        if qubits is None and measurement_gate is None:
-            raise_error(ValueError, "Either ``qubits`` or ``measurement_gates`` "
-                                    "should be given to calculate measurement "
-                                    "probabilities.")
-
-        if qubits is not None:
-            if measurement_gate is not None:
+    def check_measured_qubits(func): # pylint: disable=E0213
+        """Decorator for checking list of measured qubits for probability calculation."""
+        def wrapper(self, qubits=None, measurement_gate=None):
+            if qubits is None:
+                if measurement_gate is None:
+                    raise_error(ValueError, "Either ``qubits`` or ``measurement_gates`` "
+                                            "should be given to calculate measurement "
+                                            "probabilities.")
+                if not measurement_gate.is_prepared:
+                    measurement_gate.set_nqubits(self.tensor)
+                qubits = measurement_gate.target_qubits
+            elif measurement_gate is not None:
                 raise_error(ValueError, "Cannot calculate measurement "
                                         "probabilities if both ``qubits`` and "
                                         "``measurement_gate`` are given."
                                         "Please specify only one of them.")
-            unmeasured_qubits = [i for i in range(self.nqubits)
-                                 if i not in qubits]
-            if isinstance(self, MatrixState):
-                from qibo.abstractions.callbacks import PartialTrace
-                qubits = set(unmeasured_qubits)
-                return PartialTrace.einsum_string(qubits, self.nqubits,
-                                                  measuring=True)
-            return unmeasured_qubits
+            return func(self, qubits=set(qubits)) # pylint: disable=E1102
+        return wrapper
 
-        if not measurement_gate.is_prepared:
-            measurement_gate.set_nqubits(self.tensor)
-        if isinstance(self, MatrixState):
-            return measurement_gate.traceout
-        return measurement_gate.unmeasured_qubits
-
+    @check_measured_qubits
     def probabilities(self, qubits=None, measurement_gate=None):
-        unmeasured_qubits = self._traceout(qubits, measurement_gate)
-        shape = self.nqubits * (2,)
-        state = K.reshape(K.square(K.abs(self.tensor)), shape)
-        return K.sum(state, axis=tuple(unmeasured_qubits))
+        unmeasured_qubits = tuple(i for i in range(self.nqubits)
+                                  if i not in qubits)
+        state = K.reshape(K.square(K.abs(self.tensor)), self.nqubits * (2,))
+        return K.sum(state, axis=unmeasured_qubits)
 
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
@@ -144,11 +133,18 @@ class MatrixState(VectorState):
     def to_density_matrix(self):
         raise_error(RuntimeError, "State is already a density matrix.")
 
+    @VectorState.check_measured_qubits
     def probabilities(self, qubits=None, measurement_gate=None):
-        traceout = self._traceout(qubits, measurement_gate)
-        shape = 2 * self.nqubits * (2,)
-        state = K.einsum(traceout, K.reshape(self.tensor, shape))
-        return K.cast(state, dtype='DTYPE')
+        order = (tuple(sorted(qubits)) +
+                 tuple(i for i in range(self.nqubits) if i not in qubits))
+        order = order + tuple(i + self.nqubits for i in order)
+        shape = 2 * (2 ** len(qubits), 2 ** (self.nqubits - len(qubits)))
+
+        state = K.reshape(self.tensor, 2 * self.nqubits * (2,))
+        state = K.reshape(K.transpose(state, order), shape)
+        state = K.einsum("abab->a", state)
+
+        return K.reshape(K.cast(state, dtype='DTYPE'), len(qubits) * (2,))
 
 
 class DistributedState(VectorState):
