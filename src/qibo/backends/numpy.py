@@ -1,5 +1,5 @@
 from qibo.backends import abstract
-from qibo.config import raise_error, log, SHOT_BATCH_SIZE
+from qibo.config import raise_error, log
 
 
 class NumpyBackend(abstract.AbstractBackend):
@@ -198,6 +198,7 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def sample_frequencies(self, probs, nshots):
           import collections
+          from qibo.config import SHOT_BATCH_SIZE
           frequencies = collections.Counter()
           def update_frequencies(nsamples):
               samples = self.sample_shots(probs, nsamples)

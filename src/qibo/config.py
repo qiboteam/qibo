@@ -70,6 +70,20 @@ def set_threads(num_threads):
     global OMP_NUM_THREADS
     OMP_NUM_THREADS = num_threads
 
+def get_batch_size():
+    """Returns batch size used for sampling measurement shots."""
+    return SHOT_BATCH_SIZE
+
+def set_batch_size(batch_size):
+    if not isinstance(batch_size, int):
+        raise_error(TypeError, "Shot batch size must be integer.")
+    elif batch_size < 1:
+        raise_error(ValueError, "Shot batch size must be a positive integer.")
+    elif batch_size > 2 ** 31:
+         raise_error(ValueError, "Shot batch size cannot be greater than 2^31.")
+    global SHOT_BATCH_SIZE
+    SHOT_BATCH_SIZE = batch_size
+
 
 # Configuration for logging mechanism
 class CustomHandler(logging.StreamHandler):

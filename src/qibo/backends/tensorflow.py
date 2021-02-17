@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, LOG_LEVEL, SHOT_BATCH_SIZE
+from qibo.config import raise_error, LOG_LEVEL
 
 
 class Optimization:
@@ -162,8 +162,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
     def sample_shots(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
         logits = self.log(probs)[self.newaxis]
-
         samples = [self.random.categorical(
             logits, SHOT_BATCH_SIZE, dtype=self.dtypes('DTYPEINT'))[0]
             for _ in range(nshots // SHOT_BATCH_SIZE)]
