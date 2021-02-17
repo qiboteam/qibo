@@ -126,7 +126,8 @@ class TensorflowBackend(numpy.NumpyBackend):
             res, _, counts = self.backend.unique_with_counts(
                 x, out_idx=self.dtypes('DTYPEINT'))
             return res, counts
-        return self.backend.unique(x, out_idx=self.dtypes('DTYPEINT'))
+        res, _  = self.backend.unique(x, out_idx=self.dtypes('DTYPEINT'))
+        return res
 
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is not None:
@@ -182,7 +183,8 @@ class TensorflowBackend(numpy.NumpyBackend):
     def update_frequencies(self, probs, nsamples, frequencies):
         samples = self.sample_shots(probs, nsamples)
         res, counts = self.unique(samples, return_counts=True)
-        frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
+        frequencies = self.backend.tensor_scatter_nd_add(
+            frequencies, res[:, self.newaxis], counts)
         return frequencies
 
     def compile(self, func):
