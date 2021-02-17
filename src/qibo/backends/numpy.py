@@ -196,20 +196,22 @@ class NumpyBackend(abstract.AbstractBackend):
     def sample_shots(self, probs, nshots):
         return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
 
-    def sample_frequencies(self, probs, nshots):
-          import collections
-          from qibo.config import SHOT_BATCH_SIZE
-          frequencies = collections.Counter()
-          def update_frequencies(nsamples):
-              samples = self.sample_shots(probs, nsamples)
-              res, cnts = self.unique(samples, return_counts=True)
-              for k, v in zip(res, cnts):
-                  frequencies[k] += v
+    def update_frequencies(self, probs, nsamples, frequencies):
+        samples = self.sample_shots(probs, nsamples)
+        res, counts = self.unique(samples, return_counts=True)
+        frequencies[res] += counts
+        return frequencies
 
-          for _ in range(nshots // SHOT_BATCH_SIZE):
-              update_frequencies(SHOT_BATCH_SIZE)
-          update_frequencies(nshots % SHOT_BATCH_SIZE)
-          return frequencies
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+        n = int(probs.shape[0])
+        frequencies = self.zeros(n, dtype=self.dtypes('DTYPEINT'))
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = self.update_frequencies(probs, SHOT_BATCH_SIZE,
+                                                  frequencies)
+        frequencies = self.update_frequencies(probs, nshots % SHOT_BATCH_SIZE,
+                                              frequencies)
+        return frequencies
 
     def compile(self, func):
         return func

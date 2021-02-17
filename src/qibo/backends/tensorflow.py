@@ -121,6 +121,13 @@ class TensorflowBackend(numpy.NumpyBackend):
     def inv(self, x):
         raise_error(NotImplementedError)
 
+    def unique(self, x, return_counts=False):
+        if return_counts:
+            res, _, counts = self.backend.unique_with_counts(
+                x, out_idx=self.dtypes('DTYPEINT'))
+            return res, counts
+        return self.backend.unique(x, out_idx=self.dtypes('DTYPEINT'))
+
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is not None:
             return self.backend.gather(x, indices, axis=axis)
@@ -171,6 +178,12 @@ class TensorflowBackend(numpy.NumpyBackend):
                 logits, nshots % SHOT_BATCH_SIZE,
                 dtype=self.dtypes('DTYPEINT'))[0])
         return self.concatenate(samples, axis=0)
+
+    def update_frequencies(self, probs, nsamples, frequencies):
+        samples = self.sample_shots(probs, nsamples)
+        res, counts = self.unique(samples, return_counts=True)
+        frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
+        return frequencies
 
     def compile(self, func):
         return self.backend.function(func)

@@ -133,10 +133,15 @@ class MeasurementResult:
                                           "frequencies without a probability "
                                           "distribution or  samples.")
             if self.nshots > SHOT_BATCH_SIZE:
-                return K.sample_frequencies(self.probabilities, self.nshots)
+                freqs = K.sample_frequencies(self.probabilities, self.nshots)
+                freqs = K.np.array(freqs)
+                print(freqs)
+                return collections.Counter(
+                        {k: v for k, v in enumerate(freqs) if v > 0})
 
-        res, cnts = K.unique(self.decimal, return_counts=True)
-        return collections.Counter({k: v for k, v in zip(res, cnts)})
+        res, counts = K.unique(self.decimal, return_counts=True)
+        res, counts = K.np.array(res), K.np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
