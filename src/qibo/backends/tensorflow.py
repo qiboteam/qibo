@@ -44,7 +44,10 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.optimization = Optimization()
 
         from qibo.tensorflow import custom_operators as op
-        self.op = op
+        self.op = None
+        if op._custom_operators_loaded:
+            self.op = op
+
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -132,10 +135,28 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.gather_nd(x, indices)
 
     def initial_state(self, nqubits, is_matrix=False):
-        from qibo.config import get_threads
-        return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
-                                     is_matrix=is_matrix,
-                                     omp_num_threads=get_threads())
+        if self.op is None: # pragma: no cover
+            dim = 1 + is_matrix
+            shape = dim * (2 ** nqubits,)
+            idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))
+            state = self.backend.zeros(shape, dtype=self.dtypes('DTYPECPX'))
+            update = self.backend.constant([1], dtype=self.dtypes('DTYPECPX'))
+            state = self.backend.tensor_scatter_nd_update(state, idx, update)
+            return state
+        else:
+            from qibo.config import get_threads
+            return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
+                                        is_matrix=is_matrix,
+                                        omp_num_threads=get_threads())
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        if self.op is None: # pragma: no cover
+            pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+            return self.reshape(self.transpose(pieces, order), state.shape)
+        else:
+            from qibo.config import get_threads
+            return self.op.transpose_state(pieces, state, nqubits, order,
+                                           get_threads())
 
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))

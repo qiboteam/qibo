@@ -22,8 +22,10 @@ Here is an example of a circuit with 2 qubits:
     # Define an initial state (optional - default initial state is |00>)
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
-    final_state = c(initial_state) # c.execute(initial_state) also works
-    print(final_state.numpy())
+    result = c(initial_state) # c.execute(initial_state) also works
+    print(result.state())
+    # should print `tf.Tensor([1, 0, 0, 0])`
+    print(result.state(numpy=True))
     # should print `np.array([1, 0, 0, 0])`
 
 If you are planning to freeze the circuit and just query for different initial
@@ -120,9 +122,9 @@ How to perform measurements?
 
 In order to obtain measurement results from a circuit one has to add measurement
 gates (:class:`qibo.abstractions.gates.M`) and provide a number of shots (``nshots``)
-when executing the circuit. This will return a :class:`qibo.core.measurements.CircuitResult`
-object which contains all the information about the measured samples.
-For example
+when executing the circuit. In this case the returned
+:class:`qibo.abstractions.states.AbstractState` will contain all the
+information about the measured samples. For example
 
 .. code-block:: python
 
@@ -181,9 +183,8 @@ Unmeasured qubits are ignored by the measurement objects. Also, the
 order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
-If the user wishes to access the full state vector of a circuit that was
-measured, this is possible using the
-:py:attr:`qibo.abstractions.circuit.AbstractCircuit.final_state` property of circuits.
+The final state vector is still accessible via
+:method:`qibo.abstractions.states.AbstractCircuit.state`.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not

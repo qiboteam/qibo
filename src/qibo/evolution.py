@@ -1,7 +1,7 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
 from qibo.abstractions import hamiltonians
-from qibo.core import circuit
+from qibo.core import circuit, states
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
 
@@ -65,6 +65,7 @@ class StateEvolution:
 
         self.callbacks = callbacks
         self.accelerators = accelerators
+        self.state_cls = states.VectorState
         self.normalize_state = self._create_normalize_state(solver)
         self.calculate_callbacks = self._create_calculate_callbacks(
             accelerators, memory_device)
@@ -88,7 +89,7 @@ class StateEvolution:
         def calculate_callbacks_distributed(state):
             with K.device(memory_device):
                 if not isinstance(state, K.tensor_types):
-                    state = state.vector
+                    state = state.tensor
                 calculate_callbacks(state)
 
         return calculate_callbacks_distributed
@@ -128,7 +129,7 @@ class StateEvolution:
             raise_error(ValueError, "StateEvolution cannot be used without "
                                     "initial state.")
         if self.accelerators is None:
-            return circuit.Circuit._cast_initial_state(self, state)
+            return circuit.Circuit.get_initial_state(self, state)
         else:
             c = self.solver.hamiltonian(0).circuit(self.solver.dt)
             return c.get_initial_state(state)
@@ -281,8 +282,10 @@ class AdiabaticEvolution(StateEvolution):
             if self.accelerators is None:
                 return self.h0.ground_state()
             else:
+                from qibo.core.states import DistributedState
                 c = self.hamiltonian(0).circuit(self.solver.dt)
-                return c.get_initial_state("ones")
+                state = DistributedState.plus_state(c)
+                return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)
 
     @staticmethod

@@ -7,8 +7,8 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8]
+        os: [ubuntu-latest]
+        python-version: [3.8]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
@@ -33,10 +33,6 @@ jobs:
     - name: Test with pytest core
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
-    - name: Test examples
-      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
-      run: |
-        pytest examples/
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v1
