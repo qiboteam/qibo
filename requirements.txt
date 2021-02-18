@@ -9,9 +9,4 @@ joblib
 matplotlib
 psutil
 networkx
-
-# paramiko requirements
-numpy~=1.18.5
-paramiko~=2.7.2
-h5py~=2.10.0
-setuptools~=51.0.0
+paramiko
