@@ -115,7 +115,7 @@ class IcarusQ(Experiment):
     def upload(self, waveform):
         dump = BytesIO()
         with self.connection as sftp:
-            for i in range(self.nchannels):
+            for i in range(self.static.nchannels):
                 dump.seek(0)
                 np.savetxt(dump, waveform[i], fmt='%d', newline=',')
                 dump.seek(0)
@@ -123,10 +123,10 @@ class IcarusQ(Experiment):
         dump.close()
 
     def download(self):
-        waveform = np.zeros((self.nchannels, self.sample_size))
+        waveform = np.zeros((self.static.nchannels, self.static.sample_size))
         dump = BytesIO()
         with self.connection as sftp:
-            for i in range(self.nchannels):
+            for i in range(self.static.nchannels):
                 dump.seek(0)
                 #sftp.get('/tmp/ADC_CH{}.txt'.format(i + 1), local + 'ADC_CH{}.txt'.format(i + 1))
                 dump = sftp.getfo(dump)

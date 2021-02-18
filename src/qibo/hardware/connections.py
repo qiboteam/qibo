@@ -31,7 +31,7 @@ class ParamikoSSH(Connection):
         import paramiko
         self.ssh = paramiko.SSHClient()
         self.ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.ssh.connect(hostname=address, username=username, password=password)
+        self.ssh.connect(hostname=hostname, username=username, password=password)
 
         self.sftp = None
         self.sftp_counter = 1
