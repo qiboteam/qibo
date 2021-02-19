@@ -180,11 +180,19 @@ class TensorflowBackend(numpy.NumpyBackend):
                 dtype=self.dtypes('DTYPEINT'))[0])
         return self.concatenate(samples, axis=0)
 
-    def update_frequencies(self, probs, nsamples, frequencies):
-        samples = self.sample_shots(probs, nsamples)
-        res, counts = self.unique(samples, return_counts=True)
-        frequencies = self.backend.tensor_scatter_nd_add(
-            frequencies, res[:, self.newaxis], counts)
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+        logits = self.log(probs)[self.newaxis]
+        def update_frequencies(nsamples, frequencies):
+            samples = self.random.categorical(logits, nsamples, dtype=self.dtypes('DTYPEINT'))[0]
+            res, counts = self.unique(samples, return_counts=True)
+            return self.backend.tensor_scatter_nd_add(
+                frequencies, res[:, self.newaxis], counts)
+
+        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
         return frequencies
 
     def compile(self, func):
