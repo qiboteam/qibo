@@ -301,8 +301,13 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def equal(self, x, y): # pragma: no cover
+        """Checks if two arrays are equal element-wise. Returns a tensor."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def array_equal(self, x, y): # pragma: no cover
-        """Checks if two arrays are equal elementwise.
+        """Checks if two arrays are equal element-wise. Returns a single bool.
 
         Used in :meth:`qibo.tensorflow.hamiltonians.TrotterHamiltonian.construct_terms`.
         """

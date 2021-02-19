@@ -157,6 +157,9 @@ class NumpyBackend(abstract.AbstractBackend):
     def eigvalsh(self, x):
         return self.backend.linalg.eigvalsh(x)
 
+    def equal(self, x, y):
+        return self.backend.equal(x, y)
+
     def array_equal(self, x, y):
         return self.np.array_equal(x, y)
 

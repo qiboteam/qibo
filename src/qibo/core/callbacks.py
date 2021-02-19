@@ -156,13 +156,12 @@ class Gap(BackendCallback, callbacks.Gap):
             return K.real(eigvals[self.mode])
 
         # case: self.mode == "gap"
-        import tensorflow as tf
         excited = 1
         gap = K.real(eigvals[excited] - eigvals[0])
         if not self.check_degenerate:
             return gap
 
-        while tf.equal(gap, 0):
+        while K.equal(gap, 0):
             gap = K.real(eigvals[excited] - eigvals[0])
             excited += 1
         if excited > 1:
