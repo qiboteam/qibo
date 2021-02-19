@@ -235,6 +235,11 @@ class Gap(Callback):
             first excited state energy (gap) is calculated.
             If ``mode`` is an integer, then the energy of the corresponding
             eigenstate is calculated.
+        check_degenerate (bool): If ``True`` the excited state number is
+            increased until a non-zero gap is found. This is used to find the
+            proper gap in the case of degenerate Hamiltonians.
+            This flag is relevant only if ``mode`` is ``'gap'``.
+            Default is ``True``.
 
     Example:
         ::
@@ -258,7 +263,7 @@ class Gap(Callback):
             print(gap[:])
     """
 
-    def __init__(self, mode: Union[str, int] = "gap"):
+    def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):
         super(Gap, self).__init__()
         if isinstance(mode, str):
             if mode != "gap":
@@ -268,3 +273,4 @@ class Gap(Callback):
             raise_error(TypeError, "Gap callback mode should be integer or "
                                    "string but is {}.".format(type(mode)))
         self.mode = mode
+        self.check_degenerate = check_degenerate

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from qibo import K
 from qibo.abstractions import callbacks
 from qibo.abstractions.states import AbstractState
-from qibo.config import EIGVAL_CUTOFF, raise_error
+from qibo.config import EIGVAL_CUTOFF, raise_error, log
 
 
 class BackendCallback(callbacks.Callback, ABC):
@@ -126,8 +126,8 @@ class Energy(BackendCallback, callbacks.Energy):
 
 class Gap(BackendCallback, callbacks.Gap):
 
-    def __init__(self, mode="gap"):
-        callbacks.Gap.__init__(self, mode)
+    def __init__(self, mode="gap", check_degenerate=True):
+        callbacks.Gap.__init__(self, mode, check_degenerate)
         self._evolution = None
 
     @property
@@ -151,10 +151,24 @@ class Gap(BackendCallback, callbacks.Gap):
         hamiltonian = self.evolution.hamiltonian()
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()
+        eigvals = hamiltonian.eigenvalues()
         if isinstance(self.mode, int):
-            return K.real(hamiltonian.eigenvalues()[self.mode])
+            return K.real(eigvals[self.mode])
+
         # case: self.mode == "gap"
-        return K.real(hamiltonian.eigenvalues()[1] - hamiltonian.eigenvalues()[0])
+        import tensorflow as tf
+        excited = 1
+        gap = K.real(eigvals[excited] - eigvals[0])
+        if not self.check_degenerate:
+            return gap
+
+        while tf.equal(gap, 0):
+            gap = K.real(eigvals[excited] - eigvals[0])
+            excited += 1
+        if excited > 1:
+            log.warning("The Hamiltonian is degenerate. Using eigenvalue {} "
+                        "to calculate gap.".format(excited))
+        return gap
 
     def density_matrix_call(self, state):
         raise_error(NotImplementedError, "Gap callback is not implemented for "
