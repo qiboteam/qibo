@@ -161,7 +161,7 @@ class Gap(BackendCallback, callbacks.Gap):
         if not self.check_degenerate:
             return gap
 
-        while K.equal(gap, 0):
+        while K.less(gap, EIGVAL_CUTOFF):
             gap = K.real(eigvals[excited] - eigvals[0])
             excited += 1
         if excited > 1:

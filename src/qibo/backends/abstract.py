@@ -301,8 +301,8 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def equal(self, x, y): # pragma: no cover
-        """Checks if two arrays are equal element-wise. Returns a tensor."""
+    def less(self, x, y): # pragma: no cover
+        """Compares the values of two tensors element-wise. Returns a bool tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod

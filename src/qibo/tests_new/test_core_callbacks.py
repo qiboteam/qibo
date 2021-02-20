@@ -334,9 +334,9 @@ def test_gap(backend, trotter, check_degenerate):
     h0 = hamiltonians.X(4, trotter=trotter)
     if check_degenerate:
         # use h=0 to make this Hamiltonian degenerate
-        h1 = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
+        h1 = hamiltonians.TFIM(4, h=0, trotter=trotter)
     else:
-        h1 = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
+        h1 = hamiltonians.TFIM(4, h=1, trotter=trotter)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
@@ -345,8 +345,8 @@ def test_gap(backend, trotter, check_degenerate):
         targets["ground"].append(eigvals[0])
         targets["excited"].append(eigvals[1])
         targets["gap"].append(eigvals[1] - eigvals[0])
-    #if check_degenerate:
-    #    targets["gap"][-1] = eigvals[2] - eigvals[0]
+    if check_degenerate:
+        targets["gap"][-1] = eigvals[3] - eigvals[0]
 
     gap = callbacks.Gap(check_degenerate=check_degenerate)
     ground = callbacks.Gap(0)
