@@ -326,12 +326,17 @@ def test_energy(backend, density_matrix):
 
 
 @pytest.mark.parametrize("trotter", [False, True])
-def test_gap(backend, trotter):
+@pytest.mark.parametrize("check_degenerate", [False, True])
+def test_gap(backend, trotter, check_degenerate):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     from qibo import hamiltonians
     h0 = hamiltonians.X(4, trotter=trotter)
-    h1 = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
+    if check_degenerate:
+        # use h=0 to make this Hamiltonian degenerate
+        h1 = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
+    else:
+        h1 = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}
@@ -340,8 +345,10 @@ def test_gap(backend, trotter):
         targets["ground"].append(eigvals[0])
         targets["excited"].append(eigvals[1])
         targets["gap"].append(eigvals[1] - eigvals[0])
+    #if check_degenerate:
+    #    targets["gap"][-1] = eigvals[2] - eigvals[0]
 
-    gap = callbacks.Gap()
+    gap = callbacks.Gap(check_degenerate=check_degenerate)
     ground = callbacks.Gap(0)
     excited = callbacks.Gap(1)
     evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
@@ -350,13 +357,6 @@ def test_gap(backend, trotter):
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])
-    # check not implemented for density matrices
-    gap.density_matrix = True
-    with pytest.raises(NotImplementedError):
-        gap(np.zeros(8))
-    # for coverage
-    _ = gap.density_matrix
-    gap.density_matrix = False
     qibo.set_backend(original_backend)
 
 
@@ -368,11 +368,18 @@ def test_gap_errors():
     # invalid ``mode`` type
     with pytest.raises(TypeError):
         gap = callbacks.Gap([])
+
+    gap = callbacks.Gap()
     # invalid evolution model type
     with pytest.raises(TypeError):
-        gap = callbacks.Gap()
         gap.evolution = "test"
     # call before setting evolution model
     with pytest.raises(ValueError):
-        gap = callbacks.Gap()
         gap(np.ones(4))
+    # not implemented for density matrices
+    gap.density_matrix = True
+    with pytest.raises(NotImplementedError):
+        gap(np.zeros(8))
+    # for coverage
+    _ = gap.density_matrix
+    gap.density_matrix = False
