@@ -54,6 +54,15 @@ def test_entropy_singlet_state(backend):
     qibo.set_backend(original_backend)
 
 
+def test_entropy_bad_state_type(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    entropy = callbacks.EntanglementEntropy([0])
+    with pytest.raises(TypeError):
+        _ = entropy("test")
+    qibo.set_backend(original_backend)
+
+
 def test_entropy_random_state(backend):
     """Check that entropy calculation agrees with numpy."""
     original_backend = qibo.get_backend()
