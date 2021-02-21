@@ -44,6 +44,7 @@ METHODS = [
     ("transpose", [rand((3, 3, 3)), [0, 2, 1]]),
     ("inv", [rand((4, 4))]),
     ("eigvalsh", [rand((4, 4))]),
+    ("less", [rand(10), rand(10)]),
     ("array_equal", [rand(10), rand(10)]),
     ("gather_nd", [rand((5, 3)), [0, 1]]),
     ("initial_state", [5, True]),
