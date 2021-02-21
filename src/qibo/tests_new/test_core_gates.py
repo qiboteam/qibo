@@ -518,5 +518,12 @@ def test_flatten(backend):
         gate.reprepare()
     qibo.set_backend(original_backend)
 
-# TODO: Test `CallbackGate`
+
+def test_callback_gate_errors():
+    from qibo import callbacks
+    entropy = callbacks.EntanglementEntropy([0])
+    gate = gates.CallbackGate(entropy)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
+
 # TODO: Test channels
