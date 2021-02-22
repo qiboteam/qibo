@@ -38,6 +38,19 @@ REGISTER_OP("SwapPieces")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 
 
+// Register op that calculates measurement frequencies
+REGISTER_OP("MeasureFrequencies")
+    .Attr("Tfloat: {float32, float64}")
+    .Attr("Tint: {int32, int64}")
+    .Input("frequencies: Tint")
+    .Input("cumprobs: Tfloat")
+    .Attr("nqubits: int")
+    .Attr("nshots: int")
+    .Attr("omp_num_threads: int")
+    .Output("out: Tint")
+    .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
+
+
 // Register op that collapses state vector according to measured bit string
 REGISTER_OP("CollapseState")            \
     .Attr("T: {complex64, complex128}") \

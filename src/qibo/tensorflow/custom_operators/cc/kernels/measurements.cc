@@ -13,65 +13,77 @@ typedef Eigen::GpuDevice GPUDevice;
 namespace functor {
 
 // CPU specialization
-template <typename T>
-struct MeasurementFrequenciesFunctor<CPUDevice, T> {
-  void operator()(const CPUDevice &d, T *out, int64 size)
+template <typename Tint, typename Tfloat>
+struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
+  void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* cumprobs,
+                  int64 nshots, int nqubits)
   {
-    #pragma omp parallel for
-    for (int i = 0; i < nsamples; i++) {
-      for (long j = 0; j < nstates; j++) {
-        if (random() < cumprobs[j]) {
-            frequencies[j]++;
-            break;
-      }
+    int64 nstates = 1 << nqubits;
+    #pragma omp parallel shared(cumprobs)
+    {
+        std::map<int64, int64> frequencies_private;
+        #pragma omp for
+        for (auto i = 0; i < nshots; i++) {
+          Tfloat random_number = ((Tfloat) rand() / RAND_MAX);
+          for (auto j = 0; j < nstates; j++) {
+            if (random_number < cumprobs[j]) {
+                if (frequencies_private.find(j) == frequencies_private.end()) {
+                    frequencies_private[j] = 1;
+                } else {
+                    frequencies_private[j]++;
+                }
+                break;
+            }
+          }
+        }
+        #pragma omp critical
+        {
+            for(const auto& entry : frequencies_private) {
+                frequencies[entry.first] += entry.second;
+            }
+        }
     }
-    for (size_t i = 1; i < (size_t) size; i++)
-      out[i] = T(0, 0);
-    out[0] = T(1, 0);
   }
 };
 
-template <typename Device, typename T>
-class MeasurementFrequenciesOp : public OpKernel {
+template <typename Device, typename Tint, typename Tfloat>
+class MeasureFrequenciesOp : public OpKernel {
  public:
-  explicit InitialStateOp(OpKernelConstruction *context) : OpKernel(context) {
+  explicit MeasureFrequenciesOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("is_matrix", &is_matrix_));
+    OP_REQUIRES_OK(context, context->GetAttr("nshots", &nshots_));
     OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
-    OP_REQUIRES(context, nqubits_ > 0, errors::InvalidArgument("nqubits must be positive"));
     omp_set_num_threads(threads_);
   }
 
   void Compute(OpKernelContext *context) override {
-    // grabe the input tensor
-    const int64 size = pow(2, nqubits_);
-
-    TensorShape shape{size};
-    if (is_matrix_)
-      shape = TensorShape{size, size};
-
-    Tensor* output_tensor = NULL;
-    OP_REQUIRES_OK(context, context->allocate_output(0, shape, &output_tensor));
+    // grab the input tensor
+    Tensor frequencies = context->input(0);
+    const Tensor& cumprobs = context->input(1);
 
     // call the implementation
-    MeasurementFrequenciesFunctor<Device, T>()(context->eigen_device<Device>(),
-                                     output_tensor->flat<T>().data(),
-                                     output_tensor->flat<T>().size());
+    MeasureFrequenciesFunctor<Device, Tint, Tfloat>()
+      (context->eigen_device<Device>(), frequencies.flat<Tint>().data(),
+       cumprobs.flat<Tfloat>().data(), nshots_, nqubits_);
+    context->set_output(0, frequencies);
   }
 
  private:
   int nqubits_;
-  bool is_matrix_;
+  int64 nshots_;
   int threads_;
 };
 
 // Register the CPU kernels.
-#define REGISTER_CPU(T)                                               \
-  REGISTER_KERNEL_BUILDER(                                            \
-      Name("MeasurementFrequencies").Device(DEVICE_CPU).TypeConstraint<T>("dtype"), \
-      MeasurementFrequenciesOp<CPUDevice, T>);
-REGISTER_CPU(complex64);
-REGISTER_CPU(complex128);
+#define REGISTER_CPU(Tint, Tfloat)                                     \
+  REGISTER_KERNEL_BUILDER(                                             \
+      Name("MeasureFrequencies").Device(DEVICE_CPU)                    \
+      .TypeConstraint<Tint>("Tint").TypeConstraint<Tfloat>("Tfloat"),  \
+      MeasureFrequenciesOp<CPUDevice, Tint, Tfloat>);
+REGISTER_CPU(int32, float);
+REGISTER_CPU(int64, float);
+REGISTER_CPU(int32, double);
+REGISTER_CPU(int64, double);
 
 //#ifdef GOOGLE_CUDA
 // Register the GPU kernels.
