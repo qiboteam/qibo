@@ -16,7 +16,7 @@ namespace functor {
 template <typename Tint, typename Tfloat>
 struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
   void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* cumprobs,
-                  int64 nshots, int nqubits)
+                  Tint nshots, int nqubits)
   {
     int64 nstates = 1 << nqubits;
     #pragma omp parallel shared(cumprobs)
@@ -52,7 +52,6 @@ class MeasureFrequenciesOp : public OpKernel {
  public:
   explicit MeasureFrequenciesOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
-    OP_REQUIRES_OK(context, context->GetAttr("nshots", &nshots_));
     OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
     omp_set_num_threads(threads_);
   }
@@ -61,17 +60,17 @@ class MeasureFrequenciesOp : public OpKernel {
     // grab the input tensor
     Tensor frequencies = context->input(0);
     const Tensor& cumprobs = context->input(1);
+    const Tensor& nshots = context->input(2);
 
     // call the implementation
     MeasureFrequenciesFunctor<Device, Tint, Tfloat>()
       (context->eigen_device<Device>(), frequencies.flat<Tint>().data(),
-       cumprobs.flat<Tfloat>().data(), nshots_, nqubits_);
+       cumprobs.flat<Tfloat>().data(), nshots.flat<Tint>().data()[0], nqubits_);
     context->set_output(0, frequencies);
   }
 
  private:
   int nqubits_;
-  int64 nshots_;
   int threads_;
 };
 
