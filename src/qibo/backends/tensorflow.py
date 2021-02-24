@@ -180,7 +180,6 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.concatenate(samples, axis=0)
 
     def sample_frequencies(self, probs, nshots):
-        print("sample frequencies called")
         if self.op is None: # pragma: no cover
             from qibo.config import SHOT_BATCH_SIZE
             logits = self.log(probs)[self.newaxis]
@@ -200,8 +199,6 @@ class TensorflowBackend(numpy.NumpyBackend):
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
-            print(nshots)
-            print(type(nshots))
             frequencies = self.op.measure_frequencies(frequencies, cumprobs, nshots,
                                                       nqubits, get_threads())
         return frequencies

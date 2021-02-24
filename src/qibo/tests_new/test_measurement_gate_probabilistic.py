@@ -15,14 +15,19 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
     c.add(gates.H(1))
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
-    print(result.frequencies())
 
     K.set_seed(1234)
-    #if use_samples:
-    #    _ = result.samples()
+    if use_samples:
+        # calculates sample tensor directly using `tf.random.categorical`
+        # otherwise it uses the frequency-only calculation
+        _ = result.samples()
+
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 249}
+        if use_samples:
+            decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
+        else:
+            decimal_frequencies = {0: 246, 1: 255, 2: 252, 3: 247}
     if K.gpu_devices and not accelerators: # pragma: no cover
         # case not tested in GitHub workflows because it requires GPU
         decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
@@ -33,20 +38,27 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
     qibo.set_backend(original_backend)
 
 
-def test_unbalanced_probabilistic_measurement(backend):
+@pytest.mark.parametrize("use_samples", [True, False])
+def test_unbalanced_probabilistic_measurement(backend, use_samples):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    K.set_seed(1234)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
     c = models.Circuit(2)
     c.add(gates.Flatten(state))
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
-    # calculate samples to get statistical noise in measurements
-    _ = result.samples()
+
+    K.set_seed(1234)
+    if use_samples:
+        # calculates sample tensor directly using `tf.random.categorical`
+        # otherwise it uses the frequency-only calculation
+        _ = result.samples()
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
+        if use_samples:
+            decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
+        else:
+            decimal_frequencies = {0: 177, 1: 151, 2: 173, 3: 499}
         if K.gpu_devices: # pragma: no cover
             # case not tested in GitHub workflows because it requires GPU
             decimal_frequencies = {0: 196, 1: 153, 2: 156, 3: 495}
