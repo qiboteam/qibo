@@ -53,12 +53,6 @@ class MeasurementResult:
         _range = K.pow(2, _range)[:, K.newaxis]
         return K.matmul(self.binary, _range)[:, 0]
 
-    def _get_cpu(self): # pragma: no cover
-        # case not covered by GitHub workflows because it requires OOM
-        if not K.cpu_devices:
-            raise_error(RuntimeError, "Cannot find CPU device to use for sampling.")
-        return K.cpu_devices[0]
-
     def _sample_shots(self):
         self._frequencies = None
         if self.probabilities is None:
@@ -68,16 +62,15 @@ class MeasurementResult:
         if math.log2(self.nshots) + self.nqubits > 31: # pragma: no cover
             # case not covered by GitHub workflows because it requires large example
             # Use CPU to avoid "aborted" error
-            with K.device(self._get_cpu()):
+            with K.device(K.get_cpu()):
                 result = K.sample_shots(self.probabilities, self.nshots)
         else:
             try:
-                with K.device(K.default_device):
-                    result = K.sample_shots(self.probabilities, self.nshots)
+                result = K.sample_shots(self.probabilities, self.nshots)
             except K.oom_error: # pragma: no cover
                 # case not covered by GitHub workflows because it requires OOM
                 # Force using CPU to perform sampling
-                with K.device(self._get_cpu()):
+                with K.device(K.get_cpu()):
                     result = K.sample_shots(self.probabilities, self.nshots)
         return result
 

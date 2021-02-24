@@ -106,6 +106,13 @@ class AbstractBackend(ABC):
             raise_error(ValueError, f"Device {name} does not exist.")
         self.default_device = name
 
+    def get_cpu(self): # pragma: no cover
+        """Returns default CPU device to use for OOM fallback."""
+        # case not covered by GitHub workflows because it requires OOM""
+        if not self.cpu_devices:
+            raise_error(RuntimeError, "Cannot find CPU device to fall back to.")
+        return self.cpu_devices[0]
+
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
         """Casts tensor to the given dtype."""
