@@ -6,7 +6,8 @@ from qibo import models, gates, K
 from qibo.tests_new.test_measurement_gate import assert_result
 
 
-def test_probabilistic_measurement(backend, accelerators):
+@pytest.mark.parametrize("use_samples", [True, False])
+def test_probabilistic_measurement(backend, accelerators, use_samples):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = models.Circuit(4, accelerators)
@@ -15,9 +16,12 @@ def test_probabilistic_measurement(backend, accelerators):
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
 
-    # calculate samples to get statistical noise in measurements
     K.set_seed(1234)
-    _ = result.samples()
+    if use_samples:
+        # calculates sample tensor directly using `tf.random.categorical`
+        # otherwise it uses the frequency-only calculation
+        _ = result.samples()
+
     # update reference values based on backend and device
     if K.name == "tensorflow":
         decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
@@ -31,17 +35,21 @@ def test_probabilistic_measurement(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
-def test_unbalanced_probabilistic_measurement(backend):
+@pytest.mark.parametrize("use_samples", [True, False])
+def test_unbalanced_probabilistic_measurement(backend, use_samples):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    K.set_seed(1234)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
     c = models.Circuit(2)
     c.add(gates.Flatten(state))
     c.add(gates.M(0, 1))
     result = c(nshots=1000)
-    # calculate samples to get statistical noise in measurements
-    _ = result.samples()
+
+    K.set_seed(1234)
+    if use_samples:
+        # calculates sample tensor directly using `tf.random.categorical`
+        # otherwise it uses the frequency-only calculation
+        _ = result.samples()
     # update reference values based on backend and device
     if K.name == "tensorflow":
         decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
