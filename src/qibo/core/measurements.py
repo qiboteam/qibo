@@ -132,11 +132,10 @@ class MeasurementResult:
                 raise_error(RuntimeError, "Cannot calculate measurement "
                                           "frequencies without a probability "
                                           "distribution or  samples.")
-            if self.nshots > SHOT_BATCH_SIZE:
-                freqs = K.sample_frequencies(self.probabilities, self.nshots)
-                freqs = K.np.array(freqs)
-                return collections.Counter(
-                        {k: v for k, v in enumerate(freqs) if v > 0})
+            freqs = K.sample_frequencies(self.probabilities, self.nshots)
+            freqs = K.np.array(freqs)
+            return collections.Counter(
+                {k: v for k, v in enumerate(freqs) if v > 0})
 
         res, counts = K.unique(self.decimal, return_counts=True)
         res, counts = K.np.array(res), K.np.array(counts)
