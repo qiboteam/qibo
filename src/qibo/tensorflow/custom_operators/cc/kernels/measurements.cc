@@ -25,9 +25,9 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
         std::unordered_map<int64, int64> frequencies_private;
         #pragma omp for
         for (auto i = 0; i < nshots; i++) {
-          Tfloat random_number = ((Tfloat) rand_r(&seed) / RAND_MAX);
+          Tfloat random_number = ((Tfloat) rand_r(&seed) / (RAND_MAX + 1.0));
           for (auto j = 0; j < nstates; j++) {
-            if (random_number <= cumprobs[j] || j == nstates - 1) {
+            if (random_number <= cumprobs[j]) {
                 if (frequencies_private.find(j) == frequencies_private.end()) {
                     frequencies_private[j] = 1;
                 } else {
