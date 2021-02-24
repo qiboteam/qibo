@@ -273,10 +273,13 @@ class M(BackendGate, gates.M):
                                    "{} that is not supported."
                                    "".format(type(state)))
 
-        probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
-        probs = state.probabilities(measurement_gate=self)
-        probs = K.transpose(probs, axes=self.reduced_target_qubits)
-        probs = K.reshape(probs, probs_dim)
+        def calculate_probs():
+            probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
+            probs = state.probabilities(measurement_gate=self)
+            probs = K.transpose(probs, axes=self.reduced_target_qubits)
+            probs = K.reshape(probs, probs_dim)
+            return probs
+        probs = K.cpu_fallback(calculate_probs)
         result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
         # optional bitflip noise
         if sum(sum(x.values()) for x in self.bitflip_map) > 0:

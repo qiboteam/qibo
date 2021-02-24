@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 
 
 class AbstractBackend(ABC):
@@ -105,6 +105,24 @@ class AbstractBackend(ABC):
         if device_number >= ndevices:
             raise_error(ValueError, f"Device {name} does not exist.")
         self.default_device = name
+
+    def get_cpu(self): # pragma: no cover
+        """Returns default CPU device to use for OOM fallback."""
+        # case not covered by GitHub workflows because it requires OOM""
+        if not self.cpu_devices:
+            raise_error(RuntimeError, "Cannot find CPU device to fall back to.")
+        return self.cpu_devices[0]
+
+    def cpu_fallback(self, func, *args):
+        """Executes a function on CPU if the default devices raises OOM."""
+        try:
+            return func(*args)
+        except self.oom_error: # pragma: no cover
+            # case not covered by GitHub workflows because it requires OOM
+            # Force using CPU to perform sampling
+            log.warn("Falling back to CPU because the GPU is out-of-memory.")
+            with self.device(self.get_cpu()):
+                return func(*args)
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
