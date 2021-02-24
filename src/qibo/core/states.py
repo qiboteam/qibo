@@ -77,8 +77,10 @@ class VectorState(AbstractState):
     def probabilities(self, qubits=None, measurement_gate=None):
         unmeasured_qubits = tuple(i for i in range(self.nqubits)
                                   if i not in qubits)
-        state = K.reshape(K.square(K.abs(self.tensor)), self.nqubits * (2,))
-        return K.sum(state, axis=unmeasured_qubits)
+        def calculate_probs(x):
+            state = K.reshape(K.square(K.abs(x)), self.nqubits * (2,))
+            return K.sum(state, axis=unmeasured_qubits)
+        return K.cpu_fallback(calculate_probs, self.tensor)
 
     def measure(self, gate, nshots, registers=None):
         self.measurements = gate(self, nshots)
