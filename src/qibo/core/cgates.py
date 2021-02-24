@@ -275,7 +275,8 @@ class M(BackendGate, gates.M):
 
         def calculate_probs():
             probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
-            probs = state.probabilities(measurement_gate=self)
+            probs = K.reshape(K.square(K.abs(state.tensor)), self.nqubits * (2,))
+            probs = K.sum(probs, axis=self.unmeasured_qubits)
             probs = K.transpose(probs, axes=self.reduced_target_qubits)
             probs = K.reshape(probs, probs_dim)
             return probs
