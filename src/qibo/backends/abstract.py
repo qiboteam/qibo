@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from qibo.config import raise_error, log
+from qibo.config import raise_error
 
 
 class AbstractBackend(ABC):
@@ -120,7 +120,6 @@ class AbstractBackend(ABC):
         except self.oom_error: # pragma: no cover
             # case not covered by GitHub workflows because it requires OOM
             # Force using CPU to perform sampling
-            log.warn("Falling back to CPU because the GPU is out-of-memory.")
             with self.device(self.get_cpu()):
                 return func(*args)
 
