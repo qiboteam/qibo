@@ -48,7 +48,6 @@ class TensorflowBackend(numpy.NumpyBackend):
         if op._custom_operators_loaded:
             self.op = op
 
-
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
 
@@ -181,18 +180,30 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.concatenate(samples, axis=0)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_BATCH_SIZE
-        logits = self.log(probs)[self.newaxis]
-        def update_frequencies(nsamples, frequencies):
-            samples = self.random.categorical(logits, nsamples, dtype=self.dtypes('DTYPEINT'))[0]
-            res, counts = self.unique(samples, return_counts=True)
-            return self.backend.tensor_scatter_nd_add(
-                frequencies, res[:, self.newaxis], counts)
+        print("sample frequencies called")
+        if self.op is None: # pragma: no cover
+            from qibo.config import SHOT_BATCH_SIZE
+            logits = self.log(probs)[self.newaxis]
+            def update_frequencies(nsamples, frequencies):
+                samples = self.random.categorical(logits, nsamples, dtype=self.dtypes('DTYPEINT'))[0]
+                res, counts = self.unique(samples, return_counts=True)
+                return self.backend.tensor_scatter_nd_add(
+                    frequencies, res[:, self.newaxis], counts)
 
-        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
-        for _ in range(nshots // SHOT_BATCH_SIZE):
-            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
-        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+            frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+            for _ in range(nshots // SHOT_BATCH_SIZE):
+                frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+            frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+        else:
+            from qibo.config import get_threads
+            cumprobs = self.backend.cumsum(probs)
+            nqubits = int(self.np.log2(tuple(probs.shape)[0]))
+            shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
+            frequencies = self.zeros(shape, dtype='DTYPEINT')
+            print(nshots)
+            print(type(nshots))
+            frequencies = self.op.measure_frequencies(frequencies, cumprobs, nshots,
+                                                      nqubits, get_threads())
         return frequencies
 
     def compile(self, func):
