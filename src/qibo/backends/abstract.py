@@ -113,6 +113,16 @@ class AbstractBackend(ABC):
             raise_error(RuntimeError, "Cannot find CPU device to fall back to.")
         return self.cpu_devices[0]
 
+    def cpu_fallback(self, func, *args):
+        """Executes a function on CPU if the default devices raises OOM."""
+        try:
+            return func(*args)
+        except self.oom_error: # pragma: no cover
+            # case not covered by GitHub workflows because it requires OOM
+            # Force using CPU to perform sampling
+            with self.device(self.get_cpu()):
+                return func(*args)
+
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
         """Casts tensor to the given dtype."""

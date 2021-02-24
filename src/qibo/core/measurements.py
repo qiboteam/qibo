@@ -65,13 +65,7 @@ class MeasurementResult:
             with K.device(K.get_cpu()):
                 result = K.sample_shots(self.probabilities, self.nshots)
         else:
-            try:
-                result = K.sample_shots(self.probabilities, self.nshots)
-            except K.oom_error: # pragma: no cover
-                # case not covered by GitHub workflows because it requires OOM
-                # Force using CPU to perform sampling
-                with K.device(K.get_cpu()):
-                    result = K.sample_shots(self.probabilities, self.nshots)
+            result = K.cpu_fallback(K.sample_shots, self.probabilities, self.nshots)
         return result
 
     @property
