@@ -16,12 +16,10 @@ namespace functor {
 template <typename Tint, typename Tfloat>
 struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
   void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* cumprobs,
-                  Tint nshots, int nqubits)
+                  Tint nshots, int nqubits, int user_seed = 1234)
   {
     int64 nstates = 1 << nqubits;
-    unsigned user_seed = 1234;
     srand(user_seed);
-
     unsigned thread_seed[omp_get_max_threads()];
     for (auto i = 0; i < omp_get_max_threads(); i++) {
       thread_seed[i] = rand();
@@ -60,6 +58,7 @@ class MeasureFrequenciesOp : public OpKernel {
   explicit MeasureFrequenciesOp(OpKernelConstruction *context) : OpKernel(context) {
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
+    OP_REQUIRES_OK(context, context->GetAttr("seed", &seed_));
     omp_set_num_threads(threads_);
   }
 
@@ -72,13 +71,15 @@ class MeasureFrequenciesOp : public OpKernel {
     // call the implementation
     MeasureFrequenciesFunctor<Device, Tint, Tfloat>()
       (context->eigen_device<Device>(), frequencies.flat<Tint>().data(),
-       cumprobs.flat<Tfloat>().data(), nshots.flat<Tint>().data()[0], nqubits_);
+       cumprobs.flat<Tfloat>().data(), nshots.flat<Tint>().data()[0],
+       nqubits_, seed_);
     context->set_output(0, frequencies);
   }
 
  private:
   int nqubits_;
   int threads_;
+  int seed_;
 };
 
 // Register the CPU kernels.

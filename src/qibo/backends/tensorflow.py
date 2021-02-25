@@ -47,6 +47,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.op = None
         if op._custom_operators_loaded:
             self.op = op
+        self._seed = 1234 # seed to use in the measurement frequency custom op
+        # seed can be modified using ``K.set_seed``
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -199,8 +201,9 @@ class TensorflowBackend(numpy.NumpyBackend):
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
-            frequencies = self.op.measure_frequencies(frequencies, cumprobs, nshots,
-                                                      nqubits, get_threads())
+            frequencies = self.op.measure_frequencies(
+                frequencies, cumprobs, nshots, nqubits,
+                get_threads(), self._seed)
         return frequencies
 
     def compile(self, func):
@@ -213,4 +216,5 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.executing_eagerly()
 
     def set_seed(self, seed):
+        self._seed = seed
         self.backend.random.set_seed(seed)

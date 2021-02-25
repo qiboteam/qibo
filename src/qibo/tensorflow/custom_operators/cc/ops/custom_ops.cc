@@ -47,6 +47,7 @@ REGISTER_OP("MeasureFrequencies")
     .Input("nshots: Tint")
     .Attr("nqubits: int")
     .Attr("omp_num_threads: int")
+    .Attr("seed: int")
     .Output("out: Tint")
     .SetShapeFn(::tensorflow::shape_inference::UnchangedShape);
 

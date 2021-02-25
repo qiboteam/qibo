@@ -11,6 +11,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
     original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
     qibo.set_backend(backend)
+    # set single-thread to fix the random values generated from the frequency custom op
     qibo.set_threads(1)
     c = models.Circuit(4, accelerators)
     c.add(gates.H(0))
@@ -46,6 +47,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
     original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
     qibo.set_backend(backend)
+    # set single-thread to fix the random values generated from the frequency custom op
     qibo.set_threads(1)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
     c = models.Circuit(2)
