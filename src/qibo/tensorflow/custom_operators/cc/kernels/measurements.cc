@@ -20,14 +20,17 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
   {
     int64 nstates = 1 << nqubits;
     unsigned user_seed = 12345;
+    srand(user_seed);
+
     unsigned thread_seed[omp_get_max_threads()];
     for (auto i = 0; i < omp_get_max_threads(); i++) {
-      thread_seed[i] = user_seed;
+      thread_seed[i] = rand();
+      std::cout << thread_seed[i] << std::endl;
     }
     #pragma omp parallel shared(cumprobs)
     {
-        unsigned seed = thread_seed[omp_get_thread_num()];
         std::unordered_map<int64, int64> frequencies_private;
+        unsigned seed = thread_seed[omp_get_thread_num()];
         #pragma omp for
         for (auto i = 0; i < nshots; i++) {
           Tfloat random_number = ((Tfloat) rand_r(&seed) / (RAND_MAX + 1.0));
