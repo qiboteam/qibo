@@ -22,7 +22,7 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
     unsigned user_seed = 12345;
     unsigned thread_seed[omp_get_max_threads()];
     for (auto i = 0; i < omp_get_max_threads(); i++) {
-      thread_seed[i] = rand_r(&user_seed);
+      thread_seed[i] = user_seed;
     }
     #pragma omp parallel shared(cumprobs)
     {
