@@ -75,10 +75,10 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
             decimal_frequencies = {0: 154, 1: 168, 2: 158, 3: 520}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
-            decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 499}
+            decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 490}
     elif K.name == "numpy":
         decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
-    assert sum(decimal_frequencies.values()) == 1000
+    assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_backend(original_backend)
     qibo.set_threads(original_threads)
