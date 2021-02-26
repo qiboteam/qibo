@@ -1,4 +1,5 @@
 """Test :class:`qibo.abstractions.gates.M` when results are probabilistic."""
+import sys
 import pytest
 import numpy as np
 import qibo
@@ -27,13 +28,16 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
 
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        if use_samples:
-            decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
-        else:
-            decimal_frequencies = {0: 234, 1: 246, 2: 245, 3: 275}
         if K.gpu_devices and not accelerators: # pragma: no cover
-            # case not tested in GitHub workflows because it requires GPU
+            # CI does not use GPU
             decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
+        elif use_samples or sys.platform not in {"linux", "darwin"}:
+            decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
+        elif sys.platform == "linux":
+            decimal_frequencies = {0: 234, 1: 246, 2: 245, 3: 275}
+        elif sys.platform == "darwin": # pragma: no cover
+            # coverage does not use macos
+            decimal_frequencies = {0: 243, 1: 267, 2: 251, 3: 239}
     elif K.name == "numpy":
         decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
     assert sum(result.frequencies().values()) == 1000
@@ -62,13 +66,16 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         _ = result.samples()
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        if use_samples:
-            decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
-        else:
-            decimal_frequencies = {0: 154, 1: 168, 2: 158, 3: 520}
         if K.gpu_devices: # pragma: no cover
-            # case not tested in GitHub workflows because it requires GPU
+            # CI does not use GPU
             decimal_frequencies = {0: 196, 1: 153, 2: 156, 3: 495}
+        elif use_samples or sys.platform not in {"linux", "darwin"}:
+            decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
+        elif sys.platform == "linux":
+            decimal_frequencies = {0: 154, 1: 168, 2: 158, 3: 520}
+        elif sys.platform == "darwin": # pragma: no cover
+            # coverage does not use macos
+            decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 499}
     elif K.name == "numpy":
         decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
     assert sum(decimal_frequencies.values()) == 1000
