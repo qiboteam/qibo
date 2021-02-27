@@ -33,7 +33,7 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
         unsigned seed = thread_seed[omp_get_thread_num()];
         int64 shot = initial_shot;
         #pragma omp for
-        for (auto i = 0; i < nshots; i++) {
+        for (int64 i = 0; i < nshots; i++) {
           // Generate random index to flip its bit
           int flip_index = ((int) rand_r(&seed) % nqubits);
           // Flip the corresponding bit
