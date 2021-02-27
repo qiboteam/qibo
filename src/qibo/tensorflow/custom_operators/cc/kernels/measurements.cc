@@ -15,7 +15,7 @@ namespace functor {
 // CPU specialization
 template <typename Tint, typename Tfloat>
 struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
-  void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* cumprobs,
+  void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* probs,
                   Tint nshots, int nqubits, int user_seed = 1234)
   {
     int64 nstates = 1 << nqubits;
@@ -24,22 +24,26 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
     for (auto i = 0; i < omp_get_max_threads(); i++) {
       thread_seed[i] = rand();
     }
-    #pragma omp parallel shared(cumprobs)
+    // Initial bitstring is the one with the maximum probability
+    int64 initial_shot = std::distance(probs.begin(), std::max_element(probs.begin(), probs.end()));
+    #pragma omp parallel
     {
         std::unordered_map<int64, int64> frequencies_private;
         unsigned seed = thread_seed[omp_get_thread_num()];
+        int64 shot = initial_shot;
         #pragma omp for
         for (auto i = 0; i < nshots; i++) {
-          Tfloat random_number = ((Tfloat) rand_r(&seed) / (RAND_MAX + 1.0));
-          for (auto j = 0; j < nstates; j++) {
-            if (random_number <= cumprobs[j]) {
-                if (frequencies_private.find(j) == frequencies_private.end()) {
-                    frequencies_private[j] = 1;
-                } else {
-                    frequencies_private[j]++;
-                }
-                break;
-            }
+          int flip_index = ((int) rand_r(&seed) % nqubits);
+          int current_value = ((int64) shot >> flip_index) % 2
+          int64 new_shot = shot + ((int64)(1 - 2 * current_value)) * ((int64) 1 << flip_index);
+          Tfloat ratio = probs[new_shot] / probs[shot];
+          if (ratio >= rand_r(&seed) / RAND_MAX) {
+            shot = new_shot;
+          }
+          if (frequencies_private.find(shot) == frequencies_private.end()) {
+              frequencies_private[shot] = 1;
+          } else {
+              frequencies_private[shot]++;
           }
         }
         #pragma omp critical
