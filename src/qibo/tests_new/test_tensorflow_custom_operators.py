@@ -506,13 +506,18 @@ def test_initial_state_gradient(dtype, compile): # pragma: no cover
 @pytest.mark.parametrize("dtype", [np.float32, np.float64])
 @pytest.mark.parametrize("inttype", [np.int32, np.int64])
 def test_measure_frequencies(dtype, inttype):
+    import sys
     probs = np.ones(16, dtype=dtype) / 16
     cumprobs = np.cumsum(probs)
     frequencies = np.zeros(16, dtype=inttype)
     frequencies = K.op.measure_frequencies(frequencies, cumprobs, nshots=1000,
                                            nqubits=4, omp_num_threads=1,
                                            seed=1234)
-    target_frequencies = [55, 61, 68, 50, 68, 65, 54, 59, 67, 55, 62, 61,
-                          75, 72, 65, 63]
+    if sys.platform == "linux":
+        target_frequencies = [55, 61, 68, 50, 68, 65, 54, 59, 67, 55, 62,
+                              61, 75, 72, 65, 63]
+    elif sys.platform == "darwin": # pragma: no cover
+        target_frequencies = [50, 51, 69, 73, 65, 72, 78, 52, 70, 59, 61,
+                              61, 64, 62, 61, 52]
     assert np.sum(frequencies) == 1000
     np.testing.assert_allclose(frequencies, target_frequencies)
