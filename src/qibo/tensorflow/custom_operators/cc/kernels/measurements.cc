@@ -27,7 +27,6 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
     // Initial bitstring is the one with the maximum probability
     const int64 size_ratio = ((int64) sizeof(probs) / sizeof(Tfloat));
     int64 initial_shot = std::distance(probs, std::max_element(probs, probs + size_ratio));
-    std::cout << "Initial shot: " << initial_shot << std::endl;
     #pragma omp parallel
     {
         std::unordered_map<int64, int64> frequencies_private;

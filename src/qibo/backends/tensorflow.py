@@ -197,12 +197,11 @@ class TensorflowBackend(numpy.NumpyBackend):
             frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
         else:
             from qibo.config import get_threads
-            cumprobs = self.backend.cumsum(probs)
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
             frequencies = self.op.measure_frequencies(
-                frequencies, cumprobs, nshots, nqubits,
+                frequencies, probs, nshots, nqubits,
                 get_threads(), self._seed)
         return frequencies
 
