@@ -34,7 +34,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         elif use_samples or sys.platform not in {"linux", "darwin"}:
             decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
         elif sys.platform == "linux":
-            decimal_frequencies = {0: 234, 1: 246, 2: 245, 3: 275}
+            decimal_frequencies = {0: 261, 1: 258, 2: 242, 3: 239}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
             decimal_frequencies = {0: 243, 1: 267, 2: 251, 3: 239}
@@ -72,7 +72,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         elif use_samples or sys.platform not in {"linux", "darwin"}:
             decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
         elif sys.platform == "linux":
-            decimal_frequencies = {0: 154, 1: 168, 2: 158, 3: 520}
+            decimal_frequencies = {0: 165, 1: 167, 2: 163, 3: 505}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
             decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 490}
