@@ -35,13 +35,17 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
         int64 shot = initial_shot;
         #pragma omp for
         for (auto i = 0; i < nshots; i++) {
+          // Generate random index to flip its bit
           int flip_index = ((int) rand_r(&seed) % nqubits);
+          // Flip the corresponding bit
           int current_value = ((int64) shot >> flip_index) % 2;
           int64 new_shot = shot + ((int64)(1 - 2 * current_value)) * ((int64) 1 << flip_index);
+          // Accept or reject move
           Tfloat ratio = probs[new_shot] / probs[shot];
-          if (ratio > rand_r(&seed) / RAND_MAX) {
+          if (ratio > ((Tfloat) rand_r(&seed) / RAND_MAX)) {
             shot = new_shot;
           }
+          // Update frequencies
           if (frequencies_private.find(shot) == frequencies_private.end()) {
               frequencies_private[shot] = 1;
           } else {
