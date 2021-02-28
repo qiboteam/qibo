@@ -516,7 +516,7 @@ def test_measure_frequencies(dtype, inttype):
         target_frequencies = [72, 56, 61, 60, 61, 47, 52, 55, 67, 64, 69,
                               68, 63, 59, 73, 73]
     elif sys.platform == "darwin": # pragma: no cover
-        target_frequencies = [50, 51, 69, 73, 65, 72, 78, 52, 70, 59, 61,
-                              61, 64, 62, 61, 52]
+        target_frequencies = [65, 45, 74, 70, 68, 50, 67, 61, 65, 64, 71,
+                              71, 55, 52, 64, 58]
     assert np.sum(frequencies) == 1000
     np.testing.assert_allclose(frequencies, target_frequencies)

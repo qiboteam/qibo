@@ -37,7 +37,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
             decimal_frequencies = {0: 261, 1: 258, 2: 242, 3: 239}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
-            decimal_frequencies = {0: 243, 1: 267, 2: 251, 3: 239}
+            decimal_frequencies = {0: 244, 1: 248, 2: 252, 3: 256}
     elif K.name == "numpy":
         decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
     assert sum(result.frequencies().values()) == 1000
@@ -75,7 +75,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
             decimal_frequencies = {0: 165, 1: 167, 2: 162, 3: 506}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
-            decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 490}
+            decimal_frequencies = {0: 164, 1: 157, 2: 171, 3: 508}
     elif K.name == "numpy":
         decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
     assert sum(result.frequencies().values()) == 1000
