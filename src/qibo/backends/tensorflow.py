@@ -47,7 +47,11 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.op = None
         if op._custom_operators_loaded:
             self.op = op
-        self._seed = 1234 # seed to use in the measurement frequency custom op
+
+        # seed to use in the measurement frequency custom op
+        from datetime import datetime
+        self._seed = None
+        self.set_seed(int(datetime.now().microsecond))
         # seed can be modified using ``K.set_seed``
 
     def set_device(self, name):
