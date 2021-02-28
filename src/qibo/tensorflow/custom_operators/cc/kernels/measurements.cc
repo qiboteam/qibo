@@ -20,9 +20,10 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
   {
     int64 nstates = 1 << nqubits;
     srand(user_seed);
-    unsigned thread_seed[omp_get_max_threads()];
+    // Create vector of seeds for each thread
+    std::vector<unsigned> thread_seed;
     for (auto i = 0; i < omp_get_max_threads(); i++) {
-      thread_seed[i] = rand();
+      thread_seed.push_back(rand());
     }
     // Initial bitstring is the one with the maximum probability
     int64 initial_shot = 0;
