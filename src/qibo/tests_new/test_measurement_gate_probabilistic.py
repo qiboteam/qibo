@@ -72,7 +72,7 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         elif use_samples or sys.platform not in {"linux", "darwin"}:
             decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
         elif sys.platform == "linux":
-            decimal_frequencies = {0: 165, 1: 167, 2: 163, 3: 505}
+            decimal_frequencies = {0: 165, 1: 167, 2: 162, 3: 506}
         elif sys.platform == "darwin": # pragma: no cover
             # coverage does not use macos
             decimal_frequencies = {0: 150, 1: 184, 2: 176, 3: 490}
