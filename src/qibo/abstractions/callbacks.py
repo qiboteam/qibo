@@ -176,6 +176,7 @@ class EntanglementEntropy(Callback):
     def __init__(self, partition: Optional[List[int]] = None,
                  compute_spectrum: bool = False):
         super().__init__()
+        self.partition = partition
         self.compute_spectrum = compute_spectrum
         self.spectrum = list()
 

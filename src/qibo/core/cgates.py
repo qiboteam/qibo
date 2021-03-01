@@ -13,8 +13,7 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "ZPow", "CZPow", "Flatten",
-                      "CallbackGate", "PartialTrace"}
+        cgate_only = {"I", "M", "ZPow", "CZPow", "Flatten", "CallbackGate"}
         # TODO: Move these to a different file and refactor
         if K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
@@ -799,10 +798,24 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         self.transpose_order = tuple(order.index(i) for i in range(2 * self.nqubits))
         # Output shape
         self.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
+        self.reduced_shape = K.cast(2 * (2 ** n,), dtype='DTYPEINT')
 
     def construct_unitary(self):
         raise_error(ValueError, "Partial trace gate does not have unitary "
                                 "representation.")
+
+    def state_vector_partial_trace(self, state):
+        self.set_nqubits(state)
+        state = K.reshape(state, self.nqubits * (2,))
+        axes = 2 * [list(self.target_qubits)]
+        rho = K.tensordot(state, K.conj(state), axes=axes)
+        return K.reshape(rho, self.reduced_shape)
+
+    def density_matrix_partial_trace(self, state):
+        self.set_nqubits(state)
+        state = K.reshape(state, 2 * self.nqubits * (2,))
+        rho = K.einsum(self.traceout_string, state)
+        return K.reshape(rho, self.reduced_shape)
 
     def state_vector_call(self, state):
         raise_error(RuntimeError, "Partial trace gate cannot be used on state "

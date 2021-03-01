@@ -63,13 +63,18 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
     def __init__(self, partition=None, compute_spectrum=False):
         callbacks.EntanglementEntropy.__init__(
             self, partition, compute_spectrum)
-        self.partial_trace = PartialTrace(partition)
+        self.partial_trace = None
 
     @callbacks.Callback.nqubits.setter
     def nqubits(self, n: int):
+        from qibo import gates
         self._nqubits = n
-        self.partial_trace.nqubits = n
-        self.partial_trace.switch_partition()
+        if self.partition is None:
+            self.partition = list(range(n // 2 + n % 2))
+        if len(self.partition) <= self.nqubits // 2:
+            self.partition = [i for i in range(self.nqubits)
+                              if i not in set(self.partition)]
+        self.partial_trace = gates.PartialTrace(*self.partition)
 
     def entropy(self, rho):
         """Calculates entropy of a density matrix via exact diagonalization."""
@@ -86,12 +91,12 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
 
     def state_vector_call(self, state):
         PartialTrace.set_nqubits(self, state)
-        rho = self.partial_trace.state_vector_call(state)
+        rho = self.partial_trace.state_vector_partial_trace(state)
         return self.entropy(rho)
 
     def density_matrix_call(self, state):
         PartialTrace.set_nqubits(self, state)
-        rho = self.partial_trace.density_matrix_call(state)
+        rho = self.partial_trace.density_matrix_partial_trace(state)
         return self.entropy(rho)
 
 
