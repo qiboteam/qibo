@@ -28,6 +28,7 @@ def test_partial_trace_partition():
     # test partition reversion
     callback = callbacks.PartialTrace([0, 1])
     callback.nqubits = 6
+    callback.switch_partition()
     assert callback.partition == [2, 3, 4, 5]
 
 

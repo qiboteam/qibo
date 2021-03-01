@@ -69,6 +69,7 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
     def nqubits(self, n: int):
         self._nqubits = n
         self.partial_trace.nqubits = n
+        self.partial_trace.switch_partition()
 
     def entropy(self, rho):
         """Calculates entropy of a density matrix via exact diagonalization."""
@@ -84,10 +85,12 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
         return entropy / self._log2
 
     def state_vector_call(self, state):
+        PartialTrace.set_nqubits(self, state)
         rho = self.partial_trace.state_vector_call(state)
         return self.entropy(rho)
 
     def density_matrix_call(self, state):
+        PartialTrace.set_nqubits(self, state)
         rho = self.partial_trace.density_matrix_call(state)
         return self.entropy(rho)
 

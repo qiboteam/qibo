@@ -76,13 +76,19 @@ class PartialTrace(Callback):
         self._nqubits = n
         if self.partition is None: # pragma: no cover
             self.partition = list(range(n // 2 + n % 2))
-
-        if len(self.partition) <= n // 2:
-            # Revert parition so that we diagonalize a smaller matrix
-            self.partition = [i for i in range(n)
-                              if i not in set(self.partition)]
         self.rho_dim = 2 ** (n - len(self.partition))
         self._traceout = None
+
+    def switch_partition(self):
+        """Switches qubit bi-partition to the largest part.
+
+        Useful in order diagonalize a smaller matrix in the entanglement
+        entropy calculation.
+        """
+        if len(self.partition) <= self.nqubits // 2:
+            self.partition = [i for i in range(self.nqubits)
+                              if i not in set(self.partition)]
+            self.rho_dim = 2 ** (self.nqubits - len(self.partition))
 
     @classmethod
     def einsum_string(cls, qubits: Set[int], nqubits: int,
