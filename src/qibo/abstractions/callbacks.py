@@ -90,6 +90,7 @@ class PartialTrace(Callback):
                               if i not in set(self.partition)]
             self.rho_dim = 2 ** (self.nqubits - len(self.partition))
 
+    # TODO: Remove this method from here
     @classmethod
     def einsum_string(cls, qubits: Set[int], nqubits: int,
                       measuring: bool = False) -> str:

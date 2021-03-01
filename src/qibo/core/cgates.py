@@ -13,7 +13,8 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "Flatten", "CallbackGate", "ZPow", "CZPow"}
+        cgate_only = {"I", "M", "ZPow", "CZPow", "Flatten",
+                      "CallbackGate", "PartialTrace"}
         # TODO: Move these to a different file and refactor
         if K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
@@ -245,10 +246,8 @@ class M(BackendGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
         if self.density_matrix:
-            from qibo.abstractions.callbacks import PartialTrace
             qubits = set(self.unmeasured_qubits)
-            self.traceout = PartialTrace.einsum_string(
-                qubits, self.nqubits, measuring=True)
+            self.traceout = self.einsum_string(qubits, self.nqubits, True)
 
     def _get_cpu(self): # pragma: no cover
         # case not covered by GitHub workflows because it requires OOM
@@ -759,8 +758,8 @@ class CallbackGate(BackendGate, gates.CallbackGate):
         self.callback.density_matrix = x
 
     def construct_unitary(self):
-        raise_error(ValueError, "Unitary gate does not have unitary "
-                                 "representation.")
+        raise_error(ValueError, "Callback gate does not have unitary "
+                                "representation.")
 
     def state_vector_call(self, state):
         self.callback.append(self.callback(state))
@@ -768,6 +767,55 @@ class CallbackGate(BackendGate, gates.CallbackGate):
 
     def density_matrix_call(self, state):
         return self.state_vector_call(state)
+
+
+class PartialTrace(BackendGate, gates.PartialTrace):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        gates.PartialTrace.__init__(self, *q)
+
+        self.traceout_string = None
+        self.zero_matrix = None
+        self.transpose_order = None
+        self.output_shape = None
+
+    def prepare(self):
+        BackendGate.prepare(self)
+        qubits = set(self.target_qubits)
+        self.traceout_string = M.einsum_string(qubits, self.nqubits)
+        # Create |00...0><00...0| for qubits that are traced out
+        n = len(self.target_qubits)
+        row0 = K.cast([1] + (2 ** n - 1) * [0], dtype='DTYPECPX')
+        shape = K.cast((2 ** n - 1, 2 ** n), dtype='DTYPEINT')
+        rows = K.zeros(shape, dtype='DTYPECPX')
+        self.zero_matrix = K.concatenate([row0[K.newaxis], rows], axis=0)
+        self.zero_matrix = K.reshape(self.zero_matrix, 2 * n * (2,))
+        # Calculate final transpose order
+        order1 = tuple(i for i in range(self.nqubits) if i not in qubits)
+        order2 = tuple(self.target_qubits)
+        order = (order1 + tuple(i + self.nqubits for i in order1) +
+                 order2 + tuple(i + self.nqubits for i in order2))
+        self.transpose_order = tuple(order.index(i) for i in range(2 * self.nqubits))
+        # Output shape
+        self.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
+
+    def construct_unitary(self):
+        raise_error(ValueError, "Partial trace gate does not have unitary "
+                                "representation.")
+
+    def state_vector_call(self, state):
+        raise_error(RuntimeError, "Partial trace gate cannot be used on state "
+                                  "vectors. Please switch to density matrix "
+                                  "simulation.")
+
+    def density_matrix_call(self, state):
+        self.set_nqubits(state)
+        state = K.reshape(state, 2 * self.nqubits * (2,))
+        substate = K.einsum(self.traceout_string, state)
+        state = K.tensordot(substate, self.zero_matrix, axes=0)
+        state = K.transpose(state, self.transpose_order)
+        return K.reshape(state, self.output_shape)
 
 
 class KrausChannel(BackendGate, gates.KrausChannel):

@@ -216,7 +216,6 @@ class Collapse(BackendGate, gates.Collapse):
         cgates.Collapse.construct_unitary(self)
 
     def state_vector_call(self, state):
-        print(self.result)
         substate = K.gather_nd(K.transpose(state, self.order), self.result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
