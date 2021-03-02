@@ -530,8 +530,7 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         cgates.PartialTrace.prepare(self)
 
     def construct_unitary(self):
-        raise_error(ValueError, "Partial trace gate does not have unitary "
-                                "representation.")
+        cgates.PartialTrace.construct_unitary(self)
 
     def state_vector_partial_trace(self, state):
         return cgates.PartialTrace.state_vector_partial_trace(self, state)

@@ -283,7 +283,6 @@ def test_collapse_gate(backend, nqubits, targets, results):
 def test_partial_trace_gate(backend, qubit):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-
     gate = gates.PartialTrace(qubit)
     gate.density_matrix = True
     initial_rho = random_density_matrix(3)
@@ -307,3 +306,17 @@ def test_partial_trace_traceout_string():
     gate.nqubits = 6
     gate.prepare()
     assert gate.traceout_string == "abcdefahcdel->bfhl"
+
+
+def test_partial_trace_gate_errors(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gate = gates.PartialTrace(0, 1)
+    # attempt to create unitary matrix
+    with pytest.raises(ValueError):
+        matrix = gate.unitary()
+    # attempt to call on state vector
+    state = np.random.random(16) + 1j * np.random.random(16)
+    with pytest.raises(RuntimeError):
+        gate(state)
+    qibo.set_backend(original_backend)
