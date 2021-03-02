@@ -204,10 +204,11 @@ class TensorflowBackend(numpy.NumpyBackend):
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
-            nshots = self.cast(nshots, dtype='DTYPEINT')
+            with self.device(self.cpu_devices[0]):
+                nshots = self.cast(nshots, dtype='DTYPEINT')
             frequencies = self.op.measure_frequencies(
                 frequencies, probs, nshots, nqubits,
-                get_threads(), self._seed)
+                self._seed, get_threads())
         return frequencies
 
     def compile(self, func):
