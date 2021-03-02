@@ -257,18 +257,24 @@ def test_controlled_by_random(backend, nqubits):
 def test_collapse_gate(backend, nqubits, targets, results):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo.models import Circuit
-    from qibo.tests_new.test_core_gates import random_state
-    initial_psi = random_state(nqubits)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    c = Circuit(nqubits, density_matrix=True)
-    c.add(gates.Collapse(*targets, result=results))
-    final_rho = c(np.copy(initial_rho))
+    initial_rho = random_density_matrix(nqubits)
+    gate = gates.Collapse(*targets, result=results)
+    gate.density_matrix = True
+    final_rho = gate(np.copy(initial_rho))
 
-    c = Circuit(nqubits)
-    c.add(gates.Collapse(*targets, result=results))
-    target_psi = c(np.copy(initial_psi))
-    target_rho = np.outer(target_psi, np.conj(target_psi))
+    target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
+    if isinstance(results, int):
+        results = len(targets) * [results]
+    for q, r in zip(targets, results):
+        slicer = 2 * nqubits * [slice(None)]
+        slicer[q], slicer[q + nqubits] = 1 - r, 1 - r
+        target_rho[tuple(slicer)] = 0
+        slicer[q], slicer[q + nqubits] = r, 1 - r
+        target_rho[tuple(slicer)] = 0
+        slicer[q], slicer[q + nqubits] = 1 - r, r
+        target_rho[tuple(slicer)] = 0
+    target_rho = np.reshape(target_rho, initial_rho.shape)
+    target_rho = target_rho / np.trace(target_rho)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
