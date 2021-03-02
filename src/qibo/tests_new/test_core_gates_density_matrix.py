@@ -314,7 +314,7 @@ def test_partial_trace_gate_errors(backend):
     gate = gates.PartialTrace(0, 1)
     # attempt to create unitary matrix
     with pytest.raises(ValueError):
-        matrix = gate.unitary()
+        gate.construct_unitary()
     # attempt to call on state vector
     state = np.random.random(16) + 1j * np.random.random(16)
     with pytest.raises(RuntimeError):
