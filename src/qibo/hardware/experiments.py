@@ -52,19 +52,22 @@ class IcarusQ(Experiment):
         lo_frequency = 4.51e9
         readout_nyquist_zone = 4
         ADC_sampling_rate = 2e9
+        default_averaging = 10000
         qubit_static_parameters = [
             {
                 "id": 0,
                 "channel": [2, None, [0, 1]], # XY control, Z line, readout
                 "frequency_range": [2.6e9, 2.61e9],
                 "resonator_frequency": 4.5241e9,
-                "neighbours": [2]
+                "neighbours": [2],
+                "amplitude": 0.75 / 2
             }, {
                 "id": 1,
                 "channel": [3, None, [0, 1]],
                 "frequency_range": [3.14e9, 3.15e9],
                 "resonator_frequency": 4.5241e9,
-                "neighbours": [1]
+                "neighbours": [1],
+                "amplitude": 0.75 / 2
             }
         ]
         dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet

@@ -1,4 +1,5 @@
 import copy
+import bisect
 import numpy as np
 from qibo.abstractions import circuit
 from qibo.config import raise_error
@@ -15,15 +16,19 @@ class PulseSequence:
     Args:
         pulses: Array of Pulse objects
     """
-    def __init__(self, pulses):
+    def __init__(self, pulses, duration=None):
         self.pulses = pulses
         self.nchannels = experiment.static.nchannels
         self.sample_size = experiment.static.sample_size
         self.sampling_rate = experiment.static.sampling_rate
         self.file_dir = experiment.static.pulse_file
 
-        self.duration = self.sample_size / self.sampling_rate
-        self.time = np.linspace(0, self.duration, num=self.sample_size)
+        if duration is None:
+            self.duration = self.sample_size / self.sampling_rate
+        else:
+            self.duration = duration
+        end = experiment.static.readout_pulse_duration + 1e-6
+        self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
         """Compiles pulse sequence into waveform arrays
@@ -49,11 +54,11 @@ class PulseSequence:
         return waveform
 
     def _compile_basic(self, waveform, pulse):
-        i_start = int((pulse.start / self.duration) * self.sample_size)
+        i_start = bisect.bisect(self.time, pulse.start)
+        #i_start = int((pulse.start / self.duration) * self.sample_size)
         i_duration = int((pulse.duration / self.duration) * self.sample_size)
         envelope = pulse.shape.envelope(self.time, pulse.start, pulse.duration, pulse.amplitude)
-        waveform[pulse.channel, i_start:i_start + i_duration] = envelope * np.sin(
-            2 * np.pi * pulse.frequency * self.time[:i_duration] + pulse.phase)
+        waveform[pulse.channel, i_start:i_start + i_duration] += envelope * np.sin(2 * np.pi * pulse.frequency * self.time[i_start:i_start + i_duration] + pulse.phase)
         return waveform
 
     def _compile_multi(self, waveform, pulse):
