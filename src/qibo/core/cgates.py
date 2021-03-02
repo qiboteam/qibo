@@ -821,8 +821,9 @@ class PartialTrace(BackendGate, gates.PartialTrace):
     def density_matrix_partial_trace(self, state):
         self.set_nqubits(state)
         state = K.reshape(state, 2 * self.nqubits * (2,))
-        rho = K.einsum(self.traceout_string, state)
-        return K.reshape(rho, self.reduced_shape)
+        state = K.transpose(state, self.einsum_order)
+        state = K.reshape(state, self.einsum_shape)
+        return K.einsum("abac->bc", state)
 
     def state_vector_call(self, state):
         raise_error(RuntimeError, "Partial trace gate cannot be used on state "
@@ -830,11 +831,7 @@ class PartialTrace(BackendGate, gates.PartialTrace):
                                   "simulation.")
 
     def density_matrix_call(self, state):
-        self.set_nqubits(state)
-        state = K.reshape(state, 2 * self.nqubits * (2,))
-        state = K.transpose(state, self.einsum_order)
-        state = K.reshape(state, self.einsum_shape)
-        substate = K.einsum("abac->bc", state)
+        substate = self.density_matrix_partial_trace(state)
         n = self.nqubits - len(self.target_qubits)
         substate = K.reshape(substate, 2 * n * (2,))
         state = K.tensordot(substate, self.zero_matrix, axes=0)
