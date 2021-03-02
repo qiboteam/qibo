@@ -774,15 +774,16 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         BackendGate.__init__(self)
         gates.PartialTrace.__init__(self, *q)
 
-        self.traceout_string = None
         self.zero_matrix = None
-        self.transpose_order = None
+        self.einsum_order = None
+        self.final_order = None
+        self.einsum_shape = None
         self.output_shape = None
+        self.reduced_shape = None
 
     def prepare(self):
         self.is_prepared = True
         qubits = set(self.target_qubits)
-        self.traceout_string = M.einsum_string(qubits, self.nqubits)
         # Create |00...0><00...0| for qubits that are traced out
         n = len(self.target_qubits)
         row0 = K.cast([1] + (2 ** n - 1) * [0], dtype='DTYPECPX')
@@ -790,13 +791,19 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         rows = K.zeros(shape, dtype='DTYPECPX')
         self.zero_matrix = K.concatenate([row0[K.newaxis], rows], axis=0)
         self.zero_matrix = K.reshape(self.zero_matrix, 2 * n * (2,))
+        # Calculate initial transpose order
+        order = tuple(sorted(self.target_qubits))
+        order += tuple(i for i in range(self.nqubits) if i not in qubits)
+        order += tuple(i + self.nqubits for i in order)
+        self.einsum_order = order
         # Calculate final transpose order
         order1 = tuple(i for i in range(self.nqubits) if i not in qubits)
         order2 = tuple(self.target_qubits)
         order = (order1 + tuple(i + self.nqubits for i in order1) +
                  order2 + tuple(i + self.nqubits for i in order2))
-        self.transpose_order = tuple(order.index(i) for i in range(2 * self.nqubits))
-        # Output shape
+        self.final_order = tuple(order.index(i) for i in range(2 * self.nqubits))
+        # Shapes
+        self.einsum_shape = K.cast(2 * (2 ** n, 2 ** (self.nqubits - n)), dtype='DTYPEINT')
         self.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
         self.reduced_shape = K.cast(2 * (2 ** (self.nqubits - n),), dtype='DTYPEINT')
 
@@ -812,7 +819,6 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         return K.reshape(rho, self.reduced_shape)
 
     def density_matrix_partial_trace(self, state):
-        print(state.shape)
         self.set_nqubits(state)
         state = K.reshape(state, 2 * self.nqubits * (2,))
         rho = K.einsum(self.traceout_string, state)
@@ -826,9 +832,13 @@ class PartialTrace(BackendGate, gates.PartialTrace):
     def density_matrix_call(self, state):
         self.set_nqubits(state)
         state = K.reshape(state, 2 * self.nqubits * (2,))
-        substate = K.einsum(self.traceout_string, state)
+        state = K.transpose(state, self.einsum_order)
+        state = K.reshape(state, self.einsum_shape)
+        substate = K.einsum("abac->bc", state)
+        n = self.nqubits - len(self.target_qubits)
+        substate = K.reshape(substate, 2 * n * (2,))
         state = K.tensordot(substate, self.zero_matrix, axes=0)
-        state = K.transpose(state, self.transpose_order)
+        state = K.transpose(state, self.final_order)
         return K.reshape(state, self.output_shape)
 
 

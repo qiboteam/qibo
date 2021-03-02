@@ -65,7 +65,7 @@ def test_rygate_density_matrix(backend):
     matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
     target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
 
-    np.testing.assert_allclose(final_rho, target_rho)#, atol=_atol)
+    np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
     qibo.set_backend(original_backend)
 
 
@@ -299,13 +299,6 @@ def test_partial_trace_gate(backend, qubit):
     target_state = np.reshape(target_state, (8, 8))
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
-
-
-def test_partial_trace_traceout_string():
-    gate = gates.PartialTrace(0, 2, 3, 4)
-    gate.nqubits = 6
-    gate.prepare()
-    assert gate.traceout_string == "abcdefahcdel->bfhl"
 
 
 def test_partial_trace_gate_errors(backend):
