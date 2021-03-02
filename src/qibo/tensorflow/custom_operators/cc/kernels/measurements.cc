@@ -16,7 +16,7 @@ namespace functor {
 template <typename Tint, typename Tfloat>
 struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
   void operator()(const CPUDevice &d, Tint* frequencies, const Tfloat* probs,
-                  Tint nshots, int nqubits, int user_seed = 1234)
+                  int64 nshots, int nqubits, int user_seed = 1234)
   {
     int64 nstates = 1 << nqubits;
     srand(user_seed);
@@ -70,6 +70,7 @@ template <typename Device, typename Tint, typename Tfloat>
 class MeasureFrequenciesOp : public OpKernel {
  public:
   explicit MeasureFrequenciesOp(OpKernelConstruction *context) : OpKernel(context) {
+    OP_REQUIRES_OK(context, context->GetAttr("nshots", &nshots_));
     OP_REQUIRES_OK(context, context->GetAttr("nqubits", &nqubits_));
     OP_REQUIRES_OK(context, context->GetAttr("omp_num_threads", &threads_));
     OP_REQUIRES_OK(context, context->GetAttr("seed", &seed_));
@@ -79,14 +80,12 @@ class MeasureFrequenciesOp : public OpKernel {
   void Compute(OpKernelContext *context) override {
     // grab the input tensor
     Tensor frequencies = context->input(0);
-    const Tensor& cumprobs = context->input(1);
-    const Tensor& nshots = context->input(2);
+    const Tensor& probs = context->input(1);
 
     // call the implementation
     MeasureFrequenciesFunctor<Device, Tint, Tfloat>()
       (context->eigen_device<Device>(), frequencies.flat<Tint>().data(),
-       cumprobs.flat<Tfloat>().data(), nshots.flat<Tint>().data()[0],
-       nqubits_, seed_);
+       probs.flat<Tfloat>().data(), (int64) nshots_, nqubits_, seed_);
     context->set_output(0, frequencies);
   }
 
@@ -94,6 +93,7 @@ class MeasureFrequenciesOp : public OpKernel {
   int nqubits_;
   int threads_;
   int seed_;
+  float nshots_;
 };
 
 // Register the CPU kernels.
