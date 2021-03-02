@@ -1313,7 +1313,7 @@ class PartialTrace(Gate):
 
     Args:
         q (int): Qubit ids that will be traced-out and collapsed to the zero
-            state.
+            state. More than one qubits can be given.
     """
 
     def __init__(self, *q):
