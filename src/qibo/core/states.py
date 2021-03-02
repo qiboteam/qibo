@@ -73,10 +73,9 @@ class VectorState(AbstractState):
             unmeasured_qubits = [i for i in range(self.nqubits)
                                  if i not in qubits]
             if isinstance(self, MatrixState):
-                from qibo.abstractions.callbacks import PartialTrace
+                from qibo.abstractions.gates import M
                 qubits = set(unmeasured_qubits)
-                return PartialTrace.einsum_string(qubits, self.nqubits,
-                                                  measuring=True)
+                return M.einsum_string(qubits, self.nqubits, measuring=True)
             return unmeasured_qubits
 
         if not measurement_gate.is_prepared:

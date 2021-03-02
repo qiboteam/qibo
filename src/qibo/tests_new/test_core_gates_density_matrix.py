@@ -6,12 +6,6 @@ from qibo import gates
 from qibo.config import raise_error
 
 
-def random_state(nqubits):
-    nstates = 2 ** nqubits
-    initial_state = np.random.random(nstates) + 1j * np.random.random(nstates)
-    return initial_state / np.sqrt((np.abs(initial_state) ** 2).sum())
-
-
 def random_density_matrix(nqubits):
     """Generates a random density matrix.
 
@@ -56,3 +50,10 @@ def test_partial_trace_gate(backend, qubit):
     target_state = np.reshape(target_state, (8, 8))
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
+
+
+def test_partial_trace_traceout_string():
+    gate = gates.PartialTrace(0, 2, 3, 4)
+    gate.nqubits = 6
+    gate.prepare()
+    assert gate.traceout_string == "abcdefahcdel->bfhl"

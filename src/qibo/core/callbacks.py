@@ -34,29 +34,6 @@ class BackendCallback(callbacks.Callback, ABC):
         return getattr(self, self._active_call)(state)
 
 
-class PartialTrace(BackendCallback, callbacks.PartialTrace):
-
-    def set_nqubits(self, state):
-        if not isinstance(state, K.tensor_types):
-            raise_error(TypeError, "State of unknown type {} was given in callback "
-                                   "calculation.".format(type(state)))
-        if self._nqubits is None:
-            self.nqubits = int(math.log2(tuple(state.shape)[0]))
-
-    def state_vector_call(self, state):
-        self.set_nqubits(state)
-        state = K.reshape(state, self.nqubits * (2,))
-        rho = K.tensordot(state, K.conj(state),
-                           axes=[self.partition, self.partition])
-        return K.reshape(rho, (self.rho_dim, self.rho_dim))
-
-    def density_matrix_call(self, state):
-        self.set_nqubits(state)
-        state = K.reshape(state, 2 * self.nqubits * (2,))
-        rho = K.einsum(self.traceout(), state)
-        return K.reshape(rho, (self.rho_dim, self.rho_dim))
-
-
 class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
     _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
@@ -97,13 +74,21 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
         entropy = K.sum(masked_eigvals * spectrum)
         return entropy / self._log2
 
+    def set_nqubits(self, state):
+        if not isinstance(state, K.tensor_types):
+            raise_error(TypeError, "State of unknown type {} was given in callback "
+                                   "calculation.".format(type(state)))
+        if self._nqubits is None:
+            self.nqubits = int(math.log2(tuple(state.shape)[0]))
+
+
     def state_vector_call(self, state):
-        PartialTrace.set_nqubits(self, state)
+        self.set_nqubits(state)
         rho = self.partial_trace.state_vector_partial_trace(state)
         return self.entropy(rho)
 
     def density_matrix_call(self, state):
-        PartialTrace.set_nqubits(self, state)
+        self.set_nqubits(state)
         rho = self.partial_trace.density_matrix_partial_trace(state)
         return self.entropy(rho)
 
