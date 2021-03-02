@@ -780,7 +780,7 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         self.output_shape = None
 
     def prepare(self):
-        BackendGate.prepare(self)
+        self.is_prepared = True
         qubits = set(self.target_qubits)
         self.traceout_string = M.einsum_string(qubits, self.nqubits)
         # Create |00...0><00...0| for qubits that are traced out
@@ -798,7 +798,7 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         self.transpose_order = tuple(order.index(i) for i in range(2 * self.nqubits))
         # Output shape
         self.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
-        self.reduced_shape = K.cast(2 * (2 ** n,), dtype='DTYPEINT')
+        self.reduced_shape = K.cast(2 * (2 ** (self.nqubits - n),), dtype='DTYPEINT')
 
     def construct_unitary(self):
         raise_error(ValueError, "Partial trace gate does not have unitary "
@@ -812,6 +812,7 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         return K.reshape(rho, self.reduced_shape)
 
     def density_matrix_partial_trace(self, state):
+        print(state.shape)
         self.set_nqubits(state)
         state = K.reshape(state, 2 * self.nqubits * (2,))
         rho = K.einsum(self.traceout_string, state)
