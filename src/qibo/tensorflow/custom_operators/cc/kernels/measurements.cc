@@ -107,15 +107,18 @@ REGISTER_CPU(int64, float);
 REGISTER_CPU(int32, double);
 REGISTER_CPU(int64, double);
 
-//#ifdef GOOGLE_CUDA
+#ifdef GOOGLE_CUDA
 // Register the GPU kernels.
-//#define REGISTER_GPU(T)                                               \
-  extern template struct InitialStateFunctor<GPUDevice, T>;           \
+#define REGISTER_GPU(Tint, Tfloat)                                               \
+  extern template struct MeasureFrequenciesFunctor<GPUDevice, Tint, Tfloat>; \
   REGISTER_KERNEL_BUILDER(                                            \
-      Name("InitialState").Device(DEVICE_GPU).TypeConstraint<T>("dtype"), \
-      InitialStateOp<GPUDevice, T>);
-//REGISTER_GPU(complex64);
-//REGISTER_GPU(complex128);
-//#endif
+      Name("MeasureFrequencies").Device(DEVICE_GPU)                   \
+      .TypeConstraint<Tint>("Tint").TypeConstraint<Tfloat>("Tfloat"), \
+      MeasureFrequenciesOp<GPUDevice, Tint, Tfloat>);
+REGISTER_GPU(int32, float);
+REGISTER_GPU(int64, float);
+REGISTER_GPU(int32, double);
+REGISTER_GPU(int64, double);
+#endif
 }  // namespace functor
 }  // namespace tensorflow

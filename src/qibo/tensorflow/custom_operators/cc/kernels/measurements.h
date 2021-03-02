@@ -10,7 +10,7 @@ namespace functor {
 template <typename Device, typename Tint, typename Tfloat>
 struct MeasureFrequenciesFunctor {
   void operator()(const Device &d, Tint* frequencies, const Tfloat* probs,
-                  Tint nshots, int nqubits, int user_seed);
+                  int64 nshots, int nqubits, int user_seed);
 };
 
 }  // namespace functor
