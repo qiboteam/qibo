@@ -61,7 +61,7 @@ def main(index, plot):
     print("Fidelity:", fidelity)
 
     if plot:
-        from plot import plot
+        from plot import plot # pylint: disable=import-error
         plot(tom, rho_theory)
 
 
