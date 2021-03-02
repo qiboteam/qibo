@@ -1005,7 +1005,8 @@ class AbstractCircuit(ABC):
         # Print to terminal
         output = ""
         for q in range(self.nqubits):
-            output += f'q{q}: ─' + ''.join(matrix[q]) + '\n'
+            output += f'q{q}' + ' ' * (len(str(self.nqubits))-len(str(q))) + \
+                       ': ─' + ''.join(matrix[q]) + '\n'
 
         # line wrap
         if line_wrap:
