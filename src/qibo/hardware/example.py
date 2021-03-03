@@ -123,7 +123,8 @@ def randomized_benchmark(q, ngates, scheduler=None):
 def main(qubit, ngates, nshots, address, username, password):
     scheduler = TaskScheduler()
     if address is not None:
-        experiment.connect(address, username, password)
+        #experiment.connect(address, username, password)
+        pass
     else:
         # set hard=coded calibration data
         scheduler._qubit_config = experiment.static.calibration_placeholder

@@ -5,6 +5,18 @@ from qibo.abstractions import circuit
 from qibo.config import raise_error
 from qibo.hardware import pulses, experiment
 
+def square(t, start, duration, amplitude, freq, I_phase, Q_phase):
+    x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
+    I_phase = I_phase * np.pi / 180
+    Q_phase = Q_phase * np.pi / 180
+    i = x * np.cos(2 * np.pi * freq * t + I_phase)
+    q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
+    return i, q
+
+def TTL(t, start, duration, amplitude):
+    x = amplitude * (1 * (start < t) & 1 * (start + duration > t))
+    return x
+
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -27,7 +39,8 @@ class PulseSequence:
             self.duration = self.sample_size / self.sampling_rate
         else:
             self.duration = duration
-        end = experiment.static.readout_pulse_duration + 1e-6
+            self.sample_size = int(duration * self.sampling_rate)
+        end = experiment.static.readout_start_time + experiment.static.readout_pulse_duration + 1e-6
         self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
@@ -51,6 +64,13 @@ class PulseSequence:
                 waveform = self._compile_file(waveform, pulse)
             else:
                 raise_error(TypeError, "Invalid pulse type {}.".format(pulse))
+        # Hardcoded bypass for now
+        i_wfm, q_wfm, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_pulses(self.time)
+        waveform[0] = i_wfm
+        waveform[1] = q_wfm
+        waveform[4] = adc_ttl
+        waveform[5] = ro_ttl
+        waveform[6] = qb_ttl
         return waveform
 
     def _compile_basic(self, waveform, pulse):
@@ -79,6 +99,25 @@ class PulseSequence:
         """Returns the serialized pulse sequence."""
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
+    @staticmethod
+    def _generate_readout_pulses(time_array):
+        # TODO: Fix for multiplexed readout
+        i_wfm, q_wfm = square(time_array, experiment.static.readout_start_time, experiment.static.readout_pulse_duration,
+                              experiment.static.readout_pulse_amplitude, experiment.static.readout_IF_frequency, experiment.static.readout_phase[0],
+                              experiment.static.readout_phase[1])
+        # ADC TTL
+        start = experiment.static.readout_start_time + experiment.static.ADC_delay
+        adc_ttl = TTL(time_array, start, 10e-9, 1)
+
+        # RO SW TTL
+        start = experiment.static.readout_start_time + experiment.static.RO_SW_delay
+        ro_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+
+        # QB SW TTL
+        start = experiment.static.readout_start_time + experiment.static.QB_SW_delay
+        qb_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+
+        return i_wfm, q_wfm, adc_ttl, ro_ttl, qb_ttl
 
 class Circuit(circuit.AbstractCircuit):
 
@@ -141,6 +180,7 @@ class Circuit(circuit.AbstractCircuit):
         final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
         step = 1 / experiment.static.ADC_sampling_rate
         ADC_time_array = np.arange(0, final, step)
+        ADC_time_array = ADC_time_array[50:]
 
         static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]

@@ -37,6 +37,18 @@ def _parse_result(raw_data, static_config):
 
     return [it, qt, ampl, phase]
 
+def _parse_batch_result(raw_data, static_config):
+    steps = len(raw_data)
+    res = np.zeros((4, steps))
+    for i in range(steps):
+        it, qt, ampl, phase = _parse_result(raw_data[i], static_config)
+        res[0, i] = it
+        res[1, i] = qt
+        res[2, i] = ampl
+        res[3, i] = phase
+
+    return res
+
 def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
     steps = len(pulse_sequences)
     res = np.zeros((4, steps))
@@ -61,18 +73,21 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
     channel = qubit.drive_channel
     amplitude = qubit.qubit_amplitude
     freq_sweep, seq = tasks.PulseSpectroscopy(freq_start, freq_end, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = scheduler.execute_batch_sequence(seq, experiment.static.default_averaging).result()
+    res = _parse_batch_result(res, static_config)
     ampl_array = res[2]
     log["pulse"] = {
         "freq_sweep": freq_sweep.tolist(),
         "result": res.tolist()
     }
     freq = fitting.fit_pulse(ampl_array, freq_sweep)
+    log["freq"] = freq
     qubit.qubit_frequency = freq
 
     # Next, do Rabi oscillation to determine pi-pulse time
     time_sweep, seq = tasks.RabiTime(0, 600e-9, 3e-9, freq, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = scheduler.execute_batch_sequence(seq, experiment.static.default_averaging).result()
+    res = _parse_batch_result(res, static_config)
     log["rabi"] = {
         "time_sweep": time_sweep.tolist(),
         "result": res.tolist()
@@ -87,6 +102,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
     freq_nyquist = freq - experiment.static.sampling_rate
     qubit.pulses["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
     qubit.pulses["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
+    log["pi-pulse"] = pi_pulse
 
     return qubit, log
 

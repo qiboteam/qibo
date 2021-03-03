@@ -59,7 +59,7 @@ class TaskScheduler:
     @staticmethod
     def _execute_pulse_sequence(pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
-        experiment.upload(wfm)
+        experiment.upload(wfm, nshots)
         experiment.start()
         # NIY
         #self._pi_trig.trigger(shots, delay=50e6)
@@ -67,3 +67,30 @@ class TaskScheduler:
         experiment.stop()
         res = experiment.download()
         return res
+
+    def execute_batch_sequence(self, pulse_batch, nshots):
+        if not isinstance(nshots, int) or nshots < 1:
+            raise_error(ValueError, "Invalid number of shots {}.".format(nshots))
+        future = self._executor.submit(self._execute_batch_sequence,
+                                       pulse_batch=pulse_batch,
+                                       nshots=nshots)
+        return future
+
+    @staticmethod
+    def _execute_batch_sequence(pulse_batch, nshots):
+        wfm = pulse_batch[0].compile()
+        steps = len(pulse_batch)
+        sample_size = len(wfm[0])
+        wfm_batch = np.zeros((experiment.static.nchannels, steps, sample_size))
+        for i in range(steps):
+            wfm = pulse_batch[i].compile()
+            for j in range(experiment.static.nchannels):
+                wfm_batch[j, i] = wfm[j]
+
+        experiment.upload_batch(wfm_batch, nshots)
+        experiment.start_batch(steps)
+        experiment.stop()
+        res = experiment.download()
+        return res
+
+        
