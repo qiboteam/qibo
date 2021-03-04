@@ -8,7 +8,6 @@
 namespace tensorflow {
 
 typedef Eigen::ThreadPoolDevice CPUDevice;
-typedef Eigen::GpuDevice GPUDevice;
 
 namespace functor {
 
@@ -34,7 +33,7 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
     }
     #pragma omp parallel
     {
-        std::unordered_map<int64, int64> frequencies_private;
+        std::vector<int64> frequencies_private(nstates, 0);
         unsigned seed = thread_seed[omp_get_thread_num()];
         int64 shot = initial_shot;
         #pragma omp for
@@ -50,16 +49,12 @@ struct MeasureFrequenciesFunctor<CPUDevice, Tint, Tfloat> {
             shot = new_shot;
           }
           // Update frequencies
-          if (frequencies_private.find(shot) == frequencies_private.end()) {
-              frequencies_private[shot] = 1;
-          } else {
-              frequencies_private[shot]++;
-          }
+          frequencies_private[shot]++;
         }
         #pragma omp critical
         {
-            for(const auto& entry : frequencies_private) {
-                frequencies[entry.first] += entry.second;
+            for(int64 i = 0; i < nstates; i++) {
+                frequencies[i] += frequencies_private[i];
             }
         }
     }
@@ -107,15 +102,5 @@ REGISTER_CPU(int64, float);
 REGISTER_CPU(int32, double);
 REGISTER_CPU(int64, double);
 
-//#ifdef GOOGLE_CUDA
-// Register the GPU kernels.
-//#define REGISTER_GPU(T)                                               \
-  extern template struct InitialStateFunctor<GPUDevice, T>;           \
-  REGISTER_KERNEL_BUILDER(                                            \
-      Name("InitialState").Device(DEVICE_GPU).TypeConstraint<T>("dtype"), \
-      InitialStateOp<GPUDevice, T>);
-//REGISTER_GPU(complex64);
-//REGISTER_GPU(complex128);
-//#endif
 }  // namespace functor
 }  // namespace tensorflow
