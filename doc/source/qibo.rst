@@ -179,7 +179,7 @@ the gate on an arbitrary number of qubits. For example
 .. automodule:: qibo.abstractions.gates
    :members:
    :member-order: bysource
-   :exclude-members: KrausChannel, UnitaryChannel, PauliNoiseChannel, ResetChannel, ThermalRelaxationChannel
+   :exclude-members: PartialTrace, KrausChannel, UnitaryChannel, PauliNoiseChannel, ResetChannel, ThermalRelaxationChannel
 
 _______________________
 
@@ -196,6 +196,10 @@ For more information on the use of channels to simulate noise we refer to
 :ref:`How to perform noisy simulation? <noisy-example>`
 The following channels are currently implemented:
 
+
+.. autoclass:: qibo.abstractions.gates.PartialTrace
+    :members:
+    :member-order: bysource
 .. autoclass:: qibo.abstractions.gates.KrausChannel
     :members:
     :member-order: bysource

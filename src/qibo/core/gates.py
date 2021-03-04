@@ -216,7 +216,6 @@ class Collapse(BackendGate, gates.Collapse):
         cgates.Collapse.construct_unitary(self)
 
     def state_vector_call(self, state):
-        print(self.result)
         substate = K.gather_nd(K.transpose(state, self.order), self.result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
@@ -514,6 +513,36 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
 
     def density_matrix_call(self, state):
         return cgates.VariationalLayer.density_matrix_call(self, state)
+
+
+class PartialTrace(BackendGate, gates.PartialTrace):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        gates.PartialTrace.__init__(self, *q)
+
+        self.traceout_string = None
+        self.zero_matrix = None
+        self.transpose_order = None
+        self.output_shape = None
+
+    def prepare(self):
+        cgates.PartialTrace.prepare(self)
+
+    def construct_unitary(self):
+        cgates.PartialTrace.construct_unitary(self)
+
+    def state_vector_partial_trace(self, state):
+        return cgates.PartialTrace.state_vector_partial_trace(self, state)
+
+    def density_matrix_partial_trace(self, state):
+        return cgates.PartialTrace.density_matrix_partial_trace(self, state)
+
+    def state_vector_call(self, state):
+        return cgates.PartialTrace.state_vector_call(self, state)
+
+    def density_matrix_call(self, state):
+        return cgates.PartialTrace.density_matrix_call(self, state)
 
 
 class KrausChannel(BackendGate, gates.KrausChannel):

@@ -2,7 +2,7 @@
 # @authors: S. Carrazza and A. Garcia
 import math
 from abc import abstractmethod
-from qibo.config import raise_error
+from qibo.config import raise_error, EINSUM_CHARS
 from typing import Dict, List, Optional, Tuple
 from qibo.abstractions.abstract_gates import Gate, ParametrizedGate, SpecialGate
 
@@ -293,6 +293,42 @@ class M(Gate):
             return tuple(probs[q] if q in probs else 0.0 for q in qubits)
 
         raise_error(TypeError, "Invalid type {} of bitflip map.".format(probs))
+
+    @staticmethod
+    def einsum_string(qubits, nqubits, measuring=False):
+        """Generates einsum string for partial trace of density matrices.
+
+        Args:
+            qubits (list): Set of qubit ids that are traced out.
+            nqubits (int): Total number of qubits in the state.
+            measuring (bool): If True non-traced-out indices are multiplied and
+                the output has shape (nqubits - len(qubits),).
+                If False the output has shape 2 * (nqubits - len(qubits),).
+
+        Returns:
+            String to use in einsum for performing partial density of a
+            density matrix.
+        """
+        if (2 - int(measuring)) * nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it requires large instance
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        left_in, right_in, left_out, right_out = [], [], [], []
+        for i in range(nqubits):
+            left_in.append(EINSUM_CHARS[i])
+            if i in qubits:
+                right_in.append(EINSUM_CHARS[i])
+            else:
+                left_out.append(EINSUM_CHARS[i])
+                if measuring:
+                    right_in.append(EINSUM_CHARS[i])
+                else:
+                    right_in.append(EINSUM_CHARS[i + nqubits])
+                    right_out.append(EINSUM_CHARS[i + nqubits])
+
+        left_in, left_out = "".join(left_in), "".join(left_out)
+        right_in, right_out = "".join(right_in), "".join(right_out)
+        return f"{left_in}{right_in}->{left_out}{right_out}"
 
     def _get_bitflip_map(self, p: Optional["ProbsType"] = None
                          ) -> Dict[int, float]:
@@ -1262,6 +1298,31 @@ class CallbackGate(SpecialGate):
     def nqubits(self, n: int):
         Gate.nqubits.fset(self, n) # pylint: disable=no-member
         self.callback.nqubits = n
+
+
+class PartialTrace(Gate):
+    """Collapses a density matrix by tracing out selected qubits.
+
+    Works only with density matrices (not state vectors) and implements the
+    following transformation:
+
+    .. math::
+        \\mathcal{E}(\\rho ) = (|0\\rangle \\langle 0|) _A \\otimes \\mathrm{Tr} _A (\\rho )
+
+    where A denotes the subsystem of qubits that are traced out.
+
+    Args:
+        q (int): Qubit ids that will be traced-out and collapsed to the zero
+            state. More than one qubits can be given.
+    """
+
+    def __init__(self, *q):
+        super().__init__()
+        self.name = "PartialTrace"
+        self.target_qubits = tuple(q)
+
+        self.init_args = q
+        self.init_kwargs = {}
 
 
 class KrausChannel(Gate):
