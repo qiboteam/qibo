@@ -38,6 +38,9 @@ class BackendGate(BaseBackendGate):
     def prepare(self):
         self.is_prepared = True
         self.reprepare()
+        s = 1 + self.density_matrix
+        self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
+        self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
         if self.is_controlled_by:
             if self.density_matrix:
                 # fall back to the 'defaulteinsum' backend when using
@@ -64,6 +67,7 @@ class BackendGate(BaseBackendGate):
         self.prepare()
 
     def state_vector_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -82,9 +86,10 @@ class BackendGate(BaseBackendGate):
         else:
             einsum_str = self.calculation_cache.vector
             state = self.einsum(einsum_str, state, self.matrix)
-        return state
+        return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -111,7 +116,7 @@ class BackendGate(BaseBackendGate):
             state = self.einsum(self.calculation_cache.right, state,
                                 K.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
-        return state
+        return K.reshape(state, self.flat_shape)
 
     def __call__(self, state):
         if not self.is_prepared:
