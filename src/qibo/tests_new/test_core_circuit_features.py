@@ -27,9 +27,6 @@ def test_circuit_vs_gate_execution(backend):
 
     init2 = c.get_initial_state()
     init3 = c.get_initial_state()
-    if backend != "custom":
-        init2 = K.reshape(init2, (2, 2))
-        init3 = K.reshape(init3, (2, 2))
 
     r2 = K.reshape(custom_circuit(init2, theta), (4,))
     np.testing.assert_allclose(r1, r2)

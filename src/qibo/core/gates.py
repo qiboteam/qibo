@@ -59,12 +59,7 @@ class BackendGate(BaseBackendGate):
             lambda x: K.cast(x, dtype='DTYPEINT'))
 
     def set_nqubits(self, state):
-        shape = tuple(state.shape)
-        if len(shape) == 1 + self.density_matrix: # pragma: no cover
-            self.nqubits = int(math.log2(shape[0]))
-        else:
-            self.nqubits = len(tuple(state.shape)) // (1 + self.density_matrix)
-        self.prepare()
+        cgates.BackendGate.set_nqubits(self, state)
 
     def state_vector_call(self, state):
         state = K.reshape(state, self.tensor_shape)
@@ -122,9 +117,6 @@ class BackendGate(BaseBackendGate):
         if not self.is_prepared:
             self.set_nqubits(state)
         original_shape = state.shape
-        if len(tuple(original_shape)) == 1 + self.density_matrix: # pragma: no cover
-            tensor_shape = (1 + self.density_matrix) * self.nqubits * (2,)
-            state = K.reshape(state, tensor_shape)
         state = getattr(self, self._active_call)(state)
         return K.reshape(state, original_shape)
 
@@ -195,6 +187,9 @@ class Collapse(BackendGate, gates.Collapse):
     def prepare(self):
         self.is_prepared = True
         self.order = list(self.sorted_qubits)
+        s = 1 + self.density_matrix
+        self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
+        self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
         if self.density_matrix:
             self.order.extend((q + self.nqubits for q in self.sorted_qubits))
             self.order.extend((q for q in range(self.nqubits)
@@ -221,19 +216,23 @@ class Collapse(BackendGate, gates.Collapse):
         cgates.Collapse.construct_unitary(self)
 
     def state_vector_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order), self.result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        return self._append_zeros(state, self.sorted_qubits, self.result)
+        state = self._append_zeros(state, self.sorted_qubits, self.result)
+        return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
                                self.density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = K.trace(K.reshape(substate, (n, n)))
         state = substate / norm
-        return self._append_zeros(state, self.sorted_qubits,
-                                  self.density_matrix_result)
+        state = self._append_zeros(state, self.sorted_qubits,
+                                   self.density_matrix_result)
+        return K.reshape(state, self.flat_shape)
 
 
 class RX(BackendGate, gates.RX):
