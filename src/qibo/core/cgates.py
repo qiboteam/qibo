@@ -137,7 +137,13 @@ class Y(BackendGate, gates.Y):
         return matrices.Y
 
     def density_matrix_call(self, state):
-        return -BackendGate.density_matrix_call(self, state)
+        state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
+                             *self.target_qubits, get_threads())
+        matrix = K.conj(matrices.Y)
+        state = K.op.apply_gate(state, matrix, self.qubits_tensor,
+                                2 * self.nqubits, *self.target_qubits_dm,
+                                get_threads())
+        return state
 
 
 class Z(BackendGate, gates.Z):
