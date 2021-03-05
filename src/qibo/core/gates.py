@@ -645,6 +645,8 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
 
     def prepare(self):
         self.is_prepared = True
+        self.tensor_shape = K.cast(2 * self.nqubits * (2,), dtype='DTYPEINT')
+        self.flat_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
         self.reprepare()
         qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
         self.calculation_cache = self.einsum.create_cache(
@@ -661,4 +663,6 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
 
     def density_matrix_call(self, state):
         einsum_str = self.calculation_cache.vector
-        return self.einsum(einsum_str, state, self.matrix)
+        state = K.reshape(state, self.tensor_shape)
+        state = self.einsum(einsum_str, state, self.matrix)
+        return K.reshape(state, self.flat_shape)
