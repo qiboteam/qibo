@@ -522,4 +522,5 @@ def test_callback_gate_errors():
     with pytest.raises(ValueError):
         gate.construct_unitary()
 
+
 # TODO: Test channels
