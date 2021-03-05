@@ -28,7 +28,7 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
 
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        if K.gpu_devices and not accelerators: # pragma: no cover
+        if K.gpu_devices: # pragma: no cover
             # CI does not use GPU
             decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
         elif use_samples or sys.platform != "darwin":
