@@ -25,6 +25,9 @@ EIGVAL_CUTOFF = 1e-14
 # Batch size for sampling shots in measurement frequencies calculation
 SHOT_BATCH_SIZE = 2 ** 18
 
+# Threshold size for sampling shots in measurements frequencies with custom operator
+SHOT_CUSTOM_OP_THREASHOLD = 100000
+
 # Flag for raising warning in ``set_precision`` and ``set_backend``
 ALLOW_SWITCHERS = True
 
