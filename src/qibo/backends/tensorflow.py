@@ -48,6 +48,11 @@ class TensorflowBackend(numpy.NumpyBackend):
         if op._custom_operators_loaded:
             self.op = op
 
+        # seed to use in the measurement frequency custom op
+        from datetime import datetime
+        self._seed = None
+        self.set_seed(int(datetime.now().microsecond))
+        # seed can be modified using ``K.set_seed``
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -181,18 +186,21 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.concatenate(samples, axis=0)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_BATCH_SIZE
-        logits = self.log(probs)[self.newaxis]
-        def update_frequencies(nsamples, frequencies):
-            samples = self.random.categorical(logits, nsamples, dtype=self.dtypes('DTYPEINT'))[0]
+        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+        if self.op is None or nshots < SHOT_CUSTOM_OP_THREASHOLD:
+            logits = self.log(probs)[self.newaxis]
+            samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
             res, counts = self.unique(samples, return_counts=True)
-            return self.backend.tensor_scatter_nd_add(
-                frequencies, res[:, self.newaxis], counts)
-
-        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
-        for _ in range(nshots // SHOT_BATCH_SIZE):
-            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
-        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+            frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+            frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
+        else:
+            from qibo.config import get_threads
+            nqubits = int(self.np.log2(tuple(probs.shape)[0]))
+            shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
+            frequencies = self.zeros(shape, dtype='DTYPEINT')
+            frequencies = self.op.measure_frequencies(
+                frequencies, probs, nshots, nqubits,
+                self._seed, get_threads())
         return frequencies
 
     def compile(self, func):
@@ -205,4 +213,5 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.executing_eagerly()
 
     def set_seed(self, seed):
+        self._seed = seed
         self.backend.random.set_seed(seed)

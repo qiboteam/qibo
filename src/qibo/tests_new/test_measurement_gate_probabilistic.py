@@ -1,4 +1,5 @@
 """Test :class:`qibo.abstractions.gates.M` when results are probabilistic."""
+import sys
 import pytest
 import numpy as np
 import qibo
@@ -9,7 +10,10 @@ from qibo.tests_new.test_measurement_gate import assert_result
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_probabilistic_measurement(backend, accelerators, use_samples):
     original_backend = qibo.get_backend()
+    original_threads = qibo.get_threads()
     qibo.set_backend(backend)
+    # set single-thread to fix the random values generated from the frequency custom op
+    qibo.set_threads(1)
     c = models.Circuit(4, accelerators)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -24,21 +28,26 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
 
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
-        if K.gpu_devices and not accelerators: # pragma: no cover
-            # case not tested in GitHub workflows because it requires GPU
+        if K.gpu_devices: # pragma: no cover
+            # CI does not use GPU
             decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
+        else:
+            decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
     elif K.name == "numpy":
         decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
-    assert sum(decimal_frequencies.values()) == 1000
+    assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_backend(original_backend)
+    qibo.set_threads(original_threads)
 
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_unbalanced_probabilistic_measurement(backend, use_samples):
     original_backend = qibo.get_backend()
+    original_threads = qibo.get_threads()
     qibo.set_backend(backend)
+    # set single-thread to fix the random values generated from the frequency custom op
+    qibo.set_threads(1)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
     c = models.Circuit(2)
     c.add(gates.Flatten(state))
@@ -52,15 +61,17 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         _ = result.samples()
     # update reference values based on backend and device
     if K.name == "tensorflow":
-        decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
         if K.gpu_devices: # pragma: no cover
-            # case not tested in GitHub workflows because it requires GPU
+            # CI does not use GPU
             decimal_frequencies = {0: 196, 1: 153, 2: 156, 3: 495}
+        else:
+            decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
     elif K.name == "numpy":
         decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
-    assert sum(decimal_frequencies.values()) == 1000
+    assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_backend(original_backend)
+    qibo.set_threads(original_threads)
 
 
 def test_measurements_with_probabilistic_noise(backend):

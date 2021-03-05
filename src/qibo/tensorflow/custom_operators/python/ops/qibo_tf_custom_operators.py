@@ -23,6 +23,9 @@ transpose_state = custom_module.transpose_state
 # swap state pieces operator (for multi-GPU)
 swap_pieces = custom_module.swap_pieces
 
+# measurement frequencies operator
+measure_frequencies = custom_module.measure_frequencies
+
 # apply_gate operator
 def apply_gate(state, gate, qubits, nqubits, target, omp_num_threads=get_threads()):
     """Applies arbitrary one-qubit gate to a state vector.
