@@ -37,15 +37,10 @@ def test_hgate_density_matrix(backend):
     initial_rho = random_density_matrix(2)
     gate = gates.H(1)
     gate.density_matrix = True
-    if backend == "custom":
-        final_rho = np.copy(initial_rho)
-    else:
-        final_rho = np.copy(initial_rho).reshape(4 * (2,))
-    final_rho = np.reshape(gate(final_rho), (4, 4))
+    final_rho = gate(np.copy(initial_rho))
 
     matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     matrix = np.kron(np.eye(2), matrix)
-    initial_rho = initial_rho.reshape((4, 4))
     target_rho = matrix.dot(initial_rho).dot(matrix)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
@@ -156,13 +151,9 @@ def test_cu1gate_application_twoqubit(backend):
     theta = 0.1234
     nqubits = 3
     initial_rho = random_density_matrix(nqubits)
-    if backend == "custom":
-        final_rho = np.copy(initial_rho)
-    else:
-        final_rho = np.copy(initial_rho).reshape(2 * nqubits * (2,))
     gate = gates.CU1(0, 1, theta=theta)
     gate.density_matrix = True
-    final_rho = np.reshape(gate(final_rho), initial_rho.shape)
+    final_rho = gate(np.copy(initial_rho))
 
     matrix = np.eye(4, dtype=np.complex128)
     matrix[3, 3] = np.exp(1j * theta)

@@ -20,7 +20,7 @@ def test_circuit_dm(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = c(np.copy(initial_rho)).numpy().reshape(initial_rho.shape)
+    final_rho = c(np.copy(initial_rho))
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -131,13 +131,9 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     if oncircuit:
         c = models.Circuit(2, density_matrix=True)
         c.add(gate)
-        final_rho = c(np.copy(initial_rho)).numpy()
+        final_rho = c(np.copy(initial_rho))
     else:
-        if backend == "custom":
-            final_rho = gate(np.copy(initial_rho))
-        else:
-            final_rho = gate(np.copy(initial_rho).reshape(4 * (2,)))
-            final_rho = final_rho.numpy().reshape((4, 4))
+        final_rho = gate(np.copy(initial_rho))
 
     m1 = np.kron(np.eye(2), np.array(a1))
     m2 = np.array(a2)
@@ -498,12 +494,7 @@ def test_variational_layer(backend, nqubits):
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ, theta)
     gate.density_matrix = True
-    initial_state = c.get_initial_state()
-    if backend != "custom":
-        initial_state = np.reshape(initial_state, 2 * nqubits * (2,))
-    final_state = gate(initial_state)
-    if backend != "custom":
-        final_state = np.reshape(final_state, 2 * (2 ** nqubits,))
+    final_state = gate(c.get_initial_state())
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
 

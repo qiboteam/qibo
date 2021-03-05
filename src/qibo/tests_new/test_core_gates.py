@@ -28,12 +28,8 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
                                "".format(type(initial_state)))
 
     state = K.cast(state)
-    if qibo.get_backend() != "custom":
-        state = K.qnp.reshape(state, nqubits * (2,))
     for gate in gatelist:
         state = gate(state)
-    if qibo.get_backend() != "custom":
-        state = np.array(state).ravel()
     return state
 
 
@@ -525,5 +521,6 @@ def test_callback_gate_errors():
     gate = gates.CallbackGate(entropy)
     with pytest.raises(ValueError):
         gate.construct_unitary()
+
 
 # TODO: Test channels
