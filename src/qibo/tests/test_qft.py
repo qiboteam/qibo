@@ -30,11 +30,12 @@ def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
     return qft_matrix(dim, inverse).dot(x) / np.sqrt(dim)
 
 
-def test_qft_sanity():
-    c = models.QFT(4)
-    assert c.nqubits == 4
-    assert c.depth == 8
-    assert c.ngates == 12
+@pytest.mark.parametrize("nqubits", [4, 10, 100])
+def test_qft_circuit_size(nqubits):
+    c = models.QFT(nqubits)
+    assert c.nqubits == nqubits
+    assert c.depth == 2 * nqubits
+    assert c.ngates == nqubits ** 2 // 2 + nqubits
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
