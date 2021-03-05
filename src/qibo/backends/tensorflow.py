@@ -186,19 +186,13 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.concatenate(samples, axis=0)
 
     def sample_frequencies(self, probs, nshots):
-        if self.op is None: # pragma: no cover
-            from qibo.config import SHOT_BATCH_SIZE
+        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+        if self.op is None or nshots < SHOT_CUSTOM_OP_THREASHOLD:
             logits = self.log(probs)[self.newaxis]
-            def update_frequencies(nsamples, frequencies):
-                samples = self.random.categorical(logits, nsamples, dtype=self.dtypes('DTYPEINT'))[0]
-                res, counts = self.unique(samples, return_counts=True)
-                return self.backend.tensor_scatter_nd_add(
-                    frequencies, res[:, self.newaxis], counts)
-
+            samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
+            res, counts = self.unique(samples, return_counts=True)
             frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
-            for _ in range(nshots // SHOT_BATCH_SIZE):
-                frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
-            frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+            frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
         else:
             from qibo.config import get_threads
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
