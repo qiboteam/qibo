@@ -116,9 +116,7 @@ class BackendGate(BaseBackendGate):
     def __call__(self, state):
         if not self.is_prepared:
             self.set_nqubits(state)
-        original_shape = state.shape
-        state = getattr(self, self._active_call)(state)
-        return K.reshape(state, original_shape)
+        return getattr(self, self._active_call)(state)
 
 
 class H(BackendGate, gates.H):
