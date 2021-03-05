@@ -6,17 +6,18 @@ from qibo import gates
 from qibo.models import Circuit
 
 
-def test_circuit_vs_gate_execution(backend):
+@pytest.mark.parametrize("compile", [False, True])
+def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
     from qibo import K
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    c = Circuit(2)
-    c.add(gates.X(0))
-    c.add(gates.X(1))
-    c.add(gates.CU1(0, 1, theta))
-    r1 = c.execute()
+    target_c = Circuit(2)
+    target_c.add(gates.X(0))
+    target_c.add(gates.X(1))
+    target_c.add(gates.CU1(0, 1, theta))
+    target_result = target_c()
 
     # custom circuit
     def custom_circuit(initial_state, theta):
@@ -25,18 +26,18 @@ def test_circuit_vs_gate_execution(backend):
         o = gates.CU1(0, 1, theta)(l2)
         return o
 
-    init2 = c.get_initial_state()
-    init3 = c.get_initial_state()
-
-    r2 = K.reshape(custom_circuit(init2, theta), (4,))
-    np.testing.assert_allclose(r1, r2)
-    compiled_custom_circuit = K.compile(custom_circuit)
-    if backend == "custom":
-        with pytest.raises(NotImplementedError):
-            r3 = compiled_custom_circuit(init3, theta)
+    initial_state = target_c.get_initial_state()
+    if compile:
+        c = K.compile(custom_circuit)
     else:
-        r3 = K.reshape(compiled_custom_circuit(init3, theta), (4,))
-        np.testing.assert_allclose(r2, r3)
+        c = custom_circuit
+
+    if backend == "custom" and compile:
+        with pytest.raises(NotImplementedError):
+            result = c(initial_state, theta)
+    else:
+        result = c(initial_state, theta)
+        np.testing.assert_allclose(result, target_result)
     qibo.set_backend(original_backend)
 
 
