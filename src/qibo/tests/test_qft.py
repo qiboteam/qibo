@@ -3,6 +3,7 @@ Testing Quantum Fourier Transform (QFT) circuit.
 """
 import numpy as np
 import pytest
+import qibo
 from qibo import gates, models
 from qibo.tests import utils
 
@@ -30,11 +31,15 @@ def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
     return qft_matrix(dim, inverse).dot(x) / np.sqrt(dim)
 
 
-def test_qft_sanity():
-    c = models.QFT(4)
-    assert c.nqubits == 4
-    assert c.depth == 8
-    assert c.ngates == 12
+@pytest.mark.parametrize("nqubits", [4, 10, 100])
+def test_qft_circuit_size(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    c = models.QFT(nqubits)
+    assert c.nqubits == nqubits
+    assert c.depth == 2 * nqubits
+    assert c.ngates == nqubits ** 2 // 2 + nqubits
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])

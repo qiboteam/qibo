@@ -30,8 +30,6 @@ class Circuit(circuit.AbstractCircuit):
         self.param_tensor_types = K.tensor_types
         self._compiled_execute = None
         self.state_cls = states.VectorState
-        self.tensor_shape = K.cast(nqubits * (2,), dtype='DTYPEINT')
-        self.flat_shape = K.cast((2 ** nqubits,), dtype='DTYPEINT')
 
     def set_nqubits(self, gate):
         if gate.is_prepared and gate.nqubits != self.nqubits:
@@ -141,8 +139,6 @@ class Circuit(circuit.AbstractCircuit):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if not K.custom_gates:
-            state = K.reshape(state, self.tensor_shape)
 
         if self._compiled_execute is None:
             state = self._eager_execute(state)
@@ -150,9 +146,6 @@ class Circuit(circuit.AbstractCircuit):
             state, callback_results = self._compiled_execute(state)
             for callback, results in callback_results.items():
                 callback.extend(results)
-
-        if not K.custom_gates:
-            state = K.reshape(state, self.flat_shape)
 
         self._final_state = self.state_cls.from_tensor(state, self.nqubits)
         return self._final_state
@@ -276,8 +269,6 @@ class DensityMatrixCircuit(Circuit):
         super(DensityMatrixCircuit, self).__init__(nqubits)
         self.density_matrix = True
         self.state_cls = states.MatrixState
-        self.tensor_shape = K.cast(2 * nqubits * (2,), dtype='DTYPEINT')
-        self.flat_shape = K.cast(2 * (2 ** nqubits,), dtype='DTYPEINT')
 
     def get_initial_state(self, state=None):
         # Allow using state vectors as initial states but transform them

@@ -25,6 +25,8 @@ class BackendGate(BaseBackendGate):
         from qibo.core import einsum
         self.einsum_module = einsum
         self.einsum = getattr(einsum, K.custom_einsum)()
+        self.tensor_shape = None
+        self.flat_shape = None
 
     @staticmethod
     def control_unitary(unitary):
@@ -38,32 +40,34 @@ class BackendGate(BaseBackendGate):
     def prepare(self):
         self.is_prepared = True
         self.reprepare()
-        if self.is_controlled_by:
-            if self.density_matrix:
-                # fall back to the 'defaulteinsum' backend when using
-                # density matrices with `controlled_by` gates because
-                # 'matmuleinsum' is not properly implemented for this case
-                self.einsum = self.einsum_module.DefaultEinsum()
-            self.control_cache = self.einsum_module.ControlCache(self)
-            nactive = self.nqubits - len(self.control_qubits)
-            targets = self.control_cache.targets
-            self.calculation_cache = self.einsum.create_cache(
-                targets, nactive, ncontrol=len(self.control_qubits))
-        else:
-            self.calculation_cache = self.einsum.create_cache(
-                self.qubits, self.nqubits)
-        self.calculation_cache.cast_shapes(
-            lambda x: K.cast(x, dtype='DTYPEINT'))
+        try:
+            s = 1 + self.density_matrix
+            self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
+            self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
+            if self.is_controlled_by:
+                if self.density_matrix:
+                    # fall back to the 'defaulteinsum' backend when using
+                    # density matrices with `controlled_by` gates because
+                    # 'matmuleinsum' is not properly implemented for this case
+                    self.einsum = self.einsum_module.DefaultEinsum()
+                self.control_cache = self.einsum_module.ControlCache(self)
+                nactive = self.nqubits - len(self.control_qubits)
+                targets = self.control_cache.targets
+                self.calculation_cache = self.einsum.create_cache(
+                    targets, nactive, ncontrol=len(self.control_qubits))
+            else:
+                self.calculation_cache = self.einsum.create_cache(
+                    self.qubits, self.nqubits)
+            self.calculation_cache.cast_shapes(
+                lambda x: K.cast(x, dtype='DTYPEINT'))
+        except (ValueError, OverflowError):
+            pass
 
     def set_nqubits(self, state):
-        shape = tuple(state.shape)
-        if len(shape) == 1 + self.density_matrix: # pragma: no cover
-            self.nqubits = int(math.log2(shape[0]))
-        else:
-            self.nqubits = len(tuple(state.shape)) // (1 + self.density_matrix)
-        self.prepare()
+        cgates.BackendGate.set_nqubits(self, state)
 
     def state_vector_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -82,9 +86,10 @@ class BackendGate(BaseBackendGate):
         else:
             einsum_str = self.calculation_cache.vector
             state = self.einsum(einsum_str, state, self.matrix)
-        return state
+        return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
@@ -111,17 +116,7 @@ class BackendGate(BaseBackendGate):
             state = self.einsum(self.calculation_cache.right, state,
                                 K.conj(self.matrix))
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
-        return state
-
-    def __call__(self, state):
-        if not self.is_prepared:
-            self.set_nqubits(state)
-        original_shape = state.shape
-        if len(tuple(original_shape)) == 1 + self.density_matrix: # pragma: no cover
-            tensor_shape = (1 + self.density_matrix) * self.nqubits * (2,)
-            state = K.reshape(state, tensor_shape)
-        state = getattr(self, self._active_call)(state)
-        return K.reshape(state, original_shape)
+        return K.reshape(state, self.flat_shape)
 
 
 class H(BackendGate, gates.H):
@@ -189,18 +184,24 @@ class Collapse(BackendGate, gates.Collapse):
 
     def prepare(self):
         self.is_prepared = True
-        self.order = list(self.sorted_qubits)
-        if self.density_matrix:
-            self.order.extend((q + self.nqubits for q in self.sorted_qubits))
-            self.order.extend((q for q in range(self.nqubits)
-                               if q not in self.sorted_qubits))
-            self.order.extend((q + self.nqubits for q in range(self.nqubits)
-                               if q not in self.sorted_qubits))
-            self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
-            self.density_matrix_result = 2 * self.result
-        else:
-            self.order.extend((q for q in range(self.nqubits)
-                               if q not in self.sorted_qubits))
+        try:
+            self.order = list(self.sorted_qubits)
+            s = 1 + self.density_matrix
+            self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
+            self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
+            if self.density_matrix:
+                self.order.extend((q + self.nqubits for q in self.sorted_qubits))
+                self.order.extend((q for q in range(self.nqubits)
+                                   if q not in self.sorted_qubits))
+                self.order.extend((q + self.nqubits for q in range(self.nqubits)
+                                   if q not in self.sorted_qubits))
+                self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
+                self.density_matrix_result = 2 * self.result
+            else:
+                self.order.extend((q for q in range(self.nqubits)
+                                   if q not in self.sorted_qubits))
+        except (ValueError, OverflowError): # pragma: no cover
+            pass
 
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):
@@ -216,20 +217,23 @@ class Collapse(BackendGate, gates.Collapse):
         cgates.Collapse.construct_unitary(self)
 
     def state_vector_call(self, state):
-        print(self.result)
+        state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order), self.result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        return self._append_zeros(state, self.sorted_qubits, self.result)
+        state = self._append_zeros(state, self.sorted_qubits, self.result)
+        return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
+        state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
                                self.density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = K.trace(K.reshape(substate, (n, n)))
         state = substate / norm
-        return self._append_zeros(state, self.sorted_qubits,
-                                  self.density_matrix_result)
+        state = self._append_zeros(state, self.sorted_qubits,
+                                   self.density_matrix_result)
+        return K.reshape(state, self.flat_shape)
 
 
 class RX(BackendGate, gates.RX):
@@ -516,6 +520,36 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
         return cgates.VariationalLayer.density_matrix_call(self, state)
 
 
+class PartialTrace(BackendGate, gates.PartialTrace):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        gates.PartialTrace.__init__(self, *q)
+
+        self.traceout_string = None
+        self.zero_matrix = None
+        self.transpose_order = None
+        self.output_shape = None
+
+    def prepare(self):
+        cgates.PartialTrace.prepare(self)
+
+    def construct_unitary(self):
+        cgates.PartialTrace.construct_unitary(self)
+
+    def state_vector_partial_trace(self, state):
+        return cgates.PartialTrace.state_vector_partial_trace(self, state)
+
+    def density_matrix_partial_trace(self, state):
+        return cgates.PartialTrace.density_matrix_partial_trace(self, state)
+
+    def state_vector_call(self, state):
+        return cgates.PartialTrace.state_vector_call(self, state)
+
+    def density_matrix_call(self, state):
+        return cgates.PartialTrace.density_matrix_call(self, state)
+
+
 class KrausChannel(BackendGate, gates.KrausChannel):
 
     def __init__(self, ops):
@@ -612,12 +646,17 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
 
     def prepare(self):
         self.is_prepared = True
-        self.reprepare()
-        qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
-        self.calculation_cache = self.einsum.create_cache(
-            qubits, 2 * self.nqubits)
-        self.calculation_cache.cast_shapes(
-            lambda x: K.cast(x, dtype='DTYPEINT'))
+        try:
+            self.tensor_shape = K.cast(2 * self.nqubits * (2,), dtype='DTYPEINT')
+            self.flat_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
+            self.reprepare()
+            qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
+            self.calculation_cache = self.einsum.create_cache(
+                qubits, 2 * self.nqubits)
+            self.calculation_cache.cast_shapes(
+                lambda x: K.cast(x, dtype='DTYPEINT'))
+        except (ValueError, OverflowError): # pragma: no cover
+            pass
 
     def construct_unitary(self):
         return cgates._ThermalRelaxationChannelB.construct_unitary(self)
@@ -628,4 +667,6 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
 
     def density_matrix_call(self, state):
         einsum_str = self.calculation_cache.vector
-        return self.einsum(einsum_str, state, self.matrix)
+        state = K.reshape(state, self.tensor_shape)
+        state = self.einsum(einsum_str, state, self.matrix)
+        return K.reshape(state, self.flat_shape)

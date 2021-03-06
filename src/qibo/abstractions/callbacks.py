@@ -51,85 +51,6 @@ class Callback:
         self._results.extend(x)
 
 
-class PartialTrace(Callback):
-    """Calculates reduced density matrix of a state.
-
-    This is used by the :class:`qibo.core.callbacks.EntanglementEntropy`
-    callback. It can also be used as a standalone callback in order to access
-    a reduced density matrix in the middle of a circuit execution.
-
-    Args:
-        partition (list): List with qubit ids that defines the first subsystem.
-            If `partition` is not given then the first subsystem is the first
-            half of the qubits.
-    """
-    from qibo.config import EINSUM_CHARS
-
-    def __init__(self, partition: Optional[List[int]] = None):
-        super().__init__()
-        self.partition = partition
-        self.rho_dim = None
-        self._traceout = None
-
-    @Callback.nqubits.setter
-    def nqubits(self, n: int):
-        self._nqubits = n
-        if self.partition is None: # pragma: no cover
-            self.partition = list(range(n // 2 + n % 2))
-
-        if len(self.partition) <= n // 2:
-            # Revert parition so that we diagonalize a smaller matrix
-            self.partition = [i for i in range(n)
-                              if i not in set(self.partition)]
-        self.rho_dim = 2 ** (n - len(self.partition))
-        self._traceout = None
-
-    @classmethod
-    def einsum_string(cls, qubits: Set[int], nqubits: int,
-                      measuring: bool = False) -> str:
-        """Generates einsum string for partial trace of density matrices.
-
-        This method is also used in :meth:`qibo.core.cgates.M.prepare`.
-
-        Args:
-            qubits (list): Set of qubit ids that are traced out.
-            nqubits (int): Total number of qubits in the state.
-            measuring (bool): If True non-traced-out indices are multiplied and
-                the output has shape (nqubits - len(qubits),).
-                If False the output has shape 2 * (nqubits - len(qubits),).
-
-        Returns:
-            String to use in einsum for performing partial density of a
-            density matrix.
-        """
-        if (2 - int(measuring)) * nqubits > len(cls.EINSUM_CHARS): # pragma: no cover
-            # case not tested because it requires large instance
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        left_in, right_in, left_out, right_out = [], [], [], []
-        for i in range(nqubits):
-            left_in.append(cls.EINSUM_CHARS[i])
-            if i in qubits:
-                right_in.append(cls.EINSUM_CHARS[i])
-            else:
-                left_out.append(cls.EINSUM_CHARS[i])
-                if measuring:
-                    right_in.append(cls.EINSUM_CHARS[i])
-                else:
-                    right_in.append(cls.EINSUM_CHARS[i + nqubits])
-                    right_out.append(cls.EINSUM_CHARS[i + nqubits])
-
-        left_in, left_out = "".join(left_in), "".join(left_out)
-        right_in, right_out = "".join(right_in), "".join(right_out)
-        return f"{left_in}{right_in}->{left_out}{right_out}"
-
-    def traceout(self):
-        if self._traceout is None:
-            partition = set(self.partition)
-            self._traceout = self.einsum_string(partition, self.nqubits)
-        return self._traceout
-
-
 class EntanglementEntropy(Callback):
     """Von Neumann entanglement entropy callback.
 
@@ -169,6 +90,7 @@ class EntanglementEntropy(Callback):
     def __init__(self, partition: Optional[List[int]] = None,
                  compute_spectrum: bool = False):
         super().__init__()
+        self.partition = partition
         self.compute_spectrum = compute_spectrum
         self.spectrum = list()
 
