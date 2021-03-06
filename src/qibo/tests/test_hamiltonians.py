@@ -170,6 +170,15 @@ def test_hamiltonian_expectation(numpy, trotter, density_matrix):
     np.testing.assert_allclose(h.expectation(state, True), target_ev / norm)
 
 
+def test_hamiltonian_expectation_errors():
+    h = XXZ(nqubits=3, delta=0.5)
+    state = utils.random_numpy_complex((4, 4, 4))
+    with pytest.raises(ValueError):
+        h.expectation(state)
+    with pytest.raises(TypeError):
+        h.expectation("test")
+
+
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_runtime_errors(numpy):
     """Testing hamiltonian runtime errors."""

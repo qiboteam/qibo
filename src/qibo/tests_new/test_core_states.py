@@ -158,3 +158,40 @@ def test_state_apply_bitflips():
     with pytest.raises(RuntimeError):
         state.apply_bitflips(0.1)
     # Bitflips are tested in measurement tests
+
+
+@pytest.mark.parametrize("trotter", [True, False])
+def test_vector_state_expectation(backend, trotter):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo.hamiltonians import XXZ
+    ham = XXZ(nqubits=5, delta=0.5, trotter=trotter)
+    matrix = np.array(ham.matrix)
+
+    state = np.random.random(32) + 1j * np.random.random(32)
+    norm = np.sum(np.abs(state) ** 2)
+    target_ev = np.sum(state.conj() * matrix.dot(state)).real
+    state = states.VectorState.from_tensor(state)
+
+    np.testing.assert_allclose(state.expectation(ham), target_ev)
+    np.testing.assert_allclose(state.expectation(ham, True), target_ev / norm)
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("trotter", [True, False])
+def test_matrix_state_expectation(backend, trotter):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo.hamiltonians import TFIM
+    ham = TFIM(nqubits=2, h=1.0, trotter=trotter)
+    matrix = np.array(ham.matrix)
+
+    state = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
+    state = state + state.T.conj()
+    norm = np.trace(state)
+    target_ev = np.trace(matrix.dot(state)).real
+    state = states.MatrixState.from_tensor(state)
+
+    np.testing.assert_allclose(state.expectation(ham), target_ev)
+    np.testing.assert_allclose(state.expectation(ham, True), target_ev / norm)
+    qibo.set_backend(original_backend)
