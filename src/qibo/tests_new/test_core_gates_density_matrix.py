@@ -86,6 +86,24 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z"])
+def test_controlled_by_one_qubit_gates(backend, gatename):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_rho = random_density_matrix(2)
+    gate = getattr(gates, gatename)(1).controlled_by(0)
+    gate.density_matrix = True
+    final_rho = gate(np.copy(initial_rho))
+
+    from qibo import matrices
+    matrix = getattr(matrices, gatename)
+    cmatrix = np.eye(4, dtype=matrix.dtype)
+    cmatrix[2:, 2:] = matrix
+    target_rho = np.einsum("ab,bc,cd->ad", cmatrix, initial_rho, cmatrix.conj().T)
+    np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("gatename,gatekwargs",
                          [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
                           ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
