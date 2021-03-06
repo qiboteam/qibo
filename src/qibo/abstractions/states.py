@@ -265,4 +265,12 @@ class AbstractState(ABC):
 
     @abstractmethod
     def expectation(self, hamiltonian, normalize=False): # pragma: no cover
+        """Calculates Hamiltonian expectation value with respect to the state.
+
+        Args:
+            hamiltonian (`qibo.abstractions.hamiltonians.Hamiltonian`):
+                Hamiltonian object to calculate the expectation value of.
+            normalize (bool): Normalize the result by dividing with the norm of
+                the state. Default is ``False``.
+        """
         raise_error(NotImplementedError)
