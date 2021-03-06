@@ -150,7 +150,7 @@ def test_hamiltonian_exponentiation(numpy, trotter):
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [False])
+@pytest.mark.parametrize("trotter", [True, False])
 @pytest.mark.parametrize("density_matrix", [True, False])
 def test_hamiltonian_expectation(numpy, trotter, density_matrix):
     h = XXZ(nqubits=3, delta=0.5, numpy=numpy, trotter=trotter)

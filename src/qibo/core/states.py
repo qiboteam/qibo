@@ -158,6 +158,11 @@ class MatrixState(VectorState):
         return K.cast(state, dtype='DTYPE')
 
     def expectation(self, hamiltonian, normalize=False):
+        from qibo.abstractions.hamiltonians import TrotterHamiltonian
+        if isinstance(hamiltonian, TrotterHamiltonian):
+            # use dense form of Trotter Hamiltonians because their
+            # multiplication to rank-2 tensors is not implemented
+            hamiltonian = hamiltonian.dense
         ev = K.real(K.trace(hamiltonian @ self.tensor))
         if normalize:
             norm = K.real(K.trace(self.tensor))
