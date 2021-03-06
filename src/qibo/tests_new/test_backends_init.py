@@ -123,3 +123,18 @@ def test_set_device(backend):
             backends.set_device("/GPU:10")
         backends.set_device(original_device)
     backends.set_backend(original_backend)
+
+
+def test_set_shot_batch_size():
+    import qibo
+    assert qibo.get_batch_size() == 2 ** 18
+    qibo.set_batch_size(1024)
+    assert qibo.get_batch_size() == 1024
+    from qibo.config import SHOT_BATCH_SIZE
+    assert SHOT_BATCH_SIZE == 1024
+    with pytest.raises(TypeError):
+        qibo.set_batch_size("test")
+    with pytest.raises(ValueError):
+        qibo.set_batch_size(-10)
+    with pytest.raises(ValueError):
+        qibo.set_batch_size(2 ** 35)

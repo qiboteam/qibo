@@ -196,8 +196,22 @@ class NumpyBackend(abstract.AbstractBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
-    def sample_measurements(self, probs, nshots):
-        return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
+    def sample_shots(self, probs, nshots):
+        return self.random.choice(range(len(probs)), size=nshots, p=probs)
+
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+        def update_frequencies(nsamples, frequencies):
+            samples = self.random.choice(range(len(probs)), size=nsamples, p=probs)
+            res, counts = self.unique(samples, return_counts=True)
+            frequencies[res] += counts
+            return frequencies
+
+        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+        return frequencies
 
     def compile(self, func):
         return func
