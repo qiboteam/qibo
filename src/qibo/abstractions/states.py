@@ -262,3 +262,7 @@ class AbstractState(ABC):
                 ``p0`` will be used for both bitflips.
         """
         raise_error(NotImplementedError)
+
+    @abstractmethod
+    def expectation(self, hamiltonian, normalize=False): # pragma: no cover
+        raise_error(NotImplementedError)

@@ -127,6 +127,15 @@ class VectorState(AbstractState):
         self.measurements = self.measurements.apply_bitflips(p0, p1)
         return self
 
+    def expectation(self, hamiltonian, normalize=False):
+        statec = K.conj(self.tensor)
+        hstate = hamiltonian @ self.tensor
+        ev = K.real(K.sum(statec * hstate))
+        if normalize:
+            norm = K.sum(K.square(K.abs(self.tensor)))
+            ev = ev / norm
+        return ev
+
 
 class MatrixState(VectorState):
 
