@@ -150,14 +150,21 @@ def test_hamiltonian_exponentiation(numpy, trotter):
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [True, False])
-def test_hamiltonian_expectation(numpy, trotter):
+@pytest.mark.parametrize("trotter", [False])
+@pytest.mark.parametrize("density_matrix", [True, False])
+def test_hamiltonian_expectation(numpy, trotter, density_matrix):
     h = XXZ(nqubits=3, delta=0.5, numpy=numpy, trotter=trotter)
     matrix = np.array(h.matrix)
 
-    state = utils.random_numpy_complex(8)
-    norm = (np.abs(state) ** 2).sum()
-    target_ev = (state.conj() * matrix.dot(state)).sum().real
+    if density_matrix:
+        state = utils.random_numpy_complex((8, 8))
+        state = state + state.T.conj()
+        norm = np.trace(state)
+        target_ev = np.trace(matrix.dot(state)).real
+    else:
+        state = utils.random_numpy_complex(8)
+        norm = np.sum(np.abs(state) ** 2)
+        target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
     np.testing.assert_allclose(h.expectation(state), target_ev)
     np.testing.assert_allclose(h.expectation(state, True), target_ev / norm)

@@ -157,6 +157,13 @@ class MatrixState(VectorState):
         state = K.einsum(traceout, K.reshape(self.tensor, shape))
         return K.cast(state, dtype='DTYPE')
 
+    def expectation(self, hamiltonian, normalize=False):
+        ev = K.real(K.trace(hamiltonian @ self.tensor))
+        if normalize:
+            norm = K.real(K.trace(self.tensor))
+            ev = ev / norm
+        return ev
+
 
 class DistributedState(VectorState):
     """Data structure that holds the pieces of a state vector.
