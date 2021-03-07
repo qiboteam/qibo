@@ -224,9 +224,6 @@ class M(BackendGate, gates.M):
                                 "representation.")
 
     def state_vector_call(self, state):
-        print(state)
-        print(self.qubits_tensor)
-        print(self.result_tensor)
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
                             self.nqubits, self.normalize, get_threads())
 
@@ -266,7 +263,7 @@ class M(BackendGate, gates.M):
             result = result.apply_bitflips(*self.bitflip_map)
         return result
 
-    def __call__(self, state, nshots):
+    def __call__(self, state, nshots=1):
         # TODO: Make this return the state vector always for compatibility
         result = self.measure(state, nshots)
         if self.collapse:

@@ -246,7 +246,7 @@ class M(BackendGate, gates.M):
     def measure(self, state, nshots):
         return cgates.M.measure(self, state, nshots)
 
-    def __call__(self, state, nshots):
+    def __call__(self, state, nshots=1):
         return cgates.M.__call__(self, state, nshots)
 
 

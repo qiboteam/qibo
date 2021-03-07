@@ -87,10 +87,10 @@ def test_collapse_gate_distributed(backend, accelerators, nqubits, targets):
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
     c = Circuit(nqubits, accelerators)
-    c.add(gates.Collapse(*targets))
-    final_state = c(np.copy(initial_state))
+    c.add(gates.M(*targets, collapse=True))
+    result = c(np.copy(initial_state))
     slicer = nqubits * [slice(None)]
-    for t in targets:
+    for t, r in zip(targets, measurements):
         slicer[t] = 0
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
@@ -98,7 +98,7 @@ def test_collapse_gate_distributed(backend, accelerators, nqubits, targets):
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
-    np.testing.assert_allclose(final_state, target_state)
+    np.testing.assert_allclose(result.state(), target_state)
     qibo.set_backend(original_backend)
 
 
