@@ -223,10 +223,12 @@ class M(BackendGate, gates.M):
     from qibo.core import measurements, states
 
     def __init__(self, *q, register_name: Optional[str] = None,
+                 collapse: bool = False,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
         BackendGate.__init__(self)
-        gates.M.__init__(self, *q, register_name=register_name, p0=p0, p1=p1)
+        gates.M.__init__(self, *q, register_name=register_name,
+                         collapse=collapse, p0=p0, p1=p1)
         self.traceout = None
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
@@ -264,7 +266,7 @@ class M(BackendGate, gates.M):
     def density_matrix_call(self, state):
         return self.states.MatrixState.from_tensor(state)
 
-    def __call__(self, state, nshots):
+    def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             if not self.is_prepared:
                 self.set_nqubits(state)
@@ -289,6 +291,14 @@ class M(BackendGate, gates.M):
         if sum(sum(x.values()) for x in self.bitflip_map) > 0:
             result = result.apply_bitflips(*self.bitflip_map)
         return result
+
+    def __call__(self, state, nshots):
+        if self.collapse:
+            if nshots > 1:
+                raise_error(ValueError, "Cannot perform measurement collapse "
+                                        "for more than one shots.")
+            raise_error(NotImplementedError)
+        return self.measure(state, nshots)
 
 
 class RX(MatrixGate, gates.RX):

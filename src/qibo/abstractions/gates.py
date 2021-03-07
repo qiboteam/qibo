@@ -253,15 +253,19 @@ class M(Gate):
     """
 
     def __init__(self, *q, register_name: Optional[str] = None,
+                 collapse: bool = False,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = q
         self.register_name = register_name
+        self.collapse = collapse
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name, "p0": p0, "p1": p1}
+        self.init_kwargs = {"register_name": register_name,
+                            "collapse": collapse, 
+                            "p0": p0, "p1": p1}
 
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1
