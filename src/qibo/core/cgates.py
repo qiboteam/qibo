@@ -173,23 +173,6 @@ class I(BackendGate, gates.I):
         return state
 
 
-class Collapse(BackendGate, gates.Collapse):
-
-    def __init__(self, *q: int, result: List[int] = 0):
-        BackendGate.__init__(self)
-
-    def _result_to_list(self, res):
-        if isinstance(res, K.tensor_types):
-            return list(K.qnp.cast(res, dtype='DTYPEINT'))
-        if isinstance(res, int) or isinstance(res, K.numeric_types):
-            return len(self.target_qubits) * [res]
-        return list(res)
-
-    def prepare(self):
-        BackendGate.prepare(self)
-        self.reprepare()
-
-
 class M(BackendGate, gates.M):
     from qibo.core import measurements, states
 
