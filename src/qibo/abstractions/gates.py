@@ -316,12 +316,7 @@ class M(Gate):
         self.bitflip_map[1].update(gate.bitflip_map[1])
 
     def set_result(self, res):
-        resdict = {}
-        for q, r in zip(self.target_qubits, res):
-            if r not in {0, 1}:
-                raise_error(ValueError, "Result values should be 0 or 1 but "
-                                        "{} was given.".format(r))
-            resdict[q] = r
+        resdict = {q: r for q, r in zip(self.target_qubits, res)}
         self.result = [resdict[q] for q in self.sorted_qubits]
 
     def controlled_by(self, *q):

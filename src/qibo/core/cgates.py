@@ -196,7 +196,7 @@ class M(BackendGate, gates.M):
         gates.M.add(self, gate)
 
     def prepare(self):
-        self.is_prepared = True
+        BackendGate.prepare(self)
         target_qubits = set(self.target_qubits)
         unmeasured_qubits = []
         reduced_target_qubits = dict()
@@ -224,6 +224,9 @@ class M(BackendGate, gates.M):
                                 "representation.")
 
     def state_vector_call(self, state):
+        print(state)
+        print(self.qubits_tensor)
+        print(self.result_tensor)
         return self.gate_op(state, self.qubits_tensor, self.result_tensor,
                             self.nqubits, self.normalize, get_threads())
 
@@ -265,14 +268,14 @@ class M(BackendGate, gates.M):
 
     def __call__(self, state, nshots):
         # TODO: Make this return the state vector always for compatibility
+        result = self.measure(state, nshots)
         if self.collapse:
             if nshots > 1:
                 raise_error(ValueError, "Cannot perform measurement collapse "
                                         "for more than one shots.")
-            result = self.measure(state, nshots)
             self.set_result(result.samples(binary=True)[0])
             return getattr(self, self._active_call)(state)
-        return self.measure(state, nshots)
+        return result
 
 
 class RX(MatrixGate, gates.RX):

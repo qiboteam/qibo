@@ -178,9 +178,7 @@ class M(BackendGate, gates.M):
                          collapse=collapse, p0=p0, p1=p1)
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
-
         self.order = None
-        self.density_matrix_result = None
 
     def add(self, gate: gates.M):
         cgates.M.add(self, gate)
@@ -198,13 +196,14 @@ class M(BackendGate, gates.M):
                                    if q not in self.sorted_qubits))
                 self.order.extend((q + self.nqubits for q in range(self.nqubits)
                                    if q not in self.sorted_qubits))
-                self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
-                self.density_matrix_result = 2 * self.result
             else:
                 self.order.extend((q for q in range(self.nqubits)
                                    if q not in self.sorted_qubits))
         except (ValueError, OverflowError): # pragma: no cover
             pass
+
+    def reprepare(self):
+        cgates.M.reprepare(self)
 
     def set_result(self, res):
         gates.M.set_result(self, res)
@@ -233,14 +232,15 @@ class M(BackendGate, gates.M):
         return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
+        density_matrix_result = 2 * self.result
+        sorted_qubits = self.sorted_qubits + [q + self.nqubits for q in self.sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
-                               self.density_matrix_result)
+                               density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = K.trace(K.reshape(substate, (n, n)))
         state = substate / norm
-        state = self._append_zeros(state, self.sorted_qubits,
-                                   self.density_matrix_result)
+        state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return K.reshape(state, self.flat_shape)
 
     def measure(self, state, nshots):

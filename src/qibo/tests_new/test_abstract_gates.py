@@ -123,9 +123,6 @@ def test_measurement_errors():
     gate = gates.M(0)
     with pytest.raises(NotImplementedError):
         gate.controlled_by(1)
-    gate = gates.M(0, 1, collapse=True)
-    with pytest.raises(ValueError):
-        gate.set_result([0, 2])
 
 
 @pytest.mark.parametrize("gatename,params",

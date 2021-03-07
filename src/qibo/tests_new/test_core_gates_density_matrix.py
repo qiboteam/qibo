@@ -260,34 +260,6 @@ def test_controlled_by_random(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [1], [0]), (3, [1], 0), (4, [1, 3], [0, 1]),
-                          (5, [0, 3, 4], [1, 1, 0])])
-def test_collapse_gate(backend, nqubits, targets, results):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = random_density_matrix(nqubits)
-    gate = gates.Collapse(*targets, result=results)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho))
-
-    target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
-    if isinstance(results, int):
-        results = len(targets) * [results]
-    for q, r in zip(targets, results):
-        slicer = 2 * nqubits * [slice(None)]
-        slicer[q], slicer[q + nqubits] = 1 - r, 1 - r
-        target_rho[tuple(slicer)] = 0
-        slicer[q], slicer[q + nqubits] = r, 1 - r
-        target_rho[tuple(slicer)] = 0
-        slicer[q], slicer[q + nqubits] = 1 - r, r
-        target_rho[tuple(slicer)] = 0
-    target_rho = np.reshape(target_rho, initial_rho.shape)
-    target_rho = target_rho / np.trace(target_rho)
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
 @pytest.mark.parametrize("qubit", [0, 1, 2])
 def test_partial_trace_gate(backend, qubit):
     original_backend = qibo.get_backend()
