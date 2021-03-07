@@ -187,6 +187,10 @@ class M(Gate):
             ``gates.M(*range(5))``.
         register_name (str): Optional name of the register to distinguish it
             from other registers when used in circuits.
+        collapse (bool): Collapse the state vector after the measurement is
+            performed. Can be used only for single shot measurements.
+            If ``True`` the collapsed state vector is returned. If ``False``
+            the measurement result is returned.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
             that it is flipped, a list or tuple that has the same length
@@ -310,6 +314,19 @@ class M(Gate):
         self.target_qubits += gate.target_qubits
         self.bitflip_map[0].update(gate.bitflip_map[0])
         self.bitflip_map[1].update(gate.bitflip_map[1])
+
+    def set_result(self, res):
+        if len(self.target_qubits) != len(res):
+            raise_error(ValueError, "Collapse gate was created on {} qubits "
+                                    "but {} result values were given."
+                                    "".format(len(self.target_qubits), len(res)))
+        resdict = {}
+        for q, r in zip(self.target_qubits, res):
+            if r not in {0, 1}:
+                raise_error(ValueError, "Result values should be 0 or 1 but "
+                                        "{} was given.".format(r))
+            resdict[q] = r
+        self.result = [resdict[q] for q in self.sorted_qubits]
 
     def controlled_by(self, *q):
         """"""

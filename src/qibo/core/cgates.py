@@ -13,7 +13,7 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "ZPow", "CZPow", "Flatten", "CallbackGate"}
+        cgate_only = {"I", "ZPow", "CZPow", "Flatten", "CallbackGate"}
         # TODO: Move these to a different file and refactor
         if K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
@@ -200,7 +200,6 @@ class M(BackendGate, gates.M):
         BackendGate.__init__(self)
         gates.M.__init__(self, *q, register_name=register_name,
                          collapse=collapse, p0=p0, p1=p1)
-        self.traceout = None
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
@@ -226,9 +225,6 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = tuple(unmeasured_qubits)
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
-        if self.density_matrix:
-            qubits = set(self.unmeasured_qubits)
-            self.traceout = self.einsum_string(qubits, self.nqubits, True)
 
     def reprepare(self):
         n = len(self.result)
@@ -236,18 +232,7 @@ class M(BackendGate, gates.M):
         self.result_tensor = K.cast(result, dtype='DTYPEINT')
 
     def set_result(self, res):
-        if len(self.target_qubits) != len(res):
-            raise_error(ValueError, "Collapse gate was created on {} qubits "
-                                    "but {} result values were given."
-                                    "".format(len(self.target_qubits), len(res)))
-        resdict = {}
-        for q, r in zip(self.target_qubits, res):
-            if r not in {0, 1}:
-                raise_error(ValueError, "Result values should be 0 or 1 but "
-                                        "{} was given.".format(r))
-            resdict[q] = r
-
-        self.result = [resdict[q] for q in self.sorted_qubits]
+        gates.M.set_result(self, res)
         if self.is_prepared:
             self.reprepare()
 
@@ -296,6 +281,7 @@ class M(BackendGate, gates.M):
         return result
 
     def __call__(self, state, nshots):
+        # TODO: Make this return the state vector always for compatibility
         if self.collapse:
             if nshots > 1:
                 raise_error(ValueError, "Cannot perform measurement collapse "
