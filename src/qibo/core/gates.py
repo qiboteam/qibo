@@ -91,23 +91,22 @@ class BackendGate(BaseBackendGate):
     def density_matrix_call(self, state):
         state = K.reshape(state, self.tensor_shape)
         if self.is_controlled_by:
-            import tensorflow as tf
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
             n = 2 ** ncontrol
             state = K.transpose(state, self.control_cache.order(True))
             state = K.reshape(state, 2 * (n,) + 2 * nactive * (2,))
             state01 = K.gather(state, indices=range(n - 1), axis=0)
-            state01 = tf.squeeze(K.gather(state01, indices=[n - 1], axis=1), axis=1)
+            state01 = K.squeeze(K.gather(state01, indices=[n - 1], axis=1), axis=1)
             state01 = self.einsum(self.calculation_cache.right0,
                                   state01, K.conj(self.matrix))
             state10 = K.gather(state, indices=range(n - 1), axis=1)
-            state10 = tf.squeeze(K.gather(state10, indices=[n - 1], axis=0), axis=0)
+            state10 = K.squeeze(K.gather(state10, indices=[n - 1], axis=0), axis=0)
             state10 = self.einsum(self.calculation_cache.left0,
                                   state10, self.matrix)
 
-            state11 = tf.squeeze(K.gather(state, indices=[n - 1], axis=0), axis=0)
-            state11 = tf.squeeze(K.gather(state11, indices=[n - 1], axis=0), axis=0)
+            state11 = K.squeeze(K.gather(state, indices=[n - 1], axis=0), axis=0)
+            state11 = K.squeeze(K.gather(state11, indices=[n - 1], axis=0), axis=0)
             state11 = self.einsum(self.calculation_cache.right, state11,
                                   K.conj(self.matrix))
             state11 = self.einsum(self.calculation_cache.left,
