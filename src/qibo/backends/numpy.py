@@ -167,6 +167,9 @@ class NumpyBackend(abstract.AbstractBackend):
         # Uses numpy backend always (even on Tensorflow)
         return self.np.unique(x, return_counts=return_counts)
 
+    def squeeze(self, x, axis=None):
+        return self.backend.squeeze(x, axis=axis)
+
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is None:
             if condition is None:
