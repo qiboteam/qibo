@@ -118,6 +118,15 @@ class VectorState(AbstractState):
         self.measurements = self.measurements.apply_bitflips(p0, p1)
         return self
 
+    def expectation(self, hamiltonian, normalize=False):
+        statec = K.conj(self.tensor)
+        hstate = hamiltonian @ self.tensor
+        ev = K.real(K.sum(statec * hstate))
+        if normalize:
+            norm = K.sum(K.square(K.abs(self.tensor)))
+            ev = ev / norm
+        return ev
+
 
 class MatrixState(VectorState):
 
@@ -145,6 +154,18 @@ class MatrixState(VectorState):
         state = K.einsum("abab->a", state)
 
         return K.reshape(K.cast(state, dtype='DTYPE'), len(qubits) * (2,))
+
+    def expectation(self, hamiltonian, normalize=False):
+        from qibo.abstractions.hamiltonians import TrotterHamiltonian
+        if isinstance(hamiltonian, TrotterHamiltonian):
+            # use dense form of Trotter Hamiltonians because their
+            # multiplication to rank-2 tensors is not implemented
+            hamiltonian = hamiltonian.dense
+        ev = K.real(K.trace(hamiltonian @ self.tensor))
+        if normalize:
+            norm = K.real(K.trace(self.tensor))
+            ev = ev / norm
+        return ev
 
 
 class DistributedState(VectorState):
