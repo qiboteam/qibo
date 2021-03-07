@@ -394,7 +394,7 @@ class AbstractCircuit(ABC):
                                         "".format(gate.target_qubits, self.nqubits))
 
         self.check_measured(gate.qubits)
-        if isinstance(gate, gates.M):
+        if isinstance(gate, gates.M) and not gate.collapse:
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
@@ -949,7 +949,7 @@ class AbstractCircuit(ABC):
                   "cx": "X", "swap": "x", "cz": "Z",
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
-                  "id": "I", "collapse": "M", "fsim": "f",
+                  "id": "I", "measure": "M", "fsim": "f",
                   "generalizedfsim": "gf"}
 
         # build string representation of gates

@@ -270,7 +270,7 @@ class DistributedQueues:
             then ``transform` should be used to obtain a compatible queue.
         """
         for gate in queue:
-            is_collapse = isinstance(gate, gates.Collapse)
+            is_collapse = isinstance(gate, gates.M) and gate.collapse
 
             if not gate.target_qubits: # special gate
                 gate.nqubits = self.nqubits

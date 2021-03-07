@@ -316,10 +316,6 @@ class M(Gate):
         self.bitflip_map[1].update(gate.bitflip_map[1])
 
     def set_result(self, res):
-        if len(self.target_qubits) != len(res):
-            raise_error(ValueError, "Collapse gate was created on {} qubits "
-                                    "but {} result values were given."
-                                    "".format(len(self.target_qubits), len(res)))
         resdict = {}
         for q, r in zip(self.target_qubits, res):
             if r not in {0, 1}:
@@ -1474,8 +1470,6 @@ class ResetChannel(UnitaryChannel):
 
     .. math::
         \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
-
-    using :class:`qibo.abstractions.gates.Collapse`.
 
     Args:
         q (int): Qubit id that the channel acts on.
