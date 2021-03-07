@@ -83,24 +83,7 @@ def test_z(backend):
     target_state = np.ones_like(final_state) / 2.0
     target_state[2] *= -1.0
     target_state[3] *= -1.0
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-def test_identity(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    gatelist = [gates.H(0), gates.H(1), gates.I(0), gates.I(1)]
-    final_state = apply_gates(gatelist, nqubits=2)
-    target_state = np.ones_like(final_state) / 2.0
-    np.testing.assert_allclose(final_state, target_state)
-    gatelist = [gates.H(0), gates.H(1), gates.I(0, 1)]
-    final_state = apply_gates(gatelist, nqubits=2)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("nqubits,targets,results",
+    np.testing.assert_allclose(final_state, target_state)@pytest.mark.parametrize("nqubits,targets,results",
                          [(2, [1], [0]),
                           (3, [1], 0),
                           (4, [1, 3], [0, 1]),
@@ -147,6 +130,20 @@ def test_collapse_gate_errors(backend):
     gate.nqubits = 4
     gate.prepare()
     gate.result = np.ones(2, dtype=int)
+    qibo.set_backend(original_backend)
+    qibo.set_backend(original_backend)
+
+
+def test_identity(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gatelist = [gates.H(0), gates.H(1), gates.I(0), gates.I(1)]
+    final_state = apply_gates(gatelist, nqubits=2)
+    target_state = np.ones_like(final_state) / 2.0
+    np.testing.assert_allclose(final_state, target_state)
+    gatelist = [gates.H(0), gates.H(1), gates.I(0, 1)]
+    final_state = apply_gates(gatelist, nqubits=2)
+    np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`

@@ -69,24 +69,6 @@ def test_z_controlled_by(controls, instance):
     assert isinstance(gate, getattr(gates, instance))
 
 
-@pytest.mark.parametrize("result,target_result",
-                         [(1, [1, 1, 1]),
-                          ([0, 1, 0], [0, 0, 1])])
-def test_collapse_init(result, target_result):
-    # also tests ``Collapse.result`` getter and setter
-    gate = gates.Collapse(0, 2, 1, result=result)
-    assert gate.target_qubits == (0, 2, 1)
-    assert gate.sorted_qubits == [0, 1, 2]
-    assert gate.result == target_result
-
-
-@pytest.mark.parametrize("gatename", ["Collapse", "M"])
-def test_not_implemented_controlled_by(gatename):
-    gate = getattr(gates, gatename)(0)
-    with pytest.raises(NotImplementedError):
-        gate.controlled_by(1)
-
-
 @pytest.mark.parametrize("targets,p0,p1",
                          [((0,), None, None),
                           ((0, 1, 2), None, None),
@@ -98,6 +80,12 @@ def test_measurement_init(targets, p0, p1):
     p0map = {q: 0 if p0 is None else p0 for q in targets}
     p1map = {q: 0 if p1 is None else p1 for q in targets}
     assert gate.bitflip_map == (p0map, p1map)
+
+
+def test_measurement_collapse_init():
+    gate = gates.M(0, 2, 1, collapse=True)
+    assert gate.target_qubits == (0, 2, 1)
+    assert gate.sorted_qubits == [0, 1, 2]
 
 
 def test_measurement_einsum_string():
@@ -112,6 +100,15 @@ def test_measurement_einsum_string():
     assert estr == "abcdefghijabcdefghij->cehij"
 
 
+@pytest.mark.parametrize("result,target_result",
+                         [([1, 1, 1], [1, 1, 1]),
+                          ([0, 1, 0], [0, 0, 1])])
+def test_measurement_set_result(result, target_result):
+    gate = gates.M(0, 2, 1)
+    gate.set_result(result)
+    gate.result == target_result
+
+
 def test_measurement_add():
     gate = gates.M(0, 2)
     assert gate.target_qubits == (0, 2)
@@ -120,6 +117,15 @@ def test_measurement_add():
     assert gate.target_qubits == (0, 2, 1, 3)
     assert gate.bitflip_map == ({0: 0, 1: 0.3, 2: 0, 3: 0.3},
                                 {0: 0, 1: 0, 2: 0, 3: 0})
+
+
+def test_measurement_errors():
+    gate = gates.M(0)
+    with pytest.raises(NotImplementedError):
+        gate.controlled_by(1)
+    gate = gates.M(0, 1, collapse=True)
+    with pytest.raises(ValueError):
+        gate.set_result([0, 2])
 
 
 @pytest.mark.parametrize("gatename,params",
@@ -297,7 +303,7 @@ def test_pauli_noise_channel_init():
 def test_reset_channel_init():
     gate = gates.ResetChannel(0, 0.1, 0.2)
     assert gate.target_qubits == (0,)
-    assert isinstance(gate.gates[0], gates.Collapse)
+    assert isinstance(gate.gates[0], gates.M)
     assert isinstance(gate.gates[1], gates.X)
 
 # TODO: Add thermal relaxation channel init test

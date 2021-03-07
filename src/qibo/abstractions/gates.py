@@ -1481,7 +1481,8 @@ class ResetChannel(UnitaryChannel):
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
         probs = [p0, p1]
-        gates = [self.module.Collapse(q), self.module.X(q)]
+        gates = [self.module.M(q, collapse=True), self.module.X(q)]
+        # TODO: Manually set this collapse result to 0
         super(ResetChannel, self).__init__(probs, gates, seed=seed)
         self.name = "ResetChannel"
         assert self.target_qubits == (q,)
@@ -1574,8 +1575,9 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        gates = [self.module.Z(q), self.module.Collapse(q),
+        gates = [self.module.Z(q), self.module.M(q, collapse=True),
                  self.module.X(q)]
+        # TODO: Manually set this collapse result to 0.
 
         super(_ThermalRelaxationChannelA, self).__init__(
             probs, gates, seed=seed)

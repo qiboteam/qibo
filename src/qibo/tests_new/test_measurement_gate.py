@@ -294,3 +294,28 @@ def test_measurement_gate_bitflip_errors():
         gate = gates.M(0, 1, p0={0: 0.1, 2: 0.2})
     with pytest.raises(TypeError):
         gate = gates.M(0, 1, p0="test")
+
+
+@pytest.mark.parametrize("nqubits,targets",
+                         [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]),
+                          (6, [1, 3]), (4, [0, 2])])
+def test_measurement_collapse(backend, nqubits, targets):
+    from qibo import K
+    from qibo.tests_new.test_core_gates import random_state
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    initial_state = random_state(nqubits)
+    collapse = gates.M(*targets, collapse=True)
+    final_state = collapse(np.copy(initial_state), nshots=1)
+    results = collapse.result
+    slicer = nqubits * [slice(None)]
+    for t, r in zip(targets, results):
+        slicer[t] = r
+    slicer = tuple(slicer)
+    initial_state = initial_state.reshape(nqubits * (2,))
+    target_state = np.zeros_like(initial_state)
+    target_state[slicer] = initial_state[slicer]
+    norm = (np.abs(target_state) ** 2).sum()
+    target_state = target_state.ravel() / np.sqrt(norm)
+    np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
