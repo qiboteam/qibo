@@ -177,9 +177,6 @@ class Collapse(BackendGate, gates.Collapse):
 
     def __init__(self, *q: int, result: List[int] = 0):
         BackendGate.__init__(self)
-        gates.Collapse.__init__(self, *q, result=result)
-        self.result_tensor = None
-        self.gate_op = K.op.collapse_state
 
     def _result_to_list(self, res):
         if isinstance(res, K.tensor_types):
@@ -188,35 +185,9 @@ class Collapse(BackendGate, gates.Collapse):
             return len(self.target_qubits) * [res]
         return list(res)
 
-    @gates.Collapse.result.setter
-    def result(self, res):
-        gates.Collapse.result.fset(self, self._result_to_list(res)) # pylint: disable=no-member
-        if self.is_prepared:
-            self.reprepare()
-
-    def reprepare(self):
-        n = len(self.result)
-        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
-        self.result_tensor = K.cast(result, dtype='DTYPEINT')
-
     def prepare(self):
         BackendGate.prepare(self)
         self.reprepare()
-
-    def construct_unitary(self):
-        raise_error(ValueError, "Collapse gate does not have unitary "
-                                "representation.")
-
-    def state_vector_call(self, state):
-        return self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                            self.nqubits, self.normalize, get_threads())
-
-    def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
-                             2 * self.nqubits, False, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                             2 * self.nqubits, False, get_threads())
-        return state / K.trace(state)
 
 
 class M(BackendGate, gates.M):
@@ -232,6 +203,9 @@ class M(BackendGate, gates.M):
         self.traceout = None
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
+
+        self.result_tensor = None
+        self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
         if self.is_prepared:
@@ -256,21 +230,50 @@ class M(BackendGate, gates.M):
             qubits = set(self.unmeasured_qubits)
             self.traceout = self.einsum_string(qubits, self.nqubits, True)
 
+    def reprepare(self):
+        n = len(self.result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
+        self.result_tensor = K.cast(result, dtype='DTYPEINT')
+
+    def set_result(self, res):
+        if len(self.target_qubits) != len(res):
+            raise_error(ValueError, "Collapse gate was created on {} qubits "
+                                    "but {} result values were given."
+                                    "".format(len(self.target_qubits), len(res)))
+        resdict = {}
+        for q, r in zip(self.target_qubits, res):
+            if r not in {0, 1}:
+                raise_error(ValueError, "Result values should be 0 or 1 but "
+                                        "{} was given.".format(r))
+            resdict[q] = r
+
+        self.result = [resdict[q] for q in self.sorted_qubits]
+        if self.is_prepared:
+            self.reprepare()
+
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
     def state_vector_call(self, state):
-        return self.states.VectorState.from_tensor(state)
+        return self.gate_op(state, self.qubits_tensor, self.result_tensor,
+                            self.nqubits, self.normalize, get_threads())
 
     def density_matrix_call(self, state):
-        return self.states.MatrixState.from_tensor(state)
+        state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
+                             2 * self.nqubits, False, get_threads())
+        state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
+                             2 * self.nqubits, False, get_threads())
+        return state / K.trace(state)
 
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             if not self.is_prepared:
                 self.set_nqubits(state)
-            state = getattr(self, self._active_call)(state)
+            if self.density_matrix:
+                state = self.states.MatrixState.from_tensor(state)
+            else:
+                state = self.states.VectorState.from_tensor(state)
         elif isinstance(state, self.states.AbstractState):
             if not self.is_prepared:
                 self.set_nqubits(state.tensor)
@@ -297,7 +300,9 @@ class M(BackendGate, gates.M):
             if nshots > 1:
                 raise_error(ValueError, "Cannot perform measurement collapse "
                                         "for more than one shots.")
-            raise_error(NotImplementedError)
+            result = self.measure(state, nshots)
+            self.set_result(result.samples(binary=True)[0])
+            return getattr(self, self._active_call)(state)
         return self.measure(state, nshots)
 
 
