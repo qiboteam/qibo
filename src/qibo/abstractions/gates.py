@@ -212,9 +212,6 @@ class M(Gate):
         self.target_qubits = q
         self.register_name = register_name
         self.collapse = collapse
-
-        self.result = None
-        self.sorted_qubits = sorted(q)
         # Flag that is turned ``False`` automatically if this gate is used in a
         # ``DistributedCircuit`` in order to skip the normalization.
         self.normalize = True
@@ -314,10 +311,6 @@ class M(Gate):
         self.target_qubits += gate.target_qubits
         self.bitflip_map[0].update(gate.bitflip_map[0])
         self.bitflip_map[1].update(gate.bitflip_map[1])
-
-    def set_result(self, res):
-        resdict = {q: r for q, r in zip(self.target_qubits, res)}
-        self.result = [resdict[q] for q in self.sorted_qubits]
 
     def controlled_by(self, *q):
         """"""

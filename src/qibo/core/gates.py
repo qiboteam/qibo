@@ -176,8 +176,11 @@ class M(BackendGate, gates.M):
         BackendGate.__init__(self)
         gates.M.__init__(self, *q, register_name=register_name,
                          collapse=collapse, p0=p0, p1=p1)
+        self.sorted_qubits = sorted(self.target_qubits)
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
+
+        self.result = self.measurements.MeasurementResult(self.qubits)
         self.order = None
 
     def add(self, gate: gates.M):
@@ -232,7 +235,7 @@ class M(BackendGate, gates.M):
         return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
-        density_matrix_result = 2 * self.result
+        density_matrix_result = 2 * self.result.binary[0]
         sorted_qubits = self.sorted_qubits + [q + self.nqubits for q in self.sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),

@@ -186,7 +186,7 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
-        self.result_tensor = None
+        self.result = self.measurements.MeasurementResult(self.qubits)
         self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
@@ -194,6 +194,7 @@ class M(BackendGate, gates.M):
             raise_error(RuntimeError, "Cannot add qubits to a measurement "
                                       "gate that is prepared.")
         gates.M.add(self, gate)
+        self.result.add_qubits(gate.target_qubits)
 
     def prepare(self):
         BackendGate.prepare(self)
@@ -209,28 +210,18 @@ class M(BackendGate, gates.M):
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
 
-    def reprepare(self):
-        n = len(self.result)
-        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
-        self.result_tensor = K.cast(result, dtype='DTYPEINT')
-
-    def set_result(self, res):
-        gates.M.set_result(self, res)
-        if self.is_prepared:
-            self.reprepare()
-
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
     def state_vector_call(self, state):
-        return self.gate_op(state, self.qubits_tensor, self.result_tensor,
+        return self.gate_op(state, self.qubits_tensor, self.result.tensor(),
                             self.nqubits, self.normalize, get_threads())
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
+        state = self.gate_op(state, self.qubits_tensor_dm, self.result.tensor(),
                              2 * self.nqubits, False, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
+        state = self.gate_op(state, self.qubits_tensor, self.result.tensor(),
                              2 * self.nqubits, False, get_threads())
         return state / K.trace(state)
 
@@ -256,23 +247,22 @@ class M(BackendGate, gates.M):
             probs = K.transpose(probs, axes=self.reduced_target_qubits)
             probs = K.reshape(probs, probs_dim)
             return probs
-        probs = K.cpu_fallback(calculate_probs)
-        result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
+        self.result.set_probabilities(K.cpu_fallback(calculate_probs), nshots)
         # optional bitflip noise
         if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            result = result.apply_bitflips(*self.bitflip_map)
-        return result
+            noisy_result = self.result.apply_bitflips(*self.bitflip_map)
+            self.result.binary = noisy_result.binary
+        return self.result
 
     def __call__(self, state, nshots=1):
         # TODO: Make this return the state vector always for compatibility
-        result = self.measure(state, nshots)
+        self.result = self.measure(state, nshots)
         if self.collapse:
             if nshots > 1:
                 raise_error(ValueError, "Cannot perform measurement collapse "
                                         "for more than one shots.")
-            self.set_result(result.samples(binary=True)[0])
             return getattr(self, self._active_call)(state)
-        return result
+        return self.result
 
 
 class RX(MatrixGate, gates.RX):

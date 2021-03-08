@@ -82,12 +82,6 @@ def test_measurement_init(targets, p0, p1):
     assert gate.bitflip_map == (p0map, p1map)
 
 
-def test_measurement_collapse_init():
-    gate = gates.M(0, 2, 1, collapse=True)
-    assert gate.target_qubits == (0, 2, 1)
-    assert gate.sorted_qubits == [0, 1, 2]
-
-
 def test_measurement_einsum_string():
     func = gates.M.einsum_string
     estr = func({0, 2, 4}, 5)
@@ -98,15 +92,6 @@ def test_measurement_einsum_string():
     assert estr == "abcdefghijabmdofgrst->cehijmorst"
     estr = func({0, 1, 3, 5, 6}, 10, measuring=True)
     assert estr == "abcdefghijabcdefghij->cehij"
-
-
-@pytest.mark.parametrize("result,target_result",
-                         [([1, 1, 1], [1, 1, 1]),
-                          ([0, 1, 0], [0, 0, 1])])
-def test_measurement_set_result(result, target_result):
-    gate = gates.M(0, 2, 1)
-    gate.set_result(result)
-    gate.result == target_result
 
 
 def test_measurement_add():
