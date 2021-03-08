@@ -214,16 +214,22 @@ class M(BackendGate, gates.M):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
-    def state_vector_call(self, state):
-        return self.gate_op(state, self.qubits_tensor, self.result.tensor(),
+    def state_vector_collapse(self, state, result):
+        return self.gate_op(state, self.qubits_tensor, result,
                             self.nqubits, self.normalize, get_threads())
 
-    def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, self.result.tensor(),
+    def density_matrix_collapse(self, state, result):
+        state = self.gate_op(state, self.qubits_tensor_dm, result,
                              2 * self.nqubits, False, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, self.result.tensor(),
+        state = self.gate_op(state, self.qubits_tensor, result,
                              2 * self.nqubits, False, get_threads())
         return state / K.trace(state)
+
+    def state_vector_call(self, state):
+        return self.state_vector_collapse(state, self.result.tensor())
+
+    def density_matrix_call(self, state):
+        return self.density_matrix_collapse(state, self.result.tensor())
 
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
@@ -908,20 +914,29 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     @staticmethod
     def _invert(gate):
-        if isinstance(gate, gates.Collapse):
+        if isinstance(gate, gates.M):
             return None
         return gate
 
     def state_vector_call(self, state):
         not_collapsed = True
         if K.qnp.random.random() < self.probs[-2]:
-            state = self.gates[-2](state)
+            state = self.gates[-2].state_vector_collapse(state, [0])
             not_collapsed = False
         if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
-                state = self.gates[-2](state)
+                state = self.gates[-2].state_vector_collapse(state, [0])
             state = self.gates[-1](state)
         return state
+
+    def density_matrix_call(self, state):
+        new_state = (1 - self.psum) * state
+        state = self.gates[0].density_matrix_collapse(state, [0])
+        new_state += self.probs[0] * state
+        state = self.gates[1](state)
+        new_state += self.probs[1] * state
+        state = self.gates[1](state) # reset to the original state vector
+        return new_state
 
 
 class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):

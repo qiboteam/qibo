@@ -226,16 +226,16 @@ class M(BackendGate, gates.M):
                 state = K.concatenate([state, K.zeros_like(state)], axis=q)
         return state
 
-    def state_vector_call(self, state):
+    def state_vector_collapse(self, state, result):
         state = K.reshape(state, self.tensor_shape)
-        substate = K.gather_nd(K.transpose(state, self.order), self.result.binary[0])
+        substate = K.gather_nd(K.transpose(state, self.order), result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, self.sorted_qubits, self.result.binary[0])
+        state = self._append_zeros(state, self.sorted_qubits, result)
         return K.reshape(state, self.flat_shape)
 
-    def density_matrix_call(self, state):
-        density_matrix_result = 2 * self.result.list()
+    def density_matrix_collapse(self, state, result):
+        density_matrix_result = 2 * result
         sorted_qubits = self.sorted_qubits + [q + self.nqubits for q in self.sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
@@ -245,6 +245,12 @@ class M(BackendGate, gates.M):
         state = substate / norm
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return K.reshape(state, self.flat_shape)
+
+    def state_vector_call(self, state):
+        return self.state_vector_collapse(state, self.result.binary[0])
+
+    def density_matrix_call(self, state):
+        return self.density_matrix_collapse(state, self.result.list())
 
     def measure(self, state, nshots):
         return cgates.M.measure(self, state, nshots)
@@ -630,9 +636,8 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
-        for p, gate in zip(self.probs, self.gates):
-            state = gate(state)
-            new_state += p * state
+        new_state += self.probs[0] * self.gates[0].density_matrix_collapse(state, [0])
+        new_state += self.probs[1] * self.gates[1](state)
         return new_state
 
 

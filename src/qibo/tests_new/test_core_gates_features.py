@@ -341,14 +341,20 @@ def test_reset_channel_repeated(backend):
 
     np.random.seed(123)
     target_state = []
+    collapse = gates.M(2, collapse=True)
+    collapse.nqubits = 5
+    collapse.prepare()
+    xgate = gates.X(2)
     for _ in range(30):
-        noiseless_c = Circuit(5)
+        state = np.copy(initial_state)
         if np.random.random() < 0.3:
-            noiseless_c.add(gates.Collapse(2))
+            state = collapse.state_vector_collapse(state, [0])
         if np.random.random() < 0.3:
-            noiseless_c.add(gates.Collapse(2))
-            noiseless_c.add(gates.X(2))
-        target_state.append(noiseless_c(np.copy(initial_state)))
+            state = collapse.state_vector_collapse(state, [0])
+            state = xgate(state)
+        target_state.append(np.copy(state))
+
+    print(target_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
