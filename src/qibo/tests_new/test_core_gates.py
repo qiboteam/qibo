@@ -84,6 +84,7 @@ def test_z(backend):
     target_state[2] *= -1.0
     target_state[3] *= -1.0
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 def test_identity(backend):

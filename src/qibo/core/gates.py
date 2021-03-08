@@ -208,11 +208,6 @@ class M(BackendGate, gates.M):
     def reprepare(self):
         cgates.M.reprepare(self)
 
-    def set_result(self, res):
-        gates.M.set_result(self, res)
-        if self.is_prepared:
-            self.reprepare()
-
     def construct_unitary(self):
         cgates.M.construct_unitary(self)
 
@@ -636,8 +631,12 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
-        new_state += self.probs[0] * self.gates[0].density_matrix_collapse(state, [0])
-        new_state += self.probs[1] * self.gates[1](state)
+        for p, gate in zip(self.probs, self.gates):
+            if isinstance(gate, M):
+                state = gate.density_matrix_collapse(state, [0])
+            else:
+                state = gate(state)
+            new_state += p * state
         return new_state
 
 
