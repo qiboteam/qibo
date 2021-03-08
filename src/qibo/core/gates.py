@@ -228,14 +228,14 @@ class M(BackendGate, gates.M):
 
     def state_vector_call(self, state):
         state = K.reshape(state, self.tensor_shape)
-        substate = K.gather_nd(K.transpose(state, self.order), self.result)
+        substate = K.gather_nd(K.transpose(state, self.order), self.result.binary[0])
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, self.sorted_qubits, self.result)
+        state = self._append_zeros(state, self.sorted_qubits, self.result.binary[0])
         return K.reshape(state, self.flat_shape)
 
     def density_matrix_call(self, state):
-        density_matrix_result = 2 * self.result.binary[0]
+        density_matrix_result = 2 * self.result.list()
         sorted_qubits = self.sorted_qubits + [q + self.nqubits for q in self.sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),

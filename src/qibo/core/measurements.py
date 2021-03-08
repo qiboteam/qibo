@@ -49,6 +49,96 @@ class MeasurementResult:
     def add_qubits(self, *qubits):
         self.qubits += tuple(*qubits)
 
+    def set_probabilities(self, probabilities, nshots=None):
+        self.reset()
+        self.probabilities = probabilities
+        self.nshots = nshots
+
+    def set_frequencies(self, frequencies):
+        if self.has_samples():
+            raise_error(RuntimeError, "Cannot set frequencies for measurement "
+                                      "result that contains shots.")
+        self._frequencies = frequencies
+
+    def reset(self):
+        self._decimal = None
+        self._binary = None
+        self._frequencies = None
+        self._list = None
+        self._tensor = None
+
+    @property
+    def decimal(self):
+        if self._decimal is None:
+            if self._binary is None:
+                self._decimal = self._sample_shots()
+            else:
+                self._decimal = self._convert_to_decimal()
+        return self._decimal
+
+    @property
+    def binary(self):
+        if self._binary is None:
+            self._binary = self._convert_to_binary()
+        return self._binary
+
+    def list(self):
+        if self._list is None:
+            resdict = {q: r for q, r in zip(self.qubits, self.binary[0])}
+            self._list = [resdict[q] for q in sorted(self.qubits)]
+        return self._list
+
+    def tensor(self):
+        if self._tensor is None:
+            result = self.list()
+            n = len(result)
+            result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
+            self._tensor = K.cast(result, dtype='DTYPEINT')
+        return self._tensor
+
+    @decimal.setter
+    def decimal(self, x):
+        self.reset()
+        self._decimal = x
+
+    @binary.setter
+    def binary(self, x):
+        self.reset()
+        self._binary = x
+
+    def has_samples(self):
+        """Checks if the measurement result has samples calculated."""
+        return self._binary is not None or self._decimal is not None
+
+    def samples(self, binary: bool = True) -> TensorType:
+        if binary:
+            return self.binary
+        return self.decimal
+
+    def frequencies(self, binary: bool = True) -> collections.Counter:
+        """Calculates frequencies of appearance of each measurement.
+
+        Args:
+            binary: If True the returned keys (measurement results) are in
+                binary representation. Otherwise they are in decimal
+                representation.
+
+        Returns:
+            A `collections.Counter` where the keys are the measurement results
+            and the values are the number of appearances of each result in the
+            measured shots.
+        """
+        if self._frequencies is None:
+            self._frequencies = self._calculate_frequencies()
+        if binary:
+            return collections.Counter(
+                {"{0:b}".format(k).zfill(self.nqubits): v
+                 for k, v in self._frequencies.items()})
+        return self._frequencies
+
+    def __getitem__(self, i: int) -> TensorType:
+        return self.decimal[i]
+
     def _convert_to_binary(self):
         _range = K.range(self.nqubits - 1, -1, -1, dtype=self.decimal.dtype)
         return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
@@ -73,61 +163,6 @@ class MeasurementResult:
             result = K.cpu_fallback(K.sample_shots, self.probabilities, self.nshots)
         return result
 
-    @property
-    def decimal(self):
-        if self._decimal is None:
-            if self._binary is None:
-                self._decimal = self._sample_shots()
-            else:
-                self._decimal = self._convert_to_decimal()
-        return self._decimal
-
-    @property
-    def binary(self):
-        if self._binary is None:
-            self._binary = self._convert_to_binary()
-        return self._binary
-
-    def reset(self):
-        self._decimal = None
-        self._binary = None
-        self._frequencies = None
-        self._list = None
-        self._tensor = None
-
-    def set_probabilities(self, probabilities, nshots=None):
-        self.reset()
-        self.probabilities = probabilities
-        self.nshots = nshots
-
-    def set_frequencies(self, frequencies):
-        if self.has_samples():
-            raise_error(RuntimeError, "Cannot set frequencies for measurement "
-                                      "result that contains shots.")
-        self._frequencies = frequencies
-
-    @decimal.setter
-    def decimal(self, x):
-        self.reset()
-        self._decimal = x
-
-    @binary.setter
-    def binary(self, x):
-        self.reset()
-        self._binary = x
-
-    def has_samples(self):
-        """Checks if the measurement result has samples calculated."""
-        return self._binary is not None or self._decimal is not None
-
-    def samples(self, binary: bool = True) -> TensorType:
-        if binary:
-            return self.binary
-        return self.decimal
-
-    def __getitem__(self, i: int) -> TensorType:
-        return self.samples(binary=False)[i]
-
     def _calculate_frequencies(self):
         if self._binary is None and self._decimal is None:
             if self.probabilities is None or self.nshots is None:
@@ -142,41 +177,6 @@ class MeasurementResult:
         res, counts = K.unique(self.decimal, return_counts=True)
         res, counts = K.np.array(res), K.np.array(counts)
         return collections.Counter({k: v for k, v in zip(res, counts)})
-
-    def frequencies(self, binary: bool = True) -> collections.Counter:
-        """Calculates frequencies of appearance of each measurement.
-
-        Args:
-            binary: If True the returned keys (measurement results) are in
-                binary representation. Otherwise they are in decimal
-                representation.
-
-        Returns:
-            A `collections.Counter` where the keys are the measurement results
-            and the values are the number of appearances of each result in the
-            measured shots.
-        """
-        if self._frequencies is None:
-            self._frequencies = self._calculate_frequencies()
-        if binary:
-            return collections.Counter(
-                {"{0:b}".format(k).zfill(self.nqubits): v
-                 for k, v in self._frequencies.items()})
-        return self._frequencies
-
-    def list(self):
-        if self._list is None:
-            resdict = {q: r for q, r in zip(self.qubits, self.binary[0])}
-            self._list = [resdict[q] for q in sorted(self.qubits)]
-        return self._list
-
-    def tensor(self):
-        if self._tensor is None:
-            result = self.list()
-            n = len(result)
-            result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
-            self._tensor = K.cast(result, dtype='DTYPEINT')
-        return self._tensor
 
     def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None):
         """Applies bitflip noise to the measured samples.

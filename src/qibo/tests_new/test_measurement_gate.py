@@ -304,9 +304,9 @@ def test_measurement_collapse(backend, nqubits, targets):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
-    collapse = gates.M(*targets, collapse=True)
-    final_state = collapse(np.copy(initial_state), nshots=1)
-    results = collapse.result
+    gate = gates.M(*targets, collapse=True)
+    final_state = gate(np.copy(initial_state), nshots=1)
+    results = gate.result.binary[0]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
         slicer[t] = r
@@ -322,7 +322,7 @@ def test_measurement_collapse(backend, nqubits, targets):
 
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])])
-def test_measurement_collapse(backend, nqubits, targets):
+def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     from qibo.tests_new.test_core_gates_density_matrix import random_density_matrix
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -330,7 +330,7 @@ def test_measurement_collapse(backend, nqubits, targets):
     gate = gates.M(*targets, collapse=True)
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho), nshots=1)
-    results = gate.result
+    results = gate.result.binary[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
     if isinstance(results, int):
         results = len(targets) * [results]
