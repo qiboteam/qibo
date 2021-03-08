@@ -1565,8 +1565,6 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
         gates = [self.module.Z(q), self.module.M(q, collapse=True),
                  self.module.X(q)]
-        # TODO: Manually set this collapse result to 0.
-
         super(_ThermalRelaxationChannelA, self).__init__(
             probs, gates, seed=seed)
         ThermalRelaxationChannel.__init__(
