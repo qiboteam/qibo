@@ -930,12 +930,14 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
         return state
 
     def density_matrix_call(self, state):
-        new_state = (1 - self.psum) * state
-        state = self.gates[0].density_matrix_collapse(state, [0])
-        new_state += self.probs[0] * state
-        state = self.gates[1](state)
-        new_state += self.probs[1] * state
-        state = self.gates[1](state) # reset to the original state vector
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+            if isinstance(gate, M):
+                state = gate.density_matrix_collapse(state, [0])
+            else:
+                state = gate(state)
+            new_state += p * state
+            if inv_gate is not None:
+                state = inv_gate(state) # reset to the original state vector
         return new_state
 
 

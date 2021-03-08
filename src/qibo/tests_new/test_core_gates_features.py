@@ -353,8 +353,6 @@ def test_reset_channel_repeated(backend):
             state = collapse.state_vector_collapse(state, [0])
             state = xgate(state)
         target_state.append(np.copy(state))
-
-    print(target_state)
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
@@ -372,16 +370,20 @@ def test_thermal_relaxation_channel_repeated(backend):
     pz, p0, p1 = c.queue[0].calculate_probabilities(1.0, 0.6, 0.8, 0.8)
     np.random.seed(123)
     target_state = []
+    collapse = gates.M(4, collapse=True)
+    collapse.nqubits = 5
+    collapse.prepare()
+    zgate, xgate = gates.Z(4), gates.X(4)
     for _ in range(30):
-        noiseless_c = Circuit(5)
+        state = np.copy(initial_state)
         if np.random.random() < pz:
-            noiseless_c.add(gates.Z(4))
+            state = zgate(state)
         if np.random.random() < p0:
-            noiseless_c.add(gates.Collapse(4))
+            state = collapse.state_vector_collapse(state, [0])
         if np.random.random() < p1:
-            noiseless_c.add(gates.Collapse(4))
-            noiseless_c.add(gates.X(4))
-        target_state.append(noiseless_c(np.copy(initial_state)))
+            state = collapse.state_vector_collapse(state, [0])
+            state = xgate(state)
+        target_state.append(np.copy(state))
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
