@@ -81,17 +81,19 @@ def test_construct_unitary_controlled(backend):
 
 ########################### Test `Collapse` features ##########################
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
-def test_collapse_gate_distributed(backend, accelerators, nqubits, targets):
-    """Check :class:`qibo.core.cgates.Collapse` as part of distributed circuits."""
+def test_measurement_collapse_distributed(backend, nqubits, targets):
+    # TODO: Add accelerators in this test once you fix `gates.M` collapse for
+    # distributed circuit
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
-    c = Circuit(nqubits, accelerators)
-    c.add(gates.M(*targets, collapse=True))
+    #c = Circuit(nqubits, accelerators)
+    c = Circuit(nqubits)
+    output = c.add(gates.M(*targets, collapse=True))
     result = c(np.copy(initial_state))
     slicer = nqubits * [slice(None)]
-    for t, r in zip(targets, measurements):
-        slicer[t] = 0
+    for t, r in zip(targets, output.binary[0]):
+        slicer[t] = r
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
     target_state = np.zeros_like(initial_state)
@@ -106,16 +108,13 @@ def test_collapse_after_measurement(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     qubits = [0, 2, 3]
-
-    c1 = Circuit(5)
-    c1.add((gates.H(i) for i in range(5)))
-    c1.add(gates.M(*qubits))
-    result = c1(nshots=1)
-    c2 = Circuit(5)
-    bitstring = result.samples(binary=True)[0]
-    c2.add(gates.Collapse(*qubits, result=bitstring))
-    c2.add((gates.H(i) for i in range(5)))
-    final_state = c2(initial_state=c1.final_state)
+    c = Circuit(5)
+    c.add((gates.H(i) for i in range(5)))
+    output = c.add(gates.M(*qubits, collapse=True))
+    c.add((gates.H(i) for i in range(5)))
+    result = c(nshots=1)
+    bitstring = output.binary[0]
+    final_state = result.state()
 
     ct = Circuit(5)
     for i, r in zip(qubits, bitstring):

@@ -368,10 +368,12 @@ class AbstractCircuit(ABC):
                 circuit.
         """
         if isinstance(gate, collections.abc.Iterable):
+            outputs = []
             for g in gate:
-                self.add(g)
+                outputs.append(self.add(g))
+            return outputs
         elif isinstance(gate, gates.Gate):
-            self._add(gate)
+            return self._add(gate)
         else:
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
@@ -401,12 +403,15 @@ class AbstractCircuit(ABC):
         else:
             self.set_nqubits(gate)
             self.queue.append(gate)
+            if isinstance(gate, gates.M):
+                return gate.result
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
             if gate.trainable:
                 self.trainable_gates.append(gate)
+        return
 
     def set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.

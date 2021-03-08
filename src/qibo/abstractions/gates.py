@@ -215,6 +215,7 @@ class M(Gate):
         # Flag that is turned ``False`` automatically if this gate is used in a
         # ``DistributedCircuit`` in order to skip the normalization.
         self.normalize = True
+        self.result = None
 
         self.init_args = q
         self.init_kwargs = {"register_name": register_name,
