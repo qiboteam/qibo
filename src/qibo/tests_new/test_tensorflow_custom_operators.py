@@ -1,6 +1,7 @@
 """
 Testing Tensorflow custom operators circuit.
 """
+import itertools
 import pytest
 import numpy as np
 from qibo import K, get_threads
@@ -522,11 +523,11 @@ def test_measure_frequencies(dtype, inttype):
     np.testing.assert_allclose(frequencies, target_frequencies)
 
 
-
-@pytest.mark.parametrize("nonzero",
-                         [[0, 1], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7],
-                          [1, 2], [1, 3], [1, 4], [3, 4], [2, 5], [1, 7],
-                          [1, 2, 7], [2, 5, 7], [0, 1, 7], [2, 6, 7]])
+NONZERO = list(itertools.combinations(range(8), r=1))
+NONZERO.extend(itertools.combinations(range(8), r=2))
+NONZERO.extend(itertools.combinations(range(8), r=3))
+NONZERO.extend(itertools.combinations(range(8), r=4))
+@pytest.mark.parametrize("nonzero", NONZERO)
 def test_measure_frequencies_sparse_probabilities(nonzero):
     import sys
     probs = np.zeros(8, dtype=np.float64)
