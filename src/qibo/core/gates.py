@@ -39,7 +39,8 @@ class BackendGate(BaseBackendGate):
 
     def prepare(self):
         self.is_prepared = True
-        self.reprepare()
+        if self.well_defined:
+            self.reprepare()
         try:
             s = 1 + self.density_matrix
             self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
