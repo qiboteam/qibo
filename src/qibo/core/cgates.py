@@ -606,6 +606,9 @@ class Unitary(MatrixGate, gates.Unitary):
     def parameters(self, x):
         x = K.qnp.cast(x)
         shape = tuple(x.shape)
+        if len(shape) > 2 and shape[0] == 1:
+            shape = shape[1:]
+            x = K.squeeze(x, axis=0)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
             ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
