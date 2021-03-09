@@ -1,6 +1,7 @@
 """
 Testing Tensorflow custom operators circuit.
 """
+import itertools
 import pytest
 import numpy as np
 from qibo import K, get_threads
@@ -513,10 +514,33 @@ def test_measure_frequencies(dtype, inttype):
                                            nqubits=4, omp_num_threads=1,
                                            seed=1234)
     if sys.platform == "linux":
-        target_frequencies = [72, 56, 61, 60, 61, 47, 52, 55, 67, 64, 69,
-                              68, 63, 59, 73, 73]
+        target_frequencies = [60, 50, 68, 64, 53, 53, 67, 54, 64, 53, 67,
+                              69, 76, 57, 64, 81]
     elif sys.platform == "darwin": # pragma: no cover
-        target_frequencies = [65, 45, 74, 70, 68, 50, 67, 61, 65, 64, 71,
-                              71, 55, 52, 64, 58]
+        target_frequencies = [57, 51, 62, 63, 55, 70, 52, 47, 75, 58, 63, 
+                              73, 68, 72, 60, 74]
     assert np.sum(frequencies) == 1000
     np.testing.assert_allclose(frequencies, target_frequencies)
+
+
+NONZERO = list(itertools.combinations(range(8), r=1))
+NONZERO.extend(itertools.combinations(range(8), r=2))
+NONZERO.extend(itertools.combinations(range(8), r=3))
+NONZERO.extend(itertools.combinations(range(8), r=4))
+@pytest.mark.parametrize("nonzero", NONZERO)
+def test_measure_frequencies_sparse_probabilities(nonzero):
+    import sys
+    probs = np.zeros(8, dtype=np.float64)
+    for i in nonzero:
+        probs[i] = 1
+    probs = probs / np.sum(probs)
+    frequencies = np.zeros(8, dtype=np.int64)
+    frequencies = K.op.measure_frequencies(frequencies, probs, nshots=1000,
+                                           nqubits=3, omp_num_threads=1,
+                                           seed=1234)
+    assert np.sum(frequencies) == 1000
+    for i, freq in enumerate(frequencies):
+        if i in nonzero:
+            assert freq != 0
+        else:
+            assert freq == 0
