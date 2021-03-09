@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sympy
 from abc import ABC, abstractmethod
 from qibo import get_device, config
 from qibo.config import raise_error
@@ -43,6 +44,12 @@ class Gate:
         config.ALLOW_SWITCHERS = False
 
         self.is_prepared = False
+        self.well_defined = True
+        # Keeps track of whether parametrized gates are well-defined
+        # (parameter value is known during circuit creation) or if they are
+        # measurement dependent so the parameter value is determined during
+        # execution
+
         # Using density matrices or state vectors
         self._density_matrix = False
         self._active_call = "state_vector_call"
@@ -286,6 +293,7 @@ class ParametrizedGate(Gate):
         self.nparams = 1
         self.trainable = trainable
         self._parameters = None
+        self.symbolic_parameters = None
 
     @property
     def parameters(self):
@@ -298,17 +306,25 @@ class ParametrizedGate(Gate):
     def parameters(self, x):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
+            if isinstance(x, sympy.Expr):
+                self.well_defined = False
+                self.symbolic_parameters = x
             self._parameters = x
         else:
             nparams = len(self.parameter_names)
             if self._parameters is None:
                 self._parameters = nparams * [None]
+            if self.symbolic_parameters is None:
+                self.symbolic_parameters = nparams * [None]
             if len(x) != nparams:
                 raise_error(ValueError, "Parametrized gate has {} parameters "
                                         "but {} update values were given."
                                         "".format(nparams, len(x)))
             for i, v in enumerate(x):
+                if isinstance(v, sympy.Expr):
+                    self.well_defined = False
                 self._parameters[i] = v
+                self.symbolic_parameters[i] = v
 
         # This part uses ``BackendGate`` attributes (see below), assuming
         # that the gate was initialized using a calculation backend.
@@ -321,6 +337,21 @@ class ParametrizedGate(Gate):
                 self.reprepare()
             for devgate in self.device_gates:
                 devgate.parameters = x
+
+    def substitute_symbols(self):
+        if isinstance(self.parameter_names, str):
+            params = self.symbolic_parameters
+            for symbol in params.free_symbols:
+                params = params.subs(symbol, symbol.binary[0][0]) # works for single qubit only
+            params = float(params)
+        else:
+            params = []
+            for param0 in self.symbolic_parameters:
+                param = param0
+                for symbol in param.free_symbols:
+                    param = param.subs(symbol, symbol.binary[0][0]) # works for single qubit only
+                params.append(float(param))
+        self.parameters = params
 
 
 class BaseBackendGate(Gate, ABC):
@@ -442,4 +473,6 @@ class BaseBackendGate(Gate, ABC):
         """
         if not self.is_prepared:
             self.set_nqubits(state)
+        if not self.well_defined:
+            self.substitute_symbols()
         return getattr(self, self._active_call)(state)
