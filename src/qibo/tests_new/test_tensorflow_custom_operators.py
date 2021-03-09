@@ -513,10 +513,33 @@ def test_measure_frequencies(dtype, inttype):
                                            nqubits=4, omp_num_threads=1,
                                            seed=1234)
     if sys.platform == "linux":
-        target_frequencies = [72, 56, 61, 60, 61, 47, 52, 55, 67, 64, 69,
-                              68, 63, 59, 73, 73]
+        target_frequencies = [60, 50, 68, 64, 53, 53, 67, 54, 64, 53, 67,
+                              69, 76, 57, 64, 81]
     elif sys.platform == "darwin": # pragma: no cover
         target_frequencies = [65, 45, 74, 70, 68, 50, 67, 61, 65, 64, 71,
                               71, 55, 52, 64, 58]
     assert np.sum(frequencies) == 1000
     np.testing.assert_allclose(frequencies, target_frequencies)
+
+
+
+@pytest.mark.parametrize("nonzero",
+                         [[0, 1], [0, 3], [0, 4], [0, 5], [0, 6], [0, 7],
+                          [1, 2], [1, 3], [1, 4], [3, 4], [2, 5], [1, 7],
+                          [1, 2, 7], [2, 5, 7], [0, 1, 7], [2, 6, 7]])
+def test_measure_frequencies_sparse_probabilities(nonzero):
+    import sys
+    probs = np.zeros(8, dtype=np.float64)
+    for i in nonzero:
+        probs[i] = 1
+    probs = probs / np.sum(probs)
+    frequencies = np.zeros(8, dtype=np.int64)
+    frequencies = K.op.measure_frequencies(frequencies, probs, nshots=1000,
+                                           nqubits=3, omp_num_threads=1,
+                                           seed=1234)
+    assert np.sum(frequencies) == 1000
+    for i, freq in enumerate(frequencies):
+        if i in nonzero:
+            assert freq != 0
+        else:
+            assert freq == 0
