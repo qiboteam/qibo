@@ -46,6 +46,7 @@ METHODS = [
     ("eigvalsh", [rand((4, 4))]),
     ("less", [rand(10), rand(10)]),
     ("array_equal", [rand(10), rand(10)]),
+    ("squeeze", {"x": rand((5, 1, 2)), "axis": 1}),
     ("gather_nd", [rand((5, 3)), [0, 1]]),
     ("initial_state", [5, True]),
     ("initial_state", [3, False])

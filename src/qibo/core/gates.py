@@ -94,23 +94,30 @@ class BackendGate(BaseBackendGate):
         if self.is_controlled_by:
             ncontrol = len(self.control_qubits)
             nactive = self.nqubits - ncontrol
+            n = 2 ** ncontrol
             state = K.transpose(state, self.control_cache.order(True))
-            state = K.reshape(state, 2 * (2 ** ncontrol,) + 2 * nactive * (2,))
+            state = K.reshape(state, 2 * (n,) + 2 * nactive * (2,))
+            state01 = K.gather(state, indices=range(n - 1), axis=0)
+            state01 = K.squeeze(K.gather(state01, indices=[n - 1], axis=1), axis=1)
+            state01 = self.einsum(self.calculation_cache.right0,
+                                  state01, K.conj(self.matrix))
+            state10 = K.gather(state, indices=range(n - 1), axis=1)
+            state10 = K.squeeze(K.gather(state10, indices=[n - 1], axis=0), axis=0)
+            state10 = self.einsum(self.calculation_cache.left0,
+                                  state10, self.matrix)
 
-            updates01 = self.einsum(self.calculation_cache.right0,
-                                    state[:-1, -1], K.conj(self.matrix))
-            updates10 = self.einsum(self.calculation_cache.left0,
-                                    state[-1, :-1],
-                                    self.matrix)
+            state11 = K.squeeze(K.gather(state, indices=[n - 1], axis=0), axis=0)
+            state11 = K.squeeze(K.gather(state11, indices=[n - 1], axis=0), axis=0)
+            state11 = self.einsum(self.calculation_cache.right, state11,
+                                  K.conj(self.matrix))
+            state11 = self.einsum(self.calculation_cache.left,
+                                  state11, self.matrix)
 
-            updates11 = self.einsum(self.calculation_cache.right,
-                                    state[-1, -1], K.conj(self.matrix))
-            updates11 = self.einsum(self.calculation_cache.left,
-                                    updates11, self.matrix)
-
-            updates01 = K.concatenate([state[:-1, :-1], updates01[:, K.newaxis]], axis=1)
-            updates10 = K.concatenate([updates10, updates11[K.newaxis]], axis=0)
-            state = K.concatenate([updates01, updates10[K.newaxis]], axis=0)
+            state00 = K.gather(state, indices=range(n - 1), axis=0)
+            state00 = K.gather(state00, indices=range(n - 1), axis=1)
+            state01 = K.concatenate([state00, state01[:, K.newaxis]], axis=1)
+            state10 = K.concatenate([state10, state11[K.newaxis]], axis=0)
+            state = K.concatenate([state01, state10[K.newaxis]], axis=0)
             state = K.reshape(state, 2 * self.nqubits * (2,))
             state = K.transpose(state, self.control_cache.reverse(True))
         else:

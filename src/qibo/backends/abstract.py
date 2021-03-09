@@ -332,6 +332,11 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def squeeze(self, x, axis=None): # pragma: no cover
+        """Removes axis of unit length."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def gather(self, x, indices=None, condition=None, axis=0): # pragma: no cover
         """Indexing of one-dimensional tensor."""
         raise_error(NotImplementedError)
