@@ -35,8 +35,6 @@ class MeasurementResult:
         self._decimal = None
         self._binary = None
         self._frequencies = None
-        self._list = None
-        self._tensor = None
 
     @property
     def nqubits(self) -> int:
@@ -61,14 +59,14 @@ class MeasurementResult:
         self._frequencies = frequencies
 
     def reset(self):
+        """Resets the sampled shots contained in the ``MeasurementResult`` object."""
         self._decimal = None
         self._binary = None
         self._frequencies = None
-        self._list = None
-        self._tensor = None
 
     @property
     def decimal(self):
+        """Returns sampled measurement shots in decimal form."""
         if self._decimal is None:
             if self._binary is None:
                 self._decimal = self._sample_shots()
@@ -78,23 +76,10 @@ class MeasurementResult:
 
     @property
     def binary(self):
+        """Returns sampled measurement shots in binary form."""
         if self._binary is None:
             self._binary = self._convert_to_binary()
         return self._binary
-
-    def list(self):
-        if self._list is None:
-            resdict = {q: r for q, r in zip(self.qubits, self.binary[0])}
-            self._list = [resdict[q] for q in sorted(self.qubits)]
-        return self._list
-
-    def tensor(self):
-        if self._tensor is None:
-            result = self.list()
-            n = len(result)
-            result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
-            self._tensor = K.cast(result, dtype='DTYPEINT')
-        return self._tensor
 
     @decimal.setter
     def decimal(self, x):

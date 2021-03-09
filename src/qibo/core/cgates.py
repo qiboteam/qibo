@@ -187,6 +187,8 @@ class M(BackendGate, gates.M):
         self.reduced_target_qubits = None # List
 
         self.result = self.measurements.MeasurementResult(self.qubits)
+        self._result_list = None
+        self._result_tensor = None
         self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
@@ -225,11 +227,29 @@ class M(BackendGate, gates.M):
                              2 * self.nqubits, False, get_threads())
         return state / K.trace(state)
 
-    def state_vector_call(self, state):
-        return self.state_vector_collapse(state, self.result.tensor())
+    def result_list(self):
+        if self._result_list is None:
+            resdict = {q: r for q, r in zip(self.target_qubits, self.result.binary[0])}
+            self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
+        return self._result_list
 
-    def density_matrix_call(self, state):
-        return self.density_matrix_collapse(state, self.result.tensor())
+    def result_tensor(self):
+        if self._result_tensor is None:
+            n = len(self.result_list())
+            result = sum(2 ** (n - i - 1) * r
+                         for i, r in enumerate(self.result_list()))
+            self._result_tensor = K.cast(result, dtype='DTYPEINT')
+        return self._result_tensor
+
+    def set_result(self, probs, nshots):
+        self._result_list = None
+        self._result_tensor = None
+        self.result.set_probabilities(probs, nshots)
+        # optional bitflip noise
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            noisy_result = self.result.apply_bitflips(*self.bitflip_map)
+            self.result.binary = noisy_result.binary
+        return self.result
 
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
@@ -253,15 +273,16 @@ class M(BackendGate, gates.M):
             probs = K.transpose(probs, axes=self.reduced_target_qubits)
             probs = K.reshape(probs, probs_dim)
             return probs
-        self.result.set_probabilities(K.cpu_fallback(calculate_probs), nshots)
-        # optional bitflip noise
-        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            noisy_result = self.result.apply_bitflips(*self.bitflip_map)
-            self.result.binary = noisy_result.binary
-        return self.result
+
+        return self.set_result(K.cpu_fallback(calculate_probs), nshots)
+
+    def state_vector_call(self, state):
+        return self.state_vector_collapse(state, self.result_tensor())
+
+    def density_matrix_call(self, state):
+        return self.density_matrix_collapse(state, self.result_tensor())
 
     def __call__(self, state, nshots=1):
-        # TODO: Make this return the state vector always for compatibility
         self.result = self.measure(state, nshots)
         if self.collapse:
             if nshots > 1:

@@ -176,11 +176,12 @@ class M(BackendGate, gates.M):
         BackendGate.__init__(self)
         gates.M.__init__(self, *q, register_name=register_name,
                          collapse=collapse, p0=p0, p1=p1)
-        self.sorted_qubits = sorted(self.target_qubits)
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
         self.result = self.measurements.MeasurementResult(self.qubits)
+        self._result_list = None
+        self._result_tensor = None
         self.order = None
 
     def add(self, gate: gates.M):
@@ -189,19 +190,20 @@ class M(BackendGate, gates.M):
     def prepare(self):
         cgates.M.prepare(self)
         try:
-            self.order = list(self.sorted_qubits)
+            sorted_qubits = sorted(self.target_qubits)
+            self.order = list(sorted_qubits)
             s = 1 + self.density_matrix
             self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
             self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
             if self.density_matrix:
-                self.order.extend((q + self.nqubits for q in self.sorted_qubits))
+                self.order.extend((q + self.nqubits for q in sorted_qubits))
                 self.order.extend((q for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
+                                   if q not in sorted_qubits))
                 self.order.extend((q + self.nqubits for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
+                                   if q not in sorted_qubits))
             else:
                 self.order.extend((q for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
+                                   if q not in sorted_qubits))
         except (ValueError, OverflowError): # pragma: no cover
             pass
 
@@ -226,12 +228,13 @@ class M(BackendGate, gates.M):
         substate = K.gather_nd(K.transpose(state, self.order), result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, self.sorted_qubits, result)
+        state = self._append_zeros(state, sorted(self.target_qubits), result)
         return K.reshape(state, self.flat_shape)
 
     def density_matrix_collapse(self, state, result):
         density_matrix_result = 2 * result
-        sorted_qubits = self.sorted_qubits + [q + self.nqubits for q in self.sorted_qubits]
+        sorted_qubits = sorted(self.target_qubits)
+        sorted_qubits = sorted_qubits + [q + self.nqubits for q in sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
                                density_matrix_result)
@@ -241,14 +244,20 @@ class M(BackendGate, gates.M):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return K.reshape(state, self.flat_shape)
 
+    def result_list(self):
+        return cgates.M.result_list(self)
+
+    def set_result(self, probs, nshots):
+        return cgates.M.set_result(self, probs, nshots)
+
+    def measure(self, state, nshots):
+        return cgates.M.measure(self, state, nshots)
+
     def state_vector_call(self, state):
         return self.state_vector_collapse(state, self.result.binary[0])
 
     def density_matrix_call(self, state):
-        return self.density_matrix_collapse(state, self.result.list())
-
-    def measure(self, state, nshots):
-        return cgates.M.measure(self, state, nshots)
+        return self.density_matrix_collapse(state, self.result_list())
 
     def __call__(self, state, nshots=1):
         return cgates.M.__call__(self, state, nshots)
