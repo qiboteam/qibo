@@ -341,7 +341,7 @@ class _Rn_(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters)
+        return self.__class__(self.target_qubits[0], -self.parameters) # pylint: disable=E1130
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -478,7 +478,7 @@ class U1(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters)
+        return self.__class__(self.target_qubits[0], -self.parameters) # pylint: disable=E1130
 
 
 class U2(_Un_):
@@ -660,7 +660,7 @@ class _CRn_(ParametrizedGate):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameters)
+        return self.__class__(q0, q1, -self.parameters) # pylint: disable=E1130
 
 
 class CRX(_CRn_):
@@ -793,7 +793,7 @@ class CU1(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameters)
+        return self.__class__(q0, q1, -self.parameters) # pylint: disable=E1130
 
 
 class CU2(_CUn_):

@@ -353,11 +353,13 @@ class ParametrizedGate(Gate):
 
     def substitute_symbols(self):
         params = []
-        for param0 in self.symbolic_parameters:
-            param = param0
-            for symbol in param.free_symbols:
-                param = symbol.evaluate(param)
-            params.append(float(param))
+        for param in self.symbolic_parameters:
+            if isinstance(param, sympy.Expr):
+                for symbol in param.free_symbols:
+                    param = symbol.evaluate(param)
+                params.append(float(param))
+            else:
+                params.append(param)
         self.parameters = params
 
 
