@@ -19,7 +19,9 @@ class MeasurementResult(sympy.Symbol):
     representation and vice versa.
 
     If ``probabilities`` and ``nshots`` are not given during this object's
-    initialization binary or decimal samples should be added using the
+    initialization they should be specified later using
+    :meth:`qibo.core.measurements.MeasurementResult.set_probabilities`.
+    Alternatively binary or decimal samples can be added directly using the
     corresponding setters.
 
     Args:
@@ -127,6 +129,24 @@ class MeasurementResult(sympy.Symbol):
                 {"{0:b}".format(k).zfill(self.nqubits): v
                  for k, v in self._frequencies.items()})
         return self._frequencies
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        if len(self.qubits) > 1:
+            raise_error(NotImplementedError, "Symbolic measurements are not "
+                                             "available for more than one "
+                                             "measured qubits. Please use "
+                                             "seperate measurement gates.")
+        if self.nshots > 1:
+            raise_error(NotImplementedError, "Symbolic measurements are only "
+                                             "available for single shot but "
+                                             "{} shots were given.")
+        return expr.subs(self, self.binary[0, 0])
 
     def __getitem__(self, i: int) -> TensorType:
         return self.decimal[i]

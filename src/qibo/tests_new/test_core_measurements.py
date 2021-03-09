@@ -13,6 +13,16 @@ def test_measurementresult_init():
     assert result.qubit_map == {0: 0, 1: 1}
 
 
+def test_measurementresult_counter():
+    result1 = measurements.MeasurementResult((0, 1))
+    result2 = measurements.MeasurementResult((1, 3))
+    assert result1.qubits == (0, 1)
+    assert result2.qubits == (1, 3)
+    assert result1.name[0] == "m" # pylint: disable=E1101
+    assert result2.name[0] == "m" # pylint: disable=E1101
+    assert int(result1.name[1:]) + 1 == int(result2.name[1:]) # pylint: disable=E1101
+
+
 def test_measurementresult_errors():
     """Try to sample shots and frequencies without probability distribution."""
     result = measurements.MeasurementResult((0, 1))
@@ -60,6 +70,24 @@ def test_measurementresult_frequencies(backend):
               "101": 3, "110": 2}
     assert result.frequencies(binary=True) == bfreqs
     assert result.frequencies(binary=False) == dfreqs
+    qibo.set_backend(original_backend)
+
+
+def test_measurementresult_evaluate(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementResult((0, 1))
+    expr = 2 * result
+    with pytest.raises(NotImplementedError):
+        value = result.evaluate(expr)
+    result = measurements.MeasurementResult((0,))
+    result.set_probabilities(np.array([1., 0.]), nshots=10)
+    expr = 2 * result
+    with pytest.raises(NotImplementedError):
+        value = result.evaluate(expr)
+    result.set_probabilities(np.array([0., 1.]), nshots=1)
+    value = result.evaluate(expr)
+    assert value == 2
     qibo.set_backend(original_backend)
 
 

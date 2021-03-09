@@ -342,14 +342,14 @@ class ParametrizedGate(Gate):
         if isinstance(self.parameter_names, str):
             params = self.symbolic_parameters
             for symbol in params.free_symbols:
-                params = params.subs(symbol, symbol.binary[0][0]) # works for single qubit only
+                params = symbol.evaluate(params)
             params = float(params)
         else:
             params = []
             for param0 in self.symbolic_parameters:
                 param = param0
                 for symbol in param.free_symbols:
-                    param = param.subs(symbol, symbol.binary[0][0]) # works for single qubit only
+                    params = symbol.evaluate(params)
                 params.append(float(param))
         self.parameters = params
 
@@ -474,5 +474,6 @@ class BaseBackendGate(Gate, ABC):
         if not self.is_prepared:
             self.set_nqubits(state)
         if not self.well_defined:
-            self.substitute_symbols()
+            self.substitute_symbols() # pylint: disable=E1101
+            # method available only for parametrized gates
         return getattr(self, self._active_call)(state)
