@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import math
 import collections
+import sympy
 from qibo import K
 from qibo.config import raise_error, SHOT_BATCH_SIZE
 from qibo.abstractions.gates import M
@@ -10,7 +11,7 @@ TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
 
 
-class MeasurementResult:
+class MeasurementResult(sympy.Symbol):
     """Holds measurement results (shot samples and frequencies).
 
     Implements tools for calculating the frequencies and shot samples from
@@ -27,6 +28,12 @@ class MeasurementResult:
             measurements.
         nshots (int): Number of shots for the measurement.
     """
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
 
     def __init__(self, qubits, probabilities=None, nshots=None):
         self.qubits = tuple(qubits)

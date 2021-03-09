@@ -90,7 +90,8 @@ class MatrixGate(BackendGate):
 
     def prepare(self):
         super().prepare()
-        self.reprepare()
+        if self.well_defined:
+            self.reprepare()
 
     def state_vector_call(self, state):
         return self.gate_op(state, self.matrix, self.qubits_tensor, # pylint: disable=E1121
