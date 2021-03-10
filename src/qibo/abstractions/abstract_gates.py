@@ -184,15 +184,20 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, *q, controls=None) -> "Gate":
+    def on_qubits(self, *q) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
         """
-        gate = self.__class__(*q, **self.init_kwargs)
         if self.is_controlled_by:
+            targets = (q[i] for i in self.target_qubits)
+            controls = (q[i] for i in self.control_qubits)
+            gate = self.__class__(*targets, **self.init_kwargs)
             gate = gate.controlled_by(*controls)
+        else:
+            qubits = (q[i] for i in self.qubits)
+            gate = self.__class__(*qubits, **self.init_kwargs)
         return gate
 
     def _dagger(self) -> "Gate":
