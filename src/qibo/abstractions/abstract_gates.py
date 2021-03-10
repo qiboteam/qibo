@@ -184,13 +184,16 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, *q) -> "Gate":
+    def on_qubits(self, *q, controls=None) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
         """
-        return self.__class__(*q, **self.init_kwargs)
+        gate = self.__class__(*q, **self.init_kwargs)
+        if self.is_controlled_by:
+            gate = gate.controlled_by(*controls)
+        return gate
 
     def _dagger(self) -> "Gate":
         """Helper method for :meth:`qibo.abstractions.gates.Gate.dagger`."""

@@ -180,7 +180,13 @@ class AbstractCircuit(ABC):
                                     "the circuit contains {} qubits."
                                     "".format(len(q), self.nqubits))
         for gate in self.queue:
-            yield gate.on_qubits(*(q[i] for i in gate.qubits))
+            if gate.is_controlled_by:
+                qubits = (q[i] for i in gate.target_qubits)
+                controls = [q[i] for i in gate.control_qubits]
+            else:
+                qubits = (q[i] for i in gate.qubits)
+                controls = None
+            yield gate.on_qubits(*qubits, controls=controls)
 
     def copy(self, deep: bool = False):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
