@@ -81,14 +81,13 @@ def test_construct_unitary_controlled(backend):
 
 ########################### Test `Collapse` features ##########################
 @pytest.mark.parametrize("nqubits,targets", [(5, [2, 4]), (6, [3, 5])])
-def test_measurement_collapse_distributed(backend, nqubits, targets):
+def test_measurement_collapse_distributed(backend, accelerators, nqubits, targets):
     # TODO: Add accelerators in this test once you fix `gates.M` collapse for
     # distributed circuit
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
-    #c = Circuit(nqubits, accelerators)
-    c = Circuit(nqubits)
+    c = Circuit(nqubits, accelerators)
     output = c.add(gates.M(*targets, collapse=True))
     result = c(np.copy(initial_state))
     slicer = nqubits * [slice(None)]
