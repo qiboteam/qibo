@@ -392,6 +392,15 @@ def test_controlled_by():
         gate = gate.controlled_by(2)
 
 
+def test_on_qubits_controlled_by():
+    gate = gates.H(0).controlled_by(1, 2)
+    gate = gate.on_qubits(5, 4, 6)
+    assert gate.target_qubits == (5,)
+    assert gate.control_qubits == (4, 6)
+    assert isinstance(gate, gates.H)
+    assert gate.is_controlled_by
+
+
 def test_decompose():
     decomp_gates = gates.H(0).decompose(1)
     assert len(decomp_gates) == 1
