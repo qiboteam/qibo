@@ -192,13 +192,11 @@ class TensorflowBackend(numpy.NumpyBackend):
             frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
             frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
         else:
-            if self._seed is None:
-                # generate random seed
-                seed = self.np.random.randint(1e8)
-                self.backend.random.set_seed(seed)
-            else:
-                seed = self._seed
             from qibo.config import get_threads
+            # Generate random seed using tf
+            dtype = self.dtypes('DTYPEINT')
+            seed = self.backend.random.uniform(
+                shape=tuple(), maxval=int(1e8), dtype=dtype)
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
@@ -215,7 +213,6 @@ class TensorflowBackend(numpy.NumpyBackend):
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
 
-    def set_seed(self, seed=None):
+    def set_seed(self, seed):
         self._seed = seed
-        if seed is not None:
-            self.backend.random.set_seed(seed)
+        self.backend.random.set_seed(seed)

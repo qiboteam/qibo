@@ -550,7 +550,6 @@ def test_backend_sample_frequencies_seed():
     """Check that frequencies generated using custom operator are different in each call."""
     from qibo import K
     from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
-    K.set_seed()
     nshots = SHOT_CUSTOM_OP_THREASHOLD + 1
     probs = np.random.random(8)
     probs = probs / np.sum(probs)
