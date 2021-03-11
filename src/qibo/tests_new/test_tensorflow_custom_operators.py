@@ -517,7 +517,7 @@ def test_measure_frequencies(dtype, inttype):
         target_frequencies = [60, 50, 68, 64, 53, 53, 67, 54, 64, 53, 67,
                               69, 76, 57, 64, 81]
     elif sys.platform == "darwin": # pragma: no cover
-        target_frequencies = [57, 51, 62, 63, 55, 70, 52, 47, 75, 58, 63, 
+        target_frequencies = [57, 51, 62, 63, 55, 70, 52, 47, 75, 58, 63,
                               73, 68, 72, 60, 74]
     assert np.sum(frequencies) == 1000
     np.testing.assert_allclose(frequencies, target_frequencies)
@@ -544,3 +544,16 @@ def test_measure_frequencies_sparse_probabilities(nonzero):
             assert freq != 0
         else:
             assert freq == 0
+
+
+def test_backend_sample_frequencies_seed():
+    """Check that frequencies generated using custom operator are different in each call."""
+    from qibo import K
+    from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+    nshots = SHOT_CUSTOM_OP_THREASHOLD + 1
+    probs = np.random.random(8)
+    probs = probs / np.sum(probs)
+    frequencies1 = K.sample_frequencies(probs, nshots)
+    frequencies2 = K.sample_frequencies(probs, nshots)
+    np.testing.assert_raises(AssertionError, np.testing.assert_allclose,
+                             frequencies1, frequencies2)

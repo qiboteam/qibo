@@ -226,6 +226,7 @@ def test_circuit_on_qubits():
     c = Circuit(3)
     c.add([gates.H(0), gates.X(1), gates.Y(2)])
     c.add([gates.CNOT(0, 1), gates.CZ(1, 2)])
+    c.add(gates.H(1).controlled_by(0, 2))
     new_gates = list(c.on_qubits(2, 5, 4))
     assert new_gates[0].target_qubits == (2,)
     assert new_gates[1].target_qubits == (5,)
@@ -234,6 +235,8 @@ def test_circuit_on_qubits():
     assert new_gates[3].control_qubits == (2,)
     assert new_gates[4].target_qubits == (4,)
     assert new_gates[4].control_qubits == (5,)
+    assert new_gates[5].target_qubits == (5,)
+    assert new_gates[5].control_qubits == (2, 4)
 
 
 def test_circuit_on_qubits_errors():

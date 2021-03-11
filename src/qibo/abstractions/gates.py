@@ -1106,8 +1106,12 @@ class Unitary(ParametrizedGate):
 
     def on_qubits(self, *q) -> "Gate":
         args = [self.init_args[0]]
-        args.extend(q)
-        return self.__class__(*args, **self.init_kwargs)
+        args.extend((q[i] for i in self.target_qubits))
+        gate = self.__class__(*args, **self.init_kwargs)
+        if self.is_controlled_by:
+            controls = (q[i] for i in self.control_qubits)
+            gate = gate.controlled_by(*controls)
+        return gate
 
     @abstractmethod
     def _dagger(self) -> "Gate": # pragma: no cover
