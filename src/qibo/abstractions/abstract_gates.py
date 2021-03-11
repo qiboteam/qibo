@@ -326,9 +326,7 @@ class ParametrizedGate(Gate):
                         x = [x]
                 except TypeError: # tf.Variable case
                     s = tuple(x.shape)
-                    if not s:
-                        x = [x]
-                    elif s[0] != 1:
+                    if not s or s[0] != 1:
                         x = [x]
         else:
             nparams = len(self.parameter_names)
