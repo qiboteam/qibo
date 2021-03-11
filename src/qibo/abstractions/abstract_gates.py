@@ -302,7 +302,7 @@ class ParametrizedGate(Gate):
         self.nparams = 1
         self.trainable = trainable
         self._parameters = []
-        self.symbolic_parameters = []
+        self.symbolic_parameters = {}
 
     @property
     def parameters(self):
@@ -335,8 +335,6 @@ class ParametrizedGate(Gate):
 
         if not self._parameters:
             self._parameters = nparams * [None]
-        if not self.symbolic_parameters:
-            self.symbolic_parameters = nparams * [None]
         if len(x) != nparams:
             raise_error(ValueError, "Parametrized gate has {} parameters "
                                     "but {} update values were given."
@@ -344,8 +342,8 @@ class ParametrizedGate(Gate):
         for i, v in enumerate(x):
             if isinstance(v, sympy.Expr):
                 self.well_defined = False
+                self.symbolic_parameters[i] = v
             self._parameters[i] = v
-            self.symbolic_parameters[i] = v
 
         # This part uses ``BackendGate`` attributes (see below), assuming
         # that the gate was initialized using a calculation backend.
@@ -360,14 +358,11 @@ class ParametrizedGate(Gate):
                 devgate.parameters = x
 
     def substitute_symbols(self):
-        params = []
-        for param in self.symbolic_parameters:
-            if isinstance(param, sympy.Expr):
-                for symbol in param.free_symbols:
-                    param = symbol.evaluate(param)
-                params.append(float(param))
-            else:
-                params.append(param)
+        params = list(self._parameters)
+        for i, param in self.symbolic_parameters.items():
+            for symbol in param.free_symbols:
+                param = symbol.evaluate(param)
+            params[i] = float(param)
         self.parameters = params
 
 

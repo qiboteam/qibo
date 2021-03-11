@@ -109,6 +109,16 @@ class MeasurementResult(sympy.Symbol):
             return self.binary
         return self.decimal
 
+    def outcome(self):
+        """Returns the outcome for single qubit, single shot measurements."""
+        if self.nshots is None or self.nshots > 1:
+            raise_error(ValueError, "Cannot return measurement outcome if the "
+                                    "number of shots is different than 1.")
+        if len(self.qubits) > 1:
+            raise_error(ValueError, "Cannot return measurement outcome if more "
+                                    "than one qubit is measured.")
+        return self.binary[0, 0]
+
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
 
