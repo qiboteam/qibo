@@ -181,26 +181,66 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
     qibo.set_backend(original_backend)
 
 
-def test_circuit_on_qubits_with_unitary_execution(backend, accelerators):
+def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    smallc = Circuit(3)
+    smallc.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
+    smallc.add(gates.RY(1, theta=0.2).controlled_by(0))
+    smallc.add(gates.RX(2, theta=0.3).controlled_by(1, 0))
+    smallc.add(gates.RZ(1, theta=0.4).controlled_by(0, 2))
+
+    largec = Circuit(6, accelerators=accelerators)
+    largec.add(gates.H(i) for i in range(6))
+    largec.add(smallc.on_qubits(1, 4, 3))
+
+    targetc = Circuit(6)
+    targetc.add(gates.H(i) for i in range(6))
+    targetc.add(gates.RX(1, theta=0.1).controlled_by(3, 4))
+    targetc.add(gates.RY(4, theta=0.2).controlled_by(1))
+    targetc.add(gates.RX(3, theta=0.3).controlled_by(1, 4))
+    targetc.add(gates.RZ(4, theta=0.4).controlled_by(1, 3))
+
+    assert largec.depth == targetc.depth
+    np.testing.assert_allclose(largec(), targetc())
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("controlled", [False, True])
+def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, controlled):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
 
     unitaries = np.random.random((2, 2, 2))
     smallc = Circuit(2)
-    smallc.add((gates.Unitary(u, i) for i, u in enumerate(unitaries)))
+    if controlled:
+        smallc.add(gates.Unitary(unitaries[0], 0).controlled_by(1))
+        smallc.add(gates.Unitary(unitaries[1], 1).controlled_by(0))
+    else:
+        smallc.add(gates.Unitary(unitaries[0], 0))
+        smallc.add(gates.Unitary(unitaries[1], 1))
     smallc.add(gates.CNOT(0, 1))
 
     largec = Circuit(4, accelerators=accelerators)
-    largec.add(gates.RY(1, theta=0.1))
-    largec.add(gates.RY(2, theta=0.2))
-    largec.add(smallc.on_qubits(0, 3))
+    largec.add(gates.RY(0, theta=0.1))
+    largec.add(gates.RY(1, theta=0.2))
+    largec.add(gates.RY(2, theta=0.3))
+    largec.add(gates.RY(3, theta=0.2))
+    largec.add(smallc.on_qubits(3, 0))
 
     targetc = Circuit(4)
-    targetc.add(gates.RY(1, theta=0.1))
-    targetc.add(gates.RY(2, theta=0.2))
-    targetc.add(gates.Unitary(unitaries[0], 0))
-    targetc.add(gates.Unitary(unitaries[1], 3))
-    targetc.add(gates.CNOT(0, 3))
+    targetc.add(gates.RY(0, theta=0.1))
+    targetc.add(gates.RY(1, theta=0.2))
+    targetc.add(gates.RY(2, theta=0.3))
+    targetc.add(gates.RY(3, theta=0.2))
+    if controlled:
+        targetc.add(gates.Unitary(unitaries[0], 3).controlled_by(0))
+        targetc.add(gates.Unitary(unitaries[1], 0).controlled_by(3))
+    else:
+        targetc.add(gates.Unitary(unitaries[0], 3))
+        targetc.add(gates.Unitary(unitaries[1], 0))
+    targetc.add(gates.CNOT(3, 0))
     assert largec.depth == targetc.depth
     np.testing.assert_allclose(largec(), targetc())
     qibo.set_backend(original_backend)
