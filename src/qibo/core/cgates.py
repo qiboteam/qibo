@@ -289,6 +289,7 @@ class M(BackendGate, gates.M):
             if nshots > 1:
                 raise_error(ValueError, "Cannot perform measurement collapse "
                                         "for more than one shots.")
+            print(self.result.samples())
             return getattr(self, self._active_call)(state)
         return self.result
 

@@ -104,8 +104,6 @@ class DistributedCircuit(circuit.Circuit):
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
-        if isinstance(gate, gates.M) and gate.collapse:
-            raise_error(NotImplementedError)
         elif (self.nqubits - len(gate.target_qubits) < self.nglobal and
               not isinstance(gate, (gates.M, gates.VariationalLayer))):
             raise_error(ValueError, "Insufficient qubits to use for global in "
