@@ -212,9 +212,6 @@ class M(Gate):
         self.target_qubits = q
         self.register_name = register_name
         self.collapse = collapse
-        # Flag that is turned ``False`` automatically if this gate is used in a
-        # ``DistributedCircuit`` in order to skip the normalization.
-        self.normalize = True
         self.result = None
 
         self.init_args = q

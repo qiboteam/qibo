@@ -150,21 +150,6 @@ class DistributedCircuit(circuit.Circuit):
                 K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
                                  local_eff, self.nlocal, get_threads())
 
-    def _normalize(self, state):
-        """Normalizes state by summing the norms of each state piece.
-
-        To be used after ``Collapse`` gates because normalization should be
-        applied collectively and not in each piece seperately.
-        The full calculation happens on CPU. (may not be efficient)
-        """
-        total_norm = 0
-        with K.device(self.memory_device):
-            for piece in state.pieces:
-                total_norm += K.sum(K.square(K.abs(piece)))
-            total_norm = K.cast(K.sqrt(total_norm), dtype=state.dtype)
-            for piece in state.pieces:
-                piece.assign(piece / total_norm)
-
     def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
             if q1 not in self.queues.qubits.set:
@@ -205,9 +190,6 @@ class DistributedCircuit(circuit.Circuit):
                 gate = next(special_gates)
                 if isinstance(gate, tuple): # SWAP global-local qubit
                     self._swap(state, *gate)
-                elif isinstance(gate, str): # Normalize state (after ``Collapse``)
-                    assert gate == "normalize"
-                    self._normalize(state)
                 else:
                     self._special_gate_execute(state, gate)
         for gate in special_gates: # pragma: no cover

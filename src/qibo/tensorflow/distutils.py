@@ -304,11 +304,6 @@ class DistributedQueues:
                     devgate.device = device
                     devgate.nqubits = self.nlocal
                     devgate.prepare()
-                    if is_collapse:
-                        # For ``Collapse`` gates we have to skip the
-                        # normalization step in each device
-                        devgate.normalize = False
-
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then

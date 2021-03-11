@@ -219,7 +219,7 @@ class M(BackendGate, gates.M):
 
     def state_vector_collapse(self, state, result):
         return self.gate_op(state, self.qubits_tensor, result,
-                            self.nqubits, self.normalize, get_threads())
+                            self.nqubits, True, get_threads())
 
     def density_matrix_collapse(self, state, result):
         state = self.gate_op(state, self.qubits_tensor_dm, result,
