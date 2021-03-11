@@ -49,9 +49,7 @@ class TensorflowBackend(numpy.NumpyBackend):
             self.op = op
 
         # seed to use in the measurement frequency custom op
-        from datetime import datetime
         self._seed = None
-        self.set_seed(int(datetime.now().microsecond))
         # seed can be modified using ``K.set_seed``
 
     def set_device(self, name):
@@ -195,12 +193,15 @@ class TensorflowBackend(numpy.NumpyBackend):
             frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
         else:
             from qibo.config import get_threads
+            # Generate random seed using tf
+            dtype = self.dtypes('DTYPEINT')
+            seed = self.backend.random.uniform(
+                shape=tuple(), maxval=int(1e8), dtype=dtype)
             nqubits = int(self.np.log2(tuple(probs.shape)[0]))
             shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
             frequencies = self.zeros(shape, dtype='DTYPEINT')
             frequencies = self.op.measure_frequencies(
-                frequencies, probs, nshots, nqubits,
-                self._seed, get_threads())
+                frequencies, probs, nshots, nqubits, seed, get_threads())
         return frequencies
 
     def compile(self, func):
