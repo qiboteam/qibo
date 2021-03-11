@@ -59,6 +59,24 @@ def test_measurementresult_conversions(backend, binary, dsamples, bsamples):
     qibo.set_backend(original_backend)
 
 
+def test_measurementresult_outcome(backend):
+    import collections
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementResult((0,))
+    result.decimal = np.zeros(1, dtype=np.int64)
+    assert result.outcome() == 0
+    result.decimal = np.ones(1, dtype=np.int64)
+    assert result.outcome() == 1
+    result.decimal = np.ones(5, dtype=np.int64)
+    with pytest.raises(ValueError):
+        outcome = result.outcome()
+    result = measurements.MeasurementResult((0, 1))
+    with pytest.raises(ValueError):
+        outcome = result.outcome()
+    qibo.set_backend(original_backend)
+
+
 def test_measurementresult_frequencies(backend):
     import collections
     original_backend = qibo.get_backend()

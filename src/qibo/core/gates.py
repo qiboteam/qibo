@@ -215,9 +215,6 @@ class M(BackendGate, gates.M):
         except (ValueError, OverflowError): # pragma: no cover
             pass
 
-    def reprepare(self):
-        cgates.M.reprepare(self)
-
     def construct_unitary(self):
         cgates.M.construct_unitary(self)
 

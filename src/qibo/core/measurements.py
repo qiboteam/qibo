@@ -111,12 +111,16 @@ class MeasurementResult(sympy.Symbol):
 
     def outcome(self):
         """Returns the outcome for single qubit, single shot measurements."""
-        if self.nshots is None or self.nshots > 1:
-            raise_error(ValueError, "Cannot return measurement outcome if the "
-                                    "number of shots is different than 1.")
         if len(self.qubits) > 1:
             raise_error(ValueError, "Cannot return measurement outcome if more "
                                     "than one qubit is measured.")
+        if self.nshots is None:
+            nshots = int(self.binary.shape[0])
+        else:
+            nshots = self.nshots
+        if nshots > 1:
+            raise_error(ValueError, "Cannot return measurement outcome if the "
+                                    "number of shots is different than 1.")
         return self.binary[0, 0]
 
     def frequencies(self, binary: bool = True) -> collections.Counter:
@@ -162,11 +166,11 @@ class MeasurementResult(sympy.Symbol):
         return self.decimal[i]
 
     def _convert_to_binary(self):
-        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.decimal.dtype)
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=K.dtypes('DTYPEINT'))
         return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
 
     def _convert_to_decimal(self):
-        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.binary.dtype)
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=K.dtypes('DTYPEINT'))
         _range = K.pow(2, _range)[:, K.newaxis]
         return K.matmul(self.binary, _range)[:, 0]
 

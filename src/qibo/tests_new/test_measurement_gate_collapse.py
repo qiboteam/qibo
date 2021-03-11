@@ -5,18 +5,6 @@ import qibo
 from qibo import models, gates
 
 
-def assert_result(result, decimal_samples=None, binary_samples=None,
-                  decimal_frequencies=None, binary_frequencies=None):
-    if decimal_frequencies is not None:
-        assert result.frequencies(False) == decimal_frequencies
-    if binary_frequencies is not None:
-        assert result.frequencies(True) == binary_frequencies
-    if decimal_samples is not None:
-        np.testing.assert_allclose(result.samples(False), decimal_samples)
-    if binary_samples is not None:
-        np.testing.assert_allclose(result.samples(True), binary_samples)
-
-
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]),
                           (6, [1, 3]), (4, [0, 2])])
@@ -53,8 +41,6 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     final_rho = gate(np.copy(initial_rho), nshots=1)
     results = gate.result.binary[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
-    if isinstance(results, int):
-        results = len(targets) * [results]
     for q, r in zip(targets, results):
         slicer = 2 * nqubits * [slice(None)]
         slicer[q], slicer[q + nqubits] = 1 - r, 1 - r
@@ -66,6 +52,16 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     target_rho = np.reshape(target_rho, initial_rho.shape)
     target_rho = target_rho / np.trace(target_rho)
     np.testing.assert_allclose(final_rho, target_rho)
+    qibo.set_backend(original_backend)
+
+
+def test_measurement_collapse_errors(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gate = gates.M(0, 1, collapse=True)
+    state = np.ones(4) / 4
+    with pytest.raises(ValueError):
+        state = gate(state, nshots=100)
     qibo.set_backend(original_backend)
 
 
@@ -102,7 +98,7 @@ def test_measurement_result_parameters_random(backend):
     K.set_seed(123)
     collapse = gates.M(1, collapse=True)
     target_state = collapse(np.copy(initial_state))
-    if int(output.binary[0, 0]):
+    if int(output.outcome()):
         target_state = gates.RX(2, theta=np.pi / 4)(target_state)
     np.testing.assert_allclose(result, target_state)
     qibo.set_backend(original_backend)
