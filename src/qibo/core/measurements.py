@@ -37,7 +37,7 @@ class MeasurementResult(sympy.Symbol):
         cls._counter += 1
         return super().__new__(cls=cls, name=name)
 
-    def __init__(self, qubits, probabilities=None, nshots=None):
+    def __init__(self, qubits, probabilities=None, nshots=0):
         self.qubits = tuple(qubits)
         self.probabilities = probabilities
         self.nshots = nshots
@@ -56,7 +56,7 @@ class MeasurementResult(sympy.Symbol):
     def add_qubits(self, *qubits):
         self.qubits += tuple(*qubits)
 
-    def set_probabilities(self, probabilities, nshots=None):
+    def set_probabilities(self, probabilities, nshots=0):
         self.reset()
         self.probabilities = probabilities
         self.nshots = nshots
@@ -114,7 +114,7 @@ class MeasurementResult(sympy.Symbol):
         if len(self.qubits) > 1:
             raise_error(ValueError, "Cannot return measurement outcome if more "
                                     "than one qubit is measured.")
-        if self.nshots is None:
+        if not self.nshots:
             nshots = int(self.binary.shape[0])
         else:
             nshots = self.nshots
@@ -176,7 +176,7 @@ class MeasurementResult(sympy.Symbol):
 
     def _sample_shots(self):
         self._frequencies = None
-        if self.probabilities is None:
+        if self.probabilities is None or not self.nshots:
             raise_error(RuntimeError, "Cannot sample measurement shots if "
                                       "a probability distribution is not "
                                       "provided.")
@@ -191,7 +191,7 @@ class MeasurementResult(sympy.Symbol):
 
     def _calculate_frequencies(self):
         if self._binary is None and self._decimal is None:
-            if self.probabilities is None or self.nshots is None:
+            if self.probabilities is None or not self.nshots:
                 raise_error(RuntimeError, "Cannot calculate measurement "
                                           "frequencies without a probability "
                                           "distribution or  samples.")
