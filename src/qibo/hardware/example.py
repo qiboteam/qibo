@@ -133,8 +133,7 @@ def main(qubit, ngates, nshots, address, username, password):
 
     results = []
     for circuit in circuits:
-        circuit(nshots)
-        results.append(circuit.parse_result(qubit))
+        results.append(circuit(nshots)[qubit])
 
     sweep = range(1, ngates + 1)
     plt.plot(sweep, results)

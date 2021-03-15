@@ -3,20 +3,7 @@ import bisect
 import numpy as np
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses, experiment
-
-def square(t, start, duration, amplitude, freq, I_phase, Q_phase):
-    x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
-    I_phase = I_phase * np.pi / 180
-    Q_phase = Q_phase * np.pi / 180
-    i = x * np.cos(2 * np.pi * freq * t + I_phase)
-    q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
-    return i, q
-
-def TTL(t, start, duration, amplitude):
-    x = amplitude * (1 * (start < t) & 1 * (start + duration > t))
-    return x
-
+from qibo.hardware import pulses, experiment, gates
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -64,13 +51,6 @@ class PulseSequence:
                 waveform = self._compile_file(waveform, pulse)
             else:
                 raise_error(TypeError, "Invalid pulse type {}.".format(pulse))
-        # Hardcoded bypass for now
-        i_wfm, q_wfm, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_pulses(self.time)
-        waveform[0] = i_wfm
-        waveform[1] = q_wfm
-        waveform[4] = adc_ttl
-        waveform[5] = ro_ttl
-        waveform[6] = qb_ttl
         return waveform
 
     def _compile_basic(self, waveform, pulse):
@@ -98,26 +78,6 @@ class PulseSequence:
     def serialize(self):
         """Returns the serialized pulse sequence."""
         return ", ".join([pulse.serial() for pulse in self.pulses])
-
-    @staticmethod
-    def _generate_readout_pulses(time_array):
-        # TODO: Fix for multiplexed readout
-        i_wfm, q_wfm = square(time_array, experiment.static.readout_start_time, experiment.static.readout_pulse_duration,
-                              experiment.static.readout_pulse_amplitude, experiment.static.readout_IF_frequency, experiment.static.readout_phase[0],
-                              experiment.static.readout_phase[1])
-        # ADC TTL
-        start = experiment.static.readout_start_time + experiment.static.ADC_delay
-        adc_ttl = TTL(time_array, start, 10e-9, 1)
-
-        # RO SW TTL
-        start = experiment.static.readout_start_time + experiment.static.RO_SW_delay
-        ro_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
-
-        # QB SW TTL
-        start = experiment.static.readout_start_time + experiment.static.QB_SW_delay
-        qb_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
-
-        return i_wfm, q_wfm, adc_ttl, ro_ttl, qb_ttl
 
 class Circuit(circuit.AbstractCircuit):
 
@@ -151,7 +111,7 @@ class Circuit(circuit.AbstractCircuit):
             new_data[0] = new_refer_1[0]
         return new_data[0]/new_refer_1[0]
 
-    def execute(self, nshots):
+    def execute(self, nshots, measurement_level=2):
         if self.scheduler is None:
             raise_error(RuntimeError, "Cannot execute circuit on hardware if "
                                       "scheduler is not provided.")
@@ -159,12 +119,47 @@ class Circuit(circuit.AbstractCircuit):
         qubit_times = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = self.scheduler.fetch_config()
-        # compile pulse sequence
+
+        # Compile pulse sequence
+        try:
+            measurement_gate = next(gate for gate in self.queue if isinstance(gate, gates.M))
+        except StopIteration:
+            raise_error(RuntimeError, "No measurement register assigned")
         pulse_sequence = [pulse for gate in self.queue
             for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
+
         pulse_sequence = PulseSequence(pulse_sequence)
-        # execute using the scheduler
-        self._final_state = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        # Execute using the scheduler
+        job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        raw_data = job.result()
+        
+        # Parse results according to desired measurement level
+        target_qubits = measurement_gate.target_qubits
+        output = {}
+
+        # We use the same standard as OpenPulses measurement output level
+        # Level 0: Raw
+        # Level 1: IQ Values
+        # Level 2: Qubit State
+
+        # (Possible Implementation) Level 3: Tomography to return density matrix?
+
+        if measurement_level == 0: 
+            self._final_state = raw_data
+        else:
+            for q in target_qubits:
+                data = self._parse_result(q, raw_data) # Get IQ values
+
+                if measurement_level == 1:
+                    output[q] = data
+                
+                elif measurement_level == 2:
+                    ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
+                    ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
+                    output[q] = self._probability_extraction(data, ref_zero, ref_one)
+
+            self._final_state = output
+
         return self._final_state
 
     def __call__(self, nshots):
@@ -176,7 +171,7 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError)
         return self._final_state
 
-    def parse_result(self, qubit):
+    def _parse_result(self, qubit, raw_data):
         final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
         step = 1 / experiment.static.ADC_sampling_rate
         ADC_time_array = np.arange(0, final, step)
@@ -187,11 +182,9 @@ class Circuit(circuit.AbstractCircuit):
         # For now readout is done with mixers
         IF_frequency = static_data["resonator_frequency"] - experiment.static.lo_frequency # downconversion
 
-        raw_data = self.final_state.result()
+        #raw_data = self.final_state.result()
+        # TODO: Implement a method to detect when the readout signal starts in the ADC data
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
         it = np.sum(raw_data[ro_channel[0]] * cos)
         qt = np.sum(raw_data[ro_channel[1]] * cos)
-        data = np.array([it, qt])
-        ref_zero = np.array(self.qubit_config[qubit]["iq_state"]["0"])
-        ref_one = np.array(self.qubit_config[qubit]["iq_state"]["1"])
-        return self._probability_extraction(data, ref_zero, ref_one)
+        return np.array([it, qt])

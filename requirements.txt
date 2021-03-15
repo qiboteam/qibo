@@ -10,3 +10,4 @@ matplotlib
 psutil
 networkx
 paramiko
+qcodes

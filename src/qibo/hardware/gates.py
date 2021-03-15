@@ -68,3 +68,14 @@ class RY(_Rn_, gates.RY):
 
     def __init__(self, q, theta):
         gates.RY.__init__(self, q, theta)
+
+class M(HardwareGate, gates.M):
+    def __init__(self, *q):
+        gates.M.__init__(self, *q)
+
+    def pulse_sequence(self, qubit_config, qubit_times):
+        pulses = []
+        for q in self.target_qubits:
+            pulses += qubit_config[q]["gates"][self.name]
+        
+        return pulses

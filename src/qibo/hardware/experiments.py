@@ -148,7 +148,7 @@ class AWGSystem(Experiment):
         """Hardware static parameters."""
         num_qubits = 2
         sampling_rate = 2.3e9
-        nchannels = 7
+        nchannels = 4
         sample_size = 23000
         readout_pulse_type = "IQ"
         readout_pulse_duration = 5e-6
@@ -215,6 +215,8 @@ class AWGSystem(Experiment):
             "gates": {
                 "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, pulses.Rectangular())],
                 "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, pulses.Rectangular())],
+                "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
+                            pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
             }
         }]
 
@@ -261,6 +263,30 @@ class AWGSystem(Experiment):
     def stop(self):
         self.ac.stop()
 
+    @staticmethod
+    def _generate_readout_TTL(samples):
+        end = self.static.readout_start_time + self.static.readout_pulse_duration + 1e-6
+        duration = self.static.sampling_rate * samples
+        time_array = np.linspace(end - duration, end, num=samples)
+        
+        def TTL(t, start, duration, amplitude):
+            x = amplitude * (1 * (start < t) & 1 * (start + duration > t))
+            return x
+
+        # ADC TTL
+        start = self.static.readout_start_time + self.static.ADC_delay
+        adc_ttl = TTL(time_array, start, 10e-9, 1)
+
+        # RO SW TTL
+        start = experiment.static.readout_start_time + experiment.static.RO_SW_delay
+        ro_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+
+        # QB SW TTL
+        start = experiment.static.readout_start_time + experiment.static.QB_SW_delay
+        qb_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+
+        return adc_ttl, ro_ttl, qb_ttl
+
     def upload(self, waveform, averaging):
         self.ic.setup(self.static.awg_params, self.static.lo_frequency, self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ic.awg.set_nyquist_mode()
@@ -268,9 +294,7 @@ class AWGSystem(Experiment):
         q_readout = waveform[1]
         ch3_drive = waveform[2]
         ch4_drive = waveform[3]
-        adc_ttl = waveform[4]
-        ro_ttl = waveform[5]
-        qb_ttl = waveform[6]
+        adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
         output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 60, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, 1)
         self.ic.ready_instruments_for_scanning(self.static.qubit_attenuation, self.static.readout_attenuation, 0)
@@ -296,9 +320,7 @@ class AWGSystem(Experiment):
         q_readout = waveform_batch[1, 0]
         ch3_drive = waveform_batch[2]
         ch4_drive = waveform_batch[3]
-        adc_ttl = waveform_batch[4, 0]
-        ro_ttl = waveform_batch[5, 0]
-        qb_ttl = waveform_batch[6, 0]
+        adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
         steps = len(ch3_drive)
         output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 60, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, steps)
