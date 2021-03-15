@@ -263,8 +263,7 @@ class AWGSystem(Experiment):
     def stop(self):
         self.ac.stop()
 
-    @staticmethod
-    def _generate_readout_TTL(samples):
+    def _generate_readout_TTL(self, samples):
         end = self.static.readout_start_time + self.static.readout_pulse_duration + 1e-6
         duration = self.static.sampling_rate * samples
         time_array = np.linspace(end - duration, end, num=samples)
@@ -278,12 +277,12 @@ class AWGSystem(Experiment):
         adc_ttl = TTL(time_array, start, 10e-9, 1)
 
         # RO SW TTL
-        start = experiment.static.readout_start_time + experiment.static.RO_SW_delay
-        ro_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+        start = self.static.readout_start_time + self.static.RO_SW_delay
+        ro_ttl = TTL(time_array, start, self.static.readout_pulse_duration, 1)
 
         # QB SW TTL
-        start = experiment.static.readout_start_time + experiment.static.QB_SW_delay
-        qb_ttl = TTL(time_array, start, experiment.static.readout_pulse_duration, 1)
+        start = self.static.readout_start_time + self.static.QB_SW_delay
+        qb_ttl = TTL(time_array, start, self.static.readout_pulse_duration, 1)
 
         return adc_ttl, ro_ttl, qb_ttl
 
