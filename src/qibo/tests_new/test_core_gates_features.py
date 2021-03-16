@@ -111,7 +111,7 @@ def test_collapse_after_measurement(backend):
     c.add((gates.H(i) for i in range(5)))
     output = c.add(gates.M(*qubits, collapse=True))
     c.add((gates.H(i) for i in range(5)))
-    result = c(nshots=1)
+    result = c()
     bitstring = output.binary[0]
     final_state = result.state()
 
