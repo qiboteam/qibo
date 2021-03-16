@@ -161,6 +161,23 @@ def test_measurementsymbol_counter():
     assert int(result1.name[1:]) + 1 == int(result2.name[1:]) # pylint: disable=E1101
 
 
+def test_measurementsymbol_add_shots(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementSymbol((0, 1))
+    probs = np.array([1, 0, 0, 0], dtype=np.float64)
+    result.add_shot(probabilities=probs)
+    assert result.nshots == 1
+    np.testing.assert_allclose(result.decimal, [0])
+    np.testing.assert_allclose(result.binary, [[0, 0]])
+    probs = np.array([0, 0, 0, 1], dtype=np.float64)
+    result.add_shot(probabilities=probs)
+    assert result.nshots == 2
+    np.testing.assert_allclose(result.decimal, [0, 3])
+    np.testing.assert_allclose(result.binary, [[0, 0], [1, 1]])
+    qibo.set_backend(original_backend)
+
+
 def test_measurementsymbol_outcome(backend):
     import collections
     original_backend = qibo.get_backend()

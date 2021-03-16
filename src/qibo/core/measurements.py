@@ -226,11 +226,18 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
         self.qubits += tuple(*qubits)
 
     def add_shot(self, probabilities=None):
+        """Adds a measurement shot to an existing measurement symbol.
+
+        Useful for sampling more than one shots with collapse measurement gates.
+        """
         if self.nshots:
             if probabilities is not None:
                 self.probabilities = probabilities
             self.nshots += 1
-            pass
+            # sample new shot
+            new_shot = K.cpu_fallback(K.sample_shots, self.probabilities, 1)
+            self._decimal = K.concatenate([self.decimal, new_shot], axis=0)
+            self._binary = None
         else:
             if probabilities is None:
                 raise_error(ValueError, "Cannot add shots in measurement that "
