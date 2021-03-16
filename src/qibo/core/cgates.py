@@ -245,16 +245,6 @@ class M(BackendGate, gates.M):
             self._result_tensor = K.cast(result, dtype='DTYPEINT')
         return self._result_tensor
 
-    def set_result(self, probs, nshots):
-        self._result_list = None
-        self._result_tensor = None
-        self.result.set_probabilities(probs, nshots)
-        # optional bitflip noise
-        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            noisy_result = self.result.apply_bitflips(*self.bitflip_map)
-            self.result.binary = noisy_result.binary
-        return self.result
-
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             if not self.is_prepared:
@@ -280,7 +270,14 @@ class M(BackendGate, gates.M):
 
         probs = K.cpu_fallback(calculate_probs)
         if self.collapse:
-            return self.set_result(probs, nshots)
+            self._result_list = None
+            self._result_tensor = None
+            self.result.add_shot(probs)
+            # optional bitflip noise
+            if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+                noisy_result = self.result.apply_bitflips(*self.bitflip_map)
+                self.result.binary = noisy_result.binary
+            return self.result
 
         result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
         if sum(sum(x.values()) for x in self.bitflip_map) > 0:

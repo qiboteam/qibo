@@ -254,9 +254,6 @@ class M(BackendGate, gates.M):
     def result_list(self):
         return cgates.M.result_list(self)
 
-    def set_result(self, probs, nshots):
-        return cgates.M.set_result(self, probs, nshots)
-
     def measure(self, state, nshots):
         return cgates.M.measure(self, state, nshots)
 

@@ -187,9 +187,6 @@ def test_measurementsymbol_outcome(backend):
     assert result.outcome() == 0
     result.decimal = np.ones(1, dtype=np.int64)
     assert result.outcome() == 1
-    result.decimal = np.ones(5, dtype=np.int64)
-    with pytest.raises(ValueError):
-        outcome = result.outcome()
     result = measurements.MeasurementSymbol((0, 1))
     with pytest.raises(ValueError):
         outcome = result.outcome()
@@ -204,11 +201,8 @@ def test_measurementsymbol_evaluate(backend):
     with pytest.raises(NotImplementedError):
         value = result.evaluate(expr)
     result = measurements.MeasurementSymbol((0,))
-    result.set_probabilities(np.array([1., 0.]), nshots=10)
-    expr = 2 * result
-    with pytest.raises(NotImplementedError):
-        value = result.evaluate(expr)
     result.set_probabilities(np.array([0., 1.]), nshots=1)
+    expr = 2 * result
     value = result.evaluate(expr)
     assert value == 2
     qibo.set_backend(original_backend)

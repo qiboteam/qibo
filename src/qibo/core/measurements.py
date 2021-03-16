@@ -246,7 +246,7 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
             self.set_probabilities(probabilities)
 
     def outcome(self):
-        """Returns the outcome for single qubit, single shot measurements."""
+        """Returns the last outcome for single qubit measurements."""
         if len(self.qubits) > 1:
             raise_error(ValueError, "Cannot return measurement outcome if more "
                                     "than one qubit is measured.")
@@ -254,11 +254,7 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
             nshots = int(self.binary.shape[0])
         else:
             nshots = self.nshots
-        if nshots > 1:
-            raise_error(ValueError, "Cannot return measurement outcome if the "
-                                    "number of shots is different than 1.")
-        return self.binary[0, 0]
-
+        return self.binary[-1, 0]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.
@@ -272,11 +268,7 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
                                              "available for more than one "
                                              "measured qubits. Please use "
                                              "seperate measurement gates.")
-        if self.nshots > 1:
-            raise_error(NotImplementedError, "Symbolic measurements are only "
-                                             "available for single shot but "
-                                             "{} shots were given.")
-        return expr.subs(self, self.binary[0, 0])
+        return expr.subs(self, self.outcome())
 
 
 class MeasurementRegistersResult:
