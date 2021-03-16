@@ -187,9 +187,11 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
-        self.result = self.measurements.MeasurementResult(self.qubits)
+        self.result = None
         self._result_list = None
         self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementSymbol(self.qubits)
         self.order = None
 
     def add(self, gate: gates.M):

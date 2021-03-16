@@ -187,9 +187,11 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
-        self.result = self.measurements.MeasurementResult(self.qubits)
+        self.result = None
         self._result_list = None
         self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementSymbol(self.qubits)
         self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
@@ -197,7 +199,8 @@ class M(BackendGate, gates.M):
             raise_error(RuntimeError, "Cannot add qubits to a measurement "
                                       "gate that is prepared.")
         gates.M.add(self, gate)
-        self.result.add_qubits(gate.target_qubits)
+        if self.result:
+            self.result.add_qubits(gate.target_qubits)
 
     def prepare(self):
         BackendGate.prepare(self)
@@ -275,7 +278,14 @@ class M(BackendGate, gates.M):
             probs = K.reshape(probs, probs_dim)
             return probs
 
-        return self.set_result(K.cpu_fallback(calculate_probs), nshots)
+        probs = K.cpu_fallback(calculate_probs)
+        if self.collapse:
+            return self.set_result(probs, nshots)
+
+        result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
+        return result
 
     def state_vector_call(self, state):
         return self.state_vector_collapse(state, self.result_tensor())
