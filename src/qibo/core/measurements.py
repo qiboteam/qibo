@@ -220,7 +220,7 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
         return super().__new__(cls=cls, name=name)
 
     def __init__(self, qubits, probabilities=None, nshots=0):
-        return MeasurementResult.__init__(self, qubits, probabilities, nshots)
+        MeasurementResult.__init__(self, qubits, probabilities, nshots)
 
     def add_qubits(self, *qubits):
         self.qubits += tuple(*qubits)
