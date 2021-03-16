@@ -222,9 +222,6 @@ class MeasurementSymbol(MeasurementResult, sympy.Symbol):
     def __init__(self, qubits, probabilities=None, nshots=0):
         MeasurementResult.__init__(self, qubits, probabilities, nshots)
 
-    def add_qubits(self, *qubits):
-        self.qubits += tuple(*qubits)
-
     def add_shot(self, probabilities=None):
         """Adds a measurement shot to an existing measurement symbol.
 

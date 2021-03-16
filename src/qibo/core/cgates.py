@@ -199,8 +199,6 @@ class M(BackendGate, gates.M):
             raise_error(RuntimeError, "Cannot add qubits to a measurement "
                                       "gate that is prepared.")
         gates.M.add(self, gate)
-        if self.result:
-            self.result.add_qubits(gate.target_qubits)
 
     def prepare(self):
         BackendGate.prepare(self)
