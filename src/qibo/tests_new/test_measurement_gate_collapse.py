@@ -65,6 +65,24 @@ def test_measurement_collapse_errors(backend):
     qibo.set_backend(original_backend)
 
 
+def test_measurement_collapse_bitflip_noise(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo import K
+    K.set_seed(123)
+    c = models.Circuit(4, accelerators)
+    output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
+    result = c(nshots=20)
+    if K.name == "tensorflow":
+        target_samples = [2, 2, 2, 1, 1, 0, 1, 2, 1, 2, 2, 3, 3, 0, 3,
+                          0, 0, 3, 0, 1]
+    elif K.name == "numpy":
+        target_samples = [3, 3, 0, 3, 2, 0, 1, 2, 2, 2, 2, 0, 0, 2, 0,
+                          2, 3, 1, 1, 0]
+    np.testing.assert_allclose(output.samples(binary=False), target_samples)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("effect", [False, True])
 def test_measurement_result_parameters(backend, accelerators, effect):
     original_backend = qibo.get_backend()

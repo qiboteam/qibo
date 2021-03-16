@@ -165,6 +165,8 @@ def test_measurementsymbol_add_shots(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     result = measurements.MeasurementSymbol((0, 1))
+    with pytest.raises(ValueError):
+        result.add_shot()
     probs = np.array([1, 0, 0, 0], dtype=np.float64)
     result.add_shot(probabilities=probs)
     assert result.nshots == 1
