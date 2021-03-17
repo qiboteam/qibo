@@ -80,6 +80,9 @@ def test_measurement_collapse_bitflip_noise(backend, accelerators):
         target_samples = [3, 3, 0, 3, 2, 0, 1, 2, 2, 2, 2, 0, 0, 2, 0,
                           2, 3, 1, 1, 0]
     np.testing.assert_allclose(output.samples(binary=False), target_samples)
+    _, target_frequencies = np.unique(target_samples, return_counts=True)
+    target_frequencies = {i: v for i, v in enumerate(target_frequencies)}
+    assert output.frequencies(binary=False) == target_frequencies
     qibo.set_backend(original_backend)
 
 

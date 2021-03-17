@@ -372,13 +372,8 @@ class AbstractCircuit(ABC):
             a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
         if isinstance(gate, collections.abc.Iterable):
-            outputs = []
             for g in gate:
-                output = self.add(g)
-                if output is not None:
-                    outputs.append(output)
-            if outputs:
-                return outputs
+                self.add(g)
         elif isinstance(gate, gates.Gate):
             return self._add(gate)
         else:
