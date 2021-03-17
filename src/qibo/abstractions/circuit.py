@@ -366,6 +366,10 @@ class AbstractCircuit(ABC):
                 `gate` can also be an iterable or generator of gates.
                 In this case all gates in the iterable will be added in the
                 circuit.
+
+        Returns:
+            If the circuit contains measurement gates with ``collapse=True``
+            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
         if isinstance(gate, collections.abc.Iterable):
             outputs = []

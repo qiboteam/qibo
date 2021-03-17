@@ -255,6 +255,9 @@ class MeasurementSymbol(sympy.Symbol):
     def __init__(self, measurement_result, qubit=None):
         self.result = measurement_result
         self.qubit = qubit
+        # create seperate ``MeasurementSymbol`` object that maps to the same
+        # result for each measured qubit so that the user can use the symbol
+        # to control subsequent parametrized gates
         if qubit is None:
             self.elements = [self.__class__(self.result, q)
                              for q in self.result.qubits]
