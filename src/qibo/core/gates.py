@@ -191,7 +191,7 @@ class M(BackendGate, gates.M):
         self._result_list = None
         self._result_tensor = None
         if collapse:
-            self.result = self.measurements.MeasurementSymbol(self.qubits)
+            self.result = self.measurements.MeasurementResult(self.qubits)
         self.order = None
 
     def add(self, gate: gates.M):
@@ -219,6 +219,9 @@ class M(BackendGate, gates.M):
 
     def construct_unitary(self):
         cgates.M.construct_unitary(self)
+
+    def symbols(self):
+        return cgates.M.symbols(self)
 
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):

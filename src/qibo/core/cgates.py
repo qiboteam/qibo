@@ -191,7 +191,7 @@ class M(BackendGate, gates.M):
         self._result_list = None
         self._result_tensor = None
         if collapse:
-            self.result = self.measurements.MeasurementSymbol(self.qubits)
+            self.result = self.measurements.MeasurementResult(self.qubits)
         self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
@@ -217,6 +217,12 @@ class M(BackendGate, gates.M):
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
+
+    def symbols(self):
+        if self._symbols is None:
+            from qibo.core.measurements import MeasurementSymbol
+            self._symbols = MeasurementSymbol(self.result)
+        return self._symbols
 
     def state_vector_collapse(self, state, result):
         return self.gate_op(state, self.qubits_tensor, result,
