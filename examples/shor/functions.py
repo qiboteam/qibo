@@ -363,47 +363,39 @@ def quantum_order_finding_semiclassical(N, a):
     x = [n+1+i for i in range(n)]
     ancilla = 2*n + 1
     q_reg = 2*n + 2
-    circuit = Circuit(2*n+3)
     print(f'  - Total number of qubits used: {2*n+3}.\n')
-    r = []
+    results = []
     exponents = []
     exp = a%N
     for i in range(2*n):
         exponents.append(exp)
         exp = (exp**2)%N
-    
+
+    circuit = Circuit(2 * n + 3)
     # Building the quantum circuit
     circuit.add(gates.H(q_reg))
-    circuit.add(gates.X(x[len(x)-1]))
+    circuit.add(gates.X(x[len(x) - 1]))
     #a_i = (a**(2**(2*n - 1)))
     circuit.add(c_U(q_reg, x, b, exponents[-1], N, ancilla, n))
     circuit.add(gates.H(q_reg))
-    circuit.add(gates.M(q_reg))
-    result = circuit(nshots=1)
-    r.append(result.frequencies(binary=False).most_common()[0][0])
-    initial_state = circuit.final_state
-    
+    results.append(circuit.add(gates.M(q_reg, collapse=True)))
     # Using multiple measurements for the semiclassical QFT.
     for i in range(1, 2*n):
-        circuit = Circuit(2*n+3)
-        circuit.add(gates.Collapse(q_reg, result=[r[-1]]))
-        if r[-1] == 1:
-            circuit.add(gates.X(q_reg))
+        # reset measured qubit to |0>
+        circuit.add(gates.RX(q_reg, theta=np.pi * results[-1]))
+
         circuit.add(gates.H(q_reg))
         #a_i = (a**(2**(2*n - 1 - i)))
         circuit.add(c_U(q_reg, x, b, exponents[-1-i], N, ancilla, n))
         angle = 0
         for k in range(2, i+2):
-            angle += 2*np.pi*r[i+1-k]/(2**k)
+            angle += 2 * np.pi * results[i + 1 - k] / (2 ** k)
         circuit.add(gates.U1(q_reg, -angle))
         circuit.add(gates.H(q_reg))
-        circuit.add(gates.M(q_reg))
-        result = circuit(initial_state, nshots=1)
-        r.append(result.frequencies(binary=False).most_common()[0][0])
-        initial_state = circuit.final_state
-    s = 0
-    for i in range(2*n):
-        s += r[i]*2**(i)
+        results.append(circuit.add(gates.M(q_reg, collapse=True)))
+
+    circuit() # execute
+    s = sum(int(r.outcome()) * (2 ** i) for i, r in enumerate(results))
     print(f"The quantum circuit measures s = {s}.\n")
     return s
 
