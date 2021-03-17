@@ -370,8 +370,11 @@ class AbstractCircuit(ABC):
         if isinstance(gate, collections.abc.Iterable):
             outputs = []
             for g in gate:
-                outputs.append(self.add(g))
-            return outputs
+                output = self.add(g)
+                if output is not None:
+                    outputs.append(output)
+            if outputs:
+                return outputs
         elif isinstance(gate, gates.Gate):
             return self._add(gate)
         else:
@@ -412,7 +415,6 @@ class AbstractCircuit(ABC):
             self.parametrized_gates.append(gate)
             if gate.trainable:
                 self.trainable_gates.append(gate)
-        return
 
     def set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.

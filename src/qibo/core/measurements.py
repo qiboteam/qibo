@@ -280,12 +280,12 @@ class MeasurementSymbol(sympy.Symbol):
             expr (sympy.Expr): Sympy expression that involves the current
                 measurement symbol.
         """
-        if len(self.result.qubits) > 1:
+        if self.qubit is None and len(self.result.qubits) > 1:
             raise_error(NotImplementedError, "Symbolic measurements are not "
                                              "available for more than one "
                                              "measured qubits. Please use "
                                              "seperate measurement gates.")
-        return expr.subs(self, self.result.outcome())
+        return expr.subs(self, self.outcome())
 
 
 class MeasurementRegistersResult:
