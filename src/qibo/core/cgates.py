@@ -218,11 +218,11 @@ class M(BackendGate, gates.M):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
-    def symbols(self):
-        if self._symbols is None:
+    def symbol(self):
+        if self._symbol is None:
             from qibo.core.measurements import MeasurementSymbol
-            self._symbols = MeasurementSymbol(self.result)
-        return self._symbols
+            self._symbol = MeasurementSymbol(self.result)
+        return self._symbol
 
     def state_vector_collapse(self, state, result):
         return self.gate_op(state, self.qubits_tensor, result,

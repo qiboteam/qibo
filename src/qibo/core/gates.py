@@ -220,8 +220,8 @@ class M(BackendGate, gates.M):
     def construct_unitary(self):
         cgates.M.construct_unitary(self)
 
-    def symbols(self):
-        return cgates.M.symbols(self)
+    def symbol(self):
+        return cgates.M.symbol(self)
 
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):

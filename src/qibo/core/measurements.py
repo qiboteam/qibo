@@ -252,19 +252,12 @@ class MeasurementSymbol(sympy.Symbol):
         cls._counter += 1
         return super().__new__(cls=cls, name=name)
 
-    def __init__(self, measurement_result):
+    def __init__(self, measurement_result, qubit=None):
         self.result = measurement_result
-
-    def set_probabilities(self, *args, **kwargs):
-        self.result.set_probabilities(*args, **kwargs)
-
-    @property
-    def decimal(self):
-        return self.result.decimal
-
-    @property
-    def binary(self):
-        return self.result.binary
+        self.qubit = qubit
+        if qubit is None:
+            self.elements = [self.__class__(self.result, q)
+                             for q in self.result.qubits]
 
     def samples(self, *args, **kwargs):
         return self.result.samples(*args, **kwargs)
@@ -273,7 +266,12 @@ class MeasurementSymbol(sympy.Symbol):
         return self.result.frequencies(*args, **kwargs)
 
     def outcome(self):
-        return self.result.outcome()
+        if self.qubit is None:
+            return self.result.outcome()
+        return self.result.outcome(self.qubit)
+
+    def __getitem__(self, i):
+        return self.elements[i]
 
     def evaluate(self, expr):
         """Substitutes the symbol's value in the given expression.

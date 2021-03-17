@@ -189,7 +189,7 @@ def test_measurementsymbol_counter():
     assert symbol2.result.qubits == (1, 3)
     assert symbol1.name[0] == "m" # pylint: disable=E1101
     assert symbol2.name[0] == "m" # pylint: disable=E1101
-    assert int(symbol1.name[1:]) + 1 == int(symbol2.name[1:]) # pylint: disable=E1101
+    assert int(symbol1.name[1:]) + 3 == int(symbol2.name[1:]) # pylint: disable=E1101
 
 
 def test_measurementsymbol_evaluate(backend):
@@ -200,7 +200,7 @@ def test_measurementsymbol_evaluate(backend):
     with pytest.raises(NotImplementedError):
         value = result.evaluate(expr)
     result = measurements.MeasurementSymbol(measurements.MeasurementResult((0,)))
-    result.set_probabilities(np.array([0., 1.]), nshots=1)
+    result.result.set_probabilities(np.array([0., 1.]), nshots=1)
     expr = 2 * result
     value = result.evaluate(expr)
     assert value == 2

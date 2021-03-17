@@ -91,7 +91,7 @@ def test_measurement_collapse_distributed(backend, accelerators, nqubits, target
     output = c.add(gates.M(*targets, collapse=True))
     result = c(np.copy(initial_state))
     slicer = nqubits * [slice(None)]
-    for t, r in zip(targets, output.binary[0]):
+    for t, r in zip(targets, output.samples()[0]):
         slicer[t] = r
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
@@ -112,7 +112,7 @@ def test_collapse_after_measurement(backend):
     output = c.add(gates.M(*qubits, collapse=True))
     c.add((gates.H(i) for i in range(5)))
     result = c()
-    bitstring = output.binary[0]
+    bitstring = output.samples()[0]
     final_state = result.state()
 
     ct = Circuit(5)
