@@ -231,7 +231,8 @@ class M(BackendGate, gates.M):
 
     def result_list(self):
         if self._result_list is None:
-            resdict = {q: r for q, r in zip(self.target_qubits, self.result.binary[0])}
+            pairs = zip(self.target_qubits, self.result.binary[-1])
+            resdict = {q: r for q, r in pairs}
             self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
         return self._result_list
 

@@ -143,9 +143,9 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
         final_states = c(initial_state=np.copy(initial_state), nshots=20)
 
     K.set_seed(123)
-    collapse = gates.M(1, collapse=True)
     target_states = []
     for _ in range(20):
+        collapse = gates.M(1, collapse=True)
         target_state = collapse(np.copy(initial_state))
         if int(collapse.result.outcome()):
             target_state = gates.RX(2, theta=np.pi / 4)(target_state)
@@ -169,15 +169,14 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     result = c(initial_state=np.copy(initial_state), nshots=30)
 
     K.set_seed(123)
-    collapse = gates.M(1, collapse=True)
-    measurement = gates.M(0, 1, 2, 3)
     target_samples = []
     for _ in range(30):
+        collapse = gates.M(1, collapse=True)
         target_state = collapse(np.copy(initial_state))
         if int(collapse.result.outcome()):
             target_state = gates.RY(0, theta=np.pi / 3)(target_state)
             target_state = gates.RY(2, theta=np.pi / 4)(target_state)
-        target_result = measurement(target_state)
+        target_result = gates.M(0, 1, 2, 3)(target_state)
         target_samples.append(target_result.decimal[0])
     np.testing.assert_allclose(result.samples(binary=False), target_samples)
     qibo.set_backend(original_backend)

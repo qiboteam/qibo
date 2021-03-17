@@ -258,7 +258,7 @@ class M(BackendGate, gates.M):
         return cgates.M.measure(self, state, nshots)
 
     def state_vector_call(self, state):
-        return self.state_vector_collapse(state, self.result.binary[0])
+        return self.state_vector_collapse(state, self.result.binary[-1])
 
     def density_matrix_call(self, state):
         return self.density_matrix_collapse(state, self.result_list())
