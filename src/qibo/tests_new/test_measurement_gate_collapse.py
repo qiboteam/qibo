@@ -65,6 +65,27 @@ def test_measurement_collapse_errors(backend):
     qibo.set_backend(original_backend)
 
 
+def test_measurement_collapse_bitflip_noise(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo import K
+    K.set_seed(123)
+    c = models.Circuit(4, accelerators)
+    output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
+    result = c(nshots=20)
+    if K.name == "tensorflow":
+        target_samples = [2, 2, 2, 1, 1, 0, 1, 2, 1, 2, 2, 3, 3, 0, 3,
+                          0, 0, 3, 0, 1]
+    elif K.name == "numpy":
+        target_samples = [3, 3, 0, 3, 2, 0, 1, 2, 2, 2, 2, 0, 0, 2, 0,
+                          2, 3, 1, 1, 0]
+    np.testing.assert_allclose(output.samples(binary=False), target_samples)
+    _, target_frequencies = np.unique(target_samples, return_counts=True)
+    target_frequencies = {i: v for i, v in enumerate(target_frequencies)}
+    assert output.frequencies(binary=False) == target_frequencies
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("effect", [False, True])
 def test_measurement_result_parameters(backend, accelerators, effect):
     original_backend = qibo.get_backend()
@@ -92,39 +113,97 @@ def test_measurement_result_parameters_random(backend, accelerators):
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
     output = c.add(gates.M(1, collapse=True))
+    c.add(gates.RY(0, theta=np.pi * output / 5))
     c.add(gates.RX(2, theta=np.pi * output / 4))
     result = c(initial_state=np.copy(initial_state))
 
     K.set_seed(123)
     collapse = gates.M(1, collapse=True)
     target_state = collapse(np.copy(initial_state))
-    if int(output.outcome()):
+    if int(collapse.result.outcome()):
+        target_state = gates.RY(0, theta=np.pi / 5)(target_state)
         target_state = gates.RX(2, theta=np.pi / 4)(target_state)
     np.testing.assert_allclose(result, target_state)
     qibo.set_backend(original_backend)
 
 
-def test_measurement_result_parameters_multiple_executions_loop(backend, accelerators):
+@pytest.mark.parametrize("use_loop", [True, False])
+def test_measurement_result_parameters_repeated_execution(backend, accelerators, use_loop):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     from qibo import K
     from qibo.tests_new.test_core_gates import random_state
+    initial_state = random_state(4)
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
     output = c.add(gates.M(1, collapse=True))
     c.add(gates.RX(2, theta=np.pi * output / 4))
-    final_states = []
-    for _ in range(20):
-        final_states.append(c().state())
+    if use_loop:
+        final_states = []
+        for _ in range(20):
+            final_states.append(c(np.copy(initial_state)).state())
+    else:
+        final_states = c(initial_state=np.copy(initial_state), nshots=20)
 
     K.set_seed(123)
-    initial_state = c.get_initial_state()
     target_states = []
-    collapse = gates.M(1, collapse=True)
     for _ in range(20):
+        collapse = gates.M(1, collapse=True)
         target_state = collapse(np.copy(initial_state))
-        if int(output.outcome()):
+        if int(collapse.result.outcome()):
             target_state = gates.RX(2, theta=np.pi / 4)(target_state)
         target_states.append(np.copy(target_state))
     np.testing.assert_allclose(final_states, target_states)
+    qibo.set_backend(original_backend)
+
+
+def test_measurement_result_parameters_repeated_execution_final_measurements(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo import K
+    from qibo.tests_new.test_core_gates import random_state
+    initial_state = random_state(4)
+    K.set_seed(123)
+    c = models.Circuit(4, accelerators)
+    output = c.add(gates.M(1, collapse=True))
+    c.add(gates.RY(0, theta=np.pi * output / 3))
+    c.add(gates.RY(2, theta=np.pi * output / 4))
+    c.add(gates.M(0, 1, 2, 3))
+    result = c(initial_state=np.copy(initial_state), nshots=30)
+
+    K.set_seed(123)
+    target_samples = []
+    for _ in range(30):
+        collapse = gates.M(1, collapse=True)
+        target_state = collapse(np.copy(initial_state))
+        if int(collapse.result.outcome()):
+            target_state = gates.RY(0, theta=np.pi / 3)(target_state)
+            target_state = gates.RY(2, theta=np.pi / 4)(target_state)
+        target_result = gates.M(0, 1, 2, 3)(target_state)
+        target_samples.append(target_result.decimal[0])
+    np.testing.assert_allclose(result.samples(binary=False), target_samples)
+    qibo.set_backend(original_backend)
+
+
+def test_measurement_result_parameters_multiple_qubits(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo import K
+    from qibo.tests_new.test_core_gates import random_state
+    initial_state = random_state(4)
+    K.set_seed(123)
+    c = models.Circuit(4)
+    output = c.add(gates.M(0, 1, 2, collapse=True))
+    c.add(gates.RY(1, theta=np.pi * output[0] / 5))
+    c.add(gates.RX(3, theta=np.pi * output[2] / 3))
+    result = c(initial_state=np.copy(initial_state))
+
+    K.set_seed(123)
+    collapse = gates.M(0, 1, 2, collapse=True)
+    target_state = collapse(np.copy(initial_state))
+    if int(collapse.result.outcome(0)):
+        target_state = gates.RY(1, theta=np.pi / 5)(target_state)
+    if int(collapse.result.outcome(2)):
+        target_state = gates.RX(3, theta=np.pi / 3)(target_state)
+    np.testing.assert_allclose(result, target_state)
     qibo.set_backend(original_backend)

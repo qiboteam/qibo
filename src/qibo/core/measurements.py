@@ -11,7 +11,7 @@ TensorType = Any
 ProbsType = Union[float, List[float], Dict[int, float]]
 
 
-class MeasurementResult(sympy.Symbol):
+class MeasurementResult:
     """Holds measurement results (shot samples and frequencies).
 
     Implements tools for calculating the frequencies and shot samples from
@@ -30,14 +30,8 @@ class MeasurementResult(sympy.Symbol):
             measurements.
         nshots (int): Number of shots for the measurement.
     """
-    _counter = 0
 
-    def __new__(cls, *args, **kwargs):
-        name = "m{}".format(cls._counter)
-        cls._counter += 1
-        return super().__new__(cls=cls, name=name)
-
-    def __init__(self, qubits, probabilities=None, nshots=None):
+    def __init__(self, qubits, probabilities=None, nshots=0):
         self.qubits = tuple(qubits)
         self.probabilities = probabilities
         self.nshots = nshots
@@ -53,13 +47,40 @@ class MeasurementResult(sympy.Symbol):
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
 
-    def add_qubits(self, *qubits):
-        self.qubits += tuple(*qubits)
+    def set_probabilities(self, probabilities, nshots=1):
+        """Sets the probability distribution and number of shots for measurements.
 
-    def set_probabilities(self, probabilities, nshots=None):
+        Calling this resets existing previous samples.
+
+        Args:
+            probabilities (Tensor): Tensor of size ``(2 ** len(qubits),)``
+                that defines the probability distribution to sample measurements
+                from.
+            nshots (int): Number of measurement shots to sample.
+        """
         self.reset()
         self.probabilities = probabilities
         self.nshots = nshots
+
+    def add_shot(self, probabilities=None):
+        """Adds a measurement shot to an existing measurement symbol.
+
+        Useful for sampling more than one shots with collapse measurement gates.
+        """
+        if self.nshots:
+            if probabilities is not None:
+                self.probabilities = probabilities
+            self.nshots += 1
+            # sample new shot
+            new_shot = K.cpu_fallback(K.sample_shots, self.probabilities, 1)
+            self._decimal = K.concatenate([self.decimal, new_shot], axis=0)
+            self._binary = None
+        else:
+            if probabilities is None:
+                raise_error(ValueError, "Cannot add shots in measurement that "
+                                        "for which the probability distribution "
+                                        "is not specified.")
+            self.set_probabilities(probabilities)
 
     def set_frequencies(self, frequencies):
         if self.has_samples():
@@ -100,6 +121,14 @@ class MeasurementResult(sympy.Symbol):
         self.reset()
         self._binary = x
 
+    def outcome(self, q=0):
+        """Returns the latest outcome for the selected qubit."""
+        if not self.nshots:
+            nshots = int(self.binary.shape[0])
+        else:
+            nshots = self.nshots
+        return self.binary[-1, q]
+
     def has_samples(self):
         """Checks if the measurement result has samples calculated."""
         return self._binary is not None or self._decimal is not None
@@ -108,20 +137,6 @@ class MeasurementResult(sympy.Symbol):
         if binary:
             return self.binary
         return self.decimal
-
-    def outcome(self):
-        """Returns the outcome for single qubit, single shot measurements."""
-        if len(self.qubits) > 1:
-            raise_error(ValueError, "Cannot return measurement outcome if more "
-                                    "than one qubit is measured.")
-        if self.nshots is None:
-            nshots = int(self.binary.shape[0])
-        else:
-            nshots = self.nshots
-        if nshots > 1:
-            raise_error(ValueError, "Cannot return measurement outcome if the "
-                                    "number of shots is different than 1.")
-        return self.binary[0, 0]
 
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
@@ -144,24 +159,6 @@ class MeasurementResult(sympy.Symbol):
                  for k, v in self._frequencies.items()})
         return self._frequencies
 
-    def evaluate(self, expr):
-        """Substitutes the symbol's value in the given expression.
-
-        Args:
-            expr (sympy.Expr): Sympy expression that involves the current
-                measurement symbol.
-        """
-        if len(self.qubits) > 1:
-            raise_error(NotImplementedError, "Symbolic measurements are not "
-                                             "available for more than one "
-                                             "measured qubits. Please use "
-                                             "seperate measurement gates.")
-        if self.nshots > 1:
-            raise_error(NotImplementedError, "Symbolic measurements are only "
-                                             "available for single shot but "
-                                             "{} shots were given.")
-        return expr.subs(self, self.binary[0, 0])
-
     def __getitem__(self, i: int) -> TensorType:
         return self.decimal[i]
 
@@ -176,7 +173,7 @@ class MeasurementResult(sympy.Symbol):
 
     def _sample_shots(self):
         self._frequencies = None
-        if self.probabilities is None:
+        if self.probabilities is None or not self.nshots:
             raise_error(RuntimeError, "Cannot sample measurement shots if "
                                       "a probability distribution is not "
                                       "provided.")
@@ -191,7 +188,7 @@ class MeasurementResult(sympy.Symbol):
 
     def _calculate_frequencies(self):
         if self._binary is None and self._decimal is None:
-            if self.probabilities is None or self.nshots is None:
+            if self.probabilities is None or not self.nshots:
                 raise_error(RuntimeError, "Cannot calculate measurement "
                                           "frequencies without a probability "
                                           "distribution or  samples.")
@@ -240,6 +237,58 @@ class MeasurementResult(sympy.Symbol):
         noisy_result = self.__class__(self.qubits)
         noisy_result.binary = noisy_samples
         return noisy_result
+
+
+class MeasurementSymbol(sympy.Symbol):
+    """``sympy.Symbol`` connected to a specific :class:`qibo.core.measurements.MeasurementResult`.
+
+    Used by :class:`qibo.abstractions.gates.M` with ``collapse=True`` to allow
+    controlling subsequent gates from the measurement results.
+    """
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
+
+    def __init__(self, measurement_result, qubit=None):
+        self.result = measurement_result
+        self.qubit = qubit
+        # create seperate ``MeasurementSymbol`` object that maps to the same
+        # result for each measured qubit so that the user can use the symbol
+        # to control subsequent parametrized gates
+        if qubit is None:
+            self.elements = [self.__class__(self.result, q)
+                             for q in self.result.qubits]
+
+    def samples(self, *args, **kwargs):
+        return self.result.samples(*args, **kwargs)
+
+    def frequencies(self, *args, **kwargs):
+        return self.result.frequencies(*args, **kwargs)
+
+    def outcome(self):
+        if self.qubit is None:
+            return self.result.outcome()
+        return self.result.outcome(self.qubit)
+
+    def __getitem__(self, i):
+        return self.elements[i]
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        if self.qubit is None and len(self.result.qubits) > 1:
+            raise_error(NotImplementedError, "Symbolic measurements are not "
+                                             "available for more than one "
+                                             "measured qubits. Please use "
+                                             "seperate measurement gates.")
+        return expr.subs(self, self.outcome())
 
 
 class MeasurementRegistersResult:

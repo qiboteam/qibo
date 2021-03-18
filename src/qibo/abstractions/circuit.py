@@ -366,12 +366,14 @@ class AbstractCircuit(ABC):
                 `gate` can also be an iterable or generator of gates.
                 In this case all gates in the iterable will be added in the
                 circuit.
+
+        Returns:
+            If the circuit contains measurement gates with ``collapse=True``
+            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
         if isinstance(gate, collections.abc.Iterable):
-            outputs = []
             for g in gate:
-                outputs.append(self.add(g))
-            return outputs
+                self.add(g)
         elif isinstance(gate, gates.Gate):
             return self._add(gate)
         else:
@@ -404,14 +406,14 @@ class AbstractCircuit(ABC):
             self.set_nqubits(gate)
             self.queue.append(gate)
             if isinstance(gate, gates.M):
-                return gate.result
+                self.repeated_execution = True
+                return gate.symbol()
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
             self.parametrized_gates.append(gate)
             if gate.trainable:
                 self.trainable_gates.append(gate)
-        return
 
     def set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.

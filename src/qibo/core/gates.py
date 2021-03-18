@@ -187,9 +187,11 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
-        self.result = self.measurements.MeasurementResult(self.qubits)
+        self.result = None
         self._result_list = None
         self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementResult(self.qubits)
         self.order = None
 
     def add(self, gate: gates.M):
@@ -217,6 +219,9 @@ class M(BackendGate, gates.M):
 
     def construct_unitary(self):
         cgates.M.construct_unitary(self)
+
+    def symbol(self):
+        return cgates.M.symbol(self)
 
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):
@@ -252,14 +257,11 @@ class M(BackendGate, gates.M):
     def result_list(self):
         return cgates.M.result_list(self)
 
-    def set_result(self, probs, nshots):
-        return cgates.M.set_result(self, probs, nshots)
-
     def measure(self, state, nshots):
         return cgates.M.measure(self, state, nshots)
 
     def state_vector_call(self, state):
-        return self.state_vector_collapse(state, self.result.binary[0])
+        return self.state_vector_collapse(state, self.result.binary[-1])
 
     def density_matrix_call(self, state):
         return self.density_matrix_collapse(state, self.result_list())

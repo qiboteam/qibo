@@ -187,9 +187,11 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
 
-        self.result = self.measurements.MeasurementResult(self.qubits)
+        self.result = None
         self._result_list = None
         self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementResult(self.qubits)
         self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
@@ -197,7 +199,6 @@ class M(BackendGate, gates.M):
             raise_error(RuntimeError, "Cannot add qubits to a measurement "
                                       "gate that is prepared.")
         gates.M.add(self, gate)
-        self.result.add_qubits(gate.target_qubits)
 
     def prepare(self):
         BackendGate.prepare(self)
@@ -217,6 +218,12 @@ class M(BackendGate, gates.M):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
+    def symbol(self):
+        if self._symbol is None:
+            from qibo.core.measurements import MeasurementSymbol
+            self._symbol = MeasurementSymbol(self.result)
+        return self._symbol
+
     def state_vector_collapse(self, state, result):
         return self.gate_op(state, self.qubits_tensor, result,
                             self.nqubits, True, get_threads())
@@ -230,7 +237,8 @@ class M(BackendGate, gates.M):
 
     def result_list(self):
         if self._result_list is None:
-            resdict = {q: r for q, r in zip(self.target_qubits, self.result.binary[0])}
+            pairs = zip(self.target_qubits, self.result.binary[-1])
+            resdict = {q: r for q, r in pairs}
             self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
         return self._result_list
 
@@ -241,16 +249,6 @@ class M(BackendGate, gates.M):
                          for i, r in enumerate(self.result_list()))
             self._result_tensor = K.cast(result, dtype='DTYPEINT')
         return self._result_tensor
-
-    def set_result(self, probs, nshots):
-        self._result_list = None
-        self._result_tensor = None
-        self.result.set_probabilities(probs, nshots)
-        # optional bitflip noise
-        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-            noisy_result = self.result.apply_bitflips(*self.bitflip_map)
-            self.result.binary = noisy_result.binary
-        return self.result
 
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
@@ -275,7 +273,21 @@ class M(BackendGate, gates.M):
             probs = K.reshape(probs, probs_dim)
             return probs
 
-        return self.set_result(K.cpu_fallback(calculate_probs), nshots)
+        probs = K.cpu_fallback(calculate_probs)
+        if self.collapse:
+            self._result_list = None
+            self._result_tensor = None
+            self.result.add_shot(probs)
+            # optional bitflip noise
+            if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+                noisy_result = self.result.apply_bitflips(*self.bitflip_map)
+                self.result.binary = noisy_result.binary
+            return self.result
+
+        result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
+        if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+            result = result.apply_bitflips(*self.bitflip_map)
+        return result
 
     def state_vector_call(self, state):
         return self.state_vector_collapse(state, self.result_tensor())

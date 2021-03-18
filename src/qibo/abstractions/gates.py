@@ -213,6 +213,7 @@ class M(Gate):
         self.register_name = register_name
         self.collapse = collapse
         self.result = None
+        self._symbol = None
 
         self.init_args = q
         self.init_kwargs = {"register_name": register_name,
@@ -293,6 +294,10 @@ class M(Gate):
             return {q: 0 for q in self.qubits}
         pt = self._get_bitflip_tuple(self.qubits, p)
         return {q: p for q, p in zip(self.qubits, pt)}
+
+    def symbol(self):
+        """Returns symbol containing measurement outcomes for ``collapse=True`` gates."""
+        return self._symbol
 
     def add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
