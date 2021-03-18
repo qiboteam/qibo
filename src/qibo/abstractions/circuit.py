@@ -938,7 +938,7 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self, line_wrap=None) -> str:
+    def draw(self, line_wrap=70) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -1015,24 +1015,29 @@ class AbstractCircuit(ABC):
 
         # line wrap
         if line_wrap:
-            output = output.splitlines()
+            loutput = output.splitlines()
             def chunkstring(string, length):
                 nchunks = range(0, len(string), length)
                 return (string[i:length+i] for i in nchunks), len(nchunks)
             for row in range(self.nqubits):
-                chunks, nchunks = chunkstring(output[row], line_wrap)
+                chunks, nchunks = chunkstring(loutput[row][3 + len(str(self.nqubits)):], line_wrap)
+                if nchunks == 1:
+                    loutput = None
+                    break
                 for i, c in enumerate(chunks):
-                    output += ['' for _ in range(self.nqubits)]
-                    suffix = ' ...\n'
+                    loutput += ['' for _ in range(self.nqubits)]
+                    suffix = f' ...\n'
+                    prefix = f'q{row}' + ' ' * (len(str(self.nqubits))-len(str(row))) + ': '
                     if i == 0:
-                        prefix = ''
+                        prefix += ' ' * 4
                     elif row == 0:
-                        prefix = '\n... '
+                        prefix = '\n' + prefix + '... '
                     else:
-                        prefix = '... '
+                        prefix += '... '
                     if i == nchunks-1:
                         suffix = '\n'
-                    output[row + i * self.nqubits] = prefix + c + suffix
-            output = ''.join(output)
+                    loutput[row + i * self.nqubits] = prefix + c + suffix
+            if loutput is not None:
+                output = ''.join(loutput)
 
         return output.rstrip('\n')
