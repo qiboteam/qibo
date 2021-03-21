@@ -1,5 +1,6 @@
 def optimize(loss, initial_parameters, args=(), method='Powell',
-             options=None, compile=False, processes=None):
+             options=None, compile=False, processes=None, jac=None, hess=None,
+             hessp=None, bounds=None, constraints=(), tol=None, callback=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cma`
         - :meth:`qibo.optimizers.newtonian`
@@ -20,6 +21,14 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
             This is relevant only for the ``'sgd'`` optimizer.
         processes (int): number of processes when using the parallel BFGS method.
+        jac (dict): Method for computing the gradient vector for scipy optimizers.
+        hess (dict): Method for computing the hessian matrix for scipy optimizers.
+        hessp (callable): Hessian of objective function times an arbitrary
+            vector for scipy optimizers.
+        bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
+        constraints (dict): Constraints definition for scipy optimizers.
+        tol (float): Tolerance of termination for scipy optimizers.
+        callback (callable): Called after each iteration for scipy optimizers.
 
     Returns:
         loss (float): final best loss value.
@@ -57,7 +66,8 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
     elif method == "sgd":
         return sgd(loss, initial_parameters, args, options, compile)
     else:
-        return newtonian(loss, initial_parameters, args, method, options, processes)
+        return newtonian(loss, initial_parameters, args, method, options, processes,
+                         jac, hess, hessp, bounds, constraints, tol, callback)
 
 
 def cma(loss, initial_parameters, args=(), options=None):
@@ -78,7 +88,8 @@ def cma(loss, initial_parameters, args=(), options=None):
     return r[1].result.fbest, r[1].result.xbest, r
 
 
-def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, processes=None):
+def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, processes=None,
+              jac=None, hess=None, hessp=None, bounds=None, constraints=(), tol=None, callback=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -104,15 +115,26 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
         options (dict): Dictionary with options accepted by
             ``scipy.optimize.minimize``.
         processes (int): number of processes when using the parallel BFGS method.
+        jac (dict): Method for computing the gradient vector for scipy optimizers.
+        hess (dict): Method for computing the hessian matrix for scipy optimizers.
+        hessp (callable): Hessian of objective function times an arbitrary
+            vector for scipy optimizers.
+        bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
+        constraints (dict): Constraints definition for scipy optimizers.
+        tol (float): Tolerance of termination for scipy optimizers.
+        callback (callable): Called after each iteration for scipy optimizers.
     """
     if method == 'parallel_L-BFGS-B':
         from qibo.parallel import _check_parallel_configuration
         _check_parallel_configuration(processes)
-        o = ParallelBFGS(loss, args=args, options=options, processes=processes)
+        o = ParallelBFGS(loss, args=args, options=options, processes=processes,
+                         bounds=bounds, callback=callback)
         m = o.run(initial_parameters)
     else:
         from scipy.optimize import minimize
-        m = minimize(loss, initial_parameters, args=args, method=method, options=options)
+        m = minimize(loss, initial_parameters, args=args, method=method, options=options,
+                     jac=jac, hess=hess, hessp=hessp, bounds=bounds, constraints=constraints,
+                     tol=tol, callback=callback)
     return m.fun, m.x, m
 
 
