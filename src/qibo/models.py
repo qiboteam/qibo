@@ -188,6 +188,10 @@ class VQE(object):
         Return:
             The final expectation value.
             The corresponding best parameters.
+            The optimization result object. For scipy methods it
+                returns the ``OptimizeResult``, for ``'cma'`` the
+                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
+                the options used during the optimization.
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
@@ -212,12 +216,12 @@ class VQE(object):
             loss = _loss
         else:
             loss = lambda p, c, h: _loss(p, c, h).numpy()
-        result, parameters = self.optimizers.optimize(loss, initial_state,
-                                                      args=(self.circuit, self.hamiltonian),
-                                                      method=method, options=options,
-                                                      compile=compile, processes=processes)
+        result, parameters, extra = self.optimizers.optimize(loss, initial_state,
+                                                             args=(self.circuit, self.hamiltonian),
+                                                             method=method, options=options,
+                                                             compile=compile, processes=processes)
         self.circuit.set_parameters(parameters)
-        return result, parameters
+        return result, parameters, extra
 
 
 class QAOA(object):
@@ -373,6 +377,10 @@ class QAOA(object):
         Return:
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
+            The optimization result object. For scipy methods it
+                returns the ``OptimizeResult``, for ``'cma'`` the
+                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
+                the options used during the optimization.
         """
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
@@ -390,7 +398,7 @@ class QAOA(object):
         else:
             loss = lambda p, c, h: _loss(p, c, h).numpy()
 
-        result, parameters = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
-                                                      method=method, options=options)
+        result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
+                                                             method=method, options=options)
         self.set_parameters(parameters)
-        return result, parameters
+        return result, parameters, extra

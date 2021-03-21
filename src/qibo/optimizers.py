@@ -21,6 +21,13 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
             This is relevant only for the ``'sgd'`` optimizer.
         processes (int): number of processes when using the parallel BFGS method.
 
+    Returns:
+        loss (float): final best loss value.
+        xbest (float): best parameters obtained by the optimizer.
+        extra: optimizer specific return object containing. For scipy methods it
+            returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
+            and for ``'sgd'`` the options used during the optimization.
+
     Example:
         ::
 
@@ -40,7 +47,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
 
             # optimize using random initial variational parameters
             initial_parameters = np.random.uniform(0, 2, 1)
-            best, params = optimize(myloss, initial_parameters, args=(circuit))
+            best, params, extra = optimize(myloss, initial_parameters, args=(circuit))
 
             # set parameters to circuit
             circuit.set_parameters(params)
@@ -68,7 +75,7 @@ def cma(loss, initial_parameters, args=(), options=None):
     """
     import cma
     r = cma.fmin2(loss, initial_parameters, 1.7, options=options, args=args)
-    return r[1].result.fbest, r[1].result.xbest
+    return r[1].result.fbest, r[1].result.xbest, r
 
 
 def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, processes=None):
@@ -106,7 +113,7 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
     else:
         from scipy.optimize import minimize
         m = minimize(loss, initial_parameters, args=args, method=method, options=options)
-    return m.fun, m.x
+    return m.fun, m.x, m
 
 
 def sgd(loss, initial_parameters, args=(), options=None, compile=False):
@@ -171,7 +178,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         if e % sgd_options["nmessage"] == 1:
             log.info('ite %d : loss %f', e, l.numpy())
 
-    return loss(vparams, *args).numpy(), vparams.numpy()
+    return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
 
 
 from qibo.parallel import ParallelResources, _executor
