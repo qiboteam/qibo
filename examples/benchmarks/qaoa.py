@@ -36,8 +36,8 @@ def main(nqubits, nangles, trotter=False, solver="exp",
 
     start_time = time.time()
     options = {'disp': True, 'maxiter': maxiter}
-    best, params = qaoa.minimize(initial_parameters, method=method,
-                                 options=options)
+    best, params, _ = qaoa.minimize(initial_parameters, method=method,
+                                    options=options)
     minimization_time = time.time() - start_time
 
     epsilon = np.log10(1/np.abs(best - target))
