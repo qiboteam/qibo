@@ -1,6 +1,6 @@
 def optimize(loss, initial_parameters, args=(), method='Powell',
-             options=None, compile=False, processes=None, jac=None, hess=None,
-             hessp=None, bounds=None, constraints=(), tol=None, callback=None):
+             jac=None, hess=None, hessp=None, bounds=None, constraints=(),
+             tol=None, callback=None, options=None, compile=False, processes=None):
     """Main optimization method. Selects one of the following optimizers:
         - :meth:`qibo.optimizers.cma`
         - :meth:`qibo.optimizers.newtonian`
@@ -16,11 +16,6 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
             one of the Newtonian methods supported by
             :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``.
-        options (dict): Dictionary with options. See the specific optimizer
-            bellow for a list of the supported options.
-        compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
-            This is relevant only for the ``'sgd'`` optimizer.
-        processes (int): number of processes when using the parallel BFGS method.
         jac (dict): Method for computing the gradient vector for scipy optimizers.
         hess (dict): Method for computing the hessian matrix for scipy optimizers.
         hessp (callable): Hessian of objective function times an arbitrary
@@ -29,6 +24,11 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         constraints (dict): Constraints definition for scipy optimizers.
         tol (float): Tolerance of termination for scipy optimizers.
         callback (callable): Called after each iteration for scipy optimizers.
+        options (dict): Dictionary with options. See the specific optimizer
+            bellow for a list of the supported options.
+        compile (bool): If ``True`` the Tensorflow optimization graph is compiled.
+            This is relevant only for the ``'sgd'`` optimizer.
+        processes (int): number of processes when using the parallel BFGS method.
 
     Returns:
         loss (float): final best loss value.
@@ -66,8 +66,9 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
     elif method == "sgd":
         return sgd(loss, initial_parameters, args, options, compile)
     else:
-        return newtonian(loss, initial_parameters, args, method, options, processes,
-                         jac, hess, hessp, bounds, constraints, tol, callback)
+        return newtonian(loss, initial_parameters, args, method,
+                         jac, hess, hessp, bounds, constraints, tol,
+                         callback, options, processes)
 
 
 def cma(loss, initial_parameters, args=(), options=None):
@@ -88,8 +89,9 @@ def cma(loss, initial_parameters, args=(), options=None):
     return r[1].result.fbest, r[1].result.xbest, r
 
 
-def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, processes=None,
-              jac=None, hess=None, hessp=None, bounds=None, constraints=(), tol=None, callback=None):
+def newtonian(loss, initial_parameters, args=(), method='Powell',
+              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
+              tol=None, callback=None, options=None, processes=None):
     """Newtonian optimization approaches based on ``scipy.optimize.minimize``.
 
     For more details check the `scipy documentation <https://docs.scipy.org/doc/scipy/reference/generated/scipy.optimize.minimize.html>`_.
@@ -112,9 +114,6 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
         args (tuple): optional arguments for the loss function.
         method (str): Name of method supported by ``scipy.optimize.minimize`` and ``'parallel_L-BFGS-B'`` for
             a parallel version of L-BFGS-B algorithm.
-        options (dict): Dictionary with options accepted by
-            ``scipy.optimize.minimize``.
-        processes (int): number of processes when using the parallel BFGS method.
         jac (dict): Method for computing the gradient vector for scipy optimizers.
         hess (dict): Method for computing the hessian matrix for scipy optimizers.
         hessp (callable): Hessian of objective function times an arbitrary
@@ -123,18 +122,21 @@ def newtonian(loss, initial_parameters, args=(), method='Powell', options=None, 
         constraints (dict): Constraints definition for scipy optimizers.
         tol (float): Tolerance of termination for scipy optimizers.
         callback (callable): Called after each iteration for scipy optimizers.
+        options (dict): Dictionary with options accepted by
+            ``scipy.optimize.minimize``.
+        processes (int): number of processes when using the parallel BFGS method.
     """
     if method == 'parallel_L-BFGS-B':
         from qibo.parallel import _check_parallel_configuration
         _check_parallel_configuration(processes)
-        o = ParallelBFGS(loss, args=args, options=options, processes=processes,
-                         bounds=bounds, callback=callback)
+        o = ParallelBFGS(loss, args=args, processes=processes,
+                         bounds=bounds, callback=callback, options=options)
         m = o.run(initial_parameters)
     else:
         from scipy.optimize import minimize
-        m = minimize(loss, initial_parameters, args=args, method=method, options=options,
+        m = minimize(loss, initial_parameters, args=args, method=method,
                      jac=jac, hess=hess, hessp=hessp, bounds=bounds, constraints=constraints,
-                     tol=tol, callback=callback)
+                     tol=tol, callback=callback, options=options)
     return m.fun, m.x, m
 
 
