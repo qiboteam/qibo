@@ -357,6 +357,8 @@ As mentioned in the :ref:`How to perform measurements? <measurement-examples>`
 measurement can by default be used only in the end of the circuit and they do
 not have any effect on the state. In this section we describe how to collapse
 the state during measurements and re-use measured qubits in the circuit.
+Collapsing the state means projecting to the |0> or |1> subspace according to
+the sampled result for each measured qubit.
 
 The state is collapsed when the ``collapse=True`` is used during instantiation
 of the :class:`qibo.abstractions.gates.M` gate. For example
@@ -427,6 +429,7 @@ any parametrized gate as follows:
 
 .. code-block:: python
 
+    import numpy as np
     from qibo.models import Circuit
     from qibo import gates
 
@@ -448,6 +451,7 @@ If more than one qubits are used in a ``collapse=True`` measurement gate the
 
 .. code-block:: python
 
+    import numpy as np
     from qibo.models import Circuit
     from qibo import gates
 
