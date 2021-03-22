@@ -53,9 +53,9 @@ def main(nqubits, hfield, params, dt, solver, method, maxiter, save):
     evolution = models.AdiabaticEvolution(h0, h1, spolynomial, dt=dt,
                                           solver=solver)
     options = {"maxiter": maxiter, "disp": True}
-    energy, parameters = evolution.minimize(params, method=method,
-                                            options=options,
-                                            messages=True)
+    energy, parameters, _ = evolution.minimize(params, method=method,
+                                               options=options,
+                                               messages=True)
 
     print("\nBest energy found:", energy)
     print("Final parameters:", parameters)

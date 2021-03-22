@@ -46,7 +46,7 @@ def test_vqc(method, options, compile, filename):
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    best, params = optimize(myloss, x0, args=(c, data), method=method,
+    best, params, _ = optimize(myloss, x0, args=(c, data), method=method,
                             options=options, compile=compile)
     if filename is not None:
         utils.assert_regression_fixture(params, filename)
@@ -100,8 +100,8 @@ def test_vqe(method, options, compile, filename):
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
     v = VQE(circuit, hamiltonian)
-    best, params = v.minimize(initial_parameters, method=method,
-                              options=options, compile=compile)
+    best, params, _ = v.minimize(initial_parameters, method=method,
+                                 options=options, compile=compile)
     if method == "cma":
         # remove `outcmaes` folder
         import shutil
@@ -134,12 +134,12 @@ def test_vqe_custom_gates_errors():
     v = VQE(circuit, hamiltonian)
     # compile with custom gates
     with pytest.raises(RuntimeError):
-        best, params = v.minimize(initial_parameters, method="BFGS",
-                                  options={'maxiter': 1}, compile=True)
+        best, params, _ = v.minimize(initial_parameters, method="BFGS",
+                                     options={'maxiter': 1}, compile=True)
     # use SGD with custom gates
     with pytest.raises(RuntimeError):
-        best, params = v.minimize(initial_parameters, method="sgd",
-                                  compile=False)
+        best, params, _ = v.minimize(initial_parameters, method="sgd",
+                                     compile=False)
     qibo.set_backend(original_backend)
 
 
@@ -252,6 +252,6 @@ def test_qaoa_optimization(method, options, trotter, filename):
     h = hamiltonians.XXZ(3, trotter=trotter)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
-    best, params = qaoa.minimize(initial_p, method=method, options=options)
+    best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         utils.assert_regression_fixture(params, filename)
