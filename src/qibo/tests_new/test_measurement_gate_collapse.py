@@ -109,6 +109,7 @@ def test_measurement_result_parameters_random(backend, accelerators):
     qibo.set_backend(backend)
     from qibo import K
     from qibo.tests_new.test_core_gates import random_state
+    test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
@@ -118,11 +119,12 @@ def test_measurement_result_parameters_random(backend, accelerators):
     result = c(initial_state=np.copy(initial_state))
 
     K.set_seed(123)
-    collapse = gates.M(1, collapse=True)
-    target_state = collapse(np.copy(initial_state))
-    if int(collapse.result.outcome()):
-        target_state = gates.RY(0, theta=np.pi / 5)(target_state)
-        target_state = gates.RX(2, theta=np.pi / 4)(target_state)
+    with K.device(test_device):
+        collapse = gates.M(1, collapse=True)
+        target_state = collapse(np.copy(initial_state))
+        if int(collapse.result.outcome()):
+            target_state = gates.RY(0, theta=np.pi / 5)(target_state)
+            target_state = gates.RX(2, theta=np.pi / 4)(target_state)
     np.testing.assert_allclose(result, target_state)
     qibo.set_backend(original_backend)
 
@@ -133,6 +135,7 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
     qibo.set_backend(backend)
     from qibo import K
     from qibo.tests_new.test_core_gates import random_state
+    test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
@@ -147,12 +150,13 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
 
     K.set_seed(123)
     target_states = []
-    for _ in range(20):
-        collapse = gates.M(1, collapse=True)
-        target_state = collapse(np.copy(initial_state))
-        if int(collapse.result.outcome()):
-            target_state = gates.RX(2, theta=np.pi / 4)(target_state)
-        target_states.append(np.copy(target_state))
+    with K.device(test_device):
+        for _ in range(20):
+            collapse = gates.M(1, collapse=True)
+            target_state = collapse(np.copy(initial_state))
+            if int(collapse.result.outcome()):
+                target_state = gates.RX(2, theta=np.pi / 4)(target_state)
+            target_states.append(np.copy(target_state))
     np.testing.assert_allclose(final_states, target_states)
     qibo.set_backend(original_backend)
 
@@ -162,6 +166,7 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     qibo.set_backend(backend)
     from qibo import K
     from qibo.tests_new.test_core_gates import random_state
+    test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
@@ -173,14 +178,16 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
 
     K.set_seed(123)
     target_samples = []
-    for _ in range(30):
-        collapse = gates.M(1, collapse=True)
-        target_state = collapse(np.copy(initial_state))
-        if int(collapse.result.outcome()):
-            target_state = gates.RY(0, theta=np.pi / 3)(target_state)
-            target_state = gates.RY(2, theta=np.pi / 4)(target_state)
-        target_result = gates.M(0, 1, 2, 3)(target_state)
-        target_samples.append(target_result.decimal[0])
+    with K.device(test_device):
+        for _ in range(30):
+            collapse = gates.M(1, collapse=True)
+            target_state = collapse(np.copy(initial_state))
+            if int(collapse.result.outcome()):
+                target_state = gates.RY(0, theta=np.pi / 3)(target_state)
+                target_state = gates.RY(2, theta=np.pi / 4)(target_state)
+            with K.device(K.default_device):
+                target_result = gates.M(0, 1, 2, 3)(target_state)
+                target_samples.append(target_result.decimal[0])
     np.testing.assert_allclose(result.samples(binary=False), target_samples)
     qibo.set_backend(original_backend)
 
