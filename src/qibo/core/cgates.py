@@ -52,14 +52,12 @@ class BackendGate(BaseBackendGate):
         self.is_prepared = True
         targets = K.qnp.cast(self.target_qubits, dtype="int32")
         controls = K.qnp.cast(self.control_qubits, dtype="int32")
-        qubits = list(self.nqubits - controls - 1)
-        qubits.extend(self.nqubits - targets - 1)
-        qubits = sorted(qubits)
-        with K.device(self.device):
-            self.qubits_tensor = K.cast(qubits, dtype="int32")
-            if self.density_matrix:
-                self.target_qubits_dm = tuple(targets + self.nqubits)
-                self.qubits_tensor_dm = self.qubits_tensor + self.nqubits
+        qubits = [self.nqubits - q - 1 for q in self.control_qubits]
+        qubits.extend(self.nqubits - q - 1 for q in self.target_qubits)
+        self.qubits_tensor = sorted(qubits)
+        if self.density_matrix:
+            self.target_qubits_dm = [q + self.nqubits for q in self.target_qubits]
+            self.qubits_tensor_dm = [q + self.nqubits for q in self.qubits_tensor]
 
     def set_nqubits(self, state):
         self.nqubits = int(math.log2(tuple(state.shape)[0]))
