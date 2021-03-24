@@ -83,8 +83,7 @@ class MatrixGate(BackendGate):
         self.matrix = None
 
     def reprepare(self):
-        with K.device(self.device):
-            self.matrix = K.cast(self.construct_unitary(), dtype='DTYPECPX')
+        self.matrix = self.construct_unitary()
 
     def prepare(self):
         super().prepare()
@@ -425,9 +424,7 @@ class _CUn_(MatrixGate):
         getattr(gates, cbase).__init__(self, q0, q1, **params)
 
     def reprepare(self):
-        with K.device(self.device):
-            self.matrix = K.cast(self.base.construct_unitary(self),
-                                 dtype='DTYPECPX')
+        self.matrix = self.base.construct_unitary(self)
 
     def construct_unitary(self):
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
