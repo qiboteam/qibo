@@ -366,12 +366,16 @@ class AbstractCircuit(ABC):
                 `gate` can also be an iterable or generator of gates.
                 In this case all gates in the iterable will be added in the
                 circuit.
+
+        Returns:
+            If the circuit contains measurement gates with ``collapse=True``
+            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
         elif isinstance(gate, gates.Gate):
-            self._add(gate)
+            return self._add(gate)
         else:
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
@@ -394,13 +398,16 @@ class AbstractCircuit(ABC):
                                         "".format(gate.target_qubits, self.nqubits))
 
         self.check_measured(gate.qubits)
-        if isinstance(gate, gates.M):
+        if isinstance(gate, gates.M) and not gate.collapse:
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
         else:
             self.set_nqubits(gate)
             self.queue.append(gate)
+            if isinstance(gate, gates.M):
+                self.repeated_execution = True
+                return gate.symbol()
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
@@ -949,7 +956,7 @@ class AbstractCircuit(ABC):
                   "cx": "X", "swap": "x", "cz": "Z",
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
-                  "id": "I", "collapse": "M", "fsim": "f",
+                  "id": "I", "measure": "M", "fsim": "f",
                   "generalizedfsim": "gf"}
 
         # build string representation of gates

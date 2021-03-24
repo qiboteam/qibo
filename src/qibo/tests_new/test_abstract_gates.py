@@ -69,24 +69,6 @@ def test_z_controlled_by(controls, instance):
     assert isinstance(gate, getattr(gates, instance))
 
 
-@pytest.mark.parametrize("result,target_result",
-                         [(1, [1, 1, 1]),
-                          ([0, 1, 0], [0, 0, 1])])
-def test_collapse_init(result, target_result):
-    # also tests ``Collapse.result`` getter and setter
-    gate = gates.Collapse(0, 2, 1, result=result)
-    assert gate.target_qubits == (0, 2, 1)
-    assert gate.sorted_qubits == [0, 1, 2]
-    assert gate.result == target_result
-
-
-@pytest.mark.parametrize("gatename", ["Collapse", "M"])
-def test_not_implemented_controlled_by(gatename):
-    gate = getattr(gates, gatename)(0)
-    with pytest.raises(NotImplementedError):
-        gate.controlled_by(1)
-
-
 @pytest.mark.parametrize("targets,p0,p1",
                          [((0,), None, None),
                           ((0, 1, 2), None, None),
@@ -120,6 +102,12 @@ def test_measurement_add():
     assert gate.target_qubits == (0, 2, 1, 3)
     assert gate.bitflip_map == ({0: 0, 1: 0.3, 2: 0, 3: 0.3},
                                 {0: 0, 1: 0, 2: 0, 3: 0})
+
+
+def test_measurement_errors():
+    gate = gates.M(0)
+    with pytest.raises(NotImplementedError):
+        gate.controlled_by(1)
 
 
 @pytest.mark.parametrize("gatename,params",
@@ -297,7 +285,7 @@ def test_pauli_noise_channel_init():
 def test_reset_channel_init():
     gate = gates.ResetChannel(0, 0.1, 0.2)
     assert gate.target_qubits == (0,)
-    assert isinstance(gate.gates[0], gates.Collapse)
+    assert isinstance(gate.gates[0], gates.M)
     assert isinstance(gate.gates[1], gates.X)
 
 # TODO: Add thermal relaxation channel init test

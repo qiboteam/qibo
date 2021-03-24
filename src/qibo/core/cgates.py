@@ -13,7 +13,7 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        cgate_only = {"I", "M", "ZPow", "CZPow", "Flatten", "CallbackGate"}
+        cgate_only = {"I", "ZPow", "CZPow", "Flatten", "CallbackGate"}
         # TODO: Move these to a different file and refactor
         if K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
@@ -90,7 +90,8 @@ class MatrixGate(BackendGate):
 
     def prepare(self):
         super().prepare()
-        self.reprepare()
+        if self.well_defined:
+            self.reprepare()
 
     def state_vector_call(self, state):
         return self.gate_op(state, self.matrix, self.qubits_tensor, # pylint: disable=E1121
@@ -173,63 +174,25 @@ class I(BackendGate, gates.I):
         return state
 
 
-class Collapse(BackendGate, gates.Collapse):
-
-    def __init__(self, *q: int, result: List[int] = 0):
-        BackendGate.__init__(self)
-        gates.Collapse.__init__(self, *q, result=result)
-        self.result_tensor = None
-        self.gate_op = K.op.collapse_state
-
-    def _result_to_list(self, res):
-        if isinstance(res, K.tensor_types):
-            return list(K.qnp.cast(res, dtype='DTYPEINT'))
-        if isinstance(res, int) or isinstance(res, K.numeric_types):
-            return len(self.target_qubits) * [res]
-        return list(res)
-
-    @gates.Collapse.result.setter
-    def result(self, res):
-        gates.Collapse.result.fset(self, self._result_to_list(res)) # pylint: disable=no-member
-        if self.is_prepared:
-            self.reprepare()
-
-    def reprepare(self):
-        n = len(self.result)
-        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(self.result))
-        self.result_tensor = K.cast(result, dtype='DTYPEINT')
-
-    def prepare(self):
-        BackendGate.prepare(self)
-        self.reprepare()
-
-    def construct_unitary(self):
-        raise_error(ValueError, "Collapse gate does not have unitary "
-                                "representation.")
-
-    def state_vector_call(self, state):
-        return self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                            self.nqubits, self.normalize, get_threads())
-
-    def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, self.result_tensor,
-                             2 * self.nqubits, False, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, self.result_tensor,
-                             2 * self.nqubits, False, get_threads())
-        return state / K.trace(state)
-
-
 class M(BackendGate, gates.M):
     from qibo.core import measurements, states
 
     def __init__(self, *q, register_name: Optional[str] = None,
+                 collapse: bool = False,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
         BackendGate.__init__(self)
-        gates.M.__init__(self, *q, register_name=register_name, p0=p0, p1=p1)
-        self.traceout = None
+        gates.M.__init__(self, *q, register_name=register_name,
+                         collapse=collapse, p0=p0, p1=p1)
         self.unmeasured_qubits = None # Tuple
         self.reduced_target_qubits = None # List
+
+        self.result = None
+        self._result_list = None
+        self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementResult(self.qubits)
+        self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
         if self.is_prepared:
@@ -238,7 +201,7 @@ class M(BackendGate, gates.M):
         gates.M.add(self, gate)
 
     def prepare(self):
-        self.is_prepared = True
+        BackendGate.prepare(self)
         target_qubits = set(self.target_qubits)
         unmeasured_qubits = []
         reduced_target_qubits = dict()
@@ -250,25 +213,51 @@ class M(BackendGate, gates.M):
         self.unmeasured_qubits = tuple(unmeasured_qubits)
         self.reduced_target_qubits = list(
             reduced_target_qubits[i] for i in self.target_qubits)
-        if self.density_matrix:
-            qubits = set(self.unmeasured_qubits)
-            self.traceout = self.einsum_string(qubits, self.nqubits, True)
 
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
                                 "representation.")
 
-    def state_vector_call(self, state):
-        return self.states.VectorState.from_tensor(state)
+    def symbol(self):
+        if self._symbol is None:
+            from qibo.core.measurements import MeasurementSymbol
+            self._symbol = MeasurementSymbol(self.result)
+        return self._symbol
 
-    def density_matrix_call(self, state):
-        return self.states.MatrixState.from_tensor(state)
+    def state_vector_collapse(self, state, result):
+        return self.gate_op(state, self.qubits_tensor, result,
+                            self.nqubits, True, get_threads())
 
-    def __call__(self, state, nshots):
+    def density_matrix_collapse(self, state, result):
+        state = self.gate_op(state, self.qubits_tensor_dm, result,
+                             2 * self.nqubits, False, get_threads())
+        state = self.gate_op(state, self.qubits_tensor, result,
+                             2 * self.nqubits, False, get_threads())
+        return state / K.trace(state)
+
+    def result_list(self):
+        if self._result_list is None:
+            pairs = zip(self.target_qubits, self.result.binary[-1])
+            resdict = {q: r for q, r in pairs}
+            self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
+        return self._result_list
+
+    def result_tensor(self):
+        if self._result_tensor is None:
+            n = len(self.result_list())
+            result = sum(2 ** (n - i - 1) * r
+                         for i, r in enumerate(self.result_list()))
+            self._result_tensor = K.cast(result, dtype='DTYPEINT')
+        return self._result_tensor
+
+    def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             if not self.is_prepared:
                 self.set_nqubits(state)
-            state = getattr(self, self._active_call)(state)
+            if self.density_matrix:
+                state = self.states.MatrixState.from_tensor(state)
+            else:
+                state = self.states.VectorState.from_tensor(state)
         elif isinstance(state, self.states.AbstractState):
             if not self.is_prepared:
                 self.set_nqubits(state.tensor)
@@ -283,12 +272,37 @@ class M(BackendGate, gates.M):
             probs = K.transpose(probs, axes=self.reduced_target_qubits)
             probs = K.reshape(probs, probs_dim)
             return probs
+
         probs = K.cpu_fallback(calculate_probs)
+        if self.collapse:
+            self._result_list = None
+            self._result_tensor = None
+            self.result.add_shot(probs)
+            # optional bitflip noise
+            if sum(sum(x.values()) for x in self.bitflip_map) > 0:
+                noisy_result = self.result.apply_bitflips(*self.bitflip_map)
+                self.result.binary = noisy_result.binary
+            return self.result
+
         result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
-        # optional bitflip noise
         if sum(sum(x.values()) for x in self.bitflip_map) > 0:
             result = result.apply_bitflips(*self.bitflip_map)
         return result
+
+    def state_vector_call(self, state):
+        return self.state_vector_collapse(state, self.result_tensor())
+
+    def density_matrix_call(self, state):
+        return self.density_matrix_collapse(state, self.result_tensor())
+
+    def __call__(self, state, nshots=1):
+        self.result = self.measure(state, nshots)
+        if self.collapse:
+            if nshots > 1:
+                raise_error(ValueError, "Cannot perform measurement collapse "
+                                        "for more than one shots.")
+            return getattr(self, self._active_call)(state)
+        return self.result
 
 
 class RX(MatrixGate, gates.RX):
@@ -604,6 +618,9 @@ class Unitary(MatrixGate, gates.Unitary):
     def parameters(self, x):
         x = K.qnp.cast(x)
         shape = tuple(x.shape)
+        if len(shape) > 2 and shape[0] == 1:
+            shape = shape[1:]
+            x = K.squeeze(x, axis=0)
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == true_shape:
             ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
@@ -934,20 +951,32 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     @staticmethod
     def _invert(gate):
-        if isinstance(gate, gates.Collapse):
+        if isinstance(gate, gates.M):
             return None
         return gate
 
     def state_vector_call(self, state):
         not_collapsed = True
         if K.qnp.random.random() < self.probs[-2]:
-            state = self.gates[-2](state)
+            state = self.gates[-2].state_vector_collapse(state, [0])
             not_collapsed = False
         if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
-                state = self.gates[-2](state)
+                state = self.gates[-2].state_vector_collapse(state, [0])
             state = self.gates[-1](state)
         return state
+
+    def density_matrix_call(self, state):
+        new_state = (1 - self.psum) * state
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+            if isinstance(gate, M):
+                state = gate.density_matrix_collapse(state, [0])
+            else:
+                state = gate(state)
+            new_state += p * state
+            if inv_gate is not None:
+                state = inv_gate(state) # reset to the original state vector
+        return new_state
 
 
 class ThermalRelaxationChannel(gates.ThermalRelaxationChannel):

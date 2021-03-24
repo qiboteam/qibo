@@ -39,7 +39,8 @@ class BackendGate(BaseBackendGate):
 
     def prepare(self):
         self.is_prepared = True
-        self.reprepare()
+        if self.well_defined:
+            self.reprepare()
         try:
             s = 1 + self.density_matrix
             self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
@@ -173,42 +174,54 @@ class Z(BackendGate, gates.Z):
         return K.matrices.Z
 
 
-class Collapse(BackendGate, gates.Collapse):
+class M(BackendGate, gates.M):
+    from qibo.core import measurements, states
 
-    def __init__(self, *q: int, result: List[int] = 0):
+    def __init__(self, *q, register_name: Optional[str] = None,
+                 collapse: bool = False,
+                 p0: Optional["ProbsType"] = None,
+                 p1: Optional["ProbsType"] = None):
         BackendGate.__init__(self)
-        gates.Collapse.__init__(self, *q, result=result)
-        self.order = None
-        self.ids = None
-        self.density_matrix_result = None
+        gates.M.__init__(self, *q, register_name=register_name,
+                         collapse=collapse, p0=p0, p1=p1)
+        self.unmeasured_qubits = None # Tuple
+        self.reduced_target_qubits = None # List
 
-    @gates.Collapse.result.setter
-    def result(self, res):
-        x = cgates.Collapse._result_to_list(self, res)
-        gates.Collapse.result.fset(self, x) # pylint: disable=no-member
-        if self.is_prepared:
-            self.prepare()
+        self.result = None
+        self._result_list = None
+        self._result_tensor = None
+        if collapse:
+            self.result = self.measurements.MeasurementResult(self.qubits)
+        self.order = None
+
+    def add(self, gate: gates.M):
+        cgates.M.add(self, gate)
 
     def prepare(self):
-        self.is_prepared = True
+        cgates.M.prepare(self)
         try:
-            self.order = list(self.sorted_qubits)
+            sorted_qubits = sorted(self.target_qubits)
+            self.order = list(sorted_qubits)
             s = 1 + self.density_matrix
             self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
             self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
             if self.density_matrix:
-                self.order.extend((q + self.nqubits for q in self.sorted_qubits))
+                self.order.extend((q + self.nqubits for q in sorted_qubits))
                 self.order.extend((q for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
+                                   if q not in sorted_qubits))
                 self.order.extend((q + self.nqubits for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
-                self.sorted_qubits += [q + self.nqubits for q in self.sorted_qubits]
-                self.density_matrix_result = 2 * self.result
+                                   if q not in sorted_qubits))
             else:
                 self.order.extend((q for q in range(self.nqubits)
-                                   if q not in self.sorted_qubits))
+                                   if q not in sorted_qubits))
         except (ValueError, OverflowError): # pragma: no cover
             pass
+
+    def construct_unitary(self):
+        cgates.M.construct_unitary(self)
+
+    def symbol(self):
+        return cgates.M.symbol(self)
 
     @staticmethod
     def _append_zeros(state, qubits: List[int], results: List[int]):
@@ -220,27 +233,41 @@ class Collapse(BackendGate, gates.Collapse):
                 state = K.concatenate([state, K.zeros_like(state)], axis=q)
         return state
 
-    def construct_unitary(self):
-        cgates.Collapse.construct_unitary(self)
-
-    def state_vector_call(self, state):
+    def state_vector_collapse(self, state, result):
         state = K.reshape(state, self.tensor_shape)
-        substate = K.gather_nd(K.transpose(state, self.order), self.result)
+        substate = K.gather_nd(K.transpose(state, self.order), result)
         norm = K.sum(K.square(K.abs(substate)))
         state = substate / K.cast(K.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, self.sorted_qubits, self.result)
+        state = self._append_zeros(state, sorted(self.target_qubits), result)
         return K.reshape(state, self.flat_shape)
 
-    def density_matrix_call(self, state):
+    def density_matrix_collapse(self, state, result):
+        density_matrix_result = 2 * result
+        sorted_qubits = sorted(self.target_qubits)
+        sorted_qubits = sorted_qubits + [q + self.nqubits for q in sorted_qubits]
         state = K.reshape(state, self.tensor_shape)
         substate = K.gather_nd(K.transpose(state, self.order),
-                               self.density_matrix_result)
+                               density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = K.trace(K.reshape(substate, (n, n)))
         state = substate / norm
-        state = self._append_zeros(state, self.sorted_qubits,
-                                   self.density_matrix_result)
+        state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return K.reshape(state, self.flat_shape)
+
+    def result_list(self):
+        return cgates.M.result_list(self)
+
+    def measure(self, state, nshots):
+        return cgates.M.measure(self, state, nshots)
+
+    def state_vector_call(self, state):
+        return self.state_vector_collapse(state, self.result.binary[-1])
+
+    def density_matrix_call(self, state):
+        return self.density_matrix_collapse(state, self.result_list())
+
+    def __call__(self, state, nshots=1):
+        return cgates.M.__call__(self, state, nshots)
 
 
 class RX(BackendGate, gates.RX):
@@ -621,7 +648,10 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
         for p, gate in zip(self.probs, self.gates):
-            state = gate(state)
+            if isinstance(gate, M):
+                state = gate.density_matrix_collapse(state, [0])
+            else:
+                state = gate(state)
             new_state += p * state
         return new_state
 

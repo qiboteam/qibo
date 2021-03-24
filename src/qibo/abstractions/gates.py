@@ -176,59 +176,6 @@ class I(Gate):
         self.init_args = q
 
 
-class Collapse(Gate):
-    """Gate that collapses the state vector according to a measurement.
-
-    Args:
-        *q (int): the qubit id numbers that were measured.
-        result (int/list): measured result for each qubit. Should be 0 or 1.
-            If a ``list`` is given, it should have the same length as the
-            number of qubits measured. If an ``int`` is given, the same
-            result is used for all qubits measured.
-    """
-
-    def __init__(self, *q, result=0):
-        super(Collapse, self).__init__()
-        if isinstance(result, int):
-            result = len(q) * [result]
-        self.name = "collapse"
-        self.target_qubits = tuple(q)
-        self._result = None
-
-        self.init_args = q
-        self.init_kwargs = {"result": result}
-        self.sorted_qubits = sorted(q)
-        self.result = result
-        # Flag that is turned ``False`` automatically if this gate is used in a
-        # ``DistributedCircuit`` in order to skip the normalization.
-        self.normalize = True
-
-    @property
-    def result(self):
-        """Returns the result list in proper order after sorting the qubits."""
-        return self._result
-
-    @result.setter
-    def result(self, res):
-        if len(self.target_qubits) != len(res):
-            raise_error(ValueError, "Collapse gate was created on {} qubits "
-                                    "but {} result values were given."
-                                    "".format(len(self.target_qubits), len(res)))
-        resdict = {}
-        for q, r in zip(self.target_qubits, res):
-            if r not in {0, 1}:
-                raise_error(ValueError, "Result values should be 0 or 1 but "
-                                        "{} was given.".format(r))
-            resdict[q] = r
-
-        self._result = [resdict[q] for q in self.sorted_qubits]
-        self.init_kwargs = {"result": res}
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(NotImplementedError, "Collapse gates cannot be controlled.")
-
-
 class M(Gate):
     """The Measure Z gate.
 
@@ -240,6 +187,10 @@ class M(Gate):
             ``gates.M(*range(5))``.
         register_name (str): Optional name of the register to distinguish it
             from other registers when used in circuits.
+        collapse (bool): Collapse the state vector after the measurement is
+            performed. Can be used only for single shot measurements.
+            If ``True`` the collapsed state vector is returned. If ``False``
+            the measurement result is returned.
         p0 (dict): Optional bitflip probability map. Can be:
             A dictionary that maps each measured qubit to the probability
             that it is flipped, a list or tuple that has the same length
@@ -253,15 +204,21 @@ class M(Gate):
     """
 
     def __init__(self, *q, register_name: Optional[str] = None,
+                 collapse: bool = False,
                  p0: Optional["ProbsType"] = None,
                  p1: Optional["ProbsType"] = None):
         super(M, self).__init__()
         self.name = "measure"
         self.target_qubits = q
         self.register_name = register_name
+        self.collapse = collapse
+        self.result = None
+        self._symbol = None
 
         self.init_args = q
-        self.init_kwargs = {"register_name": register_name, "p0": p0, "p1": p1}
+        self.init_kwargs = {"register_name": register_name,
+                            "collapse": collapse,
+                            "p0": p0, "p1": p1}
 
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1
@@ -338,6 +295,10 @@ class M(Gate):
         pt = self._get_bitflip_tuple(self.qubits, p)
         return {q: p for q, p in zip(self.qubits, pt)}
 
+    def symbol(self):
+        """Returns symbol containing measurement outcomes for ``collapse=True`` gates."""
+        return self._symbol
+
     def add(self, gate: "M"):
         """Adds target qubits to a measurement gate.
 
@@ -382,7 +343,7 @@ class _Rn_(ParametrizedGate):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters)
+        return self.__class__(self.target_qubits[0], -self.parameters) # pylint: disable=E1130
 
     @Gate.check_controls
     def controlled_by(self, *q):
@@ -519,7 +480,7 @@ class U1(_Un_):
 
     def _dagger(self) -> "Gate":
         """"""
-        return self.__class__(self.target_qubits[0], -self.parameters)
+        return self.__class__(self.target_qubits[0], -self.parameters) # pylint: disable=E1130
 
 
 class U2(_Un_):
@@ -701,7 +662,7 @@ class _CRn_(ParametrizedGate):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameters)
+        return self.__class__(q0, q1, -self.parameters) # pylint: disable=E1130
 
 
 class CRX(_CRn_):
@@ -834,7 +795,7 @@ class CU1(_CUn_):
         """"""
         q0 = self.control_qubits[0]
         q1 = self.target_qubits[0]
-        return self.__class__(q0, q1, -self.parameters)
+        return self.__class__(q0, q1, -self.parameters) # pylint: disable=E1130
 
 
 class CU2(_CUn_):
@@ -1505,8 +1466,6 @@ class ResetChannel(UnitaryChannel):
     .. math::
         \\tilde{\\rho } = \\frac{\langle 0|\\rho |0\\rangle }{\mathrm{Tr}\langle 0|\\rho |0\\rangle}
 
-    using :class:`qibo.abstractions.gates.Collapse`.
-
     Args:
         q (int): Qubit id that the channel acts on.
         p0 (float): Probability to reset to 0.
@@ -1517,7 +1476,7 @@ class ResetChannel(UnitaryChannel):
 
     def __init__(self, q, p0=0.0, p1=0.0, seed=None):
         probs = [p0, p1]
-        gates = [self.module.Collapse(q), self.module.X(q)]
+        gates = [self.module.M(q, collapse=True), self.module.X(q)]
         super(ResetChannel, self).__init__(probs, gates, seed=seed)
         self.name = "ResetChannel"
         assert self.target_qubits == (q,)
@@ -1610,9 +1569,8 @@ class _ThermalRelaxationChannelA(UnitaryChannel):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        gates = [self.module.Z(q), self.module.Collapse(q),
+        gates = [self.module.Z(q), self.module.M(q, collapse=True),
                  self.module.X(q)]
-
         super(_ThermalRelaxationChannelA, self).__init__(
             probs, gates, seed=seed)
         ThermalRelaxationChannel.__init__(

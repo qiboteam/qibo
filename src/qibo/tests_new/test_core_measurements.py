@@ -25,6 +25,37 @@ def test_measurementresult_errors():
         result.set_frequencies({0: 100})
 
 
+def test_measurementresult_add_shots(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementResult((0, 1))
+    with pytest.raises(ValueError):
+        result.add_shot()
+    probs = np.array([1, 0, 0, 0], dtype=np.float64)
+    result.add_shot(probabilities=probs)
+    assert result.nshots == 1
+    np.testing.assert_allclose(result.decimal, [0])
+    np.testing.assert_allclose(result.binary, [[0, 0]])
+    probs = np.array([0, 0, 0, 1], dtype=np.float64)
+    result.add_shot(probabilities=probs)
+    assert result.nshots == 2
+    np.testing.assert_allclose(result.decimal, [0, 3])
+    np.testing.assert_allclose(result.binary, [[0, 0], [1, 1]])
+    qibo.set_backend(original_backend)
+
+
+def test_measurementresult_outcome(backend):
+    import collections
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementResult((0,))
+    result.decimal = np.zeros(1, dtype=np.int64)
+    assert result.outcome() == 0
+    result.decimal = np.ones(1, dtype=np.int64)
+    assert result.outcome() == 1
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("binary", [True, False])
 @pytest.mark.parametrize("dsamples,bsamples",
                          [([0, 3, 2, 3, 1],
@@ -149,6 +180,31 @@ def test_measurementresult_apply_bitflips_errors():
     # Passing negative bitflip probability
     with pytest.raises(ValueError):
         noisy_result = result.apply_bitflips(-0.4)
+
+
+def test_measurementsymbol_counter():
+    symbol1 = measurements.MeasurementSymbol(measurements.MeasurementResult((0, 1)))
+    symbol2 = measurements.MeasurementSymbol(measurements.MeasurementResult((1, 3)))
+    assert symbol1.result.qubits == (0, 1)
+    assert symbol2.result.qubits == (1, 3)
+    assert symbol1.name[0] == "m" # pylint: disable=E1101
+    assert symbol2.name[0] == "m" # pylint: disable=E1101
+    assert int(symbol1.name[1:]) + 3 == int(symbol2.name[1:]) # pylint: disable=E1101
+
+
+def test_measurementsymbol_evaluate(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    result = measurements.MeasurementSymbol(measurements.MeasurementResult((0, 1)))
+    expr = 2 * result
+    with pytest.raises(NotImplementedError):
+        value = result.evaluate(expr)
+    result = measurements.MeasurementSymbol(measurements.MeasurementResult((0,)))
+    result.result.set_probabilities(np.array([0., 1.]), nshots=1)
+    expr = 2 * result
+    value = result.evaluate(expr)
+    assert value == 2
+    qibo.set_backend(original_backend)
 
 
 def test_measurementregistersresult_samples(backend):

@@ -106,8 +106,8 @@ def test_set_precision_errors():
 
 def test_set_device(backend):
     original_backend = backends.get_backend()
-    backends.set_backend(backend)
     original_device = backends.get_device()
+    backends.set_backend(backend)
     if "numpy" in backend:
         with pytest.warns(RuntimeWarning):
             backends.set_device("/CPU:0")
@@ -121,7 +121,7 @@ def test_set_device(backend):
             backends.set_device("/gpu:10")
         with pytest.raises(ValueError):
             backends.set_device("/GPU:10")
-        backends.set_device(original_device)
+    backends.set_device(original_device)
     backends.set_backend(original_backend)
 
 

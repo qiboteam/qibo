@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import collections
+import sympy
 from abc import ABC, abstractmethod
 from qibo import get_device, config
 from qibo.config import raise_error
@@ -43,6 +45,12 @@ class Gate:
         config.ALLOW_SWITCHERS = False
 
         self.is_prepared = False
+        self.well_defined = True
+        # Keeps track of whether parametrized gates are well-defined
+        # (parameter value is known during circuit creation) or if they are
+        # measurement dependent so the parameter value is determined during
+        # execution
+
         # Using density matrices or state vectors
         self._density_matrix = False
         self._active_call = "state_vector_call"
@@ -293,30 +301,47 @@ class ParametrizedGate(Gate):
         self.parameter_names = "theta"
         self.nparams = 1
         self.trainable = trainable
-        self._parameters = None
+        self._parameters = []
+        self.symbolic_parameters = {}
 
     @property
     def parameters(self):
         """Returns a tuple containing the current value of gate's parameters."""
         if isinstance(self.parameter_names, str):
-            return self._parameters
+            return self._parameters[0]
         return tuple(self._parameters)
 
     @parameters.setter
     def parameters(self, x):
         """Updates the values of gate's parameters."""
         if isinstance(self.parameter_names, str):
-            self._parameters = x
+            nparams = 1
+            if not isinstance(x, collections.abc.Iterable):
+                x = [x]
+            else:
+                # Captures the ``Unitary`` gate case where the given parameter
+                # can be an array
+                try:
+                    if len(x) != 1:
+                        x = [x]
+                except TypeError: # tf.Variable case
+                    s = tuple(x.shape)
+                    if not s or s[0] != 1:
+                        x = [x]
         else:
             nparams = len(self.parameter_names)
-            if self._parameters is None:
-                self._parameters = nparams * [None]
-            if len(x) != nparams:
-                raise_error(ValueError, "Parametrized gate has {} parameters "
-                                        "but {} update values were given."
-                                        "".format(nparams, len(x)))
-            for i, v in enumerate(x):
-                self._parameters[i] = v
+
+        if not self._parameters:
+            self._parameters = nparams * [None]
+        if len(x) != nparams:
+            raise_error(ValueError, "Parametrized gate has {} parameters "
+                                    "but {} update values were given."
+                                    "".format(nparams, len(x)))
+        for i, v in enumerate(x):
+            if isinstance(v, sympy.Expr):
+                self.well_defined = False
+                self.symbolic_parameters[i] = v
+            self._parameters[i] = v
 
         # This part uses ``BackendGate`` attributes (see below), assuming
         # that the gate was initialized using a calculation backend.
@@ -329,6 +354,14 @@ class ParametrizedGate(Gate):
                 self.reprepare()
             for devgate in self.device_gates:
                 devgate.parameters = x
+
+    def substitute_symbols(self):
+        params = list(self._parameters)
+        for i, param in self.symbolic_parameters.items():
+            for symbol in param.free_symbols:
+                param = symbol.evaluate(param)
+            params[i] = float(param)
+        self.parameters = params
 
 
 class BaseBackendGate(Gate, ABC):
@@ -450,4 +483,7 @@ class BaseBackendGate(Gate, ABC):
         """
         if not self.is_prepared:
             self.set_nqubits(state)
+        if not self.well_defined:
+            self.substitute_symbols() # pylint: disable=E1101
+            # method available only for parametrized gates
         return getattr(self, self._active_call)(state)

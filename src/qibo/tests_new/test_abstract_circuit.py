@@ -535,7 +535,7 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     circuit.add(gates.I(*range(2)))
-    circuit.add(gates.Collapse(3))
+    circuit.add(gates.M(3, collapse=True))
     circuit.add(gates.fSim(0,4,0,0))
     circuit.add(gates.CU3(0,1,0,0,0))
     circuit.add(gates.TOFFOLI(4,3,2))

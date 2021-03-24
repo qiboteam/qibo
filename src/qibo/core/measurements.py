@@ -2,6 +2,7 @@
 # @authors: S. Efthymiou
 import math
 import collections
+import sympy
 from qibo import K
 from qibo.config import raise_error, SHOT_BATCH_SIZE
 from qibo.abstractions.gates import M
@@ -18,7 +19,9 @@ class MeasurementResult:
     representation and vice versa.
 
     If ``probabilities`` and ``nshots`` are not given during this object's
-    initialization binary or decimal samples should be added using the
+    initialization they should be specified later using
+    :meth:`qibo.core.measurements.MeasurementResult.set_probabilities`.
+    Alternatively binary or decimal samples can be added directly using the
     corresponding setters.
 
     Args:
@@ -28,8 +31,8 @@ class MeasurementResult:
         nshots (int): Number of shots for the measurement.
     """
 
-    def __init__(self, qubits, probabilities=None, nshots=None):
-        self.qubits = qubits
+    def __init__(self, qubits, probabilities=None, nshots=0):
+        self.qubits = tuple(qubits)
         self.probabilities = probabilities
         self.nshots = nshots
         self._decimal = None
@@ -44,32 +47,56 @@ class MeasurementResult:
     def qubit_map(self) -> Dict[int, int]:
         return {q: i for i, q in enumerate(self.qubits)}
 
-    def _convert_to_binary(self):
-        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.decimal.dtype)
-        return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
+    def set_probabilities(self, probabilities, nshots=1):
+        """Sets the probability distribution and number of shots for measurements.
 
-    def _convert_to_decimal(self):
-        _range = K.range(self.nqubits - 1, -1, -1, dtype=self.binary.dtype)
-        _range = K.pow(2, _range)[:, K.newaxis]
-        return K.matmul(self.binary, _range)[:, 0]
+        Calling this resets existing previous samples.
 
-    def _sample_shots(self):
-        self._frequencies = None
-        if self.probabilities is None:
-            raise_error(RuntimeError, "Cannot sample measurement shots if "
-                                      "a probability distribution is not "
-                                      "provided.")
-        if math.log2(self.nshots) + self.nqubits > 31: # pragma: no cover
-            # case not covered by GitHub workflows because it requires large example
-            # Use CPU to avoid "aborted" error
-            with K.device(K.get_cpu()):
-                result = K.sample_shots(self.probabilities, self.nshots)
+        Args:
+            probabilities (Tensor): Tensor of size ``(2 ** len(qubits),)``
+                that defines the probability distribution to sample measurements
+                from.
+            nshots (int): Number of measurement shots to sample.
+        """
+        self.reset()
+        self.probabilities = probabilities
+        self.nshots = nshots
+
+    def add_shot(self, probabilities=None):
+        """Adds a measurement shot to an existing measurement symbol.
+
+        Useful for sampling more than one shots with collapse measurement gates.
+        """
+        if self.nshots:
+            if probabilities is not None:
+                self.probabilities = probabilities
+            self.nshots += 1
+            # sample new shot
+            new_shot = K.cpu_fallback(K.sample_shots, self.probabilities, 1)
+            self._decimal = K.concatenate([self.decimal, new_shot], axis=0)
+            self._binary = None
         else:
-            result = K.cpu_fallback(K.sample_shots, self.probabilities, self.nshots)
-        return result
+            if probabilities is None:
+                raise_error(ValueError, "Cannot add shots in measurement that "
+                                        "for which the probability distribution "
+                                        "is not specified.")
+            self.set_probabilities(probabilities)
+
+    def set_frequencies(self, frequencies):
+        if self.has_samples():
+            raise_error(RuntimeError, "Cannot set frequencies for measurement "
+                                      "result that contains shots.")
+        self._frequencies = frequencies
+
+    def reset(self):
+        """Resets the sampled shots contained in the ``MeasurementResult`` object."""
+        self._decimal = None
+        self._binary = None
+        self._frequencies = None
 
     @property
     def decimal(self):
+        """Returns sampled measurement shots in decimal form."""
         if self._decimal is None:
             if self._binary is None:
                 self._decimal = self._sample_shots()
@@ -79,27 +106,28 @@ class MeasurementResult:
 
     @property
     def binary(self):
+        """Returns sampled measurement shots in binary form."""
         if self._binary is None:
             self._binary = self._convert_to_binary()
         return self._binary
 
-    def set_frequencies(self, frequencies):
-        if self.has_samples():
-            raise_error(RuntimeError, "Cannot set frequencies for measurement "
-                                      "result that contains shots.")
-        self._frequencies = frequencies
-
     @decimal.setter
     def decimal(self, x):
+        self.reset()
         self._decimal = x
-        self._binary = None
-        self._frequencies = None
 
     @binary.setter
     def binary(self, x):
+        self.reset()
         self._binary = x
-        self._decimal = None
-        self._frequencies = None
+
+    def outcome(self, q=0):
+        """Returns the latest outcome for the selected qubit."""
+        if not self.nshots:
+            nshots = int(self.binary.shape[0])
+        else:
+            nshots = self.nshots
+        return self.binary[-1, q]
 
     def has_samples(self):
         """Checks if the measurement result has samples calculated."""
@@ -109,24 +137,6 @@ class MeasurementResult:
         if binary:
             return self.binary
         return self.decimal
-
-    def __getitem__(self, i: int) -> TensorType:
-        return self.samples(binary=False)[i]
-
-    def _calculate_frequencies(self):
-        if self._binary is None and self._decimal is None:
-            if self.probabilities is None or self.nshots is None:
-                raise_error(RuntimeError, "Cannot calculate measurement "
-                                          "frequencies without a probability "
-                                          "distribution or  samples.")
-            freqs = K.sample_frequencies(self.probabilities, self.nshots)
-            freqs = K.np.array(freqs)
-            return collections.Counter(
-                {k: v for k, v in enumerate(freqs) if v > 0})
-
-        res, counts = K.unique(self.decimal, return_counts=True)
-        res, counts = K.np.array(res), K.np.array(counts)
-        return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def frequencies(self, binary: bool = True) -> collections.Counter:
         """Calculates frequencies of appearance of each measurement.
@@ -148,6 +158,48 @@ class MeasurementResult:
                 {"{0:b}".format(k).zfill(self.nqubits): v
                  for k, v in self._frequencies.items()})
         return self._frequencies
+
+    def __getitem__(self, i: int) -> TensorType:
+        return self.decimal[i]
+
+    def _convert_to_binary(self):
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=K.dtypes('DTYPEINT'))
+        return K.mod(K.right_shift(self.decimal[:, K.newaxis], _range), 2)
+
+    def _convert_to_decimal(self):
+        _range = K.range(self.nqubits - 1, -1, -1, dtype=K.dtypes('DTYPEINT'))
+        _range = K.pow(2, _range)[:, K.newaxis]
+        return K.matmul(self.binary, _range)[:, 0]
+
+    def _sample_shots(self):
+        self._frequencies = None
+        if self.probabilities is None or not self.nshots:
+            raise_error(RuntimeError, "Cannot sample measurement shots if "
+                                      "a probability distribution is not "
+                                      "provided.")
+        if math.log2(self.nshots) + self.nqubits > 31: # pragma: no cover
+            # case not covered by GitHub workflows because it requires large example
+            # Use CPU to avoid "aborted" error
+            with K.device(K.get_cpu()):
+                result = K.sample_shots(self.probabilities, self.nshots)
+        else:
+            result = K.cpu_fallback(K.sample_shots, self.probabilities, self.nshots)
+        return result
+
+    def _calculate_frequencies(self):
+        if self._binary is None and self._decimal is None:
+            if self.probabilities is None or not self.nshots:
+                raise_error(RuntimeError, "Cannot calculate measurement "
+                                          "frequencies without a probability "
+                                          "distribution or  samples.")
+            freqs = K.sample_frequencies(self.probabilities, self.nshots)
+            freqs = K.np.array(freqs)
+            return collections.Counter(
+                {k: v for k, v in enumerate(freqs) if v > 0})
+
+        res, counts = K.unique(self.decimal, return_counts=True)
+        res, counts = K.np.array(res), K.np.array(counts)
+        return collections.Counter({k: v for k, v in zip(res, counts)})
 
     def apply_bitflips(self, p0: ProbsType, p1: Optional[ProbsType] = None):
         """Applies bitflip noise to the measured samples.
@@ -185,6 +237,58 @@ class MeasurementResult:
         noisy_result = self.__class__(self.qubits)
         noisy_result.binary = noisy_samples
         return noisy_result
+
+
+class MeasurementSymbol(sympy.Symbol):
+    """``sympy.Symbol`` connected to a specific :class:`qibo.core.measurements.MeasurementResult`.
+
+    Used by :class:`qibo.abstractions.gates.M` with ``collapse=True`` to allow
+    controlling subsequent gates from the measurement results.
+    """
+    _counter = 0
+
+    def __new__(cls, *args, **kwargs):
+        name = "m{}".format(cls._counter)
+        cls._counter += 1
+        return super().__new__(cls=cls, name=name)
+
+    def __init__(self, measurement_result, qubit=None):
+        self.result = measurement_result
+        self.qubit = qubit
+        # create seperate ``MeasurementSymbol`` object that maps to the same
+        # result for each measured qubit so that the user can use the symbol
+        # to control subsequent parametrized gates
+        if qubit is None:
+            self.elements = [self.__class__(self.result, q)
+                             for q in self.result.qubits]
+
+    def samples(self, *args, **kwargs):
+        return self.result.samples(*args, **kwargs)
+
+    def frequencies(self, *args, **kwargs):
+        return self.result.frequencies(*args, **kwargs)
+
+    def outcome(self):
+        if self.qubit is None:
+            return self.result.outcome()
+        return self.result.outcome(self.qubit)
+
+    def __getitem__(self, i):
+        return self.elements[i]
+
+    def evaluate(self, expr):
+        """Substitutes the symbol's value in the given expression.
+
+        Args:
+            expr (sympy.Expr): Sympy expression that involves the current
+                measurement symbol.
+        """
+        if self.qubit is None and len(self.result.qubits) > 1:
+            raise_error(NotImplementedError, "Symbolic measurements are not "
+                                             "available for more than one "
+                                             "measured qubits. Please use "
+                                             "seperate measurement gates.")
+        return expr.subs(self, self.outcome())
 
 
 class MeasurementRegistersResult:
