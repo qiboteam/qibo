@@ -29,9 +29,7 @@ class BackendGate(BaseBackendGate):
         super().__init__()
         if K.op:
             self.gate_op = K.op.apply_gate
-        self.qubits_tensor = None
-        self.qubits_tensor_dm = None
-        self.target_qubits_dm = None
+        self._qubits_tensor = None
 
     @staticmethod
     def control_unitary(unitary):
@@ -50,14 +48,22 @@ class BackendGate(BaseBackendGate):
     def prepare(self):
         """Prepares the gate for application to state vectors."""
         self.is_prepared = True
-        targets = K.qnp.cast(self.target_qubits, dtype="int32")
-        controls = K.qnp.cast(self.control_qubits, dtype="int32")
-        qubits = [self.nqubits - q - 1 for q in self.control_qubits]
-        qubits.extend(self.nqubits - q - 1 for q in self.target_qubits)
-        self.qubits_tensor = sorted(qubits)
-        if self.density_matrix:
-            self.target_qubits_dm = [q + self.nqubits for q in self.target_qubits]
-            self.qubits_tensor_dm = [q + self.nqubits for q in self.qubits_tensor]
+
+    @property
+    def qubits_tensor(self):
+        if self._qubits_tensor is None:
+            qubits = [self.nqubits - q - 1 for q in self.control_qubits]
+            qubits.extend(self.nqubits - q - 1 for q in self.target_qubits)
+            self._qubits_tensor = sorted(qubits)
+        return self._qubits_tensor
+
+    @property
+    def qubits_tensor_dm(self):
+        return [q + self.nqubits for q in self.qubits_tensor]
+
+    @property
+    def target_qubits_dm(self):
+        return [q + self.nqubits for q in self.target_qubits]
 
     def set_nqubits(self, state):
         self.nqubits = int(math.log2(tuple(state.shape)[0]))
@@ -1037,17 +1043,16 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
             seed=seed)
         self.gate_op = K.op.apply_two_qubit_gate
 
-    def prepare(self):
-        super().prepare()
-        targets = K.qnp.cast(self.target_qubits, dtype="int32")
-        controls = K.qnp.cast(self.control_qubits, dtype="int32")
-        qubits = sorted(list(self.nqubits - controls - 1))
-        qubits = self.nqubits - targets - 1
-        qubits = K.qnp.concatenate([qubits, qubits + self.nqubits], axis=0)
-        qubits = sorted(list(qubits))
-        self.qubits_tensor = K.cast(qubits, dtype="int32")
-        self.target_qubits_dm = (self.target_qubits +
-                                 tuple(targets + self.nqubits))
+    @property
+    def qubits_tensor(self):
+        if self._qubits_tensor is None:
+            qubits = sorted(self.nqubits - q - 1 for q in self.target_qubits)
+            self._qubits_tensor = qubits + [q + self.nqubits for q in qubits]
+        return self._qubits_tensor
+
+    @property
+    def target_qubits_dm(self):
+        return self.target_qubits + tuple(q + self.nqubits for q in self.target_qubits)
 
     def construct_unitary(self):
         matrix = K.qnp.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
