@@ -2,9 +2,12 @@ import pytest
 from qibo import K, backends, models, gates
 
 
-def test_construct_backend(engine):
-    backend = backends._construct_backend(engine)
-    assert backend.name == engine
+def test_construct_backend(backend):
+    bk = backends._construct_backend(backend)
+    try:
+        assert bk.name == backend
+    except AssertionError:
+        assert bk.name.split("_")[-1] == backend
     with pytest.raises(ValueError):
         bk = backends._construct_backend("test")
 
@@ -13,13 +16,6 @@ def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
-    assert backends.get_backend() == backend
-
-    target_name = "numpy" if "numpy" in backend else "tensorflow"
-    assert K.name == target_name
-    assert str(K) == target_name
-    assert K.__repr__() == "{}Backend".format(target_name.capitalize())
-
     if backend == "custom":
         assert K.custom_gates
         assert K.custom_einsum is None

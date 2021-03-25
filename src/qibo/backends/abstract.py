@@ -4,16 +4,11 @@ from qibo.config import raise_error, log
 
 class AbstractBackend(ABC):
 
-    base_methods = {"assign", "set_gates", "dtypes",
-                    "set_precision"}
+    base_methods = {"assign", "dtypes", "set_precision"}
 
     def __init__(self):
         self.backend = None
         self.name = "base"
-
-        self.gates = "custom"
-        self.custom_gates = True
-        self.custom_einsum = None
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -31,7 +26,6 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
-        self.op = None
 
     def __str__(self):
         return self.name
@@ -53,22 +47,6 @@ class AbstractBackend(ABC):
         self.newaxis = backend.newaxis
         self.oom_error = backend.oom_error
         self.optimization = backend.optimization
-        self.op = backend.op
-
-    def set_gates(self, name):
-        if name == 'custom':
-            self.custom_gates = True
-            self.custom_einsum = None
-        elif name == 'defaulteinsum':
-            self.custom_gates = False
-            self.custom_einsum = "DefaultEinsum"
-        elif name == 'matmuleinsum':
-            self.custom_gates = False
-            self.custom_einsum = "MatmulEinsum"
-        else: # pragma: no cover
-            # this case is captured by `backends.__init__.set_backend` checks
-            raise_error(ValueError, f"Gate backend '{name}' not supported.")
-        self.gates = name
 
     def dtypes(self, name):
         if name in self._dtypes:

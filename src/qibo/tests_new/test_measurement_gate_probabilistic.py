@@ -27,14 +27,14 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    if K.name == "tensorflow":
+    if "numpy" in K.name:
+        decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
+    else:
         if K.gpu_devices: # pragma: no cover
             # CI does not use GPU
             decimal_frequencies = {0: 273, 1: 233, 2: 242, 3: 252}
         else:
             decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
-    elif K.name == "numpy":
-        decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_backend(original_backend)
@@ -60,14 +60,14 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    if K.name == "tensorflow":
+    if "numpy" in K.name:
+        decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
+    else:
         if K.gpu_devices: # pragma: no cover
             # CI does not use GPU
             decimal_frequencies = {0: 196, 1: 153, 2: 156, 3: 495}
         else:
             decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
-    elif K.name == "numpy":
-        decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
     qibo.set_backend(original_backend)
@@ -118,12 +118,12 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, p0=probs[2]))
     result = c(nshots=30).frequencies(binary=False)
-    if K.name == "tensorflow":
-        targets = [{5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
-                   {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}]
-    elif K.name == "numpy":
+    if "numpy" in K.name:
         targets = [{5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                    {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}]
+    else:
+        targets = [{5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
+                   {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}]
     assert result == targets[i]
     qibo.set_backend(original_backend)
 
