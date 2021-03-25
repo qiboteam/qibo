@@ -1,10 +1,12 @@
 import math
 from qibo import get_backend
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 from qibo.core.circuit import Circuit as StateCircuit
 from qibo.core.circuit import DensityMatrixCircuit
 from qibo.evolution import StateEvolution, AdiabaticEvolution
 from typing import Dict, Optional
+import numpy as np
+from qibo import gates
 
 
 class Circuit(StateCircuit):
@@ -429,3 +431,161 @@ class QAOA(object):
                                                              compile=compile, processes=processes)
         self.set_parameters(parameters)
         return result, parameters, extra
+
+
+class Grover:
+    """Model that performs Grover's algorithm.
+
+    # TODO: Add a few more details on Grover's algorithm and/or reference.
+
+    Args:
+        oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
+            the sign using a Grover ancilla initialized with -X-H-
+            and expected to have the total size of the circuit.
+        initial_state (:class:`qibo.core.circuit.Circuit`): quantum circuit
+            that initializes the state. Leave empty if |000..00>
+        superposition (:class:`qibo.core.circuit.Circuit`): quantum circuit that
+            takes an initial state to a superposition. Expected to use the first
+            set of qubits to store the relevant superposition.
+        sup_qubits (int): number of qubits that store the relevant superposition.
+            Leave empty if superposition does not use ancillas.
+        sup_size (int): how many states are in a superposition.
+            Leave empty if its an equal superposition of quantum states.
+        num_sol (int): number of expected solutions. Needed for normal Grover.
+            Leave empty for iterative version.
+        check (function): function that returns True if the solution has been
+            found. Required of iterative approach.
+            First argument should be the bitstring to check.
+        check_args (tuple): arguments needed for the check function.
+            The found bitstring not included.
+    """
+    def __init__(self, oracle, superposition=None, initial_state=None, sup_qubits=None, sup_size=None, num_sol=None, check=None, check_args=()):
+        self.oracle = oracle
+        self.initial_state = initial_state
+
+        if superposition:
+            self.superposition = superposition
+        else:
+            if not sup_qubits:
+                raise_error(ValueError)
+                # TODO: Consider a better way for the user to pass superposition qubits
+                # and the number of ancillas
+            self.superposition = Circuit(sup_qubits)
+            self.superposition.add((gates.H(i) for i in range(sup_qubits)))
+
+        if sup_qubits:
+            self.sup_qubits = sup_qubits
+        else:
+            self.sup_qubits = self.superposition.nqubits
+
+        if sup_size:
+            self.sup_size = sup_size
+        else:
+            self.sup_size = int(2**self.superposition.nqubits)
+
+        self.check = check
+        self.check_args = check_args
+        self.num_sol = num_sol
+
+    def initialize(self):
+        """Initialize the Grover algorithm with the superposition and Grover ancilla."""
+        c = Circuit(self.oracle.nqubits)
+        c.add(gates.X(self.oracle.nqubits - 1))
+        c.add(gates.H(self.oracle.nqubits - 1))
+        c.add(self.superposition.on_qubits(*range(self.superposition.nqubits)))
+        return c
+
+    def diffusion(self):
+        """Construct the diffusion operator out of the superposition circuit."""
+        nqubits = self.superposition.nqubits
+        c = Circuit(nqubits + 1)
+        c.add(self.superposition.invert().on_qubits(*range(nqubits)))
+        if self.initial_state:
+            c.add(self.initial_state.on_qubits(*range(self.initial_state.nqubits)))
+        c.add([gates.X(i) for i in range(nqubits)])
+        c.add(gates.X(nqubits).controlled_by(*range(nqubits)))
+        c.add([gates.X(i) for i in range(nqubits)])
+        if self.initial_state:
+            c.add(self.initial_state.invert().on_qubits(*range(self.initial_state.nqubits)))
+        c.add(self.superposition.on_qubits(*range(nqubits)))
+        return c
+
+    def step(self):
+        """Combine oracle and diffusion for a Grover step."""
+        c = Circuit(self.oracle.nqubits)
+        c += self.oracle
+        diffusion = self.diffusion()
+        qubits = list(range(diffusion.nqubits - 1))
+        qubits.append(self.oracle.nqubits - 1)
+        c.add(diffusion.on_qubits(*qubits))
+        return c
+
+    def circuit(self, iterations):
+        """Creates circuit that performs Grover's algorithm with a set amount of iterations.
+
+        Args:
+            iterations (int): number of times to repeat the Grover step.
+
+        Returns:
+            :class:`qibo.core.circuit.Circuit` that performs Grover's algorithm.
+        """
+        c = Circuit(self.oracle.nqubits)
+        c += self.initialize()
+        for _ in range(iterations):
+            c += self.step()
+        c.add(gates.M(*range(self.sup_qubits)))
+        return c
+
+    def iterative(self):
+        """Iterative approach of Grover for when the number of solutions is not known."""
+        k = 1
+        lamda = 6/5 # TODO: Perhaps allow user to control these values? (Has to be between 1 and 4/3)
+        total_iterations = 0
+        while True:
+            it = np.random.randint(k + 1)
+            if it != 0:
+                total_iterations += it
+                circuit = self.circuit(it)
+                result = circuit(nshots=1)
+                measured = result.frequencies(binary=True).most_common(1)[0][0]
+                if self.check(measured, *self.check_args):
+                    return measured, total_iterations
+            k = min(lamda * k, np.sqrt(self.sup_size))
+            if total_iterations > 2*self.sup_size:
+                raise_error(TimeoutError, "Cancelling iterative method as too "
+                                          "many iterations have taken place.")
+
+    def execute(self, nshots=100, freq=False):
+        """Execute Grover's algorithm.
+
+        If the number of solutions is given, calculates iterations,
+        otherwise it uses an iterative approach.
+
+        Args:
+            nshots (int): number of shots in order to get the frequencies.
+            freq (bool): print the full frequencies after the exact Grover algorithm.
+        """
+        #TODO: How do we want to return this information.
+        if self.num_sol:
+            it = np.int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
+            circuit = self.circuit(it)
+            result = circuit(nshots=nshots).frequencies(binary=True)
+            if freq:
+                log.info("Result of sampling Grover's algorihm")
+                log.info(result)
+            log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
+            most_common = result.most_common(self.num_sol)
+            for i in most_common:
+                log.info(i[0])
+                if self.check:
+                    if self.check(i[0], *self.check_args):
+                        log.info('Solution checked and successful.')
+                    else:
+                        log.info('Not a solution of the problem. Something went wrong.')
+        else:
+            if not self.check:
+                raise_error(ValueError, "Check function needed for iterative approach.")
+            measured, total_iterations = self.iterative()
+            log.info('Solution found in an iterative process.')
+            log.info(f'Solution: {measured}\n')
+            log.info(f'Total Grover iterations taken: {total_iterations}')
