@@ -164,7 +164,7 @@ class I(BackendGate, gates.I):
         gates.I.__init__(self, *q)
 
     def construct_unitary(self):
-        return K.qnp.eye(2 ** len(self.target_qubits))
+        return K.eye(2 ** len(self.target_qubits))
 
     def state_vector_call(self, state):
         return state
@@ -312,8 +312,8 @@ class RX(MatrixGate, gates.RX):
 
     def construct_unitary(self):
         theta = self.parameters
-        cos, isin = K.qnp.cos(theta / 2.0), -1j * K.qnp.sin(theta / 2.0)
-        return K.qnp.cast([[cos, isin], [isin, cos]])
+        cos, isin = K.qnp.cos(theta / 2.0) + 0j, -1j * K.qnp.sin(theta / 2.0)
+        return K.cast([[cos, isin], [isin, cos]])
 
 
 class RY(MatrixGate, gates.RY):
@@ -325,7 +325,7 @@ class RY(MatrixGate, gates.RY):
     def construct_unitary(self):
         theta = self.parameters
         cos, sin = K.qnp.cos(theta / 2.0), K.qnp.sin(theta / 2.0)
-        return K.qnp.cast([[cos, -sin], [sin, cos]])
+        return K.cast([[cos, -sin], [sin, cos]])
 
 
 class RZ(MatrixGate, gates.RZ):
@@ -336,7 +336,7 @@ class RZ(MatrixGate, gates.RZ):
 
     def construct_unitary(self):
         phase = K.qnp.exp(1j * self.parameters / 2.0)
-        return K.qnp.diag([K.qnp.conj(phase), phase])
+        return K.cast(K.qnp.diag([K.qnp.conj(phase), phase]))
 
 
 class U1(MatrixGate, gates.U1):
@@ -347,9 +347,7 @@ class U1(MatrixGate, gates.U1):
         self.gate_op = K.op.apply_z_pow
 
     def reprepare(self):
-        with K.device(self.device):
-            self.matrix = K.cast(K.qnp.exp(1j * self.parameters),
-                                 dtype='DTYPECPX')
+        self.matrix = K.cast(K.qnp.exp(1j * self.parameters))
 
     def construct_unitary(self):
         return K.qnp.diag([1, K.qnp.exp(1j * self.parameters)])
@@ -365,8 +363,8 @@ class U2(MatrixGate, gates.U2):
         phi, lam = self.parameters
         eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
         eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
-        return K.qnp.cast([[eplus.conj(), - eminus.conj()],
-                         [eminus, eplus]]) / K.qnp.sqrt(2)
+        return K.cast([[eplus.conj(), - eminus.conj()],
+                       [eminus, eplus]]) / K.qnp.sqrt(2)
 
 
 class U3(MatrixGate, gates.U3):
@@ -381,8 +379,8 @@ class U3(MatrixGate, gates.U3):
         sint = K.qnp.sin(theta / 2)
         eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
         eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
-        return K.qnp.cast([[eplus.conj() * cost, - eminus.conj() * sint],
-                         [eminus * sint, eplus * cost]])
+        return K.cast([[eplus.conj() * cost, - eminus.conj() * sint],
+                       [eminus * sint, eplus * cost]])
 
 
 class ZPow(gates.ZPow):
@@ -509,11 +507,9 @@ class fSim(MatrixGate, gates.fSim):
 
     def reprepare(self):
         theta, phi = self.parameters
-        cos, isin = K.qnp.cos(theta), -1j * K.qnp.sin(theta)
+        cos, isin = K.qnp.cos(theta) + 0j, -1j * K.qnp.sin(theta)
         phase = K.qnp.exp(-1j * phi)
-        matrix = K.qnp.cast([cos, isin, isin, cos, phase])
-        with K.device(self.device):
-            self.matrix = K.cast(matrix)
+        self.matrix = K.cast([cos, isin, isin, cos, phase])
 
     def construct_unitary(self):
         theta, phi = self.parameters
@@ -522,7 +518,7 @@ class fSim(MatrixGate, gates.fSim):
         matrix[1, 1], matrix[2, 2] = cos, cos
         matrix[1, 2], matrix[2, 1] = isin, isin
         matrix[3, 3] = K.qnp.exp(-1j * phi)
-        return matrix
+        return K.cast(matrix)
 
 
 class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
@@ -537,15 +533,14 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
         matrix = K.qnp.zeros(5)
         matrix[:4] = K.qnp.reshape(unitary, (4,))
         matrix[4] = K.qnp.exp(-1j * phi)
-        with K.device(self.device):
-            self.matrix = K.cast(matrix)
+        self.matrix = K.cast(matrix)
 
     def construct_unitary(self):
         unitary, phi = self.parameters
         matrix = K.qnp.eye(4)
         matrix[1:3, 1:3] = K.qnp.reshape(unitary, (2, 2))
         matrix[3, 3] = K.qnp.exp(-1j * phi)
-        return matrix
+        return K.cast(matrix)
 
     def _dagger(self) -> "GenerelizedfSim":
         unitary, phi = self.parameters
@@ -1052,10 +1047,10 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
 
     def construct_unitary(self):
         matrix = K.qnp.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
-                           1 - self.preset0])
+                             1 - self.preset0])
         matrix[0, -1] = self.preset1
         matrix[-1, 0] = self.preset0
-        return matrix
+        return K.cast(matrix)
 
     def state_vector_call(self, state):
         raise_error(ValueError, "Thermal relaxation cannot be applied to "
