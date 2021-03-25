@@ -232,3 +232,21 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
+
+
+class NumpyDefaultEinsumBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_defaulteinsum"
+        self.custom_gates = False
+        self.custom_einsum = "DefaultEinsum"
+
+
+class NumpyMatmulEinsumBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_matmuleinsum"
+        self.custom_gates = False
+        self.custom_einsum = "MatmulEinsum"

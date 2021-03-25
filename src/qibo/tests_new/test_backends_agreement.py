@@ -60,7 +60,7 @@ def test_backend_methods(tested_backend, target_backend, method, kwargs):
     if isinstance(kwargs, dict):
         np.testing.assert_allclose(tested_func(**kwargs), target_func(**kwargs))
     else:
-        if method in {"kron", "inv"} and tested_backend.name == "tensorflow":
+        if method in {"kron", "inv"} and "numpy" not in tested_backend.name:
             with pytest.raises(NotImplementedError):
                 tested_func(*kwargs)
         else:
