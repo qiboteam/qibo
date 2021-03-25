@@ -58,10 +58,6 @@ class BackendGate(BaseBackendGate):
         return self._qubits_tensor
 
     @property
-    def qubits_tensor_dm(self):
-        return self.qubits_tensor + self.nqubits
-
-    @property
     def target_qubits_dm(self):
         return [q + self.nqubits for q in self.target_qubits]
 
@@ -74,7 +70,7 @@ class BackendGate(BaseBackendGate):
                             *self.target_qubits, get_threads())
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
+        state = self.gate_op(state, self.qubits_tensor + self.nqubits, 2 * self.nqubits,
                              *self.target_qubits, get_threads())
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
                              *self.target_qubits_dm, get_threads())
@@ -101,7 +97,7 @@ class MatrixGate(BackendGate):
                             self.nqubits, *self.target_qubits, get_threads())
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.matrix, self.qubits_tensor_dm, # pylint: disable=E1121
+        state = self.gate_op(state, self.matrix, self.qubits_tensor + self.nqubits, # pylint: disable=E1121
                              2 * self.nqubits, *self.target_qubits, get_threads())
         adjmatrix = K.conj(self.matrix)
         state = self.gate_op(state, adjmatrix, self.qubits_tensor,
@@ -141,7 +137,7 @@ class Y(BackendGate, gates.Y):
         return K.matrices.Y
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
+        state = self.gate_op(state, self.qubits_tensor + self.nqubits, 2 * self.nqubits,
                              *self.target_qubits, get_threads())
         matrix = K.conj(K.matrices.Y)
         state = K.op.apply_gate(state, matrix, self.qubits_tensor,
@@ -232,7 +228,7 @@ class M(BackendGate, gates.M):
                             self.nqubits, True, get_threads())
 
     def density_matrix_collapse(self, state, result):
-        state = self.gate_op(state, self.qubits_tensor_dm, result,
+        state = self.gate_op(state, self.qubits_tensor + self.nqubits, result,
                              2 * self.nqubits, False, get_threads())
         state = self.gate_op(state, self.qubits_tensor, result,
                              2 * self.nqubits, False, get_threads())
