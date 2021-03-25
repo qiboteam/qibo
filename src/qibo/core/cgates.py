@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import sys
 import math
-from qibo import K, get_threads, matrices
+from qibo import K, get_threads
 from qibo.abstractions import gates
 from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.config import raise_error
@@ -54,12 +54,12 @@ class BackendGate(BaseBackendGate):
         if self._qubits_tensor is None:
             qubits = [self.nqubits - q - 1 for q in self.control_qubits]
             qubits.extend(self.nqubits - q - 1 for q in self.target_qubits)
-            self._qubits_tensor = sorted(qubits)
+            self._qubits_tensor = K.cast(sorted(qubits), "int32")
         return self._qubits_tensor
 
     @property
     def qubits_tensor_dm(self):
-        return [q + self.nqubits for q in self.qubits_tensor]
+        return self.qubits_tensor + self.nqubits
 
     @property
     def target_qubits_dm(self):
@@ -116,7 +116,7 @@ class H(MatrixGate, gates.H):
         gates.H.__init__(self, q)
 
     def construct_unitary(self):
-        return matrices.H
+        return K.matrices.H
 
 
 class X(BackendGate, gates.X):
@@ -127,7 +127,7 @@ class X(BackendGate, gates.X):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return matrices.X
+        return K.matrices.X
 
 
 class Y(BackendGate, gates.Y):
@@ -138,12 +138,12 @@ class Y(BackendGate, gates.Y):
         self.gate_op = K.op.apply_y
 
     def construct_unitary(self):
-        return matrices.Y
+        return K.matrices.Y
 
     def density_matrix_call(self, state):
         state = self.gate_op(state, self.qubits_tensor_dm, 2 * self.nqubits,
                              *self.target_qubits, get_threads())
-        matrix = K.conj(matrices.Y)
+        matrix = K.conj(K.matrices.Y)
         state = K.op.apply_gate(state, matrix, self.qubits_tensor,
                                 2 * self.nqubits, *self.target_qubits_dm,
                                 get_threads())
@@ -158,7 +158,7 @@ class Z(BackendGate, gates.Z):
         self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
-        return matrices.Z
+        return K.matrices.Z
 
 
 class I(BackendGate, gates.I):
@@ -407,7 +407,7 @@ class CNOT(BackendGate, gates.CNOT):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return matrices.CNOT
+        return K.matrices.CNOT
 
 
 class CZ(BackendGate, gates.CZ):
@@ -418,7 +418,7 @@ class CZ(BackendGate, gates.CZ):
         self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
-        return matrices.CZ
+        return K.matrices.CZ
 
 
 class _CUn_(MatrixGate):
@@ -501,7 +501,7 @@ class SWAP(BackendGate, gates.SWAP):
         self.gate_op = K.op.apply_swap
 
     def construct_unitary(self):
-        return matrices.SWAP
+        return K.matrices.SWAP
 
 
 class fSim(MatrixGate, gates.fSim):
@@ -569,7 +569,7 @@ class TOFFOLI(BackendGate, gates.TOFFOLI):
         self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return matrices.TOFFOLI
+        return K.matrices.TOFFOLI
 
     @property
     def unitary(self):
