@@ -233,15 +233,33 @@ class TensorflowDefaultEinsumBackend(TensorflowBackend):
 
     def __init__(self):
         super().__init__()
+        from qibo.backends import einsum
         self.name = "tensorflow_defaulteinsum"
         self.custom_gates = False
-        self.custom_einsum = "DefaultEinsum"
+        self.einsum_module = einsum
+
+    def create_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyDefaultEinsumBackend.create_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def gate_call(self, cache, state, matrix):
+        return numpy.NumpyDefaultEinsumBackend.gate_call(
+            self, cache, state, matrix)
 
 
 class TensorflowMatmulEinsumBackend(TensorflowBackend):
 
     def __init__(self):
+        from qibo.backends import einsum
         super().__init__()
         self.name = "tensorflow_matmuleinsum"
         self.custom_gates = False
-        self.custom_einsum = "MatmulEinsum"
+        self.einsum_module = einsum
+
+    def create_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyMatmulEinsumBackend.create_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def gate_call(self, cache, state, matrix):
+        return numpy.NumpyMatmulEinsumBackend.gate_call(
+            self, cache, state, matrix)

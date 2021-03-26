@@ -21,12 +21,6 @@ class BackendGate(BaseBackendGate):
         self.control_cache = None
         # Gate matrices
         self.matrix = None
-        # Einsum backend
-        from qibo.core import einsum
-        self.einsum_module = einsum
-        self.einsum = getattr(einsum, K.custom_einsum)()
-        self.tensor_shape = None
-        self.flat_shape = None
 
     @staticmethod
     def control_unitary(unitary):
@@ -42,25 +36,7 @@ class BackendGate(BaseBackendGate):
         if self.well_defined:
             self.reprepare()
         try:
-            s = 1 + self.density_matrix
-            self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
-            self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
-            if self.is_controlled_by:
-                if self.density_matrix:
-                    # fall back to the 'defaulteinsum' backend when using
-                    # density matrices with `controlled_by` gates because
-                    # 'matmuleinsum' is not properly implemented for this case
-                    self.einsum = self.einsum_module.DefaultEinsum()
-                self.control_cache = self.einsum_module.ControlCache(self)
-                nactive = self.nqubits - len(self.control_qubits)
-                targets = self.control_cache.targets
-                self.calculation_cache = self.einsum.create_cache(
-                    targets, nactive, ncontrol=len(self.control_qubits))
-            else:
-                self.calculation_cache = self.einsum.create_cache(
-                    self.qubits, self.nqubits)
-            self.calculation_cache.cast_shapes(
-                lambda x: K.cast(x, dtype='DTYPEINT'))
+            K.prepare_gate(self)
         except (ValueError, OverflowError):
             pass
 
@@ -68,63 +44,10 @@ class BackendGate(BaseBackendGate):
         cgates.BackendGate.set_nqubits(self, state)
 
     def state_vector_call(self, state):
-        state = K.reshape(state, self.tensor_shape)
-        if self.is_controlled_by:
-            ncontrol = len(self.control_qubits)
-            nactive = self.nqubits - ncontrol
-            state = K.transpose(state, self.control_cache.order(False))
-            # Apply `einsum` only to the part of the state where all controls
-            # are active. This should be `state[-1]`
-            state = K.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            updates = self.einsum(self.calculation_cache.vector, state[-1],
-                                  self.matrix)
-            # Concatenate the updated part of the state `updates` with the
-            # part of of the state that remained unaffected `state[:-1]`.
-            state = K.concatenate([state[:-1], updates[K.newaxis]], axis=0)
-            state = K.reshape(state, self.nqubits * (2,))
-            # Put qubit indices back to their proper places
-            state = K.transpose(state, self.control_cache.reverse(False))
-        else:
-            einsum_str = self.calculation_cache.vector
-            state = self.einsum(einsum_str, state, self.matrix)
-        return K.reshape(state, self.flat_shape)
+        return K.state_vector_call(self, state)
 
     def density_matrix_call(self, state):
-        state = K.reshape(state, self.tensor_shape)
-        if self.is_controlled_by:
-            ncontrol = len(self.control_qubits)
-            nactive = self.nqubits - ncontrol
-            n = 2 ** ncontrol
-            state = K.transpose(state, self.control_cache.order(True))
-            state = K.reshape(state, 2 * (n,) + 2 * nactive * (2,))
-            state01 = K.gather(state, indices=range(n - 1), axis=0)
-            state01 = K.squeeze(K.gather(state01, indices=[n - 1], axis=1), axis=1)
-            state01 = self.einsum(self.calculation_cache.right0,
-                                  state01, K.conj(self.matrix))
-            state10 = K.gather(state, indices=range(n - 1), axis=1)
-            state10 = K.squeeze(K.gather(state10, indices=[n - 1], axis=0), axis=0)
-            state10 = self.einsum(self.calculation_cache.left0,
-                                  state10, self.matrix)
-
-            state11 = K.squeeze(K.gather(state, indices=[n - 1], axis=0), axis=0)
-            state11 = K.squeeze(K.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.einsum(self.calculation_cache.right, state11,
-                                  K.conj(self.matrix))
-            state11 = self.einsum(self.calculation_cache.left,
-                                  state11, self.matrix)
-
-            state00 = K.gather(state, indices=range(n - 1), axis=0)
-            state00 = K.gather(state00, indices=range(n - 1), axis=1)
-            state01 = K.concatenate([state00, state01[:, K.newaxis]], axis=1)
-            state10 = K.concatenate([state10, state11[K.newaxis]], axis=0)
-            state = K.concatenate([state01, state10[K.newaxis]], axis=0)
-            state = K.reshape(state, 2 * self.nqubits * (2,))
-            state = K.transpose(state, self.control_cache.reverse(True))
-        else:
-            state = self.einsum(self.calculation_cache.right, state,
-                                K.conj(self.matrix))
-            state = self.einsum(self.calculation_cache.left, state, self.matrix)
-        return K.reshape(state, self.flat_shape)
+        return K.density_matrix_call(self, state)
 
 
 class H(BackendGate, gates.H):
@@ -150,7 +73,6 @@ class X(BackendGate, gates.X):
         """Fall back to CNOT and Toffoli if controls are one or two."""
         # FIXME: This method can probably be removed
         gate = gates.X.controlled_by(self, *q)
-        gate.einsum = self.einsum
         return gate
 
 

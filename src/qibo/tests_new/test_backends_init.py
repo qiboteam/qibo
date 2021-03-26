@@ -22,11 +22,6 @@ def test_set_backend(backend):
         from qibo.core import cgates as custom_gates
         assert isinstance(gates.H(0), custom_gates.BackendGate)
     else:
-        assert not K.custom_gates
-        if "defaulteinsum" in backend:
-            assert K.custom_einsum == "DefaultEinsum"
-        else:
-            assert K.custom_einsum == "MatmulEinsum"
         from qibo.core import gates as native_gates
         h = gates.H(0)
         assert isinstance(h, native_gates.BackendGate)
