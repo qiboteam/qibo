@@ -389,3 +389,24 @@ class AbstractBackend(ABC):
     @abstractmethod
     def set_seed(self, seed): # pragma: no cover
         raise_error(NotImplementedError)
+
+    # TODO: Add docstrings here
+    @abstractmethod
+    def create_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def gate_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def prepare_gate(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def state_vector_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)

@@ -1,3 +1,4 @@
+from abc import abstractmethod
 from qibo.backends import abstract
 from qibo.config import raise_error, log
 
@@ -232,12 +233,6 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
-
-    def create_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    def gate_call(self, cache, state, matrix): # pragma: no cover
-        raise_error(NotImplementedError)
 
     def _get_default_einsum(self):
         # finds default einsum backend of the same engine to use for fall back

@@ -228,6 +228,21 @@ class TensorflowCustomBackend(TensorflowBackend):
             frequencies, probs, nshots, nqubits, seed, self.get_threads())
         return frequencies
 
+    def create_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def gate_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def prepare_gate(self, gate): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def state_vector_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def density_matrix_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
 
 class TensorflowDefaultEinsumBackend(TensorflowBackend):
 
