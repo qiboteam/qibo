@@ -603,20 +603,6 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
 
-    def prepare(self):
-        self.is_prepared = True
-        try:
-            self.tensor_shape = K.cast(2 * self.nqubits * (2,), dtype='DTYPEINT')
-            self.flat_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
-            self.reprepare()
-            qubits = self.qubits + tuple(q + self.nqubits for q in self.qubits)
-            self.calculation_cache = self.einsum.create_cache(
-                qubits, 2 * self.nqubits)
-            self.calculation_cache.cast_shapes(
-                lambda x: K.cast(x, dtype='DTYPEINT'))
-        except (ValueError, OverflowError): # pragma: no cover
-            pass
-
     def construct_unitary(self):
         return cgates._ThermalRelaxationChannelB.construct_unitary(self)
 
@@ -626,6 +612,6 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
 
     def density_matrix_call(self, state):
         einsum_str = self.calculation_cache.vector
-        state = K.reshape(state, self.tensor_shape)
-        state = self.einsum(einsum_str, state, self.matrix)
-        return K.reshape(state, self.flat_shape)
+        state = K.reshape(state, self.tensor_shape) # pylint: disable=no-member
+        state = K.gate_call(einsum_str, state, self.matrix)
+        return K.reshape(state, self.flat_shape) # pylint: disable=no-member

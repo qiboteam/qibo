@@ -263,7 +263,13 @@ class NumpyBackend(abstract.AbstractBackend):
                 gate.calculation_cache = self.create_cache(
                     targets, nactive, ncontrol)
         else:
-            gate.calculation_cache = self.create_cache(gate.qubits, gate.nqubits)
+            from qibo.abstractions.gates import _ThermalRelaxationChannelB
+            if isinstance(gate, _ThermalRelaxationChannelB):
+                # TODO: Handle this case otherwise
+                qubits = gate.qubits + tuple(q + gate.nqubits for q in gate.qubits)
+                gate.calculation_cache = self.create_cache(qubits, 2 * gate.nqubits)
+            else:
+                gate.calculation_cache = self.create_cache(gate.qubits, gate.nqubits)
         gate.calculation_cache.cast_shapes(
             lambda x: self.cast(x, dtype='DTYPEINT'))
 
