@@ -42,6 +42,12 @@ class BackendGate(BaseBackendGate):
         part2 = K.concatenate([zeros, unitary], axis=0)
         return K.concatenate([part1, part2], axis=1)
 
+    @property
+    def cache(self):
+        if self._cache is None:
+            self._cache = K.create_gate_cache(self)
+        return self._cache
+
     def reprepare(self):
         raise_error(RuntimeError, "Cannot reprepare non-parametrized gate.")
 

@@ -15,16 +15,17 @@ class BackendGate(BaseBackendGate):
 
     def __init__(self):
         super().__init__()
-        self.calculation_cache = None
-        # For ``controlled_by`` gates
-        # (see ``core.einsum.ControlCache`` for more details)
-        self.control_cache = None
-        # Gate matrices
         self.matrix = None
 
     @staticmethod
     def control_unitary(unitary):
         return cgates.BackendGate.control_unitary(unitary)
+
+    @property
+    def cache(self):
+        if self._cache is None:
+            self._cache = K.create_gate_cache(self)
+        return self._cache
 
     def reprepare(self):
         matrix = self.construct_unitary()
@@ -35,10 +36,6 @@ class BackendGate(BaseBackendGate):
         self.is_prepared = True
         if self.well_defined:
             self.reprepare()
-        try:
-            K.prepare_gate(self)
-        except (ValueError, OverflowError):
-            pass
 
     def set_nqubits(self, state):
         cgates.BackendGate.set_nqubits(self, state)
@@ -611,7 +608,7 @@ class _ThermalRelaxationChannelB(BackendGate, gates._ThermalRelaxationChannelB):
                                 "state vectors when T1 < T2.")
 
     def density_matrix_call(self, state):
-        einsum_str = self.calculation_cache.vector
-        state = K.reshape(state, self.tensor_shape) # pylint: disable=no-member
-        state = K.gate_call(einsum_str, state, self.matrix)
-        return K.reshape(state, self.flat_shape) # pylint: disable=no-member
+        einsum_str = self.cache.calculation_cache.vector
+        state = K.reshape(state, self.cache.tensor_shape) # pylint: disable=no-member
+        state = K.einsum_call(einsum_str, state, self.matrix)
+        return K.reshape(state, self.cache.flat_shape) # pylint: disable=no-member

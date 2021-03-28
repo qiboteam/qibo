@@ -133,6 +133,9 @@ class Circuit(circuit.AbstractCircuit):
         if K.custom_gates:
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
+        for gate in self.queue:
+            # create gate cache before compilation
+            _ = gate.cache
         self._compiled_execute = K.compile(self._execute_for_compile)
 
     def _execute(self, initial_state=None):

@@ -392,7 +392,7 @@ class AbstractBackend(ABC):
 
     # TODO: Add docstrings here
     @abstractmethod
-    def prepare_gate(self, gate): # pragma: no cover
+    def create_gate_cache(self, gate): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod

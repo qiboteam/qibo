@@ -386,6 +386,7 @@ class BaseBackendGate(Gate, ABC):
     def __init__(self):
         Gate.__init__(self)
         self._unitary = None
+        self._cache = None
         # Cast gate matrices to the proper device
         self.device = get_device()
         # Reference to copies of this gate that are casted in devices when
@@ -431,6 +432,11 @@ class BaseBackendGate(Gate, ABC):
     def construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
+
+    @property
+    @abstractmethod
+    def cache(self): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def prepare(self): # pragma: no cover

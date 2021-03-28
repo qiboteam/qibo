@@ -251,79 +251,84 @@ class NumpyBackend(abstract.AbstractBackend):
         engine = self.name.split("_")[0].capitalize()
         return getattr(module, f"{engine}DefaultEinsumBackend")
 
-    def prepare_gate(self, gate):
+    class GateCache:
+        pass
+
+    def create_gate_cache(self, gate):
+        cache = self.GateCache()
         s = 1 + gate.density_matrix
-        gate.tensor_shape = self.cast(s * gate.nqubits * (2,), dtype='DTYPEINT')
-        gate.flat_shape = self.cast(s * (2 ** gate.nqubits,), dtype='DTYPEINT')
+        cache.tensor_shape = self.cast(s * gate.nqubits * (2,), dtype='DTYPEINT')
+        cache.flat_shape = self.cast(s * (2 ** gate.nqubits,), dtype='DTYPEINT')
         if gate.is_controlled_by:
-            gate.control_cache = self.einsum_module.ControlCache(gate)
+            cache.control_cache = self.einsum_module.ControlCache(gate)
             nactive = gate.nqubits - len(gate.control_qubits)
-            targets = gate.control_cache.targets
+            targets = cache.control_cache.targets
             ncontrol = len(gate.control_qubits)
             if gate.density_matrix:
                 # fall back to the 'defaulteinsum' backend when using
                 # density matrices with `controlled_by` gates because
                 # 'matmuleinsum' is not properly implemented for this case
                 backend = self._get_default_einsum()
-                gate.calculation_cache = backend.create_einsum_cache(
+                cache.calculation_cache = backend.create_einsum_cache(
                     self, targets, nactive, ncontrol)
             else:
-                gate.calculation_cache = self.create_einsum_cache(
+                cache.calculation_cache = self.create_einsum_cache(
                     targets, nactive, ncontrol)
         else:
             from qibo.abstractions.gates import _ThermalRelaxationChannelB
             if isinstance(gate, _ThermalRelaxationChannelB):
                 # TODO: Handle this case otherwise
                 qubits = gate.qubits + tuple(q + gate.nqubits for q in gate.qubits)
-                gate.calculation_cache = self.create_einsum_cache(qubits, 2 * gate.nqubits)
+                cache.calculation_cache = self.create_einsum_cache(qubits, 2 * gate.nqubits)
             else:
-                gate.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
-        gate.calculation_cache.cast_shapes(
+                cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
+        cache.calculation_cache.cast_shapes(
             lambda x: self.cast(x, dtype='DTYPEINT'))
+        return cache
 
     def state_vector_call(self, gate, state):
-        state = self.reshape(state, gate.tensor_shape)
+        state = self.reshape(state, gate.cache.tensor_shape)
         if gate.is_controlled_by:
             ncontrol = len(gate.control_qubits)
             nactive = gate.nqubits - ncontrol
-            state = self.transpose(state, gate.control_cache.order(False))
+            state = self.transpose(state, gate.cache.control_cache.order(False))
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = self.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            updates = self.einsum_call(gate.calculation_cache.vector, state[-1],
+            updates = self.einsum_call(gate.cache.calculation_cache.vector, state[-1],
                                      gate.matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
             state = self.concatenate([state[:-1], updates[self.newaxis]], axis=0)
             state = self.reshape(state, gate.nqubits * (2,))
             # Put qubit indices back to their proper places
-            state = self.transpose(state, gate.control_cache.reverse(False))
+            state = self.transpose(state, gate.cache.control_cache.reverse(False))
         else:
-            einsum_str = gate.calculation_cache.vector
+            einsum_str = gate.cache.calculation_cache.vector
             state = self.einsum_call(einsum_str, state, gate.matrix)
-        return self.reshape(state, gate.flat_shape)
+        return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_call(self, gate, state):
-        state = self.reshape(state, gate.tensor_shape)
+        state = self.reshape(state, gate.cache.tensor_shape)
         if gate.is_controlled_by:
             ncontrol = len(gate.control_qubits)
             nactive = gate.nqubits - ncontrol
             n = 2 ** ncontrol
-            state = self.transpose(state, gate.control_cache.order(True))
+            state = self.transpose(state, gate.cache.control_cache.order(True))
             state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
             state01 = self.gather(state, indices=range(n - 1), axis=0)
             state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
-            state01 = self.einsum_call(gate.calculation_cache.right0,
+            state01 = self.einsum_call(gate.cache.calculation_cache.right0,
                                      state01, self.conj(gate.matrix))
             state10 = self.gather(state, indices=range(n - 1), axis=1)
             state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
-            state10 = self.einsum_call(gate.calculation_cache.left0,
+            state10 = self.einsum_call(gate.cache.calculation_cache.left0,
                                        state10, gate.matrix)
 
             state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
             state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.einsum_call(gate.calculation_cache.right, state11, self.conj(gate.matrix))
-            state11 = self.einsum_call(gate.calculation_cache.left, state11, gate.matrix)
+            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, self.conj(gate.matrix))
+            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, gate.matrix)
 
             state00 = self.gather(state, indices=range(n - 1), axis=0)
             state00 = self.gather(state00, indices=range(n - 1), axis=1)
@@ -331,12 +336,12 @@ class NumpyBackend(abstract.AbstractBackend):
             state10 = self.concatenate([state10, state11[self.newaxis]], axis=0)
             state = self.concatenate([state01, state10[self.newaxis]], axis=0)
             state = self.reshape(state, 2 * gate.nqubits * (2,))
-            state = self.transpose(state, gate.control_cache.reverse(True))
+            state = self.transpose(state, gate.cache.control_cache.reverse(True))
         else:
-            state = self.einsum_call(gate.calculation_cache.right, state,
+            state = self.einsum_call(gate.cache.calculation_cache.right, state,
                                    self.conj(gate.matrix))
-            state = self.einsum_call(gate.calculation_cache.left, state, gate.matrix)
-        return self.reshape(state, gate.flat_shape)
+            state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
+        return self.reshape(state, gate.cache.flat_shape)
 
 
 class NumpyDefaultEinsumBackend(NumpyBackend):
