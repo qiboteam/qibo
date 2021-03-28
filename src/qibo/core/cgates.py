@@ -55,32 +55,15 @@ class BackendGate(BaseBackendGate):
         """Prepares the gate for application to state vectors."""
         self.is_prepared = True
 
-    @property
-    def qubits_tensor(self):
-        if self._qubits_tensor is None:
-            qubits = [self.nqubits - q - 1 for q in self.control_qubits]
-            qubits.extend(self.nqubits - q - 1 for q in self.target_qubits)
-            self._qubits_tensor = K.cast(sorted(qubits), "int32")
-        return self._qubits_tensor
-
-    @property
-    def target_qubits_dm(self):
-        return [q + self.nqubits for q in self.target_qubits]
-
     def set_nqubits(self, state):
         self.nqubits = int(math.log2(tuple(state.shape)[0]))
         self.prepare()
 
     def state_vector_call(self, state):
-        return self.gate_op(state, self.qubits_tensor, self.nqubits,
-                            *self.target_qubits, get_threads())
+        return K.state_vector_call(self, state)
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor + self.nqubits, 2 * self.nqubits,
-                             *self.target_qubits, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
-                             *self.target_qubits_dm, get_threads())
-        return state
+        return K.density_matrix_call(self, state)
 
 
 class MatrixGate(BackendGate):
@@ -99,16 +82,10 @@ class MatrixGate(BackendGate):
             self.reprepare()
 
     def state_vector_call(self, state):
-        return self.gate_op(state, self.matrix, self.qubits_tensor, # pylint: disable=E1121
-                            self.nqubits, *self.target_qubits, get_threads())
+        return K.state_vector_matrix_call(self, state)
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.matrix, self.qubits_tensor + self.nqubits, # pylint: disable=E1121
-                             2 * self.nqubits, *self.target_qubits, get_threads())
-        adjmatrix = K.conj(self.matrix)
-        state = self.gate_op(state, adjmatrix, self.qubits_tensor,
-                             2 * self.nqubits, *self.target_qubits_dm, get_threads())
-        return state
+        return K.density_matrix_matrix_call(self, state)
 
 
 class H(MatrixGate, gates.H):
@@ -143,11 +120,12 @@ class Y(BackendGate, gates.Y):
         return K.matrices.Y
 
     def density_matrix_call(self, state):
-        state = self.gate_op(state, self.qubits_tensor + self.nqubits, 2 * self.nqubits,
-                             *self.target_qubits, get_threads())
+        state = self.gate_op(state, self.cache.qubits_tensor + self.nqubits,
+                             2 * self.nqubits, *self.target_qubits,
+                             get_threads())
         matrix = K.conj(K.matrices.Y)
-        state = K.op.apply_gate(state, matrix, self.qubits_tensor,
-                                2 * self.nqubits, *self.target_qubits_dm,
+        state = K.op.apply_gate(state, matrix, self.cache.qubits_tensor,
+                                2 * self.nqubits, *self.cache.target_qubits_dm,
                                 get_threads())
         return state
 
@@ -230,13 +208,13 @@ class M(BackendGate, gates.M):
         return self._symbol
 
     def state_vector_collapse(self, state, result):
-        return self.gate_op(state, self.qubits_tensor, result,
+        return self.gate_op(state, self.cache.qubits_tensor, result,
                             self.nqubits, True, get_threads())
 
     def density_matrix_collapse(self, state, result):
-        state = self.gate_op(state, self.qubits_tensor + self.nqubits, result,
+        state = self.gate_op(state, self.cache.qubits_tensor + self.nqubits, result,
                              2 * self.nqubits, False, get_threads())
-        state = self.gate_op(state, self.qubits_tensor, result,
+        state = self.gate_op(state, self.cache.qubits_tensor, result,
                              2 * self.nqubits, False, get_threads())
         return state / K.trace(state)
 
@@ -1040,6 +1018,7 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
             seed=seed)
         self.gate_op = K.op.apply_two_qubit_gate
 
+    # TODO: Remove this property and `target_qubits_dm`
     @property
     def qubits_tensor(self):
         if self._qubits_tensor is None:

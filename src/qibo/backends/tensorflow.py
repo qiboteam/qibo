@@ -236,13 +236,40 @@ class TensorflowCustomBackend(TensorflowBackend):
         raise_error(NotImplementedError)
 
     def create_gate_cache(self, gate):
-        raise_error(NotImplementedError)
+        cache = self.GateCache()
+        qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
+        qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
+        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
+        if gate.density_matrix:
+            cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
+        return cache
 
-    def state_vector_call(self, gate, state): # pragma: no cover
-        raise_error(NotImplementedError)
+    def state_vector_call(self, gate, state):
+        return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
+                            *gate.target_qubits, self.get_threads())
 
-    def density_matrix_call(self, gate, state): # pragma: no cover
-        raise_error(NotImplementedError)
+    def state_vector_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
+                            gate.nqubits, *gate.target_qubits,
+                            self.get_threads())
+
+    def density_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
+                             *gate.cache.target_qubits_dm, self.get_threads())
+        return state
+
+    def density_matrix_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        adjmatrix = self.conj(gate.matrix)
+        state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
+                             2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             self.get_threads())
+        return state
 
 
 class TensorflowDefaultEinsumBackend(TensorflowBackend):
