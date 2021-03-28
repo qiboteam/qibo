@@ -236,9 +236,11 @@ class NumpyBackend(abstract.AbstractBackend):
     def set_seed(self, seed):
         self.backend.random.seed(seed)
 
+    @abstractmethod
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
         raise_error(NotImplementedError)
 
+    @abstractmethod
     def einsum_call(self, cache, state, matrix): # pragma: no cover
         raise_error(NotImplementedError)
 

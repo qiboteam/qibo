@@ -213,6 +213,8 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
+            for gate in self.circuit.queue:
+                _ = gate.cache
             loss = K.compile(_loss)
 
         if method == 'sgd':

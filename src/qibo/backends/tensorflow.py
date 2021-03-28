@@ -229,7 +229,13 @@ class TensorflowCustomBackend(TensorflowBackend):
             frequencies, probs, nshots, nqubits, seed, self.get_threads())
         return frequencies
 
-    def prepare_gate(self, gate): # pragma: no cover
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def einsum_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def create_gate_cache(self, gate):
         raise_error(NotImplementedError)
 
     def state_vector_call(self, gate, state): # pragma: no cover
