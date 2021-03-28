@@ -1,6 +1,7 @@
 from qibo import get_backend
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit
+from qibo.models.evolution import StateEvolution
 
 
 class VQE(object):
