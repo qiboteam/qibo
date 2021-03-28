@@ -203,6 +203,7 @@ class TensorflowCustomBackend(TensorflowBackend):
         self.op = op
         from qibo.config import get_threads
         self.get_threads = get_threads
+        self.einsum_module = None
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
@@ -251,14 +252,13 @@ class TensorflowDefaultEinsumBackend(TensorflowBackend):
         from qibo.backends import einsum
         self.name = "tensorflow_defaulteinsum"
         self.custom_gates = False
-        self.einsum_module = einsum
 
-    def create_cache(self, qubits, nqubits, ncontrol=None):
-        return numpy.NumpyDefaultEinsumBackend.create_cache(
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyDefaultEinsumBackend.create_einsum_cache(
             self, qubits, nqubits, ncontrol)
 
-    def gate_call(self, cache, state, matrix):
-        return numpy.NumpyDefaultEinsumBackend.gate_call(
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyDefaultEinsumBackend.einsum_call(
             self, cache, state, matrix)
 
 
@@ -269,12 +269,11 @@ class TensorflowMatmulEinsumBackend(TensorflowBackend):
         super().__init__()
         self.name = "tensorflow_matmuleinsum"
         self.custom_gates = False
-        self.einsum_module = einsum
 
-    def create_cache(self, qubits, nqubits, ncontrol=None):
-        return numpy.NumpyMatmulEinsumBackend.create_cache(
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyMatmulEinsumBackend.create_einsum_cache(
             self, qubits, nqubits, ncontrol)
 
-    def gate_call(self, cache, state, matrix):
-        return numpy.NumpyMatmulEinsumBackend.gate_call(
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyMatmulEinsumBackend.einsum_call(
             self, cache, state, matrix)

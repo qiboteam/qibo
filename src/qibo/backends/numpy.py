@@ -23,7 +23,9 @@ class NumpyBackend(abstract.AbstractBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = None
-        self.einsum_module = None
+
+        from qibo.backends import einsum
+        self.einsum_module = einsum
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
@@ -234,6 +236,12 @@ class NumpyBackend(abstract.AbstractBackend):
     def set_seed(self, seed):
         self.backend.random.seed(seed)
 
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def einsum_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
     def _get_default_einsum(self):
         # finds default einsum backend of the same engine to use for fall back
         # in the case of `controlled_by` gates used on density matrices where
@@ -257,19 +265,19 @@ class NumpyBackend(abstract.AbstractBackend):
                 # density matrices with `controlled_by` gates because
                 # 'matmuleinsum' is not properly implemented for this case
                 backend = self._get_default_einsum()
-                gate.calculation_cache = backend.create_cache(
+                gate.calculation_cache = backend.create_einsum_cache(
                     self, targets, nactive, ncontrol)
             else:
-                gate.calculation_cache = self.create_cache(
+                gate.calculation_cache = self.create_einsum_cache(
                     targets, nactive, ncontrol)
         else:
             from qibo.abstractions.gates import _ThermalRelaxationChannelB
             if isinstance(gate, _ThermalRelaxationChannelB):
                 # TODO: Handle this case otherwise
                 qubits = gate.qubits + tuple(q + gate.nqubits for q in gate.qubits)
-                gate.calculation_cache = self.create_cache(qubits, 2 * gate.nqubits)
+                gate.calculation_cache = self.create_einsum_cache(qubits, 2 * gate.nqubits)
             else:
-                gate.calculation_cache = self.create_cache(gate.qubits, gate.nqubits)
+                gate.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
         gate.calculation_cache.cast_shapes(
             lambda x: self.cast(x, dtype='DTYPEINT'))
 
@@ -282,7 +290,7 @@ class NumpyBackend(abstract.AbstractBackend):
             # Apply `einsum` only to the part of the state where all controls
             # are active. This should be `state[-1]`
             state = self.reshape(state, (2 ** ncontrol,) + nactive * (2,))
-            updates = self.gate_call(gate.calculation_cache.vector, state[-1],
+            updates = self.einsum_call(gate.calculation_cache.vector, state[-1],
                                      gate.matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
@@ -292,7 +300,7 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.transpose(state, gate.control_cache.reverse(False))
         else:
             einsum_str = gate.calculation_cache.vector
-            state = self.gate_call(einsum_str, state, gate.matrix)
+            state = self.einsum_call(einsum_str, state, gate.matrix)
         return self.reshape(state, gate.flat_shape)
 
     def density_matrix_call(self, gate, state):
@@ -305,17 +313,17 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.reshape(state, 2 * (n,) + 2 * nactive * (2,))
             state01 = self.gather(state, indices=range(n - 1), axis=0)
             state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
-            state01 = self.gate_call(gate.calculation_cache.right0,
+            state01 = self.einsum_call(gate.calculation_cache.right0,
                                      state01, self.conj(gate.matrix))
             state10 = self.gather(state, indices=range(n - 1), axis=1)
             state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
-            state10 = self.gate_call(gate.calculation_cache.left0,
-                                     state10, gate.matrix)
+            state10 = self.einsum_call(gate.calculation_cache.left0,
+                                       state10, gate.matrix)
 
             state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
             state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.gate_call(gate.calculation_cache.right, state11, self.conj(gate.matrix))
-            state11 = self.gate_call(gate.calculation_cache.left, state11, gate.matrix)
+            state11 = self.einsum_call(gate.calculation_cache.right, state11, self.conj(gate.matrix))
+            state11 = self.einsum_call(gate.calculation_cache.left, state11, gate.matrix)
 
             state00 = self.gather(state, indices=range(n - 1), axis=0)
             state00 = self.gather(state00, indices=range(n - 1), axis=1)
@@ -325,9 +333,9 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.reshape(state, 2 * gate.nqubits * (2,))
             state = self.transpose(state, gate.control_cache.reverse(True))
         else:
-            state = self.gate_call(gate.calculation_cache.right, state,
+            state = self.einsum_call(gate.calculation_cache.right, state,
                                    self.conj(gate.matrix))
-            state = self.gate_call(gate.calculation_cache.left, state, gate.matrix)
+            state = self.einsum_call(gate.calculation_cache.left, state, gate.matrix)
         return self.reshape(state, gate.flat_shape)
 
 
@@ -342,15 +350,13 @@ class NumpyDefaultEinsumBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        from qibo.backends import einsum
         self.name = "numpy_defaulteinsum"
         self.custom_gates = False
-        self.einsum_module = einsum
 
-    def create_cache(self, qubits, nqubits, ncontrol=None):
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
         return self.einsum_module.DefaultEinsumCache(qubits, nqubits, ncontrol)
 
-    def gate_call(self, cache, state, matrix):
+    def einsum_call(self, cache, state, matrix):
         return self.einsum(cache, state, matrix)
 
 
@@ -375,22 +381,20 @@ class NumpyMatmulEinsumBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        from qibo.backends import einsum
         self.name = "numpy_matmuleinsum"
         self.custom_gates = False
-        self.einsum_module = einsum
 
-    def create_cache(self, qubits, nqubits, ncontrol=None):
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
         return self.einsum_module.MatmulEinsumCache(qubits, nqubits, ncontrol)
 
-    def gate_call(self, cache, state, matrix):
+    def einsum_call(self, cache, state, matrix):
         if isinstance(cache, str):
             # `controlled_by` gate acting on density matrices
             # fall back to defaulteinsum because matmuleinsum is not properly
             # implemented. See `qibo.backends.numpy.NumpyBackend.prepare_gate`
             # for more details
             backend = self._get_default_einsum()
-            return backend.gate_call(self, cache, state, matrix)
+            return backend.einsum_call(self, cache, state, matrix)
 
         shapes = cache["shapes"]
 
