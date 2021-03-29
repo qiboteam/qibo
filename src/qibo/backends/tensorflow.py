@@ -271,6 +271,17 @@ class TensorflowCustomBackend(TensorflowBackend):
                              self.get_threads())
         return state
 
+    def state_vector_collapse(self, gate, state, result):
+        return gate.gate_op(state, gate.cache.qubits_tensor, result,
+                            gate.nqubits, True, self.get_threads())
+
+    def density_matrix_collapse(self, gate, state, result):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        return state / self.trace(state)
+
 
 class TensorflowDefaultEinsumBackend(TensorflowBackend):
 

@@ -39,12 +39,8 @@ def test_circuit_add_layer(backend, nqubits, accelerators):
     params = nqubits * [0.1]
     c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
     assert len(c.queue) == nqubits // 2 + nqubits % 2
-    if backend == "custom":
-        target_gate_cls = gates.Unitary
-    else:
-        from qibo.core.gates import Unitary as target_gate_cls
     for gate in c.queue:
-        assert isinstance(gate, target_gate_cls)
+        assert isinstance(gate, gates.Unitary)
     qibo.set_backend(original_backend)
 
 # TODO: Test `_fuse_copy`

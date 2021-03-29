@@ -310,6 +310,10 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.einsum_call(einsum_str, state, gate.matrix)
         return self.reshape(state, gate.cache.flat_shape)
 
+    def state_vector_matrix_call(self, gate, state):
+        print(gate, gate.matrix.shape)
+        return self.state_vector_call(gate, state)
+
     def density_matrix_call(self, gate, state):
         state = self.reshape(state, gate.cache.tensor_shape)
         if gate.is_controlled_by:
@@ -344,6 +348,40 @@ class NumpyBackend(abstract.AbstractBackend):
                                    self.conj(gate.matrix))
             state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
         return self.reshape(state, gate.cache.flat_shape)
+
+    def density_matrix_matrix_call(self, gate, state):
+        return self.density_matrix_call(gate, state)
+
+    def _append_zeros(self, state, qubits, results):
+        """Helper method for `state_vector_collapse` and `density_matrix_collapse`."""
+        for q, r in zip(qubits, results):
+            state = self.expand_dims(state, axis=q)
+            if r:
+                state = self.concatenate([self.zeros_like(state), state], axis=q)
+            else:
+                state = self.concatenate([state, self.zeros_like(state)], axis=q)
+        return state
+
+    def state_vector_collapse(self, gate, state, result):
+        state = self.reshape(state, gate.tensor_shape)
+        substate = self.gather_nd(self.transpose(state, gate.order), result)
+        norm = self.sum(self.square(self.abs(substate)))
+        state = substate / self.cast(self.sqrt(norm), dtype=state.dtype)
+        state = self._append_zeros(state, sorted(gate.target_qubits), result)
+        return self.reshape(state, gate.flat_shape)
+
+    def density_matrix_collapse(self, gate, state, result):
+        density_matrix_result = 2 * result
+        sorted_qubits = sorted(gate.target_qubits)
+        sorted_qubits = sorted_qubits + [q + gate.nqubits for q in sorted_qubits]
+        state = self.reshape(state, gate.tensor_shape)
+        substate = self.gather_nd(self.transpose(state, gate.order),
+                                  density_matrix_result)
+        n = 2 ** (len(tuple(substate.shape)) // 2)
+        norm = self.trace(self.reshape(substate, (n, n)))
+        state = substate / norm
+        state = self._append_zeros(state, sorted_qubits, density_matrix_result)
+        return self.reshape(state, gate.flat_shape)
 
 
 class NumpyDefaultEinsumBackend(NumpyBackend):

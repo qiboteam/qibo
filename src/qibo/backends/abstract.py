@@ -400,5 +400,21 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def state_vector_matrix_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def density_matrix_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_matrix_call(self, gate, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def state_vector_collapse(self, gate, state, result): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_collapse(self, gate, state, result): # pragma: no cover
         raise_error(NotImplementedError)

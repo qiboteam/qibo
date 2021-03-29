@@ -347,9 +347,9 @@ def test_reset_channel_repeated(backend):
     for _ in range(30):
         state = np.copy(initial_state)
         if np.random.random() < 0.3:
-            state = collapse.state_vector_collapse(state, [0])
+            state = K.state_vector_collapse(collapse, state, [0])
         if np.random.random() < 0.3:
-            state = collapse.state_vector_collapse(state, [0])
+            state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
         target_state.append(np.copy(state))
     np.testing.assert_allclose(final_state, target_state)
@@ -378,9 +378,9 @@ def test_thermal_relaxation_channel_repeated(backend):
         if np.random.random() < pz:
             state = zgate(state)
         if np.random.random() < p0:
-            state = collapse.state_vector_collapse(state, [0])
+            state = K.state_vector_collapse(collapse, state, [0])
         if np.random.random() < p1:
-            state = collapse.state_vector_collapse(state, [0])
+            state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
         target_state.append(np.copy(state))
     np.testing.assert_allclose(final_state, target_state)

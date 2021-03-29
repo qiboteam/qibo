@@ -451,8 +451,6 @@ def test_flatten(backend):
     gate = gates.Flatten(target_state)
     with pytest.raises(ValueError):
         gate.construct_unitary()
-    with pytest.raises(RuntimeError):
-        gate.reprepare()
     qibo.set_backend(original_backend)
 
 
