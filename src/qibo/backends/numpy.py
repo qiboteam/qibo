@@ -311,7 +311,6 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
     def state_vector_matrix_call(self, gate, state):
-        print(gate, gate.matrix.shape)
         return self.state_vector_call(gate, state)
 
     def density_matrix_call(self, gate, state):

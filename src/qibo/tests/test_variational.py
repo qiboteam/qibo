@@ -81,6 +81,7 @@ def test_vqe(method, options, compile, filename):
     original_threads = get_threads()
     nqubits = 6
     layers  = 4
+    print(qibo.get_backend())
 
     circuit = Circuit(nqubits)
     for l in range(layers):

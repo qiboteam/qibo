@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 
 
 class BackendGate(BaseBackendGate):
-    module = sys.modules[__name__] # FIXME: This is probably not needed
+    module = sys.modules[__name__]
 
     def __init__(self):
         if K.name == "custom":
@@ -303,7 +303,11 @@ class RX(MatrixGate, gates.RX):
 
     def construct_unitary(self):
         theta = self.parameters
-        cos, isin = K.qnp.cos(theta / 2.0) + 0j, -1j * K.qnp.sin(theta / 2.0)
+        if isinstance(theta, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        cos, isin = p.cos(theta / 2.0) + 0j, -1j * p.sin(theta / 2.0)
         return K.cast([[cos, isin], [isin, cos]])
 
 
@@ -315,7 +319,11 @@ class RY(MatrixGate, gates.RY):
 
     def construct_unitary(self):
         theta = self.parameters
-        cos, sin = K.qnp.cos(theta / 2.0), K.qnp.sin(theta / 2.0)
+        if isinstance(theta, K.Tensor):
+            p = K
+        else:
+            p = K.qnp
+        cos, sin = p.cos(theta / 2.0), p.sin(theta / 2.0)
         return K.cast([[cos, -sin], [sin, cos]])
 
 
@@ -326,8 +334,12 @@ class RZ(MatrixGate, gates.RZ):
         gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self):
-        phase = K.qnp.exp(1j * self.parameters / 2.0)
-        return K.cast(K.qnp.diag([K.qnp.conj(phase), phase]))
+        if isinstance(self.parameters, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        phase = p.exp(1j * self.parameters / 2.0)
+        return K.cast(p.diag([p.conj(phase), phase]))
 
 
 class U1(MatrixGate, gates.U1):
@@ -345,7 +357,11 @@ class U1(MatrixGate, gates.U1):
             MatrixGate.reprepare(self)
 
     def construct_unitary(self):
-        return K.qnp.diag([1, K.qnp.exp(1j * self.parameters)])
+        if isinstance(self.parameters, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        return p.diag([1, p.exp(1j * self.parameters)])
 
 
 class U2(MatrixGate, gates.U2):
@@ -356,10 +372,14 @@ class U2(MatrixGate, gates.U2):
 
     def construct_unitary(self):
         phi, lam = self.parameters
-        eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
-        eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
-        return K.cast([[eplus.conj(), - eminus.conj()],
-                       [eminus, eplus]]) / K.qnp.sqrt(2)
+        if isinstance(phi, K.Tensor) or isinstance(lam, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        eplus = p.exp(1j * (phi + lam) / 2.0)
+        eminus = p.exp(1j * (phi - lam) / 2.0)
+        return K.cast([[p.conj(eplus), - p.conj(eminus)],
+                       [eminus, eplus]]) / p.sqrt(2)
 
 
 class U3(MatrixGate, gates.U3):
@@ -370,11 +390,13 @@ class U3(MatrixGate, gates.U3):
 
     def construct_unitary(self):
         theta, phi, lam = self.parameters
-        cost = K.qnp.cos(theta / 2)
-        sint = K.qnp.sin(theta / 2)
-        eplus = K.qnp.exp(1j * (phi + lam) / 2.0)
-        eminus = K.qnp.exp(1j * (phi - lam) / 2.0)
-        return K.cast([[eplus.conj() * cost, - eminus.conj() * sint],
+        if isinstance(theta, K.Tensor) or isinstance(phi, K.Tensor) or isinstance(lam, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        cost, sint = p.cos(theta / 2), p.sin(theta / 2)
+        eplus, eminus = p.exp(1j * (phi + lam) / 2.0), p.exp(1j * (phi - lam) / 2.0)
+        return K.cast([[p.conj(eplus) * cost, - p.conj(eminus) * sint],
                        [eminus * sint, eplus * cost]])
 
 
@@ -510,11 +532,15 @@ class fSim(MatrixGate, gates.fSim):
 
     def construct_unitary(self):
         theta, phi = self.parameters
-        cos, isin = K.qnp.cos(theta), -1j * K.qnp.sin(theta)
-        matrix = K.qnp.eye(4)
+        if isinstance(theta, K.Tensor) or isinstance(phi, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        cos, isin = p.cos(theta), -1j * p.sin(theta)
+        matrix = p.eye(4)
         matrix[1, 1], matrix[2, 2] = cos, cos
         matrix[1, 2], matrix[2, 1] = isin, isin
-        matrix[3, 3] = K.qnp.exp(-1j * phi)
+        matrix[3, 3] = p.exp(-1j * phi)
         return K.cast(matrix)
 
 
@@ -538,9 +564,13 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def construct_unitary(self):
         unitary, phi = self.parameters
-        matrix = K.qnp.eye(4)
-        matrix[1:3, 1:3] = K.qnp.reshape(unitary, (2, 2))
-        matrix[3, 3] = K.qnp.exp(-1j * phi)
+        if isinstance(unitary, K.Tensor) or isinstance(phi, K.Tensor): # pragma: no cover
+            p = K
+        else:
+            p = K.qnp
+        matrix = p.eye(4)
+        matrix[1:3, 1:3] = p.reshape(unitary, (2, 2))
+        matrix[3, 3] = p.exp(-1j * phi)
         return K.cast(matrix)
 
     def _dagger(self) -> "GenerelizedfSim":
@@ -661,7 +691,7 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
                  params: List[float], params2: Optional[List[float]] = None,
                  trainable: bool = True,
                  name: Optional[str] = None):
-        self.module.BackendGate.__init__(self)
+        BackendGate.__init__(self)
         gates.VariationalLayer.__init__(self, qubits, pairs,
                                         one_qubit_gate, two_qubit_gate,
                                         params, params2,
@@ -670,10 +700,10 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
         matrices, additional_matrix = self._calculate_unitaries()
         self.unitaries = []
         for targets, matrix in zip(self.pairs, matrices):
-            unitary = self.module.Unitary(matrix, *targets)
+            unitary = Unitary(matrix, *targets)
             self.unitaries.append(unitary)
         if self.additional_target is not None:
-            self.additional_unitary = self.module.Unitary(
+            self.additional_unitary = Unitary(
                 additional_matrix, self.additional_target)
             self.additional_unitary.density_matrix = self.density_matrix
         else:
