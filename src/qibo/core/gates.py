@@ -124,7 +124,8 @@ class Z(BackendGate, gates.Z):
     def __init__(self, q):
         BackendGate.__init__(self)
         gates.Z.__init__(self, q)
-        self.gate_op = K.op.apply_z
+        if self.gate_op:
+            self.gate_op = K.op.apply_z
 
     def construct_unitary(self):
         return K.matrices.Z
@@ -161,7 +162,8 @@ class M(BackendGate, gates.M):
         self._result_tensor = None
         if collapse:
             self.result = self.measurements.MeasurementResult(self.qubits)
-        self.gate_op = K.op.collapse_state
+        if self.gate_op:
+            self.gate_op = K.op.collapse_state
         self.order = None
 
     @property
@@ -1016,8 +1018,9 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
         gates._ThermalRelaxationChannelB.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
-        self.gate_op = K.op.apply_two_qubit_gate
         self._qubits_tensor = None
+        if self.gate_op:
+            self.gate_op = K.op.apply_two_qubit_gate
 
     # TODO: Remove this property and `target_qubits_dm`
     @property

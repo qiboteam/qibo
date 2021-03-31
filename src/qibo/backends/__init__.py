@@ -59,6 +59,8 @@ else:
                     "Einsum will be used to apply gates on CPU.")
         AVAILABLE_BACKENDS = {k: v for k, v in AVAILABLE_BACKENDS.items()
                               if "numpy" in k}
+        AVAILABLE_BACKENDS["defaulteinsum"] = NumpyDefaultEinsumBackend
+        AVAILABLE_BACKENDS["matmuleinsum"] = NumpyMatmulEinsumBackend
         K = AVAILABLE_BACKENDS.get("numpy")()
 
 
