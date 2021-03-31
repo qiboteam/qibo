@@ -277,13 +277,7 @@ class NumpyBackend(abstract.AbstractBackend):
                 cache.calculation_cache = self.create_einsum_cache(
                     targets, nactive, ncontrol)
         else:
-            from qibo.abstractions.gates import _ThermalRelaxationChannelB
-            if isinstance(gate, _ThermalRelaxationChannelB):
-                # TODO: Handle this case otherwise
-                qubits = gate.qubits + tuple(q + gate.nqubits for q in gate.qubits)
-                cache.calculation_cache = self.create_einsum_cache(qubits, 2 * gate.nqubits)
-            else:
-                cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
+            cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
         cache.calculation_cache.cast_shapes(
             lambda x: self.cast(x, dtype='DTYPEINT'))
         return cache

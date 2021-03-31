@@ -2,7 +2,7 @@
 # @authors: S. Efthymiou
 import sys
 import math
-from qibo import K, get_threads
+from qibo import K
 from qibo.abstractions import gates
 from qibo.abstractions.abstract_gates import BaseBackendGate, ParametrizedGate
 from qibo.config import raise_error
@@ -111,11 +111,11 @@ class Y(BackendGate, gates.Y):
     def _custom_density_matrix_call(self, state):
         state = self.gate_op(state, self.cache.qubits_tensor + self.nqubits,
                              2 * self.nqubits, *self.target_qubits,
-                             get_threads())
+                             K.get_threads())
         matrix = K.conj(K.matrices.Y)
         state = K.op.apply_gate(state, matrix, self.cache.qubits_tensor,
                                 2 * self.nqubits, *self.cache.target_qubits_dm,
-                                get_threads())
+                                K.get_threads())
         return state
 
 
@@ -1022,17 +1022,22 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
         if self.gate_op:
             self.gate_op = K.op.apply_two_qubit_gate
 
-    # TODO: Remove this property and `target_qubits_dm`
     @property
-    def qubits_tensor(self):
-        if self._qubits_tensor is None:
-            qubits = sorted(self.nqubits - q - 1 for q in self.target_qubits)
-            self._qubits_tensor = qubits + [q + self.nqubits for q in qubits]
-        return self._qubits_tensor
+    def cache(self):
+        if self._cache is None:
+            cache = K.create_gate_cache(self)
 
-    @property
-    def target_qubits_dm(self):
-        return self.target_qubits + tuple(q + self.nqubits for q in self.target_qubits)
+            qubits = sorted(self.nqubits - q - 1 for q in self.target_qubits)
+            cache.qubits_tensor = qubits + [q + self.nqubits for q in qubits]
+            cache.target_qubits_dm = self.qubits + tuple(q + self.nqubits for q in self.qubits)
+
+            if K.name != "custom":
+                cache.calculation_cache = K.create_einsum_cache(
+                    cache.target_qubits_dm, 2 * self.nqubits)
+
+            self._cache = cache
+
+        return self._cache
 
     def construct_unitary(self):
         matrix = K.qnp.diag([1 - self.preset1, self.exp_t2, self.exp_t2,
@@ -1046,5 +1051,8 @@ class _ThermalRelaxationChannelB(MatrixGate, gates._ThermalRelaxationChannelB):
                                 "state vectors when T1 < T2.")
 
     def density_matrix_call(self, state):
-        return self.gate_op(state, self.matrix, self.qubits_tensor,
-                            2 * self.nqubits, *self.target_qubits_dm, get_threads())
+        if K.name == "custom":
+            return self.gate_op(state, self.matrix, self.cache.qubits_tensor,
+                                2 * self.nqubits, *self.cache.target_qubits_dm,
+                                K.get_threads())
+        return K.state_vector_call(self, state)
