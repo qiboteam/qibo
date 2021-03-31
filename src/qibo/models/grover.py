@@ -1,12 +1,7 @@
-<<<<<<< HEAD
 import numpy as np
 from qibo import gates
 from qibo.config import log, raise_error
 from qibo.models.circuit import Circuit
-=======
-from qibo.config import raise_error, log
-from qibo.models import Circuit
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
 
 
 class Grover(object):
@@ -34,15 +29,8 @@ class Grover(object):
             First argument should be the bitstring to check.
         check_args (tuple): arguments needed for the check function.
             The found bitstring not included.
-<<<<<<< HEAD
         iterative (bool): force the use of the iterative Grover
     """
-=======
-        iterative (Bool): force the use of the iterative Grover
-    """
-    import numpy as np
-    from qibo import gates
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
 
     def __init__(self, oracle, superposition_circuit=None, initial_state_circuit=None,
                  superposition_qubits=None, superposition_size=None, number_solutions=None,
@@ -55,18 +43,11 @@ class Grover(object):
             self.superposition = superposition_circuit
         else:
             if not superposition_qubits:
-<<<<<<< HEAD
                 raise_error(ValueError, "Cannot create Grover model if the "
                                         "superposition circuit or number of "
                                         "qubits is not specified.")
             self.superposition = Circuit(superposition_qubits)
             self.superposition.add([gates.H(i) for i in range(superposition_qubits)])
-=======
-                raise_error(ValueError)
-            self.superposition = Circuit(superposition_qubits)
-            self.superposition.add([self.gates.H(i)
-                                   for i in range(superposition_qubits)])
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
 
         if superposition_qubits:
             self.sup_qubits = superposition_qubits
@@ -76,11 +57,7 @@ class Grover(object):
         if superposition_size:
             self.sup_size = superposition_size
         else:
-<<<<<<< HEAD
             self.sup_size = int(2 ** self.superposition.nqubits)
-=======
-            self.sup_size = int(2**self.superposition.nqubits)
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
 
         self.check = check
         self.check_args = check_args
@@ -91,13 +68,8 @@ class Grover(object):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
 
         c = Circuit(self.oracle.nqubits)
-<<<<<<< HEAD
         c.add(gates.X(self.oracle.nqubits - 1))
         c.add(gates.H(self.oracle.nqubits - 1))
-=======
-        c.add(self.gates.X(self.oracle.nqubits - 1))
-        c.add(self.gates.H(self.oracle.nqubits - 1))
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
         c.add(self.superposition.on_qubits(*range(self.superposition.nqubits)))
         return c
 
@@ -107,23 +79,12 @@ class Grover(object):
         c = Circuit(nqubits + 1)
         c.add(self.superposition.invert().on_qubits(*range(nqubits)))
         if self.initial_state_circuit:
-<<<<<<< HEAD
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add([gates.X(i) for i in range(nqubits)])
         c.add(gates.X(nqubits).controlled_by(*range(nqubits)))
         c.add([gates.X(i) for i in range(nqubits)])
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
-=======
-            c.add(self.initial_state_circuit.invert().on_qubits(
-                *range(self.initial_state_circuit.nqubits)))
-        c.add([self.gates.X(i) for i in range(nqubits)])
-        c.add(self.gates.X(nqubits).controlled_by(*range(nqubits)))
-        c.add([self.gates.X(i) for i in range(nqubits)])
-        if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.on_qubits(
-                *range(self.initial_state_circuit.nqubits)))
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
         c.add(self.superposition.on_qubits(*range(nqubits)))
         return c
 
@@ -150,11 +111,7 @@ class Grover(object):
         c += self.initialize()
         for _ in range(iterations):
             c += self.step()
-<<<<<<< HEAD
         c.add(gates.M(*range(self.sup_qubits)))
-=======
-        c.add(self.gates.M(*range(self.sup_qubits)))
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
         return c
 
     def iterative_grover(self, lamda_value=6/5):
@@ -172,11 +129,7 @@ class Grover(object):
         lamda = lamda_value
         total_iterations = 0
         while True:
-<<<<<<< HEAD
             it = np.random.randint(k + 1)
-=======
-            it = self.np.random.randint(k + 1)
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
             if it != 0:
                 total_iterations += it
                 circuit = self.circuit(it)
@@ -184,13 +137,8 @@ class Grover(object):
                 measured = result.frequencies(binary=True).most_common(1)[0][0]
                 if self.check(measured, *self.check_args):
                     return measured, total_iterations
-<<<<<<< HEAD
             k = min(lamda * k, np.sqrt(self.sup_size))
             if total_iterations > (9/4) * np.sqrt(self.sup_size):
-=======
-            k = min(lamda * k, self.np.sqrt(self.sup_size))
-            if total_iterations > (9/4)*self.np.sqrt(self.sup_size):
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
                 raise_error(TimeoutError, "Cancelling iterative method as too "
                                           "many iterations have taken place.")
 
@@ -205,31 +153,18 @@ class Grover(object):
             freq (bool): print the full frequencies after the exact Grover algorithm.
 
         Returns:
-<<<<<<< HEAD
             solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             iterations (int): number of oracle calls done to reach a solution.
         """
         if self.num_sol and not self.iterative:
             it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
-=======
-            self.solution (str): bitstring (or list of bitstrings) measured as solution of the search.
-            self.iterations (int): number of oracle calls done to reach a solution.
-        """
-        if self.num_sol and not self.iterative:
-            it = int(self.np.pi * self.np.sqrt(self.sup_size / self.num_sol) / 4)
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
             circuit = self.circuit(it)
             result = circuit(nshots=nshots).frequencies(binary=True)
             if freq:
                 log.info("Result of sampling Grover's algorihm")
                 log.info(result)
                 self.frequencies = result
-<<<<<<< HEAD
             log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
-=======
-            log.info(
-                f"Most common states found using Grover's algorithm with {it} iterations:")
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
             most_common = result.most_common(self.num_sol)
             self.solution = []
             self.iterations = it
@@ -240,19 +175,10 @@ class Grover(object):
                     if self.check(i[0], *self.check_args):
                         log.info('Solution checked and successful.')
                     else:
-<<<<<<< HEAD
                         log.info('Not a solution of the problem. Something went wrong.')
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")
-=======
-                        log.info(
-                            'Not a solution of the problem. Something went wrong.')
-        else:
-            if not self.check:
-                raise_error(
-                    ValueError, "Check function needed for iterative approach.")
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
             measured, total_iterations = self.iterative_grover()
             log.info('Solution found in an iterative process.')
             log.info(f'Solution: {measured}')
@@ -260,11 +186,8 @@ class Grover(object):
             self.solution = measured
             self.iterations = total_iterations
         return self.solution, self.iterations
-<<<<<<< HEAD
 
 
     def __call__(self, nshots=100, freq=False):
         """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
         return self.execute(nshots=nshots, freq=freq)
-=======
->>>>>>> 7da786afe4eea1e0ddbe2d7ccc047184497f4372
