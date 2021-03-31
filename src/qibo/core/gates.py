@@ -54,7 +54,8 @@ class BackendGate(BaseBackendGate):
         return matrix
 
     def set_nqubits(self, state):
-        self.nqubits = int(math.log2(tuple(state.shape)[0]))
+        if self._nqubits is None:
+            self.nqubits = int(math.log2(tuple(state.shape)[0]))
 
     def state_vector_call(self, state):
         return K.state_vector_call(self, state)
@@ -155,9 +156,6 @@ class M(BackendGate, gates.M):
         BackendGate.__init__(self)
         gates.M.__init__(self, *q, register_name=register_name,
                          collapse=collapse, p0=p0, p1=p1)
-        self.unmeasured_qubits = None # Tuple
-        self.reduced_target_qubits = None # List
-
         self.result = None
         self._result_list = None
         self._result_tensor = None
@@ -165,9 +163,6 @@ class M(BackendGate, gates.M):
             self.result = self.measurements.MeasurementResult(self.qubits)
         self.gate_op = K.op.collapse_state
         self.order = None
-
-    def add(self, gate: gates.M):
-        gates.M.add(self, gate)
 
     @property
     def cache(self):
@@ -230,15 +225,13 @@ class M(BackendGate, gates.M):
 
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
-            if not self.is_prepared:
-                self.set_nqubits(state)
+            self.set_nqubits(state)
             if self.density_matrix:
                 state = self.states.MatrixState.from_tensor(state)
             else:
                 state = self.states.VectorState.from_tensor(state)
         elif isinstance(state, self.states.AbstractState):
-            if not self.is_prepared:
-                self.set_nqubits(state.tensor)
+            self.set_nqubits(state.tensor)
         else:
             raise_error(TypeError, "Measurement gate called on state of type "
                                    "{} that is not supported."
@@ -247,7 +240,7 @@ class M(BackendGate, gates.M):
         def calculate_probs():
             probs_dim = K.cast((2 ** len(self.target_qubits),), dtype='DTYPEINT')
             probs = state.probabilities(measurement_gate=self)
-            probs = K.transpose(probs, axes=self.reduced_target_qubits)
+            probs = K.transpose(probs, axes=self.cache.reduced_target_qubits)
             probs = K.reshape(probs, probs_dim)
             return probs
 
