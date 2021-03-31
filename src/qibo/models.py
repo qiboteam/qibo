@@ -460,11 +460,11 @@ class Grover(object):
     """
     import numpy as np
     from qibo import gates
-    
+
     def __init__(self, oracle, superposition_circuit=None, initial_state_circuit=None,
-                 superposition_qubits=None, superposition_size=None, number_solutions=None, 
+                 superposition_qubits=None, superposition_size=None, number_solutions=None,
                  check=None, check_args=(), iterative=False):
-        
+
         self.oracle = oracle
         self.initial_state_circuit = initial_state_circuit
 
@@ -493,7 +493,7 @@ class Grover(object):
 
     def initialize(self):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
-        
+
         c = Circuit(self.oracle.nqubits)
         c.add(self.gates.X(self.oracle.nqubits - 1))
         c.add(self.gates.H(self.oracle.nqubits - 1))
@@ -506,12 +506,12 @@ class Grover(object):
         c = Circuit(nqubits + 1)
         c.add(self.superposition.invert().on_qubits(*range(nqubits)))
         if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state.nqubits)))
+            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add([self.gates.X(i) for i in range(nqubits)])
         c.add(self.gates.X(nqubits).controlled_by(*range(nqubits)))
         c.add([self.gates.X(i) for i in range(nqubits)])
         if self.initial_state_circuit:
-            c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state.nqubits)))
+            c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add(self.superposition.on_qubits(*range(nqubits)))
         return c
 
@@ -543,11 +543,11 @@ class Grover(object):
 
     def iterative_grover(self, lamda_value=6/5):
         """Iterative approach of Grover for when the number of solutions is not known.
-        
+
         Args:
             lamda_value (real): parameter that controls the evolution of the iterative method.
                                 Must be between 1 and 4/3.
-                                
+
         Returns:
             measured (str): bitstring measured and checked as a valid solution.
             total_iterations (int): number of times the oracle has been called.
@@ -578,7 +578,7 @@ class Grover(object):
         Args:
             nshots (int): number of shots in order to get the frequencies.
             freq (bool): print the full frequencies after the exact Grover algorithm.
-            
+
         Returns:
             self.solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             self.iterations (int): number of oracle calls done to reach a solution.
