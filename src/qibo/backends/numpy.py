@@ -232,3 +232,10 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
+
+
+class HardwareBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "hardware"

@@ -15,7 +15,10 @@ class BackendGate(BaseBackendGate):
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "ZPow", "CZPow", "Flatten", "CallbackGate"}
         # TODO: Move these to a different file and refactor
-        if K.custom_gates or cls.__name__ in cgate_only:
+        if K.name == "hardware":
+            from qibo.hardware import gates as hgates
+            return getattr(hgates, cls.__name__)(*args, **kwargs)
+        elif K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
         else:
             from qibo.core import gates

@@ -1,7 +1,7 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyBackend
+from qibo.backends.numpy import NumpyBackend, HardwareBackend
 from qibo.backends.tensorflow import TensorflowBackend
 
 
@@ -12,6 +12,8 @@ def _construct_backend(name):
             _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
         elif name == "tensorflow":
             _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
+        elif name == "hardware":
+            _CONSTRUCTED_BACKENDS["hardware"] = HardwareBackend()
         else:
             raise_error(ValueError, "Unknown backend name {}.".format(name))
     return _CONSTRUCTED_BACKENDS.get(name)
@@ -22,6 +24,8 @@ numpy_matrices = numpy_backend.matrices
 AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
                       "tensorflow_defaulteinsum", "tensorflow_matmuleinsum",
                       "numpy_defaulteinsum", "numpy_matmuleinsum"]
+HARDWARE_BACKENDS = {"icarusq"}
+AVAILABLE_BACKENDS.extend(HARDWARE_BACKENDS)
 
 
 # Select the default backend engine
@@ -80,13 +84,16 @@ def set_backend(backend="custom"):
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
 
-    gate_backend = backend.split("_")
-    if len(gate_backend) == 1:
-        calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
-    elif len(gate_backend) == 2:
-        calc_backend, gate_backend = gate_backend
-    if gate_backend == "custom":
-        calc_backend = "tensorflow"
+    if backend in HARDWARE_BACKENDS:
+        calc_backend, gate_backend = "hardware", "defaulteinsum"
+    else:
+        gate_backend = backend.split("_")
+        if len(gate_backend) == 1:
+            calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
+        elif len(gate_backend) == 2:
+            calc_backend, gate_backend = gate_backend
+        if gate_backend == "custom":
+            calc_backend = "tensorflow"
     bk = _construct_backend(calc_backend)
     K.assign(bk)
     K.qnp = numpy_backend

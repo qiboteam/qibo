@@ -65,6 +65,9 @@ class AbstractBackend(ABC):
         elif name == 'matmuleinsum':
             self.custom_gates = False
             self.custom_einsum = "MatmulEinsum"
+        elif name == 'hardware':
+            self.custom_gates = False
+            self.custom_einsum = None
         else: # pragma: no cover
             # this case is captured by `backends.__init__.set_backend` checks
             raise_error(ValueError, f"Gate backend '{name}' not supported.")
