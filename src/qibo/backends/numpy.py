@@ -18,6 +18,7 @@ class NumpyBackend(abstract.AbstractBackend):
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
         self.tensor_types = (np.ndarray,)
+        self.native_types = (np.ndarray,)
         self.Tensor = np.ndarray
         self.random = np.random
         self.newaxis = np.newaxis

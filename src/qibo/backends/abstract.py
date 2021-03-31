@@ -21,6 +21,7 @@ class AbstractBackend(ABC):
         self.matrices = None
         self.numeric_types = None
         self.tensor_types = None
+        self.native_types = None
         self.Tensor = None
         self.random = None
         self.newaxis = None

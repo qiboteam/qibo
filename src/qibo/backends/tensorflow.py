@@ -36,6 +36,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
 
         self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
+        self.native_types = (tf.Tensor, tf.Variable)
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis

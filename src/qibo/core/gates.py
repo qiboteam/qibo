@@ -294,8 +294,9 @@ class RX(MatrixGate, gates.RX):
 
     def construct_unitary(self):
         theta = self.parameters
-        if isinstance(theta, K.Tensor): # pragma: no cover
+        if isinstance(theta, K.native_types): # pragma: no cover
             p = K
+            theta = K.cast(theta)
         else:
             p = K.qnp
         cos, isin = p.cos(theta / 2.0) + 0j, -1j * p.sin(theta / 2.0)
@@ -310,8 +311,9 @@ class RY(MatrixGate, gates.RY):
 
     def construct_unitary(self):
         theta = self.parameters
-        if isinstance(theta, K.Tensor):
+        if isinstance(theta, K.native_types):
             p = K
+            theta = K.cast(theta)
         else:
             p = K.qnp
         cos, sin = p.cos(theta / 2.0), p.sin(theta / 2.0)
@@ -325,11 +327,17 @@ class RZ(MatrixGate, gates.RZ):
         gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self):
-        if isinstance(self.parameters, K.Tensor): # pragma: no cover
+        print(self.parameters)
+        if isinstance(self.parameters, K.native_types): # pragma: no cover
             p = K
+            theta = K.cast(self.parameters)
+            print(theta)
         else:
             p = K.qnp
-        phase = p.exp(1j * self.parameters / 2.0)
+            theta = self.parameters
+        print(theta)
+        print(p)
+        phase = p.exp(1j * theta / 2.0)
         return K.cast(p.diag([p.conj(phase), phase]))
 
 
@@ -348,11 +356,13 @@ class U1(MatrixGate, gates.U1):
             return MatrixGate.calculate_matrix(self)
 
     def construct_unitary(self):
-        if isinstance(self.parameters, K.Tensor): # pragma: no cover
+        if isinstance(self.parameters, K.native_types): # pragma: no cover
             p = K
+            theta = K.cast(self.parameters)
         else:
             p = K.qnp
-        return p.diag([1, p.exp(1j * self.parameters)])
+            theta = self.parameters
+        return p.diag([1, p.exp(1j * theta)])
 
 
 class U2(MatrixGate, gates.U2):
@@ -363,7 +373,7 @@ class U2(MatrixGate, gates.U2):
 
     def construct_unitary(self):
         phi, lam = self.parameters
-        if isinstance(phi, K.Tensor) or isinstance(lam, K.Tensor): # pragma: no cover
+        if isinstance(phi, K.native_types) or isinstance(lam, K.native_types): # pragma: no cover
             p = K
         else:
             p = K.qnp
@@ -381,7 +391,7 @@ class U3(MatrixGate, gates.U3):
 
     def construct_unitary(self):
         theta, phi, lam = self.parameters
-        if isinstance(theta, K.Tensor) or isinstance(phi, K.Tensor) or isinstance(lam, K.Tensor): # pragma: no cover
+        if isinstance(theta, K.native_types) or isinstance(phi, K.native_types) or isinstance(lam, K.native_types): # pragma: no cover
             p = K
         else:
             p = K.qnp
@@ -523,7 +533,7 @@ class fSim(MatrixGate, gates.fSim):
 
     def construct_unitary(self):
         theta, phi = self.parameters
-        if isinstance(theta, K.Tensor) or isinstance(phi, K.Tensor): # pragma: no cover
+        if isinstance(theta, K.native_types) or isinstance(phi, K.native_types): # pragma: no cover
             p = K
         else:
             p = K.qnp
@@ -554,7 +564,7 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def construct_unitary(self):
         unitary, phi = self.parameters
-        if isinstance(unitary, K.Tensor) or isinstance(phi, K.Tensor): # pragma: no cover
+        if isinstance(unitary, K.native_types) or isinstance(phi, K.native_types): # pragma: no cover
             p = K
         else:
             p = K.qnp
@@ -565,7 +575,7 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
 
     def _dagger(self) -> "GenerelizedfSim":
         unitary, phi = self.parameters
-        if isinstance(unitary, K.Tensor):
+        if isinstance(unitary, K.native_types):
             ud = K.conj(K.transpose(unitary))
         else:
             ud = unitary.conj().T
