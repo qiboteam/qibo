@@ -83,7 +83,7 @@ def set_backend(backend="custom"):
                       category=RuntimeWarning)
 
     gate_backend = backend.split("_")
-    if gate_backend == "icarusq":
+    if gate_backend == ["icarusq"]:
         calc_backend, gate_backend = "icarusq", "defaulteinsum"
     elif len(gate_backend) == 1:
         calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
