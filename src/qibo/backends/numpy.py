@@ -234,8 +234,11 @@ class NumpyBackend(abstract.AbstractBackend):
         self.backend.random.seed(seed)
 
 
-class HardwareBackend(NumpyBackend):
+class IcarusQBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        self.name = "hardware"
+        # TODO: Implement experiment switcher
+        from qibo.hardware.experiments import IcarusQ
+        self.name = "icarusq"
+        self.experiment = IcarusQ()

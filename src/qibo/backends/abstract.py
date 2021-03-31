@@ -32,6 +32,7 @@ class AbstractBackend(ABC):
         self.oom_error = None
         self.optimization = None
         self.op = None
+        self.experiment = None
 
     def __str__(self):
         return self.name
@@ -54,6 +55,7 @@ class AbstractBackend(ABC):
         self.oom_error = backend.oom_error
         self.optimization = backend.optimization
         self.op = backend.op
+        self.experiment = backend.experiment
 
     def set_gates(self, name):
         if name == 'custom':
