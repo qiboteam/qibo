@@ -77,7 +77,7 @@ def main(nclasses, nqubits, nlayers, nshots, training, RxRzRx, method):
             np.save('data/optimal_angles_rxrzrx_{}q_{}l.npy'.format(nqubits,nlayers), optimal_angles)
         
     # We define our test set (both kets and labels)
-    data_test = np.concatenate((data[35:49], data[85:99], data[135:149]))  
+    data_test = np.concatenate((data[35:50], data[85:100], data[135:150]))  
     labels_test = [[1,1]]*15 + [[1,-1]]*15 + [[-1,1]]*15
     
     # We run an accuracy check for the training and the test sets
