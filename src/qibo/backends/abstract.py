@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 
 
 class AbstractBackend(ABC):
@@ -105,6 +105,24 @@ class AbstractBackend(ABC):
         if device_number >= ndevices:
             raise_error(ValueError, f"Device {name} does not exist.")
         self.default_device = name
+
+    def get_cpu(self): # pragma: no cover
+        """Returns default CPU device to use for OOM fallback."""
+        # case not covered by GitHub workflows because it requires OOM""
+        if not self.cpu_devices:
+            raise_error(RuntimeError, "Cannot find CPU device to fall back to.")
+        return self.cpu_devices[0]
+
+    def cpu_fallback(self, func, *args):
+        """Executes a function on CPU if the default devices raises OOM."""
+        try:
+            return func(*args)
+        except self.oom_error: # pragma: no cover
+            # case not covered by GitHub workflows because it requires OOM
+            # Force using CPU to perform sampling
+            log.warn("Falling back to CPU because the GPU is out-of-memory.")
+            with self.device(self.get_cpu()):
+                return func(*args)
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
@@ -301,11 +319,21 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def less(self, x, y): # pragma: no cover
+        """Compares the values of two tensors element-wise. Returns a bool tensor."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def array_equal(self, x, y): # pragma: no cover
-        """Checks if two arrays are equal elementwise.
+        """Checks if two arrays are equal element-wise. Returns a single bool.
 
         Used in :meth:`qibo.tensorflow.hamiltonians.TrotterHamiltonian.construct_terms`.
         """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def squeeze(self, x, axis=None): # pragma: no cover
+        """Removes axis of unit length."""
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -337,10 +365,30 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def sample_measurements(self, probs, nshots): # pragma: no cover
-        """Samples measurements from a given probability distribution.
+    def sample_shots(self, probs, nshots): # pragma: no cover
+        """Samples measurement shots from a given probability distribution.
 
-        Measurements are returned in decimal as a tensor of shape ``(nshots,)``.
+        Args:
+            probs (Tensor): Tensor with the probability distribution on the
+                measured bitsrings.
+            nshots (int): Number of measurement shots to sample.
+
+        Returns:
+            Measurements in decimal as a tensor of shape ``(nshots,)``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def sample_frequencies(self, probs, nshots): # pragma: no cover
+        """Samples measurement frequencies from a given probability distribution.
+
+        Args:
+            probs (Tensor): Tensor with the probability distribution on the
+                measured bitsrings.
+            nshots (int): Number of measurement shots to sample.
+
+        Returns:
+            Frequencies of measurements as a ``collections.Counter``.
         """
         raise_error(NotImplementedError)
 

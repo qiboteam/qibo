@@ -8,178 +8,6 @@ from qibo.tests import utils
 _atol = 1e-8
 
 
-def test_hgate_application_twoqubit(backend):
-    """Check applying H gate to two qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = utils.random_density_matrix(2)
-    gate = gates.H(1)
-    gate.density_matrix = True
-    if backend == "custom":
-        final_rho = np.copy(initial_rho)
-    else:
-        final_rho = np.copy(initial_rho).reshape(4 * (2,))
-    final_rho = gate(final_rho).numpy().reshape((4, 4))
-
-    matrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
-    matrix = np.kron(np.eye(2), matrix)
-    initial_rho = initial_rho.reshape((4, 4))
-    target_rho = matrix.dot(initial_rho).dot(matrix)
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_rygate_application_twoqubit(backend):
-    """Check applying non-hermitian one qubit gate to one qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    theta = 0.1234
-    initial_rho = utils.random_density_matrix(1)
-
-    gate = gates.RY(0, theta=theta)
-    gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho)).numpy()
-
-    phase = np.exp(1j * theta / 2.0)
-    matrix = phase * np.array([[phase.real, -phase.imag], [phase.imag, phase.real]])
-    target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
-
-    np.testing.assert_allclose(final_rho, target_rho, atol=_atol)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("gatename,gatekwargs",
-                         [("H", {}), ("X", {}), ("Y", {}), ("Z", {}), ("I", {}),
-                          ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
-                          ("RZ", {"theta": 0.123}), ("U1", {"theta": 0.123}),
-                          ("ZPow", {"theta": 0.123}),
-                          ("U2", {"phi": 0.123, "lam": 0.321}),
-                          ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123})])
-def test_one_qubit_gates(backend, gatename, gatekwargs):
-    """Check applying one qubit gates to one qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(1)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    circuit = models.Circuit(1, density_matrix=True)
-    circuit.add(getattr(gates, gatename)(0, **gatekwargs))
-    final_rho = circuit(np.copy(initial_rho)).numpy()
-
-    circuit = models.Circuit(1)
-    circuit.add(getattr(gates, gatename)(0, **gatekwargs))
-    target_psi = circuit(np.copy(initial_psi)).numpy()
-    target_rho = np.outer(target_psi, target_psi.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("gatename,gatekwargs",
-                         [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
-                          ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
-                          ("CRZ", {"theta": 0.123}), ("CU1", {"theta": 0.123}),
-                          ("CZPow", {"theta": 0.123}),
-                          ("CU2", {"phi": 0.123, "lam": 0.321}),
-                          ("CU3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
-                          ("fSim", {"theta": 0.123, "phi": 0.543})])
-def test_two_qubit_gates(backend, gatename, gatekwargs):
-    """Check applying two qubit gates to two qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(2)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    circuit = models.Circuit(2, density_matrix=True)
-    circuit.add(getattr(gates, gatename)(1, 0, **gatekwargs))
-    final_rho = circuit(np.copy(initial_rho)).numpy()
-
-    circuit = models.Circuit(2)
-    circuit.add(getattr(gates, gatename)(1, 0, **gatekwargs))
-    target_psi = circuit(np.copy(initial_psi)).numpy()
-    target_rho = np.outer(target_psi, target_psi.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_toffoli_gate(backend):
-    """Check applying Toffoli to three qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(3)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    circuit = models.Circuit(3, density_matrix=True)
-    circuit.add(gates.TOFFOLI(0, 2, 1))
-    final_rho = circuit(np.copy(initial_rho)).numpy()
-
-    circuit = models.Circuit(3)
-    circuit.add(gates.TOFFOLI(0, 2, 1))
-    target_psi = circuit(np.copy(initial_psi)).numpy()
-    target_rho = np.outer(target_psi, target_psi.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("nqubits", [1, 2, 3])
-def test_unitary_gate(backend, nqubits):
-    """Check applying `gates.Unitary` to density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    shape = 2 * (2 ** nqubits,)
-    matrix = utils.random_numpy_complex(shape)
-    initial_psi = utils.random_numpy_state(nqubits)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    circuit = models.Circuit(nqubits, density_matrix=True)
-    if backend == "custom" and nqubits > 2:
-        with pytest.raises(NotImplementedError):
-            circuit.add(gates.Unitary(matrix, *range(nqubits)))
-    else:
-        circuit.add(gates.Unitary(matrix, *range(nqubits)))
-        final_rho = circuit(np.copy(initial_rho)).numpy()
-
-        circuit = models.Circuit(nqubits)
-        circuit.add(gates.Unitary(matrix, *range(nqubits)))
-        target_psi = circuit(np.copy(initial_psi)).numpy()
-        target_rho = np.outer(target_psi, target_psi.conj())
-        np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_cu1gate_application_twoqubit(backend):
-    """Check applying two qubit gate to three qubit density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    theta = 0.1234
-    nqubits = 3
-    initial_rho = utils.random_density_matrix(nqubits)
-
-    gate = gates.CU1(0, 1, theta=theta)
-    gate.density_matrix = True
-    if backend == "custom":
-        final_rho = np.copy(initial_rho)
-    else:
-        final_rho = np.copy(initial_rho).reshape(2 * nqubits * (2,))
-    final_rho = gate(final_rho).numpy().reshape(initial_rho.shape)
-
-    matrix = np.eye(4, dtype=np.complex128)
-    matrix[3, 3] = np.exp(1j * theta)
-    matrix = np.kron(matrix, np.eye(2))
-    target_rho = matrix.dot(initial_rho).dot(matrix.T.conj())
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_flatten_density_matrix(backend):
-    """Check ``Flatten`` gate works with density matrices."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    target_rho = utils.random_density_matrix(3)
-    initial_rho = np.zeros(6 * (2,))
-    gate = gates.Flatten(target_rho)
-    gate.density_matrix = True
-    final_rho = gate(initial_rho).numpy().reshape((8, 8))
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
 def test_circuit_dm(backend):
     """Check passing density matrix as initial state to a circuit."""
     original_backend = qibo.get_backend()
@@ -192,7 +20,7 @@ def test_circuit_dm(backend):
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
     c.add(gates.H(2))
-    final_rho = c(np.copy(initial_rho)).numpy().reshape(initial_rho.shape)
+    final_rho = c(np.copy(initial_rho))
 
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0],
@@ -204,72 +32,6 @@ def test_circuit_dm(backend):
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
 
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_controlled_by_no_effect(backend):
-    """Check controlled_by SWAP that should not be applied."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    psi = np.zeros(2 ** 4)
-    psi[0] = 1
-    initial_rho = np.outer(psi, psi.conj())
-
-    c = models.Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = c(np.copy(initial_rho)).numpy()
-
-    c = models.Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    target_rho = c(np.copy(initial_rho)).numpy()
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-def test_controlled_with_effect(backend):
-    """Check controlled_by SWAP that should be applied."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    psi = np.zeros(2 ** 4)
-    psi[0] = 1
-    initial_rho = np.outer(psi, psi.conj())
-
-    c = models.Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
-    c.add(gates.SWAP(1, 3).controlled_by(0, 2))
-    final_rho = c(np.copy(initial_rho)).numpy()
-
-    c = models.Circuit(4, density_matrix=True)
-    c.add(gates.X(0))
-    c.add(gates.X(2))
-    c.add(gates.SWAP(1, 3))
-    target_rho = c(np.copy(initial_rho)).numpy()
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("nqubits", [4, 5])
-def test_controlled_by_random(backend, nqubits):
-    """Check controlled_by method on gate."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(nqubits)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    c = models.Circuit(nqubits, density_matrix=True)
-    c.add(gates.RX(1, theta=0.789).controlled_by(2))
-    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    final_rho = c(np.copy(initial_rho)).numpy()
-
-    c = models.Circuit(nqubits)
-    c.add(gates.RX(1, theta=0.789).controlled_by(2))
-    c.add(gates.fSim(0, 2, theta=0.123, phi=0.321).controlled_by(1, 3))
-    target_psi = c(np.copy(initial_psi)).numpy()
-    target_rho = np.outer(target_psi, target_psi.conj())
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
 
@@ -369,13 +131,9 @@ def test_general_channel(backend, tfmatrices, oncircuit):
     if oncircuit:
         c = models.Circuit(2, density_matrix=True)
         c.add(gate)
-        final_rho = c(np.copy(initial_rho)).numpy()
+        final_rho = c(np.copy(initial_rho))
     else:
-        if backend == "custom":
-            final_rho = gate(np.copy(initial_rho))
-        else:
-            final_rho = gate(np.copy(initial_rho).reshape(4 * (2,)))
-            final_rho = final_rho.numpy().reshape((4, 4))
+        final_rho = gate(np.copy(initial_rho))
 
     m1 = np.kron(np.eye(2), np.array(a1))
     m2 = np.array(a2)
@@ -577,7 +335,7 @@ def test_circuit_with_noise_exception():
 
 def test_density_matrix_measurement(backend):
     """Check measurement gate on density matrices."""
-    from qibo.tests.test_measurements import assert_results
+    from qibo.tests_new.test_measurement_gate import assert_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(4)
@@ -589,18 +347,18 @@ def test_density_matrix_measurement(backend):
 
     target_binary_samples = np.zeros((100, 2))
     target_binary_samples[:, 0] = 1
-    assert_results(result,
-                   decimal_samples=2 * np.ones((100,)),
-                   binary_samples=target_binary_samples,
-                   decimal_frequencies={2: 100},
-                   binary_frequencies={"10": 100})
+    assert_result(result,
+                  decimal_samples=2 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={2: 100},
+                  binary_frequencies={"10": 100})
     qibo.set_backend(original_backend)
 
 
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
-    from qibo.tests.test_measurements import assert_results
-    from qibo.tests.test_measurements import assert_register_results
+    from qibo.tests_new.test_measurement_gate import assert_result
+    from qibo.tests_new.test_measurement_gate_registers import assert_register_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(16)
@@ -617,11 +375,11 @@ def test_density_matrix_circuit_measurement(backend):
     target_binary_samples = np.zeros((100, 4))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1
-    assert_results(result,
-                   decimal_samples=6 * np.ones((100,)),
-                   binary_samples=target_binary_samples,
-                   decimal_frequencies={6: 100},
-                   binary_frequencies={"0110": 100})
+    assert_result(result,
+                  decimal_samples=6 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={6: 100},
+                  binary_frequencies={"0110": 100})
 
     target = {}
     target["decimal_samples"] = {"A": np.ones((100,)),
@@ -632,27 +390,7 @@ def test_density_matrix_circuit_measurement(backend):
     target["binary_samples"]["B"][:, 0] = 1
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
-    assert_register_results(result, **target)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [1], [0]), (3, [1], 0), (4, [1, 3], [0, 1]),
-                          (5, [0, 3, 4], [1, 1, 0])])
-def test_collapse_gate(backend, nqubits, targets, results):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(nqubits)
-    initial_rho = np.outer(initial_psi, initial_psi.conj())
-    c = models.Circuit(nqubits, density_matrix=True)
-    c.add(gates.Collapse(*targets, result=results))
-    final_rho = c(np.copy(initial_rho))
-
-    c = models.Circuit(nqubits)
-    c.add(gates.Collapse(*targets, result=results))
-    target_psi = c(np.copy(initial_psi)).numpy()
-    target_rho = np.outer(target_psi, target_psi.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
+    assert_register_result(result, **target)
     qibo.set_backend(original_backend)
 
 
@@ -756,12 +494,7 @@ def test_variational_layer(backend, nqubits):
     gate = gates.VariationalLayer(range(nqubits), pairs,
                                   gates.RY, gates.CZ, theta)
     gate.density_matrix = True
-    initial_state = c.get_initial_state()
-    if backend != "custom":
-        initial_state = np.reshape(initial_state, 2 * nqubits * (2,))
-    final_state = gate(initial_state)
-    if backend != "custom":
-        final_state = np.reshape(final_state, 2 * (2 ** nqubits,))
+    final_state = gate(c.get_initial_state())
     np.testing.assert_allclose(target_state, final_state)
     qibo.set_backend(original_backend)
 

@@ -348,6 +348,121 @@ gates during optimization.
 Note that ``trainable`` defaults to ``True`` for all parametrized gates.
 
 
+.. _collapse-examples:
+
+How to collapse state during measurements?
+------------------------------------------
+
+As mentioned in the :ref:`How to perform measurements? <measurement-examples>`
+measurement can by default be used only in the end of the circuit and they do
+not have any effect on the state. In this section we describe how to collapse
+the state during measurements and re-use measured qubits in the circuit.
+Collapsing the state means projecting to the |0> or |1> subspace according to
+the sampled result for each measured qubit.
+
+The state is collapsed when the ``collapse=True`` is used during instantiation
+of the :class:`qibo.abstractions.gates.M` gate. For example
+
+.. code-block:: python
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(1)
+    c.add(gates.H(0))
+    output = c.add(gates.M(0, collapse=True))
+    c.add(gates.H(0))
+    result = c()
+    print(result.state())
+    # prints [0.7071, 0.7071] if 0 is measured
+    # or [0.7071, -0.7071] if 1 is measured
+
+In this example the single qubit is measured while in the state (|0> + |1>) and
+is collapsed to either |0> or |1>. The qubit can then be re-used by adding more
+gates that act to this. The outcomes of ``collapse=True`` measurements is not
+contained in the final result object but is accessible from the `output` object
+returned when adding the gate to the circuit. ``output`` supports the
+``output.samples()`` and ``output.frequencies()`` functionality as described
+in :ref:`How to perform measurements? <measurement-examples>`.
+
+Collapse gates are single-shot by default because the state collapse is not
+well-defined for more than one shots. If the user passes the ``nshots`` arguments
+during the circuit execution (eg. ``result = c(nshots=100)`` in the above
+example), then the circuit execution will be repeated ``nshots`` times using
+a loop:
+
+.. code-block:: python
+
+    for _ in range(nshots):
+        result = c()
+
+Note that this will be more time-consuming compared to multi-shot simulation
+of standard (non-collapse) measurements where the circuit is simulated once and
+the final state vector is sampled ``nshots`` times. For multi-shot simulation
+the outcomes are still accessible using ``output.samples()`` and
+``output.frequencies()``.
+
+Using normal measurements and collapse measurements in the same circuit is
+also possible:
+
+.. code-block:: python
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(2)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    output = c.add(gates.M(0, collapse=True))
+    c.add(gates.H(0))
+    c.add(gates.M(0, 1))
+    result = c(nshots=100)
+
+In this case ``output`` will contain the results of the first ``collapse=True``
+measurement while ``result`` will contain the results of the standard measurement.
+
+Conditioning gates on measurement outcomes
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The output of ``collapse=True`` measurements can be used as a parameter in
+any parametrized gate as follows:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(2)
+    c.add(gates.H(0))
+    output = c.add(gates.M(0, collapse=True))
+    c.add(gates.RX(1, theta=np.pi * output / 4))
+    result = c()
+
+In this case the first qubit will be measured and if 1 is found a pi/4 X-rotation
+will be applied to the second qubit, otherwise no rotation. Qibo allows to
+use ``output`` as a parameter during circuit creation by representing it using
+a ``sympy.Symbol``. The symbol acquires a numerical value later during execution
+when the measurement is performed. As explained above, if a ``nshots > 1`` is
+given during circuit execution the execution is repeated using a loop.
+
+If more than one qubits are used in a ``collapse=True`` measurement gate the
+``output`` can be indexed accordingly:
+
+.. code-block:: python
+
+    import numpy as np
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(3)
+    c.add(gates.H(0))
+    output = c.add(gates.M(0, 1, collapse=True))
+    c.add(gates.RX(1, theta=np.pi * output[0] / 4))
+    c.add(gates.RY(2, theta=np.pi * (output[0] + output[1]) / 5))
+    result = c()
+
+
 How to invert a circuit?
 ------------------------
 

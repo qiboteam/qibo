@@ -180,7 +180,7 @@ class AbstractCircuit(ABC):
                                     "the circuit contains {} qubits."
                                     "".format(len(q), self.nqubits))
         for gate in self.queue:
-            yield gate.on_qubits(*(q[i] for i in gate.qubits))
+            yield gate.on_qubits(*q)
 
     def copy(self, deep: bool = False):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
@@ -366,12 +366,16 @@ class AbstractCircuit(ABC):
                 `gate` can also be an iterable or generator of gates.
                 In this case all gates in the iterable will be added in the
                 circuit.
+
+        Returns:
+            If the circuit contains measurement gates with ``collapse=True``
+            a ``sympy.Symbol`` that parametrizes the corresponding outcome.
         """
         if isinstance(gate, collections.abc.Iterable):
             for g in gate:
                 self.add(g)
         elif isinstance(gate, gates.Gate):
-            self._add(gate)
+            return self._add(gate)
         else:
             raise_error(TypeError, "Unknown gate type {}.".format(type(gate)))
 
@@ -394,13 +398,16 @@ class AbstractCircuit(ABC):
                                         "".format(gate.target_qubits, self.nqubits))
 
         self.check_measured(gate.qubits)
-        if isinstance(gate, gates.M):
+        if isinstance(gate, gates.M) and not gate.collapse:
             self._add_measurement(gate)
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
         else:
             self.set_nqubits(gate)
             self.queue.append(gate)
+            if isinstance(gate, gates.M):
+                self.repeated_execution = True
+                return gate.symbol()
             if isinstance(gate, gates.UnitaryChannel):
                 self.repeated_execution = not self.density_matrix
         if isinstance(gate, gates.ParametrizedGate):
@@ -933,7 +940,7 @@ class AbstractCircuit(ABC):
 
         return len(qubits), gate_list
 
-    def draw(self, line_wrap=None) -> str:
+    def draw(self, line_wrap=70) -> str:
         """Draw text circuit using unicode symbols.
 
         Args:
@@ -949,7 +956,7 @@ class AbstractCircuit(ABC):
                   "cx": "X", "swap": "x", "cz": "Z",
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
-                  "id": "I", "collapse": "M", "fsim": "f",
+                  "id": "I", "measure": "M", "fsim": "f",
                   "generalizedfsim": "gf"}
 
         # build string representation of gates
@@ -1005,28 +1012,34 @@ class AbstractCircuit(ABC):
         # Print to terminal
         output = ""
         for q in range(self.nqubits):
-            output += f'q{q}: ─' + ''.join(matrix[q]) + '\n'
+            output += f'q{q}' + ' ' * (len(str(self.nqubits))-len(str(q))) + \
+                       ': ─' + ''.join(matrix[q]) + '\n'
 
         # line wrap
         if line_wrap:
-            output = output.splitlines()
+            loutput = output.splitlines()
             def chunkstring(string, length):
                 nchunks = range(0, len(string), length)
                 return (string[i:length+i] for i in nchunks), len(nchunks)
             for row in range(self.nqubits):
-                chunks, nchunks = chunkstring(output[row], line_wrap)
+                chunks, nchunks = chunkstring(loutput[row][3 + len(str(self.nqubits)):], line_wrap)
+                if nchunks == 1:
+                    loutput = None
+                    break
                 for i, c in enumerate(chunks):
-                    output += ['' for _ in range(self.nqubits)]
-                    suffix = ' ...\n'
+                    loutput += ['' for _ in range(self.nqubits)]
+                    suffix = f' ...\n'
+                    prefix = f'q{row}' + ' ' * (len(str(self.nqubits))-len(str(row))) + ': '
                     if i == 0:
-                        prefix = ''
+                        prefix += ' ' * 4
                     elif row == 0:
-                        prefix = '\n... '
+                        prefix = '\n' + prefix + '... '
                     else:
-                        prefix = '... '
+                        prefix += '... '
                     if i == nchunks-1:
                         suffix = '\n'
-                    output[row + i * self.nqubits] = prefix + c + suffix
-            output = ''.join(output)
+                    loutput[row + i * self.nqubits] = prefix + c + suffix
+            if loutput is not None:
+                output = ''.join(loutput)
 
         return output.rstrip('\n')

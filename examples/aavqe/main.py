@@ -36,9 +36,9 @@ def AAVQE(nqubits, layers, maxsteps, T_max, initial_parameters, easy_hamiltonian
         print('s =',s)
         hamiltonian =  (1-s)*easy_hamiltonian + s*problem_hamiltonian
         vqe = models.VQE(circuit, hamiltonian)
-        energy, params = vqe.minimize(initial_parameters, method='Nelder-Mead',
-                                      options={'maxfev': maxsteps},
-                                      compile=False)
+        energy, params, _ = vqe.minimize(initial_parameters, method='Nelder-Mead',
+                                         options={'maxfev': maxsteps},
+                                         compile=False)
         initial_parameters = params
     return energy, params
 

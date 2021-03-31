@@ -326,11 +326,11 @@ class AdiabaticEvolution(StateEvolution):
         else:
             loss = lambda p, ae, h1, msg, hist: self._loss(p, ae, h1, msg, hist).numpy()
 
-        result, parameters = optimizers.optimize(loss, initial_parameters,
+        result, parameters, extra = optimizers.optimize(loss, initial_parameters,
                                                  args=(self, self.h1, self.opt_messages, self.opt_history),
                                                  method=method, options=options)
         if isinstance(parameters, K.tensor_types) and not len(parameters.shape): # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]
         self.set_parameters(parameters)
-        return result, parameters
+        return result, parameters, extra

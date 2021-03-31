@@ -184,7 +184,7 @@ class DistributedQueues:
         """Helper recursive method for ``transform``."""
         new_remaining_queue = []
         for gate in remaining_queue:
-            if isinstance(gate, gates.SpecialGate):
+            if isinstance(gate, (gates.SpecialGate, gates.M)):
                 gate.swap_reset = list(self.swaps_list)
 
             global_targets = set(gate.target_qubits) & self.qubits.set
@@ -270,9 +270,8 @@ class DistributedQueues:
             then ``transform` should be used to obtain a compatible queue.
         """
         for gate in queue:
-            is_collapse = isinstance(gate, gates.Collapse)
-
-            if not gate.target_qubits: # special gate
+            is_collapse = isinstance(gate, gates.M) and gate.collapse
+            if not gate.target_qubits or is_collapse: # special gate
                 gate.nqubits = self.nqubits
                 gate.prepare()
                 self.special_queue.append(gate)
@@ -305,11 +304,6 @@ class DistributedQueues:
                     devgate.device = device
                     devgate.nqubits = self.nlocal
                     devgate.prepare()
-                    if is_collapse:
-                        # For ``Collapse`` gates we have to skip the
-                        # normalization step in each device
-                        devgate.normalize = False
-
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then
@@ -325,9 +319,3 @@ class DistributedQueues:
                             self.queues[-1][i].append(devgate)
                             if isinstance(gate, gates.ParametrizedGate):
                                 gate.device_gates.add(devgate)
-
-            if is_collapse:
-                # and normalize  the full state on CPU by adding a
-                # special gate
-                self.special_queue.append("normalize")
-                self.queues.append([])
