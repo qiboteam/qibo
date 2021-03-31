@@ -362,25 +362,25 @@ class NumpyBackend(abstract.AbstractBackend):
         return state
 
     def state_vector_collapse(self, gate, state, result):
-        state = self.reshape(state, gate.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.order), result)
+        state = self.reshape(state, gate.cache.tensor_shape)
+        substate = self.gather_nd(self.transpose(state, gate.cache.order), result)
         norm = self.sum(self.square(self.abs(substate)))
         state = substate / self.cast(self.sqrt(norm), dtype=state.dtype)
         state = self._append_zeros(state, sorted(gate.target_qubits), result)
-        return self.reshape(state, gate.flat_shape)
+        return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_collapse(self, gate, state, result):
         density_matrix_result = 2 * result
         sorted_qubits = sorted(gate.target_qubits)
         sorted_qubits = sorted_qubits + [q + gate.nqubits for q in sorted_qubits]
-        state = self.reshape(state, gate.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.order),
+        state = self.reshape(state, gate.cache.tensor_shape)
+        substate = self.gather_nd(self.transpose(state, gate.cache.order),
                                   density_matrix_result)
         n = 2 ** (len(tuple(substate.shape)) // 2)
         norm = self.trace(self.reshape(substate, (n, n)))
         state = substate / norm
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
-        return self.reshape(state, gate.flat_shape)
+        return self.reshape(state, gate.cache.flat_shape)
 
 
 class NumpyDefaultEinsumBackend(NumpyBackend):
@@ -435,8 +435,7 @@ class NumpyMatmulEinsumBackend(NumpyBackend):
         if isinstance(cache, str):
             # `controlled_by` gate acting on density matrices
             # fall back to defaulteinsum because matmuleinsum is not properly
-            # implemented. See `qibo.backends.numpy.NumpyBackend.prepare_gate`
-            # for more details
+            # implemented.
             backend = self._get_default_einsum()
             return backend.einsum_call(self, cache, state, matrix)
 

@@ -22,7 +22,6 @@ class BackendGate(BaseBackendGate):
         else:
             self.gate_op = None
         super().__init__()
-        self.matrix = None
 
     @staticmethod
     def control_unitary(unitary):
@@ -41,21 +40,21 @@ class BackendGate(BaseBackendGate):
             self._cache = K.create_gate_cache(self)
         return self._cache
 
-    def reprepare(self):
-        self.matrix = self.construct_unitary()
-        if K.name != "custom":
-            rank = int(math.log2(int(self.matrix.shape[0])))
-            self.matrix = K.reshape(self.matrix, 2 * rank * (2,))
+    @property
+    def matrix(self):
+        if self._matrix is None:
+            self._matrix = self.calculate_matrix()
+        return self._matrix
 
-    def prepare(self):
-        """Prepares the gate for application to state vectors."""
-        self.is_prepared = True
-        if self.well_defined:
-            self.reprepare()
+    def calculate_matrix(self):
+        matrix = self.construct_unitary()
+        if K.name != "custom":
+            rank = int(math.log2(int(matrix.shape[0])))
+            matrix = K.reshape(matrix, 2 * rank * (2,))
+        return matrix
 
     def set_nqubits(self, state):
         self.nqubits = int(math.log2(tuple(state.shape)[0]))
-        self.prepare()
 
     def state_vector_call(self, state):
         return K.state_vector_call(self, state)
@@ -168,44 +167,41 @@ class M(BackendGate, gates.M):
         self.order = None
 
     def add(self, gate: gates.M):
-        if self.is_prepared:
-            raise_error(RuntimeError, "Cannot add qubits to a measurement "
-                                      "gate that is prepared.")
         gates.M.add(self, gate)
 
-    def prepare(self):
-        # FIXME: Move these to `self.cache`
-        BackendGate.prepare(self)
-        target_qubits = set(self.target_qubits)
-        unmeasured_qubits = []
-        reduced_target_qubits = dict()
-        for i in range(self.nqubits):
-            if i in target_qubits:
-                reduced_target_qubits[i] = i - len(unmeasured_qubits)
-            else:
-                unmeasured_qubits.append(i)
-        self.unmeasured_qubits = tuple(unmeasured_qubits)
-        self.reduced_target_qubits = list(
-            reduced_target_qubits[i] for i in self.target_qubits)
+    @property
+    def cache(self):
+        if self._cache is None:
+            cache = K.create_gate_cache(self)
+            target_qubits = set(self.target_qubits)
+            unmeasured_qubits = []
+            reduced_target_qubits = dict()
+            for i in range(self.nqubits):
+                if i in target_qubits:
+                    reduced_target_qubits[i] = i - len(unmeasured_qubits)
+                else:
+                    unmeasured_qubits.append(i)
+            cache.unmeasured_qubits = tuple(unmeasured_qubits)
+            cache.reduced_target_qubits = list(
+                reduced_target_qubits[i] for i in self.target_qubits)
 
-        if K.name != "custom":
-            sorted_qubits = sorted(self.target_qubits)
-            self.order = list(sorted_qubits)
-            s = 1 + self.density_matrix
-            self.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
-            self.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
-            if self.density_matrix:
-                self.order.extend((q + self.nqubits for q in sorted_qubits))
-                self.order.extend((q for q in range(self.nqubits)
-                                   if q not in sorted_qubits))
-                self.order.extend((q + self.nqubits for q in range(self.nqubits)
-                                   if q not in sorted_qubits))
-            else:
-                self.order.extend((q for q in range(self.nqubits)
-                                   if q not in sorted_qubits))
-
-    def reprepare(self):
-        pass
+            if K.name != "custom":
+                sorted_qubits = sorted(self.target_qubits)
+                cache.order = list(sorted_qubits)
+                s = 1 + self.density_matrix
+                cache.tensor_shape = K.cast(s * self.nqubits * (2,), dtype='DTYPEINT')
+                cache.flat_shape = K.cast(s * (2 ** self.nqubits,), dtype='DTYPEINT')
+                if self.density_matrix:
+                    cache.order.extend((q + self.nqubits for q in sorted_qubits))
+                    cache.order.extend((q for q in range(self.nqubits)
+                                        if q not in sorted_qubits))
+                    cache.order.extend((q + self.nqubits for q in range(self.nqubits)
+                                        if q not in sorted_qubits))
+                else:
+                    cache.order.extend((q for q in range(self.nqubits)
+                                        if q not in sorted_qubits))
+            self._cache = cache
+        return self._cache
 
     def construct_unitary(self):
         raise_error(ValueError, "Measurement gate does not have unitary "
@@ -350,11 +346,11 @@ class U1(MatrixGate, gates.U1):
         if self.gate_op:
             self.gate_op = K.op.apply_z_pow
 
-    def reprepare(self):
+    def calculate_matrix(self):
         if K.name == "custom":
-            self.matrix = K.cast(K.qnp.exp(1j * self.parameters))
+            return K.cast(K.qnp.exp(1j * self.parameters))
         else:
-            MatrixGate.reprepare(self)
+            return MatrixGate.calculate_matrix(self)
 
     def construct_unitary(self):
         if isinstance(self.parameters, K.Tensor): # pragma: no cover
@@ -438,10 +434,11 @@ class _CUn_(MatrixGate):
         cbase = "C{}".format(self.base.__name__)
         getattr(gates, cbase).__init__(self, q0, q1, **params)
 
-    def reprepare(self):
-        self.matrix = self.base.construct_unitary(self)
+    def calculate_matrix(self):
+        matrix = self.base.construct_unitary(self)
         if K.name != "custom":
-            self.matrix = K.reshape(self.control_unitary(self.matrix), 4 * (2,))
+            matrix = K.reshape(self.control_unitary(matrix), 4 * (2,))
+        return matrix
 
     def construct_unitary(self):
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
@@ -476,8 +473,8 @@ class CU1(_CUn_, gates.CU1):
         if self.gate_op:
             self.gate_op = K.op.apply_z_pow
 
-    def reprepare(self):
-        U1.reprepare(self)
+    def calculate_matrix(self):
+        return U1.calculate_matrix(self)
 
 
 class CU2(_CUn_, gates.CU2):
@@ -521,14 +518,13 @@ class fSim(MatrixGate, gates.fSim):
         if self.gate_op:
             self.gate_op = K.op.apply_fsim
 
-    def reprepare(self):
+    def calculate_matrix(self):
         if K.name == "custom":
             theta, phi = self.parameters
             cos, isin = K.qnp.cos(theta) + 0j, -1j * K.qnp.sin(theta)
             phase = K.qnp.exp(-1j * phi)
-            self.matrix = K.cast([cos, isin, isin, cos, phase])
-        else:
-            MatrixGate.reprepare(self)
+            return K.cast([cos, isin, isin, cos, phase])
+        return MatrixGate.calculate_matrix(self)
 
     def construct_unitary(self):
         theta, phi = self.parameters
@@ -552,15 +548,14 @@ class GeneralizedfSim(MatrixGate, gates.GeneralizedfSim):
         if self.gate_op:
             self.gate_op = K.op.apply_fsim
 
-    def reprepare(self):
+    def calculate_matrix(self):
         if K.name == "custom":
             unitary, phi = self.parameters
             matrix = K.qnp.zeros(5)
             matrix[:4] = K.qnp.reshape(unitary, (4,))
             matrix[4] = K.qnp.exp(-1j * phi)
-            self.matrix = K.cast(matrix)
-        else:
-            MatrixGate.reprepare(self)
+            return K.cast(matrix)
+        return MatrixGate.calculate_matrix(self)
 
     def construct_unitary(self):
         unitary, phi = self.parameters
@@ -729,18 +724,6 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
         raise_error(ValueError, "VariationalLayer gate does not have unitary "
                                  "representation.")
 
-    def reprepare(self):
-        matrices, additional_matrix = self._calculate_unitaries()
-        for unitary, matrix in zip(self.unitaries, matrices):
-            unitary.parameters = matrix
-            unitary.reprepare()
-        if additional_matrix is not None:
-            self.additional_unitary.parameters = additional_matrix
-            self.additional_unitary.reprepare()
-
-    def prepare(self):
-        self.is_prepared = True
-
     def state_vector_call(self, state):
         for i, unitary in enumerate(self.unitaries):
             state = unitary(state)
@@ -758,9 +741,6 @@ class Flatten(BackendGate, gates.Flatten):
         BackendGate.__init__(self)
         gates.Flatten.__init__(self, coefficients)
         self.swap_reset = []
-
-    def reprepare(self):
-        pass
 
     def construct_unitary(self):
         raise_error(ValueError, "Flatten gate does not have unitary "
@@ -787,9 +767,6 @@ class CallbackGate(BackendGate, gates.CallbackGate):
         BaseBackendGate.density_matrix.fset(self, x) # pylint: disable=no-member
         self.callback.density_matrix = x
 
-    def reprepare(self):
-        pass
-
     def construct_unitary(self):
         raise_error(ValueError, "Callback gate does not have unitary "
                                 "representation.")
@@ -808,38 +785,38 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         BackendGate.__init__(self)
         gates.PartialTrace.__init__(self, *q)
 
-        self.zero_matrix = None
-        self.einsum_order = None
-        self.final_order = None
-        self.einsum_shape = None
-        self.output_shape = None
-        self.reduced_shape = None
+    class GateCache:
+        pass
 
-    def prepare(self):
-        self.is_prepared = True
-        qubits = set(self.target_qubits)
-        # Create |00...0><00...0| for qubits that are traced out
-        n = len(self.target_qubits)
-        row0 = K.cast([1] + (2 ** n - 1) * [0], dtype='DTYPECPX')
-        shape = K.cast((2 ** n - 1, 2 ** n), dtype='DTYPEINT')
-        rows = K.zeros(shape, dtype='DTYPECPX')
-        self.zero_matrix = K.concatenate([row0[K.newaxis], rows], axis=0)
-        self.zero_matrix = K.reshape(self.zero_matrix, 2 * n * (2,))
-        # Calculate initial transpose order
-        order = tuple(sorted(self.target_qubits))
-        order += tuple(i for i in range(self.nqubits) if i not in qubits)
-        order += tuple(i + self.nqubits for i in order)
-        self.einsum_order = order
-        # Calculate final transpose order
-        order1 = tuple(i for i in range(self.nqubits) if i not in qubits)
-        order2 = tuple(self.target_qubits)
-        order = (order1 + tuple(i + self.nqubits for i in order1) +
-                 order2 + tuple(i + self.nqubits for i in order2))
-        self.final_order = tuple(order.index(i) for i in range(2 * self.nqubits))
-        # Shapes
-        self.einsum_shape = K.cast(2 * (2 ** n, 2 ** (self.nqubits - n)), dtype='DTYPEINT')
-        self.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
-        self.reduced_shape = K.cast(2 * (2 ** (self.nqubits - n),), dtype='DTYPEINT')
+    @property
+    def cache(self):
+        if self._cache is None:
+            cache = self.GateCache()
+            qubits = set(self.target_qubits)
+            # Create |00...0><00...0| for qubits that are traced out
+            n = len(self.target_qubits)
+            row0 = K.cast([1] + (2 ** n - 1) * [0], dtype='DTYPECPX')
+            shape = K.cast((2 ** n - 1, 2 ** n), dtype='DTYPEINT')
+            rows = K.zeros(shape, dtype='DTYPECPX')
+            cache.zero_matrix = K.concatenate([row0[K.newaxis], rows], axis=0)
+            cache.zero_matrix = K.reshape(cache.zero_matrix, 2 * n * (2,))
+            # Calculate initial transpose order
+            order = tuple(sorted(self.target_qubits))
+            order += tuple(i for i in range(self.nqubits) if i not in qubits)
+            order += tuple(i + self.nqubits for i in order)
+            cache.einsum_order = order
+            # Calculate final transpose order
+            order1 = tuple(i for i in range(self.nqubits) if i not in qubits)
+            order2 = tuple(self.target_qubits)
+            order = (order1 + tuple(i + self.nqubits for i in order1) +
+                     order2 + tuple(i + self.nqubits for i in order2))
+            cache.final_order = tuple(order.index(i) for i in range(2 * self.nqubits))
+            # Shapes
+            cache.einsum_shape = K.cast(2 * (2 ** n, 2 ** (self.nqubits - n)), dtype='DTYPEINT')
+            cache.output_shape = K.cast(2 * (2 ** self.nqubits,), dtype='DTYPEINT')
+            cache.reduced_shape = K.cast(2 * (2 ** (self.nqubits - n),), dtype='DTYPEINT')
+            self._cache = cache
+        return self._cache
 
     def construct_unitary(self):
         raise_error(ValueError, "Partial trace gate does not have unitary "
@@ -850,13 +827,13 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         state = K.reshape(state, self.nqubits * (2,))
         axes = 2 * [list(self.target_qubits)]
         rho = K.tensordot(state, K.conj(state), axes=axes)
-        return K.reshape(rho, self.reduced_shape)
+        return K.reshape(rho, self.cache.reduced_shape)
 
     def density_matrix_partial_trace(self, state):
         self.set_nqubits(state)
         state = K.reshape(state, 2 * self.nqubits * (2,))
-        state = K.transpose(state, self.einsum_order)
-        state = K.reshape(state, self.einsum_shape)
+        state = K.transpose(state, self.cache.einsum_order)
+        state = K.reshape(state, self.cache.einsum_shape)
         return K.einsum("abac->bc", state)
 
     def state_vector_call(self, state):
@@ -868,9 +845,9 @@ class PartialTrace(BackendGate, gates.PartialTrace):
         substate = self.density_matrix_partial_trace(state)
         n = self.nqubits - len(self.target_qubits)
         substate = K.reshape(substate, 2 * n * (2,))
-        state = K.tensordot(substate, self.zero_matrix, axes=0)
-        state = K.transpose(state, self.final_order)
-        return K.reshape(state, self.output_shape)
+        state = K.tensordot(substate, self.cache.zero_matrix, axes=0)
+        state = K.transpose(state, self.cache.final_order)
+        return K.reshape(state, self.cache.output_shape)
 
 
 class KrausChannel(BackendGate, gates.KrausChannel):
@@ -878,33 +855,16 @@ class KrausChannel(BackendGate, gates.KrausChannel):
     def __init__(self, ops):
         BackendGate.__init__(self)
         gates.KrausChannel.__init__(self, ops)
-        # create inversion gates to rest to the original state vector
-        # because of the in-place updates used in custom operators
-        self.inv_gates = tuple()
 
-    @staticmethod
-    def _invert(gate):
-        """Creates invert gates of each Ak to reset to the original state."""
-        matrix = gate.parameters
-        if isinstance(matrix, K.tensor_types):
-            inv_matrix = K.qnp.inv(matrix)
-        return Unitary(inv_matrix, *gate.target_qubits)
-
-    def prepare(self):
-        self.is_prepared = True
+    def calculate_inverse_gates(self):
         inv_gates = []
-        for gate in self.gates:
-            inv_gate = self._invert(gate)
-            # use a ``set`` for this loop because it may be ``inv_gate == gate``
-            for g in {gate, inv_gate}:
-                if g is not None:
-                    g.density_matrix = self.density_matrix
-                    g.device = self.device
-                    g.nqubits = self.nqubits
-                    g.prepare()
-            inv_gates.append(inv_gate)
-        inv_gates[-1] = None
-        self.inv_gates = tuple(inv_gates)
+        for gate in self.gates[:-1]:
+            matrix = gate.parameters
+            if isinstance(matrix, K.tensor_types):
+                inv_matrix = K.qnp.inv(matrix)
+            inv_gates.append(Unitary(inv_matrix, *gate.target_qubits))
+        inv_gates.append(None)
+        return tuple(inv_gates)
 
     def construct_unitary(self):
         raise_error(ValueError, "Channels do not have unitary representation.")
@@ -915,7 +875,7 @@ class KrausChannel(BackendGate, gates.KrausChannel):
 
     def density_matrix_call(self, state):
         new_state = K.zeros_like(state)
-        for gate, inv_gate in zip(self.gates, self.inv_gates):
+        for gate, inv_gate in zip(self.gates, self.inverse_gates):
             new_state += gate(state)
             if inv_gate is not None:
                 inv_gate(state)
@@ -928,19 +888,15 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
                  seed: Optional[int] = None):
         BackendGate.__init__(self)
         gates.UnitaryChannel.__init__(self, p, ops, seed=seed)
-        self.inv_gates = tuple()
+        self.set_seed()
 
-    @staticmethod
-    def _invert(gate):
-        return gate.dagger()
+    def calculate_inverse_gates(self):
+        inv_gates = tuple(gate.dagger() for gate in self.gates[:-1])
+        return inv_gates + (None,)
 
     def set_seed(self):
         if self.seed is not None:
             K.qnp.random.seed(self.seed)
-
-    def prepare(self):
-        KrausChannel.prepare(self)
-        self.set_seed()
 
     def state_vector_call(self, state):
         for p, gate in zip(self.probs, self.gates):
@@ -950,7 +906,7 @@ class UnitaryChannel(KrausChannel, gates.UnitaryChannel):
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
-        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inverse_gates):
             state = gate(state)
             new_state += p * state
             if inv_gate is not None:
@@ -964,12 +920,10 @@ class PauliNoiseChannel(UnitaryChannel, gates.PauliNoiseChannel):
                  seed: Optional[int] = None):
         BackendGate.__init__(self)
         gates.PauliNoiseChannel.__init__(self, q, px, py, pz, seed=seed)
-        self.inv_gates = tuple()
+        self.set_seed()
 
-    @staticmethod
-    def _invert(gate):
-        # for Pauli gates we can use same gate as inverse for efficiency
-        return gate
+    def calculate_inverse_gates(self):
+        return tuple(self.gates[:-1]) + (None,)
 
 
 class ResetChannel(UnitaryChannel, gates.ResetChannel):
@@ -978,13 +932,12 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
                  seed: Optional[int] = None):
         BackendGate.__init__(self)
         gates.ResetChannel.__init__(self, q, p0=p0, p1=p1, seed=seed)
-        self.inv_gates = tuple()
+        self.set_seed()
 
-    @staticmethod
-    def _invert(gate):
-        if isinstance(gate, gates.M):
-            return None
-        return gate
+    def calculate_inverse_gates(self):
+        inv_gates = tuple(gate.dagger() if not isinstance(gate, gates.M) else None
+                          for gate in self.gates[:-1])
+        return inv_gates + (None,)
 
     def state_vector_call(self, state):
         not_collapsed = True
@@ -999,7 +952,7 @@ class ResetChannel(UnitaryChannel, gates.ResetChannel):
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
-        for p, gate, inv_gate in zip(self.probs, self.gates, self.inv_gates):
+        for p, gate, inv_gate in zip(self.probs, self.gates, self.inverse_gates):
             if isinstance(gate, M):
                 state = K.density_matrix_collapse(gate, state, [0])
             else:
@@ -1045,7 +998,7 @@ class _ThermalRelaxationChannelA(ResetChannel, gates._ThermalRelaxationChannelA)
         gates._ThermalRelaxationChannelA.__init__(
             self, q, t1, t2, time, excited_population=excited_population,
             seed=seed)
-        self.inv_gates = tuple()
+        self.set_seed()
 
     def state_vector_call(self, state):
         if K.qnp.random.random() < self.probs[0]:

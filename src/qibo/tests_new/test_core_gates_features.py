@@ -342,7 +342,6 @@ def test_reset_channel_repeated(backend):
     target_state = []
     collapse = gates.M(2, collapse=True)
     collapse.nqubits = 5
-    collapse.prepare()
     xgate = gates.X(2)
     for _ in range(30):
         state = np.copy(initial_state)
@@ -371,7 +370,6 @@ def test_thermal_relaxation_channel_repeated(backend):
     target_state = []
     collapse = gates.M(4, collapse=True)
     collapse.nqubits = 5
-    collapse.prepare()
     zgate, xgate = gates.Z(4), gates.X(4)
     for _ in range(30):
         state = np.copy(initial_state)

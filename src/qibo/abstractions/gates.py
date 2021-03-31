@@ -4,7 +4,7 @@ import math
 from abc import abstractmethod
 from qibo.config import raise_error, EINSUM_CHARS
 from typing import Dict, List, Optional, Tuple
-from qibo.abstractions.abstract_gates import Gate, ParametrizedGate, SpecialGate
+from qibo.abstractions.abstract_gates import Gate, Channel, SpecialGate, ParametrizedGate
 
 QASM_GATES = {"h": "H", "x": "X", "y": "Y", "z": "Z",
               "rx": "RX", "ry": "RY", "rz": "RZ",
@@ -1290,7 +1290,7 @@ class PartialTrace(Gate):
         self.init_kwargs = {}
 
 
-class KrausChannel(Gate):
+class KrausChannel(Channel):
     """General channel defined by arbitrary Krauss operators.
 
     Implements the following transformation:
@@ -1353,15 +1353,6 @@ class KrausChannel(Gate):
             qubitset.update(qubits)
             gatelist.append(self.module.Unitary(matrix, *list(qubits)))
         return tuple(gatelist), tuple(sorted(qubitset))
-
-    def controlled_by(self, *q):
-        """"""
-        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
-
-    def on_qubits(self, *q): # pragma: no cover
-        # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `GeneralChannel` gate.")
 
 
 class UnitaryChannel(KrausChannel):

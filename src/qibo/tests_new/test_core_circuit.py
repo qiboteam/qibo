@@ -23,7 +23,6 @@ def test_set_nqubits(backend):
     assert c.queue[0].nqubits == 4
     gate = gates.H(1)
     gate.nqubits = 3
-    gate.prepare()
     with pytest.raises(RuntimeError):
         c.add(gate)
     qibo.set_backend(original_backend)
@@ -84,10 +83,7 @@ def test_compiled_execute(backend):
         c2.compile()
         r2 = c2()
         init_state = c2.get_initial_state()
-        r3, _ = c2._execute_for_compile(np.reshape(init_state, (2, 2)))
-        r3 = np.reshape(r3, (4,))
         np.testing.assert_allclose(r1, r2)
-        np.testing.assert_allclose(r1, r3)
     qibo.set_backend(original_backend)
 
 
