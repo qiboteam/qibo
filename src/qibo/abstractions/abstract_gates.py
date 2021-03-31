@@ -304,6 +304,10 @@ class Channel(Gate):
     def inverse_gates(self):
         if self._inverse_gates is None:
             self._inverse_gates = self.calculate_inverse_gates()
+            for gate in self._inverse_gates:
+                if gate is not None:
+                    gate.nqubits = self.nqubits
+                    gate.density_matrix = self.density_matrix
         return self._inverse_gates
 
     @abstractmethod
@@ -318,6 +322,15 @@ class Channel(Gate):
         if self._inverse_gates is not None:
             for gate in self._inverse_gates:
                 gate.nqubits = n
+
+    @Gate.density_matrix.setter
+    def density_matrix(self, x):
+        Gate.density_matrix.fset(self, x) # pylint: disable=no-member
+        for gate in self.gates:
+            gate.density_matrix = x
+        if self._inverse_gates is not None:
+            for gate in self._inverse_gates:
+                gate.density_matrix = x
 
     def controlled_by(self, *q):
         """"""

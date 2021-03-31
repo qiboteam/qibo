@@ -1351,6 +1351,7 @@ class KrausChannel(Channel):
                                         "".format(shape, len(qubits)))
             qubitset.update(qubits)
             gatelist.append(self.module.Unitary(matrix, *list(qubits)))
+            gatelist[-1].density_matrix = True
         return tuple(gatelist), tuple(sorted(qubitset))
 
 
