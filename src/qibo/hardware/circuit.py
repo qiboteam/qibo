@@ -1,9 +1,10 @@
 import copy
 import bisect
 import numpy as np
+from qibo import K
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses, experiment
+from qibo.hardware import pulses
 
 
 class PulseSequence:
@@ -18,16 +19,16 @@ class PulseSequence:
     """
     def __init__(self, pulses, duration=None):
         self.pulses = pulses
-        self.nchannels = experiment.static.nchannels
-        self.sample_size = experiment.static.sample_size
-        self.sampling_rate = experiment.static.sampling_rate
-        self.file_dir = experiment.static.pulse_file
+        self.nchannels = K.experiment.static.nchannels
+        self.sample_size = K.experiment.static.sample_size
+        self.sampling_rate = K.experiment.static.sampling_rate
+        self.file_dir = K.experiment.static.pulse_file
 
         if duration is None:
             self.duration = self.sample_size / self.sampling_rate
         else:
             self.duration = duration
-        end = experiment.static.readout_pulse_duration + 1e-6
+        end = K.experiment.static.readout_pulse_duration + 1e-6
         self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
@@ -138,14 +139,14 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def parse_result(self, qubit):
-        final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
-        step = 1 / experiment.static.ADC_sampling_rate
+        final = K.experiment.static.sample_size / K.experiment.static.ADC_sampling_rate
+        step = 1 / K.experiment.static.ADC_sampling_rate
         ADC_time_array = np.arange(0, final, step)
 
-        static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
+        static_data = K.experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonator_frequency"] - experiment.static.lo_frequency # downconversion
+        IF_frequency = static_data["resonator_frequency"] - K.experiment.static.lo_frequency # downconversion
 
         raw_data = self.final_state.result()
         cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)

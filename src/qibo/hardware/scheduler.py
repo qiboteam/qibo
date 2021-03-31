@@ -1,7 +1,8 @@
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, Future
+from qibo import K
 from qibo.config import raise_error
-from qibo.hardware import pulses, experiment
+from qibo.hardware import pulses
 from qibo.hardware.circuit import PulseSequence
 
 
@@ -59,11 +60,11 @@ class TaskScheduler:
     @staticmethod
     def _execute_pulse_sequence(pulse_sequence, nshots):
         wfm = pulse_sequence.compile()
-        experiment.upload(wfm)
-        experiment.start()
+        K.experiment.upload(wfm)
+        K.experiment.start()
         # NIY
         #self._pi_trig.trigger(shots, delay=50e6)
         # OPC?
-        experiment.stop()
-        res = experiment.download()
+        K.experiment.stop()
+        res = K.experiment.download()
         return res

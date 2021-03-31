@@ -19,8 +19,8 @@ class HardwareGate(ABC, Gate):
         Not required for hardware execution but required to construct the
         example circuits.
         """
-        from qibo import gates
-        backend_gate = getattr(gates, self.__class__.__name__)
+        from qibo.core import cgates
+        backend_gate = getattr(cgates, self.__class__.__name__)
         backend_gate = backend_gate(*self.init_args, **self.init_kwargs)
         return backend_gate.unitary
 
