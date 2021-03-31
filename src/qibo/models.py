@@ -476,7 +476,7 @@ class Grover(object):
             self.superposition = Circuit(superposition_qubits)
             self.superposition.add([self.gates.H(i) for i in range(superposition_qubits)])
 
-        if sup_qubits:
+        if superposition_qubits:
             self.sup_qubits = superposition_qubits
         else:
             self.sup_qubits = self.superposition.nqubits
@@ -541,7 +541,7 @@ class Grover(object):
         c.add(self.gates.M(*range(self.sup_qubits)))
         return c
 
-    def iterative(self, lamda_value=6/5):
+    def iterative_grover(self, lamda_value=6/5):
         """Iterative approach of Grover for when the number of solutions is not known.
         
         Args:
@@ -593,10 +593,11 @@ class Grover(object):
                 self.frequencies = result
             log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
             most_common = result.most_common(self.num_sol)
-            self.solution = most_common
+            self.solution = []
             self.iterations = it
             for i in most_common:
                 log.info(i[0])
+                self.solution.append(i[0])
                 if self.check:
                     if self.check(i[0], *self.check_args):
                         log.info('Solution checked and successful.')
@@ -605,11 +606,10 @@ class Grover(object):
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")
-            measured, total_iterations = self.iterative()
+            measured, total_iterations = self.iterative_grover()
             log.info('Solution found in an iterative process.')
             log.info(f'Solution: {measured}')
-            log.info(f'Total Grover iterations taken: {total_iterations}')'
+            log.info(f'Total Grover iterations taken: {total_iterations}')
             self.solution = measured
             self.iterations = total_iterations
         return self.solution, self.iterations
-            
