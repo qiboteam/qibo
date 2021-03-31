@@ -1178,6 +1178,9 @@ class VariationalLayer(ParametrizedGate):
                             "trainable": trainable, "name": name}
         self.name = "VariationalLayer" if name is None else name
 
+        self.unitaries = []
+        self.additional_unitary = None
+
         self.target_qubits = tuple(qubits)
         self.parameter_names = [f"theta{i}" for i, _ in enumerate(params)]
         parameter_values = list(params)
@@ -1213,10 +1216,6 @@ class VariationalLayer(ParametrizedGate):
                                     "{} parameters were given."
                                     "".format(len(self.target_qubits), len(params)))
         return {q: p for q, p in zip(self.target_qubits, params)}
-
-    @abstractmethod
-    def _dagger(self) -> "Gate": # pragma: no cover
-        raise_error(NotImplementedError)
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):

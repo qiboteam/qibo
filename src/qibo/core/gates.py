@@ -693,16 +693,12 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
                                         trainable=trainable, name=name)
 
         matrices, additional_matrix = self._calculate_unitaries()
-        self.unitaries = []
-        for targets, matrix in zip(self.pairs, matrices):
-            unitary = Unitary(matrix, *targets)
-            self.unitaries.append(unitary)
+        self.unitaries = [Unitary(matrix, *targets)
+                          for targets, matrix in zip(self.pairs, matrices)]
         if self.additional_target is not None:
             self.additional_unitary = Unitary(
                 additional_matrix, self.additional_target)
             self.additional_unitary.density_matrix = self.density_matrix
-        else:
-            self.additional_unitary = None
 
     @BaseBackendGate.density_matrix.setter
     def density_matrix(self, x: bool):
@@ -711,6 +707,16 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
             unitary.density_matrix = x
         if self.additional_unitary is not None:
             self.additional_unitary.density_matrix = x
+
+    @ParametrizedGate.parameters.setter
+    def parameters(self, x):
+        gates.VariationalLayer.parameters.fset(self, x) # pylint: disable=no-member
+        if self.unitaries:
+            matrices, additional_matrix = self._calculate_unitaries()
+            for gate, matrix in zip(self.unitaries, matrices):
+                gate.parameters = matrix
+        if self.additional_unitary is not None:
+            self.additional_unitary.parameters = additional_matrix
 
     def _dagger(self):
         import copy
@@ -722,7 +728,7 @@ class VariationalLayer(BackendGate, gates.VariationalLayer):
 
     def construct_unitary(self):
         raise_error(ValueError, "VariationalLayer gate does not have unitary "
-                                 "representation.")
+                                "representation.")
 
     def state_vector_call(self, state):
         for i, unitary in enumerate(self.unitaries):
