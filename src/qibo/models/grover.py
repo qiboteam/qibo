@@ -1,6 +1,6 @@
 import numpy as np
 from qibo import gates
-from qibo.config import raise_error
+from qibo.config import log, raise_error
 from qibo.models.circuit import Circuit
 
 
@@ -29,7 +29,7 @@ class Grover(object):
             First argument should be the bitstring to check.
         check_args (tuple): arguments needed for the check function.
             The found bitstring not included.
-        iterative (Bool): force the use of the iterative Grover
+        iterative (bool): force the use of the iterative Grover
     """
 
     def __init__(self, oracle, superposition_circuit=None, initial_state_circuit=None,
@@ -43,7 +43,9 @@ class Grover(object):
             self.superposition = superposition_circuit
         else:
             if not superposition_qubits:
-                raise_error(ValueError)
+                raise_error(ValueError, "Cannot create Grover model if the "
+                                        "superposition circuit or number of "
+                                        "qubits is not specified.")
             self.superposition = Circuit(superposition_qubits)
             self.superposition.add([gates.H(i) for i in range(superposition_qubits)])
 
@@ -55,7 +57,7 @@ class Grover(object):
         if superposition_size:
             self.sup_size = superposition_size
         else:
-            self.sup_size = int(2**self.superposition.nqubits)
+            self.sup_size = int(2 ** self.superposition.nqubits)
 
         self.check = check
         self.check_args = check_args
@@ -151,8 +153,8 @@ class Grover(object):
             freq (bool): print the full frequencies after the exact Grover algorithm.
 
         Returns:
-            self.solution (str): bitstring (or list of bitstrings) measured as solution of the search.
-            self.iterations (int): number of oracle calls done to reach a solution.
+            solution (str): bitstring (or list of bitstrings) measured as solution of the search.
+            iterations (int): number of oracle calls done to reach a solution.
         """
         if self.num_sol and not self.iterative:
             it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
@@ -184,3 +186,8 @@ class Grover(object):
             self.solution = measured
             self.iterations = total_iterations
         return self.solution, self.iterations
+
+
+    def __call__(self, nshots=100, freq=False):
+        """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
+        return self.execute(nshots=nshots, freq=freq)
