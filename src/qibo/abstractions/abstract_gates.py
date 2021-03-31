@@ -474,6 +474,10 @@ class BaseBackendGate(Gate, ABC):
         """Applies the gate on a density matrix."""
         raise_error(NotImplementedError)
 
+    @abstractmethod
+    def pulse_sequence(self, qubit_config, qubit_times):
+        raise_error(NotImplementedError)
+
     def __call__(self, state):
         """Applies the gate on a state.
 

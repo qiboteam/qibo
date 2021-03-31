@@ -2,9 +2,9 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 import qibo
-from qibo import K
+from qibo import K, gates
+from qibo.models import Circuit
 from qibo.config import log, raise_error
-from qibo.hardware import gates, circuit
 from qibo.hardware.scheduler import TaskScheduler
 qibo.set_backend("icarusq")
 
@@ -110,7 +110,7 @@ def randomized_benchmark(q, ngates, scheduler=None):
             for gate in inverse_gates:
                 res = np.matmul(gate.unitary, res)
             if np.allclose(res, np.eye(2)):
-                c = circuit.Circuit(2, scheduler)
+                c = Circuit(2, scheduler)
                 c.add(initial_gates)
                 c.add(inverse_gates)
                 break

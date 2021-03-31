@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import sys
+import copy
 import math
 from qibo import K, get_threads, matrices
 from qibo.abstractions import gates
@@ -15,10 +16,7 @@ class BackendGate(BaseBackendGate):
     def __new__(cls, *args, **kwargs):
         cgate_only = {"I", "ZPow", "CZPow", "Flatten", "CallbackGate"}
         # TODO: Move these to a different file and refactor
-        if K.name == "icarusq":
-            from qibo.hardware import gates as hgates
-            return getattr(hgates, cls.__name__)(*args, **kwargs)
-        elif K.custom_gates or cls.__name__ in cgate_only:
+        if K.custom_gates or cls.__name__ in cgate_only:
             return super(BackendGate, cls).__new__(cls)
         else:
             from qibo.core import gates
@@ -78,6 +76,9 @@ class BackendGate(BaseBackendGate):
         state = self.gate_op(state, self.qubits_tensor, 2 * self.nqubits,
                              *self.target_qubits_dm, get_threads())
         return state
+
+    def pulse_sequence(self, qubit_config, qubit_times):
+        raise_error(NotImplementedError)
 
 
 class MatrixGate(BackendGate):
@@ -175,6 +176,9 @@ class I(BackendGate, gates.I):
 
     def density_matrix_call(self, state):
         return state
+
+    def pulse_sequence(self, qubit_config, qubit_times):
+        return []
 
 
 class M(BackendGate, gates.M):
@@ -319,6 +323,24 @@ class RX(MatrixGate, gates.RX):
         cos, isin = K.qnp.cos(theta / 2.0), -1j * K.qnp.sin(theta / 2.0)
         return K.qnp.cast([[cos, isin], [isin, cos]])
 
+    def pulse_sequence(self, qubit_config, qubit_times):
+        if self.parameters == 0:
+            return []
+
+        q = self.target_qubits[0]
+        time_mod = abs(self.parameters / math.pi)
+        phase_mod = 0 if self.parameters > 0 else -180
+
+        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
+        for p in pulses:
+            duration = p.duration * time_mod
+            p.start = qubit_times[q]
+            p.phase += phase_mod
+            p.duration = duration
+            qubit_times[q] += duration
+
+        return pulses
+
 
 class RY(MatrixGate, gates.RY):
 
@@ -330,6 +352,9 @@ class RY(MatrixGate, gates.RY):
         theta = self.parameters
         cos, sin = K.qnp.cos(theta / 2.0), K.qnp.sin(theta / 2.0)
         return K.qnp.cast([[cos, -sin], [sin, cos]])
+
+    def pulse_sequence(self, qubit_config, qubit_times):
+        return RX.pulse_sequence(self, qubit_config, qubit_times)
 
 
 class RZ(MatrixGate, gates.RZ):
