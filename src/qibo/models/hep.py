@@ -1,5 +1,6 @@
-from qibo import models, gates, K
+from qibo import gates, K
 from qibo.hamiltonians import Hamiltonian, matrices
+from qibo.models.circuit import Circuit
 from qibo.config import raise_error
 
 
@@ -128,7 +129,7 @@ def ansatz_Fourier(layers, qubits=1):
     Returns:
         The circuit, the rotation function and the total number of parameters.
     """
-    circuit = models.Circuit(qubits)
+    circuit = Circuit(qubits)
     for l in range(layers - 1):
         for q in range(qubits):
             for _ in range(2):
@@ -205,7 +206,7 @@ def ansatz_Weighted(layers, qubits=1):
         The circuit, the rotation function and the total number of
         parameters.
     """
-    circuit = models.Circuit(qubits)
+    circuit = Circuit(qubits)
     for _ in range(layers - 1):
         for q in range(qubits):
             circuit.add(gates.RY(q, theta=0))
