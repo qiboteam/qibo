@@ -87,8 +87,8 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
             options = {"nepochs": maxiter}
         else:
             options = {"maxiter": maxiter, "disp": True}
-        energy, params = evolve.minimize(params, method=method,
-                                         options=options)
+        energy, params, _ = evolve.minimize(params, method=method,
+                                            options=options)
         T = params[-1]
 
     # Perform evolution

@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import LOG_LEVEL, raise_error
+from qibo.config import raise_error, LOG_LEVEL
 
 
 class Optimization:
@@ -48,6 +48,9 @@ class TensorflowBackend(numpy.NumpyBackend):
         if op._custom_operators_loaded:
             self.op = op
 
+        # seed to use in the measurement frequency custom op
+        self._seed = None
+        # seed can be modified using ``K.set_seed``
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -121,6 +124,14 @@ class TensorflowBackend(numpy.NumpyBackend):
     def inv(self, x):
         raise_error(NotImplementedError)
 
+    def unique(self, x, return_counts=False):
+        if return_counts:
+            res, _, counts = self.backend.unique_with_counts(
+                x, out_idx=self.dtypes('DTYPEINT'))
+            return res, counts
+        res, _  = self.backend.unique(x, out_idx=self.dtypes('DTYPEINT'))
+        return res
+
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is not None:
             return self.backend.gather(x, indices, axis=axis)
@@ -161,11 +172,37 @@ class TensorflowBackend(numpy.NumpyBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
-    def sample_measurements(self, probs, nshots):
+    def sample_shots(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
         logits = self.log(probs)[self.newaxis]
-        samples_dec = self.random.categorical(
-            logits, nshots, dtype=self.dtypes('DTYPEINT'))
-        return samples_dec[0]
+        samples = [self.random.categorical(
+            logits, SHOT_BATCH_SIZE, dtype=self.dtypes('DTYPEINT'))[0]
+            for _ in range(nshots // SHOT_BATCH_SIZE)]
+        samples.append(self.random.categorical(
+                logits, nshots % SHOT_BATCH_SIZE,
+                dtype=self.dtypes('DTYPEINT'))[0])
+        return self.concatenate(samples, axis=0)
+
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+        if self.op is None or nshots < SHOT_CUSTOM_OP_THREASHOLD:
+            logits = self.log(probs)[self.newaxis]
+            samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
+            res, counts = self.unique(samples, return_counts=True)
+            frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+            frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
+        else:
+            from qibo.config import get_threads
+            # Generate random seed using tf
+            dtype = self.dtypes('DTYPEINT')
+            seed = self.backend.random.uniform(
+                shape=tuple(), maxval=int(1e8), dtype=dtype)
+            nqubits = int(self.np.log2(tuple(probs.shape)[0]))
+            shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
+            frequencies = self.zeros(shape, dtype='DTYPEINT')
+            frequencies = self.op.measure_frequencies(
+                frequencies, probs, nshots, nqubits, seed, get_threads())
+        return frequencies
 
     def compile(self, func):
         return self.backend.function(func)
@@ -177,4 +214,5 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.backend.executing_eagerly()
 
     def set_seed(self, seed):
+        self._seed = seed
         self.backend.random.set_seed(seed)

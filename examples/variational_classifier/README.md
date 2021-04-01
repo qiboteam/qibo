@@ -4,7 +4,7 @@ Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/variational_c
 
 ## Problem overview
 
-We want to perform a supervised classification task with a [variational quantum classifer](https://arxiv.org/abs/2001.03622). The classifier is trained to minimize a local loss function given by the quadratic deviation of the classifier's predictions from the actual labels of the examples in the training set. A variational quantum circuit is employed to perform the classification.
+We want to perform a supervised classification task with a [variational quantum classifer](https://arxiv.org/abs/1802.06002). The classifier is trained to minimize a local loss function given by the quadratic deviation of the classifier's predictions from the actual labels of the examples in the training set. A variational quantum circuit is employed to perform the classification.
 
 ## Implementing the solution
 
@@ -42,4 +42,4 @@ Note that nclases must be 3 and cannot be changed in this example, because we ar
 
 ## Results
 
-The classification accuracy for the training and test sets is found to be around 70% and 67%, respectively.
+The classification accuracy for the training and test sets is found to be around 70% and 73%, respectively.

@@ -1,6 +1,7 @@
 """
 Testing Tensorflow custom operators circuit.
 """
+import itertools
 import pytest
 import numpy as np
 from qibo import K, get_threads
@@ -501,3 +502,58 @@ def test_initial_state_gradient(dtype, compile): # pragma: no cover
     grad_reference = grad_default(zeros)
     grad_custom_op = grad_custom(zeros)
     np.testing.assert_allclose(grad_reference, grad_custom_op)
+
+
+@pytest.mark.parametrize("dtype", [np.float32, np.float64])
+@pytest.mark.parametrize("inttype", [np.int32, np.int64])
+def test_measure_frequencies(dtype, inttype):
+    import sys
+    probs = np.ones(16, dtype=dtype) / 16
+    frequencies = np.zeros(16, dtype=inttype)
+    frequencies = K.op.measure_frequencies(frequencies, probs, nshots=1000,
+                                           nqubits=4, omp_num_threads=1,
+                                           seed=1234)
+    if sys.platform == "linux":
+        target_frequencies = [60, 50, 68, 64, 53, 53, 67, 54, 64, 53, 67,
+                              69, 76, 57, 64, 81]
+    elif sys.platform == "darwin": # pragma: no cover
+        target_frequencies = [57, 51, 62, 63, 55, 70, 52, 47, 75, 58, 63,
+                              73, 68, 72, 60, 74]
+    assert np.sum(frequencies) == 1000
+    np.testing.assert_allclose(frequencies, target_frequencies)
+
+
+NONZERO = list(itertools.combinations(range(8), r=1))
+NONZERO.extend(itertools.combinations(range(8), r=2))
+NONZERO.extend(itertools.combinations(range(8), r=3))
+NONZERO.extend(itertools.combinations(range(8), r=4))
+@pytest.mark.parametrize("nonzero", NONZERO)
+def test_measure_frequencies_sparse_probabilities(nonzero):
+    import sys
+    probs = np.zeros(8, dtype=np.float64)
+    for i in nonzero:
+        probs[i] = 1
+    probs = probs / np.sum(probs)
+    frequencies = np.zeros(8, dtype=np.int64)
+    frequencies = K.op.measure_frequencies(frequencies, probs, nshots=1000,
+                                           nqubits=3, omp_num_threads=1,
+                                           seed=1234)
+    assert np.sum(frequencies) == 1000
+    for i, freq in enumerate(frequencies):
+        if i in nonzero:
+            assert freq != 0
+        else:
+            assert freq == 0
+
+
+def test_backend_sample_frequencies_seed():
+    """Check that frequencies generated using custom operator are different in each call."""
+    from qibo import K
+    from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+    nshots = SHOT_CUSTOM_OP_THREASHOLD + 1
+    probs = np.random.random(8)
+    probs = probs / np.sum(probs)
+    frequencies1 = K.sample_frequencies(probs, nshots)
+    frequencies2 = K.sample_frequencies(probs, nshots)
+    np.testing.assert_raises(AssertionError, np.testing.assert_allclose,
+                             frequencies1, frequencies2)

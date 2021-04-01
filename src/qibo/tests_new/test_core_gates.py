@@ -28,12 +28,8 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
                                "".format(type(initial_state)))
 
     state = K.cast(state)
-    if qibo.get_backend() != "custom":
-        state = K.qnp.reshape(state, nqubits * (2,))
     for gate in gatelist:
         state = gate(state)
-    if qibo.get_backend() != "custom":
-        state = np.array(state).ravel()
     return state
 
 
@@ -103,66 +99,7 @@ def test_identity(backend):
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
-
-@pytest.mark.parametrize("nqubits,targets,results",
-                         [(2, [1], [0]),
-                          (3, [1], 0),
-                          (4, [1, 3], [0, 1]),
-                          (5, [0, 3, 4], [1, 1, 0]),
-                          (6, [1, 3], np.ones(2, dtype=int)),
-                          (4, [0, 2], np.zeros(2, dtype=int)[0])])
-def test_collapse_gate(backend, nqubits, targets, results):
-    from qibo import K
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_state = random_state(nqubits)
-    collapse = gates.Collapse(*targets, result=results)
-    final_state = apply_gates([collapse], initial_state=np.copy(initial_state))
-    if isinstance(results, int) or isinstance(results, K.numeric_types):
-        results = nqubits * [results]
-    slicer = nqubits * [slice(None)]
-    for t, r in zip(targets, results):
-        slicer[t] = r
-    slicer = tuple(slicer)
-    initial_state = initial_state.reshape(nqubits * (2,))
-    target_state = np.zeros_like(initial_state)
-    target_state[slicer] = initial_state[slicer]
-    norm = (np.abs(target_state) ** 2).sum()
-    target_state = target_state.ravel() / np.sqrt(norm)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-def test_collapse_gate_errors(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    # pass wrong result length
-    with pytest.raises(ValueError):
-        gate = gates.Collapse(0, 1, result=[0, 1, 0])
-    # pass wrong result values
-    with pytest.raises(ValueError):
-        gate = gates.Collapse(0, 1, result=[0, 2])
-    # attempt to construct unitary
-    gate = gates.Collapse(2, 0, result=[0, 0])
-    with pytest.raises(ValueError):
-        gate.construct_unitary()
-    # change result after creation
-    gate = gates.Collapse(2, 0, result=[0, 0])
-    gate.nqubits = 4
-    gate.prepare()
-    gate.result = np.ones(2, dtype=int)
-    qibo.set_backend(original_backend)
-
-# TODO: Test :class:`qibo.core.cgates.M`
-
-def test_m_construct_unitary(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    gate = gates.M(0)
-    with pytest.raises(ValueError):
-        matrix = gate.unitary
-    qibo.set_backend(original_backend)
-
+# :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
 def test_rx(backend):
     original_backend = qibo.get_backend()
@@ -518,5 +455,13 @@ def test_flatten(backend):
         gate.reprepare()
     qibo.set_backend(original_backend)
 
-# TODO: Test `CallbackGate`
+
+def test_callback_gate_errors():
+    from qibo import callbacks
+    entropy = callbacks.EntanglementEntropy([0])
+    gate = gates.CallbackGate(entropy)
+    with pytest.raises(ValueError):
+        gate.construct_unitary()
+
+
 # TODO: Test channels

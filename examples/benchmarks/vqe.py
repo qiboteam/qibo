@@ -67,8 +67,8 @@ def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
 
     start_time = time.time()
     options = {'disp': True, 'maxiter': maxiter}
-    best, params = vqe.minimize(initial_parameters, method=method,
-                                options=options, compile=False)
+    best, params, _ = vqe.minimize(initial_parameters, method=method,
+                                   options=options, compile=False)
     minimization_time = time.time() - start_time
     epsilon = np.log10(1/np.abs(best-target))
     print("Found state =", best)
