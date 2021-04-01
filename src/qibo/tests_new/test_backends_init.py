@@ -16,6 +16,15 @@ def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
+    if backend == "defaulteinsum":
+        target_name = "tensorflow_defaulteinsum"
+    elif backend == "matmuleinsum":
+        target_name = "tensorflow_matmuleinsum"
+    else:
+        target_name = backend
+    assert K.name == target_name
+    assert str(K) == target_name
+
     if backend == "custom":
         assert K.custom_gates
         assert K.custom_einsum is None

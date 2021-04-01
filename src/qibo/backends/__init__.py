@@ -39,7 +39,7 @@ if "QIBO_BACKEND" in os.environ: # pragma: no cover
         _available_names = ", ".join(list(AVAILABLE_BACKENDS.keys()))
         raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
                                 "unknown value {}. Please select one of {}."
-                                "".format(_available_names))
+                                "".format(_BACKEND_NAME, _available_names))
     K = AVAILABLE_BACKENDS.get(_BACKEND_NAME)()
 else:
     try:
