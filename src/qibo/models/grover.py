@@ -71,6 +71,8 @@ class Grover(object):
         c = Circuit(self.oracle.nqubits)
         c.add(gates.X(self.oracle.nqubits - 1))
         c.add(gates.H(self.oracle.nqubits - 1))
+        if self.initial_state_circuit:
+            c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add(self.superposition.on_qubits(*range(self.superposition.nqubits)))
         return c
 
@@ -143,7 +145,7 @@ class Grover(object):
                 raise_error(TimeoutError, "Cancelling iterative method as too "
                                           "many iterations have taken place.")
 
-    def execute(self, nshots=100, freq=False):
+    def execute(self, nshots=100, freq=False, logs=False):
         """Execute Grover's algorithm.
 
         If the number of solutions is given, calculates iterations,
@@ -162,33 +164,38 @@ class Grover(object):
             circuit = self.circuit(it)
             result = circuit(nshots=nshots).frequencies(binary=True)
             if freq:
-                log.info("Result of sampling Grover's algorihm")
-                log.info(result)
+                if logs:
+                    log.info("Result of sampling Grover's algorihm")
+                    log.info(result)
                 self.frequencies = result
-            log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
+            if logs:
+                log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
             most_common = result.most_common(self.num_sol)
             self.solution = []
             self.iterations = it
             for i in most_common:
-                log.info(i[0])
+                if logs:
+                    log.info(i[0])
                 self.solution.append(i[0])
-                if self.check:
-                    if self.check(i[0], *self.check_args):
-                        log.info('Solution checked and successful.')
-                    else:
-                        log.info('Not a solution of the problem. Something went wrong.')
+                if logs:
+                    if self.check:
+                        if self.check(i[0], *self.check_args):
+                            log.info('Solution checked and successful.')
+                        else:
+                            log.info('Not a solution of the problem. Something went wrong.')
         else:
             if not self.check:
                 raise_error(ValueError, "Check function needed for iterative approach.")
             measured, total_iterations = self.iterative_grover()
-            log.info('Solution found in an iterative process.')
-            log.info(f'Solution: {measured}')
-            log.info(f'Total Grover iterations taken: {total_iterations}')
+            if logs:
+                log.info('Solution found in an iterative process.')
+                log.info(f'Solution: {measured}')
+                log.info(f'Total Grover iterations taken: {total_iterations}')
             self.solution = measured
             self.iterations = total_iterations
         return self.solution, self.iterations
 
 
-    def __call__(self, nshots=100, freq=False):
+    def __call__(self, nshots=100, freq=False, logs=False):
         """Equivalent to :meth:`qibo.models.grover.Grover.execute`."""
-        return self.execute(nshots=nshots, freq=freq)
+        return self.execute(nshots=nshots, freq=freq, logs=logs)
