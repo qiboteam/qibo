@@ -135,7 +135,7 @@ def main(qubit, ngates, nshots, address, username, password):
 
     results = []
     for circuit in circuits:
-        circuit(nshots)
+        circuit(nshots, scheduler)
         results.append(circuit.parse_result(qubit))
 
     sweep = range(1, ngates + 1)

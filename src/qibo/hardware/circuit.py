@@ -83,10 +83,6 @@ class PulseSequence:
 
 class Circuit(circuit.AbstractCircuit):
 
-    def __init__(self, nqubits, scheduler=None):
-        super().__init__(nqubits)
-        self.scheduler = scheduler
-
     def _add_layer(self):
         raise_error(NotImplementedError)
 
@@ -113,24 +109,20 @@ class Circuit(circuit.AbstractCircuit):
             new_data[0] = new_refer_1[0]
         return new_data[0]/new_refer_1[0]
 
-    def execute(self, nshots):
-        if self.scheduler is None:
-            raise_error(RuntimeError, "Cannot execute circuit on hardware if "
-                                      "scheduler is not provided.")
-
+    def execute(self, nshots, scheduler):
         qubit_times = np.zeros(self.nqubits)
         # Get calibration data
-        self.qubit_config = self.scheduler.fetch_config()
+        self.qubit_config = scheduler.fetch_config()
         # compile pulse sequence
         pulse_sequence = [pulse for gate in self.queue
             for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
         pulse_sequence = PulseSequence(pulse_sequence)
         # execute using the scheduler
-        self._final_state = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        self._final_state = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
         return self._final_state
 
-    def __call__(self, nshots):
-        return self.execute(nshots)
+    def __call__(self, nshots, scheduler):
+        return self.execute(nshots, scheduler)
 
     @property
     def final_state(self):
