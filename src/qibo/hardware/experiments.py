@@ -178,18 +178,18 @@ class AWGSystem(Experiment):
             {
                 "id": 0,
                 "name": "Left/Bottom Qubit",
-                "channel": [3, None, [0, 1]], # XY control, Z line, readout
+                "channel": [2, None, [0, 1]], # XY control, Z line, readout
                 "frequency_range": [3e9, 3.1e9],
-                "resonator_frequency": 4.5171749e9,
-                "amplitude": 0.75 / 2,
+                "resonator_frequency": 4.5172671e9,
+                "amplitude": 0.375 / 2,
                 "neighbours": [2]
             }, {
                 "id": 1,
                 "name": "Right/Top Qubit",
                 "channel": [3, None, [0, 1]],
                 "frequency_range": [2.14e9, 3.15e9],
-                "resonator_frequency": 4.5241e9,
-                "amplitude": 0.75 / 2,
+                "resonator_frequency": 4.5172671e9,
+                "amplitude": 0.375 / 2,
                 "neighbours": [1]
             }, 
         ]
@@ -200,21 +200,21 @@ class AWGSystem(Experiment):
         from qibo.hardware import pulses
         calibration_placeholder = [{
             "id": 0,
-            "qubit_frequency": 3.0473825e9,
-            "qubit_amplitude": 0.75 / 2,
+            "qubit_frequency": 3.0636e9,
+            "qubit_amplitude": 0.375 / 2,
             "T1": 5.89e-6,
             "T2": 1.27e-6,
             "T2_Spinecho": 3.5e-6,
-            "pi-pulse": 24.78e-9,
-            "drive_channel": 3,
+            "pi-pulse": 27.28e-9,
+            "drive_channel": 2,
             "readout_channel": (0, 1),
             "iq_state": {
-                "0": [0.016901687416102748, -0.006633150376482062],
-                "1": [0.009458352995780546, -0.008570922209494462]
+                "0": [0.016931769653898632, -0.012145890519806354],
+                "1": [0.011120875219705504, -0.013398438039841545]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 24.78e-9, 0.375, 3.0473825e9 - sampling_rate, 90, pulses.Rectangular())],
+                "rx": [pulses.BasicPulse(3, 0, 27.28e-9, 0.375 / 2, 3.0636e9 - sampling_rate, 0, pulses.Rectangular())],
+                "ry": [pulses.BasicPulse(3, 0, 27.28e-9, 0.375 / 2, 3.0636e9 - sampling_rate, 90, pulses.Rectangular())],
                 "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
                             pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
             }
