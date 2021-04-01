@@ -34,7 +34,7 @@ if "QIBO_BACKEND" in os.environ: # pragma: no cover
     elif _BACKEND_NAME == "numpy": # pragma: no cover
         # CI uses tensorflow as default backend
         K = NumpyBackend()
-    elif BACKEND_NAME == "icarusq": # pragma: no cover
+    elif _BACKEND_NAME == "icarusq": # pragma: no cover
         # CI does not have access to hardware backends
         K = IcarusQBackend()
     else: # pragma: no cover
