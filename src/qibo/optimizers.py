@@ -193,6 +193,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         return l
 
     if compile:
+        loss = K.compile(loss)
         opt_step = K.compile(opt_step)
 
     for e in range(sgd_options["nepochs"]):
