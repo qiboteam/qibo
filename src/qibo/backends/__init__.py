@@ -34,6 +34,9 @@ if "QIBO_BACKEND" in os.environ: # pragma: no cover
     elif _BACKEND_NAME == "numpy": # pragma: no cover
         # CI uses tensorflow as default backend
         K = NumpyBackend()
+    elif BACKEND_NAME == "icarusq": # pragma: no cover
+        # CI does not have access to hardware backends
+        K = IcarusQBackend()
     else: # pragma: no cover
         raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
                                 "unknown value {}. Please select either "
@@ -56,6 +59,11 @@ else:
         AVAILABLE_BACKENDS = [b for b in AVAILABLE_BACKENDS
                               if "tensorflow" not in b]
         AVAILABLE_BACKENDS.remove("custom")
+
+    try:
+        from qibo.hardware.experiments import IcarusQ
+    except ModuleNotFoundError: # pragma: no cover
+        AVAILABLE_BACKENDS.remove("icarusq")
 
 
 K.qnp = numpy_backend
