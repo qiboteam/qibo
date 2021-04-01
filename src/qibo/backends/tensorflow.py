@@ -193,8 +193,11 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def __init__(self):
         from qibo.tensorflow import custom_operators as op
-        if not op._custom_operators_loaded:
-            raise_error(RuntimeError)
+        if not op._custom_operators_loaded: # pragma: no cover
+            # CI can compile custom operators so this case is not tested
+            raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
+                                      "backend if custom operators are not "
+                                      "compiled.")
 
         super().__init__()
         self.name = "custom"

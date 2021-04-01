@@ -24,6 +24,7 @@ def test_set_backend(backend):
         target_name = backend
     assert K.name == target_name
     assert str(K) == target_name
+    assert K.executing_eagerly()
 
     if backend == "custom":
         assert K.custom_gates
