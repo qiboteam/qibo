@@ -73,12 +73,12 @@ def test_measurement_collapse_bitflip_noise(backend, accelerators):
     c = models.Circuit(4, accelerators)
     output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
     result = c(nshots=20)
-    if K.name == "tensorflow":
-        target_samples = [2, 2, 2, 1, 1, 0, 1, 2, 1, 2, 2, 3, 3, 0, 3,
-                          0, 0, 3, 0, 1]
-    elif K.name == "numpy":
+    if "numpy" in K.name:
         target_samples = [3, 3, 0, 3, 2, 0, 1, 2, 2, 2, 2, 0, 0, 2, 0,
                           2, 3, 1, 1, 0]
+    else:
+        target_samples = [2, 2, 2, 1, 1, 0, 1, 2, 1, 2, 2, 3, 3, 0, 3,
+                          0, 0, 3, 0, 1]
     np.testing.assert_allclose(output.samples(binary=False), target_samples)
     _, target_frequencies = np.unique(target_samples, return_counts=True)
     target_frequencies = {i: v for i, v in enumerate(target_frequencies)}

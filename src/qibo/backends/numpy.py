@@ -234,11 +234,28 @@ class NumpyBackend(abstract.AbstractBackend):
         self.backend.random.seed(seed)
 
 
+class NumpyDefaultEinsumBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_defaulteinsum"
+        self.custom_gates = False
+        self.custom_einsum = "DefaultEinsum"
+
+
+class NumpyMatmulEinsumBackend(NumpyBackend):
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_matmuleinsum"
+        self.custom_gates = False
+        self.custom_einsum = "MatmulEinsum"
+
+
 class IcarusQBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        # TODO: Implement experiment switcher
         from qibo.hardware.experiments import IcarusQ
         self.name = "icarusq"
         self.experiment = IcarusQ()
