@@ -72,7 +72,7 @@ def test_grover_wrong_solution(backend):
     oracle = Circuit(5 + 1)
     oracle.add(gates.X(5).controlled_by(*range(5)))
     grover = Grover(oracle, superposition_qubits=5, check=check, number_solutions=2)
-    solution, iterations = grover()
+    solution, iterations = grover(logs=True)
     assert len(solution) == 2
     qibo.set_backend(original_backend)
 
@@ -99,7 +99,7 @@ def test_grover_iterative(backend):
     with pytest.raises(TimeoutError):
         solution, iterations = grover()
     grover = Grover(oracle, superposition_qubits=5, check=check, iterative=True)
-    solution, iterations = grover()
+    solution, iterations = grover(logs=True)
     assert solution == "11111"
     qibo.set_backend(original_backend)
 
@@ -118,7 +118,7 @@ def test_grover_execute(backend, num_sol):
     oracle = Circuit(5 + 1)
     oracle.add(gates.X(5).controlled_by(*range(5)))
     grover = Grover(oracle, superposition_qubits=5, check=check, number_solutions=num_sol)
-    solution, iterations = grover(freq=True)
+    solution, iterations = grover(freq=True, logs=True)
     if num_sol:
         assert solution == ["11111"]
         assert iterations == 4
