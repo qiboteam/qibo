@@ -57,8 +57,11 @@ else:
         log.warning("Tensorflow is not installed. Falling back to numpy. "
                     "Numpy does not support Qibo custom operators and GPU. "
                     "Einsum will be used to apply gates on CPU.")
-        AVAILABLE_BACKENDS = {k: v for k, v in AVAILABLE_BACKENDS.items()
-                              if "numpy" in k}
+        # remove Tensorflow backends
+        AVAILABLE_BACKENDS.pop("custom")
+        AVAILABLE_BACKENDS.pop("tensorflow")
+        AVAILABLE_BACKENDS.pop("tensorflow_defaulteinsum")
+        AVAILABLE_BACKENDS.pop("tensorflow_matmuleinsum")
         # use numpy for defaulteinsum and matmuleinsum backends
         AVAILABLE_BACKENDS["defaulteinsum"] = NumpyDefaultEinsumBackend
         AVAILABLE_BACKENDS["matmuleinsum"] = NumpyMatmulEinsumBackend
