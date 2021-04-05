@@ -18,7 +18,6 @@ def SupremacyLikeCircuit(nqubits: int, nlayers: int):
     for i in range(nqubits):
         gate = getattr(gates, one_qubit_gates[int(np.random.randint(0, len(one_qubit_gates)))])
         yield gate(i, np.pi / 2.0)
-        yield gates.M(i)
 
 
 def PrepareGHZ(nqubits: int):

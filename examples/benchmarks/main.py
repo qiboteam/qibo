@@ -7,6 +7,7 @@ import argparse
 import os
 import time
 import json
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 
 
 parser = argparse.ArgumentParser()
@@ -34,14 +35,13 @@ parser.add_argument("--phi", default=None, type=float)
 args = vars(parser.parse_args())
 
 
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-import tensorflow as tf
 def limit_gpu_memory(memory_limit=None):
     """Limits GPU memory that is available to Tensorflow.
 
     Args:
         memory_limit: Memory limit in MBs.
     """
+    import tensorflow as tf
     if memory_limit is None:
         print("\nNo GPU memory limiter used.\n")
         return
@@ -70,13 +70,6 @@ def main(nqubits, type,
          filename=None):
     """Runs benchmarks for different circuit types.
 
-    If `directory` is specified this saves an `.h5` file that contains the
-    following keys:
-        * nqubits: List with the number of qubits that were simulated.
-        * simulation_time: List with simulation times for each number of qubits.
-        * compile_time (optional): List with compile times for each number of
-            qubits. This is saved only if `compile` is `True`.
-
     Args:
         nqubits (int): Number of qubits in the circuit.
         type (str): Type of Circuit to use.
@@ -86,6 +79,7 @@ def main(nqubits, type,
         accelerators (dict): Dictionary that specifies the accelarator devices
             for multi-GPU setups.
         nshots (int): Number of measurement shots.
+            Logs the time required to sample frequencies (no samples).
             If ``None`` no measurements are performed.
         fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
         compile: If ``True`` then the Tensorflow graph is compiled using
@@ -103,9 +97,6 @@ def main(nqubits, type,
     qibo.set_precision(args.pop("precision"))
     if device is not None:
         qibo.set_device(device)
-
-    if device is None:
-        device = tf.config.list_logical_devices()[0].name
 
     if filename is not None:
         if os.path.isfile(filename):
@@ -138,6 +129,9 @@ def main(nqubits, type,
 
     start_time = time.time()
     circuit = circuits.CircuitFactory(**kwargs)
+    if nshots is not None:
+        # add measurement gates
+        circuit.add(qibo.gates.M(*range(nqubits)))
     if fuse:
         circuit = circuit.fuse()
     logs[-1]["creation_time"] = time.time() - start_time
@@ -147,13 +141,18 @@ def main(nqubits, type,
         circuit.compile()
         # Try executing here so that compile time is not included
         # in the simulation time
-        final_state = circuit(nshots=nshots)
+        result = circuit(nshots=nshots)
         logs[-1]["compile_time"] = time.time() - start_time
 
     start_time = time.time()
-    final_state = circuit(nshots=nshots)
+    result = circuit(nshots=nshots)
     logs[-1]["simulation_time"] = time.time() - start_time
-    logs[-1]["dtype"] = str(final_state.dtype)
+    logs[-1]["dtype"] = str(result.dtype)
+
+    if nshots is not None:
+        start_time = time.time()
+        freqs = result.frequencies()
+        logs[-1]["measurement_time"] = time.time() - start_time
 
     print()
     for k, v in logs[-1].items():
