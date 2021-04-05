@@ -7,8 +7,8 @@ from qibo.models.circuit import Circuit
 class Grover(object):
     """Model that performs Grover's algorithm.
 
-    # TODO: Add a few more details on Grover's algorithm and/or reference
-    for example `arXiv:quant-ph/9605043 <https://arxiv.org/abs/quant-ph/9605043>`_
+    For Grover's original search algorithm: `arXiv:quant-ph/9605043 <https://arxiv.org/abs/quant-ph/9605043>`_
+    For the iterative version with unknown solutions:`arXiv:quant-ph/9605034 <https://arxiv.org/abs/quant-ph/9605034>`_
 
     Args:
         oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
