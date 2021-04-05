@@ -112,6 +112,6 @@ def CircuitFactory(nqubits: int,
             raise TypeError("Unknown benchmark circuit type {}."
                             "".format(circuit_type))
         circuit = models.Circuit(nqubits, accelerators=accelerators,
-                                 memory_device=memory_device)
+                                 memory_device=device)
         circuit.add(_CIRCUITS[circuit_type](nqubits, **kwargs))
     return circuit
