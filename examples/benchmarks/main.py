@@ -6,25 +6,28 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
-from typing import Dict, List, Optional
 
-_PARAM_NAMES = {"theta", "phi"}
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="20", type=str)
-parser.add_argument("--backend", default="custom", type=str)
 parser.add_argument("--type", default="qft", type=str)
-parser.add_argument("--fuse", action="store_true")
-parser.add_argument("--nlayers", default=None, type=int)
-parser.add_argument("--gate-type", default=None, type=str)
-parser.add_argument("--nshots", default=None, type=int)
+parser.add_argument("--backend", default="custom", type=str)
+parser.add_argument("--precision", default="double", type=str)
+
 parser.add_argument("--device", default="/CPU:0", type=str)
 parser.add_argument("--accelerators", default=None, type=str)
-parser.add_argument("--memory", default=None, type=int)
-parser.add_argument("--directory", default=None, type=str)
-parser.add_argument("--name", default=None, type=str)
+
+parser.add_argument("--nshots", default=None, type=int)
+parser.add_argument("--fuse", action="store_true")
 parser.add_argument("--compile", action="store_true")
-parser.add_argument("--precision", default="double", type=str)
+parser.add_argument("--nlayers", default=None, type=int)
+parser.add_argument("--gate-type", default=None, type=str)
+
+parser.add_argument("--memory", default=None, type=int)
+parser.add_argument("--filename", default=None, type=str)
+
 # params
+_PARAM_NAMES = {"theta", "phi"}
 parser.add_argument("--theta", default=None, type=float)
 parser.add_argument("--phi", default=None, type=float)
 args = vars(parser.parse_args())
@@ -53,25 +56,17 @@ def limit_gpu_memory(memory_limit=None):
 limit_gpu_memory(args.pop("memory"))
 
 import qibo
-qibo.set_backend(args.pop("backend"))
-qibo.set_precision(args.pop("precision"))
 import circuits
 import utils
 
 
-def main(nqubits_list: List[int],
-         type: str,
-         device: Optional[str] = "/CPU:0",
-         accelerators: Optional[Dict[str, int]] = None,
-         fuse: bool = False,
-         nlayers: Optional[int] = None,
-         gate_type: Optional[str] = None,
-         params: Dict[str, float] = {},
-         nshots: Optional[int] = None,
-         directory: Optional[str] = None,
-         name: Optional[str] = None,
-         compile: bool = False):
-    """Runs benchmarks for the Quantum Fourier Transform.
+def main(nqubits_list, type,
+         backend="custom", precision="double",
+         device="/CPU:0", accelerators=None,
+         nshots=None, fuse=False, compile=False,
+         nlayers=None, gate_type=None, params={},
+         filename=None):
+    """Runs benchmarks for different circuit types.
 
     If `directory` is specified this saves an `.h5` file that contains the
     following keys:
@@ -81,49 +76,35 @@ def main(nqubits_list: List[int],
             qubits. This is saved only if `compile` is `True`.
 
     Args:
-        nqubits_list: List with the number of qubits to run for.
-        type: Type of Circuit to use.
+        nqubits (int): Number of qubits in the circuit.
+        type (str): Type of Circuit to use.
             See ``benchmark_models.py`` for available types.
-        device: Tensorflow logical device to use for the benchmark.
+        device (str): Tensorflow logical device to use for the benchmark.
             If ``None`` the first available device is used.
-        nlayers: Number of layers for supremacy-like or gate circuits.
-            If a different circuit is used ``nlayers`` is ignored.
-        gate_type: Type of gate for gate circuits.
-            If a different circuit is used ``gate_type`` is ignored.
-        params: Gate parameter for gate circuits.
-            If a non-parametrized circuit is used then ``params`` is ignored.
-        nshots: Number of measurement shots.
-        directory: Directory to save the log files.
-            If ``None`` then logs are not saved.
-        name: Name of the run to be used when saving logs.
-            This should be specified if a directory in given. Otherwise it
-            is ignored.
+        accelerators (dict): Dictionary that specifies the accelarator devices
+            for multi-GPU setups.
+        nshots (int): Number of measurement shots.
+            If ``None`` no measurements are performed.
+        fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
         compile: If ``True`` then the Tensorflow graph is compiled using
-            ``circuit.compile()``. In this case the compile time is also logged.
-
-    Raises:
-        FileExistsError if the file with the `name` specified exists in the
-        given `directory`.
+            ``circuit.compile()``. Compilation time is logged in this case.
+        nlayers (int): Number of layers for supremacy-like or gate circuits.
+            If a different circuit is used ``nlayers`` is ignored.
+        gate_type (str): Type of gate for gate circuits.
+            If a different circuit is used ``gate_type`` is ignored.
+        params (dict): Gate parameter for gate circuits.
+            If a non-parametrized circuit is used then ``params`` is ignored.
+        filename (str): Name of file to write logs.
+            If ``None`` logs will not be saved.
     """
+    qibo.set_backend(args.pop("backend"))
+    qibo.set_precision(args.pop("precision"))
+
     if device is None:
         device = tf.config.list_logical_devices()[0].name
 
-    if directory is not None:
-        if name is None:
-            raise ValueError("A run name should be given in order to save logs.")
-
-        # Generate log file name
-        log_name = [name]
-        if compile:
-            log_name.append("compiled")
-        log_name = "{}.h5".format("_".join(log_name))
-        # Generate log file path
-        file_path = os.path.join(directory, log_name)
-        if os.path.exists(file_path):
-            raise FileExistsError("File {} already exists in {}."
-                                  "".format(log_name, directory))
-
-        print("Saving logs in {}.".format(file_path))
+    if filename is not None:
+        print("Saving logs in {}.".format(filename))
 
     # Create log dict
     logs = {"nqubits": [], "simulation_time": [], "creation_time": []}
@@ -172,8 +153,8 @@ def main(nqubits_list: List[int],
         logs["nqubits"].append(nqubits)
 
         # Write updated logs in file
-        if directory is not None:
-            utils.update_file(file_path, logs)
+        if filename is not None:
+            utils.update_file(filename, logs)
 
         # Print results during run
         print("Creation time:", logs["creation_time"][-1])
