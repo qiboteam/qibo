@@ -52,7 +52,7 @@ def compute_chsh(frequencies):
     aux = 0
     for freq in frequencies:
         for outcome in freq:
-            if aux == 2:
+            if aux == 1:
                 chsh -= (-1)**(int(outcome[0])+int(outcome[1]))*freq[outcome]
             else:
                 chsh += (-1)**(int(outcome[0])+int(outcome[1]))*freq[outcome]
