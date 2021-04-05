@@ -9,7 +9,7 @@ import time
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default="20", type=str)
+parser.add_argument("--nqubits", default=20, type=int)
 parser.add_argument("--type", default="qft", type=str)
 parser.add_argument("--backend", default="custom", type=str)
 parser.add_argument("--precision", default="double", type=str)
@@ -60,7 +60,7 @@ import circuits
 import utils
 
 
-def main(nqubits_list, type,
+def main(nqubits, type,
          backend="custom", precision="double",
          device="/CPU:0", accelerators=None,
          nshots=None, fuse=False, compile=False,
@@ -114,58 +114,56 @@ def main(nqubits_list, type,
     # Set circuit type
     print("Running {} benchmarks.".format(type))
 
-    for nqubits in nqubits_list:
-        kwargs = {"nqubits": nqubits, "circuit_type": type}
-        params = {k: v for k, v in params.items() if v is not None}
-        if params: kwargs["params"] = params
-        if nlayers is not None: kwargs["nlayers"] = nlayers
-        if gate_type is not None: kwargs["gate_type"] = gate_type
-        if accelerators is not None:
-            kwargs["accelerators"] = accelerators
-            kwargs["memory_device"] = device
+    kwargs = {"nqubits": nqubits, "circuit_type": type}
+    params = {k: v for k, v in params.items() if v is not None}
+    if params: kwargs["params"] = params
+    if nlayers is not None: kwargs["nlayers"] = nlayers
+    if gate_type is not None: kwargs["gate_type"] = gate_type
+    if accelerators is not None:
+        kwargs["accelerators"] = accelerators
+        kwargs["memory_device"] = device
+
+    start_time = time.time()
+    circuit = circuits.CircuitFactory(**kwargs)
+    if fuse:
+        circuit = circuit.fuse()
+    logs["creation_time"].append(time.time() - start_time)
+
+    try:
+        actual_backend = circuit.queue[0].einsum.__class__.__name__
+    except AttributeError:
+        actual_backend = "Custom"
+
+    print("\nBenchmark parameters:", kwargs)
+    print("Actual backend:", actual_backend)
+    with tf.device(device):
+        if compile:
+            start_time = time.time()
+            circuit.compile()
+            # Try executing here so that compile time is not included
+            # in the simulation time
+            final_state = circuit.execute(nshots=nshots)
+            logs["compile_time"].append(time.time() - start_time)
 
         start_time = time.time()
-        circuit = circuits.CircuitFactory(**kwargs)
-        if fuse:
-            circuit = circuit.fuse()
-        logs["creation_time"].append(time.time() - start_time)
+        final_state = circuit.execute(nshots=nshots)
+        logs["simulation_time"].append(time.time() - start_time)
 
-        try:
-            actual_backend = circuit.queue[0].einsum.__class__.__name__
-        except AttributeError:
-            actual_backend = "Custom"
+    logs["nqubits"].append(nqubits)
 
-        print("\nBenchmark parameters:", kwargs)
-        print("Actual backend:", actual_backend)
-        with tf.device(device):
-            if compile:
-                start_time = time.time()
-                circuit.compile()
-                # Try executing here so that compile time is not included
-                # in the simulation time
-                final_state = circuit.execute(nshots=nshots)
-                logs["compile_time"].append(time.time() - start_time)
+    # Write updated logs in file
+    if filename is not None:
+        utils.update_file(filename, logs)
 
-            start_time = time.time()
-            final_state = circuit.execute(nshots=nshots)
-            logs["simulation_time"].append(time.time() - start_time)
-
-        logs["nqubits"].append(nqubits)
-
-        # Write updated logs in file
-        if filename is not None:
-            utils.update_file(filename, logs)
-
-        # Print results during run
-        print("Creation time:", logs["creation_time"][-1])
-        if compile:
-            print("Compile time:", logs["compile_time"][-1])
-        print("Simulation time:", logs["simulation_time"][-1])
-        print("Final dtype:", final_state.dtype)
+    # Print results during run
+    print("Creation time:", logs["creation_time"][-1])
+    if compile:
+        print("Compile time:", logs["compile_time"][-1])
+    print("Simulation time:", logs["simulation_time"][-1])
+    print("Final dtype:", final_state.dtype)
 
 
 if __name__ == "__main__":
-    args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
     args["accelerators"] = utils.parse_accelerators(args.pop("accelerators"))
     args["params"] = {k: args.pop(k) for k in _PARAM_NAMES}
     main(**args)
