@@ -32,11 +32,11 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        pytest --cov=qibo --cov-report=xml --pyargs qibo
+        pytest --cov=qibo --cov-report=xml --pyargs qibo --ignore examples/benchmarks
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.8'
       run: |
-        pytest examples/
+        pytest examples/ --ignore examples/benchmarks
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v1
