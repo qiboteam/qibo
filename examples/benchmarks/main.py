@@ -59,7 +59,36 @@ limit_gpu_memory(args.pop("memory"))
 
 import qibo
 import circuits
-import utils
+
+
+def parse_accelerators(accelerators):
+    """Transforms string that specifies accelerators to dictionary.
+
+    The string that is parsed has the following format:
+        n1device1,n2device2,n3device3,...
+    and is transformed to the dictionary:
+        {'device1': n1, 'device2': n2, 'device3': n3, ...}
+
+    Example:
+        2/GPU:0,2/GPU:1 --> {'/GPU:0': 2, '/GPU:1': 2}
+    """
+    if accelerators is None:
+        return None
+
+    def read_digit(x):
+        i = 0
+        while x[i].isdigit():
+            i += 1
+        return x[i:], int(x[:i])
+
+    acc_dict = {}
+    for entry in accelerators.split(","):
+        device, n = read_digit(entry)
+        if device in acc_dict:
+            acc_dict[device] += n
+        else:
+            acc_dict[device] = n
+    return acc_dict
 
 
 def main(nqubits, type,
@@ -164,6 +193,6 @@ def main(nqubits, type,
 
 
 if __name__ == "__main__":
-    args["accelerators"] = utils.parse_accelerators(args.pop("accelerators"))
+    args["accelerators"] = parse_accelerators(args.pop("accelerators"))
     args["params"] = {k: args.pop(k) for k in _PARAM_NAMES}
     main(**args)
