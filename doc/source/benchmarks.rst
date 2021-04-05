@@ -98,7 +98,8 @@ following options:
 
 * ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
   Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
-  on two GPUs.
+  on two GPUs. The coefficient of each device denotes the number of times to
+  reuse this device.
 
 * ``--memory`` (``int``): Limits GPU memory used for execution. If no limiter is used,
   Tensorflow uses all available by default.

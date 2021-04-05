@@ -122,8 +122,8 @@ def main(nqubits, type,
         filename (str): Name of file to write logs.
             If ``None`` logs will not be saved.
     """
-    qibo.set_backend(args.pop("backend"))
-    qibo.set_precision(args.pop("precision"))
+    qibo.set_backend(backend)
+    qibo.set_precision(precision)
     if device is not None:
         qibo.set_device(device)
 
