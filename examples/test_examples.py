@@ -144,7 +144,7 @@ def test_benchmarks(nqubits, type):
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
     header = ("import argparse\nimport os\nimport time"
-              "\nimport qibo\nimport circuits\nimport utils\n\n")
+              "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
             "backend": "custom", "precision": "double",
             "device": None, "accelerators": None,
