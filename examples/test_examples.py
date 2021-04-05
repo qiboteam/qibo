@@ -134,9 +134,9 @@ def test_unary(data, bins, M=10, shots=1000):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits_list", [[3, 4]])
+@pytest.mark.parametrize("nqubits", [3, 6])
 @pytest.mark.parametrize("type", ["qft", "variational"])
-def test_benchmarks(nqubits_list, type):
+def test_benchmarks(nqubits, type):
     args = locals()
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
