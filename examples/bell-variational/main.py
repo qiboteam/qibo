@@ -16,13 +16,15 @@ def main(nshots):
     best, params, _ = optimize(cost_function, initial_parameters, args=(circuits, nshots))
     print(f'Cost: {best}\n')
     print(f'Parameters: {params}\n')
+    print(f'Angles for the RY gates: {(params*180/np.pi)%360} in degrees.\n')
     frequencies = []
     for circuit in circuits:
         circuit.set_parameters(params)
         frequencies.append(circuit(nshots=nshots).frequencies())
-    chsh = compute_chsh(frequencies)
+    chsh = compute_chsh(frequencies, nshots)
     print(f'CHSH inequality value: {chsh}\n')
     print(f'Target: {np.sqrt(2)*2}\n')
+    print(f'Relative distance: {100*np.abs(np.abs(chsh)-np.sqrt(2)*2)/np.sqrt(2)*2}%\n')
 
 
 if __name__ == "__main__":

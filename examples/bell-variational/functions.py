@@ -37,7 +37,7 @@ def set_parametrized_circuits():
     return chsh_circuits
 
 
-def compute_chsh(frequencies):
+def compute_chsh(frequencies, nshots):
     '''Computes the CHSH inequelity value given the restults of an experiment.
     Args:
         frequencies (list): list of dictionaries with the result for the measurement
@@ -57,7 +57,6 @@ def compute_chsh(frequencies):
             else:
                 chsh += (-1)**(int(outcome[0])+int(outcome[1]))*freq[outcome]
         aux += 1
-    nshots = sum(freq[x] for x in freq)
     chsh /= nshots
     return chsh
 
@@ -79,6 +78,6 @@ def cost_function(parameters, circuits, nshots):
     for circuit in circuits:
         circuit.set_parameters(parameters)
         frequencies.append(circuit(nshots=nshots).frequencies())
-    chsh = compute_chsh(frequencies)
+    chsh = compute_chsh(frequencies, nshots)
     cost = (np.sqrt(2)*2-np.abs(chsh))
     return cost
