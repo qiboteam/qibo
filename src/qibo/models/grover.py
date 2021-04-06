@@ -9,6 +9,7 @@ class Grover(object):
 
     For Grover's original search algorithm: `arXiv:quant-ph/9605043 <https://arxiv.org/abs/quant-ph/9605043>`_
     For the iterative version with unknown solutions:`arXiv:quant-ph/9605034 <https://arxiv.org/abs/quant-ph/9605034>`_
+    For the Grover algorithm with any superposition:`arXiv:quant-ph/9712011 <https://arxiv.org/abs/quant-ph/9712011>`_
 
     Args:
         oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
