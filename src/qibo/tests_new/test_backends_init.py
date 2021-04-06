@@ -3,13 +3,13 @@ from qibo import K, backends, models, gates
 
 
 def test_construct_backend(backend):
-    bk = backends._construct_backend(backend)
+    bk = K.construct_backend(backend)
     try:
         assert bk.name == backend
     except AssertionError:
         assert bk.name.split("_")[-1] == backend
     with pytest.raises(ValueError):
-        bk = backends._construct_backend("test")
+        bk = K.construct_backend("test")
 
 
 def test_set_backend(backend):
