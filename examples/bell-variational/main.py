@@ -27,6 +27,6 @@ def main(nshots):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--nshots", default=10000, type=int)
+    parser.add_argument("--nshots", default=10000, type=int, help='Number of shots for each circuit base')
     args = vars(parser.parse_args())
     main(**args)
