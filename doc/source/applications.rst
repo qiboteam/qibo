@@ -22,3 +22,4 @@ problems.
     tutorials/EF_QAE/README.md
     tutorials/shor/README.md
     tutorials/qPDF/qPDF.ipynb
+    tutorials/bell-variational/README.md
