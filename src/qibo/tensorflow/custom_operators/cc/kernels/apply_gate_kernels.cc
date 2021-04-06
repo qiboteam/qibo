@@ -217,8 +217,8 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
 
     NormType norms = 0;
     #pragma omp parallel for shared(state) reduction(+: norms)
-    for (auto g = 0; g < nstates; g++) {
-      for (auto h = 0; h < res; h++) {
+    for (int64 g = 0; g < nstates; g++) {
+      for (int64 h = 0; h < res; h++) {
         state[GetIndex(g, h)] = 0;
       }
       auto x = state[GetIndex(g, res)];
