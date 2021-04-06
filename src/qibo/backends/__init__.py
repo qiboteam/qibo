@@ -181,10 +181,9 @@ def set_device(name):
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
-        if bk.default_device is not None:
-            bk.set_device(name)
-            with bk.device(bk.default_device):
-                bk.matrices.allocate_matrices()
+        bk.set_device(name)
+        with bk.device(bk.default_device):
+            bk.matrices.allocate_matrices()
 
 
 def get_device():
