@@ -21,8 +21,8 @@ class Backend:
         }
 
         self.constructed_backends = {}
-        self.qnp = self.construct_backend("numpy_defaulteinsum")
         self._active_backend = None
+        self.qnp = self.construct_backend("numpy_defaulteinsum")
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ: # pragma: no cover
             self.initialize_from_env_variable(os.environ.get("QIBO_BACKEND"))
@@ -37,7 +37,6 @@ class Backend:
 
     @active_backend.setter
     def active_backend(self, name):
-        # TODO: Move `construct_backend` here
         self._active_backend = self.construct_backend(name)
 
     def construct_backend(self, name):
@@ -59,7 +58,12 @@ class Backend:
                 raise_error(ValueError, "Unknown backend {}. Please select one of "
                                         "the available backends: {}."
                                         "".format(name, available))
-            self.constructed_backends[name] = self.available_backends.get(name)()
+            new_backend = self.available_backends.get(name)()
+            if self.active_backend is not None:
+                new_backend.set_precision(self.active_backend.precision)
+                if self.active_backend.device is not None:
+                    new_backend.set_device(self.active_backend.default_device)
+            self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)
 
     def initialize_from_env_variable(self, name): # pragma: no cover
