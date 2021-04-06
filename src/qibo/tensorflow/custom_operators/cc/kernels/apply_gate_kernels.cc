@@ -37,15 +37,15 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     // Apply gate
     if (ncontrols == 0) {
       #pragma omp parallel for
-      for (long g = 0; g < nstates; g += 1) {
-        long i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
+      for (int64 g = 0; g < nstates; g += 1) {
+        int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
         apply(state[i], state[i + tk], gate);
       }
     } else {
       const int N = ncontrols + 1;
       #pragma omp parallel for
-      for (long g = 0; g < nstates; g += 1) {
-        long i = g;
+      for (int64 g = 0; g < nstates; g += 1) {
+        int64 i = g;
         for (auto iq = 0; iq < N; iq++) {
           const auto n = qubits[iq];
           int64 k = (int64)1 << n;
@@ -125,16 +125,16 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
     if (ncontrols == 0) {
       #pragma omp parallel for
-      for (long g = 0; g < nstates; g += 1) {
-        long i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
+      for (int64 g = 0; g < nstates; g += 1) {
+        int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
         i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
         apply(state, i, targetk1, targetk2, gate);
       }
     } else {
       const int N = ncontrols + 2;
       #pragma omp parallel for
-      for (long g = 0; g < nstates; g += 1) {
-        long i = g;
+      for (int64 g = 0; g < nstates; g += 1) {
+        int64 i = g;
         for (auto iq = 0; iq < N; iq++) {
           const auto m = qubits[iq];
           int64 k = (int64)1 << m;
@@ -217,8 +217,8 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
 
     NormType norms = 0;
     #pragma omp parallel for shared(state) reduction(+: norms)
-    for (long g = 0; g < nstates; g++) {
-      for (long h = 0; h < res; h++) {
+    for (int64 g = 0; g < nstates; g++) {
+      for (int64 h = 0; h < res; h++) {
         state[GetIndex(g, h)] = 0;
       }
       auto x = state[GetIndex(g, res)];
@@ -234,7 +234,7 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
         x = T(x.real() / norm, x.imag() / norm);
       };
       #pragma omp parallel for
-      for (long g = 0; g < nstates; g++) {
+      for (int64 g = 0; g < nstates; g++) {
         NormalizeComponent(state[GetIndex(g, res)]);
       }
     }
