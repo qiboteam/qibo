@@ -31,7 +31,7 @@ class Grover(object):
         check_args (tuple): arguments needed for the check function.
             The found bitstring not included.
         iterative (bool): force the use of the iterative Grover
-        
+
     Example:
         ::
 
