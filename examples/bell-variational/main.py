@@ -13,7 +13,7 @@ def main(nshots):
     '''
     initial_parameters = np.random.uniform(0, 2*np.pi, 2)
     circuits = set_parametrized_circuits()
-    best, params, extra = optimize(cost_function, initial_parameters, args=(circuits, nshots))
+    best, params, _ = optimize(cost_function, initial_parameters, args=(circuits, nshots))
     print(f'Cost: {best}\n')
     print(f'Parameters: {params}\n')
     frequencies = []
