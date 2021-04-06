@@ -7,7 +7,7 @@ from scipy.special import binom
 # Create an oracle. Ex: Oracle that detects state |11111>
 
 qubits = 10
-num_1 = 1
+num_1 = 2
 
 
 
@@ -46,6 +46,8 @@ def oracle(qubits, num_1):
     for i, b in enumerate(booleans[::-1]):
         if b=='0': oracle.add(gates.X(qubits + i))
 
+    oracle.add(sum.invert().on_qubits(*range(sum.nqubits)))
+
     return oracle
 
 def check(instance, num_1):
@@ -60,10 +62,11 @@ superposition.add([gates.H(i) for i in range(qubits)])
 # Generate and execute Grover class
 oracle = oracle(qubits, num_1)
 
-#grover = Grover(oracle, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=int(binom(qubits, num_1)))
-grover = Grover(oracle, superposition_circuit=superposition, superposition_qubits=qubits, check=check, check_args=(num_1,))
-print(grover.sup_qubits)
+grover = Grover(oracle, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=int(binom(qubits, num_1)))
+
+# grover = Grover(oracle, superposition_circuit=superposition, superposition_qubits=qubits, check=check, check_args=(num_1,))
 solution, iterations = grover()
 
 print('The solution is', solution)
 print('Number of iterations needed:', iterations)
+print(len(solution), binom(qubits, num_1))
