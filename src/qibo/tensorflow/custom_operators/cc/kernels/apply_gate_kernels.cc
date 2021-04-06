@@ -37,14 +37,14 @@ struct BaseOneQubitGateFunctor<CPUDevice, T> {
     // Apply gate
     if (ncontrols == 0) {
       #pragma omp parallel for
-      for (auto g = 0; g < nstates; g += 1) {
+      for (int64 g = 0; g < nstates; g += 1) {
         int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
         apply(state[i], state[i + tk], gate);
       }
     } else {
       const int N = ncontrols + 1;
       #pragma omp parallel for
-      for (auto g = 0; g < nstates; g += 1) {
+      for (int64 g = 0; g < nstates; g += 1) {
         int64 i = g;
         for (auto iq = 0; iq < N; iq++) {
           const auto n = qubits[iq];
@@ -125,7 +125,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
 
     if (ncontrols == 0) {
       #pragma omp parallel for
-      for (auto g = 0; g < nstates; g += 1) {
+      for (int64 g = 0; g < nstates; g += 1) {
         int64 i = ((int64)((int64)g >> m1) << (m1 + 1)) + (g & (tk1 - 1));
         i = ((int64)((int64)i >> m2) << (m2 + 1)) + (i & (tk2 - 1));
         apply(state, i, targetk1, targetk2, gate);
@@ -133,7 +133,7 @@ struct BaseTwoQubitGateFunctor<CPUDevice, T> {
     } else {
       const int N = ncontrols + 2;
       #pragma omp parallel for
-      for (auto g = 0; g < nstates; g += 1) {
+      for (int64 g = 0; g < nstates; g += 1) {
         int64 i = g;
         for (auto iq = 0; iq < N; iq++) {
           const auto m = qubits[iq];
@@ -234,7 +234,7 @@ struct CollapseStateFunctor<CPUDevice, T, NormType> {
         x = T(x.real() / norm, x.imag() / norm);
       };
       #pragma omp parallel for
-      for (auto g = 0; g < nstates; g++) {
+      for (int64 g = 0; g < nstates; g++) {
         NormalizeComponent(state[GetIndex(g, res)]);
       }
     }
