@@ -4,6 +4,8 @@ from qibo.config import raise_error, log
 
 class NumpyBackend(abstract.AbstractBackend):
 
+    description = "Base class for numpy backends"
+
     def __init__(self):
         super().__init__()
         import numpy as np
@@ -236,6 +238,9 @@ class NumpyBackend(abstract.AbstractBackend):
 
 class NumpyDefaultEinsumBackend(NumpyBackend):
 
+    description = "Uses `np.einsum` to apply gates to states via matrix " \
+                  "multiplication."
+
     def __init__(self):
         super().__init__()
         self.name = "numpy_defaulteinsum"
@@ -244,6 +249,9 @@ class NumpyDefaultEinsumBackend(NumpyBackend):
 
 
 class NumpyMatmulEinsumBackend(NumpyBackend):
+
+    description = "Uses `np.matmul` as well as transpositions and reshapes " \
+                  "to apply gates to states via matrix multiplication."
 
     def __init__(self):
         super().__init__()

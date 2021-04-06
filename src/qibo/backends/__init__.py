@@ -25,7 +25,7 @@ class Backend:
         self.qnp = self.construct_backend("numpy_defaulteinsum")
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ: # pragma: no cover
-            self.initialize_from_env_variable(os.environ.get("QIBO_BACKEND"))
+            self.active_backend = os.environ.get("QIBO_BACKEND")
         try:
             self.initialize_tensorflow()
         except ModuleNotFoundError: # pragma: no cover
@@ -54,9 +54,11 @@ class Backend:
         """
         if name not in self.constructed_backends:
             if name not in self.available_backends:
-                available = ", ".join(list(self.available_backends.keys()))
+                available = [" - {}: {}".format(n, b.description)
+                             for n, b in self.available_backends.items()]
+                available = "\n".join(available)
                 raise_error(ValueError, "Unknown backend {}. Please select one of "
-                                        "the available backends: {}."
+                                        "the available backends:\n{}."
                                         "".format(name, available))
             new_backend = self.available_backends.get(name)()
             if self.active_backend is not None:
@@ -65,15 +67,6 @@ class Backend:
                     new_backend.set_device(self.active_backend.default_device)
             self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)
-
-    def initialize_from_env_variable(self, name): # pragma: no cover
-        """Initializes active backend from environment variable name."""
-        if name not in self.available_backends: # pragma: no cover
-            _available_names = ", ".join(list(self.available_backends.keys()))
-            raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
-                                    "unknown value {}. Please select one of {}."
-                                    "".format(name, _available_names))
-        self.active_backend = name
 
     def initialize_tensorflow(self):
         """Initializes active Tensorflow backend (if available)."""
