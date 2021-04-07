@@ -4,8 +4,6 @@ from qibo.config import raise_error, log
 
 class AbstractBackend(ABC):
 
-    base_methods = {"assign", "dtypes", "set_precision"}
-
     def __init__(self):
         self.backend = None
         self.name = "base"
@@ -27,27 +25,6 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
-
-    def __str__(self):
-        return self.name
-
-    def __repr__(self):
-        return "{}Backend".format(self.name.capitalize())
-
-    def assign(self, backend):
-        """Assigns backend's methods."""
-        for method in dir(backend):
-            if method[:2] != "__" and method not in self.base_methods:
-                setattr(self, method, getattr(backend, method))
-        self.name = backend.name
-        self.matrices = backend.matrices
-        self.numeric_types = backend.numeric_types
-        self.tensor_types = backend.tensor_types
-        self.Tensor = backend.Tensor
-        self.random = backend.random
-        self.newaxis = backend.newaxis
-        self.oom_error = backend.oom_error
-        self.optimization = backend.optimization
 
     def dtypes(self, name):
         if name in self._dtypes:

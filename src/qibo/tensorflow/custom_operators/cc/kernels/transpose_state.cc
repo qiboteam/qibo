@@ -21,7 +21,7 @@ struct TransposeStateFunctor<CPUDevice, T> {
     }
 
     #pragma omp parallel for
-    for (auto g = 0; g < nstates; g++) {
+    for (int64 g = 0; g < nstates; g++) {
       int64 k = 0;
       for (int q = 0; q < nqubits; q++) {
         if ((g >> q) % 2) k += qubit_exponents[q];
@@ -41,7 +41,7 @@ struct SwapPiecesFunctor<CPUDevice, T> {
     const int64 nstates = (int64)1 << (nqubits - 1);
 
     #pragma omp parallel for
-    for (auto g = 0; g < nstates; g++) {
+    for (int64 g = 0; g < nstates; g++) {
       int64 i = ((int64)((int64)g >> m) << (m + 1)) + (g & (tk - 1));
       std::swap(piece0[i + tk], piece1[i]);
     }

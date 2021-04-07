@@ -25,9 +25,9 @@ def pytest_configure(config):
 
 
 def pytest_generate_tests(metafunc):
-    from qibo.backends import AVAILABLE_BACKENDS
+    from qibo import K
     if "accelerators" in metafunc.fixturenames:
-        if "custom" in AVAILABLE_BACKENDS:
+        if "custom" in K.available_backends:
             accelerators = [None, {"/GPU:0": 1, "/GPU:1": 1}]
         else: # pragma: no cover
             accelerators = [None]
@@ -35,14 +35,14 @@ def pytest_generate_tests(metafunc):
 
     if "backend" in metafunc.fixturenames:
         backends = ["custom", "defaulteinsum", "matmuleinsum"]
-        if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
+        if "custom" not in K.available_backends: # pragma: no cover
             backends.remove("custom")
         metafunc.parametrize("backend", backends)
 
     # skip distributed tests if "custom" backend is not available
     module_name = "qibo.tests.test_distributed"
     if metafunc.module.__name__ == module_name:
-        if "custom" not in AVAILABLE_BACKENDS: # pragma: no cover
+        if "custom" not in K.available_backends: # pragma: no cover
             pytest.skip("Distributed circuits require custom operators.")
 
     # skip parallel tests on Windows

@@ -5,6 +5,8 @@ from qibo.config import raise_error, log
 
 class NumpyBackend(abstract.AbstractBackend):
 
+    description = "Base class for numpy backends"
+
     def __init__(self):
         super().__init__()
         import numpy as np
@@ -379,13 +381,9 @@ class NumpyBackend(abstract.AbstractBackend):
 
 
 class NumpyDefaultEinsumBackend(NumpyBackend):
-    """Gate application backend that based on default ``einsum``.
 
-    This is the most efficient implementation for GPU, however its
-    backpropagation is not working properly for complex numbers.
-    The user should switch to :class:`qibo.core.einsum.MatmulEinsum`
-    if automatic differentiation is required.
-    """
+    description = "Uses `np.einsum` to apply gates to states via matrix " \
+                  "multiplication."
 
     def __init__(self):
         super().__init__()
@@ -400,23 +398,9 @@ class NumpyDefaultEinsumBackend(NumpyBackend):
 
 
 class NumpyMatmulEinsumBackend(NumpyBackend):
-    """Gate application backend based on ``matmul``.
 
-    For Tensorflow this is more efficient than ``einsum`` on CPU but slower on GPU.
-    The matmul version implemented here is not the most efficient possible.
-    The implementation algorithm is the following.
-
-    Assume that we are applying
-    a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
-    vector of shape 5 * (2,). We perform the following steps:
-
-    * Reshape the state to (2, 4, 2, 2)
-    * Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
-    * Reshape to (4, 8).
-    * Apply the gate using the matmul (4, 4) x (4, 8).
-    * Reshape to the original shape 5 * (2,) and traspose so that the final
-      qubit order agrees with the initial.
-    """
+    description = "Uses `np.matmul` as well as transpositions and reshapes " \
+                  "to apply gates to states via matrix multiplication."
 
     def __init__(self):
         super().__init__()
