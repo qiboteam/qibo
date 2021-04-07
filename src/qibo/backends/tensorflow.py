@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, log, LOG_LEVEL
+from qibo.config import raise_error, LOG_LEVEL
 
 
 class Optimization:
@@ -13,6 +13,8 @@ class Optimization:
 
 
 class TensorflowBackend(numpy.NumpyBackend):
+
+    description = "Base class for Tensorflow backends."
 
     def __init__(self):
         super().__init__()
@@ -191,6 +193,9 @@ class TensorflowBackend(numpy.NumpyBackend):
 
 class TensorflowCustomBackend(TensorflowBackend):
 
+    description = "Uses precompiled primitives to apply gates to states. " \
+                  "This is the fastest simulation engine."
+
     def __init__(self):
         from qibo.tensorflow import custom_operators as op
         if not op._custom_operators_loaded: # pragma: no cover
@@ -234,6 +239,9 @@ class TensorflowCustomBackend(TensorflowBackend):
 
 class TensorflowDefaultEinsumBackend(TensorflowBackend):
 
+    description = "Uses `tf.einsum` to apply gates to states via matrix " \
+                  "multiplication."
+
     def __init__(self):
         super().__init__()
         self.name = "tensorflow_defaulteinsum"
@@ -242,6 +250,9 @@ class TensorflowDefaultEinsumBackend(TensorflowBackend):
 
 
 class TensorflowMatmulEinsumBackend(TensorflowBackend):
+
+    description = "Uses `tf.matmul` as well as transpositions and reshapes " \
+                  "to apply gates to states via matrix multiplication."
 
     def __init__(self):
         super().__init__()

@@ -1,7 +1,6 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
 import argparse
 import time
-import utils
 from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
@@ -10,6 +9,62 @@ parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--trotter", action="store_true")
 parser.add_argument("--accelerators", default=None, type=str)
+
+
+def parse_nqubits(nqubits_str):
+    """Transforms a string that specifies number of qubits to list.
+
+    Supported string formats are the following:
+        * 'a-b' with a and b integers.
+            Then the returned list is range(a, b + 1).
+        * 'a,b,c,d,...' with a, b, c, d, ... integers.
+            Then the returned list is [a, b, c, d]
+    """
+    # TODO: Support usage of both `-` and `,` in the same string.
+    if "-" in nqubits_str:
+        if "," in nqubits_str:
+            raise ValueError("String that specifies qubits cannot contain "
+                             "both , and -.")
+
+        nqubits_split = nqubits_str.split("-")
+        if len(nqubits_split) != 2:
+            raise ValueError("Invalid string that specifies nqubits "
+                             "{}.".format(nqubits_str))
+
+        n_start, n_end = nqubits_split
+        return list(range(int(n_start), int(n_end) + 1))
+
+    return [int(x) for x in nqubits_str.split(",")]
+
+
+def parse_accelerators(accelerators):
+    """Transforms string that specifies accelerators to dictionary.
+
+    The string that is parsed has the following format:
+        n1device1,n2device2,n3device3,...
+    and is transformed to the dictionary:
+        {'device1': n1, 'device2': n2, 'device3': n3, ...}
+
+    Example:
+        2/GPU:0,2/GPU:1 --> {'/GPU:0': 2, '/GPU:1': 2}
+    """
+    if accelerators is None:
+        return None
+
+    def read_digit(x):
+        i = 0
+        while x[i].isdigit():
+            i += 1
+        return x[i:], int(x[:i])
+
+    acc_dict = {}
+    for entry in accelerators.split(","):
+        device, n = read_digit(entry)
+        if device in acc_dict:
+            acc_dict[device] += n
+        else:
+            acc_dict[device] = n
+    return acc_dict
 
 
 def main(nqubits_list, dt, solver, trotter=False, accelerators=None):
@@ -45,6 +100,6 @@ def main(nqubits_list, dt, solver, trotter=False, accelerators=None):
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
-    args["nqubits_list"] = utils.parse_nqubits(args.pop("nqubits"))
-    args["accelerators"] = utils.parse_accelerators(args.pop("accelerators"))
+    args["nqubits_list"] = parse_nqubits(args.pop("nqubits"))
+    args["accelerators"] = parse_accelerators(args.pop("accelerators"))
     main(**args)
