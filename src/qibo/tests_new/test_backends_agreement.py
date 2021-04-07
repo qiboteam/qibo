@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from qibo import backends
+from qibo import K
 from numpy.random import random as rand
 
 
@@ -53,14 +53,14 @@ METHODS = [
 ]
 @pytest.mark.parametrize("method,kwargs", METHODS)
 def test_backend_methods(tested_backend, target_backend, method, kwargs):
-    tested_backend = backends._construct_backend(tested_backend)
-    target_backend = backends._construct_backend(target_backend)
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
     tested_func = getattr(tested_backend, method)
     target_func = getattr(target_backend, method)
     if isinstance(kwargs, dict):
         np.testing.assert_allclose(tested_func(**kwargs), target_func(**kwargs))
     else:
-        if method in {"kron", "inv"} and tested_backend.name == "tensorflow":
+        if method in {"kron", "inv"} and "numpy" not in tested_backend.name:
             with pytest.raises(NotImplementedError):
                 tested_func(*kwargs)
         else:
@@ -68,8 +68,8 @@ def test_backend_methods(tested_backend, target_backend, method, kwargs):
 
 
 def test_backend_eigh(tested_backend, target_backend):
-    tested_backend = backends._construct_backend(tested_backend)
-    target_backend = backends._construct_backend(target_backend)
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
     m = rand((5, 5))
     eigvals1, eigvecs1 = tested_backend.eigh(m)
     eigvals2, eigvecs2 = target_backend.eigh(m)
@@ -78,8 +78,8 @@ def test_backend_eigh(tested_backend, target_backend):
 
 
 def test_backend_compile(tested_backend, target_backend):
-    tested_backend = backends._construct_backend(tested_backend)
-    target_backend = backends._construct_backend(target_backend)
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
     func = lambda x: x + 1
     x = rand(5)
     cfunc1 = tested_backend.compile(func)
@@ -88,8 +88,8 @@ def test_backend_compile(tested_backend, target_backend):
 
 
 def test_backend_gather(tested_backend, target_backend):
-    tested_backend = backends._construct_backend(tested_backend)
-    target_backend = backends._construct_backend(target_backend)
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
     x = rand(5)
     target_result = target_backend.gather(x, indices=[0, 1, 3])
     test_result = tested_backend.gather(x, indices=[0, 1, 3])
@@ -111,8 +111,8 @@ def test_backend_gather(tested_backend, target_backend):
 
 @pytest.mark.parametrize("return_counts", [False, True])
 def test_backend_unique(tested_backend, target_backend, return_counts):
-    tested_backend = backends._construct_backend(tested_backend)
-    target_backend = backends._construct_backend(target_backend)
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
     x = np.random.randint(10, size=(10,))
     target_result = target_backend.unique(x, return_counts=return_counts)
     test_result = tested_backend.unique(x, return_counts=return_counts)
