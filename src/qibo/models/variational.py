@@ -292,3 +292,241 @@ class QAOA(object):
                                                              compile=compile, processes=processes)
         self.set_parameters(parameters)
         return result, parameters, extra
+
+
+
+class FALQON(object):
+    """ Feedback-based ALgorithm for Quantum OptimizatioN (FALQON) model.
+
+    The FALQON is introduced in `arXiv:2103.08619 <https://arxiv.org/abs/2103.08619>`_.
+
+    Args:
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
+            whose ground state is sought.
+        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+            If ``None``, :class:`qibo.hamiltonians.X` is used.
+        solver (str): solver used to apply the exponential operators.
+            Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
+        callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+            for more details. This option is available only when ``hamiltonian``
+            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import models, hamiltonians
+            # create XXZ Hamiltonian for four qubits
+            hamiltonian = hamiltonians.XXZ(4)
+            # create QAOA model for this Hamiltonian
+            qaoa = models.QAOA(hamiltonian)
+            # optimize using random initial variational parameters
+            # and default options and initial state
+            initial_parameters = 0.01 * np.random.random(4)
+            best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+    """
+    from qibo import hamiltonians, optimizers, K
+    from qibo.core import states
+    from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
+
+    def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
+        # list of QAOA variational parameters (angles)
+        self.params = None
+        # problem hamiltonian
+        if not isinstance(hamiltonian, self.HAMILTONIAN_TYPES):
+            raise_error(TypeError, "Invalid Hamiltonian type {}."
+                                   "".format(type(hamiltonian)))
+        self.hamiltonian = hamiltonian
+        self.nqubits = hamiltonian.nqubits
+        # mixer hamiltonian (default = -sum(sigma_x))
+        if mixer is None:
+            trotter = isinstance(
+                self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+            self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
+        else:
+            if type(mixer) != type(hamiltonian):
+                  raise_error(TypeError, "Given Hamiltonian is of type {} "
+                                         "while mixer is of type {}."
+                                         "".format(type(hamiltonian),
+                                                   type(mixer)))
+            self.mixer = mixer
+
+        self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
+
+        # create circuits for Trotter Hamiltonians
+        if (accelerators is not None and (
+                not isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+                or solver != "exp")):
+            raise_error(NotImplementedError, "Distributed QAOA is implemented "
+                                             "only with TrotterHamiltonian and "
+                                             "exponential solver.")
+        if isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian):
+            self.hamiltonian.circuit(1e-2, accelerators, memory_device)
+            self.mixer.circuit(1e-2, accelerators, memory_device)
+
+        # evolution solvers
+        from qibo import solvers
+        self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
+        self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
+
+        self.state_cls = self.states.VectorState
+        self.callbacks = callbacks
+        self.accelerators = accelerators
+        self.normalize_state = StateEvolution._create_normalize_state(
+            self, solver)
+        self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
+            self, accelerators, memory_device)
+
+    def set_parameters(self, p):
+        """Sets the variational parameters.
+
+        Args:
+            p (np.ndarray): 1D-array holding the new values for the variational
+                parameters. Length should be an even number.
+        """
+        self.params = p
+
+    def _apply_exp(self, state, solver, p):
+        """Helper method for ``execute``."""
+        solver.dt = p
+        state = solver(state)
+        if self.callbacks:
+            state = self.normalize_state(state)
+            self.calculate_callbacks(state)
+        return state
+
+    def execute(self, initial_state=None):
+        """Applies the QAOA exponential operators to a state.
+
+        Args:
+            initial_state (np.ndarray): Initial state vector.
+
+        Returns:
+            State vector after applying the QAOA exponential gates.
+        """
+        state = self.get_initial_state(initial_state)
+        self.calculate_callbacks(state)
+        n = int(self.params.shape[0])
+        for i in range(n // 2):
+            state = self._apply_exp(state, self.ham_solver,
+                                    self.params[2 * i])
+            state = self._apply_exp(state, self.mix_solver,
+                                    self.params[2 * i + 1])
+        return self.normalize_state(state)
+
+    def __call__(self, initial_state=None):
+        """Equivalent to :meth:`qibo.models.QAOA.execute`."""
+        return self.execute(initial_state)
+
+    def get_initial_state(self, state=None):
+        """"""
+        if self.accelerators is not None:
+            c = self.hamiltonian.circuit(self.params[0])
+            if state is None:
+                state = self.states.DistributedState.plus_state(c)
+            return c.get_initial_state(state)
+
+        if state is None:
+            return self.state_cls.plus_state(self.nqubits).tensor
+        return Circuit.get_initial_state(self, state)
+
+
+    def minimize(self, delta_t, max_layers, initial_state=None, callback=None, compile=False, processes=None, tol=1e-5,):
+        from numpy import array, hstack, inf
+
+        parameters = array([delta_t, 0])
+
+        def _loss(params, falqon, hamiltonian):
+            falqon.set_parameters(params)
+            state = falqon(initial_state)
+            return hamiltonian.expectation(state)
+
+        energy = inf
+
+        if callback is not None:
+            callback_result = []
+
+        for it in range(1, max_layers + 1):
+            beta = _loss(parameters, self, self.evol_hamiltonian)
+
+            energy_ = _loss(parameters, self, self.hamiltonian).numpy()
+            print(energy_)
+
+            if callback is not None:
+                callback_result.append(callback(parameters))
+
+            if abs(energy - energy_) < tol:
+                break
+
+            else:
+                energy = energy_.copy()
+
+            parameters = hstack([parameters, array([delta_t, delta_t * beta])])
+
+
+        self.set_parameters(parameters)
+
+        #return result, parameters, extra
+        return parameters
+
+
+    def minimize_(self, initial_p, initial_state=None, method='Powell',
+                 jac=None, hess=None, hessp=None, bounds=None, constraints=(),
+                 tol=None, callback=None, options=None, compile=False, processes=None):
+        """Optimizes the variational parameters of the QAOA.
+
+        Args:
+            initial_p (np.ndarray): initial guess for the parameters.
+            initial_state (np.ndarray): initial state vector of the QAOA.
+            method (str): the desired minimization method.
+                See :meth:`qibo.optimizers.optimize` for available optimization
+                methods.
+            jac (dict): Method for computing the gradient vector for scipy optimizers.
+            hess (dict): Method for computing the hessian matrix for scipy optimizers.
+            hessp (callable): Hessian of objective function times an arbitrary
+                vector for scipy optimizers.
+            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
+            constraints (dict): Constraints definition for scipy optimizers.
+            tol (float): Tolerance of termination for scipy optimizers.
+            callback (callable): Called after each iteration for scipy optimizers.
+            options (dict): a dictionary with options for the different optimizers.
+            compile (bool): whether the TensorFlow graph should be compiled.
+            processes (int): number of processes when using the paralle BFGS method.
+
+        Return:
+            The final energy (expectation value of the ``hamiltonian``).
+            The corresponding best parameters.
+            The optimization result object. For scipy methods it
+                returns the ``OptimizeResult``, for ``'cma'`` the
+                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
+                the options used during the optimization.
+        """
+        if len(initial_p) % 2 != 0:
+            raise_error(ValueError, "Initial guess for the parameters must "
+                                    "contain an even number of values but "
+                                    "contains {}.".format(len(initial_p)))
+
+        def _loss(params, qaoa, hamiltonian):
+            qaoa.set_parameters(params)
+            state = qaoa(initial_state)
+            return hamiltonian.expectation(state)
+
+        if method == "sgd":
+            from qibo import K
+            loss = lambda p, c, h: _loss(K.cast(p), c, h)
+        else:
+            loss = lambda p, c, h: _loss(p, c, h).numpy()
+
+        result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
+                                                             method=method, jac=jac, hess=hess, hessp=hessp,
+                                                             bounds=bounds, constraints=constraints,
+                                                             tol=tol, callback=callback, options=options,
+                                                             compile=compile, processes=processes)
+        self.set_parameters(parameters)
+        return result, parameters, extra
