@@ -1,63 +1,115 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyBackend
-from qibo.backends.tensorflow import TensorflowBackend
+from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
+from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
 
 
-_CONSTRUCTED_BACKENDS = {}
-def _construct_backend(name):
-    if name not in _CONSTRUCTED_BACKENDS:
-        if name == "numpy":
-            _CONSTRUCTED_BACKENDS["numpy"] = NumpyBackend()
-        elif name == "tensorflow":
-            _CONSTRUCTED_BACKENDS["tensorflow"] = TensorflowBackend()
-        else:
-            raise_error(ValueError, "Unknown backend name {}.".format(name))
-    return _CONSTRUCTED_BACKENDS.get(name)
+class Backend:
 
-numpy_backend = _construct_backend("numpy")
-numpy_matrices = numpy_backend.matrices
+    def __init__(self):
+        self.available_backends = {
+            "custom": TensorflowCustomBackend,
+            "tensorflow": TensorflowCustomBackend,
+            "defaulteinsum": TensorflowDefaultEinsumBackend,
+            "matmuleinsum": TensorflowMatmulEinsumBackend,
+            "tensorflow_defaulteinsum": TensorflowDefaultEinsumBackend,
+            "tensorflow_matmuleinsum": TensorflowMatmulEinsumBackend,
+            "numpy": NumpyDefaultEinsumBackend,
+            "numpy_defaulteinsum": NumpyDefaultEinsumBackend,
+            "numpy_matmuleinsum": NumpyMatmulEinsumBackend
+        }
 
-AVAILABLE_BACKENDS = ["custom", "defaulteinsum", "matmuleinsum",
-                      "tensorflow_defaulteinsum", "tensorflow_matmuleinsum",
-                      "numpy_defaulteinsum", "numpy_matmuleinsum"]
+        self.constructed_backends = {}
+        self._active_backend = None
+        self.qnp = self.construct_backend("numpy_defaulteinsum")
+        # Create the default active backend
+        if "QIBO_BACKEND" in os.environ: # pragma: no cover
+            self.active_backend = os.environ.get("QIBO_BACKEND")
+        try:
+            self.initialize_tensorflow()
+        except ModuleNotFoundError: # pragma: no cover
+            self.initialize_numpy()
 
+    @property
+    def active_backend(self):
+        return self._active_backend
 
-# Select the default backend engine
-if "QIBO_BACKEND" in os.environ: # pragma: no cover
-    _BACKEND_NAME = os.environ.get("QIBO_BACKEND")
-    if _BACKEND_NAME == "tensorflow":
-        K = TensorflowBackend()
-    elif _BACKEND_NAME == "numpy": # pragma: no cover
-        # CI uses tensorflow as default backend
-        K = NumpyBackend()
-    else: # pragma: no cover
-        raise_error(ValueError, "Environment variable `QIBO_BACKEND` has "
-                                "unknown value {}. Please select either "
-                                "`tensorflow` or `numpy`."
-                                "".format(_BACKEND_NAME))
-else:
-    try:
+    @active_backend.setter
+    def active_backend(self, name):
+        self._active_backend = self.construct_backend(name)
+
+    def construct_backend(self, name):
+        """Constructs and returns a backend.
+
+        If the backend already exists in previously constructed backends then
+        the existing object is returned.
+
+        Args:
+            name (str): Name of the backend to construct.
+                See ``available_backends`` for the list of supported names.
+
+        Returns:
+            Backend object.
+        """
+        if name not in self.constructed_backends:
+            if name not in self.available_backends:
+                available = [" - {}: {}".format(n, b.description)
+                             for n, b in self.available_backends.items()]
+                available = "\n".join(available)
+                raise_error(ValueError, "Unknown backend {}. Please select one of "
+                                        "the available backends:\n{}."
+                                        "".format(name, available))
+            new_backend = self.available_backends.get(name)()
+            if self.active_backend is not None:
+                new_backend.set_precision(self.active_backend.precision)
+                if self.active_backend.device is not None:
+                    new_backend.set_device(self.active_backend.default_device)
+            self.constructed_backends[name] = new_backend
+        return self.constructed_backends.get(name)
+
+    def initialize_tensorflow(self):
+        """Initializes active Tensorflow backend (if available)."""
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
         import tensorflow as tf
         import qibo.tensorflow.custom_operators as op
-        _CUSTOM_OPERATORS_LOADED = op._custom_operators_loaded
-        if not _CUSTOM_OPERATORS_LOADED: # pragma: no cover
-            log.warning("Removing custom operators from available backends.")
-            AVAILABLE_BACKENDS.remove("custom")
-        K = TensorflowBackend()
-    except ModuleNotFoundError: # pragma: no cover
+        if not op._custom_operators_loaded: # pragma: no cover
+            log.warning("Einsum will be used to apply gates with Tensorflow. "
+                        "Removing custom operators from available backends.")
+            self.available_backends.pop("custom")
+            self.available_backends["tensorflow"] = TensorflowDefaultEinsumBackend
+        self.active_backend = "tensorflow"
+
+    def initialize_numpy(self): # pragma: no cover
+        """Initializes active numpy backend (if Tensorflow is not available)."""
         # case not tested because CI has tf installed
-        log.warning("Tensorflow is not installed. Falling back to numpy.")
-        K = NumpyBackend()
-        AVAILABLE_BACKENDS = [b for b in AVAILABLE_BACKENDS
-                              if "tensorflow" not in b]
-        AVAILABLE_BACKENDS.remove("custom")
+        log.warning("Tensorflow is not installed. Falling back to numpy. "
+                    "Numpy does not support Qibo custom operators and GPU. "
+                    "Einsum will be used to apply gates on CPU.")
+        # remove Tensorflow backends
+        self.available_backends.pop("custom")
+        self.available_backends.pop("tensorflow")
+        self.available_backends.pop("tensorflow_defaulteinsum")
+        self.available_backends.pop("tensorflow_matmuleinsum")
+        # use numpy for defaulteinsum and matmuleinsum backends
+        self.available_backends["defaulteinsum"] = NumpyDefaultEinsumBackend
+        self.available_backends["matmuleinsum"] = NumpyMatmulEinsumBackend
+        self.active_backend = "numpy"
+
+    def __getattr__(self, x):
+        return getattr(self.active_backend, x)
+
+    def __str__(self):
+        return self.active_backend.name
+
+    def __repr__(self):
+        return str(self)
 
 
-K.qnp = numpy_backend
-_BACKEND_NAME = K.name
+K = Backend()
+numpy_matrices = K.qnp.matrices
+
+
 def set_backend(backend="custom"):
     """Sets backend used for mathematical operations and applying gates.
 
@@ -71,26 +123,10 @@ def set_backend(backend="custom"):
     Args:
         backend (str): A backend from the above options.
     """
-    if backend not in AVAILABLE_BACKENDS:
-        available = ", ".join(AVAILABLE_BACKENDS)
-        raise_error(ValueError, "Unknown backend {}. Please select one of the "
-                                "available backends: {}."
-                                "".format(backend, available))
-    if not config.ALLOW_SWITCHERS and backend != K.gates:
+    if not config.ALLOW_SWITCHERS and backend != K.name:
         warnings.warn("Backend should not be changed after allocating gates.",
                       category=RuntimeWarning)
-
-    gate_backend = backend.split("_")
-    if len(gate_backend) == 1:
-        calc_backend, gate_backend = _BACKEND_NAME, gate_backend[0]
-    elif len(gate_backend) == 2:
-        calc_backend, gate_backend = gate_backend
-    if gate_backend == "custom":
-        calc_backend = "tensorflow"
-    bk = _construct_backend(calc_backend)
-    K.assign(bk)
-    K.qnp = numpy_backend
-    K.set_gates(gate_backend)
+    K.active_backend = backend
 
 
 def get_backend():
@@ -99,23 +135,7 @@ def get_backend():
     Returns:
         A string with the backend name.
     """
-    if K.name == "tensorflow":
-        return K.gates
-    else:
-        return "_".join([K.name, K.gates])
-
-
-if _BACKEND_NAME != "tensorflow": # pragma: no cover
-    # CI uses tensorflow as default backend
-    log.warning("{} does not support Qibo custom operators and GPU. "
-                "Einsum will be used to apply gates on CPU."
-                "".format(_BACKEND_NAME))
-    set_backend("defaulteinsum")
-
-
-if _BACKEND_NAME == "tensorflow" and not _CUSTOM_OPERATORS_LOADED: # pragma: no cover
-    log.warning("Einsum will be used to apply gates with tensorflow.")
-    set_backend("defaulteinsum")
+    return K.name
 
 
 def set_precision(dtype='double'):
@@ -128,8 +148,7 @@ def set_precision(dtype='double'):
     if not config.ALLOW_SWITCHERS and dtype != K.precision:
         warnings.warn("Precision should not be changed after allocating gates.",
                       category=RuntimeWarning)
-    K.set_precision(dtype)
-    for bk in _CONSTRUCTED_BACKENDS.values():
+    for bk in K.constructed_backends.values():
         bk.set_precision(dtype)
         bk.matrices.allocate_matrices()
 
@@ -154,12 +173,10 @@ def set_device(name):
     if not config.ALLOW_SWITCHERS and name != K.default_device:
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
-    K.set_device(name)
-    for bk in _CONSTRUCTED_BACKENDS.values():
-        if bk.default_device is not None:
-            bk.set_device(name)
-            with bk.device(bk.default_device):
-                bk.matrices.allocate_matrices()
+    for bk in K.constructed_backends.values():
+        bk.set_device(name)
+        with bk.device(bk.default_device):
+            bk.matrices.allocate_matrices()
 
 
 def get_device():
