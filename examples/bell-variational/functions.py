@@ -43,6 +43,7 @@ def compute_chsh(frequencies, nshots):
         frequencies (list): list of dictionaries with the result for the measurement
                             and the number of times it repeated, for each measurement 
                             basis
+        nshots (int): number of samples taken in each run of the circuit.
     
     Returns:
         chsh (real): value of the CHSH inequality.
