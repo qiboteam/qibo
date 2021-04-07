@@ -19,13 +19,10 @@ class VectorState(AbstractState):
         if not isinstance(x, K.tensor_types):
             raise_error(TypeError, "Initial state type {} is not recognized."
                                     "".format(type(x)))
-        try:
-            shape = tuple(x.shape)
-            if self._nqubits is None:
-                self.nqubits = int(K.np.log2(shape[0]))
-        except ValueError: # happens when using TensorFlow compiled mode
-            shape = None
-        if shape is not None and shape != self.shape:
+        shape = tuple(x.shape)
+        if self._nqubits is None:
+            self.nqubits = int(K.np.log2(shape[0]))
+        if shape != self.shape:
             raise_error(ValueError, "Invalid tensor shape {} for state of {} "
                                     "qubits.".format(shape, self.nqubits))
         self._tensor = K.cast(x)

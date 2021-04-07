@@ -290,6 +290,61 @@ class SpecialGate(Gate):
                     "Cannot use special gates on subroutines.")
 
 
+class Channel(Gate):
+    """Abstract class for channels."""
+
+    def __init__(self):
+        super().__init__()
+        self.gates = tuple()
+        # create inversion gates to rest to the original state vector
+        # because of the in-place updates used in custom operators
+        self._inverse_gates = None
+
+    @property
+    def inverse_gates(self):
+        if self._inverse_gates is None:
+            self._inverse_gates = self.calculate_inverse_gates()
+            for gate in self._inverse_gates:
+                if gate is not None:
+                    if self._nqubits is not None:
+                        gate.nqubits = self._nqubits
+                    gate.density_matrix = self.density_matrix
+        return self._inverse_gates
+
+    @abstractmethod
+    def calculate_inverse_gates(self): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @Gate.nqubits.setter
+    def nqubits(self, n: int):
+        Gate.nqubits.fset(self, n) # pylint: disable=no-member
+        for gate in self.gates:
+            gate.nqubits = n
+        if self._inverse_gates is not None:
+            for gate in self._inverse_gates:
+                if gate is not None:
+                    gate.nqubits = n
+
+    @Gate.density_matrix.setter
+    def density_matrix(self, x):
+        Gate.density_matrix.fset(self, x) # pylint: disable=no-member
+        for gate in self.gates:
+            gate.density_matrix = x
+        if self._inverse_gates is not None:
+            for gate in self._inverse_gates:
+                if gate is not None:
+                    gate.density_matrix = x
+
+    def controlled_by(self, *q):
+        """"""
+        raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
+
+    def on_qubits(self, *q): # pragma: no cover
+        # future TODO
+        raise_error(NotImplementedError, "`on_qubits` method is not available "
+                                         "for the `GeneralChannel` gate.")
+
+
 class ParametrizedGate(Gate):
     """Base class for parametrized gates.
 
@@ -350,8 +405,7 @@ class ParametrizedGate(Gate):
         # pylint: disable=E1101
         if isinstance(self, BaseBackendGate):
             self._unitary = None
-            if self.is_prepared:
-                self.reprepare()
+            self._matrix = None
             for devgate in self.device_gates:
                 devgate.parameters = x
 
@@ -385,7 +439,9 @@ class BaseBackendGate(Gate, ABC):
 
     def __init__(self):
         Gate.__init__(self)
+        self._matrix = None
         self._unitary = None
+        self._cache = None
         # Cast gate matrices to the proper device
         self.device = get_device()
         # Reference to copies of this gate that are casted in devices when
@@ -432,26 +488,9 @@ class BaseBackendGate(Gate, ABC):
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
 
+    @property
     @abstractmethod
-    def prepare(self): # pragma: no cover
-        """Prepares gate for application to states.
-
-        This method is called automatically when a gate is added to a circuit
-        or when called on a state. Note that the gate's ``nqubits`` should be
-        set before this method is called.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def reprepare(self): # pragma: no cover
-        """Recalculates gate matrix when the gate's parameters are changed.
-
-        Used in parametrized gates when the ``circuit.set_parameters`` method
-        is used to update the variational parameters.
-        This method is seperated from ``prepare`` because it is usually not
-        required to repeat the full preperation calculation from scratch when
-        the gate's parameters are updated.
-        """
+    def cache(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod

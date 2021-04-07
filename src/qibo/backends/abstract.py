@@ -4,16 +4,11 @@ from qibo.config import raise_error, log
 
 class AbstractBackend(ABC):
 
-    base_methods = {"assign", "set_gates", "dtypes",
-                    "set_precision"}
+    base_methods = {"assign", "dtypes", "set_precision"}
 
     def __init__(self):
         self.backend = None
         self.name = "base"
-
-        self.gates = "custom"
-        self.custom_gates = True
-        self.custom_einsum = None
 
         self.precision = 'double'
         self._dtypes = {'DTYPEINT': 'int64', 'DTYPE': 'float64',
@@ -26,12 +21,12 @@ class AbstractBackend(ABC):
         self.matrices = None
         self.numeric_types = None
         self.tensor_types = None
+        self.native_types = None
         self.Tensor = None
         self.random = None
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
-        self.op = None
 
     def __str__(self):
         return self.name
@@ -53,22 +48,6 @@ class AbstractBackend(ABC):
         self.newaxis = backend.newaxis
         self.oom_error = backend.oom_error
         self.optimization = backend.optimization
-        self.op = backend.op
-
-    def set_gates(self, name):
-        if name == 'custom':
-            self.custom_gates = True
-            self.custom_einsum = None
-        elif name == 'defaulteinsum':
-            self.custom_gates = False
-            self.custom_einsum = "DefaultEinsum"
-        elif name == 'matmuleinsum':
-            self.custom_gates = False
-            self.custom_einsum = "MatmulEinsum"
-        else: # pragma: no cover
-            # this case is captured by `backends.__init__.set_backend` checks
-            raise_error(ValueError, f"Gate backend '{name}' not supported.")
-        self.gates = name
 
     def dtypes(self, name):
         if name in self._dtypes:
@@ -406,8 +385,110 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     def executing_eagerly(self):
+        """Checks if we are in eager or compiled mode.
+
+        Relevant for the Tensorflow backends only.
+        """
         return True
 
     @abstractmethod
     def set_seed(self, seed): # pragma: no cover
+        """Sets the seed for random number generation.
+
+        Args:
+            seed (int): Integer to use as seed.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def create_gate_cache(self, gate): # pragma: no cover
+        """Calculates data required for applying gates to states.
+
+        These can be einsum index strings or tensors of qubit ids and it
+        depends on the underlying backend.
+
+        Args:
+            gate (:class:`qibo.abstractions.abstract_gates.BackendGate`): Gate
+                object to calculate its cache.
+
+        Returns:
+            Custom cache object that holds all the required data as
+            attributes.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def state_vector_call(self, gate, state): # pragma: no cover
+        """Applies gate to state vector.
+
+        Args:
+            gate (:class:`qibo.abstractions.abstract_gates.BackendGate`): Gate
+                object to apply to state.
+            state (Tensor): State vector as a ``Tensor`` supported by this
+                backend.
+
+        Returns:
+            State vector after applying the gate as a ``Tensor``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def state_vector_matrix_call(self, gate, state): # pragma: no cover
+        """Applies gate to state vector using the gate's unitary matrix representation.
+
+        This method is useful for the ``custom`` backend for which some gates
+        do not require the unitary matrix.
+
+        Args:
+            gate (:class:`qibo.abstractions.abstract_gates.BackendGate`): Gate
+                object to apply to state.
+            state (Tensor): State vector as a ``Tensor`` supported by this
+                backend.
+
+        Returns:
+            State vector after applying the gate as a ``Tensor``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_call(self, gate, state): # pragma: no cover
+        """Applies gate to density matrix.
+
+        Args:
+            gate (:class:`qibo.abstractions.abstract_gates.BackendGate`): Gate
+                object to apply to state.
+            state (Tensor): Density matrix as a ``Tensor`` supported by this
+                backend.
+
+        Returns:
+            Density matrix after applying the gate as a ``Tensor``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_matrix_call(self, gate, state): # pragma: no cover
+        """Applies gate to density matrix using the gate's unitary matrix representation.
+
+        This method is useful for the ``custom`` backend for which some gates
+        do not require the unitary matrix.
+
+        Args:
+            gate (:class:`qibo.abstractions.abstract_gates.BackendGate`): Gate
+                object to apply to state.
+            state (Tensor): Density matrix as a ``Tensor`` supported by this
+                backend.
+
+        Returns:
+            Density matrix after applying the gate as a ``Tensor``.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def state_vector_collapse(self, gate, state, result): # pragma: no cover
+        """Collapses state vector to a given result."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_collapse(self, gate, state, result): # pragma: no cover
+        """Collapses density matrix to a given result."""
         raise_error(NotImplementedError)

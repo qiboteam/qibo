@@ -76,16 +76,17 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
+            for gate in self.circuit.queue:
+                _ = gate.cache
             loss = K.compile(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.core.gates import BackendGate
-            for gate in self.circuit.queue:
-                if not isinstance(gate, BackendGate):
-                    raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
-                                              'gates because gradients are not '
-                                              'supported in the custom kernels.')
+            from qibo import K
+            if K.name == "custom":
+                raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
+                                          'gates because gradients are not '
+                                          'supported in the custom kernels.')
             loss = _loss
         else:
             loss = lambda p, c, h: _loss(p, c, h).numpy()

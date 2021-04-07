@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, LOG_LEVEL
+from qibo.config import raise_error, log, LOG_LEVEL
 
 
 class Optimization:
@@ -36,17 +36,13 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
 
         self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
+        self.native_types = (tf.Tensor, tf.Variable)
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
         from tensorflow.python.framework import errors_impl # pylint: disable=E0611
         self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
-
-        from qibo.tensorflow import custom_operators as op
-        self.op = None
-        if op._custom_operators_loaded:
-            self.op = op
 
         # seed to use in the measurement frequency custom op
         self._seed = None
@@ -145,29 +141,18 @@ class TensorflowBackend(numpy.NumpyBackend):
     def gather_nd(self, x, indices):
         return self.backend.gather_nd(x, indices)
 
-    def initial_state(self, nqubits, is_matrix=False):
-        if self.op is None: # pragma: no cover
-            dim = 1 + is_matrix
-            shape = dim * (2 ** nqubits,)
-            idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))
-            state = self.backend.zeros(shape, dtype=self.dtypes('DTYPECPX'))
-            update = self.backend.constant([1], dtype=self.dtypes('DTYPECPX'))
-            state = self.backend.tensor_scatter_nd_update(state, idx, update)
-            return state
-        else:
-            from qibo.config import get_threads
-            return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
-                                        is_matrix=is_matrix,
-                                        omp_num_threads=get_threads())
+    def initial_state(self, nqubits, is_matrix=False): # pragma: no cover
+        dim = 1 + is_matrix
+        shape = dim * (2 ** nqubits,)
+        idx = self.backend.constant([dim * [0]], dtype=self.dtypes('DTYPEINT'))
+        state = self.backend.zeros(shape, dtype=self.dtypes('DTYPECPX'))
+        update = self.backend.constant([1], dtype=self.dtypes('DTYPECPX'))
+        state = self.backend.tensor_scatter_nd_update(state, idx, update)
+        return state
 
-    def transpose_state(self, pieces, state, nqubits, order):
-        if self.op is None: # pragma: no cover
-            pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-            return self.reshape(self.transpose(pieces, order), state.shape)
-        else:
-            from qibo.config import get_threads
-            return self.op.transpose_state(pieces, state, nqubits, order,
-                                           get_threads())
+    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
+        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+        return self.reshape(self.transpose(pieces, order), state.shape)
 
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
@@ -184,24 +169,11 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.concatenate(samples, axis=0)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
-        if self.op is None or nshots < SHOT_CUSTOM_OP_THREASHOLD:
-            logits = self.log(probs)[self.newaxis]
-            samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
-            res, counts = self.unique(samples, return_counts=True)
-            frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
-            frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
-        else:
-            from qibo.config import get_threads
-            # Generate random seed using tf
-            dtype = self.dtypes('DTYPEINT')
-            seed = self.backend.random.uniform(
-                shape=tuple(), maxval=int(1e8), dtype=dtype)
-            nqubits = int(self.np.log2(tuple(probs.shape)[0]))
-            shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
-            frequencies = self.zeros(shape, dtype='DTYPEINT')
-            frequencies = self.op.measure_frequencies(
-                frequencies, probs, nshots, nqubits, seed, get_threads())
+        logits = self.log(probs)[self.newaxis]
+        samples = self.random.categorical(logits, nshots, dtype=self.dtypes('DTYPEINT'))[0]
+        res, counts = self.unique(samples, return_counts=True)
+        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+        frequencies = self.backend.tensor_scatter_nd_add(frequencies, res[:, self.newaxis], counts)
         return frequencies
 
     def compile(self, func):
@@ -216,3 +188,134 @@ class TensorflowBackend(numpy.NumpyBackend):
     def set_seed(self, seed):
         self._seed = seed
         self.backend.random.set_seed(seed)
+
+
+class TensorflowCustomBackend(TensorflowBackend):
+
+    def __init__(self):
+        from qibo.tensorflow import custom_operators as op
+        if not op._custom_operators_loaded: # pragma: no cover
+            # CI can compile custom operators so this case is not tested
+            raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
+                                      "backend if custom operators are not "
+                                      "compiled.")
+
+        super().__init__()
+        self.name = "custom"
+        self.custom_gates = True
+        self.custom_einsum = None
+        self.op = op
+        from qibo.config import get_threads
+        self.get_threads = get_threads
+        self.einsum_module = None
+
+    def initial_state(self, nqubits, is_matrix=False):
+        return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
+                                    is_matrix=is_matrix,
+                                    omp_num_threads=self.get_threads())
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        return self.op.transpose_state(pieces, state, nqubits, order,
+                                       self.get_threads())
+
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+        if nshots < SHOT_CUSTOM_OP_THREASHOLD:
+            return super().sample_frequencies(probs, nshots)
+        # Generate random seed using tf
+        dtype = self.dtypes('DTYPEINT')
+        seed = self.backend.random.uniform(
+            shape=tuple(), maxval=int(1e8), dtype=dtype)
+        nqubits = int(self.np.log2(tuple(probs.shape)[0]))
+        shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
+        frequencies = self.zeros(shape, dtype='DTYPEINT')
+        frequencies = self.op.measure_frequencies(
+            frequencies, probs, nshots, nqubits, seed, self.get_threads())
+        return frequencies
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def einsum_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def create_gate_cache(self, gate):
+        cache = self.GateCache()
+        qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
+        qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
+        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
+        if gate.density_matrix:
+            cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
+        return cache
+
+    def state_vector_call(self, gate, state):
+        return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
+                            *gate.target_qubits, self.get_threads())
+
+    def state_vector_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
+                            gate.nqubits, *gate.target_qubits,
+                            self.get_threads())
+
+    def density_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
+                             *gate.cache.target_qubits_dm, self.get_threads())
+        return state
+
+    def density_matrix_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        adjmatrix = self.conj(gate.matrix)
+        state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
+                             2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             self.get_threads())
+        return state
+
+    def state_vector_collapse(self, gate, state, result):
+        return gate.gate_op(state, gate.cache.qubits_tensor, result,
+                            gate.nqubits, True, self.get_threads())
+
+    def density_matrix_collapse(self, gate, state, result):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        return state / self.trace(state)
+
+
+class TensorflowDefaultEinsumBackend(TensorflowBackend):
+
+    def __init__(self):
+        super().__init__()
+        from qibo.backends import einsum
+        self.name = "tensorflow_defaulteinsum"
+        self.custom_gates = False
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyDefaultEinsumBackend.create_einsum_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyDefaultEinsumBackend.einsum_call(
+            self, cache, state, matrix)
+
+
+class TensorflowMatmulEinsumBackend(TensorflowBackend):
+
+    def __init__(self):
+        from qibo.backends import einsum
+        super().__init__()
+        self.name = "tensorflow_matmuleinsum"
+        self.custom_gates = False
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyMatmulEinsumBackend.create_einsum_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyMatmulEinsumBackend.einsum_call(
+            self, cache, state, matrix)

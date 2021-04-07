@@ -2,9 +2,12 @@ import pytest
 from qibo import K, backends, models, gates
 
 
-def test_construct_backend(engine):
-    backend = backends._construct_backend(engine)
-    assert backend.name == engine
+def test_construct_backend(backend):
+    bk = backends._construct_backend(backend)
+    try:
+        assert bk.name == backend
+    except AssertionError:
+        assert bk.name.split("_")[-1] == backend
     with pytest.raises(ValueError):
         bk = backends._construct_backend("test")
 
@@ -13,27 +16,21 @@ def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
-    assert backends.get_backend() == backend
-
-    target_name = "numpy" if "numpy" in backend else "tensorflow"
+    if backend == "defaulteinsum":
+        target_name = "tensorflow_defaulteinsum"
+    elif backend == "matmuleinsum":
+        target_name = "tensorflow_matmuleinsum"
+    else:
+        target_name = backend
     assert K.name == target_name
     assert str(K) == target_name
-    assert K.__repr__() == "{}Backend".format(target_name.capitalize())
-
+    assert K.executing_eagerly()
+    h = gates.H(0)
     if backend == "custom":
-        assert K.custom_gates
         assert K.custom_einsum is None
-        from qibo.core import cgates as custom_gates
-        assert isinstance(gates.H(0), custom_gates.BackendGate)
+        assert h.gate_op
     else:
-        assert not K.custom_gates
-        if "defaulteinsum" in backend:
-            assert K.custom_einsum == "DefaultEinsum"
-        else:
-            assert K.custom_einsum == "MatmulEinsum"
-        from qibo.core import gates as native_gates
-        h = gates.H(0)
-        assert isinstance(h, native_gates.BackendGate)
+        assert h.gate_op is None
     backends.set_backend(original_backend)
 
 
@@ -47,7 +44,7 @@ def test_set_backend_errors():
         backends.set_backend("numpy_badgates")
     h = gates.H(0)
     with pytest.warns(RuntimeWarning):
-        backends.set_backend("numpy_defaulteinsum")
+        backends.set_backend("numpy_matmuleinsum")
     backends.set_backend(original_backend)
 
 

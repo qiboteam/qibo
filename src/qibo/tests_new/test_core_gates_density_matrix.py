@@ -294,3 +294,23 @@ def test_partial_trace_gate_errors(backend):
     with pytest.raises(RuntimeError):
         gate(state)
     qibo.set_backend(original_backend)
+
+
+def test_channel_gate_setters(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
+                                  [0, 0, 0, 1], [0, 0, 1, 0]])
+    channel = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
+    _ = channel.inverse_gates # create inverse gates
+    channel.nqubits = 5
+    channel.density_matrix = True
+    for gate in channel.gates:
+        assert gate.nqubits == 5
+        assert gate.density_matrix
+    for gate in channel.inverse_gates:
+        if gate is not None:
+            assert gate.nqubits == 5
+            assert gate.density_matrix
+    qibo.set_backend(original_backend)

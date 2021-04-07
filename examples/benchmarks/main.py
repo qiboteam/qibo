@@ -149,13 +149,8 @@ def main(nqubits_list: List[int],
             circuit = circuit.fuse()
         logs["creation_time"].append(time.time() - start_time)
 
-        try:
-            actual_backend = circuit.queue[0].einsum.__class__.__name__
-        except AttributeError:
-            actual_backend = "Custom"
-
         print("\nBenchmark parameters:", kwargs)
-        print("Actual backend:", actual_backend)
+        print("Actual backend:", qibo.get_backend())
         with tf.device(device):
             if compile:
                 start_time = time.time()
