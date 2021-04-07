@@ -34,7 +34,7 @@ class Backend:
         try:
             from qibo.hardware.experiments import IcarusQ
         except ModuleNotFoundError: # pragma: no cover
-            self.available_backends.remove("icarusq")
+            self.available_backends.pop("icarusq")
 
     @property
     def active_backend(self):
