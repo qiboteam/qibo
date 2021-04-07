@@ -296,7 +296,7 @@ class Channel(Gate):
     def __init__(self):
         super().__init__()
         self.gates = tuple()
-        # create inversion gates to rest to the original state vector
+        # create inversion gates to restore the original state vector
         # because of the in-place updates used in custom operators
         self._inverse_gates = None
 
