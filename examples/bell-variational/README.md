@@ -34,7 +34,7 @@ This example consists of a very simple parametrized circuit with two variational
 
 ![circuit](images/circuit.png)
 
-Ideally, the circuit should prepare a maximally entangled state and set up a direction of measurement of 45 (225) in degrees.
+Ideally, the circuit should prepare a maximally entangled state, by setting the first rotation parameter to, for example, 90 degrees, and choosing a measurement direction of 45 (225) in degrees.
 
 ### Aim of the example
 
