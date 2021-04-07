@@ -39,11 +39,11 @@ def _parse_result(raw_data, static_config):
 
     return [it, qt, ampl, phase]
 
-def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
+def _execute_pulse_sequences(pulse_sequences, static_config):
     steps = len(pulse_sequences)
     res = np.zeros((4, steps))
     for i in range(steps):
-        data = scheduler.execute_pulse_sequence(pulse_sequences[i], static_config).result()
+        data = K.scheduler.execute_pulse_sequence(pulse_sequences[i], static_config).result()
         it, qt, ampl, phase = _parse_result(data, static_config)
         res[0, i] = it
         res[1, i] = qt
@@ -52,7 +52,7 @@ def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
 
     return res
 
-def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
+def partial_qubit_calibration(static_config: dict, qubit: Qubit):
     """ Calibrate a qubit's frequency and pi-pulse only
 
     """
@@ -63,7 +63,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
     channel = qubit.drive_channel
     amplitude = qubit.qubit_amplitude
     freq_sweep, seq = tasks.PulseSpectroscopy(freq_start, freq_end, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = _execute_pulse_sequences(seq, static_config)
     ampl_array = res[2]
     log["pulse"] = {
         "freq_sweep": freq_sweep.tolist(),
@@ -74,7 +74,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
 
     # Next, do Rabi oscillation to determine pi-pulse time
     time_sweep, seq = tasks.RabiTime(0, 600e-9, 3e-9, freq, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = _execute_pulse_sequences(seq, static_config)
     log["rabi"] = {
         "time_sweep": time_sweep.tolist(),
         "result": res.tolist()

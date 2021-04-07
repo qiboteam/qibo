@@ -5,7 +5,6 @@ import qibo
 from qibo import K, gates
 from qibo.models import Circuit
 from qibo.config import log, raise_error
-from qibo.hardware.scheduler import TaskScheduler
 qibo.set_backend("icarusq")
 
 
@@ -78,7 +77,7 @@ rotation_group = [
     [Y_minus, X]
 ]
 
-def randomized_benchmark(q, ngates, scheduler=None):
+def randomized_benchmark(q, ngates):
     """Randomized benchmarking of single qubit operations.
 
     Follows the approach in https://arxiv.org/abs/1009.3639 but uses a reduced
@@ -110,7 +109,7 @@ def randomized_benchmark(q, ngates, scheduler=None):
             for gate in inverse_gates:
                 res = np.matmul(gate.unitary, res)
             if np.allclose(res, np.eye(2)):
-                c = Circuit(2, scheduler)
+                c = Circuit(2)
                 c.add(initial_gates)
                 c.add(inverse_gates)
                 break
@@ -124,18 +123,17 @@ def randomized_benchmark(q, ngates, scheduler=None):
 
 
 def main(qubit, ngates, nshots, address, username, password):
-    scheduler = TaskScheduler()
     if address is not None:
         K.experiment.connect(address, username, password)
     else:
         # set hard=coded calibration data
-        scheduler._qubit_config = K.experiment.static.calibration_placeholder
+        K.scheduler._qubit_config = K.experiment.static.calibration_placeholder
 
-    circuits = randomized_benchmark(qubit, ngates, scheduler)
+    circuits = randomized_benchmark(qubit, ngates)
 
     results = []
     for circuit in circuits:
-        circuit(nshots, scheduler)
+        circuit(nshots)
         results.append(circuit.parse_result(qubit))
 
     sweep = range(1, ngates + 1)

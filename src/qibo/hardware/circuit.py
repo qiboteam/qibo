@@ -109,20 +109,20 @@ class Circuit(circuit.AbstractCircuit):
             new_data[0] = new_refer_1[0]
         return new_data[0]/new_refer_1[0]
 
-    def execute(self, nshots, scheduler):
+    def execute(self, nshots):
         qubit_times = np.zeros(self.nqubits)
         # Get calibration data
-        self.qubit_config = scheduler.fetch_config()
+        self.qubit_config = K.scheduler.fetch_config()
         # compile pulse sequence
         pulse_sequence = [pulse for gate in self.queue
             for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
         pulse_sequence = PulseSequence(pulse_sequence)
         # execute using the scheduler
-        self._final_state = scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+        self._final_state = K.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
         return self._final_state
 
-    def __call__(self, nshots, scheduler):
-        return self.execute(nshots, scheduler)
+    def __call__(self, nshots):
+        return self.execute(nshots)
 
     @property
     def final_state(self):
