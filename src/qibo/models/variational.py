@@ -437,7 +437,24 @@ class FALQON(object):
         return Circuit.get_initial_state(self, state)
 
 
-    def minimize(self, delta_t, max_layers, initial_state=None, callback=None, compile=False, processes=None, tol=1e-5,):
+    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None, compile=False, processes=None,):
+        """Optimizes the variational parameters of the FALQON.
+
+                Args:
+                    delta_t (float): initial guess for the time step. A too large delta_t will make the algorithm fail.
+                    max_layers (int): maximum number of layers allowed for the FALQON.
+                    initial_state (np.ndarray): initial state vector of the FALQON.
+                    tol (float): Tolerance of energy change. If not specified, no check is done.
+                    callback (callable): Called after each iteration for scipy optimizers.
+                    options (dict): a dictionary with options for the different optimizers.
+                    compile (bool): whether the TensorFlow graph should be compiled.
+                    processes (int): number of processes when using the paralle BFGS method.
+
+                Return:
+                    The final energy (expectation value of the ``hamiltonian``).
+                    The corresponding best parameters.
+                    None
+                """
         from numpy import array, hstack, inf
 
         parameters = array([delta_t, 0])
@@ -447,7 +464,7 @@ class FALQON(object):
             state = falqon(initial_state)
             return hamiltonian.expectation(state)
 
-        energy = inf
+        energy = [inf]
 
         if callback is not None:
             callback_result = []
@@ -455,78 +472,19 @@ class FALQON(object):
         for it in range(1, max_layers + 1):
             beta = _loss(parameters, self, self.evol_hamiltonian)
 
-            energy_ = _loss(parameters, self, self.hamiltonian).numpy()
-            print(energy_)
+            if tol is not None:
+                energy.append(_loss(parameters, self, self.hamiltonian).numpy())
+                if abs(energy[-1] - energy[-2]) < tol:
+                    break
 
             if callback is not None:
                 callback_result.append(callback(parameters))
 
-            if abs(energy - energy_) < tol:
-                break
-
-            else:
-                energy = energy_.copy()
 
             parameters = hstack([parameters, array([delta_t, delta_t * beta])])
 
 
         self.set_parameters(parameters)
 
-        #return result, parameters, extra
-        return parameters
+        return _loss(parameters, self, self.hamiltonian).numpy(), parameters, {'Energies': energy, 'callbacks':callback_result}
 
-
-    def minimize_(self, initial_p, initial_state=None, method='Powell',
-                 jac=None, hess=None, hessp=None, bounds=None, constraints=(),
-                 tol=None, callback=None, options=None, compile=False, processes=None):
-        """Optimizes the variational parameters of the QAOA.
-
-        Args:
-            initial_p (np.ndarray): initial guess for the parameters.
-            initial_state (np.ndarray): initial state vector of the QAOA.
-            method (str): the desired minimization method.
-                See :meth:`qibo.optimizers.optimize` for available optimization
-                methods.
-            jac (dict): Method for computing the gradient vector for scipy optimizers.
-            hess (dict): Method for computing the hessian matrix for scipy optimizers.
-            hessp (callable): Hessian of objective function times an arbitrary
-                vector for scipy optimizers.
-            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
-            constraints (dict): Constraints definition for scipy optimizers.
-            tol (float): Tolerance of termination for scipy optimizers.
-            callback (callable): Called after each iteration for scipy optimizers.
-            options (dict): a dictionary with options for the different optimizers.
-            compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the paralle BFGS method.
-
-        Return:
-            The final energy (expectation value of the ``hamiltonian``).
-            The corresponding best parameters.
-            The optimization result object. For scipy methods it
-                returns the ``OptimizeResult``, for ``'cma'`` the
-                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
-                the options used during the optimization.
-        """
-        if len(initial_p) % 2 != 0:
-            raise_error(ValueError, "Initial guess for the parameters must "
-                                    "contain an even number of values but "
-                                    "contains {}.".format(len(initial_p)))
-
-        def _loss(params, qaoa, hamiltonian):
-            qaoa.set_parameters(params)
-            state = qaoa(initial_state)
-            return hamiltonian.expectation(state)
-
-        if method == "sgd":
-            from qibo import K
-            loss = lambda p, c, h: _loss(K.cast(p), c, h)
-        else:
-            loss = lambda p, c, h: _loss(p, c, h).numpy()
-
-        result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
-                                                             method=method, jac=jac, hess=hess, hessp=hessp,
-                                                             bounds=bounds, constraints=constraints,
-                                                             tol=tol, callback=callback, options=options,
-                                                             compile=compile, processes=processes)
-        self.set_parameters(parameters)
-        return result, parameters, extra
