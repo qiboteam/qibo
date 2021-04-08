@@ -323,12 +323,12 @@ class FALQON(object):
             from qibo import models, hamiltonians
             # create XXZ Hamiltonian for four qubits
             hamiltonian = hamiltonians.XXZ(4)
-            # create QAOA model for this Hamiltonian
-            qaoa = models.QAOA(hamiltonian)
+            # create FALQON model for this Hamiltonian
+            falqon = models.falqon(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
-            initial_parameters = 0.01 * np.random.random(4)
-            best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+            delta_t = 0.01
+            best_energy, final_parameters, extra = falqon.minimize(delta_t)
     """
     from qibo import hamiltonians, optimizers, K
     from qibo.core import states
