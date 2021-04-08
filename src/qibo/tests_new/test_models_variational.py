@@ -3,11 +3,10 @@ Testing Variational Quantum Circuits.
 """
 import numpy as np
 import pytest
-from qibo.config import get_threads, set_threads
-from qibo import gates
+import qibo
+from qibo import gates, models, hamiltonians
 from qibo.models import Circuit, VQE
 from qibo.hamiltonians import XXZ
-from qibo import models, hamiltonians
 from qibo.optimizers import optimize
 from qibo.tests import utils
 from scipy.linalg import expm
@@ -19,8 +18,10 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqc_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'vqc_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'vqc_bfgs.out')]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqc(method, options, compile, filename):
-    """Performs a VQE circuit minimization test."""
+def test_vqc(backend, method, options, compile, filename):
+    """Performs a variational circuit minimization test."""
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
 
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
@@ -50,6 +51,7 @@ def test_vqc(method, options, compile, filename):
                             options=options, compile=compile)
     if filename is not None:
         utils.assert_regression_fixture(params, filename)
+    qibo.set_backend(original_backend)
 
 
 test_names = "method,options,compile,filename"
@@ -63,9 +65,14 @@ test_values = [("Powell", {'maxiter': 1}, True, 'vqe_powell.out'),
                ("sgd", {"nepochs": 5}, False, None),
                ("sgd", {"nepochs": 5}, True, None)]
 @pytest.mark.parametrize(test_names, test_values)
-def test_vqe(method, options, compile, filename):
+def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
-    import qibo
+    original_backend = qibo.get_backend()
+    original_threads = qibo.get_threads()
+    if method == "sgd" or compile and backend != "matmuleinsum":
+        pytest.skip("Skipping SGD test for unsupported backend.")
+    qibo.set_backend(backend)
+
     if method == 'parallel_L-BFGS-B':
         if 'GPU' in qibo.get_device(): # pragma: no cover
             pytest.skip("unsupported configuration")
@@ -74,14 +81,8 @@ def test_vqe(method, options, compile, filename):
             pytest.skip("Parallel L-BFGS-B not supported on Windows.")
         qibo.set_threads(1)
 
-    original_backend = qibo.get_backend()
-    if method == "sgd" or compile:
-        qibo.set_backend("matmuleinsum")
-
-    original_threads = get_threads()
     nqubits = 6
     layers  = 4
-
     circuit = Circuit(nqubits)
     for l in range(layers):
         for q in range(nqubits):
@@ -114,7 +115,6 @@ def test_vqe(method, options, compile, filename):
 
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
-    import qibo
     if "custom" not in qibo.K.available_backends: # pragma: no cover
         pytest.skip("Custom backend not available.")
 
@@ -142,13 +142,16 @@ def test_vqe_custom_gates_errors():
     qibo.set_backend(original_backend)
 
 
-def test_initial_state(accelerators):
+def test_initial_state(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     h = hamiltonians.TFIM(3, h=1.0, trotter=True)
     qaoa = models.QAOA(h, accelerators=accelerators)
     qaoa.set_parameters(np.random.random(4))
     target_state = np.ones(2 ** 3) / np.sqrt(2 ** 3)
     final_state = qaoa.get_initial_state()
     np.testing.assert_allclose(final_state, target_state)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("solver,trotter",
@@ -247,10 +250,15 @@ test_values = [
     ("sgd", {"nepochs": 5}, False, None)
     ]
 @pytest.mark.parametrize(test_names, test_values)
-def test_qaoa_optimization(method, options, trotter, filename):
+def test_qaoa_optimization(backend, method, options, trotter, filename):
+    original_backend = qibo.get_backend()
+    if method == "sgd" and backend != "matmuleinsum":
+        pytest.skip("Skipping SGD test for unsupported backend.")
+    qibo.set_backend(backend)
     h = hamiltonians.XXZ(3, trotter=trotter)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         utils.assert_regression_fixture(params, filename)
+    qibo.set_backend(original_backend)
