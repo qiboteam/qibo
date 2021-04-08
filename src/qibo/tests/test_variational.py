@@ -81,7 +81,6 @@ def test_vqe(method, options, compile, filename):
     original_threads = get_threads()
     nqubits = 6
     layers  = 4
-
     circuit = Circuit(nqubits)
     for l in range(layers):
         for q in range(nqubits):
