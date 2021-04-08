@@ -295,10 +295,10 @@ class QAOA(object):
 
 
 
-class FALQON(object):
+class FALQON(QAOA):
     """ Feedback-based ALgorithm for Quantum OptimizatioN (FALQON) model.
 
-    The FALQON is introduced in `arXiv:2103.08619 <https://arxiv.org/abs/2103.08619>`_.
+    The FALQON is introduced in `arXiv:2103.08619 <https://arxiv.org/abs/2103.08619>`_. It inherits the QAOA class
 
     Args:
         hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
@@ -324,117 +324,20 @@ class FALQON(object):
             # create XXZ Hamiltonian for four qubits
             hamiltonian = hamiltonians.XXZ(4)
             # create FALQON model for this Hamiltonian
-            falqon = models.falqon(hamiltonian)
+            falqon = models.FALQON(hamiltonian)
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01
             best_energy, final_parameters, extra = falqon.minimize(delta_t)
     """
-    from qibo import hamiltonians, optimizers, K
     from qibo.core import states
-    from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        # list of QAOA variational parameters (angles)
-        self.params = None
-        # problem hamiltonian
-        if not isinstance(hamiltonian, self.HAMILTONIAN_TYPES):
-            raise_error(TypeError, "Invalid Hamiltonian type {}."
-                                   "".format(type(hamiltonian)))
-        self.hamiltonian = hamiltonian
-        self.nqubits = hamiltonian.nqubits
-        # mixer hamiltonian (default = -sum(sigma_x))
-        if mixer is None:
-            trotter = isinstance(
-                self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
-            self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
-        else:
-            if type(mixer) != type(hamiltonian):
-                  raise_error(TypeError, "Given Hamiltonian is of type {} "
-                                         "while mixer is of type {}."
-                                         "".format(type(hamiltonian),
-                                                   type(mixer)))
-            self.mixer = mixer
-
+        # call parent class `__init__`
+        super().__init__(hamiltonian, mixer, solver, callbacks, accelerators, memory_device)
+        # additional code not included in parent class
         self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
-
-        # create circuits for Trotter Hamiltonians
-        if (accelerators is not None and (
-                not isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
-                or solver != "exp")):
-            raise_error(NotImplementedError, "Distributed QAOA is implemented "
-                                             "only with TrotterHamiltonian and "
-                                             "exponential solver.")
-        if isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian):
-            self.hamiltonian.circuit(1e-2, accelerators, memory_device)
-            self.mixer.circuit(1e-2, accelerators, memory_device)
-
-        # evolution solvers
-        from qibo import solvers
-        self.ham_solver = solvers.factory[solver](1e-2, self.hamiltonian)
-        self.mix_solver = solvers.factory[solver](1e-2, self.mixer)
-
-        self.state_cls = self.states.VectorState
-        self.callbacks = callbacks
-        self.accelerators = accelerators
-        self.normalize_state = StateEvolution._create_normalize_state(
-            self, solver)
-        self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
-            self, accelerators, memory_device)
-
-    def set_parameters(self, p):
-        """Sets the variational parameters.
-
-        Args:
-            p (np.ndarray): 1D-array holding the new values for the variational
-                parameters. Length should be an even number.
-        """
-        self.params = p
-
-    def _apply_exp(self, state, solver, p):
-        """Helper method for ``execute``."""
-        solver.dt = p
-        state = solver(state)
-        if self.callbacks:
-            state = self.normalize_state(state)
-            self.calculate_callbacks(state)
-        return state
-
-    def execute(self, initial_state=None):
-        """Applies the QAOA exponential operators to a state.
-
-        Args:
-            initial_state (np.ndarray): Initial state vector.
-
-        Returns:
-            State vector after applying the QAOA exponential gates.
-        """
-        state = self.get_initial_state(initial_state)
-        self.calculate_callbacks(state)
-        n = int(self.params.shape[0])
-        for i in range(n // 2):
-            state = self._apply_exp(state, self.ham_solver,
-                                    self.params[2 * i])
-            state = self._apply_exp(state, self.mix_solver,
-                                    self.params[2 * i + 1])
-        return self.normalize_state(state)
-
-    def __call__(self, initial_state=None):
-        """Equivalent to :meth:`qibo.models.QAOA.execute`."""
-        return self.execute(initial_state)
-
-    def get_initial_state(self, state=None):
-        """"""
-        if self.accelerators is not None:
-            c = self.hamiltonian.circuit(self.params[0])
-            if state is None:
-                state = self.states.DistributedState.plus_state(c)
-            return c.get_initial_state(state)
-
-        if state is None:
-            return self.state_cls.plus_state(self.nqubits).tensor
-        return Circuit.get_initial_state(self, state)
 
 
     def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None, compile=False, processes=None,):
@@ -466,14 +369,13 @@ class FALQON(object):
 
         energy = [inf]
 
-        if callback is not None:
-            callback_result = []
+        callback_result = []
 
         for it in range(1, max_layers + 1):
             beta = _loss(parameters, self, self.evol_hamiltonian)
 
             if tol is not None:
-                energy.append(_loss(parameters, self, self.hamiltonian).numpy())
+                energy.append(array(_loss(parameters, self, self.hamiltonian)))
                 if abs(energy[-1] - energy[-2]) < tol:
                     break
 
