@@ -74,7 +74,8 @@ def test_vqe(backend, method, options, compile, filename):
     qibo.set_backend(backend)
 
     if method == 'parallel_L-BFGS-B':
-        if 'GPU' in qibo.get_device(): # pragma: no cover
+        device = qibo.get_device()
+        if device is not None and "GPU" in device: # pragma: no cover
             pytest.skip("unsupported configuration")
         import os
         if os.name == 'nt': # pragma: no cover
