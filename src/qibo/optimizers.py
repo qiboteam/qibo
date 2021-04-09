@@ -161,15 +161,14 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
                 a message of the loss function.
     """
     # check if gates are using the MatmulEinsum backend
+    compatible_backends = {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}
     from qibo.core.circuit import Circuit
     for argument in args:
         if isinstance(argument, Circuit):
             from qibo import K
-            if K.name == "custom": # pragma: no cover
+            if K.name not in compatible_backends: # pragma: no cover
                 from qibo.config import raise_error
-                raise_error(RuntimeError, 'SGD requires native Tensorflow '
-                                          'gates because gradients are not '
-                                          'supported in the custom kernels.')
+                raise_error(RuntimeError, "SGD requires native Tensorflow backend.")
 
     from qibo import K
     from qibo.config import log
