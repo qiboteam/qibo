@@ -94,7 +94,7 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
-    if method == "sgd" or compile and backend != "tensorflow_matmuleinsum":
+    if (method == "sgd" or compile) and backend != "matmuleinsum":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
 
@@ -281,7 +281,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, trotter, filename):
     original_backend = qibo.get_backend()
-    if method == "sgd" and backend != "tensorflow_matmuleinsum":
+    if method == "sgd" and backend != "matmuleinsum":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
     h = hamiltonians.XXZ(3, trotter=trotter)
