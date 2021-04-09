@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, LOG_LEVEL
+from qibo.config import raise_error, log, LOG_LEVEL
 
 
 class Optimization:
@@ -38,6 +38,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
 
         self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
+        self.native_types = (tf.Tensor, tf.Variable)
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
@@ -236,26 +237,120 @@ class TensorflowCustomBackend(TensorflowBackend):
             frequencies, probs, nshots, nqubits, seed, self.get_threads())
         return frequencies
 
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def einsum_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def create_gate_cache(self, gate):
+        cache = self.GateCache()
+        qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
+        qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
+        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
+        if gate.density_matrix:
+            cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
+        return cache
+
+    def state_vector_call(self, gate, state):
+        return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
+                            *gate.target_qubits, self.get_threads())
+
+    def state_vector_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
+                            gate.nqubits, *gate.target_qubits,
+                            self.get_threads())
+
+    def density_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
+                             *gate.cache.target_qubits_dm, self.get_threads())
+        return state
+
+    def density_matrix_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                             2 * gate.nqubits, *gate.target_qubits,
+                             self.get_threads())
+        adjmatrix = self.conj(gate.matrix)
+        state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
+                             2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             self.get_threads())
+        return state
+
+    def state_vector_collapse(self, gate, state, result):
+        return gate.gate_op(state, gate.cache.qubits_tensor, result,
+                            gate.nqubits, True, self.get_threads())
+
+    def density_matrix_collapse(self, gate, state, result):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
+                             2 * gate.nqubits, False, self.get_threads())
+        return state / self.trace(state)
+
 
 class TensorflowDefaultEinsumBackend(TensorflowBackend):
+    """Gate application backend that based on default ``einsum``.
+
+    This is the most efficient implementation for GPU, however its
+    backpropagation is not working properly for complex numbers.
+    The user should switch to :class:`qibo.core.einsum.MatmulEinsum`
+    if automatic differentiation is required.
+    """
 
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
 
     def __init__(self):
         super().__init__()
+        from qibo.backends import einsum
         self.name = "tensorflow_defaulteinsum"
         self.custom_gates = False
-        self.custom_einsum = "DefaultEinsum"
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyDefaultEinsumBackend.create_einsum_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyDefaultEinsumBackend.einsum_call(
+            self, cache, state, matrix)
 
 
 class TensorflowMatmulEinsumBackend(TensorflowBackend):
+
+    """Gate application backend based on ``matmul``.
+
+    For Tensorflow this is more efficient than ``einsum`` on CPU but slower on GPU.
+    The matmul version implemented here is not the most efficient possible.
+    The implementation algorithm is the following.
+
+    Assume that we are applying
+    a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
+    vector of shape 5 * (2,). We perform the following steps:
+
+    * Reshape the state to (2, 4, 2, 2)
+    * Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
+    * Reshape to (4, 8).
+    * Apply the gate using the matmul (4, 4) x (4, 8).
+    * Reshape to the original shape 5 * (2,) and traspose so that the final
+      qubit order agrees with the initial.
+    """
 
     description = "Uses `tf.matmul` as well as transpositions and reshapes " \
                   "to apply gates to states via matrix multiplication."
 
     def __init__(self):
+        from qibo.backends import einsum
         super().__init__()
         self.name = "tensorflow_matmuleinsum"
         self.custom_gates = False
-        self.custom_einsum = "MatmulEinsum"
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return numpy.NumpyMatmulEinsumBackend.create_einsum_cache(
+            self, qubits, nqubits, ncontrol)
+
+    def einsum_call(self, cache, state, matrix):
+        return numpy.NumpyMatmulEinsumBackend.einsum_call(
+            self, cache, state, matrix)

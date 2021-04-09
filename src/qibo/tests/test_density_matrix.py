@@ -526,12 +526,6 @@ def test_entanglement_entropy(backend):
 
 def test_density_matrix_circuit_errors():
     """Check errors of circuits that simulate density matrices."""
-    # Switch `gate.density_matrix` to `True` after setting `nqubits`
-    gate = gates.X(0)
-    gate.nqubits = 2
-    gate.prepare()
-    with pytest.raises(RuntimeError):
-        gate.density_matrix = True
     # Attempt to distribute density matrix circuit
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)

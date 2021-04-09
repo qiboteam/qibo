@@ -1,12 +1,12 @@
 import math
 from abc import ABC, abstractmethod
 from qibo import K
-from qibo.abstractions import callbacks
+from qibo.abstractions import callbacks as abstract_callbacks
 from qibo.abstractions.states import AbstractState
 from qibo.config import EIGVAL_CUTOFF, raise_error, log
 
 
-class BackendCallback(callbacks.Callback, ABC):
+class BackendCallback(abstract_callbacks.Callback, ABC):
 
     def __getitem__(self, k):
         if isinstance(k, int):
@@ -34,21 +34,21 @@ class BackendCallback(callbacks.Callback, ABC):
         return getattr(self, self._active_call)(state)
 
 
-class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
+class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntropy):
     _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
     def __init__(self, partition=None, compute_spectrum=False):
-        callbacks.EntanglementEntropy.__init__(
+        abstract_callbacks.EntanglementEntropy.__init__(
             self, partition, compute_spectrum)
         self.partial_trace = None
 
-    @callbacks.Callback.density_matrix.setter
+    @abstract_callbacks.Callback.density_matrix.setter
     def density_matrix(self, x):
-        callbacks.Callback.density_matrix.fset(self, x) # pylint: disable=no-member
+        abstract_callbacks.Callback.density_matrix.fset(self, x) # pylint: disable=no-member
         if self.partial_trace is not None:
             self.partial_trace.density_matrix = x
 
-    @callbacks.Callback.nqubits.setter
+    @abstract_callbacks.Callback.nqubits.setter
     def nqubits(self, n: int):
         from qibo import gates
         self._nqubits = n
@@ -93,7 +93,7 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
         return self.entropy(rho)
 
 
-class Norm(BackendCallback, callbacks.Norm):
+class Norm(BackendCallback, abstract_callbacks.Norm):
 
     def state_vector_call(self, state):
         return K.sqrt(K.sum(K.square(K.abs(state))))
@@ -102,7 +102,7 @@ class Norm(BackendCallback, callbacks.Norm):
         return K.trace(state)
 
 
-class Overlap(BackendCallback, callbacks.Overlap):
+class Overlap(BackendCallback, abstract_callbacks.Overlap):
 
     def __init__(self, state):
         super().__init__()
@@ -116,7 +116,7 @@ class Overlap(BackendCallback, callbacks.Overlap):
                                           "for density matrices.")
 
 
-class Energy(BackendCallback, callbacks.Energy):
+class Energy(BackendCallback, abstract_callbacks.Energy):
 
     def state_vector_call(self, state):
         return self.hamiltonian.expectation(state)
@@ -125,10 +125,10 @@ class Energy(BackendCallback, callbacks.Energy):
         return K.trace(K.matmul(self.hamiltonian.matrix, state))
 
 
-class Gap(BackendCallback, callbacks.Gap):
+class Gap(BackendCallback, abstract_callbacks.Gap):
 
     def __init__(self, mode="gap", check_degenerate=True):
-        callbacks.Gap.__init__(self, mode, check_degenerate)
+        abstract_callbacks.Gap.__init__(self, mode, check_degenerate)
         self._evolution = None
 
     @property
