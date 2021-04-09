@@ -146,28 +146,27 @@ def test_vqe_custom_gates_errors():
 def test_initial_state(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    h = hamiltonians.TFIM(3, h=1.0, trotter=True)
+    h = hamiltonians.TFIM(5, h=1.0, trotter=True)
     qaoa = models.QAOA(h, accelerators=accelerators)
     qaoa.set_parameters(np.random.random(4))
-    target_state = np.ones(2 ** 3) / np.sqrt(2 ** 3)
+    target_state = np.ones(2 ** 5) / np.sqrt(2 ** 5)
     final_state = qaoa.get_initial_state()
     np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("solver,trotter",
-                         [("exp", False),
-                          ("rk4", False),
-                          ("rk45", False),
-                          ("exp", True),
-                          ("rk4", True),
-                          ("rk45", True)])
-def test_qaoa_execution(solver, trotter, accel=None):
-    h = hamiltonians.TFIM(4, h=1.0, trotter=trotter)
-    m = hamiltonians.X(4, trotter=trotter)
+                         [("exp", False), ("exp", True),
+                          ("rk4", False),  ("rk4", True),
+                          ("rk45", False), ("rk45", True)])
+def test_qaoa_execution(backend, solver, trotter, accel=None):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    h = hamiltonians.TFIM(6, h=1.0, trotter=trotter)
+    m = hamiltonians.X(6, trotter=trotter)
     # Trotter and RK require small p's!
     params = 0.01 * (1 - 2 * np.random.random(4))
-    state = utils.random_numpy_state(4)
+    state = utils.random_numpy_state(6)
     # set absolute test tolerance according to solver
     if "rk" in solver:
         atol = 1e-2
@@ -177,8 +176,8 @@ def test_qaoa_execution(solver, trotter, accel=None):
         atol = 0
 
     target_state = np.copy(state)
-    h_matrix = h.matrix.numpy()
-    m_matrix = m.matrix.numpy()
+    h_matrix = np.array(h.matrix)
+    m_matrix = np.array(m.matrix)
     for i, p in enumerate(params):
         if i % 2:
             u = expm(-1j * p * m_matrix)
@@ -190,28 +189,31 @@ def test_qaoa_execution(solver, trotter, accel=None):
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
     np.testing.assert_allclose(final_state, target_state, atol=atol)
+    qibo.set_backend(original_backend)
 
 
-def test_qaoa_distributed_execution(accelerators):
-    test_qaoa_execution("exp", True, accelerators)
+def test_qaoa_distributed_execution(backend, accelerators):
+    test_qaoa_execution(backend, "exp", True, accelerators)
 
 
-def test_qaoa_callbacks(accelerators):
+def test_qaoa_callbacks(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     from qibo import callbacks
     # use ``Y`` Hamiltonian so that there are no errors
     # in the Trotter decomposition
-    h = hamiltonians.Y(3)
+    h = hamiltonians.Y(5)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
-    state = utils.random_numpy_state(3)
+    state = utils.random_numpy_state(5)
 
-    ham = hamiltonians.Y(3, trotter=True)
+    ham = hamiltonians.Y(5, trotter=True)
     qaoa = models.QAOA(ham, callbacks=[energy], accelerators=accelerators)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
 
-    h_matrix = h.matrix.numpy()
-    m_matrix = qaoa.mixer.matrix.numpy()
+    h_matrix = np.array(h.matrix)
+    m_matrix = np.array(qaoa.mixer.matrix)
     calc_energy = lambda s: (s.conj() * h_matrix.dot(s)).sum()
     target_state = np.copy(state)
     target_energy = [calc_energy(target_state)]
@@ -223,6 +225,7 @@ def test_qaoa_callbacks(accelerators):
         target_state = u @ target_state
         target_energy.append(calc_energy(target_state))
     np.testing.assert_allclose(energy[:], target_energy)
+    qibo.set_backend(original_backend)
 
 
 def test_qaoa_errors():

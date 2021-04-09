@@ -229,7 +229,7 @@ class ParallelBFGS: # pragma: no cover
         self.xval = None
         self.function_value = None
         self.jacobian_value = None
-        self.precision = self.K.np.finfo(self.K.dtypes("DTYPE").as_numpy_dtype).eps
+        self.precision = self.K.np.finfo(self.K.qnp.dtypes("DTYPE")).eps
         self.bounds = bounds
         self.callback = callback
         self.options = options
