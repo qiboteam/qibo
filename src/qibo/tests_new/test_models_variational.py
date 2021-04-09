@@ -2,14 +2,38 @@
 Testing Variational Quantum Circuits.
 """
 import numpy as np
+import pathlib
 import pytest
 import qibo
 from qibo import gates, models, hamiltonians
-from qibo.models import Circuit, VQE
-from qibo.hamiltonians import XXZ
-from qibo.optimizers import optimize
-from qibo.tests import utils
+from qibo.tests_new.test_core_gates import random_state
 from scipy.linalg import expm
+
+REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")
+
+
+def assert_regression_fixture(array, filename, rtol=1e-5):
+    """Check array matches data inside filename.
+
+    Args:
+        array: numpy array/
+        filename: fixture filename
+
+    If filename does not exists, this function
+    creates the missing file otherwise it loads
+    from file and compare.
+    """
+    def load(filename):
+        return np.loadtxt(filename)
+
+    filename = REGRESSION_FOLDER/filename
+    try:
+        array_fixture = load(filename)
+    except: # pragma: no cover
+        # case not tested in GitHub workflows because files exist
+        np.savetxt(filename, array)
+        array_fixture = load(filename)
+    np.testing.assert_allclose(array, array_fixture, rtol=rtol)
 
 
 test_names = "method,options,compile,filename"
@@ -22,6 +46,7 @@ def test_vqc(backend, method, options, compile, filename):
     """Performs a variational circuit minimization test."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
+    from qibo.optimizers import optimize
 
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
@@ -50,7 +75,7 @@ def test_vqc(backend, method, options, compile, filename):
     best, params, _ = optimize(myloss, x0, args=(c, data), method=method,
                             options=options, compile=compile)
     if filename is not None:
-        utils.assert_regression_fixture(params, filename)
+        assert_regression_fixture(params, filename)
     qibo.set_backend(original_backend)
 
 
@@ -84,7 +109,7 @@ def test_vqe(backend, method, options, compile, filename):
 
     nqubits = 6
     layers  = 4
-    circuit = Circuit(nqubits)
+    circuit = models.Circuit(nqubits)
     for l in range(layers):
         for q in range(nqubits):
             circuit.add(gates.RY(q, theta=1.0))
@@ -98,10 +123,10 @@ def test_vqe(backend, method, options, compile, filename):
     for q in range(nqubits):
         circuit.add(gates.RY(q, theta=1.0))
 
-    hamiltonian = XXZ(nqubits=nqubits)
+    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
-    v = VQE(circuit, hamiltonian)
+    v = models.VQE(circuit, hamiltonian)
     best, params, _ = v.minimize(initial_parameters, method=method,
                                  options=options, compile=compile)
     if method == "cma":
@@ -109,7 +134,7 @@ def test_vqe(backend, method, options, compile, filename):
         import shutil
         shutil.rmtree("outcmaes")
     if filename is not None:
-        utils.assert_regression_fixture(params, filename)
+        assert_regression_fixture(params, filename)
     qibo.set_backend(original_backend)
     qibo.set_threads(original_threads)
 
@@ -123,15 +148,15 @@ def test_vqe_custom_gates_errors():
     qibo.set_backend("custom")
 
     nqubits = 6
-    circuit = Circuit(nqubits)
+    circuit = models.Circuit(nqubits)
     for q in range(nqubits):
         circuit.add(gates.RY(q, theta=0))
     for q in range(0, nqubits-1, 2):
         circuit.add(gates.CZ(q, q+1))
 
-    hamiltonian = XXZ(nqubits=nqubits)
+    hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits + nqubits)
-    v = VQE(circuit, hamiltonian)
+    v = models.VQE(circuit, hamiltonian)
     # compile with custom gates
     with pytest.raises(RuntimeError):
         best, params, _ = v.minimize(initial_parameters, method="BFGS",
@@ -166,7 +191,7 @@ def test_qaoa_execution(backend, solver, trotter, accel=None):
     m = hamiltonians.X(6, trotter=trotter)
     # Trotter and RK require small p's!
     params = 0.01 * (1 - 2 * np.random.random(4))
-    state = utils.random_numpy_state(6)
+    state = random_state(6)
     # set absolute test tolerance according to solver
     if "rk" in solver:
         atol = 1e-2
@@ -205,7 +230,7 @@ def test_qaoa_callbacks(backend, accelerators):
     h = hamiltonians.Y(5)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
-    state = utils.random_numpy_state(5)
+    state = random_state(5)
 
     ham = hamiltonians.Y(5, trotter=True)
     qaoa = models.QAOA(ham, callbacks=[energy], accelerators=accelerators)
@@ -264,5 +289,5 @@ def test_qaoa_optimization(backend, method, options, trotter, filename):
     initial_p = [0.05, 0.06, 0.07, 0.08]
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
-        utils.assert_regression_fixture(params, filename)
+        assert_regression_fixture(params, filename)
     qibo.set_backend(original_backend)
