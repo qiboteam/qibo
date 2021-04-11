@@ -38,7 +38,7 @@ def execute_cirq(cirq_gates, nqubits, initial_state=None):
     c.append([cirq.I(qi) for qi in q])
     for gate, targets in cirq_gates:
         c.append(gate(*[q[i] for i in targets]))
-    result = cirq.Simulator().simulate(c, initial_state=initial_state)
+    result = cirq.sim.Simulator().simulate(c, initial_state=initial_state)
     depth = len(cirq.Circuit(c.all_operations()))
     return result.final_state_vector, depth - 1
 
