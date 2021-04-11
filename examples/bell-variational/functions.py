@@ -71,7 +71,7 @@ def cost_function(parameters, circuits, nshots):
         nshots (int): number of sampling for the experiment.
     
     Returns:
-        cost (real): closer to 0 as the inequalities are maximally violated. Can go negative due
+        cost (float): closer to 0 as the inequalities are maximally violated. Can go negative due
                      to sampling. (can be squared to avoid that)
     
     '''
