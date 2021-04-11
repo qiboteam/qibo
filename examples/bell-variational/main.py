@@ -33,6 +33,6 @@ def main(nshots, backend):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nshots", default=10000, type=int, help='Number of shots for each circuit base')
-    parser.add_argument("--backend", default='defaulteinsum', type=str, help='Backend to use for the example')
+    parser.add_argument("--backend", default='custom', type=str, help='Backend to use for the example')
     args = vars(parser.parse_args())
     main(**args)
