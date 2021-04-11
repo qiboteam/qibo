@@ -46,7 +46,7 @@ def compute_chsh(frequencies, nshots):
         nshots (int): number of samples taken in each run of the circuit.
     
     Returns:
-        chsh (real): value of the CHSH inequality.
+        chsh (float): value of the CHSH inequality.
     
     '''
     chsh = 0
