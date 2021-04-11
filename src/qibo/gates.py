@@ -1,1 +1,1 @@
-from qibo.core.cgates import *
+from qibo.core.gates import *

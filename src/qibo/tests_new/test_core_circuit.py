@@ -23,7 +23,6 @@ def test_set_nqubits(backend):
     assert c.queue[0].nqubits == 4
     gate = gates.H(1)
     gate.nqubits = 3
-    gate.prepare()
     with pytest.raises(RuntimeError):
         c.add(gate)
     qibo.set_backend(original_backend)
@@ -39,12 +38,8 @@ def test_circuit_add_layer(backend, nqubits, accelerators):
     params = nqubits * [0.1]
     c.add(gates.VariationalLayer(qubits, pairs, gates.RY, gates.CZ, params))
     assert len(c.queue) == nqubits // 2 + nqubits % 2
-    if backend == "custom":
-        target_gate_cls = gates.Unitary
-    else:
-        from qibo.core.gates import Unitary as target_gate_cls
     for gate in c.queue:
-        assert isinstance(gate, target_gate_cls)
+        assert isinstance(gate, gates.Unitary)
     qibo.set_backend(original_backend)
 
 # TODO: Test `_fuse_copy`
@@ -88,10 +83,7 @@ def test_compiled_execute(backend):
         c2.compile()
         r2 = c2()
         init_state = c2.get_initial_state()
-        r3, _ = c2._execute_for_compile(np.reshape(init_state, (2, 2)))
-        r3 = np.reshape(r3, (4,))
         np.testing.assert_allclose(r1, r2)
-        np.testing.assert_allclose(r1, r3)
     qibo.set_backend(original_backend)
 
 

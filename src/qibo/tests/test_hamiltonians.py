@@ -279,10 +279,11 @@ models_config = [
 @pytest.mark.parametrize("numpy", [True, False])
 def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
+    from qibo.tests_new.test_models_variational import assert_regression_fixture
     kwargs["numpy"] = numpy
     H = model(**kwargs)
     matrix = np.array(H.matrix).ravel().real
-    utils.assert_regression_fixture(matrix, filename)
+    assert_regression_fixture(matrix, filename)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
