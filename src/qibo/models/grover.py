@@ -13,8 +13,8 @@ class Grover(object):
 
     Args:
         oracle (:class:`qibo.core.circuit.Circuit`): quantum circuit that flips
-            the sign using a Grover ancilla initialized with -X-H-
-            and expected to have the total size of the circuit.
+            the sign using a Grover ancilla initialized with -X-H-. Grover ancilla
+            expected to be last qubit of oracle circuit.
         superposition_circuit (:class:`qibo.core.circuit.Circuit`): quantum circuit that
             takes an initial state to a superposition. Expected to use the first
             set of qubits to store the relevant superposition.
@@ -26,6 +26,8 @@ class Grover(object):
             Leave empty if its an equal superposition of quantum states.
         number_solutions (int): number of expected solutions. Needed for normal Grover.
             Leave empty for iterative version.
+        target_amplitude (float): absolute value of the amplitude of the target state. Only for
+            advanced use and known systems.
         check (function): function that returns True if the solution has been
             found. Required of iterative approach.
             First argument should be the bitstring to check.
@@ -52,7 +54,7 @@ class Grover(object):
 
     def __init__(self, oracle, superposition_circuit=None, initial_state_circuit=None,
                  superposition_qubits=None, superposition_size=None, number_solutions=None,
-                 check=None, check_args=(), iterative=False):
+                 target_amplitude = None, check=None, check_args=(), iterative=False):
 
         self.oracle = oracle
         self.initial_state_circuit = initial_state_circuit
@@ -75,29 +77,29 @@ class Grover(object):
         if superposition_size:
             self.sup_size = superposition_size
         else:
-            self.sup_size = int(2 ** self.superposition.nqubits)
+            self.sup_size = int(2 ** self.sup_qubits)
 
         assert oracle.nqubits > self.sup_qubits
 
         self.anc_qubits_sup = self.superposition.nqubits - self.sup_qubits
-        self.anc_qubits_ora = self.oracle.nqubits - 1 - self.sup_qubits
+        self.anc_qubits_ora = self.oracle.nqubits - self.sup_qubits - 1
 
-        self.nqubits = self.sup_qubits + 1 + max(self.anc_qubits_sup, self.anc_qubits_ora)
+        self.nqubits = self.sup_qubits + max(self.anc_qubits_sup, self.anc_qubits_ora) + 1
 
         self.check = check
         self.check_args = check_args
         self.num_sol = number_solutions
+        self.targ_a = target_amplitude
         self.iterative = iterative
 
-        self.space_sup = list(range(self.sup_qubits)) + list(range(self.sup_qubits + 1, self.sup_qubits + 1 + self.anc_qubits_sup))
-        self.space_ora = list(range(self.sup_qubits + 1)) + list(range(self.sup_qubits + 1, self.sup_qubits + 1 + self.anc_qubits_ora))
+        self.space_sup = list(range(self.sup_qubits, self.sup_qubits + self.anc_qubits_sup))
+        self.space_ora = list(range(self.sup_qubits, self.sup_qubits + self.anc_qubits_ora)) + [self.nqubits-1]
 
     def initialize(self):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
-
         c = Circuit(self.nqubits)
-        c.add(gates.X(self.sup_qubits))
-        c.add(gates.H(self.sup_qubits))
+        c.add(gates.X(self.nqubits-1))
+        c.add(gates.H(self.nqubits-1))
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add(self.superposition.on_qubits(*self.space_sup))
@@ -105,27 +107,24 @@ class Grover(object):
 
     def diffusion(self):
         """Construct the diffusion operator out of the superposition circuit."""
-        nqubits = self.superposition.nqubits
-        c = Circuit(self.nqubits)
-        c.add(self.superposition.invert().on_qubits(*self.space_sup))
+        nqubits = self.superposition.nqubits + 1
+        c = Circuit(nqubits)
+        c.add(self.superposition.invert().on_qubits(*range(nqubits-1)))
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
-        c.add(gates.X(self.sup_qubits).controlled_by(*range(self.sup_qubits)))
-        c.add([gates.X(i) for i in range(self.sup_qubits)])
+        c.add([gates.X(i) for i in range(nqubits-1)])
+        c.add(gates.X(nqubits-1).controlled_by(*range(nqubits-1)))
+        c.add([gates.X(i) for i in range(nqubits-1)])
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add(self.superposition.on_qubits(*self.space_sup))
+        c.add(self.superposition.on_qubits(*range(nqubits-1)))
         return c
 
     def step(self):
         """Combine oracle and diffusion for a Grover step."""
         c = Circuit(self.nqubits)
         c.add(self.oracle.on_qubits(*self.space_ora))
-        '''diffusion = self.diffusion()
-        qubits = list(range(diffusion.nqubits - 1))
-        qubits.append(self.oracle.nqubits - 1)'''
-        c.add(self.diffusion().on_qubits(*range(self.nqubits)))
+        c.add(self.diffusion().on_qubits(*(self.space_sup+[self.nqubits-1])))
         return c
 
     def circuit(self, iterations):
@@ -186,8 +185,11 @@ class Grover(object):
             solution (str): bitstring (or list of bitstrings) measured as solution of the search.
             iterations (int): number of oracle calls done to reach a solution.
         """
-        if self.num_sol and not self.iterative:
-            it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
+        if (self.num_sol or self.targ_a) and not self.iterative:
+            if self.targ_a:
+                it = int(np.pi * (1/self.targ_a) / 4)
+            else:
+                it = int(np.pi * np.sqrt(self.sup_size / self.num_sol) / 4)
             circuit = self.circuit(it)
             result = circuit(nshots=nshots).frequencies(binary=True)
             if freq:
