@@ -100,7 +100,7 @@ class Grover(object):
         c.add(gates.H(self.sup_qubits))
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add(self.superposition.on_qubits(*self.space_sup)
+        c.add(self.superposition.on_qubits(*self.space_sup))
         return c
 
     def diffusion(self):
@@ -111,7 +111,7 @@ class Grover(object):
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add([gates.X(i) for i in range(self.sup_qubits)])
-        c.add(gates.X(nqubits).controlled_by(*range(self.sup_qubits)))
+        c.add(gates.X(self.sup_qubits).controlled_by(*range(self.sup_qubits)))
         c.add([gates.X(i) for i in range(self.sup_qubits)])
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
@@ -137,7 +137,7 @@ class Grover(object):
         Returns:
             :class:`qibo.core.circuit.Circuit` that performs Grover's algorithm.
         """
-        c = Circuit(self.oracle.nqubits)
+        c = Circuit(self.nqubits)
         c += self.initialize()
         for _ in range(iterations):
             c += self.step()
