@@ -199,7 +199,10 @@ class Grover(object):
                 self.frequencies = result
             if logs:
                 log.info(f"Most common states found using Grover's algorithm with {it} iterations:")
-            most_common = result.most_common(self.num_sol)
+            if self.targ_a:
+                most_common = result.most_common(1)
+            else:
+                most_common = result.most_common(self.num_sol)
             self.solution = []
             self.iterations = it
             for i in most_common:
