@@ -76,19 +76,21 @@ class VQE(object):
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
             from qibo import K
+            for gate in self.circuit.queue:
+                _ = gate.cache
             loss = K.compile(_loss)
 
         if method == 'sgd':
             # check if gates are using the MatmulEinsum backend
-            from qibo.core.gates import BackendGate
-            for gate in self.circuit.queue:
-                if not isinstance(gate, BackendGate):
-                    raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
-                                              'gates because gradients are not '
-                                              'supported in the custom kernels.')
+            from qibo import K
+            if K.name == "custom":
+                raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
+                                          'gates because gradients are not '
+                                          'supported in the custom kernels.')
             loss = _loss
         else:
-            loss = lambda p, c, h: _loss(p, c, h).numpy()
+            from qibo import K
+            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
                                                              args=(self.circuit, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
@@ -134,7 +136,7 @@ class QAOA(object):
             initial_parameters = 0.01 * np.random.random(4)
             best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
     """
-    from qibo import hamiltonians, optimizers, K
+    from qibo import hamiltonians, optimizers
     from qibo.core import states
     from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
@@ -269,6 +271,7 @@ class QAOA(object):
                 ``CMAEvolutionStrategy.result``, and for ``'sgd'``
                 the options used during the optimization.
         """
+        from qibo import K
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
                                     "contain an even number of values but "
@@ -280,10 +283,9 @@ class QAOA(object):
             return hamiltonian.expectation(state)
 
         if method == "sgd":
-            from qibo import K
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            loss = lambda p, c, h: _loss(p, c, h).numpy()
+            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,

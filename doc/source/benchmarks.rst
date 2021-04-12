@@ -79,55 +79,49 @@ The main benchmark script is ``main.py``. This can be
 executed as ``python main.py (OPTIONS)`` where ``(OPTIONS)`` can be any of the
 following options:
 
-* ``--nqubits``: Number of qubits in the circuit. Can be a single integer or
-  an interval defined with a dash (``-``) as ``a-b``.
-  Example: ``--nqubits 5-10`` will run the benchmark for all ``nqubits``
-  from 5 to 10 inclusive.
+* ``--nqubits`` (``int``): Number of qubits in the circuit.
 
-* ``--backend``: Qibo backend to use for the calculation.
-  Available backends are ``"custom"``, ``"matmuleinsum"`` and ``"defaulteinsum"``.
+* ``--type`` (``str``): Type of benchmark circuit.
+  Available circuit types are shown in the next section. Some circuit types
+  support additional options which are described below.
+
+* ``--backend`` (``str``): Qibo backend to use for the calculation.
+  Available backends are ``"custom"``, ``"matmuleinsum"``, ``"defaulteinsum"``,
+  ``"numpy_defaulteinsum"`` and ``"numpy_matmuleinsum"``.
   ``"custom"`` is the default backend.
 
-* ``--type``: Type of benchmark circuit.
-  Available circuit types are shown in the next section. Some circuit types
-  support additional options which are analyzed bellow.
+* ``--precision`` (``str``): Complex number precision to use for the benchmark.
+    Available options are ``'single'`` and ``'double'``.
 
-* ``--nshots``: Number of measurement shots.
+* ``--device`` (``str``): Tensorflow device to use for the benchmarks.
+  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
+
+* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
+  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
+  on two GPUs. The coefficient of each device denotes the number of times to
+  reuse this device.
+
+* ``--memory`` (``int``): Limits GPU memory used for execution. If no limiter is used,
+  Tensorflow uses all available by default.
+
+* ``--nshots`` (``int``): Number of measurement shots.
+  This will benchmark the sampling of frequencies, not individual shot samples.
   If not given no measurements will be performed and the benchmark will
   terminate once the final state vector is found.
 
-* ``--device``: Tensorflow device to use for the benchmarks.
-  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
+* ``--compile`` (``bool``): If used, the circuit will be compiled using ``tf.function``.
+  Note that custom operators do not support compilation.
+  Default is ``False``.
 
-* ``--accelerators``: Devices to use for distributed execution of the circuit.
-  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
-  on two GPUs, if these are available and compatible to Tensorflow.
-
-* ``--compile``: If used, the circuit will be compiled using ``tf.function``.
-  Note: custom operators do not support compilation.
-
-* ``--precision``: Complex number precision to use for the benchmark.
-  Available options are ``'single'`` and ``'double'``.
+* ``--fuse`` (``bool``): Circuit gates will be fused for faster execution of some circuit
+  types. Default is ``False``.
 
 When a benchmark is executed, the total simulation time will be printed in the
 terminal once the simulation finishes. Optionally execution times can be saved
-in a ``.h5`` file. This can be enabled by passing the following additional flags:
-
-* ``--directory``: Directory where the ``.h5`` will be saved.
-
-* ``--name``: Name of the ``.h5`` file.
-
-If the file exists in the given directory an error will be raised. The saved file
-contains two arrays with the following keys:
-
-  1. ``nqubits``: List with the number of qubits.
-  2. ``creation_time``: List with the time required to create the circuit for
-     each number of qubits.
-  3. ``simulation_time``: List with the total execution time for each number of
-     qubits.
-
-If ``--compile`` option is used, then the measured simulation time is the second
-call, while the execution time of the first call is saved as ``compile_time``.
+by passing the ``--filename`` (``str``) flag. All benchmarks details are logged
+in a Python dictionary and saved in a text file using ``json.dump``. The logs
+include circuit creation and simulation times. If the given ``filename`` already
+exists it will be updated, otherwise it will be created.
 
 
 Available circuit types

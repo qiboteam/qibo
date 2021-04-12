@@ -11,7 +11,7 @@ def test_variable_backpropagation(backend):
         pytest.skip("Custom gates do not support automatic differentiation.")
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    if K.name != "tensorflow":
+    if "numpy" in K.name:
         qibo.set_backend(original_backend)
         pytest.skip("Backpropagation is not supported by {}.".format(K.name))
 
@@ -38,7 +38,7 @@ def test_two_variables_backpropagation(backend):
         pytest.skip("Custom gates do not support automatic differentiation.")
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    if K.name != "tensorflow":
+    if "numpy" in K.name:
         qibo.set_backend(original_backend)
         pytest.skip("Backpropagation is not supported by {}.".format(K.name))
 

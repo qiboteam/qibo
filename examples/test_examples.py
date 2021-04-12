@@ -134,10 +134,9 @@ def test_unary(data, bins, M=10, shots=1000):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits_list", [[3, 4]])
+@pytest.mark.parametrize("nqubits", [3, 6])
 @pytest.mark.parametrize("type", ["qft", "variational"])
-def test_benchmarks(nqubits_list, type):
-    args = locals()
+def test_benchmarks(nqubits, type):
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
@@ -145,11 +144,13 @@ def test_benchmarks(nqubits_list, type):
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
     header = ("import argparse\nimport os\nimport time"
-              "\nfrom typing import Dict, List, Optional"
-              "\nimport tensorflow as tf"
-              "\nimport qibo\nimport circuits\nimport utils\n\n")
-    import qibo
-    qibo.set_backend("custom")
+              "\nimport qibo\nimport circuits\n\n")
+    args = {"nqubits": nqubits, "type": type,
+            "backend": "custom", "precision": "double",
+            "device": None, "accelerators": None,
+            "nshots": None, "fuse": False, "compile": False,
+            "nlayers": None, "gate_type": None, "params": {},
+            "filename": None}
     code = header + code[start: end] + "\n\nmain(**args)"
     with timeout(max_time):
         exec(code, {"args": args})
