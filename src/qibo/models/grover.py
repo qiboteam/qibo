@@ -92,8 +92,8 @@ class Grover(object):
         self.targ_a = target_amplitude
         self.iterative = iterative
 
-        self.space_sup = list(range(self.sup_qubits, self.sup_qubits + self.anc_qubits_sup))
-        self.space_ora = list(range(self.sup_qubits, self.sup_qubits + self.anc_qubits_ora)) + [self.nqubits-1]
+        self.space_sup = list(range(self.sup_qubits + self.anc_qubits_sup))
+        self.space_ora = list(range(self.sup_qubits + self.anc_qubits_ora)) + [self.nqubits-1]
 
     def initialize(self):
         """Initialize the Grover algorithm with the superposition and Grover ancilla."""
