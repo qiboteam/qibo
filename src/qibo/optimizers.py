@@ -1,3 +1,6 @@
+from qibo.parallel import ParallelResources, _executor
+
+
 def optimize(loss, initial_parameters, args=(), method='Powell',
              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
              tol=None, callback=None, options=None, compile=False, processes=None):
@@ -80,8 +83,8 @@ def cmaes(loss, initial_parameters, args=(), options=None):
         initial_parameters (np.ndarray): Initial guess for the variational
             parameters.
         args (tuple): optional arguments for the loss function.
-        options (dict): Dictionary with options accepted by the ``cma``.
-            optimizer. The user can use ``cma.CMAOptions()`` to view the
+        options (dict): Dictionary with options accepted by the ``cma``
+            optimizer. The user can use ``import cma; cma.CMAOptions()`` to view the
             available options.
     """
     import cma
@@ -161,14 +164,16 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
                 a message of the loss function.
     """
     # check if gates are using the MatmulEinsum backend
-    compatible_backends = {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}
+    compatible_backends = {
+        "tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}
     from qibo.core.circuit import Circuit
     for argument in args:
         if isinstance(argument, Circuit):
             from qibo import K
-            if K.name not in compatible_backends: # pragma: no cover
+            if K.name not in compatible_backends:  # pragma: no cover
                 from qibo.config import raise_error
-                raise_error(RuntimeError, "SGD requires native Tensorflow backend.")
+                raise_error(
+                    RuntimeError, "SGD requires native Tensorflow backend.")
 
     from qibo import K
     from qibo.config import log
@@ -203,8 +208,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     return loss(vparams, *args).numpy(), vparams.numpy(), sgd_options
 
 
-from qibo.parallel import ParallelResources, _executor
-class ParallelBFGS: # pragma: no cover
+class ParallelBFGS:  # pragma: no cover
     """Computes the L-BFGS-B using parallel evaluation using multiprocessing.
     This implementation here is based on https://doi.org/10.32614/RJ-2019-030.
 
@@ -256,7 +260,7 @@ class ParallelBFGS: # pragma: no cover
         if eps_at == 0:
             x_ = x
         else:
-            x_= x.copy()
+            x_ = x.copy()
             if eps_at <= len(x):
                 x_[eps_at-1] += eps
             else:
@@ -272,7 +276,8 @@ class ParallelBFGS: # pragma: no cover
                                     self.itertools.repeat(x),
                                     self.itertools.repeat(eps)))
             self.function_value = ret[0]
-            self.jacobian_value = (ret[1:(len(x)+1)] - self.function_value ) / eps
+            self.jacobian_value = (
+                ret[1:(len(x)+1)] - self.function_value) / eps
 
     def fun(self, x):
         self.evaluate(x)
