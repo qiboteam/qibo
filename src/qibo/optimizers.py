@@ -2,7 +2,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
              jac=None, hess=None, hessp=None, bounds=None, constraints=(),
              tol=None, callback=None, options=None, compile=False, processes=None):
     """Main optimization method. Selects one of the following optimizers:
-        - :meth:`qibo.optimizers.cma`
+        - :meth:`qibo.optimizers.cmaes`
         - :meth:`qibo.optimizers.newtonian`
         - :meth:`qibo.optimizers.sgd`
 
@@ -62,7 +62,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
             circuit.set_parameters(params)
     """
     if method == "cma":
-        return cma(loss, initial_parameters, args, options)
+        return cmaes(loss, initial_parameters, args, options)
     elif method == "sgd":
         return sgd(loss, initial_parameters, args, options, compile)
     else:
@@ -71,7 +71,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
                          callback, options, processes)
 
 
-def cma(loss, initial_parameters, args=(), options=None):
+def cmaes(loss, initial_parameters, args=(), options=None):
     """Genetic optimizer based on `pycma <https://github.com/CMA-ES/pycma>`_.
 
     Args:
