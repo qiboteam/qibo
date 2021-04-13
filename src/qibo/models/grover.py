@@ -112,9 +112,9 @@ class Grover(object):
         c.add(self.superposition.invert().on_qubits(*range(nqubits-1)))
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.invert().on_qubits(*range(self.initial_state_circuit.nqubits)))
-        c.add([gates.X(i) for i in range(nqubits-1)])
-        c.add(gates.X(nqubits-1).controlled_by(*range(nqubits-1)))
-        c.add([gates.X(i) for i in range(nqubits-1)])
+        c.add([gates.X(i) for i in range(self.sup_qubits)])
+        c.add(gates.X(nqubits-1).controlled_by(*range(self.sup_qubits)))
+        c.add([gates.X(i) for i in range(self.sup_qubits)])
         if self.initial_state_circuit:
             c.add(self.initial_state_circuit.on_qubits(*range(self.initial_state_circuit.nqubits)))
         c.add(self.superposition.on_qubits(*range(nqubits-1)))
