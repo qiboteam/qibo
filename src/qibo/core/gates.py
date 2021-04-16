@@ -327,16 +327,12 @@ class RZ(MatrixGate, abstract_gates.RZ):
         abstract_gates.RZ.__init__(self, q, theta, trainable)
 
     def construct_unitary(self):
-        print(self.parameters)
         if isinstance(self.parameters, K.native_types): # pragma: no cover
             p = K
             theta = K.cast(self.parameters)
-            print(theta)
         else:
             p = K.qnp
             theta = self.parameters
-        print(theta)
-        print(p)
         phase = p.exp(1j * theta / 2.0)
         return K.cast(p.diag([p.conj(phase), phase]))
 
