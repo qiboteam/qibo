@@ -360,6 +360,7 @@ class FALQON(QAOA):
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
         """
+        # TODO: Are `compile` and `processes` required?
         import numpy as np
         parameters = np.array([delta_t, 0])
 
@@ -385,5 +386,5 @@ class FALQON(QAOA):
 
         self.set_parameters(parameters)
         final_loss = _loss(parameters, self, self.hamiltonian)
-        extra = {'Energies': energy, 'callbacks': callback_result}
+        extra = {'energies': energy, 'callbacks': callback_result}
         return final_loss, parameters, extra
