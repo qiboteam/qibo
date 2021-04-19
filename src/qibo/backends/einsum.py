@@ -18,7 +18,6 @@ automatic differentiation is required. For the latter case, we refer to our
 examples.
 """
 from abc import ABC, abstractmethod
-from qibo import K
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence
 
@@ -219,70 +218,6 @@ class MatmulEinsumCache(BaseCache):
         raise_error(NotImplementedError,
                     "MatmulEinsum backend is not implemented when multicontrol "
                     "gates are used on density matrices.")
-
-class DefaultEinsum:
-    """Gate application backend that based on default ``einsum``.
-
-    This is the most efficient implementation for GPU, however its
-    backpropagation is not working properly for complex numbers.
-    The user should switch to :class:`qibo.core.einsum.MatmulEinsum`
-    if automatic differentiation is required.
-    """
-
-    def __call__(self, cache: str, state: K.Tensor, gate: K.Tensor) -> K.Tensor:
-      return K.einsum(cache, state, gate)
-
-    @staticmethod
-    def create_cache(qubits: Sequence[int], nqubits: int,
-                     ncontrol: Optional[int] = None):
-        return DefaultEinsumCache(qubits, nqubits, ncontrol)
-
-
-class MatmulEinsum:
-  """Gate application backend based on ``matmul``.
-
-  For Tensorflow this is more efficient than ``einsum`` on CPU but slower on GPU.
-  The matmul version implemented here is not the most efficient possible.
-  The implementation algorithm is the following.
-
-  Assume that we are applying
-  a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
-  vector of shape 5 * (2,). We perform the following steps:
-
-  * Reshape the state to (2, 4, 2, 2)
-  * Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
-  * Reshape to (4, 8).
-  * Apply the gate using the matmul (4, 4) x (4, 8).
-  * Reshape to the original shape 5 * (2,) and traspose so that the final
-    qubit order agrees with the initial.
-  """
-
-  def __call__(self, cache: Dict, state: K.Tensor, gate: K.Tensor) -> K.Tensor:
-      shapes = cache["shapes"]
-
-      state = K.reshape(state, shapes[0])
-      state = K.transpose(state, cache["ids"])
-      if cache["conjugate"]:
-          state = K.reshape(K.conj(state), shapes[1])
-      else:
-          state = K.reshape(state, shapes[1])
-
-      n = len(tuple(gate.shape))
-      if n > 2:
-          dim = 2 ** (n // 2)
-          state = K.matmul(K.reshape(gate, (dim, dim)), state)
-      else:
-          state = K.matmul(gate, state)
-
-      state = K.reshape(state, shapes[2])
-      state = K.transpose(state, cache["inverse_ids"])
-      state = K.reshape(state, shapes[3])
-      return state
-
-  @staticmethod
-  def create_cache(qubits: Sequence[int], nqubits: int,
-                   ncontrol: Optional[int] = None):
-      return MatmulEinsumCache(qubits, nqubits, ncontrol)
 
 
 class ControlCache:
