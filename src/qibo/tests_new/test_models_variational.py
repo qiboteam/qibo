@@ -271,21 +271,24 @@ def test_qaoa_errors():
         qaoa.minimize(np.random.random(5))
 
 
-test_names = "method,options,trotter,filename"
+test_names = "model,method,options,trotter,filename"
 test_values = [
-    ("BFGS", {'maxiter': 1}, False, "qaoa_bfgs.out"),
-    ("BFGS", {'maxiter': 1}, True, "trotter_qaoa_bfgs.out"),
-    ("Powell", {'maxiter': 1}, True, "trotter_qaoa_powell.out"),
-    ("sgd", {"nepochs": 5}, False, None)
+    ("QAOA", "BFGS", {'maxiter': 1}, False, "qaoa_bfgs.out"),
+    ("FALQON", "BFGS", {'maxiter': 1}, False, "falqon_bfgs.out"),
+    ("QAOA", "BFGS", {'maxiter': 1}, True, "trotter_qaoa_bfgs.out"),
+    ("QAOA", "Powell", {'maxiter': 1}, True, "trotter_qaoa_powell.out"),
+    ("FALQON", "Powell", {'maxiter': 1}, False, "falqon_powell.out"),
+    ("QAOA", "sgd", {"nepochs": 5}, False, None),
+    ("FALQON", "sgd", {"nepochs": 5}, False, None)
     ]
 @pytest.mark.parametrize(test_names, test_values)
-def test_qaoa_optimization(backend, method, options, trotter, filename):
+def test_qaoa_optimization(backend, model, method, options, trotter, filename):
     original_backend = qibo.get_backend()
     if method == "sgd" and backend != "matmuleinsum":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
     h = hamiltonians.XXZ(3, trotter=trotter)
-    qaoa = models.QAOA(h)
+    qaoa = getattr(models, model)(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
