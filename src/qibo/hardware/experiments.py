@@ -149,15 +149,16 @@ class AWGSystem(Experiment):
         num_qubits = 2
         sampling_rate = 2.3e9
         nchannels = 4
-        sample_size = 23000
+        sample_size = 23001
+        duration = 10e-6
         readout_pulse_type = "IQ"
         readout_pulse_duration = 5e-6
         readout_pulse_amplitude = 0.75 / 2
         readout_IF_frequency = 100e6
-        readout_attenuation = 13
-        qubit_attenuation = 18
+        readout_attenuation = 14
+        qubit_attenuation = 7
         default_averaging = 10000
-        lo_frequency = 4.5171749e9 - 100e6
+        lo_frequency = 4.5172671e9 - 100e6
         ADC_sampling_rate = 1e9
         ADC_length = 4992
         readout_start_time = 0
@@ -200,21 +201,41 @@ class AWGSystem(Experiment):
         from qibo.hardware import pulses
         calibration_placeholder = [{
             "id": 0,
-            "qubit_frequency": 3.0636e9,
+            "qubit_frequency": 3.06362669e9,
             "qubit_amplitude": 0.375 / 2,
             "T1": 5.89e-6,
             "T2": 1.27e-6,
             "T2_Spinecho": 3.5e-6,
-            "pi-pulse": 27.28e-9,
+            "pi-pulse": 100.21e-9,
             "drive_channel": 2,
             "readout_channel": (0, 1),
             "iq_state": {
-                "0": [0.016931769653898632, -0.012145890519806354],
-                "1": [0.011120875219705504, -0.013398438039841545]
+                "0": [0.002117188393398148, 0.020081601323807922],
+                "1": [0.0073554035781681565, 0.01566517632138001]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 27.28e-9, 0.375 / 2, 3.0636e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 27.28e-9, 0.375 / 2, 3.0636e9 - sampling_rate, 90, pulses.Rectangular())],
+                "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 0, pulses.Rectangular())],
+                "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 90, pulses.Rectangular())],
+                "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
+                            pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
+            }
+        }, {
+            "id": 1,
+            "qubit_frequency": 3.284049061e9,
+            "qubit_amplitude": 0.375 / 2,
+            "T1": 5.89e-6,
+            "T2": 1.27e-6,
+            "T2_Spinecho": 3.5e-6,
+            "pi-pulse": 112.16e-9,
+            "drive_channel": 3,
+            "readout_channel": (0, 1),
+            "iq_state": {
+                "0": [0.002117188393398148, 0.020081601323807922],
+                "1": [0.005684468316633034, 0.018196859118029606]
+            },
+            "gates": {
+                "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 0, pulses.Rectangular())],
+                "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 90, pulses.Rectangular())],
                 "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
                             pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
             }
@@ -265,7 +286,8 @@ class AWGSystem(Experiment):
 
     def _generate_readout_TTL(self, samples):
         end = self.static.readout_start_time + self.static.readout_pulse_duration + 1e-6
-        duration = self.static.sampling_rate * samples
+        duration = self.static.duration
+        #time_array = np.linspace(self.static.readout_pulse_duration + readout_buffer - duration, readout_buffer + self.static.readout_pulse_duration, samples)
         time_array = np.linspace(end - duration, end, num=samples)
         
         def TTL(t, start, duration, amplitude):
@@ -284,17 +306,32 @@ class AWGSystem(Experiment):
         start = self.static.readout_start_time + self.static.QB_SW_delay
         qb_ttl = TTL(time_array, start, self.static.readout_pulse_duration, 1)
 
-        return adc_ttl, ro_ttl, qb_ttl
+        def square(t, start, duration, amplitude, freq, I_phase, Q_phase, *args, **kwargs):
+            # Basic rectangular pulse
+            x = amplitude * (1 * (start < t) & 1 * (start+duration > t))
+            I_phase = I_phase * np.pi / 180
+            Q_phase = Q_phase * np.pi / 180
+            i = x * np.cos(2 * np.pi * freq * t + I_phase)
+            q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
+            return i, q
+        
+        start = self.static.readout_start_time
+        i_readout, q_readout = square(time_array, start, self.static.readout_pulse_duration, self.static.readout_pulse_amplitude, self.static.readout_IF_frequency, -6.2, 0.2)
+
+        return i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl
 
     def upload(self, waveform, averaging):
         self.ic.setup(self.static.awg_params, self.static.lo_frequency, self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ic.awg.set_nyquist_mode()
-        i_readout = waveform[0]
-        q_readout = waveform[1]
         ch3_drive = waveform[2]
         ch4_drive = waveform[3]
-        adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
-        output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 60, averaging, self.static.sampling_rate)
+        #adc_ttl = waveform[4]
+        #ro_ttl = waveform[5]
+        #qb_ttl = waveform[6]
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(ch3_drive))
+        #i_readout = waveform[0]
+        #q_readout = waveform[1]
+        output = self.ic.generate_pulse_sequence(i_readout, q_readout, ch3_drive, ch4_drive, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, 1)
         self.ic.ready_instruments_for_scanning(self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ac.update_acquisitionkwargs(mode='NPT',

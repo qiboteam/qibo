@@ -4,6 +4,7 @@ CLASS FILE FOR INSTRUMENT COMMUNICATION AND UTILITY
 
 from typing import Union, Optional, Any, Tuple
 import logging
+import math
 import numpy as np
 import broadbean as bb
 from .quicsyn import QuicSyn
@@ -47,7 +48,7 @@ class InstrumentController():
         """
         
         # Create delay waveform
-        delay_time = int(delay_time / 1.5)
+        delay_time = math.ceil(delay_time / 1.5)
         sample_delay = int(1.5e-6 * sampling_rate)
         wfm_delay = np.zeros((sample_delay), dtype=float)
         # Format delay waveform into broadbean wave element

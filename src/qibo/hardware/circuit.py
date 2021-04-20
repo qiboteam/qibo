@@ -121,18 +121,17 @@ class Circuit(circuit.AbstractCircuit):
         self.qubit_config = self.scheduler.fetch_config()
 
         # Compile pulse sequence
-        try:
-            measurement_gate = next(gate for gate in self.queue if isinstance(gate, gates.M))
-        except StopIteration:
+        if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
-        pulse_sequence = [pulse for gate in self.queue
+        measurement_gate = self.measurement_gate
+        pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
             for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
 
         pulse_sequence = PulseSequence(pulse_sequence)
         # Execute using the scheduler
         job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
         raw_data = job.result()
-        
+
         # Parse results according to desired measurement level
         target_qubits = measurement_gate.target_qubits
         output = {}
@@ -172,9 +171,10 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def _parse_result(self, qubit, raw_data):
-        final = experiment.static.sample_size / experiment.static.ADC_sampling_rate
+        ADC_length = experiment.static.ADC_length
         step = 1 / experiment.static.ADC_sampling_rate
-        ADC_time_array = np.arange(0, final, step)
+        final = ADC_length * step + experiment.static.readout_start_time
+        ADC_time_array = np.arange(experiment.static.readout_start_time, final, step)
         ADC_time_array = ADC_time_array[50:]
 
         static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
