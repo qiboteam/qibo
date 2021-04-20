@@ -9,7 +9,7 @@ from qibo.config import raise_error
 class HardwareGate(ABC, Gate):
 
     @abstractmethod
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         raise_error(NotImplementedError)
 
     @property
@@ -30,7 +30,7 @@ class I(HardwareGate, gates.I):
     def __init__(self, *q):
         gates.I.__init__(self, *q)
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         return []
 
 
@@ -39,13 +39,14 @@ class _Rn_(HardwareGate, gates._Rn_):
     def __init__(self, q, theta):
         gates._Rn_.__init__(self, q, theta)
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         if self.parameters == 0:
             return []
 
         q = self.target_qubits[0]
         time_mod = abs(self.parameters / math.pi)
         phase_mod = 0 if self.parameters > 0 else -180
+        phase_mod += qubit_phases[q]
 
         pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
         for p in pulses:
@@ -68,3 +69,35 @@ class RY(_Rn_, gates.RY):
 
     def __init__(self, q, theta):
         gates.RY.__init__(self, q, theta)
+
+class H(HardwareGate, gates.H):
+    def __init__(self, q):
+        gates.H.__init__(self, q)
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        q = self.target_qubits[0]
+        pulses = []
+        composite = [RY(q, 90), RX(q, 180)]
+        for g in composite:
+            pulses += g.pulse_sequence(qubit_config, qubit_times, qubit_phases)
+
+        return pulses
+
+class CNOT(HardwareGate, gates.CNOT):
+    def __init__(self, q0, q1):
+        gates.CNOT.__init__(self, q0, q1)
+    
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        q = self.target_qubits[0]
+        control = self.control_qubits[0]
+        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name + "_{}".format(control)])
+
+        for p in pulses:
+            duration = p.duration
+            p.start = qubit_times[q]
+            p.phase = qubit_phases[q]
+            p.duration = duration
+            qubit_times[q] += duration
+
+        return pulses
+    
