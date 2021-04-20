@@ -297,7 +297,8 @@ test_names = "delta_t,max_layers,tolerance,filename"
 test_values = [
     (0.1, 5, None, "falqon1.out"),
     (0.01, 2, None, "falqon2.out"),
-    (0.01, 2, 1e-5, "falqon3.out")
+    (0.01, 2, 1e-5, "falqon3.out"),
+    (0.01, 5, 1, "falqon4.out")
     ]
 @pytest.mark.parametrize(test_names, test_values)
 def test_falqon_optimization(backend, delta_t, max_layers, tolerance, filename):

@@ -343,7 +343,7 @@ class FALQON(QAOA):
         self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
 
 
-    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None, compile=False, processes=None,):
+    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None, compile=False, processes=None):
         """Optimizes the variational parameters of the FALQON.
 
         Args:
