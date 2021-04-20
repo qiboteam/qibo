@@ -75,10 +75,10 @@ def python_files():
     for subdir, _, files in os.walk(basedir):
         for file in files:
             pieces = file.split(".")
-            if len(pieces) == 2 and pieces[1] == "py":
-                filedir = os.path.join(subdir, file)
-                if filedir != __file__: # skip current file because it contains `print`
-                    yield filedir
+            # skip non-`.py` files
+            # skip current file because it contains `print`
+            if len(pieces) == 2 and pieces[1] == "py" and pieces[0] != "test_prints":
+                yield os.path.join(subdir, file)
 
 
 @pytest.mark.parametrize("filename", python_files())
