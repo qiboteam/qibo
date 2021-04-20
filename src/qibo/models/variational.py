@@ -343,7 +343,7 @@ class FALQON(QAOA):
         self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
 
 
-    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None, compile=False, processes=None):
+    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None):
         """Optimizes the variational parameters of the FALQON.
 
         Args:
@@ -360,7 +360,6 @@ class FALQON(QAOA):
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
         """
-        # TODO: Are `compile` and `processes` required?
         import numpy as np
         parameters = np.array([delta_t, 0])
 
