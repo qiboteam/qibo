@@ -248,7 +248,7 @@ class Tomography:
             loss += 0.5 * (amp - tr) ** 2 / tr
         return abs(loss)
 
-    def minimize(self, tol=1e-9):
+    def minimize(self, tol=1e-5):
         """Finds density matrix that minimizes MLE."""
         t_guess = Cholesky.decompose(self.linear).vector
         self._fitres = minimize(self.mle, t_guess, tol=tol)
@@ -258,3 +258,43 @@ class Tomography:
         """Fidelity between the MLE-fitted density matrix and a given one."""
         sqrt_th = sqrtm(theory)
         return abs(np.trace(sqrtm(sqrt_th @ self.fit @ sqrt_th))) * 100
+
+    # Need to do this part dynamically
+    @staticmethod
+    def gate_sequence(nqubits):
+        if nqubits != 2:
+            raise_error(NotImplementedError)
+        from qibo.hardware import gates
+        
+        return [
+            [gates.I(0), gates.I(1)],
+            [gates.RX(0, 180), gates.I(1)],
+            [gates.I(0), gates.RX(1, 180)],
+            [gates.RX(0, 90), gates.I(1)],
+            [gates.RX(0, 90), gates.RX(1, 90)],
+            [gates.RX(0, 90), gates.RY(1, 90)],
+            [gates.RX(0, 90), gates.RX(1, 180)],
+            [gates.RY(0, 90), gates.I(1)],
+            [gates.RY(0, 90), gates.RX(1, 90)],
+            [gates.RY(0, 90), gates.RY(1, 90)],
+            [gates.RY(0, 90), gates.RX(1, 180)],
+            [gates.I(0), gates.RX(1, 90)],
+            [gates.RX(0, 180), gates.RX(1, 90)],
+            [gates.I(0), gates.RY(1, 90)],
+            [gates.RX(0, 180), gates.RY(1, 90)],
+            [gates.RX(0, 180), gates.RX(1, 180)],
+        ]
+
+    @staticmethod
+    def basis_states(nqubits):
+        if nqubits != 2:
+            raise_error(NotImplementedError)
+
+        from qibo.hardware import gates
+        return [
+            [], #|00>
+            [gates.RX(0, 90), gates.M(0)], #|10>
+            [gates.RX(1, 90), gates.M(1)], #|01>
+            [gates.RX(1, 90), gates.Align(0, 1), gates.RX(0, 90), gates.M(0)] #|11>
+        ]
+

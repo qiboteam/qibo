@@ -47,6 +47,7 @@ class _Rn_(HardwareGate, gates._Rn_):
         time_mod = abs(self.parameters / math.pi)
         phase_mod = 0 if self.parameters > 0 else -180
         phase_mod += qubit_phases[q]
+        m = 0
 
         pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
         for p in pulses:
@@ -54,7 +55,8 @@ class _Rn_(HardwareGate, gates._Rn_):
             p.start = qubit_times[q]
             p.phase += phase_mod
             p.duration = duration
-            qubit_times[q] += duration
+            m = max(duration, m)
+        qubit_times[q] += m
 
         return pulses
 
@@ -70,17 +72,22 @@ class RY(_Rn_, gates.RY):
     def __init__(self, q, theta):
         gates.RY.__init__(self, q, theta)
 
+
 class M(HardwareGate, gates.M):
+
     def __init__(self, *q):
         gates.M.__init__(self, *q)
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         pulses = []
         for q in self.target_qubits:
             pulses += qubit_config[q]["gates"][self.name]
         
         return pulses
+
+
 class H(HardwareGate, gates.H):
+
     def __init__(self, q):
         gates.H.__init__(self, q)
 
@@ -93,7 +100,9 @@ class H(HardwareGate, gates.H):
 
         return pulses
 
+
 class CNOT(HardwareGate, gates.CNOT):
+
     def __init__(self, q0, q1):
         gates.CNOT.__init__(self, q0, q1)
     
@@ -108,5 +117,23 @@ class CNOT(HardwareGate, gates.CNOT):
             p.phase = qubit_phases[q]
             p.duration = duration
             qubit_times[q] += duration
-
+        
+        qubit_times[control] = qubit_times[q]
         return pulses
+
+class Align(HardwareGate, gates.I):
+    """ Multi-qubit identity gate to prevent qubit operations on argument qubits until all previous qubit operations have completed
+    Used to prepare initial states or for tomography sequence
+    """
+    def __init__(self, *q):
+        gates.I.__init__(self, *q)
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        m = 0
+        for q in self.target_qubits:
+            m = max(m, qubit_times[q])
+
+        for q in self.target_qubits:
+            qubit_times[q] = m
+        return []
+

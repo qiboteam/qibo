@@ -211,11 +211,13 @@ class AWGSystem(Experiment):
             "readout_channel": (0, 1),
             "iq_state": {
                 "0": [0.002117188393398148, 0.020081601323807922],
-                "1": [0.0073554035781681565, 0.01566517632138001]
+                "1": [0.007347951048047871, 0.015370747296983345]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 90, pulses.Rectangular())],
+                "rx": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 0, pulses.Rectangular()),
+                       pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - sampling_rate, 0, pulses.Rectangular())],
+                "ry": [pulses.BasicPulse(2, 0, 100.21e-9, 0.375 / 2, 3.06362669e9 - sampling_rate, 90, pulses.Rectangular()),
+                       pulses.BasicPulse(2, 0, 69.77e-9, 0.375 / 2, 3.086e9 - sampling_rate, 90, pulses.Rectangular())],
                 "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
                             pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
             }
@@ -231,11 +233,13 @@ class AWGSystem(Experiment):
             "readout_channel": (0, 1),
             "iq_state": {
                 "0": [0.002117188393398148, 0.020081601323807922],
-                "1": [0.005684468316633034, 0.018196859118029606]
+                "1": [0.005251298773123129, 0.018463491059057126]
             },
             "gates": {
-                "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 0, pulses.Rectangular())],
-                "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 90, pulses.Rectangular())],
+                "rx": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 0, pulses.Rectangular()),
+                       pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - sampling_rate, 0, pulses.Rectangular())],
+                "ry": [pulses.BasicPulse(3, 0, 112.16e-9, 0.375 / 2, 3.284049061e9 - sampling_rate, 90, pulses.Rectangular()),
+                       pulses.BasicPulse(3, 0, 131.12e-9, 0.375 / 2, 3.23e9 - sampling_rate, 90, pulses.Rectangular())],
                 "measure": [pulses.BasicPulse(0, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 90, pulses.Rectangular()), # I cosine
                             pulses.BasicPulse(1, 0, readout_pulse_duration, readout_pulse_amplitude, readout_IF_frequency, 0, pulses.Rectangular())], # Q negative sine
             }
@@ -356,7 +360,7 @@ class AWGSystem(Experiment):
         q_readout = waveform_batch[1, 0]
         ch3_drive = waveform_batch[2]
         ch4_drive = waveform_batch[3]
-        adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
+        i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
         steps = len(ch3_drive)
         output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 60, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, steps)

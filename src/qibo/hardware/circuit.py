@@ -1,9 +1,11 @@
 import copy
 import bisect
 import numpy as np
+import tensorflow as tf
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses, experiment, gates
+from qibo.hardware import pulses, experiment, gates, tomography
+from qibo.core import measurements
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -125,17 +127,10 @@ class Circuit(circuit.AbstractCircuit):
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
         measurement_gate = self.measurement_gate
-        pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
-            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
-
-        pulse_sequence = PulseSequence(pulse_sequence)
         # Execute using the scheduler
-        job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
-        raw_data = job.result()
+        target_qubits = measurement_gate.target_qubits
 
         # Parse results according to desired measurement level
-        target_qubits = measurement_gate.target_qubits
-        output = {}
 
         # We use the same standard as OpenPulses measurement output level
         # Level 0: Raw
@@ -144,21 +139,70 @@ class Circuit(circuit.AbstractCircuit):
 
         # (Possible Implementation) Level 3: Tomography to return density matrix?
 
-        if measurement_level == 0: 
-            self._final_state = raw_data
+        if len(target_qubits) == 1:
+            pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
+                for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
+            pulse_sequence = PulseSequence(pulse_sequence)
+            job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+            raw_data = job.result()
+            if measurement_level == 0: 
+                self._final_state = raw_data
+            else:
+                for q in target_qubits:
+                    data = self._parse_result(q, raw_data) # Get IQ values
+
+                    if measurement_level == 1:
+                        output = data
+                    
+                    elif measurement_level == 2:
+                        ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
+                        ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
+                        p = self._probability_extraction(data, ref_zero, ref_one)
+                        print(p)
+                        probabilities = tf.constant([1 - p, p])
+                        output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
+
+                self._final_state = output
+
         else:
-            for q in target_qubits:
-                data = self._parse_result(q, raw_data) # Get IQ values
+            ps_states = tomography.Tomography.basis_states(2)
+            prerotation = tomography.Tomography.gate_sequence(2)
+            ps_array = []
+            for state_gate in ps_states:
+                qubit_times = np.zeros(self.nqubits)
+                qubit_phases = np.zeros(self.nqubits)
+                ps_array.append([pulse for gate in (state_gate + [measurement_gate])
+                    for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+
+            for prerotation_sequence in prerotation:
+                qubit_times = np.zeros(self.nqubits)
+                qubit_phases = np.zeros(self.nqubits)
+                ps_array.append([pulse for gate in (self.queue + prerotation_sequence + [measurement_gate])
+                    for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+            ps_array = [PulseSequence(ps) for ps in ps_array]
+            job = self.scheduler.execute_batch_sequence(ps_array, nshots)
+            raw_data = job.result()
+
+            if measurement_level == 0: 
+                self._final_state = raw_data
+            else:
+                data = [self._parse_result(0, raw_data[k]) for k in range(len(ps_array))] # Get IQ values
 
                 if measurement_level == 1:
-                    output[q] = data
+                    output = data
                 
                 elif measurement_level == 2:
-                    ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
-                    ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
-                    output[q] = self._probability_extraction(data, ref_zero, ref_one)
+                    data = np.array([np.arctan2(data[k][1], data[k][0]) * 180 / np.pi for k in range(len(ps_array))])
+                    states = data[0:4]
+                    amp = data[4:20]
+                    tom = tomography.Tomography(amp, states)
+                    tom.minimize(1e-5)
+                    fit = tom.fit
 
-            self._final_state = output
+                    probabilities = tf.constant([fit[k, k].real for k in range(4)])
+                    output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
+
+                self._final_state = output
 
         return self._final_state
 
