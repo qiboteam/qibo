@@ -2,23 +2,30 @@ import pytest
 from qibo import K, backends, models, gates
 
 
-def test_construct_backend(engine):
-    backend = backends._construct_backend(engine)
-    assert backend.name == engine
+def test_construct_backend(backend):
+    bk = K.construct_backend(backend)
+    try:
+        assert bk.name == backend
+    except AssertionError:
+        assert bk.name.split("_")[-1] == backend
     with pytest.raises(ValueError):
-        bk = backends._construct_backend("test")
+        bk = K.construct_backend("test")
 
 
 def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
-    assert backends.get_backend() == backend
-
-    target_name = "numpy" if "numpy" in backend else "tensorflow"
+    if backend == "defaulteinsum":
+        target_name = "tensorflow_defaulteinsum"
+    elif backend == "matmuleinsum":
+        target_name = "tensorflow_matmuleinsum"
+    else:
+        target_name = backend
     assert K.name == target_name
     assert str(K) == target_name
-    assert K.__repr__() == "{}Backend".format(target_name.capitalize())
+    assert repr(K) == target_name
+    assert K.executing_eagerly()
 
     if backend == "custom":
         assert K.custom_gates
@@ -47,7 +54,7 @@ def test_set_backend_errors():
         backends.set_backend("numpy_badgates")
     h = gates.H(0)
     with pytest.warns(RuntimeWarning):
-        backends.set_backend("numpy_defaulteinsum")
+        backends.set_backend("numpy_matmuleinsum")
     backends.set_backend(original_backend)
 
 
@@ -94,25 +101,29 @@ def test_set_precision_matrices(backend, precision):
     backends.set_backend(original_backend)
 
 
-def test_set_precision_errors():
+def test_set_precision_errors(backend):
+    original_backend = backends.get_backend()
     original_precision = backends.get_precision()
+    backends.set_backend(backend)
     gate = gates.H(0)
     with pytest.warns(RuntimeWarning):
         backends.set_precision("single")
     with pytest.raises(ValueError):
         backends.set_precision("test")
     backends.set_precision(original_precision)
+    backends.set_backend(original_backend)
 
 
 def test_set_device(backend):
     original_backend = backends.get_backend()
-    backends.set_backend(backend)
     original_device = backends.get_device()
+    backends.set_backend(backend)
     if "numpy" in backend:
         with pytest.warns(RuntimeWarning):
             backends.set_device("/CPU:0")
     else:
         backends.set_device("/CPU:0")
+        assert backends.get_device() == "/CPU:0"
         with pytest.raises(ValueError):
             backends.set_device("test")
         with pytest.raises(ValueError):
@@ -121,5 +132,20 @@ def test_set_device(backend):
             backends.set_device("/gpu:10")
         with pytest.raises(ValueError):
             backends.set_device("/GPU:10")
-        backends.set_device(original_device)
+    backends.set_device(original_device)
     backends.set_backend(original_backend)
+
+
+def test_set_shot_batch_size():
+    import qibo
+    assert qibo.get_batch_size() == 2 ** 18
+    qibo.set_batch_size(1024)
+    assert qibo.get_batch_size() == 1024
+    from qibo.config import SHOT_BATCH_SIZE
+    assert SHOT_BATCH_SIZE == 1024
+    with pytest.raises(TypeError):
+        qibo.set_batch_size("test")
+    with pytest.raises(ValueError):
+        qibo.set_batch_size(-10)
+    with pytest.raises(ValueError):
+        qibo.set_batch_size(2 ** 35)

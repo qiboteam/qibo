@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from qibo import K
 from qibo.abstractions import callbacks
 from qibo.abstractions.states import AbstractState
-from qibo.config import EIGVAL_CUTOFF, raise_error
+from qibo.config import EIGVAL_CUTOFF, raise_error, log
 
 
 class BackendCallback(callbacks.Callback, ABC):
@@ -34,41 +34,32 @@ class BackendCallback(callbacks.Callback, ABC):
         return getattr(self, self._active_call)(state)
 
 
-class PartialTrace(BackendCallback, callbacks.PartialTrace):
-
-    def set_nqubits(self, state):
-        if not isinstance(state, K.tensor_types):
-            raise_error(TypeError, "State of unknown type {} was given in callback "
-                                   "calculation.".format(type(state)))
-        if self._nqubits is None:
-            self.nqubits = int(math.log2(tuple(state.shape)[0]))
-
-    def state_vector_call(self, state):
-        self.set_nqubits(state)
-        state = K.reshape(state, self.nqubits * (2,))
-        rho = K.tensordot(state, K.conj(state),
-                           axes=[self.partition, self.partition])
-        return K.reshape(rho, (self.rho_dim, self.rho_dim))
-
-    def density_matrix_call(self, state):
-        self.set_nqubits(state)
-        state = K.reshape(state, 2 * self.nqubits * (2,))
-        rho = K.einsum(self.traceout(), state)
-        return K.reshape(rho, (self.rho_dim, self.rho_dim))
-
-
 class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
     _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
     def __init__(self, partition=None, compute_spectrum=False):
         callbacks.EntanglementEntropy.__init__(
             self, partition, compute_spectrum)
-        self.partial_trace = PartialTrace(partition)
+        self.partial_trace = None
+
+    @callbacks.Callback.density_matrix.setter
+    def density_matrix(self, x):
+        callbacks.Callback.density_matrix.fset(self, x) # pylint: disable=no-member
+        if self.partial_trace is not None:
+            self.partial_trace.density_matrix = x
 
     @callbacks.Callback.nqubits.setter
     def nqubits(self, n: int):
+        from qibo import gates
         self._nqubits = n
+        if self.partition is None:
+            self.partition = list(range(n // 2 + n % 2))
+        if len(self.partition) <= self.nqubits // 2:
+            self.partition = [i for i in range(self.nqubits)
+                              if i not in set(self.partition)]
+        self.partial_trace = gates.PartialTrace(*self.partition)
         self.partial_trace.nqubits = n
+        self.partial_trace.density_matrix = self.density_matrix
 
     def entropy(self, rho):
         """Calculates entropy of a density matrix via exact diagonalization."""
@@ -83,12 +74,22 @@ class EntanglementEntropy(BackendCallback, callbacks.EntanglementEntropy):
         entropy = K.sum(masked_eigvals * spectrum)
         return entropy / self._log2
 
+    def set_nqubits(self, state):
+        if not isinstance(state, K.tensor_types):
+            raise_error(TypeError, "State of unknown type {} was given in callback "
+                                   "calculation.".format(type(state)))
+        if self._nqubits is None:
+            self.nqubits = int(math.log2(tuple(state.shape)[0]))
+
+
     def state_vector_call(self, state):
-        rho = self.partial_trace.state_vector_call(state)
+        self.set_nqubits(state)
+        rho = self.partial_trace.state_vector_partial_trace(state)
         return self.entropy(rho)
 
     def density_matrix_call(self, state):
-        rho = self.partial_trace.density_matrix_call(state)
+        self.set_nqubits(state)
+        rho = self.partial_trace.density_matrix_partial_trace(state)
         return self.entropy(rho)
 
 
@@ -126,8 +127,8 @@ class Energy(BackendCallback, callbacks.Energy):
 
 class Gap(BackendCallback, callbacks.Gap):
 
-    def __init__(self, mode="gap"):
-        callbacks.Gap.__init__(self, mode)
+    def __init__(self, mode="gap", check_degenerate=True):
+        callbacks.Gap.__init__(self, mode, check_degenerate)
         self._evolution = None
 
     @property
@@ -151,10 +152,23 @@ class Gap(BackendCallback, callbacks.Gap):
         hamiltonian = self.evolution.hamiltonian()
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()
+        eigvals = hamiltonian.eigenvalues()
         if isinstance(self.mode, int):
-            return K.real(hamiltonian.eigenvalues()[self.mode])
+            return K.real(eigvals[self.mode])
+
         # case: self.mode == "gap"
-        return K.real(hamiltonian.eigenvalues()[1] - hamiltonian.eigenvalues()[0])
+        excited = 1
+        gap = K.real(eigvals[excited] - eigvals[0])
+        if not self.check_degenerate:
+            return gap
+
+        while K.less(gap, EIGVAL_CUTOFF):
+            gap = K.real(eigvals[excited] - eigvals[0])
+            excited += 1
+        if excited > 1:
+            log.warning("The Hamiltonian is degenerate. Using eigenvalue {} "
+                        "to calculate gap.".format(excited))
+        return gap
 
     def density_matrix_call(self, state):
         raise_error(NotImplementedError, "Gap callback is not implemented for "

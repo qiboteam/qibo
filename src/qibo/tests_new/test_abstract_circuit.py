@@ -226,6 +226,7 @@ def test_circuit_on_qubits():
     c = Circuit(3)
     c.add([gates.H(0), gates.X(1), gates.Y(2)])
     c.add([gates.CNOT(0, 1), gates.CZ(1, 2)])
+    c.add(gates.H(1).controlled_by(0, 2))
     new_gates = list(c.on_qubits(2, 5, 4))
     assert new_gates[0].target_qubits == (2,)
     assert new_gates[1].target_qubits == (5,)
@@ -234,6 +235,8 @@ def test_circuit_on_qubits():
     assert new_gates[3].control_qubits == (2,)
     assert new_gates[4].target_qubits == (4,)
     assert new_gates[4].control_qubits == (5,)
+    assert new_gates[5].target_qubits == (5,)
+    assert new_gates[5].control_qubits == (2, 4)
 
 
 def test_circuit_on_qubits_errors():
@@ -492,36 +495,37 @@ def test_circuit_draw():
 def test_circuit_draw_line_wrap():
     """Test circuit text draw with line wrap."""
     ref_line_wrap_50 = \
-          'q0: ─H─U1─U1─U1─U1───────────────────────────x───I ...\n' \
-          'q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─I ...\n' \
-          'q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|── ...\n' \
-          'q3: ─────────o──|───────o──|────o──|──H─U1───|─x── ...\n' \
-          'q4: ────────────o──────────o───────o────o──H─x──── ...\n' \
-          '\n' \
-          '... ───f─o────gf───M─\n' \
-          '... ───|─U3───|──o─M─\n' \
-          '... ───|────X─gf─o─M─\n' \
-          '... ─M─|────o────o───\n' \
-          '... ───f────o────X───'
+        'q0:     ─H─U1─U1─U1─U1───────────────────────────x───I───f ...\n' \
+        'q1:     ───o──|──|──|──H─U1─U1─U1────────────────|─x─I───| ...\n' \
+        'q2:     ──────o──|──|────o──|──|──H─U1─U1────────|─|─────| ...\n' \
+        'q3:     ─────────o──|───────o──|────o──|──H─U1───|─x───M─| ...\n' \
+        'q4:     ────────────o──────────o───────o────o──H─x───────f ...\n' \
+        '\n' \
+        'q0: ... ─o────gf───M─\n' \
+        'q1: ... ─U3───|──o─M─\n' \
+        'q2: ... ────X─gf─o─M─\n' \
+        'q3: ... ────o────o───\n' \
+        'q4: ... ────o────X───'
 
     ref_line_wrap_30 = \
-           'q0: ─H─U1─U1─U1─U1──────────── ...\n' \
-           'q1: ───o──|──|──|──H─U1─U1─U1─ ...\n' \
-           'q2: ──────o──|──|────o──|──|── ...\n' \
-           'q3: ─────────o──|───────o──|── ...\n' \
-           'q4: ────────────o──────────o── ...\n' \
-           '\n' \
-           '... ───────────────x───I───f─o──── ...\n' \
-           '... ───────────────|─x─I───|─U3─── ...\n' \
-           '... H─U1─U1────────|─|─────|────X─ ...\n' \
-           '... ──o──|──H─U1───|─x───M─|────o─ ...\n' \
-           '... ─────o────o──H─x───────f────o─ ...\n' \
-           '\n' \
-           '... gf───M─\n' \
-           '... |──o─M─\n' \
-           '... gf─o─M─\n' \
-           '... ───o───\n' \
-           '... ───X───'
+        'q0:     ─H─U1─U1─U1─U1──────────────── ...\n' \
+        'q1:     ───o──|──|──|──H─U1─U1─U1───── ...\n' \
+        'q2:     ──────o──|──|────o──|──|──H─U1 ...\n' \
+        'q3:     ─────────o──|───────o──|────o─ ...\n' \
+        'q4:     ────────────o──────────o────── ...\n' \
+        '\n' \
+        'q0: ... ───────────x───I───f─o────gf── ...\n' \
+        'q1: ... ───────────|─x─I───|─U3───|──o ...\n' \
+        'q2: ... ─U1────────|─|─────|────X─gf─o ...\n' \
+        'q3: ... ─|──H─U1───|─x───M─|────o────o ...\n' \
+        'q4: ... ─o────o──H─x───────f────o────X ...\n' \
+        '\n' \
+        'q0: ... ─M─\n' \
+        'q1: ... ─M─\n' \
+        'q2: ... ─M─\n' \
+        'q3: ... ───\n' \
+        'q4: ... ───'
+
     import numpy as np
     circuit = Circuit(5)
     for i1 in range(5):
@@ -531,7 +535,7 @@ def test_circuit_draw_line_wrap():
     circuit.add(gates.SWAP(0, 4))
     circuit.add(gates.SWAP(1, 3))
     circuit.add(gates.I(*range(2)))
-    circuit.add(gates.Collapse(3))
+    circuit.add(gates.M(3, collapse=True))
     circuit.add(gates.fSim(0,4,0,0))
     circuit.add(gates.CU3(0,1,0,0,0))
     circuit.add(gates.TOFFOLI(4,3,2))

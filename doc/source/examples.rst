@@ -184,7 +184,7 @@ order that qubits appear in the results is defined by the order the user added
 the measurements and not the qubit ids.
 
 The final state vector is still accessible via
-:method:`qibo.abstractions.states.AbstractCircuit.state`.
+:meth:`qibo.abstractions.states.AbstractState.state`.
 Note that the state vector accessed this way corresponds to the state as if no
 measurements occurred, that is the state is not collapsed during the measurement.
 This is because measurement gates are only used to sample bitstrings and do not
@@ -193,50 +193,8 @@ First, when more than one measurement shots are used the final collapsed state
 is not uniquely defined as it would be different for each measurement result.
 Second the user may wish to re-sample the final state vector in order to
 obtain more measurement shots without having to re-execute the full simulation.
-
-For applications that require the state vector to be collapsed according to a
-single-shot measurement, Qibo provides the :class:`qibo.abstractions.gates.Collapse`
-gate. This can be used in any place within the circuit, for example:
-
-.. code-block:: python
-
-    from qibo.models import Circuit
-    from qibo import gates
-
-    c = Circuit(2)
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.Collapse(0, result=1))
-    final_state = c()
-    # ``final_state`` will be [0, 0, 1, 1] / sqrt(2)
-
-
-Although state collapse typically happens after measurements, currently Qibo
-does not allow to add gates to qubits that are measured, and therefore
-:class:`qibo.abstractions.gates.Collapse` cannot be used after measurements.
-An approach that allows re-using measured qubits after measuring and collapsing
-them is to construct a new circuit and pass the old final state as input:
-
-.. code-block:: python
-
-    from qibo.models import Circuit
-    from qibo import gates
-
-    c1 = Circuit(5)
-    c1.add((gates.H(i) for i in range(5)))
-    c1.add(gates.M(0, 2, 3))
-    # execute and perform a single shot measurement of qubits 0, 2 and 3
-    result = c1(nshots=1)
-
-    # create a new circuit that acts post-measurement
-    c2 = Circuit(5)
-    # take the measured bitstring from ``result``
-    bitstring = result.samples(binary=True)[0]
-    # collapse the state according to this bitstring
-    c2.add(gates.Collapse(0, 2, 3, result=bitstring))
-    # do more gates
-    c2.add((gates.H(i) for i in range(5)))
-    # execute using the measured final state of ``c1`` as the initial state
-    final_state = c2(initial_state=c1.final_state)
+For applications that require the state vector to be collapsed during measurements
+we refer to the :ref:`How to collapse state during measurements? <collapse-examples>`
 
 
 How to write a Quantum Fourier Transform?

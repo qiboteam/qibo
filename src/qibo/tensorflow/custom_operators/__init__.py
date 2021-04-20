@@ -17,6 +17,7 @@ try:
         from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_fsim
         from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import apply_swap
         from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import collapse_state
+        from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators import measure_frequencies
         # Import gradients
         from qibo.tensorflow.custom_operators.python.ops.qibo_tf_custom_operators_grads import _initial_state_grad
         _custom_operators_loaded = True

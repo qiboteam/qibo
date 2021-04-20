@@ -22,6 +22,12 @@ EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 # Eigenvalues smaller than this cut-off are ignored in entropy calculation
 EIGVAL_CUTOFF = 1e-14
 
+# Batch size for sampling shots in measurement frequencies calculation
+SHOT_BATCH_SIZE = 2 ** 18
+
+# Threshold size for sampling shots in measurements frequencies with custom operator
+SHOT_CUSTOM_OP_THREASHOLD = 100000
+
 # Flag for raising warning in ``set_precision`` and ``set_backend``
 ALLOW_SWITCHERS = True
 
@@ -66,6 +72,20 @@ def set_threads(num_threads):
         raise_error(RuntimeError, "Number of threads must be positive.")
     global OMP_NUM_THREADS
     OMP_NUM_THREADS = num_threads
+
+def get_batch_size():
+    """Returns batch size used for sampling measurement shots."""
+    return SHOT_BATCH_SIZE
+
+def set_batch_size(batch_size):
+    if not isinstance(batch_size, int):
+        raise_error(TypeError, "Shot batch size must be integer.")
+    elif batch_size < 1:
+        raise_error(ValueError, "Shot batch size must be a positive integer.")
+    elif batch_size > 2 ** 31:
+         raise_error(ValueError, "Shot batch size cannot be greater than 2^31.")
+    global SHOT_BATCH_SIZE
+    SHOT_BATCH_SIZE = batch_size
 
 
 # Configuration for logging mechanism

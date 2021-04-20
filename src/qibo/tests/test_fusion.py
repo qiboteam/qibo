@@ -194,7 +194,7 @@ def test_fuse_with_callback(accelerators):
     final_state = fused_c()
     np.testing.assert_allclose(final_state, target_state)
     target_entropy = [0.0, 1.0, 0.0, 1.0]
-    np.testing.assert_allclose(entropy[:].numpy(), target_entropy, atol=1e-7)
+    np.testing.assert_allclose(entropy[:], target_entropy, atol=1e-7)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

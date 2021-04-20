@@ -52,13 +52,24 @@ class Hamiltonian(hamiltonians.Hamiltonian):
 
     def expectation(self, state, normalize=False):
         if isinstance(state, states.AbstractState):
-            state = state.tensor
-        statec = self.K.conj(state)
-        hstate = self @ state
-        ev = self.K.real(self.K.sum(statec * hstate))
-        if normalize:
-            norm = self.K.sum(self.K.square(self.K.abs(state)))
-            return ev / norm
+            ev = state.expectation(self, normalize)
+        elif isinstance(state, K.tensor_types):
+            shape = tuple(state.shape)
+            if len(shape) == 1: # state vector
+                from qibo.core.states import VectorState
+                sobj = VectorState.from_tensor(state)
+            elif len(shape) == 2: # density matrix
+                from qibo.core.states import MatrixState
+                sobj = MatrixState.from_tensor(state)
+            else:
+                raise_error(ValueError, "Cannot calculate Hamiltonian "
+                                        "expectation value for state of shape "
+                                        "{}.".format(shape))
+            ev = sobj.expectation(self, normalize)
+        else:
+            raise_error(TypeError, "Cannot calculate Hamiltonian expectation "
+                                   "value for state of type {}."
+                                   "".format(type(state)))
         return ev
 
     def eye(self, n=None):

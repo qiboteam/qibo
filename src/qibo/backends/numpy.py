@@ -4,6 +4,8 @@ from qibo.config import raise_error, log
 
 class NumpyBackend(abstract.AbstractBackend):
 
+    description = "Base class for numpy backends"
+
     def __init__(self):
         super().__init__()
         import numpy as np
@@ -157,12 +159,18 @@ class NumpyBackend(abstract.AbstractBackend):
     def eigvalsh(self, x):
         return self.backend.linalg.eigvalsh(x)
 
+    def less(self, x, y):
+        return self.backend.less(x, y)
+
     def array_equal(self, x, y):
         return self.np.array_equal(x, y)
 
     def unique(self, x, return_counts=False):
         # Uses numpy backend always (even on Tensorflow)
         return self.np.unique(x, return_counts=return_counts)
+
+    def squeeze(self, x, axis=None):
+        return self.backend.squeeze(x, axis=axis)
 
     def gather(self, x, indices=None, condition=None, axis=0):
         if indices is None:
@@ -193,8 +201,22 @@ class NumpyBackend(abstract.AbstractBackend):
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.random(shape).astype(self.dtypes(dtype))
 
-    def sample_measurements(self, probs, nshots):
-        return self.np.random.choice(range(len(probs)), size=nshots, p=probs)
+    def sample_shots(self, probs, nshots):
+        return self.random.choice(range(len(probs)), size=nshots, p=probs)
+
+    def sample_frequencies(self, probs, nshots):
+        from qibo.config import SHOT_BATCH_SIZE
+        def update_frequencies(nsamples, frequencies):
+            samples = self.random.choice(range(len(probs)), size=nsamples, p=probs)
+            res, counts = self.unique(samples, return_counts=True)
+            frequencies[res] += counts
+            return frequencies
+
+        frequencies = self.zeros(int(probs.shape[0]), dtype=self.dtypes('DTYPEINT'))
+        for _ in range(nshots // SHOT_BATCH_SIZE):
+            frequencies = update_frequencies(SHOT_BATCH_SIZE, frequencies)
+        frequencies = update_frequencies(nshots % SHOT_BATCH_SIZE, frequencies)
+        return frequencies
 
     def compile(self, func):
         return func
@@ -212,3 +234,27 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
+
+
+class NumpyDefaultEinsumBackend(NumpyBackend):
+
+    description = "Uses `np.einsum` to apply gates to states via matrix " \
+                  "multiplication."
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_defaulteinsum"
+        self.custom_gates = False
+        self.custom_einsum = "DefaultEinsum"
+
+
+class NumpyMatmulEinsumBackend(NumpyBackend):
+
+    description = "Uses `np.matmul` as well as transpositions and reshapes " \
+                  "to apply gates to states via matrix multiplication."
+
+    def __init__(self):
+        super().__init__()
+        self.name = "numpy_matmuleinsum"
+        self.custom_gates = False
+        self.custom_einsum = "MatmulEinsum"
