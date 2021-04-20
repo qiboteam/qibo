@@ -45,7 +45,7 @@ class CodeText:
 
         raise StopIteration
 
-    def get_line(self, i):
+    def get_line(self, i): # pragma: no cover
         """Calculates line number of the identified `print`.
 
         Args:
