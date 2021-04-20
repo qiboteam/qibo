@@ -117,6 +117,7 @@ class Circuit(circuit.AbstractCircuit):
                                       "scheduler is not provided.")
 
         qubit_times = np.zeros(self.nqubits)
+        qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = self.scheduler.fetch_config()
 
@@ -125,7 +126,7 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError, "No measurement register assigned")
         measurement_gate = self.measurement_gate
         pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
-            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
+            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
 
         pulse_sequence = PulseSequence(pulse_sequence)
         # Execute using the scheduler
