@@ -59,8 +59,9 @@ class PulseSequence:
         i_start = bisect.bisect(self.time, pulse.start)
         #i_start = int((pulse.start / self.duration) * self.sample_size)
         i_duration = int((pulse.duration / self.duration) * self.sample_size)
-        envelope = pulse.shape.envelope(self.time, pulse.start, pulse.duration, pulse.amplitude)
-        waveform[pulse.channel, i_start:i_start + i_duration] += envelope * np.sin(2 * np.pi * pulse.frequency * self.time[i_start:i_start + i_duration] + pulse.phase)
+        time = self.time[i_start:i_start + i_duration]
+        envelope = pulse.shape.envelope(time, pulse.start, pulse.duration, pulse.amplitude)
+        waveform[pulse.channel, i_start:i_start + i_duration] += envelope * np.sin(2 * np.pi * pulse.frequency * time + pulse.phase)
         return waveform
 
     def _compile_multi(self, waveform, pulse):
@@ -175,7 +176,7 @@ class Circuit(circuit.AbstractCircuit):
 
             # Set pulse sequence to get the state vectors
             for state_gate in ps_states:
-                qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(state_gate)
+                qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(state_gate))
                 qubit_phases = np.zeros(self.nqubits)
                 ps_array.append([pulse for gate in (state_gate + [measurement_gate])
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
@@ -184,7 +185,7 @@ class Circuit(circuit.AbstractCircuit):
             for prerotation_sequence in prerotation:
                 qubit_phases = np.zeros(self.nqubits)
                 seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
-                qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(seq)
+                qubit_times = np.zeros(self.nqubits) - max(self._calculate_sequence_duration(seq))
                 ps_array.append([pulse for gate in (seq + [measurement_gate])
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
 
@@ -210,7 +211,6 @@ class Circuit(circuit.AbstractCircuit):
                     tom = tomography.Tomography(amp, states)
                     tom.minimize(1e-5)
                     fit = tom.fit
-
                     probabilities = tf.constant([fit[k, k].real for k in range(4)])
                     output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 

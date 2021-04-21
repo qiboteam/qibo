@@ -171,7 +171,7 @@ class Align(HardwareGate, gates.I):
         gates.I.__init__(self, *q)
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
-        m = 0
+        m = -999
         for q in self.target_qubits:
             m = max(m, qubit_times[q])
 

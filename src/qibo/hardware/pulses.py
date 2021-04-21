@@ -144,14 +144,15 @@ class SWIPHT(PulseShape):
 
         ki_qq = self.g * np.pi
         t_g = 5.87 / (2 * abs(ki_qq))
-        t = time
+        t = np.linspace(0, t_g, len(time))
+
         gamma = 138.9 * (t / t_g)**4 *(1 - t / t_g)**4 + np.pi / 4
         gamma_1st = 4 * 138.9 * (t / t_g)**3 * (1 - t / t_g)**3 * (1 / t_g - 2 * t / t_g**2)
         gamma_2nd = 4*138.9*(t / t_g)**2 * (1 - t / t_g)**2 * (14*(t / t_g**2)**2 - 14*(t / t_g**3) + 3 / t_g**2)
         omega = gamma_2nd / np.sqrt(ki_qq**2 - gamma_1st**2) - 2*np.sqrt(ki_qq**2 - gamma_1st**2) * 1 / np.tan(2 * gamma)
         omega = omega / max(omega)
 
-        return omega
+        return omega * amplitude
 
     def __repr__(self):
         return "({}, {})".format(self.name, self.g)
