@@ -21,6 +21,6 @@ x. Further details and references about this model are presented in the
 qPDF circuit model
 ^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.hep.qPDF
+.. autoclass:: qibo.models.hep.qPDF
     :members:
     :member-order: bysource
