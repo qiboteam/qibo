@@ -353,8 +353,6 @@ class FALQON(QAOA):
             tol (float): Tolerance of energy change. If not specified, no check is done.
             callback (callable): Called after each iteration for scipy optimizers.
             options (dict): a dictionary with options for the different optimizers.
-            compile (bool): whether the TensorFlow graph should be compiled.
-            processes (int): number of processes when using the parallel BFGS method.
 
         Return:
             The final energy (expectation value of the ``hamiltonian``).
