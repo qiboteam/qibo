@@ -24,6 +24,10 @@ class HardwareGate(ABC, Gate):
         backend_gate = backend_gate(*self.init_args, **self.init_kwargs)
         return backend_gate.unitary
 
+    @abstractmethod
+    def duration(self, qubit_config):
+        raise_error(NotImplementedError)
+
 
 class I(HardwareGate, gates.I):
 
@@ -32,6 +36,9 @@ class I(HardwareGate, gates.I):
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         return []
+
+    def duration(self, qubit_config):
+        return 0
 
 
 class _Rn_(HardwareGate, gates._Rn_):
@@ -60,6 +67,15 @@ class _Rn_(HardwareGate, gates._Rn_):
 
         return pulses
 
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        time_mod = abs(self.parameters / math.pi)
+        pulses = qubit_config[q]["gates"][self.name]
+        m = 0
+
+        for p in pulses:
+            m = max(p.duration * time_mod, m)
+        return m
 
 class RX(_Rn_, gates.RX):
 
@@ -85,20 +101,34 @@ class M(HardwareGate, gates.M):
         
         return pulses
 
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        pulses = qubit_config[q]["gates"][self.name]
+        m = 0
+
+        for p in pulses:
+            m = max(p.duration, m)
+        return m
 
 class H(HardwareGate, gates.H):
 
     def __init__(self, q):
         gates.H.__init__(self, q)
+        self.composite = [RY(q, math.pi / 2), RX(q, math.pi)]
 
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
-        q = self.target_qubits[0]
         pulses = []
-        composite = [RY(q, 90), RX(q, 180)]
-        for g in composite:
+        for g in self.composite:
             pulses += g.pulse_sequence(qubit_config, qubit_times, qubit_phases)
 
         return pulses
+
+    def duration(self, qubit_config):
+        d = 0
+        for p in self.composite:
+            d += p.duration(qubit_config)
+
+        return d
 
 
 class CNOT(HardwareGate, gates.CNOT):
@@ -109,17 +139,29 @@ class CNOT(HardwareGate, gates.CNOT):
     def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         q = self.target_qubits[0]
         control = self.control_qubits[0]
+        start = max(qubit_times[q], qubit_times[control])
         pulses = copy.deepcopy(qubit_config[q]["gates"][self.name + "_{}".format(control)])
 
         for p in pulses:
             duration = p.duration
-            p.start = qubit_times[q]
+            p.start = start
             p.phase = qubit_phases[q]
             p.duration = duration
-            qubit_times[q] += duration
+            qubit_times[q] = start + duration
         
         qubit_times[control] = qubit_times[q]
         return pulses
+
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        control = self.control_qubits[0]
+        m = 0
+        pulses = qubit_config[q]["gates"][self.name + "_{}".format(control)]
+
+        for p in pulses:
+            m = max(p.duration, m)
+        return m
+
 
 class Align(HardwareGate, gates.I):
     """ Multi-qubit identity gate to prevent qubit operations on argument qubits until all previous qubit operations have completed
@@ -136,4 +178,7 @@ class Align(HardwareGate, gates.I):
         for q in self.target_qubits:
             qubit_times[q] = m
         return []
+
+    def duration(self, qubit_config):
+        return 0
 

@@ -118,7 +118,6 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError, "Cannot execute circuit on hardware if "
                                       "scheduler is not provided.")
 
-        qubit_times = np.zeros(self.nqubits)
         qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = self.scheduler.fetch_config()
@@ -127,7 +126,6 @@ class Circuit(circuit.AbstractCircuit):
         if self.measurement_gate is None:
             raise_error(RuntimeError, "No measurement register assigned")
         measurement_gate = self.measurement_gate
-        # Execute using the scheduler
         target_qubits = measurement_gate.target_qubits
 
         # Parse results according to desired measurement level
@@ -137,11 +135,16 @@ class Circuit(circuit.AbstractCircuit):
         # Level 1: IQ Values
         # Level 2: Qubit State
 
-        # (Possible Implementation) Level 3: Tomography to return density matrix?
+        # TODO: Move data fitting to qibo.hardware.experiments
 
+        # For one qubit, we can rely on IQ data projection to get the probability p
         if len(target_qubits) == 1:
+            # Calculate qubit control pulse duration and move it before readout
+            qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
             pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
                 for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
+
+            # Execute pulse sequence and project data to probability if requested
             pulse_sequence = PulseSequence(pulse_sequence)
             job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
             raw_data = job.result()
@@ -158,32 +161,38 @@ class Circuit(circuit.AbstractCircuit):
                         ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
                         ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
                         p = self._probability_extraction(data, ref_zero, ref_one)
-                        print(p)
                         probabilities = tf.constant([1 - p, p])
                         output = measurements.MeasurementResult(target_qubits, probabilities, nshots)
 
                 self._final_state = output
 
+        # For 2+ qubits, since we do not have a TWPA (and individual qubit resonator) on this system, we need to do tomography to get the density matrix
         else:
+            # TODO: n-qubit dynamic tomography
             ps_states = tomography.Tomography.basis_states(2)
             prerotation = tomography.Tomography.gate_sequence(2)
             ps_array = []
+
+            # Set pulse sequence to get the state vectors
             for state_gate in ps_states:
-                qubit_times = np.zeros(self.nqubits)
+                qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(state_gate)
                 qubit_phases = np.zeros(self.nqubits)
                 ps_array.append([pulse for gate in (state_gate + [measurement_gate])
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
 
+            # Append prerotation to the circuit sequence for tomography
             for prerotation_sequence in prerotation:
-                qubit_times = np.zeros(self.nqubits)
                 qubit_phases = np.zeros(self.nqubits)
-                ps_array.append([pulse for gate in (self.queue + prerotation_sequence + [measurement_gate])
+                seq = self.queue + [gates.Align(*tuple(range(self.nqubits)))] + prerotation_sequence
+                qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(seq)
+                ps_array.append([pulse for gate in (seq + [measurement_gate])
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
+
             ps_array = [PulseSequence(ps) for ps in ps_array]
             job = self.scheduler.execute_batch_sequence(ps_array, nshots)
             raw_data = job.result()
 
-            if measurement_level == 0: 
+            if measurement_level == 0:
                 self._final_state = raw_data
             else:
                 data = [self._parse_result(0, raw_data[k]) for k in range(len(ps_array))] # Get IQ values
@@ -192,9 +201,12 @@ class Circuit(circuit.AbstractCircuit):
                     output = data
                 
                 elif measurement_level == 2:
+                    # Map each measurement to the phase value and seperate state from prerotations
                     data = np.array([np.arctan2(data[k][1], data[k][0]) * 180 / np.pi for k in range(len(ps_array))])
                     states = data[0:4]
                     amp = data[4:20]
+
+                    # TODO: Repeated minimize, tomography fail decision, tolerance
                     tom = tomography.Tomography(amp, states)
                     tom.minimize(1e-5)
                     fit = tom.fit
@@ -233,3 +245,27 @@ class Circuit(circuit.AbstractCircuit):
         it = np.sum(raw_data[ro_channel[0]] * cos)
         qt = np.sum(raw_data[ro_channel[1]] * cos)
         return np.array([it, qt])
+
+    def _calculate_sequence_duration(self, gate_sequence):
+        qubit_times = np.zeros(self.nqubits)
+        for gate in gate_sequence:
+            q = gate.target_qubits[0]
+
+            if isinstance(gate, gates.Align):
+                m = 0
+                for q in gate.target_qubits:
+                    m = max(m, qubit_times[q])
+
+                for q in gate.target_qubits:
+                    qubit_times[q] = m
+
+            elif isinstance(gate, gates.CNOT):
+                control = gate.control_qubits[0]
+                start = max(qubit_times[q], qubit_times[control])
+                qubit_times[q] = start + gate.duration(self.qubit_config)
+                qubit_times[control] = qubit_times[q]
+
+            else:
+                qubit_times[q] += gate.duration(self.qubit_config)
+
+        return qubit_times

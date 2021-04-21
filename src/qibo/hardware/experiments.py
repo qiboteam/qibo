@@ -362,7 +362,7 @@ class AWGSystem(Experiment):
         ch4_drive = waveform_batch[3]
         i_readout, q_readout, adc_ttl, ro_ttl, qb_ttl = self._generate_readout_TTL(len(i_readout))
         steps = len(ch3_drive)
-        output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 60, averaging, self.static.sampling_rate)
+        output = self.ic.generate_broadbean_sequence(i_readout, q_readout, ch3_drive, ch4_drive, steps, adc_ttl, ro_ttl, qb_ttl, 20, averaging, self.static.sampling_rate)
         self.ic.awg.upload_sequence(output, steps)
         self.ic.ready_instruments_for_scanning(self.static.qubit_attenuation, self.static.readout_attenuation, 0)
         self.ac.update_acquisitionkwargs(mode='NPT',

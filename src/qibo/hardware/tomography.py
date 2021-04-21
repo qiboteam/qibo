@@ -265,24 +265,27 @@ class Tomography:
         if nqubits != 2:
             raise_error(NotImplementedError)
         from qibo.hardware import gates
+
+        pi = np.pi
+        pio2 = pi / 2
         
         return [
             [gates.I(0), gates.I(1)],
-            [gates.RX(0, 180), gates.I(1)],
-            [gates.I(0), gates.RX(1, 180)],
-            [gates.RX(0, 90), gates.I(1)],
-            [gates.RX(0, 90), gates.RX(1, 90)],
-            [gates.RX(0, 90), gates.RY(1, 90)],
-            [gates.RX(0, 90), gates.RX(1, 180)],
-            [gates.RY(0, 90), gates.I(1)],
-            [gates.RY(0, 90), gates.RX(1, 90)],
-            [gates.RY(0, 90), gates.RY(1, 90)],
-            [gates.RY(0, 90), gates.RX(1, 180)],
-            [gates.I(0), gates.RX(1, 90)],
-            [gates.RX(0, 180), gates.RX(1, 90)],
-            [gates.I(0), gates.RY(1, 90)],
-            [gates.RX(0, 180), gates.RY(1, 90)],
-            [gates.RX(0, 180), gates.RX(1, 180)],
+            [gates.RX(0, pi), gates.I(1)],
+            [gates.I(0), gates.RX(1, pi)],
+            [gates.RX(0, pio2), gates.I(1)],
+            [gates.RX(0, pio2), gates.RX(1, pio2)],
+            [gates.RX(0, pio2), gates.RY(1, pio2)],
+            [gates.RX(0, pio2), gates.RX(1, pi)],
+            [gates.RY(0, pio2), gates.I(1)],
+            [gates.RY(0, pio2), gates.RX(1, pio2)],
+            [gates.RY(0, pio2), gates.RY(1, pio2)],
+            [gates.RY(0, pio2), gates.RX(1, pi)],
+            [gates.I(0), gates.RX(1, pio2)],
+            [gates.RX(0, pi), gates.RX(1, pio2)],
+            [gates.I(0), gates.RY(1, pio2)],
+            [gates.RX(0, pi), gates.RY(1, pio2)],
+            [gates.RX(0, pi), gates.RX(1, pi)],
         ]
 
     @staticmethod
@@ -292,9 +295,9 @@ class Tomography:
 
         from qibo.hardware import gates
         return [
-            [], #|00>
-            [gates.RX(0, 90), gates.M(0)], #|10>
-            [gates.RX(1, 90), gates.M(1)], #|01>
-            [gates.RX(1, 90), gates.Align(0, 1), gates.RX(0, 90), gates.M(0)] #|11>
+            [gates.RX(0, np.pi / 2), gates.RX(0, -np.pi / 2)], #|00>
+            [gates.RX(0, np.pi)], #|10>
+            [gates.RX(1, np.pi)], #|01>
+            [gates.RX(1, np.pi), gates.Align(0, 1), gates.RX(0, np.pi)] #|11>
         ]
 
