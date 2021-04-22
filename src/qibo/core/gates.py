@@ -322,6 +322,20 @@ class M(BackendGate, abstract_gates.M):
             return getattr(self, self._active_call)(state)
         return self.result
 
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        pulses = []
+        for q in self.target_qubits:
+            pulses += qubit_config[q]["gates"][self.name]
+        return pulses
+
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        pulses = qubit_config[q]["gates"][self.name]
+        m = 0
+        for p in pulses:
+            m = max(p.duration, m)
+        return m
+
 
 class RX(MatrixGate, abstract_gates.RX):
 
