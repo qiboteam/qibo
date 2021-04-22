@@ -3,6 +3,7 @@ import argparse
 import json
 import numpy as np
 from qibo.hardware import tomography
+from qibo.config import log
 
 
 def rho_theory(i):
@@ -57,8 +58,8 @@ def main(index, plot):
     tom.minimize()
 
     fidelity = tom.fidelity(rho_theory)
-    print("Convergence:", tom.success)
-    print("Fidelity:", fidelity)
+    log.info("Convergence: {}".format(tom.success))
+    log.info("Fidelity: {}".format(fidelity))
 
     if plot:
         from plot import plot # pylint: disable=import-error
