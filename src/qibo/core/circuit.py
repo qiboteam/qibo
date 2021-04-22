@@ -32,16 +32,14 @@ class Circuit(circuit.AbstractCircuit):
         self.state_cls = states.VectorState
 
     def set_nqubits(self, gate):
-        if gate.is_prepared and gate.nqubits != self.nqubits:
+        if gate._nqubits is not None and gate.nqubits != self.nqubits:
             raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
                                       "qubits to circuit that contains {}"
                                       "qubits.".format(
                                             gate, gate.nqubits, self.nqubits))
         gate.nqubits = self.nqubits
-        gate.prepare()
 
     def _add_layer(self, gate):
-        gate.prepare()
         for unitary in gate.unitaries:
             self.set_nqubits(unitary)
             self.queue.append(unitary)
@@ -133,6 +131,9 @@ class Circuit(circuit.AbstractCircuit):
         if K.custom_gates:
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
+        for gate in self.queue:
+            # create gate cache before compilation
+            _ = gate.cache
         self._compiled_execute = K.compile(self._execute_for_compile)
 
     def _execute(self, initial_state=None):

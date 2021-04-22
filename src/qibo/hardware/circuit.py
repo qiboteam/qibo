@@ -111,11 +111,12 @@ class Circuit(circuit.AbstractCircuit):
 
     def execute(self, nshots):
         qubit_times = np.zeros(self.nqubits)
+        qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
         self.qubit_config = K.scheduler.fetch_config()
         # compile pulse sequence
         pulse_sequence = [pulse for gate in self.queue
-            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times)]
+            for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
         pulse_sequence = PulseSequence(pulse_sequence)
         # execute using the scheduler
         self._final_state = K.scheduler.execute_pulse_sequence(pulse_sequence, nshots)

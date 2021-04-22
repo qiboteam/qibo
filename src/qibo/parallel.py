@@ -189,9 +189,10 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 def _check_parallel_configuration(processes):
     """Check if configuration is suitable for efficient parallel execution."""
     import psutil
+    from qibo import get_device
     from qibo.config import raise_error, get_threads, log
-    from qibo.backends import get_device
-    if "GPU" in get_device():  # pragma: no cover
+    device = get_device()
+    if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
     if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
             (processes is None and get_threads() != 1)):  # pragma: no cover
