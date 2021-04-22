@@ -266,9 +266,10 @@ class IcarusQBackend(NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        from qibo.hardware.experiments import IcarusQ
+        #from qibo.hardware.experiments import IcarusQ
+        from qibo.hardware.experiments import AWGSystem
         from qibo.hardware.scheduler import TaskScheduler
         self.name = "icarusq"
         self.custom_gates = True
-        self.experiment = IcarusQ()
+        self.experiment = AWGSystem()
         self.scheduler = TaskScheduler()

@@ -32,7 +32,8 @@ class Backend:
         except ModuleNotFoundError: # pragma: no cover
             self.initialize_numpy()
         try:
-            from qibo.hardware.experiments import IcarusQ
+            #from qibo.hardware.experiments import IcarusQ
+            from qibo.hardware.experiments import AWGSystem
         except ModuleNotFoundError: # pragma: no cover
             self.available_backends.pop("icarusq")
 

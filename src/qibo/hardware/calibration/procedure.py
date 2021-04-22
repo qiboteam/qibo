@@ -97,9 +97,9 @@ if __name__ == "__main__":
     from qibo.hardware.scheduler import TaskScheduler
     import json
     ts = TaskScheduler()
-    static_config = experiment.static.qubit_static_parameters[0]
+    static_config = K.experiment.static.qubit_static_parameters[0]
     qb = Qubit()
     qb.load_from_staic_config(static_config)
-    qb, log = partial_qubit_calibration(static_config, qb, ts)
+    qb, log = partial_qubit_calibration(static_config, qb)
     with open("./calib_test.json", "w+") as w:
         w.write(json.dumps(log))

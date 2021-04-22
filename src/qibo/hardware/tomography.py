@@ -264,7 +264,7 @@ class Tomography:
     def gate_sequence(nqubits):
         if nqubits != 2:
             raise_error(NotImplementedError)
-        from qibo.hardware import gates
+        from qibo import gates
 
         pi = np.pi
         pio2 = pi / 2
@@ -293,7 +293,7 @@ class Tomography:
         if nqubits != 2:
             raise_error(NotImplementedError)
 
-        from qibo.hardware import gates
+        from qibo import gates
         return [
             [gates.RX(0, np.pi / 2), gates.RX(0, -np.pi / 2)], #|00>
             [gates.RX(0, np.pi)], #|10>

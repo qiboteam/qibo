@@ -223,9 +223,9 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def _parse_result(self, qubit, raw_data):
-        final = K.experiment.static.sample_size / K.experiment.static.ADC_sampling_rate
+        final = K.experiment.static.ADC_length / K.experiment.static.ADC_sampling_rate
         step = 1 / K.experiment.static.ADC_sampling_rate
-        ADC_time_array = np.arange(0, final, step)[0:50]
+        ADC_time_array = np.arange(0, final, step)[50:]
 
         static_data = K.experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]

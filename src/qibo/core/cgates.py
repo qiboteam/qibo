@@ -77,7 +77,10 @@ class BackendGate(BaseBackendGate):
                              *self.target_qubits_dm, get_threads())
         return state
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        raise_error(NotImplementedError)
+
+    def duration(self, qubit_config):
         raise_error(NotImplementedError)
 
 
@@ -115,9 +118,24 @@ class H(MatrixGate, gates.H):
     def __init__(self, q):
         MatrixGate.__init__(self)
         gates.H.__init__(self, q)
+        self.composite = [RY(q, math.pi / 2), RX(q, math.pi)]
 
     def construct_unitary(self):
         return matrices.H
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        pulses = []
+        for g in self.composite:
+            pulses += g.pulse_sequence(qubit_config, qubit_times, qubit_phases)
+
+        return pulses
+
+    def duration(self, qubit_config):
+        d = 0
+        for p in self.composite:
+            d += p.duration(qubit_config)
+
+        return d
 
 
 class X(BackendGate, gates.X):
@@ -177,7 +195,25 @@ class I(BackendGate, gates.I):
     def density_matrix_call(self, state):
         return state
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        return []
+
+    def duration(self, qubit_config):
+        return 0
+
+
+class Align(I):
+
+    def __init__(self, *q):
+        I.__init__(self, *q)
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        m = -999
+        for q in self.target_qubits:
+            m = max(m, qubit_times[q])
+
+        for q in self.target_qubits:
+            qubit_times[q] = m
         return []
 
 
@@ -199,7 +235,8 @@ class M(BackendGate, gates.M):
         self._result_tensor = None
         if collapse:
             self.result = self.measurements.MeasurementResult(self.qubits)
-        self.gate_op = K.op.collapse_state
+        if K.op:
+            self.gate_op = K.op.collapse_state
 
     def add(self, gate: gates.M):
         if self.is_prepared:
@@ -311,6 +348,21 @@ class M(BackendGate, gates.M):
             return getattr(self, self._active_call)(state)
         return self.result
 
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        pulses = []
+        for q in self.target_qubits:
+            pulses += qubit_config[q]["gates"][self.name]
+        
+        return pulses
+
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        pulses = qubit_config[q]["gates"][self.name]
+        m = 0
+
+        for p in pulses:
+            m = max(p.duration, m)
+        return m
 
 class RX(MatrixGate, gates.RX):
 
@@ -323,13 +375,15 @@ class RX(MatrixGate, gates.RX):
         cos, isin = K.qnp.cos(theta / 2.0), -1j * K.qnp.sin(theta / 2.0)
         return K.qnp.cast([[cos, isin], [isin, cos]])
 
-    def pulse_sequence(self, qubit_config, qubit_times):
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
         if self.parameters == 0:
             return []
 
         q = self.target_qubits[0]
         time_mod = abs(self.parameters / math.pi)
         phase_mod = 0 if self.parameters > 0 else -180
+        phase_mod += qubit_phases[q]
+        m = 0
 
         pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
         for p in pulses:
@@ -337,9 +391,20 @@ class RX(MatrixGate, gates.RX):
             p.start = qubit_times[q]
             p.phase += phase_mod
             p.duration = duration
-            qubit_times[q] += duration
+            m = max(duration, m)
+        qubit_times[q] += m
 
         return pulses
+
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        time_mod = abs(self.parameters / math.pi)
+        pulses = qubit_config[q]["gates"][self.name]
+        m = 0
+
+        for p in pulses:
+            m = max(p.duration * time_mod, m)
+        return m
 
 
 class RY(MatrixGate, gates.RY):
@@ -353,8 +418,11 @@ class RY(MatrixGate, gates.RY):
         cos, sin = K.qnp.cos(theta / 2.0), K.qnp.sin(theta / 2.0)
         return K.qnp.cast([[cos, -sin], [sin, cos]])
 
-    def pulse_sequence(self, qubit_config, qubit_times):
-        return RX.pulse_sequence(self, qubit_config, qubit_times)
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        return RX.pulse_sequence(self, qubit_config, qubit_times, qubit_phases)
+
+    def duration(self, qubit_config):
+        return RX.duration(self, qubit_config)
 
 
 class RZ(MatrixGate, gates.RZ):
@@ -429,10 +497,37 @@ class CNOT(BackendGate, gates.CNOT):
     def __init__(self, q0, q1):
         BackendGate.__init__(self)
         gates.CNOT.__init__(self, q0, q1)
-        self.gate_op = K.op.apply_x
+        if K.op:
+            self.gate_op = K.op.apply_x
 
     def construct_unitary(self):
-        return matrices.CNOT
+        return matrices.CNOT # TODO: SWIPHT matrix
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        q = self.target_qubits[0]
+        control = self.control_qubits[0]
+        start = max(qubit_times[q], qubit_times[control])
+        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name + "_{}".format(control)])
+
+        for p in pulses:
+            duration = p.duration
+            p.start = start
+            p.phase = qubit_phases[q]
+            p.duration = duration
+            qubit_times[q] = start + duration
+        
+        qubit_times[control] = qubit_times[q]
+        return pulses
+
+    def duration(self, qubit_config):
+        q = self.target_qubits[0]
+        control = self.control_qubits[0]
+        m = 0
+        pulses = qubit_config[q]["gates"][self.name + "_{}".format(control)]
+
+        for p in pulses:
+            m = max(p.duration, m)
+        return m
 
 
 class CZ(BackendGate, gates.CZ):
