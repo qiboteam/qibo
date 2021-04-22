@@ -63,6 +63,9 @@ class BackendGate(BaseBackendGate):
     def density_matrix_call(self, state):
         return K.density_matrix_call(self, state)
 
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        raise_error(NotImplementedError)
+
 
 class MatrixGate(BackendGate):
     """Gate that uses matrix multiplication to be applied to states."""
@@ -73,9 +76,6 @@ class MatrixGate(BackendGate):
     def density_matrix_call(self, state):
         return K.density_matrix_matrix_call(self, state)
 
-    def pulse_sequence(self, qubit_config, qubit_times):
-        raise_error(NotImplementedError)
-
 
 class H(MatrixGate, abstract_gates.H):
 
@@ -85,6 +85,14 @@ class H(MatrixGate, abstract_gates.H):
 
     def construct_unitary(self):
         return K.matrices.H
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        q = self.target_qubits[0]
+        composite = [RY(q, 90), RX(q, 180)]
+        pulses = []
+        for gate in composite:
+            pulses.extend(gate.pulse_sequence(qubit_config, qubit_times, qubit_phases))
+        return pulses
 
 
 class X(BackendGate, abstract_gates.X):
@@ -148,6 +156,9 @@ class I(BackendGate, abstract_gates.I):
 
     def density_matrix_call(self, state):
         return state
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        return []
 
 
 class M(BackendGate, abstract_gates.M):
@@ -305,6 +316,25 @@ class RX(MatrixGate, abstract_gates.RX):
         cos, isin = p.cos(theta / 2.0) + 0j, -1j * p.sin(theta / 2.0)
         return K.cast([[cos, isin], [isin, cos]])
 
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        if self.parameters == 0:
+            return []
+
+        q = self.target_qubits[0]
+        time_mod = abs(self.parameters / math.pi)
+        phase_mod = 0 if self.parameters > 0 else -180
+        phase_mod += qubit_phases[q]
+
+        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name])
+        for p in pulses:
+            duration = p.duration * time_mod
+            p.start = qubit_times[q]
+            p.phase += phase_mod
+            p.duration = duration
+            qubit_times[q] += duration
+
+        return pulses
+
 
 class RY(MatrixGate, abstract_gates.RY):
 
@@ -321,6 +351,9 @@ class RY(MatrixGate, abstract_gates.RY):
             p = K.qnp
         cos, sin = p.cos(theta / 2.0), p.sin(theta / 2.0)
         return K.cast([[cos, -sin], [sin, cos]])
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        return RX.pulse_sequence(self, qubit_config, qubit_times, qubit_phases)
 
 
 class RZ(MatrixGate, abstract_gates.RZ):
@@ -416,6 +449,20 @@ class CNOT(BackendGate, abstract_gates.CNOT):
 
     def construct_unitary(self):
         return K.matrices.CNOT
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        q = self.target_qubits[0]
+        control = self.control_qubits[0]
+        pulses = copy.deepcopy(qubit_config[q]["gates"][self.name + "_{}".format(control)])
+
+        for p in pulses:
+            duration = p.duration
+            p.start = qubit_times[q]
+            p.phase = qubit_phases[q]
+            p.duration = duration
+            qubit_times[q] += duration
+
+        return pulses
 
 
 class CZ(BackendGate, abstract_gates.CZ):
