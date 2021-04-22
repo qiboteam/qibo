@@ -2,7 +2,6 @@ import pytest
 import numpy as np
 from qibo import callbacks, hamiltonians, models
 from qibo.config import raise_error
-from qibo.tests import utils
 from scipy.linalg import expm
 
 
@@ -319,6 +318,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_scheduling_optimization(method, options, messages, trotter, filename):
     """Test optimization of s(t)."""
+    from qibo.tests_new.test_models_variational import assert_regression_fixture
     h0 = hamiltonians.X(3, trotter=trotter)
     h1 = hamiltonians.TFIM(3, trotter=trotter)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
@@ -326,4 +326,4 @@ def test_scheduling_optimization(method, options, messages, trotter, filename):
     best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
                                      messages=messages)
     if filename is not None:
-        utils.assert_regression_fixture(params, filename)
+        assert_regression_fixture(params, filename)

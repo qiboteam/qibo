@@ -273,7 +273,6 @@ class DistributedQueues:
             is_collapse = isinstance(gate, gates.M) and gate.collapse
             if not gate.target_qubits or is_collapse: # special gate
                 gate.nqubits = self.nqubits
-                gate.prepare()
                 self.special_queue.append(gate)
                 self.queues.append([])
 
@@ -303,7 +302,6 @@ class DistributedQueues:
                     # device otherwise device parallelization will break
                     devgate.device = device
                     devgate.nqubits = self.nlocal
-                    devgate.prepare()
                     for i in ids:
                         flag = True
                         # If there are control qubits that are global then

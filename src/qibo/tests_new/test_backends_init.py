@@ -26,21 +26,12 @@ def test_set_backend(backend):
     assert str(K) == target_name
     assert repr(K) == target_name
     assert K.executing_eagerly()
-
+    h = gates.H(0)
     if backend == "custom":
-        assert K.custom_gates
         assert K.custom_einsum is None
-        from qibo.core import cgates as custom_gates
-        assert isinstance(gates.H(0), custom_gates.BackendGate)
+        assert h.gate_op
     else:
-        assert not K.custom_gates
-        if "defaulteinsum" in backend:
-            assert K.custom_einsum == "DefaultEinsum"
-        else:
-            assert K.custom_einsum == "MatmulEinsum"
-        from qibo.core import gates as native_gates
-        h = gates.H(0)
-        assert isinstance(h, native_gates.BackendGate)
+        assert h.gate_op is None
     backends.set_backend(original_backend)
 
 

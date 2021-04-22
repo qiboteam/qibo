@@ -98,7 +98,7 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if not isinstance(gate, gate_module.BackendGate):
+        if K.name != "custom":
             raise_error(NotImplementedError, "Distributed circuit does not "
                                              "support native tensorflow gates.")
         if isinstance(gate, gates.KrausChannel):
