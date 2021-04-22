@@ -3,7 +3,7 @@ from qibo import config
 from qibo.config import raise_error, log, warnings
 from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
 from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
-from qibo.backends.hardware import IcarusQBackend
+from qibo.backends.hardware import IcarusQBackend, AWGBackend
 
 
 class Backend:
@@ -19,7 +19,8 @@ class Backend:
             "numpy": NumpyDefaultEinsumBackend,
             "numpy_defaulteinsum": NumpyDefaultEinsumBackend,
             "numpy_matmuleinsum": NumpyMatmulEinsumBackend,
-            "icarusq": IcarusQBackend
+            "icarusq": IcarusQBackend,
+            "awg": AWGBackend
         }
 
         self.constructed_backends = {}

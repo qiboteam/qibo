@@ -30,3 +30,14 @@ class IcarusQBackend(HardwareBackend):
         from qibo.hardware.experiments import IcarusQ
         self.name = "icarusq"
         self.experiment = IcarusQ()
+
+
+class AWGBackend(HardwareBackend):
+
+    description = "Uses QPU controlled by the AWG system."
+
+    def __init__(self):
+        super().__init__()
+        from qibo.hardware.experiments import AWGSystem
+        self.name = "awg"
+        self.experiment = AWGSystem()

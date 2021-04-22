@@ -145,6 +145,7 @@ class IcarusQ(Experiment):
 
 
 class AWGSystem(Experiment):
+
     class StaticParameters:
         """Hardware static parameters."""
         num_qubits = 2
