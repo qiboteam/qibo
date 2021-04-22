@@ -2,15 +2,15 @@ from qibo import gates
 from qibo.models import Circuit
 import numpy as np
 from scipy.special import binom as binomial
-import itertools
+import argparse
 from qibo.models import Grover
 
 qubits = 10
 num_1 = 5
 
 def set_ancillas_to_num(ancillas, num):
-    '''Set a quantum register to a specific number.
-
+    '''
+    Set a quantum register to a specific number.
     '''
     ind = 0
     for i in reversed(bin(num)[2:]):
@@ -20,8 +20,8 @@ def set_ancillas_to_num(ancillas, num):
 
 
 def add_negates_for_check(ancillas, num):
-    '''Adds the negates needed for control-on-zero.
-
+    '''
+    Adds the negates needed for control-on-zero.
     '''
     ind = 0
     for i in reversed(bin(num)[2:]):
@@ -33,8 +33,8 @@ def add_negates_for_check(ancillas, num):
 
 
 def sub_one(ancillas, controls):
-    '''Subtract 1 bit by bit.
-
+    '''
+    Subtract 1 bit by bit.
     '''
     a = ancillas
     yield gates.X(a[0]).controlled_by(*controls)
@@ -120,17 +120,39 @@ def oracle(n, s):
         oracle.add(gates.X(n).controlled_by(*range(s)))
 
         return oracle
-superposition = superposition_circuit(qubits, num_1)
 
-oracle = oracle(qubits, num_1)
-or_circuit = Circuit(oracle.nqubits)
-or_circuit.add(oracle.on_qubits(*(list(range(qubits)) + [oracle.nqubits - 1] + list(range(qubits, oracle.nqubits - 1)))))
 
-grover = Grover(or_circuit, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=1,
-                superposition_size=int(binomial(qubits, num_1)))
+def main(qubits, num_1):
+    """Creates a superposition circuit that finds all states with num_1 1's in a fixed number of qubits,
+    then the oracle find that state where all the 1's are at the beginning of the bitstring. This oracle has got ancillas
+    Args:
+        qubits (int): number of qubits
+        num_1 (int): number of 1's to find
 
-solution, iterations = grover()
+    Returns:
+        solution (str): found string
+        iterations (int): number of iterations needed
+    """
+    superposition = superposition_circuit(qubits, num_1)
 
-print('The solution is', solution)
-print('Number of iterations needed:', iterations)
+    oracle_circuit = oracle(qubits, num_1)
+    or_circuit = Circuit(oracle_circuit.nqubits)
+    or_circuit.add(oracle_circuit.on_qubits(*(list(range(qubits)) + [oracle.nqubits - 1] + list(range(qubits, oracle.nqubits - 1)))))
 
+    grover = Grover(or_circuit, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=1,
+                    superposition_size=int(binomial(qubits, num_1)))
+
+    solution, iterations = grover()
+
+    print('The solution is', solution)
+    print('Number of iterations needed:', iterations)
+
+    return solution, iterations
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--qubits", default=10, type=int)
+    parser.add_argument("--num_1", default=2, type=int)
+    args = vars(parser.parse_args())
+    main(**args)
