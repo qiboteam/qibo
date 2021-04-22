@@ -1,8 +1,9 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend, IcarusQBackend
+from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
 from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
+from qibo.backends.hardware import IcarusQBackend
 
 
 class Backend:

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from qibo.hardware import connections
 from qibo.hardware.instruments import AcquisitionController
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 
 
 class Experiment(ABC):
@@ -111,7 +111,7 @@ class IcarusQ(Experiment):
             'cd /tmp; ./cqtaws 1 {:.06f}'.format(adc_delay * 1e6))  # delay in us
         if verbose:
             for line in stdout:
-                print(line.strip('\n'))
+                log.info(line.strip('\n'))
 
     def stop(self):
         self.connection.exec_command('cd /tmp; ./cqtaws 0 0')
@@ -142,6 +142,7 @@ class IcarusQ(Experiment):
         dump.close()
 
         return waveform
+
 
 class AWGSystem(Experiment):
     class StaticParameters:
@@ -192,7 +193,7 @@ class AWGSystem(Experiment):
                 "resonator_frequency": 4.5172671e9,
                 "amplitude": 0.375 / 2,
                 "neighbours": [1]
-            }, 
+            },
         ]
         dac_mode_for_nyquist = ["NRZ", "MIX", "MIX", "NRZ"] # fifth onwards not calibrated yet
         pulse_file = 'C:/fpga_python/fpga/tmp/wave_ch1.csv'
@@ -294,7 +295,7 @@ class AWGSystem(Experiment):
         duration = self.static.duration
         #time_array = np.linspace(self.static.readout_pulse_duration + readout_buffer - duration, readout_buffer + self.static.readout_pulse_duration, samples)
         time_array = np.linspace(end - duration, end, num=samples)
-        
+
         def TTL(t, start, duration, amplitude):
             x = amplitude * (1 * (start < t) & 1 * (start + duration > t))
             return x
@@ -319,7 +320,7 @@ class AWGSystem(Experiment):
             i = x * np.cos(2 * np.pi * freq * t + I_phase)
             q = - x * np.sin(2 * np.pi * freq * t + Q_phase)
             return i, q
-        
+
         start = self.static.readout_start_time
         i_readout, q_readout = square(time_array, start, self.static.readout_pulse_duration, self.static.readout_pulse_amplitude, self.static.readout_IF_frequency, -6.2, 0.2)
 
