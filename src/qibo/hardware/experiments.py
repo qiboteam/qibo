@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from io import BytesIO
 from qibo.hardware import connections
-from qibo.config import raise_error
+from qibo.config import raise_error, log
 
 
 class Experiment(ABC):
@@ -110,7 +110,7 @@ class IcarusQ(Experiment):
             'cd /tmp; ./cqtaws 1 {:.06f}'.format(adc_delay * 1e6))  # delay in us
         if verbose:
             for line in stdout:
-                print(line.strip('\n'))
+                log.info(line.strip('\n'))
 
     def stop(self):
         self.connection.exec_command('cd /tmp; ./cqtaws 0 0')
