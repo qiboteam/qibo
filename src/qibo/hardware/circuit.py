@@ -84,6 +84,7 @@ class PulseSequence:
         """Returns the serialized pulse sequence."""
         return ", ".join([pulse.serial() for pulse in self.pulses])
 
+
 class Circuit(circuit.AbstractCircuit):
 
     def __init__(self, nqubits):
@@ -148,7 +149,7 @@ class Circuit(circuit.AbstractCircuit):
             pulse_sequence = PulseSequence(pulse_sequence)
             job = K.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
             raw_data = job.result()
-            if measurement_level == 0: 
+            if measurement_level == 0:
                 self._final_state = raw_data
             else:
                 for q in target_qubits:
@@ -156,7 +157,7 @@ class Circuit(circuit.AbstractCircuit):
 
                     if measurement_level == 1:
                         output = data
-                    
+
                     elif measurement_level == 2:
                         ref_zero = np.array(self.qubit_config[q]["iq_state"]["0"])
                         ref_one = np.array(self.qubit_config[q]["iq_state"]["1"])
@@ -199,7 +200,7 @@ class Circuit(circuit.AbstractCircuit):
 
                 if measurement_level == 1:
                     output = data
-                
+
                 elif measurement_level == 2:
                     # Map each measurement to the phase value and seperate state from prerotations
                     data = np.array([np.arctan2(data[k][1], data[k][0]) * 180 / np.pi for k in range(len(ps_array))])

@@ -176,6 +176,15 @@ class I(Gate):
         self.init_args = q
 
 
+class Align(Gate):
+
+    def __init__(self, *q):
+        super(Align, self).__init__()
+        self.name = "align"
+        self.target_qubits = tuple(q)
+        self.init_args = q
+
+
 class M(Gate):
     """The Measure Z gate.
 

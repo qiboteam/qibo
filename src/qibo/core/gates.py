@@ -162,6 +162,28 @@ class I(BackendGate, abstract_gates.I):
         return []
 
 
+class Align(BackendGate, abstract_gates.Align):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        abstract_gates.Align.__init__(self, *q)
+
+    def construct_unitary(self):
+        return K.eye(2 ** len(self.target_qubits))
+
+    def state_vector_call(self, state):
+        return state
+
+    def density_matrix_call(self, state):
+        return state
+
+    def pulse_sequence(self, qubit_config, qubit_times, qubit_phases):
+        m = max(qubit_times[q] for q in self.target_qubits)
+        for q in self.target_qubits:
+            qubit_times[q] = m
+        return []
+
+
 class M(BackendGate, abstract_gates.M):
     from qibo.core import measurements, states
 
