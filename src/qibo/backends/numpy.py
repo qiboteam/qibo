@@ -438,17 +438,3 @@ class NumpyMatmulEinsumBackend(NumpyBackend):
         state = self.transpose(state, cache["inverse_ids"])
         state = self.reshape(state, shapes[3])
         return state
-
-
-class IcarusQBackend(NumpyBackend):
-
-    description = "Uses QPU controlled by the IcarusQ FPGA."
-
-    def __init__(self):
-        super().__init__()
-        from qibo.hardware.experiments import IcarusQ
-        from qibo.hardware.scheduler import TaskScheduler
-        self.name = "icarusq"
-        self.custom_gates = True
-        self.experiment = IcarusQ()
-        self.scheduler = TaskScheduler()
