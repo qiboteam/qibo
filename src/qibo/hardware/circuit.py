@@ -83,6 +83,10 @@ class PulseSequence:
 
 class Circuit(circuit.AbstractCircuit):
 
+    def __init__(self, nqubits):
+        super().__init__(nqubits)
+        self.param_tensor_types = K.tensor_types
+
     def _add_layer(self):
         raise_error(NotImplementedError)
 

@@ -131,6 +131,7 @@ class Drag(PulseShape):
     def __repr__(self):
         return "({}, {}, {})".format(self.name, self.sigma, self.beta)
 
+
 class SWIPHT(PulseShape):
     """Speeding up Wave forms by Inducing Phase to Harmful Transitions pulse shape"""
 
@@ -138,7 +139,6 @@ class SWIPHT(PulseShape):
         self.name = "SWIPHT"
         self.g = g
 
-        
     def envelope(self, time, start, duration, amplitude):
         import numpy as np
 
