@@ -1,7 +1,7 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
+from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend, IcarusQBackend
 from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
 
 
@@ -17,7 +17,8 @@ class Backend:
             "tensorflow_matmuleinsum": TensorflowMatmulEinsumBackend,
             "numpy": NumpyDefaultEinsumBackend,
             "numpy_defaulteinsum": NumpyDefaultEinsumBackend,
-            "numpy_matmuleinsum": NumpyMatmulEinsumBackend
+            "numpy_matmuleinsum": NumpyMatmulEinsumBackend,
+            "icarusq": IcarusQBackend
         }
 
         self.constructed_backends = {}
@@ -30,6 +31,10 @@ class Backend:
             self.initialize_tensorflow()
         except ModuleNotFoundError: # pragma: no cover
             self.initialize_numpy()
+        try:
+            from qibo.hardware.experiments import IcarusQ
+        except ModuleNotFoundError: # pragma: no cover
+            self.available_backends.pop("icarusq")
 
     @property
     def active_backend(self):

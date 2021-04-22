@@ -2,10 +2,12 @@ import copy
 import bisect
 import numpy as np
 import tensorflow as tf
+from qibo import K, gates
 from qibo.abstractions import circuit
 from qibo.config import raise_error
-from qibo.hardware import pulses, experiment, gates, tomography
+from qibo.hardware import pulses, tomography
 from qibo.core import measurements
+
 
 class PulseSequence:
     """Describes a sequence of pulses for the FPGA to unpack and convert into arrays
@@ -19,17 +21,17 @@ class PulseSequence:
     """
     def __init__(self, pulses, duration=None):
         self.pulses = pulses
-        self.nchannels = experiment.static.nchannels
-        self.sample_size = experiment.static.sample_size
-        self.sampling_rate = experiment.static.sampling_rate
-        self.file_dir = experiment.static.pulse_file
+        self.nchannels = K.experiment.static.nchannels
+        self.sample_size = K.experiment.static.sample_size
+        self.sampling_rate = K.experiment.static.sampling_rate
+        self.file_dir = K.experiment.static.pulse_file
 
         if duration is None:
             self.duration = self.sample_size / self.sampling_rate
         else:
             self.duration = duration
             self.sample_size = int(duration * self.sampling_rate)
-        end = experiment.static.readout_start_time + experiment.static.readout_pulse_duration + 1e-6
+        end = K.experiment.static.readout_pulse_duration + 1e-6
         self.time = np.linspace(end - self.duration, end, num=self.sample_size)
 
     def compile(self):
@@ -84,10 +86,6 @@ class PulseSequence:
 
 class Circuit(circuit.AbstractCircuit):
 
-    def __init__(self, nqubits, scheduler=None):
-        super().__init__(nqubits)
-        self.scheduler = scheduler
-
     def _add_layer(self):
         raise_error(NotImplementedError)
 
@@ -115,13 +113,10 @@ class Circuit(circuit.AbstractCircuit):
         return new_data[0]/new_refer_1[0]
 
     def execute(self, nshots, measurement_level=2):
-        if self.scheduler is None:
-            raise_error(RuntimeError, "Cannot execute circuit on hardware if "
-                                      "scheduler is not provided.")
 
         qubit_phases = np.zeros(self.nqubits)
         # Get calibration data
-        self.qubit_config = self.scheduler.fetch_config()
+        self.qubit_config = K.scheduler.fetch_config()
 
         # Compile pulse sequence
         if self.measurement_gate is None:
@@ -141,13 +136,13 @@ class Circuit(circuit.AbstractCircuit):
         # For one qubit, we can rely on IQ data projection to get the probability p
         if len(target_qubits) == 1:
             # Calculate qubit control pulse duration and move it before readout
-            qubit_times = experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
+            qubit_times = K.experiment.static.readout_start_time - self._calculate_sequence_duration(self.queue)
             pulse_sequence = [pulse for gate in (self.queue + [measurement_gate])
                 for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)]
 
             # Execute pulse sequence and project data to probability if requested
             pulse_sequence = PulseSequence(pulse_sequence)
-            job = self.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
+            job = K.scheduler.execute_pulse_sequence(pulse_sequence, nshots)
             raw_data = job.result()
             if measurement_level == 0: 
                 self._final_state = raw_data
@@ -190,7 +185,7 @@ class Circuit(circuit.AbstractCircuit):
                     for pulse in gate.pulse_sequence(self.qubit_config, qubit_times, qubit_phases)])
 
             ps_array = [PulseSequence(ps) for ps in ps_array]
-            job = self.scheduler.execute_batch_sequence(ps_array, nshots)
+            job = K.scheduler.execute_batch_sequence(ps_array, nshots)
             raw_data = job.result()
 
             if measurement_level == 0:
@@ -228,16 +223,14 @@ class Circuit(circuit.AbstractCircuit):
         return self._final_state
 
     def _parse_result(self, qubit, raw_data):
-        ADC_length = experiment.static.ADC_length
-        step = 1 / experiment.static.ADC_sampling_rate
-        final = ADC_length * step + experiment.static.readout_start_time
-        ADC_time_array = np.arange(experiment.static.readout_start_time, final, step)
-        ADC_time_array = ADC_time_array[50:]
+        final = K.experiment.static.sample_size / K.experiment.static.ADC_sampling_rate
+        step = 1 / K.experiment.static.ADC_sampling_rate
+        ADC_time_array = np.arange(0, final, step)[0:50]
 
-        static_data = experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
+        static_data = K.experiment.static.qubit_static_parameters[self.qubit_config[qubit]["id"]]
         ro_channel = static_data["channel"][2]
         # For now readout is done with mixers
-        IF_frequency = static_data["resonator_frequency"] - experiment.static.lo_frequency # downconversion
+        IF_frequency = static_data["resonator_frequency"] - K.experiment.static.lo_frequency # downconversion
 
         #raw_data = self.final_state.result()
         # TODO: Implement a method to detect when the readout signal starts in the ADC data

@@ -126,6 +126,9 @@ class BackendGate(BaseBackendGate):
             state = self.einsum(self.calculation_cache.left, state, self.matrix)
         return K.reshape(state, self.flat_shape)
 
+    def pulse_sequence(self, qubit_config, qubit_times):
+        raise_error(NotImplementedError)
+
 
 class H(BackendGate, gates.H):
 

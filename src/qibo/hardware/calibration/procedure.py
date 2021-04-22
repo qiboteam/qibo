@@ -1,6 +1,9 @@
 import numpy as np
-from qibo.hardware import experiment, pulses
+from qibo import K
+from qibo.hardware import pulses
 from qibo.hardware.calibration import fitting, tasks
+
+default_averaging = K.experiment.static.default_averaging
 
 class Qubit:
     def __init__(self):
@@ -20,14 +23,14 @@ class Qubit:
         self.drive_channel = static_config["channel"][0]
 
 def _parse_result(raw_data, static_config):
-    final = experiment.static.ADC_length / experiment.static.ADC_sampling_rate
-    step = 1 / experiment.static.ADC_sampling_rate
+    final = K.experiment.static.sample_size / K.experiment.static.ADC_sampling_rate
+    step = 1 / K.experiment.static.ADC_sampling_rate
     ADC_time_array = np.arange(0, final, step)
     ADC_time_array = ADC_time_array[50:]
 
     ro_channel = static_config["channel"][2]
     # For now readout is done with mixers
-    IF_frequency = static_config["resonator_frequency"] - experiment.static.lo_frequency # downconversion
+    IF_frequency = static_config["resonator_frequency"] - K.experiment.static.lo_frequency # downconversion
 
     cos = np.cos(2 * np.pi * IF_frequency * ADC_time_array)
     it = np.sum(raw_data[ro_channel[0]] * cos)
@@ -37,11 +40,11 @@ def _parse_result(raw_data, static_config):
 
     return [it, qt, ampl, phase]
 
-def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
+def _execute_pulse_sequences(pulse_sequences, static_config):
     steps = len(pulse_sequences)
     res = np.zeros((4, steps))
     for i in range(steps):
-        data = scheduler.execute_pulse_sequence(pulse_sequences[i], experiment.static.default_averaging).result()
+        data = K.scheduler.execute_pulse_sequence(pulse_sequences[i], static_config).result()
         it, qt, ampl, phase = _parse_result(data, static_config)
         res[0, i] = it
         res[1, i] = qt
@@ -50,9 +53,9 @@ def _execute_pulse_sequences(scheduler, pulse_sequences, static_config):
 
     return res
 
-def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
+def partial_qubit_calibration(static_config: dict, qubit: Qubit):
     """ Calibrate a qubit's frequency and pi-pulse only
-    
+
     """
     log = {}
 
@@ -61,7 +64,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
     channel = qubit.drive_channel
     amplitude = qubit.qubit_amplitude
     freq_sweep, seq = tasks.PulseSpectroscopy(freq_start, freq_end, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = _execute_pulse_sequences(seq, static_config)
     ampl_array = res[2]
     log["pulse"] = {
         "freq_sweep": freq_sweep.tolist(),
@@ -72,7 +75,7 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
 
     # Next, do Rabi oscillation to determine pi-pulse time
     time_sweep, seq = tasks.RabiTime(0, 600e-9, 3e-9, freq, amplitude, channel)
-    res = _execute_pulse_sequences(scheduler, seq, static_config)
+    res = _execute_pulse_sequences(seq, static_config)
     log["rabi"] = {
         "time_sweep": time_sweep.tolist(),
         "result": res.tolist()
@@ -84,9 +87,9 @@ def partial_qubit_calibration(static_config: dict, qubit: Qubit, scheduler):
         "0": [res[0, idx_zero], res[1, idx_zero]],
         "1": [res[0, idx_one], res[1, idx_one]]
     }
-    freq_nyquist = freq - experiment.static.sampling_rate
-    qubit.pulses["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
-    qubit.pulses["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
+    freq_nyquist = freq - K.experiment.static.sampling_rate
+    qubit["rx"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 0, pulses.Rectangular())]
+    qubit["ry"] = [pulses.BasicPulse(channel, 0, pi_pulse, amplitude, freq_nyquist, 90, pulses.Rectangular())]
 
     return qubit, log
 

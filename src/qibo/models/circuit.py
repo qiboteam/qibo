@@ -1,4 +1,5 @@
 import math
+from qibo import K
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit as StateCircuit
 from typing import Dict, Optional
@@ -35,6 +36,10 @@ class Circuit(StateCircuit):
                 accelerators: Optional[Dict[str, int]] = None,
                 memory_device: str = "/CPU:0",
                 density_matrix: bool = False):
+        if K.name == "icarusq":
+            from qibo.hardware.circuit import Circuit as HardwareCircuit
+            return HardwareCircuit(nqubits)
+
         circuit_cls, args, kwargs = cls._constructor(
                   nqubits, accelerators=accelerators,
                   memory_device=memory_device,
