@@ -36,7 +36,7 @@ class Circuit(StateCircuit):
                 accelerators: Optional[Dict[str, int]] = None,
                 memory_device: str = "/CPU:0",
                 density_matrix: bool = False):
-        if K.name == "icarusq":
+        if K.name == "icarusq" or K.name == "awg":
             from qibo.hardware.circuit import Circuit as HardwareCircuit
             return HardwareCircuit(nqubits)
 
