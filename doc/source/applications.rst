@@ -23,3 +23,4 @@ problems.
     tutorials/shor/README.md
     tutorials/qPDF/qPDF.ipynb
     tutorials/bell-variational/README.md
+    tutorials/falqon/README.md
