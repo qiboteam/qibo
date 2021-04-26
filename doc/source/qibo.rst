@@ -61,10 +61,15 @@ General circuit models
 Application specific models
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. automodule:: qibo.models
+.. autoclass:: qibo.models.variational.VQE
     :members:
     :member-order: bysource
-    :exclude-members: K
+.. autoclass:: qibo.models.variational.QAOA
+    :members:
+    :member-order: bysource
+.. autoclass:: qibo.models.grover.Grover
+    :members:
+    :member-order: bysource
 
 
 .. _circuitaddition:
@@ -151,10 +156,10 @@ all the gates in the group.
 Time evolution
 ^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.evolution.StateEvolution
+.. autoclass:: qibo.models.evolution.StateEvolution
     :members:
     :member-order: bysource
-.. autoclass:: qibo.evolution.AdiabaticEvolution
+.. autoclass:: qibo.models.evolution.AdiabaticEvolution
     :members:
     :member-order: bysource
 
