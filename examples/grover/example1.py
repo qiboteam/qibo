@@ -36,4 +36,3 @@ if __name__ == "__main__":
     parser.add_argument("--nqubits", default=10, type=int)
     args = vars(parser.parse_args())
     main(**args)
-
