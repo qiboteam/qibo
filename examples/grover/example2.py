@@ -49,24 +49,24 @@ def check(instance, num_1):
     return res
 
 
-def main(qubits, num_1, iterative=False):
+def main(nqubits, num_1, iterative=False):
     """Create an oracle, find the states with some 1's among all the states with a fixed number of qubits
     Args:
-        qubits (int): number of qubits
+        nqubits (int): number of qubits
         num_1 (int): number of 1's to find
 
     Returns:
         solution (str): found string
         iterations (int): number of iterations needed
     """
-    oracle_circuit = oracle(qubits, num_1)
+    oracle_circuit = oracle(nqubits, num_1)
 
     #################################################################
     ###################### NON ITERATIVE MODEL ######################
     #################################################################
 
     if not iterative:
-        grover = Grover(oracle_circuit, superposition_qubits=qubits, number_solutions=int(binom(qubits, num_1)))
+        grover = Grover(oracle_circuit, superposition_qubits=nqubits, number_solutions=int(binom(nqubits, num_1)))
 
 
         solution, iterations = grover()
@@ -75,7 +75,7 @@ def main(qubits, num_1, iterative=False):
 
         print('The solution is', solution)
         print('Number of iterations needed:', iterations)
-        print('\nFound number of solutions: ',len(solution),'\nTheoretical number of solutions:', int(binom(qubits, num_1)))
+        print('\nFound number of solutions: ',len(solution),'\nTheoretical number of solutions:', int(binom(nqubits, num_1)))
 
         return solution, iterations
 
@@ -86,7 +86,7 @@ def main(qubits, num_1, iterative=False):
     print('\nITERATIVE MODEL: \n')
 
     if iterative:
-        grover = Grover(oracle_circuit, superposition_qubits=qubits, check=check, check_args=(num_1,))
+        grover = Grover(oracle_circuit, superposition_qubits=nqubits, check=check, check_args=(num_1,))
         solution, iterations = grover()
 
         print('Found solution:', solution)
@@ -97,7 +97,8 @@ def main(qubits, num_1, iterative=False):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--qubits", default=10, type=int)
+    parser.add_argument("--nqubits", default=10, type=int)
     parser.add_argument("--num_1", default=2, type=int)
+    parser.add_argument('--iterative', action='store_true')
     args = vars(parser.parse_args())
     main(**args)

@@ -5,8 +5,6 @@ from scipy.special import binom as binomial
 import argparse
 from qibo.models import Grover
 
-qubits = 10
-num_1 = 5
 
 def set_ancillas_to_num(ancillas, num):
     '''
@@ -122,25 +120,25 @@ def oracle(n, s):
         return oracle
 
 
-def main(qubits, num_1):
+def main(nqubits, num_1):
     """Creates a superposition circuit that finds all states with num_1 1's in a fixed number of qubits,
     then the oracle find that state where all the 1's are at the beginning of the bitstring. This oracle has got ancillas
     Args:
-        qubits (int): number of qubits
+        nqubits (int): number of qubits
         num_1 (int): number of 1's to find
 
     Returns:
         solution (str): found string
         iterations (int): number of iterations needed
     """
-    superposition = superposition_circuit(qubits, num_1)
+    superposition = superposition_circuit(nqubits, num_1)
 
-    oracle_circuit = oracle(qubits, num_1)
+    oracle_circuit = oracle(nqubits, num_1)
     or_circuit = Circuit(oracle_circuit.nqubits)
-    or_circuit.add(oracle_circuit.on_qubits(*(list(range(qubits)) + [oracle.nqubits - 1] + list(range(qubits, oracle.nqubits - 1)))))
+    or_circuit.add(oracle_circuit.on_qubits(*(list(range(nqubits)) + [oracle_circuit.nqubits - 1] + list(range(nqubits, oracle_circuit.nqubits - 1)))))
 
-    grover = Grover(or_circuit, superposition_circuit=superposition, superposition_qubits=qubits, number_solutions=1,
-                    superposition_size=int(binomial(qubits, num_1)))
+    grover = Grover(or_circuit, superposition_circuit=superposition, superposition_qubits=nqubits, number_solutions=1,
+                    superposition_size=int(binomial(nqubits, num_1)))
 
     solution, iterations = grover()
 
@@ -152,7 +150,7 @@ def main(qubits, num_1):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--qubits", default=10, type=int)
+    parser.add_argument("--nqubits", default=10, type=int)
     parser.add_argument("--num_1", default=2, type=int)
     args = vars(parser.parse_args())
     main(**args)
