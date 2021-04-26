@@ -3,21 +3,21 @@ from qibo.models.grover import Grover
 from qibo.models import Circuit
 import argparse
 
-def main(qubits):
+def main(nqubits):
     """Create an oracle, find state |11...11> for a number of qubits
     Args:
-        qubits (int): number of qubits
+        nqubits (int): number of qubits
 
     Returns:
         solution (str): found string
         iterations (int): number of iterations needed
     """
-    superposition = Circuit(qubits)
-    superposition.add([gates.H(i) for i in range(qubits)])
+    superposition = Circuit(nqubits)
+    superposition.add([gates.H(i) for i in range(nqubits)])
 
 
-    oracle = Circuit(qubits + 1)
-    oracle.add(gates.X(qubits + 1).controlled_by(*range(qubits)))
+    oracle = Circuit(nqubits + 1)
+    oracle.add(gates.X(nqubits).controlled_by(*range(nqubits)))
     # Create superoposition circuit: Full superposition over the selected number qubits.
 
     # Generate and execute Grover class
@@ -33,7 +33,7 @@ def main(qubits):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--qubits", default=5, type=int)
+    parser.add_argument("--nqubits", default=10, type=int)
     args = vars(parser.parse_args())
     main(**args)
 

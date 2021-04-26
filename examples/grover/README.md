@@ -1,4 +1,5 @@
 # A General Grover Model
+Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/grover](https://github.com/Quantum-TII/qibo/tree/master/examples/grover).
 
 The examples presented here provide information to run a general Grover model accesible as
 `from qibo.models import Grover`. This model allows to construct a general
