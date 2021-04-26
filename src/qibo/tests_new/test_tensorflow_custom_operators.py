@@ -327,7 +327,6 @@ def test_collapse_state(nqubits, targets, results, dtype):
     b2d = 2 ** np.arange(len(results) - 1, -1, -1)
     result = np.array(results).dot(b2d)
     state = K.op.collapse_state(state, qubits, result, nqubits)
-    print((np.abs(state.numpy()) ** 2).sum())
     np.testing.assert_allclose(state, target_state, atol=atol)
 
 
