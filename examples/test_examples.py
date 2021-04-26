@@ -246,27 +246,29 @@ def test_shor(N, times, A, semiclassical, enhance):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits", 5)
-def test_grover_1(nqubits):
+@pytest.mark.parametrize("nqubits", [5, 6, 7])
+def test_grover_example1(nqubits):
     args = locals()
     path = os.path.join(base_dir, "grover")
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="example1.py")
 
-@pytest.mark.parametrize("nqubits", 10)
-@pytest.mark.parametrize("num_1", 1)
+
+@pytest.mark.parametrize("nqubits", [5, 8, 10])
+@pytest.mark.parametrize("num_1", [1, 2])
 @pytest.mark.parametrize("iterative", [False, True])
-def test_grover_2(nqubits, num_1):
+def test_grover_example2(nqubits, num_1, iterative):
     args = locals()
     path = os.path.join(base_dir, "grover")
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="example2.py")
 
-@pytest.mark.parametrize("nqubits", 10)
-@pytest.mark.parametrize("num_1", 2)
-def test_grover_3(nqubits, num_1):
+
+@pytest.mark.parametrize("nqubits", [5, 8, 10])
+@pytest.mark.parametrize("num_1", [1, 2])
+def test_grover_example3(nqubits, num_1):
     args = locals()
     path = os.path.join(base_dir, "grover")
     sys.path[-1] = path
