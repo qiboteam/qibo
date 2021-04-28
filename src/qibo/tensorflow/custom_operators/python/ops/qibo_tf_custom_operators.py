@@ -37,7 +37,7 @@ def apply_gate(state, gate, qubits, nqubits, target, omp_num_threads=get_threads
         state (tf.Tensor): State vector of shape ``(2 ** nqubits,)``.
         gate (tf.Tensor): Gate matrix of shape ``(2, 2)``.
         qubits (tf.Tensor): Tensor that contains control and target qubits in
-            sorted order. See :meth:`qibo.tensorflow.cgates.TensorflowGate.qubits_tensor`
+            sorted order. See :meth:`qibo.backends.abstract.TensorflowCustomBackend.cache.qubits_tensor`
             for more details.
         nqubits (int): Total number of qubits in the state vector.
         target (int): Qubit ID that the gate will act on.
