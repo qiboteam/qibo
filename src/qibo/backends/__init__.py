@@ -23,7 +23,7 @@ class Backend:
             self.available_backends["numpy_defaulteinsum"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_matmuleinsum"] = NumpyMatmulEinsumBackend
         else:  # pragma: no cover
-            raise_error("Numpy is not installed.")
+            raise_error(ModuleNotFoundError, "Numpy is not installed.")
 
         # check if tensorflow is installed and use it as default backend.
         if _check_availability("tensorflow"):
