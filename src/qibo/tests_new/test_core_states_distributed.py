@@ -22,7 +22,7 @@ def test_distributed_state_init():
 def test_distributed_state_constructors(init_type):
     """Tests `zero_state` and `plus_state` for `DistributedState`."""
     from qibo.models import Circuit
-    from qibo.tensorflow.distutils import DistributedQubits
+    from qibo.core.distutils import DistributedQubits
     c = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = getattr(states.DistributedState, f"{init_type}_state")(c)
@@ -40,7 +40,7 @@ def test_distributed_state_constructors(init_type):
 def test_user_initialization(nqubits):
     import itertools
     from qibo.models import Circuit
-    from qibo.tensorflow.distutils import DistributedQubits
+    from qibo.core.distutils import DistributedQubits
     target_state = (np.random.random(2 ** nqubits) +
                     1j * np.random.random(2 ** nqubits))
     c = Circuit(nqubits, {"/GPU:0": 2, "/GPU:1": 2})
@@ -56,7 +56,7 @@ def test_user_initialization(nqubits):
 
 def test_distributed_state_copy():
     from qibo.models import Circuit
-    from qibo.tensorflow.distutils import DistributedQubits
+    from qibo.core.distutils import DistributedQubits
     c = Circuit(4, {"/GPU:0": 2, "/GPU:1": 2})
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = states.DistributedState.zero_state(c)
