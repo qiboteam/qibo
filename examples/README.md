@@ -19,6 +19,7 @@ physics problems.
 - [Determining the proton content with proton with a quantum computer](qPDF/qPDF.ipynb)
 - [Maximal violation of Bell inequalities variationally](bell-variational/README.md)
 - [Feedback-based ALgorithm for Quantum OptimizatioN - FALQON](falqon/README.md)
+- [A general Grover model](grover/README.md)
 
 In the `benchmarks` folder we have included examples concerning:
 - A generic benchmark script for multiple circuits (`benchmarks/main.py`)
