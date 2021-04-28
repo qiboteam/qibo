@@ -296,7 +296,6 @@ class QAOA(object):
         return result, parameters, extra
 
 
-
 class FALQON(QAOA):
     """ Feedback-based ALgorithm for Quantum OptimizatioN (FALQON) model.
 
@@ -331,17 +330,13 @@ class FALQON(QAOA):
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01
-            best_energy, final_parameters, extra = falqon.minimize(delta_t)
+            best_energy, final_parameters, extra = falqon.minimize(delta_t, max_layers)
     """
-    from qibo.core import states
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        # call parent class `__init__`
         super().__init__(hamiltonian, mixer, solver, callbacks, accelerators, memory_device)
-        # additional code not included in parent class
         self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
-
 
     def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None):
         """Optimizes the variational parameters of the FALQON.
@@ -357,6 +352,7 @@ class FALQON(QAOA):
         Return:
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
+            extra: variable with historical data for the energy and callbacks. If tol is None, it is empty
         """
         import numpy as np
         parameters = np.array([delta_t, 0])

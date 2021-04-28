@@ -246,9 +246,9 @@ def test_shor(N, times, A, semiclassical, enhance):
     run_script(args)
 
 
-@pytest.mark.parametrize("nqubits", 5)
-@pytest.mark.parametrize("delta_t", 0.1)
-@pytest.mark.parametrize("max_layers", 100)
+@pytest.mark.parametrize("nqubits", [4, 5])
+@pytest.mark.parametrize("delta_t", [0.5, 0.1])
+@pytest.mark.parametrize("max_layers", [10, 100])
 def test_falqon(nqubits, delta_t, max_layers):
     if "functions" in sys.modules:
         del sys.modules["functions"]

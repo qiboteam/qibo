@@ -24,14 +24,14 @@ The `FALQON` class behaves similarly to the `QAOA` one. It admits the following 
 - `hamiltonian`: problem Hamiltonian
             whose ground state is sought. 
 - `mixer`: mixer Hamiltonian.
-            If ``None``, :class:`qibo.hamiltonians.X` is used.
+            If ``None``, `qibo.hamiltonians.X` is used.
 - `solver`: solver used to apply the exponential operators.
             Default solver is 'exp'.
 - `callbacks`: List of callbacks to calculate during evolution.
 - `accelerators`: Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+            execution. See `qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+            is a `qibo.abstractions.hamiltonians.TrotterHamiltonian`.
 - `memory_device`: Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
