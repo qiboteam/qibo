@@ -244,3 +244,16 @@ def test_shor(N, times, A, semiclassical, enhance):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
+
+@pytest.mark.parametrize("nqubits", 5)
+@pytest.mark.parametrize("delta_t", 0.1)
+@pytest.mark.parametrize("max_layers", 100)
+def test_falqon(nqubits, delta_t, max_layers):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "falqon")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
+
