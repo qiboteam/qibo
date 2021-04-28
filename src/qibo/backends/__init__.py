@@ -22,7 +22,7 @@ class Backend:
             self.available_backends["numpy"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_defaulteinsum"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_matmuleinsum"] = NumpyMatmulEinsumBackend
-        else:
+        else:  # pragma: no cover
             raise_error("Numpy is not installed.")
 
         # check if tensorflow is installed and use it as default backend.
@@ -42,7 +42,7 @@ class Backend:
                 self.available_backends["custom"] = TensorflowCustomBackend
                 self.available_backends["tensorflow"] = TensorflowCustomBackend
             active_backend = "tensorflow"
-        else:
+        else:  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("Tensorflow is not installed. Falling back to numpy. "
                         "Numpy does not support Qibo custom operators and GPU. "
