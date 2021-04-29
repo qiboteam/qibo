@@ -33,14 +33,13 @@ class Backend:
             self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
             self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
             self.available_backends["tensorflow_matmuleinsum"] = TensorflowMatmulEinsumBackend
-            import qibo.tensorflow.custom_operators as op
-            if not op._custom_operators_loaded: # pragma: no cover
+            if _check_availability("qibo_sim_tensorflow"):
+                self.available_backends["custom"] = TensorflowCustomBackend
+                self.available_backends["tensorflow"] = TensorflowCustomBackend
+            else: # pragma: no cover
                 log.warning("Einsum will be used to apply gates with Tensorflow. "
                             "Removing custom operators from available backends.")
                 self.available_backends["tensorflow"] = TensorflowDefaultEinsumBackend
-            else:
-                self.available_backends["custom"] = TensorflowCustomBackend
-                self.available_backends["tensorflow"] = TensorflowCustomBackend
             active_backend = "tensorflow"
         else:  # pragma: no cover
             # case not tested because CI has tf installed
