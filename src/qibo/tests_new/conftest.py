@@ -8,13 +8,10 @@ import pytest
 from qibo import K
 
 _available_backends = set(K.available_backends.keys())
-_available_backends.remove("numpy")
-_available_backends.remove("defaulteinsum")
 _ENGINES = "numpy"
 _ACCELERATORS = None
 if "tensorflow" in _available_backends:
     _ENGINES = "numpy,tensorflow"
-    _available_backends.remove("tensorflow")
     if "custom" in _available_backends:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
@@ -40,7 +37,7 @@ def pytest_addoption(parser):
     parser.addoption("--engines", type=str, default=_ENGINES,
                      help="Backend libaries (eg. numpy, tensorflow, etc.) to test.")
     parser.addoption("--backends", type=str, default=_BACKENDS,
-                     help="Calculation schemes (eg. custom, defaulteinsum, etc.) to test.")
+                     help="Calculation schemes (eg. custom, tensorflow, numpy etc.) to test.")
     parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
                      help="Accelerator configurations for testing the distributed circuit.")
     # see `_ACCELERATORS` for the string format of the `--accelerators` flag
@@ -56,8 +53,7 @@ def pytest_generate_tests(metafunc):
 
     Test functions may have one or more of the following arguments:
         engine: Backend library (eg. numpy, tensorflow, etc.),
-        backend: Calculation backend (eg. custom, defaulteinsum,
-            numpy_defaulteinsum, etc.),
+        backend: Calculation backend (eg. custom, tensorflow, numpy),
         accelerators: Dictionary with the accelerator configuration for
             distributed circuits, for example: {'/GPU:0': 1, '/GPU:1': 1},
         tested_backend: The first backend when testing agreement between

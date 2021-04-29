@@ -34,9 +34,9 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("accelerators", accelerators)
 
     if "backend" in metafunc.fixturenames:
-        backends = ["custom", "defaulteinsum"]
-        if "custom" not in K.available_backends: # pragma: no cover
-            backends.remove("custom")
+        backends = ["tensorflow"]
+        if "custom" in K.available_backends:
+            backends.append("custom")
         metafunc.parametrize("backend", backends)
 
     # skip distributed tests if "custom" backend is not available

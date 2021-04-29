@@ -14,13 +14,15 @@ class Optimization:
 
 class TensorflowBackend(numpy.NumpyBackend):
 
-    description = "Base class for Tensorflow backends."
+    description = "Uses `tf.einsum` to apply gates to states via matrix " \
+                  "multiplication."
 
     def __init__(self):
         super().__init__()
         import tensorflow as tf
         self.backend = tf
         self.name = "tensorflow"
+        self.custom_gates = False
 
         self.cpu_devices = tf.config.list_logical_devices("CPU")
         self.gpu_devices = tf.config.list_logical_devices("GPU")
@@ -288,24 +290,3 @@ class TensorflowCustomBackend(TensorflowBackend):
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False, self.get_threads())
         return state / self.trace(state)
-
-
-class TensorflowDefaultEinsumBackend(TensorflowBackend):
-    """Gate application backend that based on ``tf.einsum``."""
-
-    description = "Uses `tf.einsum` to apply gates to states via matrix " \
-                  "multiplication."
-
-    def __init__(self):
-        super().__init__()
-        from qibo.backends import einsum
-        self.name = "tensorflow_defaulteinsum"
-        self.custom_gates = False
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return numpy.NumpyDefaultEinsumBackend.create_einsum_cache(
-            self, qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        return numpy.NumpyDefaultEinsumBackend.einsum_call(
-            self, cache, state, matrix)

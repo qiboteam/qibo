@@ -1,11 +1,11 @@
-from abc import abstractmethod
 from qibo.backends import abstract
 from qibo.config import raise_error, log
 
 
 class NumpyBackend(abstract.AbstractBackend):
 
-    description = "Base class for numpy backends"
+    description = "Uses `np.einsum` to apply gates to states via matrix " \
+                  "multiplication."
 
     def __init__(self):
         super().__init__()
@@ -13,6 +13,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.backend = np
         self.name = "numpy"
         self.np = np
+        self.custom_gates = False
 
         from qibo.backends import matrices
         self.matrices = matrices.NumpyMatrices(self.dtypes('DTYPECPX'))
@@ -239,13 +240,11 @@ class NumpyBackend(abstract.AbstractBackend):
     def set_seed(self, seed):
         self.backend.random.seed(seed)
 
-    @abstractmethod
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
-        raise_error(NotImplementedError)
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
+        return self.einsum_module.DefaultEinsumCache(qubits, nqubits, ncontrol)
 
-    @abstractmethod
-    def einsum_call(self, cache, state, matrix): # pragma: no cover
-        raise_error(NotImplementedError)
+    def einsum_call(self, cache, state, matrix):
+        return self.einsum(cache, state, matrix)
 
     class GateCache:
         pass
@@ -361,20 +360,3 @@ class NumpyBackend(abstract.AbstractBackend):
         state = substate / norm
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
-
-
-class NumpyDefaultEinsumBackend(NumpyBackend):
-
-    description = "Uses `np.einsum` to apply gates to states via matrix " \
-                  "multiplication."
-
-    def __init__(self):
-        super().__init__()
-        self.name = "numpy_defaulteinsum"
-        self.custom_gates = False
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return self.einsum_module.DefaultEinsumCache(qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        return self.einsum(cache, state, matrix)

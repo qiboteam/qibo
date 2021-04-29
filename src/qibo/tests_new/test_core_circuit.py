@@ -90,7 +90,7 @@ def test_compiled_execute(backend):
 def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
     original_backend = qibo.get_backend()
-    qibo.set_backend("defaulteinsum")
+    qibo.set_backend("tensorflow")
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.compile()
