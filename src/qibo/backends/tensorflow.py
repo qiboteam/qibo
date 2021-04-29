@@ -203,7 +203,7 @@ class TensorflowCustomBackend(TensorflowBackend):
             raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
                                       "backend if custom operators are not "
                                       "compiled.")
-
+        from qibo_sim_tensorflow import custom_operators as op
         super().__init__()
         self.name = "custom"
         self.custom_gates = True
