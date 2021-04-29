@@ -45,3 +45,34 @@ The current code standards that are applied to any new changes:
 - **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code.
 - **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
 - **Pylint**: Test code for anomalies, such as bad coding practices, missing documentation, unused variables.
+
+Documentation
+-------------
+
+The Qibo documentation is automatically generated with `sphinx
+<https://www.sphinx-doc.org/>`_, thus all functions should be documented using
+docstrings. The ``doc`` folder contains the project setup for the documentation
+web page.
+
+The documentation requirements can be installed with:
+
+.. code-block::
+
+    pip install qibo[docs]
+
+Alternatively, install the packages listed in the ``extras_require`` option in
+``setup.py``.
+
+In order to build the documentation web page locally please perform the following steps:
+
+.. code-block::
+
+    cd doc
+    make html
+
+This last command generates a web page in ``doc/build/html/``. You can browse
+the local compiled documentation by opening ``doc/build/html/index.html``.
+
+The sections in the documentation are controlled by the ``*.rst`` files located
+in ``doc/source/``. The application tutorials are rendered from markdown by
+linking the respective files from ``examples/`` in ``doc/source/tutorials/``.
