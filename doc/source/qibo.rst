@@ -42,16 +42,31 @@ to perform calculation which can be one of the backends defined in ``qibo/backen
 General circuit models
 ^^^^^^^^^^^^^^^^^^^^^^
 
-.. autoclass:: qibo.abstractions.circuit.AbstractCircuit
-    :members:
-    :member-order: bysource
+Circuit
+"""""""
+
 .. autoclass:: qibo.core.circuit.Circuit
     :members:
     :member-order: bysource
+
+Density matrix circuit
+""""""""""""""""""""""
+
 .. autoclass:: qibo.core.circuit.DensityMatrixCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.distcircuit.DistributedCircuit
+
+Distributed circuit
+"""""""""""""""""""
+
+.. autoclass:: qibo.core.distcircuit.DistributedCircuit
+    :members:
+    :member-order: bysource
+
+Abstract circuit
+""""""""""""""""
+
+.. autoclass:: qibo.abstractions.circuit.AbstractCircuit
     :members:
     :member-order: bysource
 
