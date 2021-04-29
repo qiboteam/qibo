@@ -169,7 +169,7 @@ class DistributedState(VectorState):
     """Data structure that holds the pieces of a state vector.
 
     This is created automatically by
-    :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+    :class:`qibo.core.distcircuit.DistributedCircuit`
     which uses state pieces instead of the full state vector tensor to allow
     distribution to multiple devices.
     Using the ``DistributedState`` instead of the full state vector as a tensor
@@ -182,7 +182,7 @@ class DistributedState(VectorState):
     """
 
     def __init__(self, circuit):
-        from qibo.tensorflow.distcircuit import DistributedCircuit
+        from qibo.core.distcircuit import DistributedCircuit
         super().__init__(circuit.nqubits)
         self.circuit_cls = DistributedCircuit
         if not isinstance(circuit, self.circuit_cls):
