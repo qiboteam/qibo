@@ -690,7 +690,7 @@ class CRX(_CRn_):
 
 
 class CRY(_CRn_):
-    """Controlled rotation around the X-axis for the Bloch sphere.
+    """Controlled rotation around the Y-axis for the Bloch sphere.
 
     Corresponds to the following unitary matrix
 
@@ -716,7 +716,7 @@ class CRY(_CRn_):
 
 
 class CRZ(_CRn_):
-    """Controlled rotation around the X-axis for the Bloch sphere.
+    """Controlled rotation around the Z-axis for the Bloch sphere.
 
     Corresponds to the following unitary matrix
 
