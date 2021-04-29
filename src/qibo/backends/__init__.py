@@ -72,8 +72,9 @@ class Backend:
         """Initializes active Tensorflow backend (if available)."""
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
         import tensorflow as tf
-        import qibo.tensorflow.custom_operators as op
-        if not op._custom_operators_loaded: # pragma: no cover
+        try:
+            from qibo_sim_tensorflow import custom_operators
+        except ModuleNotFoundError: # pragma: no cover
             log.warning("Einsum will be used to apply gates with Tensorflow. "
                         "Removing custom operators from available backends.")
             self.available_backends.pop("custom")

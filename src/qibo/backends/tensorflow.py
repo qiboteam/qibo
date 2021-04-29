@@ -198,8 +198,9 @@ class TensorflowCustomBackend(TensorflowBackend):
                   "This is the fastest simulation engine."
 
     def __init__(self):
-        from qibo.tensorflow import custom_operators as op
-        if not op._custom_operators_loaded: # pragma: no cover
+        try:
+            from qibo_sim_tensorflow import custom_operators as op
+        except ModuleNotFoundError: # pragma: no cover
             # CI can compile custom operators so this case is not tested
             raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
                                       "backend if custom operators are not "
