@@ -1,24 +1,50 @@
 import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
-from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
 
 
 class Backend:
 
     def __init__(self):
-        self.available_backends = {
-            "custom": TensorflowCustomBackend,
-            "tensorflow": TensorflowCustomBackend,
-            "defaulteinsum": TensorflowDefaultEinsumBackend,
-            "matmuleinsum": TensorflowMatmulEinsumBackend,
-            "tensorflow_defaulteinsum": TensorflowDefaultEinsumBackend,
-            "tensorflow_matmuleinsum": TensorflowMatmulEinsumBackend,
-            "numpy": NumpyDefaultEinsumBackend,
-            "numpy_defaulteinsum": NumpyDefaultEinsumBackend,
-            "numpy_matmuleinsum": NumpyMatmulEinsumBackend
-        }
+        self.available_backends = {}
+        active_backend = "numpy"
+
+        # check if numpy is installed
+        if self.check_availability("numpy"):
+            from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
+            self.available_backends["numpy"] = NumpyDefaultEinsumBackend
+            self.available_backends["numpy_defaulteinsum"] = NumpyDefaultEinsumBackend
+            self.available_backends["numpy_matmuleinsum"] = NumpyMatmulEinsumBackend
+        else:  # pragma: no cover
+            raise_error(ModuleNotFoundError, "Numpy is not installed.")
+
+        # check if tensorflow is installed and use it as default backend.
+        if self.check_availability("tensorflow"):
+            from qibo.backends.tensorflow import TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
+            import tensorflow as tf
+            self.available_backends["defaulteinsum"] = TensorflowDefaultEinsumBackend
+            self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
+            self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
+            self.available_backends["tensorflow_matmuleinsum"] = TensorflowMatmulEinsumBackend
+            import qibo.tensorflow.custom_operators as op
+            if not op._custom_operators_loaded: # pragma: no cover
+                log.warning("Einsum will be used to apply gates with Tensorflow. "
+                            "Removing custom operators from available backends.")
+                self.available_backends["tensorflow"] = TensorflowDefaultEinsumBackend
+            else:
+                from qibo.backends.tensorflow import TensorflowCustomBackend
+                self.available_backends["custom"] = TensorflowCustomBackend
+                self.available_backends["tensorflow"] = TensorflowCustomBackend
+            active_backend = "tensorflow"
+        else:  # pragma: no cover
+            # case not tested because CI has tf installed
+            log.warning("Tensorflow is not installed. Falling back to numpy. "
+                        "Numpy does not support Qibo custom operators and GPU. "
+                        "Einsum will be used to apply gates on CPU.")
+            # use numpy for defaulteinsum and matmuleinsum backends
+            self.available_backends["defaulteinsum"] = NumpyDefaultEinsumBackend
+            self.available_backends["matmuleinsum"] = NumpyMatmulEinsumBackend
 
         self.constructed_backends = {}
         self._active_backend = None
@@ -26,10 +52,7 @@ class Backend:
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ: # pragma: no cover
             self.active_backend = os.environ.get("QIBO_BACKEND")
-        try:
-            self.initialize_tensorflow()
-        except ModuleNotFoundError: # pragma: no cover
-            self.initialize_numpy()
+        self.active_backend = active_backend
 
     @property
     def active_backend(self):
@@ -68,34 +91,6 @@ class Backend:
             self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)
 
-    def initialize_tensorflow(self):
-        """Initializes active Tensorflow backend (if available)."""
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
-        import tensorflow as tf
-        import qibo.tensorflow.custom_operators as op
-        if not op._custom_operators_loaded: # pragma: no cover
-            log.warning("Einsum will be used to apply gates with Tensorflow. "
-                        "Removing custom operators from available backends.")
-            self.available_backends.pop("custom")
-            self.available_backends["tensorflow"] = TensorflowDefaultEinsumBackend
-        self.active_backend = "tensorflow"
-
-    def initialize_numpy(self): # pragma: no cover
-        """Initializes active numpy backend (if Tensorflow is not available)."""
-        # case not tested because CI has tf installed
-        log.warning("Tensorflow is not installed. Falling back to numpy. "
-                    "Numpy does not support Qibo custom operators and GPU. "
-                    "Einsum will be used to apply gates on CPU.")
-        # remove Tensorflow backends
-        self.available_backends.pop("custom")
-        self.available_backends.pop("tensorflow")
-        self.available_backends.pop("tensorflow_defaulteinsum")
-        self.available_backends.pop("tensorflow_matmuleinsum")
-        # use numpy for defaulteinsum and matmuleinsum backends
-        self.available_backends["defaulteinsum"] = NumpyDefaultEinsumBackend
-        self.available_backends["matmuleinsum"] = NumpyMatmulEinsumBackend
-        self.active_backend = "numpy"
-
     def __getattr__(self, x):
         return getattr(self.active_backend, x)
 
@@ -104,6 +99,19 @@ class Backend:
 
     def __repr__(self):
         return str(self)
+
+    @staticmethod
+    def check_availability(module_name):
+        """Check if module is installed.
+
+        Args:
+            module_name (str): module name.
+
+        Returns:
+            True if the module is installed, False otherwise.
+        """
+        from pkgutil import iter_modules
+        return module_name in (name for _, name, _ in iter_modules())
 
 
 K = Backend()

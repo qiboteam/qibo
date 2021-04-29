@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, log, LOG_LEVEL
+from qibo.config import raise_error, log
 
 
 class Optimization:
@@ -18,7 +18,6 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(LOG_LEVEL)
         import tensorflow as tf
         self.backend = tf
         self.name = "tensorflow"
