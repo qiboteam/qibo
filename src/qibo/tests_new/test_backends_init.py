@@ -18,8 +18,6 @@ def test_set_backend(backend):
     backends.set_backend(backend)
     if backend == "defaulteinsum":
         target_name = "tensorflow_defaulteinsum"
-    elif backend == "matmuleinsum":
-        target_name = "tensorflow_matmuleinsum"
     else:
         target_name = backend
     assert K.name == target_name
@@ -45,7 +43,7 @@ def test_set_backend_errors():
         backends.set_backend("numpy_badgates")
     h = gates.H(0)
     with pytest.warns(RuntimeWarning):
-        backends.set_backend("numpy_matmuleinsum")
+        backends.set_backend("numpy")
     backends.set_backend(original_backend)
 
 

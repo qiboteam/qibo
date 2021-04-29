@@ -10,7 +10,6 @@ from qibo import K
 _available_backends = set(K.available_backends.keys())
 _available_backends.remove("numpy")
 _available_backends.remove("defaulteinsum")
-_available_backends.remove("matmuleinsum")
 _ENGINES = "numpy"
 _ACCELERATORS = None
 if "tensorflow" in _available_backends:

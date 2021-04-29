@@ -2,8 +2,8 @@ import os
 from pkgutil import iter_modules
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
-from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
+from qibo.backends.numpy import NumpyDefaultEinsumBackend
+from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend
 
 
 def _check_availability(module_name):
@@ -21,7 +21,6 @@ class Backend:
         if _check_availability("numpy"):
             self.available_backends["numpy"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_defaulteinsum"] = NumpyDefaultEinsumBackend
-            self.available_backends["numpy_matmuleinsum"] = NumpyMatmulEinsumBackend
         else:  # pragma: no cover
             raise_error(ModuleNotFoundError, "Numpy is not installed.")
 
@@ -30,9 +29,7 @@ class Backend:
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
             import tensorflow as tf
             self.available_backends["defaulteinsum"] = TensorflowDefaultEinsumBackend
-            self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
             self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
-            self.available_backends["tensorflow_matmuleinsum"] = TensorflowMatmulEinsumBackend
             if _check_availability("qibo_sim_tensorflow"):
                 self.available_backends["custom"] = TensorflowCustomBackend
                 self.available_backends["tensorflow"] = TensorflowCustomBackend
@@ -46,9 +43,7 @@ class Backend:
             log.warning("Tensorflow is not installed. Falling back to numpy. "
                         "Numpy does not support Qibo custom operators and GPU. "
                         "Einsum will be used to apply gates on CPU.")
-            # use numpy for defaulteinsum and matmuleinsum backends
             self.available_backends["defaulteinsum"] = NumpyDefaultEinsumBackend
-            self.available_backends["matmuleinsum"] = NumpyMatmulEinsumBackend
 
         self.constructed_backends = {}
         self._active_backend = None
@@ -115,9 +110,7 @@ def set_backend(backend="custom"):
     The following backends are available:
     'custom': Tensorflow backend with custom operators for applying gates,
     'defaulteinsum': Tensorflow backend that applies gates using ``tf.einsum``,
-    'matmuleinsum': Tensorflow backend that applies gates using ``tf.matmul``,
-    'numpy_defaulteinsum': Numpy backend that applies gates using ``np.einsum``,
-    'numpy_matmuleinsum': Numpy backend that applies gates using ``np.matmul``,
+    'numpy_defaulteinsum': Numpy backend that applies gates using ``np.einsum``.
 
     Args:
         backend (str): A backend from the above options.

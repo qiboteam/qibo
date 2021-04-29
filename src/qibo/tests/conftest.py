@@ -34,7 +34,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("accelerators", accelerators)
 
     if "backend" in metafunc.fixturenames:
-        backends = ["custom", "defaulteinsum", "matmuleinsum"]
+        backends = ["custom", "defaulteinsum"]
         if "custom" not in K.available_backends: # pragma: no cover
             backends.remove("custom")
         metafunc.parametrize("backend", backends)

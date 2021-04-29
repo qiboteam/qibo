@@ -247,15 +247,6 @@ class NumpyBackend(abstract.AbstractBackend):
     def einsum_call(self, cache, state, matrix): # pragma: no cover
         raise_error(NotImplementedError)
 
-    def _get_default_einsum(self):
-        # finds default einsum backend of the same engine to use for fall back
-        # in the case of `controlled_by` gates used on density matrices where
-        # matmul einsum does not work properly
-        import sys
-        module = sys.modules[self.__class__.__module__]
-        engine = self.name.split("_")[0].capitalize()
-        return getattr(module, f"{engine}DefaultEinsumBackend")
-
     class GateCache:
         pass
 
@@ -269,16 +260,8 @@ class NumpyBackend(abstract.AbstractBackend):
             nactive = gate.nqubits - len(gate.control_qubits)
             targets = cache.control_cache.targets
             ncontrol = len(gate.control_qubits)
-            if gate.density_matrix:
-                # fall back to the 'defaulteinsum' backend when using
-                # density matrices with `controlled_by` gates because
-                # 'matmuleinsum' is not properly implemented for this case
-                backend = self._get_default_einsum()
-                cache.calculation_cache = backend.create_einsum_cache(
-                    self, targets, nactive, ncontrol)
-            else:
-                cache.calculation_cache = self.create_einsum_cache(
-                    targets, nactive, ncontrol)
+            cache.calculation_cache = self.create_einsum_cache(
+                targets, nactive, ncontrol)
         else:
             cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
         cache.calculation_cache.cast_shapes(
@@ -395,46 +378,3 @@ class NumpyDefaultEinsumBackend(NumpyBackend):
 
     def einsum_call(self, cache, state, matrix):
         return self.einsum(cache, state, matrix)
-
-
-class NumpyMatmulEinsumBackend(NumpyBackend):
-
-    description = "Uses `np.matmul` as well as transpositions and reshapes " \
-                  "to apply gates to states via matrix multiplication."
-
-    def __init__(self):
-        super().__init__()
-        self.name = "numpy_matmuleinsum"
-        self.custom_gates = False
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return self.einsum_module.MatmulEinsumCache(qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        if isinstance(cache, str):
-            # `controlled_by` gate acting on density matrices
-            # fall back to defaulteinsum because matmuleinsum is not properly
-            # implemented.
-            backend = self._get_default_einsum()
-            return backend.einsum_call(self, cache, state, matrix)
-
-        shapes = cache["shapes"]
-
-        state = self.reshape(state, shapes[0])
-        state = self.transpose(state, cache["ids"])
-        if cache["conjugate"]:
-            state = self.reshape(self.conj(state), shapes[1])
-        else:
-            state = self.reshape(state, shapes[1])
-
-        n = len(tuple(matrix.shape))
-        if n > 2:
-            dim = 2 ** (n // 2)
-            state = self.matmul(self.reshape(matrix, (dim, dim)), state)
-        else:
-            state = self.matmul(matrix, state)
-
-        state = self.reshape(state, shapes[2])
-        state = self.transpose(state, cache["inverse_ids"])
-        state = self.reshape(state, shapes[3])
-        return state
