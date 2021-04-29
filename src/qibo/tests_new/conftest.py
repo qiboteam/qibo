@@ -5,22 +5,20 @@ Pytest fixtures.
 """
 import sys
 import pytest
+from qibo import K
 
-try:
-    import tensorflow as tf
-    _BACKENDS = "custom,defaulteinsum,matmuleinsum,"\
-                "numpy_defaulteinsum,numpy_matmuleinsum"
+_available_backends = set(K.available_backends.keys())
+_available_backends.remove("numpy")
+_available_backends.remove("defaulteinsum")
+_available_backends.remove("matmuleinsum")
+_ENGINES = "numpy"
+_ACCELERATORS = None
+if "tensorflow" in _available_backends:
     _ENGINES = "numpy,tensorflow"
-    import qibo.tensorflow.custom_operators as op
-    if not op._custom_operators_loaded: # pragma: no cover
-        _BACKENDS = "defaulteinsum,matmuleinsum,"\
-                    "numpy_defaulteinsum,numpy_matmuleinsum"
-    _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
-except ModuleNotFoundError: # pragma: no cover
-    # workflows install Tensorflow automatically so this case is not covered
-    _ENGINES = "numpy"
-    _BACKENDS = "numpy_defaulteinsum,numpy_matmuleinsum"
-    _ACCELERATORS = None
+    _available_backends.remove("tensorflow")
+    if "custom" in _available_backends:
+        _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
+_BACKENDS = ",".join(_available_backends)
 
 
 def pytest_runtest_setup(item):
