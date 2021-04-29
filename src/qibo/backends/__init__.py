@@ -90,7 +90,7 @@ class Backend:
             new_backend = self.available_backends.get(name)()
             if self.active_backend is not None:
                 new_backend.set_precision(self.active_backend.precision)
-                if self.active_backend.device is not None:
+                if self.active_backend.default_device is not None:
                     new_backend.set_device(self.active_backend.default_device)
             self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)
