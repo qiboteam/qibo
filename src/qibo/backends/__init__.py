@@ -27,7 +27,7 @@ class Backend:
             self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
             self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
             self.available_backends["tensorflow_matmuleinsum"] = TensorflowMatmulEinsumBackend
-            if self.check_availability("qibo_sim_tensorflow"):
+            if self.check_availability("qibotf"):
                 from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["custom"] = TensorflowCustomBackend
                 self.available_backends["tensorflow"] = TensorflowCustomBackend
