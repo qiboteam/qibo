@@ -6,7 +6,7 @@ from qibo.config import raise_error, log
 class Optimization:
 
     def __init__(self):
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=E0401
         self.Variable = tf.Variable
         self.GradientTape = tf.GradientTape
         self.optimizers = tf.optimizers
@@ -18,7 +18,7 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def __init__(self):
         super().__init__()
-        import tensorflow as tf
+        import tensorflow as tf  # pylint: disable=E0401
         self.backend = tf
         self.name = "tensorflow"
 
@@ -38,7 +38,7 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.Tensor = tf.Tensor
         self.random = tf.random
         self.newaxis = tf.newaxis
-        from tensorflow.python.framework import errors_impl # pylint: disable=E0611
+        from tensorflow.python.framework import errors_impl  # pylint: disable=E0611,E0401
         self.oom_error = errors_impl.ResourceExhaustedError
         self.optimization = Optimization()
 
@@ -200,7 +200,7 @@ class TensorflowCustomBackend(TensorflowBackend):
             raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
                                       "backend if custom operators are not "
                                       "compiled.")
-        from qibotf import custom_operators as op
+        from qibotf import custom_operators as op  # pragma: disable=E0401
         super().__init__()
         self.name = "custom"
         self.custom_gates = True

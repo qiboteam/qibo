@@ -22,7 +22,7 @@ class Backend:
         if self.check_availability("tensorflow"):
             from qibo.backends.tensorflow import TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
-            import tensorflow as tf
+            import tensorflow as tf  # pragma: disable=E0401
             self.available_backends["defaulteinsum"] = TensorflowDefaultEinsumBackend
             self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
             self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
