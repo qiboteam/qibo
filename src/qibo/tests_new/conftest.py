@@ -72,17 +72,10 @@ def pytest_generate_tests(metafunc):
     engines = metafunc.config.option.engines.split(",")
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
-    if "tensorflow" not in engines: # pragma: no cover
-        # CI uses Tensorflow engine for test execution
-        accelerators = None
-        for x in ["custom", "defaulteinsum", "matmuleinsum"]:
-            if x in backends:
-                backends.remove(x)
 
     if "custom" not in backends: # pragma: no cover
         # skip tests that require custom operators
         tests_to_skip = {
-            "qibo.tests_new.test_tensorflow_custom_operators",
             "qibo.tests_new.test_core_states_distributed"
         }
         # for `test_tensorflow_custom_operators.py`
