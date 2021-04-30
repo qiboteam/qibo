@@ -6,9 +6,9 @@ import argparse
 #TODO: fix issue with .pkl
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", default='tricrown',
+parser.add_argument("--dataset", default='circle',
                     help="Name of the example", type=str)
-parser.add_argument("--layers", default=3, help="Number of layers.", type=int)
+parser.add_argument("--layers", default=2, help="Number of layers.", type=int)
 
 
 def main(dataset, layers):
@@ -25,6 +25,7 @@ def main(dataset, layers):
             # Load previous results. Have we ever run these problem?
             data = pickle.load(f)
     except:
+        print('new data')
         data = {}
 
     try:
@@ -35,7 +36,11 @@ def main(dataset, layers):
         print('Problem never solved, finding optimal parameters...')
         result, parameters = ql.minimize(
             method='l-bfgs-b', options={'disp': True})
-        data[dataset][layers] = parameters
+        try:
+            data[dataset][layers] = parameters
+        except:
+            data[dataset] = {}
+            data[dataset][layers] = parameters
         with open('saved_parameters.pkl', 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
 
