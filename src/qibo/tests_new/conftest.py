@@ -91,10 +91,6 @@ def pytest_generate_tests(metafunc):
         if metafunc.module.__name__ in tests_to_skip:
             pytest.skip("Custom operator tests require Tensorflow engine.")
 
-    # for `test_backends_matrices.py`
-    if "engine" in metafunc.fixturenames:
-        metafunc.parametrize("engine", engines)
-
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
         target = metafunc.config.option.target_backend
