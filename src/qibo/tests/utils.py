@@ -8,7 +8,7 @@ def random_numpy_complex(shape, dtype=np.complex128):
 
 
 def random_tensorflow_complex(shape, dtype="float64"):
-    import tensorflow as tf  # pragma: disable=E0401
+    import tensorflow as tf  # pylint: disable=E0401
     if isinstance(dtype, str):
         dtype = getattr(tf, dtype)
     _re = tf.random.uniform(shape, dtype=dtype)

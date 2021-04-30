@@ -38,7 +38,7 @@ def test_circuit_dm(backend):
 
 def test_density_matrix_circuit_initial_state(backend):
     """Check that circuit transforms state vector initial state to density matrix."""
-    import tensorflow as tf  # pragma: disable=E0401
+    import tensorflow as tf  # pylint: disable=E0401
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_psi = utils.random_numpy_state(3)

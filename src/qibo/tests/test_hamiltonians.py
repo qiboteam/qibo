@@ -8,7 +8,7 @@ from qibo.tests import utils
 
 def test_hamiltonian_initialization():
     """Testing hamiltonian initialization errors."""
-    import tensorflow as tf  # pragma: disable=E0401
+    import tensorflow as tf  # pylint: disable=E0401
     dtype = K.dtypes('DTYPECPX')
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
@@ -97,7 +97,7 @@ def test_right_operations(numpy):
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_mul(numpy):
     """Test multiplication with ``np.array`` and ``tf.Tensor`` scalar."""
-    import tensorflow as tf  # pragma: disable=E0401
+    import tensorflow as tf  # pylint: disable=E0401
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
     h2 = h * np.array(2)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))

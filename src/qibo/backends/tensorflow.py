@@ -200,7 +200,7 @@ class TensorflowCustomBackend(TensorflowBackend):
             raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
                                       "backend if custom operators are not "
                                       "compiled.")
-        from qibotf import custom_operators as op  # pragma: disable=E0401
+        from qibotf import custom_operators as op  # pylint: disable=E0401
         super().__init__()
         self.name = "custom"
         self.custom_gates = True
