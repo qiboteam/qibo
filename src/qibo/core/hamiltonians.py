@@ -221,11 +221,13 @@ class SymbolicHamiltonian:
         term_dict = self.symbolic.as_coefficients_dict()
         self.constant = 0
         if 1 in term_dict:
-            self.constant = self.matrices.dtype(term_dict.pop(1))
+            dtype = getattr(K.np, self.matrices.dtype)
+            self.constant = dtype(term_dict.pop(1))
         self.terms = dict()
         target_ids = set()
         for term, coeff in term_dict.items():
-            targets, matrices = [], [self.matrices.dtype(coeff)]
+            dtype = getattr(K.np, self.matrices.dtype)
+            targets, matrices = [], [dtype(coeff)]
             for factor in term.as_ordered_factors():
                 if factor.is_symbol:
                     self._check_symbolmap(factor)

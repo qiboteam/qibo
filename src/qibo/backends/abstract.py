@@ -16,7 +16,7 @@ class AbstractBackend(ABC):
         self.gpu_devices = []
         self.default_device = None
 
-        self.matrices = None
+        self._matrices = None
         self.numeric_types = None
         self.tensor_types = None
         self.native_types = None
@@ -43,8 +43,6 @@ class AbstractBackend(ABC):
         else:
             raise_error(ValueError, f'dtype {dtype} not supported.')
         self.precision = dtype
-        if self.matrices is not None:
-            self.matrices.dtype = self.dtypes('DTYPECPX')
 
     def set_device(self, name):
         parts = name[1:].split(":")
@@ -79,6 +77,13 @@ class AbstractBackend(ABC):
             log.warn("Falling back to CPU because the GPU is out-of-memory.")
             with self.device(self.get_cpu()):
                 return func(*args)
+
+    @property
+    def matrices(self):
+        if self._matrices is None:
+            from qibo.backends.matrices import Matrices
+            self._matrices = Matrices(self)
+        return self._matrices
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover

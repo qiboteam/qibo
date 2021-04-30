@@ -1,9 +1,9 @@
 # /usr/bin/env python
-import datasets as ds
-import numpy as np
 from qlassifier import single_qubit_classifier
 import pickle
 import argparse
+
+#TODO: fix issue with .pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", default='tricrown',
@@ -20,9 +20,13 @@ def main(dataset, layers):
         layers (int): Number of layers to use in the classifier
     """
     ql = single_qubit_classifier(dataset, layers)  # Define classifier
-    with open('saved_parameters.pkl', 'rb') as f:
-        # Load previous results. Have we ever run these problem?
-        data = pickle.load(f)
+    try:
+        with open('saved_parameters.pkl', 'rb') as f:
+            # Load previous results. Have we ever run these problem?
+            data = pickle.load(f)
+    except:
+        data = {dataset: {}}
+
     try:
         parameters = data[dataset][layers]
         print('Problem solved before, obtaining parameters from file...')
@@ -31,6 +35,7 @@ def main(dataset, layers):
         print('Problem never solved, finding optimal parameters...')
         result, parameters = ql.minimize(
             method='l-bfgs-b', options={'disp': True})
+
         data[dataset][layers] = parameters
         with open('saved_parameters.pkl', 'wb') as f:
             pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)

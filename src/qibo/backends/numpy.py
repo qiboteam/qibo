@@ -14,8 +14,6 @@ class NumpyBackend(abstract.AbstractBackend):
         self.name = "numpy"
         self.np = np
 
-        from qibo.backends import matrices
-        self.matrices = matrices.NumpyMatrices(self.dtypes('DTYPECPX'))
         self.numeric_types = (np.int, np.float, np.complex, np.int32,
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
