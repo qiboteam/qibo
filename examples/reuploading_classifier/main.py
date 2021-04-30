@@ -8,7 +8,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", default='tricrown',
                     help="Name of the example", type=str)
-parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
+parser.add_argument("--layers", default=3, help="Number of layers.", type=int)
 
 
 def main(dataset, layers):
@@ -20,9 +20,13 @@ def main(dataset, layers):
         layers (int): Number of layers to use in the classifier
     """
     ql = single_qubit_classifier(dataset, layers)  # Define classifier
-    with open('saved_parameters.pkl', 'rb') as f:
-        # Load previous results. Have we ever run these problem?
-        data = pickle.load(f)
+    try:
+        with open('saved_parameters.pkl', 'rb') as f:
+            # Load previous results. Have we ever run these problem?
+            data = pickle.load(f)
+    except:
+        data = {}
+
     try:
         parameters = data[dataset][layers]
         print('Problem solved before, obtaining parameters from file...')
