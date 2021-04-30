@@ -1,9 +1,9 @@
 # /usr/bin/env python
-import datasets as ds
-import numpy as np
 from qlassifier import single_qubit_classifier
 import pickle
 import argparse
+
+#TODO: fix issue with .pkl
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--dataset", default='tricrown',
