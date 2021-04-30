@@ -6,9 +6,9 @@ import argparse
 #TODO: fix issue with .pkl
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", default='circle',
+parser.add_argument("--dataset", default='tricrown',
                     help="Name of the example", type=str)
-parser.add_argument("--layers", default=2, help="Number of layers.", type=int)
+parser.add_argument("--layers", default=10, help="Number of layers.", type=int)
 
 
 def main(dataset, layers):
@@ -25,7 +25,6 @@ def main(dataset, layers):
             # Load previous results. Have we ever run these problem?
             data = pickle.load(f)
     except:
-        data = {}
         data = {dataset: {}}
 
     try:
