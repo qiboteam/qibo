@@ -26,7 +26,7 @@ def main(dataset, layers):
             data = pickle.load(f)
     except:
         data = {}
-        data[dataset] = {}
+        data = {dataset: {}}
 
     try:
         parameters = data[dataset][layers]
