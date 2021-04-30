@@ -135,13 +135,13 @@ specific applications (such as the QFT) the multi-GPU scheme can be faster than
 using only CPU.
 
 For more details in the distributed implementation one can look in the related
-code: :class:`qibo.tensorflow.distcircuit.DistributedCircuit`. When
+code: :class:`qibo.core.distcircuit.DistributedCircuit`. When
 ``models.Circuit`` is called then this distributed implementation is used automatically
 if the ``accelerators`` dictionary is passed, otherwise the standard single device
 :class:`qibo.core.circuit.Circuit` is used.
 
-Note that executing a:class:`qibo.tensorflow.distcircuit.DistributedCircuit`
-will return a :class:`qibo.tensorflow.distutils.DistributedState` which holds
+Note that executing a:class:`qibo.core.distcircuit.DistributedCircuit`
+will return a :class:`qibo.core.distutils.DistributedState` which holds
 the state vector partitioned in multiple pieces which are distributed to the
 different devices during the simulation.
 Creating the full state as a single tensor would require merging
@@ -168,7 +168,7 @@ however the user may create the full state as follows:
     # ``final_state`` is a ``tf.Tensor``
 
 
-Note that indexing a class:`qibo.tensorflow.distutils.DistributedState` uses
+Note that indexing a class:`qibo.core.distutils.DistributedState` uses
 the state pieces without requiring to merge and create the single state vector
 tensor.
 

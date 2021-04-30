@@ -1,14 +1,6 @@
 import os
-from pkgutil import iter_modules
 from qibo import config
 from qibo.config import raise_error, log, warnings
-from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
-from qibo.backends.tensorflow import TensorflowCustomBackend, TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
-
-
-def _check_availability(module_name):
-    """Check if module is installed."""
-    return module_name in (name for l, name, ispkg in iter_modules())
 
 
 class Backend:
@@ -18,7 +10,8 @@ class Backend:
         active_backend = "numpy"
 
         # check if numpy is installed
-        if _check_availability("numpy"):
+        if self.check_availability("numpy"):
+            from qibo.backends.numpy import NumpyDefaultEinsumBackend, NumpyMatmulEinsumBackend
             self.available_backends["numpy"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_defaulteinsum"] = NumpyDefaultEinsumBackend
             self.available_backends["numpy_matmuleinsum"] = NumpyMatmulEinsumBackend
@@ -26,7 +19,8 @@ class Backend:
             raise_error(ModuleNotFoundError, "Numpy is not installed.")
 
         # check if tensorflow is installed and use it as default backend.
-        if _check_availability("tensorflow"):
+        if self.check_availability("tensorflow"):
+            from qibo.backends.tensorflow import TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
             import tensorflow as tf
             self.available_backends["defaulteinsum"] = TensorflowDefaultEinsumBackend
@@ -103,6 +97,19 @@ class Backend:
 
     def __repr__(self):
         return str(self)
+
+    @staticmethod
+    def check_availability(module_name):
+        """Check if module is installed.
+
+        Args:
+            module_name (str): module name.
+
+        Returns:
+            True if the module is installed, False otherwise.
+        """
+        from pkgutil import iter_modules
+        return module_name in (name for _, name, _ in iter_modules())
 
 
 K = Backend()
