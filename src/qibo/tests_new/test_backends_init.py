@@ -79,14 +79,14 @@ def test_set_precision_matrices(backend, precision):
     backends.set_backend(backend)
     backends.set_precision(precision)
     if precision == "single":
-        assert matrices.dtype == np.complex64
+        assert matrices.dtype == "complex64"
         assert matrices.H.dtype == np.complex64
-        assert K.matrices.dtype == K.backend.complex64
+        assert K.matrices.dtype == "complex64"
         assert K.matrices.X.dtype == K.backend.complex64
     else:
-        assert matrices.dtype == np.complex128
+        assert matrices.dtype == "complex128"
         assert matrices.H.dtype == np.complex128
-        assert K.matrices.dtype == K.backend.complex128
+        assert K.matrices.dtype == "complex128"
         assert K.matrices.X.dtype == K.backend.complex128
     backends.set_precision(original_precision)
     backends.set_backend(original_backend)
