@@ -352,7 +352,7 @@ class FALQON(QAOA):
         Return:
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
-            extra: variable with historical data for the energy and callbacks. If tol is None, it is empty
+            extra: variable with historical data for the energy and callbacks.
         """
         import numpy as np
         parameters = np.array([delta_t, 0])
