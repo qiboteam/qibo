@@ -1,12 +1,12 @@
 import numpy as np
 
 
-class NumpyMatrices:
+class Matrices:
 
     _NAMES = ["I", "H", "X", "Y", "Z", "CNOT", "CZ", "SWAP", "TOFFOLI"]
 
-    def __init__(self, dtype):
-        self._dtype = dtype
+    def __init__(self, backend):
+        self.backend = backend
         self._I = None
         self._H = None
         self._X = None
@@ -22,16 +22,9 @@ class NumpyMatrices:
         for name in self._NAMES:
             getattr(self, f"_set{name}")()
 
-    def cast(self, x):
-        return x.astype(self.dtype)
-
     @property
     def dtype(self):
-        return self._dtype
-
-    @dtype.setter
-    def dtype(self, dtype):
-        self._dtype = dtype
+        return self.backend._dtypes.get('DTYPECPX')
 
     @property
     def I(self):
@@ -70,69 +63,46 @@ class NumpyMatrices:
         return self._TOFFOLI
 
     def _setI(self):
-        self._I = self.cast(np.eye(2, dtype=self.dtype))
+        self._I = self.backend.cast(np.eye(2, dtype=self.dtype))
 
     def _setH(self):
         m = np.ones((2, 2), dtype=self.dtype)
         m[1, 1] = -1
-        self._H = self.cast(m / np.sqrt(2))
+        self._H = self.backend.cast(m / np.sqrt(2))
 
     def _setX(self):
         m = np.zeros((2, 2), dtype=self.dtype)
         m[0, 1], m[1, 0] = 1, 1
-        self._X = self.cast(m)
+        self._X = self.backend.cast(m)
 
     def _setY(self):
         m = np.zeros((2, 2), dtype=self.dtype)
         m[0, 1], m[1, 0] = -1j, 1j
-        self._Y = self.cast(m)
+        self._Y = self.backend.cast(m)
 
     def _setZ(self):
         m = np.eye(2, dtype=self.dtype)
         m[1, 1] = -1
-        self._Z = self.cast(m)
+        self._Z = self.backend.cast(m)
 
     def _setCNOT(self):
         m = np.eye(4, dtype=self.dtype)
         m[2, 2], m[2, 3] = 0, 1
         m[3, 2], m[3, 3] = 1, 0
-        self._CNOT = self.cast(m)
+        self._CNOT = self.backend.cast(m)
 
     def _setCZ(self):
         m = np.diag([1, 1, 1, -1])
-        self._CZ = self.cast(m)
+        self._CZ = self.backend.cast(m)
 
     def _setSWAP(self):
         m = np.eye(4, dtype=self.dtype)
         m[1, 1], m[1, 2] = 0, 1
         m[2, 1], m[2, 2] = 1, 0
-        self._SWAP = self.cast(m)
+        self._SWAP = self.backend.cast(m)
 
     def _setTOFFOLI(self):
         m = np.eye(8, dtype=self.dtype)
         m[-2, -2], m[-2, -1] = 0, 1
         m[-1, -2], m[-1, -1] = 1, 0
-        self._TOFFOLI = self.cast(m)
-
-
-class TensorflowMatrices(NumpyMatrices):
-
-    def __init__(self, dtype):
-        import tensorflow as tf
-        self.tf = tf
-        self.tftype = dtype
-        if dtype == tf.complex128:
-            super().__init__(np.complex128)
-        elif dtype == tf.complex64:
-            super().__init__(np.complex64)
-
-    @NumpyMatrices.dtype.setter
-    def dtype(self, dtype):
-        self.tftype = dtype
-        if dtype == self.tf.complex128:
-            self._dtype = np.complex128
-        elif dtype == self.tf.complex64:
-            self._dtype = np.complex64
-
-    def cast(self, x):
-        return self.tf.cast(x, dtype=self.tftype)
+        self._TOFFOLI = self.backend.cast(m)

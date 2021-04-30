@@ -33,9 +33,6 @@ class TensorflowBackend(numpy.NumpyBackend):
             # case not tested by GitHub workflows because it requires no device
             raise_error(RuntimeError, "Unable to find Tensorflow devices.")
 
-        from qibo.backends import matrices
-        self.matrices = matrices.TensorflowMatrices(self.dtypes('DTYPECPX'))
-
         self.tensor_types = (self.np.ndarray, tf.Tensor, tf.Variable)
         self.native_types = (tf.Tensor, tf.Variable)
         self.Tensor = tf.Tensor
