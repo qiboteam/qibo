@@ -19,7 +19,7 @@ class Backend:
         # check if tensorflow is installed and use it as default backend.
         if self.check_availability("tensorflow"):
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
-            import tensorflow as tf
+            import tensorflow as tf # pylint: disable=E0401
             from qibo.backends.tensorflow import TensorflowBackend
             self.available_backends["tensorflow"] = TensorflowBackend
             active_backend = "tensorflow"
