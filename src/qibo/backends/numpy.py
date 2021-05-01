@@ -264,8 +264,6 @@ class NumpyBackend(abstract.AbstractBackend):
                 targets, nactive, ncontrol)
         else:
             cache.calculation_cache = self.create_einsum_cache(gate.qubits, gate.nqubits)
-        cache.calculation_cache.cast_shapes(
-            lambda x: self.cast(x, dtype='DTYPEINT'))
         return cache
 
     def state_vector_call(self, gate, state):

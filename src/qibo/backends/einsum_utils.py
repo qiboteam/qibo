@@ -85,9 +85,6 @@ class EinsumCache:
             self._calculate_density_matrix_controlled()
         return self._right0
 
-    def cast_shapes(self, cast_func):
-        pass
-
     def _calculate_density_matrix(self):
         """Calculates `left` and `right` elements."""
         if self.nqubits > len(self.rest): # pragma: no cover
