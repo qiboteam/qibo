@@ -44,8 +44,9 @@ def test_set_backend_errors():
     with pytest.raises(ValueError):
         backends.set_backend("numpy_badgates")
     h = gates.H(0)
-    with pytest.warns(RuntimeWarning):
-        backends.set_backend("numpy_matmuleinsum")
+    if "numpy" not in original_backend:
+        with pytest.warns(RuntimeWarning):
+            backends.set_backend("numpy_matmuleinsum")
     backends.set_backend(original_backend)
 
 
