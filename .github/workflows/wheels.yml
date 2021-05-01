@@ -38,8 +38,8 @@ jobs:
       if: startsWith(matrix.os, 'windows') == 0
       run: |
         python -m pip install --upgrade pip
-        pip install pytest cirq ply sklearn qibotf
-        pip install qibo --no-index --find-links ./dist/
+        pip install pytest qibotf
+        pip install --find-links ./dist/ qibo[tests]
         pytest --pyargs qibo
     - name: Test wheels on windows
       if: startsWith(matrix.os, 'windows')
