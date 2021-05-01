@@ -22,13 +22,14 @@ class Backend:
             import tensorflow as tf
             from qibo.backends.tensorflow import TensorflowBackend
             self.available_backends["tensorflow"] = TensorflowBackend
+            active_backend = "tensorflow"
             if self.check_availability("qibotf"):
                 from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["custom"] = TensorflowCustomBackend
+                active_backend = "custom"
             else: # pragma: no cover
                 log.warning("Einsum will be used to apply gates with Tensorflow. "
                             "Removing custom operators from available backends.")
-            active_backend = "tensorflow"
         else:  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("Tensorflow is not installed. Falling back to numpy. "
