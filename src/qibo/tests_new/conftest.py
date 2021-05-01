@@ -8,10 +8,8 @@ import pytest
 from qibo import K
 
 _available_backends = set(K.available_backends.keys())
-_ENGINES = "numpy"
 _ACCELERATORS = None
 if "tensorflow" in _available_backends:
-    _ENGINES = "numpy,tensorflow"
     if "custom" in _available_backends:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
@@ -34,8 +32,6 @@ def pytest_configure(config):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--engines", type=str, default=_ENGINES,
-                     help="Backend libaries (eg. numpy, tensorflow, etc.) to test.")
     parser.addoption("--backends", type=str, default=_BACKENDS,
                      help="Calculation schemes (eg. custom, tensorflow, numpy etc.) to test.")
     parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
@@ -44,7 +40,7 @@ def pytest_addoption(parser):
     parser.addoption("--target-backend", type=str, default="numpy",
                      help="Base backend that other backends are tested against.")
     # `test_backends_agreement.py` tests that backend methods agree between
-    # different backends by testing each backend in `--engines` with the
+    # different backends by testing each backend in `--backends` with the
     # `--target-backend`
 
 
@@ -64,7 +60,6 @@ def pytest_generate_tests(metafunc):
     This function parametrizes the above arguments using the values given by
     the user when calling `pytest`.
     """
-    engines = metafunc.config.option.engines.split(",")
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
 
@@ -80,7 +75,7 @@ def pytest_generate_tests(metafunc):
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
         target = metafunc.config.option.target_backend
-        metafunc.parametrize("tested_backend", [x for x in engines if x != target])
+        metafunc.parametrize("tested_backend", [x for x in backends if x != target])
         metafunc.parametrize("target_backend", [target])
 
     # for `test_core_*.py`
