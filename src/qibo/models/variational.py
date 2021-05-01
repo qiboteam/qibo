@@ -285,7 +285,7 @@ class QAOA(object):
         if method == "sgd":
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
