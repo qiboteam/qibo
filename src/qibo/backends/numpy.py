@@ -32,6 +32,12 @@ class NumpyBackend(abstract.AbstractBackend):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
 
+    def to_numpy(self, x):
+        return x
+
+    def to_complex(self, re, img):
+        return re + 1j * img
+
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)

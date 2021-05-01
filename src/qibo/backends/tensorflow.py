@@ -49,6 +49,12 @@ class TensorflowBackend(numpy.NumpyBackend):
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
 
+    def to_numpy(self, x):
+        return x.numpy()
+
+    def to_complex(self, re, img):
+        return self.backend.complex(re, img)
+
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
