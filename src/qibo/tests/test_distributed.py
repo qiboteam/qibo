@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import qibo
 from qibo import models, gates
-from qibo.tensorflow import distutils
+from qibo.core import distutils
 from qibo.tests import utils
 
 

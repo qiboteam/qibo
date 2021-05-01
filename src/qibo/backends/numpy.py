@@ -15,8 +15,6 @@ class NumpyBackend(abstract.AbstractBackend):
         self.np = np
         self.custom_gates = False
 
-        from qibo.backends import matrices
-        self.matrices = matrices.NumpyMatrices(self.dtypes('DTYPECPX'))
         self.numeric_types = (np.int, np.float, np.complex, np.int32,
                               np.int64, np.float32, np.float64,
                               np.complex64, np.complex128)
@@ -34,6 +32,12 @@ class NumpyBackend(abstract.AbstractBackend):
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
+
+    def to_numpy(self, x):
+        return x
+
+    def to_complex(self, re, img): # pragma: no cover
+        return re + 1j * img
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):

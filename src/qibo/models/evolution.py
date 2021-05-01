@@ -104,7 +104,7 @@ class StateEvolution:
 
         Returns:
             Final state vector a ``tf.Tensor`` or a
-            :class:`qibo.tensorflow.distutils.DistributedState` when a
+            :class:`qibo.core.distutils.DistributedState` when a
             distributed execution is used.
         """
         state = self.get_initial_state(initial_state)
@@ -154,7 +154,7 @@ class AdiabaticEvolution(StateEvolution):
         solver (str): Solver to use for integrating Schrodinger's equation.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
         memory_device (str): Name of device where the full state will be saved.
@@ -324,7 +324,7 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             loss = self._loss
         else:
-            loss = lambda p, ae, h1, msg, hist: self._loss(p, ae, h1, msg, hist).numpy()
+            loss = lambda p, ae, h1, msg, hist: K.to_numpy(self._loss(p, ae, h1, msg, hist))
 
         result, parameters, extra = optimizers.optimize(loss, initial_parameters,
                                                  args=(self, self.h1, self.opt_messages, self.opt_history),

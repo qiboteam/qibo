@@ -8,14 +8,13 @@ from qibo.tests import utils
 
 def test_hamiltonian_initialization():
     """Testing hamiltonian initialization errors."""
-    import tensorflow as tf
     dtype = K.dtypes('DTYPECPX')
     with pytest.raises(TypeError):
         H = Hamiltonian(2, "test")
     H1 = Hamiltonian(2, np.eye(4))
     H1 = Hamiltonian(2, np.eye(4), numpy=True)
-    H1 = Hamiltonian(2, tf.eye(4, dtype=dtype))
-    H1 = Hamiltonian(2, tf.eye(4, dtype=dtype), numpy=True)
+    H1 = Hamiltonian(2, K.eye(4, dtype=dtype))
+    H1 = Hamiltonian(2, K.eye(4, dtype=dtype), numpy=True)
     with pytest.raises(ValueError):
         H1 = Hamiltonian(-2, np.eye(4))
     with pytest.raises(RuntimeError):
@@ -97,12 +96,11 @@ def test_right_operations(numpy):
 @pytest.mark.parametrize("numpy", [True, False])
 def test_hamiltonian_mul(numpy):
     """Test multiplication with ``np.array`` and ``tf.Tensor`` scalar."""
-    import tensorflow as tf
     h = TFIM(nqubits=3, h=1.0, numpy=numpy)
     h2 = h * np.array(2)
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
     _ = h.eigenvectors()
-    h2 = h * tf.cast(2, dtype=tf.complex128)
+    h2 = h * K.cast(2, dtype='DTYPECPX')
     np.testing.assert_allclose(h2.matrix, 2 * np.array(h.matrix))
 
 
@@ -115,8 +113,8 @@ def test_hamiltonian_matmul(numpy):
         m1 = H1.matrix
         m2 = H2.matrix
     else:
-        m1 = H1.matrix.numpy()
-        m2 = H2.matrix.numpy()
+        m1 = K.to_numpy(H1.matrix)
+        m2 = K.to_numpy(H2.matrix)
 
     np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
@@ -357,7 +355,7 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     local_ham = TFIM(nqubits, h=1.0, trotter=True)
     dense_ham = TFIM(nqubits, h=1.0)
 
-    state = utils.random_tensorflow_complex((2 ** nqubits,))
+    state = utils.random_backend_complex((2 ** nqubits,))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(trotter_ev, target_ev)
@@ -433,7 +431,7 @@ def test_trotter_hamiltonian_make_compatible_simple():
 def test_trotter_hamiltonian_make_compatible_redundant():
     """Test ``make_compatible`` with redudant two-qubit terms."""
     h0 = X(2, trotter=True)
-    target_matrix = h0.dense.matrix.numpy()
+    target_matrix = K.to_numpy(h0.dense.matrix)
     target_matrix = np.kron(target_matrix, np.eye(2, dtype=target_matrix.dtype))
     parts = [{(0, 1, 2): TFIM(3, numpy=True)}]
     h1 = TrotterHamiltonian(*parts)

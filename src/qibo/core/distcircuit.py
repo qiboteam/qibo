@@ -8,7 +8,7 @@ from qibo.abstractions import gates
 from qibo.abstractions.circuit import AbstractCircuit
 from qibo.config import raise_error, get_threads
 from qibo.core import callbacks, circuit, measurements, states
-from qibo.tensorflow.distutils import DistributedQueues
+from qibo.core.distutils import DistributedQueues
 from typing import Dict, List, Optional, Set, Tuple, Union
 
 

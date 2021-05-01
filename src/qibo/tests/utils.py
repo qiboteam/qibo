@@ -7,13 +7,11 @@ def random_numpy_complex(shape, dtype=np.complex128):
   return (np.random.random(shape) + 1j * np.random.random(shape)).astype(dtype)
 
 
-def random_tensorflow_complex(shape, dtype="float64"):
-    import tensorflow as tf
-    if isinstance(dtype, str):
-        dtype = getattr(tf, dtype)
-    _re = tf.random.uniform(shape, dtype=dtype)
-    _im = tf.random.uniform(shape, dtype=dtype)
-    return tf.complex(_re, _im)
+def random_backend_complex(shape, dtype="float64"):
+    from qibo import K
+    _re = K.random_uniform(shape, dtype=dtype)
+    _im = K.random_uniform(shape, dtype=dtype)
+    return K.to_complex(_re, _im)
 
 
 def random_numpy_state(nqubits, dtype=np.complex128):

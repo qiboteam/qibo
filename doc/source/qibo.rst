@@ -51,7 +51,7 @@ General circuit models
 .. autoclass:: qibo.core.circuit.DensityMatrixCircuit
     :members:
     :member-order: bysource
-.. autoclass:: qibo.tensorflow.distcircuit.DistributedCircuit
+.. autoclass:: qibo.core.distcircuit.DistributedCircuit
     :members:
     :member-order: bysource
 
