@@ -1,4 +1,4 @@
-from qibo.backends import abstract
+from qibo.backends import abstract, einsum_utils
 from qibo.config import raise_error, log
 
 
@@ -25,9 +25,6 @@ class NumpyBackend(abstract.AbstractBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = None
-
-        from qibo.backends import einsum
-        self.einsum_module = einsum
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
@@ -245,7 +242,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.backend.random.seed(seed)
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return self.einsum_module.DefaultEinsumCache(qubits, nqubits, ncontrol)
+        return einsum_utils.EinsumCache(qubits, nqubits, ncontrol)
 
     def einsum_call(self, cache, state, matrix):
         return self.einsum(cache, state, matrix)
@@ -259,7 +256,7 @@ class NumpyBackend(abstract.AbstractBackend):
         cache.tensor_shape = self.cast(s * gate.nqubits * (2,), dtype='DTYPEINT')
         cache.flat_shape = self.cast(s * (2 ** gate.nqubits,), dtype='DTYPEINT')
         if gate.is_controlled_by:
-            cache.control_cache = self.einsum_module.ControlCache(gate)
+            cache.control_cache = einsum_utils.ControlCache(gate)
             nactive = gate.nqubits - len(gate.control_qubits)
             targets = cache.control_cache.targets
             ncontrol = len(gate.control_qubits)

@@ -4,26 +4,13 @@
 Gates use ``einsum`` to apply gates to state vectors. The einsum string that
 specifies the contraction indices is created and cached when a gate is created
 so that it is not recalculated every time the gate is called on a state. This
-functionality is implemented in :class:`qibo.core.einsum.DefaultEinsum`.
-
-Due to an `issue <https://github.com/tensorflow/tensorflow/issues/37307>`_
-with automatic differentiation and complex numbers in ``einsum``, we have
-implemented an alternative calculation backend based on ``matmul`` in
-:class:`qibo.core.einsum.MatmulEinsum`. Note that this is slower than
-the default ``einsum`` on GPU but slightly faster on CPU.
-
-The user can switch the default einsum used by the gates by changing the
-``einsum`` variable in `config.py`. It is recommended to use the default unless
-automatic differentiation is required. For the latter case, we refer to our
-examples.
+functionality is implemented in :class:`qibo.backends.numpy.NumpyBackend`.
 """
-from abc import ABC, abstractmethod
 from qibo.config import raise_error
-from typing import Dict, List, Optional, Sequence
 
 
-class BaseCache:
-    """Base cache object for einsum backends defined in `einsum.py`.
+class EinsumCache:
+    """Cache object required to apply gates using ``einsum``.
 
     ``circuit.calculation_cache`` is an object of this class.
 
@@ -31,13 +18,36 @@ class BaseCache:
     calculations.
     ``self.left``, ``self.right``, ``self.left0`` and ``self.right0`` return the cache
     elements required for density matrix calculations.
-    """
 
-    def __init__(self, nqubits, ncontrol: Optional[int] = None):
+    Args:
+        qubits (list): List with the qubit indices that the gate is applied to.
+        nqubits (int): Total number of qubits in the circuit / state vector.
+        ncontrol (int): Number of control qubits for `controlled_by` gates.
+    """
+    from qibo.config import EINSUM_CHARS as _chars
+
+    def __init__(self, qubits, nqubits, ncontrol=None):
         self.nqubits = nqubits
         self.ncontrol = ncontrol
+        if nqubits + len(qubits) > len(self._chars): # pragma: no cover
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
+        input_state = list(self._chars[:nqubits])
+        output_state = input_state[:]
+        gate_chars = list(self._chars[nqubits : nqubits + len(qubits)])
+
+        for i, q in enumerate(qubits):
+            gate_chars.append(input_state[q])
+            output_state[q] = gate_chars[i]
+
+        self.input = "".join(input_state)
+        self.output = "".join(output_state)
+        self.gate = "".join(gate_chars)
+        self.rest = self._chars[nqubits + len(qubits):]
+
         # Cache for state vectors
-        self._vector = None
+        self._vector = f"{self.input},{self.gate}->{self.output}"
+
         # Cache for density matrices
         self._left = None
         self._right = None
@@ -78,53 +88,8 @@ class BaseCache:
     def cast_shapes(self, cast_func):
         pass
 
-    @abstractmethod
-    def _calculate_density_matrix(self): # pragma: no cover
-        """Calculates `left` and `right` elements."""
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def _calculate_density_matrix_controlled(self): # pragma: no cover
-        """Calculates `left0` and `right0` elements."""
-        raise_error(NotImplementedError)
-
-
-class DefaultEinsumCache(BaseCache):
-    """Cache object required by the :class:`qibo.core.einsum.DefaultEinsum` backend.
-
-    The ``vector``, ``left``, ``right``, ``left0``, ``right0`` properties are
-    strings that hold the einsum indices.
-
-    Args:
-        qubits (list): List with the qubit indices that the gate is applied to.
-        nqubits (int): Total number of qubits in the circuit / state vector.
-        ncontrol (int): Number of control qubits for `controlled_by` gates.
-    """
-    from qibo.config import EINSUM_CHARS as _chars
-
-    def __init__(self, qubits: Sequence[int], nqubits: int,
-                 ncontrol: Optional[int] = None):
-        super(DefaultEinsumCache, self).__init__(nqubits, ncontrol)
-
-        if nqubits + len(qubits) > len(self._chars): # pragma: no cover
-            raise_error(NotImplementedError, "Not enough einsum characters.")
-
-        input_state = list(self._chars[:nqubits])
-        output_state = input_state[:]
-        gate_chars = list(self._chars[nqubits : nqubits + len(qubits)])
-
-        for i, q in enumerate(qubits):
-            gate_chars.append(input_state[q])
-            output_state[q] = gate_chars[i]
-
-        self.input = "".join(input_state)
-        self.output = "".join(output_state)
-        self.gate = "".join(gate_chars)
-        self.rest = self._chars[nqubits + len(qubits):]
-
-        self._vector = f"{self.input},{self.gate}->{self.output}"
-
     def _calculate_density_matrix(self):
+        """Calculates `left` and `right` elements."""
         if self.nqubits > len(self.rest): # pragma: no cover
             raise_error(NotImplementedError, "Not enough einsum characters.")
 
@@ -133,6 +98,7 @@ class DefaultEinsumCache(BaseCache):
         self._right = f"{rest}{self.input},{self.gate}->{rest}{self.output}"
 
     def _calculate_density_matrix_controlled(self):
+        """Calculates `left0` and `right0` elements."""
         if self.nqubits + 1 > len(self.rest): # pragma: no cover
             raise_error(NotImplementedError, "Not enough einsum characters.")
         rest, c = self.rest[:self.nqubits], self.rest[self.nqubits]
@@ -205,7 +171,7 @@ class ControlCache:
         self._reverse_dm = self.revert(self._order_dm)
 
     @staticmethod
-    def revert(transpose_order) -> List[int]:
+    def revert(transpose_order):
         reverse_order = len(transpose_order) * [0]
         for i, r in enumerate(transpose_order):
             reverse_order[r] = i
