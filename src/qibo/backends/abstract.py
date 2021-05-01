@@ -86,12 +86,12 @@ class AbstractBackend(ABC):
         return self._matrices
 
     @abstractmethod
-    def to_numpy(self, x):
+    def to_numpy(self, x): # pragma: no cover
         """Convert tensor to numpy."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def to_complex(self, re, img):
+    def to_complex(self, re, img): # pragma: no cover
         """Creates complex number from real numbers."""
         raise_error(NotImplementedError)
 

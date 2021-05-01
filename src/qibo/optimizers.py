@@ -172,7 +172,6 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         from qibo.config import raise_error
         raise_error(RuntimeError, "SGD requires native Tensorflow backend.")
 
-    from qibo import K
     from qibo.config import log
     sgd_options = {"nepochs": 1000000,
                    "nmessage": 1000,

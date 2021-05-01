@@ -4,10 +4,7 @@ from qibo import K, backends, models, gates
 
 def test_construct_backend(backend):
     bk = K.construct_backend(backend)
-    try:
-        assert bk.name == backend
-    except AssertionError:
-        assert bk.name.split("_")[-1] == backend
+    assert bk.name == backend
     with pytest.raises(ValueError):
         bk = K.construct_backend("test")
 
@@ -16,15 +13,9 @@ def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
-    if backend == "defaulteinsum":
-        target_name = "tensorflow_defaulteinsum"
-    elif backend == "matmuleinsum":
-        target_name = "tensorflow_matmuleinsum"
-    else:
-        target_name = backend
-    assert K.name == target_name
-    assert str(K) == target_name
-    assert repr(K) == target_name
+    assert K.name == backend
+    assert str(K) == backend
+    assert repr(K) == backend
     assert K.executing_eagerly()
     h = gates.H(0)
     if backend == "custom":

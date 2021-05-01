@@ -35,7 +35,7 @@ class NumpyBackend(abstract.AbstractBackend):
     def to_numpy(self, x):
         return x
 
-    def to_complex(self, re, img):
+    def to_complex(self, re, img): # pragma: no cover
         return re + 1j * img
 
     def cast(self, x, dtype='DTYPECPX'):
