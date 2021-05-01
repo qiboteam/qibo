@@ -38,14 +38,14 @@ jobs:
       if: startsWith(matrix.os, 'windows') == 0
       run: |
         python -m pip install --upgrade pip
-	wfile=`ls ./dist/*.whl`
+        wfile=`ls ./dist/*.whl`
         pip install $wfile[tests,qibotf]
         pytest --pyargs qibo
     - name: Test wheels on windows
       if: startsWith(matrix.os, 'windows')
       run: |
         python -m pip install --upgrade pip
-	wfile=`ls ./dist/*.whl`
+        wfile=`ls ./dist/*.whl`
         pip install $wfile[tests]
         pytest --pyargs qibo
   deploy:
