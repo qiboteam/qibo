@@ -324,7 +324,7 @@ class AdiabaticEvolution(StateEvolution):
         if method == "sgd":
             loss = self._loss
         else:
-            loss = lambda p, ae, h1, msg, hist: self._loss(p, ae, h1, msg, hist).numpy()
+            loss = lambda p, ae, h1, msg, hist: K.to_numpy(self._loss(p, ae, h1, msg, hist))
 
         result, parameters, extra = optimizers.optimize(loss, initial_parameters,
                                                  args=(self, self.h1, self.opt_messages, self.opt_history),

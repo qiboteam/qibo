@@ -18,7 +18,8 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         args (tuple): optional arguments for the loss function.
         method (str): Name of optimizer to use. Can be ``'cma'``, ``'sgd'`` or
             one of the Newtonian methods supported by
-            :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``.
+            :meth:`qibo.optimizers.newtonian` and ``'parallel_L-BFGS-B'``. ``sgd`` is
+            only available for backends based on tensorflow.
         jac (dict): Method for computing the gradient vector for scipy optimizers.
         hess (dict): Method for computing the hessian matrix for scipy optimizers.
         hessp (callable): Hessian of objective function times an arbitrary
@@ -166,16 +167,11 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     # check if gates are using the MatmulEinsum backend
     compatible_backends = {
         "tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}
-    from qibo.core.circuit import Circuit
-    for argument in args:
-        if isinstance(argument, Circuit):
-            from qibo import K
-            if K.name not in compatible_backends:  # pragma: no cover
-                from qibo.config import raise_error
-                raise_error(
-                    RuntimeError, "SGD requires native Tensorflow backend.")
-
     from qibo import K
+    if K.name not in compatible_backends:  # pragma: no cover
+        from qibo.config import raise_error
+        raise_error(RuntimeError, "SGD requires native Tensorflow backend.")
+
     from qibo.config import log
     sgd_options = {"nepochs": 1000000,
                    "nmessage": 1000,

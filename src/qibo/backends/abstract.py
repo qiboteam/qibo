@@ -14,7 +14,7 @@ class AbstractBackend(ABC):
 
         self.cpu_devices = []
         self.gpu_devices = []
-        self.default_device = None
+        self.default_device = []
 
         self._matrices = None
         self.numeric_types = None
@@ -84,6 +84,16 @@ class AbstractBackend(ABC):
             from qibo.backends.matrices import Matrices
             self._matrices = Matrices(self)
         return self._matrices
+
+    @abstractmethod
+    def to_numpy(self, x): # pragma: no cover
+        """Convert tensor to numpy."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def to_complex(self, re, img): # pragma: no cover
+        """Creates complex number from real numbers."""
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
