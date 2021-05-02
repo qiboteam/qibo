@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 import qibo
-from qibo import models, gates, callbacks
+from qibo import models, gates, callbacks, K
 from qibo.tests import utils
 
 
@@ -38,7 +38,6 @@ def test_circuit_dm(backend):
 
 def test_density_matrix_circuit_initial_state(backend):
     """Check that circuit transforms state vector initial state to density matrix."""
-    import tensorflow as tf
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_psi = utils.random_numpy_state(3)
@@ -47,7 +46,7 @@ def test_density_matrix_circuit_initial_state(backend):
     target_rho = np.outer(initial_psi, initial_psi.conj())
     np.testing.assert_allclose(final_rho, target_rho)
 
-    initial_psi = tf.cast(initial_psi, dtype=final_rho.dtype)
+    initial_psi = K.cast(initial_psi, dtype=final_rho.dtype)
     final_rho = c(initial_psi)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
@@ -191,7 +190,7 @@ def test_unitary_channel(backend, density_matrix):
         initial_state = utils.random_numpy_state(4)
     c = models.Circuit(4, density_matrix=density_matrix)
     c.add(gates.UnitaryChannel(probs, matrices, seed=123))
-    final_state = c(initial_state, nshots=20).numpy()
+    final_state = K.to_numpy(c(initial_state, nshots=20))
 
     eye = np.eye(2, dtype=final_state.dtype)
     ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))

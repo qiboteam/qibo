@@ -94,7 +94,7 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
-    if (method == "sgd" or compile) and backend != "matmuleinsum":
+    if (method == "sgd" or compile) and backend != "tensorflow_matmuleinsum":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
 
@@ -281,7 +281,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, trotter, filename):
     original_backend = qibo.get_backend()
-    if method == "sgd" and backend != "matmuleinsum":
+    if method == "sgd" and backend != "tensorflow_matmuleinsum":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
     h = hamiltonians.XXZ(3, trotter=trotter)
@@ -290,4 +290,41 @@ def test_qaoa_optimization(backend, method, options, trotter, filename):
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)
     if filename is not None:
         assert_regression_fixture(params, filename)
+    qibo.set_backend(original_backend)
+
+
+test_names = "delta_t,max_layers,tolerance,filename"
+test_values = [
+    (0.1, 5, None, "falqon1.out"),
+    (0.01, 2, None, "falqon2.out"),
+    (0.01, 2, 1e-5, "falqon3.out"),
+    (0.01, 5, 1, "falqon4.out")
+    ]
+@pytest.mark.parametrize(test_names, test_values)
+def test_falqon_optimization(backend, delta_t, max_layers, tolerance, filename):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    h = hamiltonians.XXZ(3)
+    falqon = models.FALQON(h)
+    best, params, extra = falqon.minimize(delta_t, max_layers, tol=tolerance)
+    if filename is not None:
+        assert_regression_fixture(params, filename)
+    qibo.set_backend(original_backend)
+
+
+def test_falqon_optimization_callback(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+
+    class TestCallback:
+        from qibo import K
+
+        def __call__(self, x):
+            return self.K.sum(x)
+
+    callback = TestCallback()
+    h = hamiltonians.XXZ(3)
+    falqon = models.FALQON(h)
+    best, params, extra = falqon.minimize(0.1, 5, callback=callback)
+    assert len(extra["callbacks"]) == 5
     qibo.set_backend(original_backend)

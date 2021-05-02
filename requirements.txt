@@ -1,7 +1,5 @@
 # Runtime requirements for qibo
 
-# numpy (included in tf)
-tensorflow==2.4.1
 scipy
 sympy
 cma

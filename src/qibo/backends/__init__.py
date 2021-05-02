@@ -22,12 +22,13 @@ class Backend:
         if self.check_availability("tensorflow"):
             from qibo.backends.tensorflow import TensorflowDefaultEinsumBackend, TensorflowMatmulEinsumBackend
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
-            import tensorflow as tf
+            import tensorflow as tf  # pylint: disable=E0401
             self.available_backends["defaulteinsum"] = TensorflowDefaultEinsumBackend
             self.available_backends["matmuleinsum"] = TensorflowMatmulEinsumBackend
             self.available_backends["tensorflow_defaulteinsum"] = TensorflowDefaultEinsumBackend
             self.available_backends["tensorflow_matmuleinsum"] = TensorflowMatmulEinsumBackend
-            if _check_availability("qibo_sim_tensorflow"):
+            if self.check_availability("qibotf"):
+                from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["custom"] = TensorflowCustomBackend
                 self.available_backends["tensorflow"] = TensorflowCustomBackend
             else: # pragma: no cover
@@ -84,7 +85,7 @@ class Backend:
             new_backend = self.available_backends.get(name)()
             if self.active_backend is not None:
                 new_backend.set_precision(self.active_backend.precision)
-                if self.active_backend.default_device is not None:
+                if self.active_backend.default_device:
                     new_backend.set_device(self.active_backend.default_device)
             self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)

@@ -4,10 +4,7 @@ from qibo import K, backends, models, gates
 
 def test_construct_backend(backend):
     bk = K.construct_backend(backend)
-    try:
-        assert bk.name == backend
-    except AssertionError:
-        assert bk.name.split("_")[-1] == backend
+    assert bk.name == backend
     with pytest.raises(ValueError):
         bk = K.construct_backend("test")
 
@@ -16,15 +13,9 @@ def test_set_backend(backend):
     """Check ``set_backend`` for switching gate backends."""
     original_backend = backends.get_backend()
     backends.set_backend(backend)
-    if backend == "defaulteinsum":
-        target_name = "tensorflow_defaulteinsum"
-    elif backend == "matmuleinsum":
-        target_name = "tensorflow_matmuleinsum"
-    else:
-        target_name = backend
-    assert K.name == target_name
-    assert str(K) == target_name
-    assert repr(K) == target_name
+    assert K.name == backend
+    assert str(K) == backend
+    assert repr(K) == backend
     assert K.executing_eagerly()
     h = gates.H(0)
     if backend == "custom":
@@ -44,8 +35,9 @@ def test_set_backend_errors():
     with pytest.raises(ValueError):
         backends.set_backend("numpy_badgates")
     h = gates.H(0)
-    with pytest.warns(RuntimeWarning):
-        backends.set_backend("numpy_matmuleinsum")
+    if "numpy" not in original_backend:
+        with pytest.warns(RuntimeWarning):
+            backends.set_backend("numpy_matmuleinsum")
     backends.set_backend(original_backend)
 
 
@@ -79,14 +71,14 @@ def test_set_precision_matrices(backend, precision):
     backends.set_backend(backend)
     backends.set_precision(precision)
     if precision == "single":
-        assert matrices.dtype == np.complex64
+        assert matrices.dtype == "complex64"
         assert matrices.H.dtype == np.complex64
-        assert K.matrices.dtype == K.backend.complex64
+        assert K.matrices.dtype == "complex64"
         assert K.matrices.X.dtype == K.backend.complex64
     else:
-        assert matrices.dtype == np.complex128
+        assert matrices.dtype == "complex128"
         assert matrices.H.dtype == np.complex128
-        assert K.matrices.dtype == K.backend.complex128
+        assert K.matrices.dtype == "complex128"
         assert K.matrices.X.dtype == K.backend.complex128
     backends.set_precision(original_precision)
     backends.set_backend(original_backend)

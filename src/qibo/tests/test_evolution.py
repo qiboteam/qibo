@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from qibo import callbacks, hamiltonians, models
+from qibo import callbacks, hamiltonians, models, K
 from qibo.config import raise_error
 from scipy.linalg import expm
 
@@ -71,7 +71,7 @@ def test_state_time_dependent_evolution_final_state(nqubits=2, dt=1e-2):
     # Analytical solution
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     for n in range(int(1 / dt)):
-        prop = expm(-1j * dt * ham(n * dt).matrix.numpy())
+        prop = expm(-1j * dt * K.to_numpy(ham(n * dt).matrix))
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=1e-8)
@@ -223,11 +223,11 @@ def test_energy_callback(solver, atol, dt=1e-2):
     final_psi = adev(final_time=1)
 
     target_psi = np.ones(4) / 2
-    calc_energy = lambda psi: psi.conj().dot(h1.matrix.numpy().dot(psi))
+    calc_energy = lambda psi: psi.conj().dot(K.to_numpy(h1.matrix).dot(psi))
     target_energies = [calc_energy(target_psi)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(dt).numpy()
+        prop = K.to_numpy(ham(n * dt).exp(dt))
         target_psi = prop.dot(target_psi)
         target_energies.append(calc_energy(target_psi))
 
@@ -247,7 +247,7 @@ def test_rk4_evolution(solver, trotter, dt=1e-3):
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(dt).numpy()
+        prop = K.to_numpy(ham(n * dt).exp(dt))
         target_psi.append(prop.dot(target_psi[-1]))
 
     checker = TimeStepChecker(target_psi, atol=dt)
@@ -282,7 +282,7 @@ def test_trotterized_adiabatic_evolution(accelerators, nqubits, dt):
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham = lambda t: dense_h0 * (1 - t) + dense_h1 * t
     for n in range(int(1 / dt)):
-        prop = ham(n * dt).exp(dt).numpy()
+        prop = K.to_numpy(ham(n * dt).exp(dt))
         target_psi.append(prop.dot(target_psi[-1]))
 
     local_h0 = hamiltonians.X(nqubits, trotter=True)
@@ -323,7 +323,16 @@ def test_scheduling_optimization(method, options, messages, trotter, filename):
     h1 = hamiltonians.TFIM(3, trotter=trotter)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
-    best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
-                                     messages=messages)
+
+    if method == "sgd":
+        from qibo import K
+        if K.name not in {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}:
+            with pytest.raises(RuntimeError):
+                best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
+                                messages=messages)
+    else:
+        best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
+                                        messages=messages)
+
     if filename is not None:
         assert_regression_fixture(params, filename)
