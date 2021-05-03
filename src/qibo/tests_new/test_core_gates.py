@@ -494,6 +494,34 @@ def test_general_channel(backend):
     qibo.set_backend(original_backend)
 
 
+def test_krauss_channel_errors(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    # bad Kraus matrix shape
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    with pytest.raises(ValueError):
+        gate = gates.KrausChannel([((0, 1), a1)])
+    # Using KrausChannel on state vectors
+    channel = gates.KrausChannel([((0,), np.eye(2))])
+    with pytest.raises(ValueError):
+        channel.state_vector_call(np.random.random(4))
+    # Attempt to construct unitary for KrausChannel
+    with pytest.raises(ValueError):
+        channel.construct_unitary()
+    qibo.set_backend(original_backend)
+
+
+def test_controlled_by_channel_error():
+    with pytest.raises(ValueError):
+        gate = gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
+
+    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
+    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
+                                  [0, 0, 1, 0]])
+    config = [((1,), a1), ((0, 1), a2)]
+    with pytest.raises(ValueError):
+        gates.KrausChannel(config).controlled_by(1)
+
 def test_unitary_channel(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

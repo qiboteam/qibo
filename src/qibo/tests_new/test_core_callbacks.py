@@ -279,6 +279,31 @@ def test_entropy_large_circuit(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+def test_entropy_density_matrix(backend):
+    from qibo.tests_new.test_core_gates import random_density_matrix
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    rho = random_density_matrix(4)
+    # this rho is not always positive. Make rho positive for this application
+    _, u = np.linalg.eigh(rho)
+    rho = u.dot(np.diag(5 * np.random.random(u.shape[0]))).dot(u.conj().T)
+    # this is a positive rho
+
+    entropy = callbacks.EntanglementEntropy([1, 3])
+    entropy.density_matrix = True
+    final_ent = entropy(rho)
+
+    rho = rho.reshape(8 * (2,))
+    reduced_rho = np.einsum("abcdafch->bdfh", rho).reshape((4, 4))
+    eigvals = np.linalg.eigvalsh(reduced_rho).real
+    # assert that all eigenvalues are non-negative
+    assert (eigvals >= 0).prod()
+    mask = eigvals > 0
+    target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
+    np.testing.assert_allclose(final_ent, target_ent)
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_norm(backend, density_matrix):
     original_backend = qibo.get_backend()

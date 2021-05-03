@@ -315,3 +315,48 @@ def test_channel_gate_setters(backend):
             assert gate.nqubits == 5
             assert gate.density_matrix
     qibo.set_backend(original_backend)
+
+
+def test_measurement_density_matrix(backend):
+    from qibo.tests_new.test_measurement_gate import assert_result
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    state = np.zeros(4)
+    state[2] = 1
+    rho = np.outer(state, state.conj())
+    mgate = gates.M(0, 1)
+    mgate.density_matrix = True
+    result = mgate(rho, nshots=100)
+
+    target_binary_samples = np.zeros((100, 2))
+    target_binary_samples[:, 0] = 1
+    assert_result(result,
+                  decimal_samples=2 * np.ones((100,)),
+                  binary_samples=target_binary_samples,
+                  decimal_frequencies={2: 100},
+                  binary_frequencies={"10": 100})
+    qibo.set_backend(original_backend)
+
+
+@pytest.mark.parametrize("nqubits", [5, 6])
+def test_variational_layer_density_matrix(backend, nqubits):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    from qibo.models import Circuit
+    theta = 2 * np.pi * np.random.random(nqubits)
+    c = Circuit(nqubits, density_matrix=True)
+    c.add((gates.RY(i, t) for i, t in enumerate(theta)))
+    c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
+    target_state = c()
+    pairs = list((i, i + 1) for i in range(0, nqubits - 1, 2))
+    c = Circuit(nqubits, density_matrix=True)
+    c.add(gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta))
+    final_state = c()
+    np.testing.assert_allclose(target_state, final_state)
+    gate = gates.VariationalLayer(range(nqubits), pairs,
+                                  gates.RY, gates.CZ, theta)
+    gate.density_matrix = True
+    final_state = gate(c.get_initial_state())
+    np.testing.assert_allclose(target_state, final_state)
+    qibo.set_backend(original_backend)

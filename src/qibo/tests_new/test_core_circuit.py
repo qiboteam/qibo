@@ -172,10 +172,11 @@ def test_get_initial_state(backend):
 def test_density_matrix_circuit(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
+    from qibo.tests_new.test_core_gates import random_density_matrix
     theta = 0.1234
-    initial_rho = utils.random_density_matrix(3)
+    initial_rho = random_density_matrix(3)
 
-    c = models.Circuit(3, density_matrix=True)
+    c = Circuit(3, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
     c.add(gates.CNOT(0, 1))
@@ -198,13 +199,12 @@ def test_density_matrix_circuit(backend):
 def test_density_matrix_circuit_initial_state(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    initial_psi = utils.random_numpy_state(3)
-    c = models.Circuit(3, density_matrix=True)
+    from qibo.tests_new.test_core_gates import random_state
+    initial_psi = random_state(3)
+    c = Circuit(3, density_matrix=True)
     final_rho = c(np.copy(initial_psi))
     target_rho = np.outer(initial_psi, initial_psi.conj())
     np.testing.assert_allclose(final_rho, target_rho)
-
-    initial_psi = K.cast(initial_psi, dtype=final_rho.dtype)
     final_rho = c(initial_psi)
     np.testing.assert_allclose(final_rho, target_rho)
     qibo.set_backend(original_backend)
