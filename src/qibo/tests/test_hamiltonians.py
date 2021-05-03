@@ -398,7 +398,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
 
     dt = 1e-2
     initial_state = utils.random_numpy_state(4)
-    if backend == "custom":
+    if K.op is not None:
         with pytest.raises(NotImplementedError):
             circuit = trotter_h.circuit(dt=dt)
     else:
