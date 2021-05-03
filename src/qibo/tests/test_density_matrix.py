@@ -8,26 +8,6 @@ from qibo.tests import utils
 _atol = 1e-8
 
 
-
-def test_bitflip_noise(backend):
-    """Test `gates.PauliNoiseChannel` on random initial density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = utils.random_density_matrix(2)
-
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.PauliNoiseChannel(1, px=0.3))
-    final_rho = c(np.copy(initial_rho)).numpy()
-
-    c = models.Circuit(2, density_matrix=True)
-    c.add(gates.X(1))
-    target_rho = 0.3 * c(np.copy(initial_rho)).numpy()
-    target_rho += 0.7 * initial_rho.reshape(target_rho.shape)
-
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
 def test_multiple_noise(backend):
     """Test `gates.NoiseChnanel` with multiple noise probabilities."""
     from qibo import matrices
@@ -67,38 +47,6 @@ def test_circuit_reexecution(backend):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("tfmatrices", [False, True])
-@pytest.mark.parametrize("oncircuit", [False, True])
-def test_general_channel(backend, tfmatrices, oncircuit):
-    """Test `gates.KrausChannel`."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = utils.random_density_matrix(2)
-
-    a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-    a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
-                                  [0, 0, 0, 1], [0, 0, 1, 0]])
-    if tfmatrices:
-        from qibo import K
-        a1, a2 = K.cast(a1), K.cast(a2)
-
-    gate = gates.KrausChannel([((1,), a1), ((0, 1), a2)])
-    assert gate.target_qubits == (0, 1)
-    if oncircuit:
-        c = models.Circuit(2, density_matrix=True)
-        c.add(gate)
-        final_rho = c(np.copy(initial_rho))
-    else:
-        final_rho = gate(np.copy(initial_rho))
-
-    m1 = np.kron(np.eye(2), np.array(a1))
-    m2 = np.array(a2)
-    target_rho = (m1.dot(initial_rho).dot(m1.conj().T) +
-                  m2.dot(initial_rho).dot(m2.conj().T))
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
 def test_controlled_by_channel():
     """Test that attempting to control channels raises error."""
     c = models.Circuit(2, density_matrix=True)
@@ -129,64 +77,6 @@ def test_krauss_channel_errors(backend):
     with pytest.raises(ValueError):
         channel.construct_unitary()
     qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("density_matrix", [True, False])
-def test_unitary_channel(backend, density_matrix):
-    """Test creating `gates.UnitaryChannel` from matrices and errors."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
-    a1 = np.array([[0, 1], [1, 0]])
-    a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
-    if density_matrix:
-        initial_state = utils.random_density_matrix(4)
-    else:
-        initial_state = utils.random_numpy_state(4)
-    c = models.Circuit(4, density_matrix=density_matrix)
-    c.add(gates.UnitaryChannel(probs, matrices, seed=123))
-    final_state = K.to_numpy(c(initial_state, nshots=20))
-
-    eye = np.eye(2, dtype=final_state.dtype)
-    ma1 = np.kron(np.kron(a1, eye), np.kron(eye, eye))
-    ma2 = np.kron(np.kron(eye, eye), a2)
-    if density_matrix:
-        # use density matrices
-        target_state = (0.3 * initial_state +
-                        0.4 * ma1.dot(initial_state.dot(ma1)) +
-                        0.3 * ma2.dot(initial_state.dot(ma2)))
-    else:
-        # sample unitary channel
-        target_state = []
-        np.random.seed(123)
-        for _ in range(20):
-            temp_state = np.copy(initial_state)
-            if np.random.random() < 0.4:
-                temp_state = ma1.dot(temp_state)
-            if np.random.random() < 0.3:
-                temp_state = ma2.dot(temp_state)
-            target_state.append(np.copy(temp_state))
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
-def test_unitary_channel_errors():
-    """Check errors raised by ``gates.UnitaryChannel``."""
-    a1 = np.array([[0, 1], [1, 0]])
-    a2 = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
-    probs = [0.4, 0.3]
-    matrices = [((0,), a1), ((2, 3), a2)]
-    # Invalid probability length
-    with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.1, 0.3, 0.2], matrices)
-    # Probability > 1
-    with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([1.1, 0.2], matrices)
-    # Probability sum = 0
-    with pytest.raises(ValueError):
-        gate = gates.UnitaryChannel([0.0, 0.0], matrices)
 
 
 def test_circuit_with_noise_gates():
@@ -347,88 +237,6 @@ def test_density_matrix_circuit_measurement(backend):
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
     assert_register_result(result, **target)
-    qibo.set_backend(original_backend)
-
-
-def test_reset_channel(backend):
-    """Check ``gates.ResetChannel`` on a 3-qubit random density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = utils.random_density_matrix(3)
-    c = models.Circuit(3, density_matrix=True)
-    c.add(gates.ResetChannel(0, p0=0.2, p1=0.2))
-    final_rho = c(np.copy(initial_rho))
-
-    dtype = initial_rho.dtype
-    collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
-    collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-    collapsed_rho = collapsed_rho.reshape((8, 8))
-    collapsed_rho /= np.trace(collapsed_rho)
-    mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
-    flipped_rho = mx.dot(collapsed_rho.dot(mx))
-    target_rho = 0.6 * initial_rho + 0.2 * (collapsed_rho + flipped_rho)
-    np.testing.assert_allclose(final_rho, target_rho)
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("t1,t2,time,excpop",
-                         [(0.8, 0.5, 1.0, 0.4), (0.5, 0.8, 1.0, 0.4)])
-def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
-    """Check ``gates.ThermalRelaxationChannel`` on a 3-qubit random density matrix."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    initial_rho = utils.random_density_matrix(3)
-    c = models.Circuit(3, density_matrix=True)
-    gate = gates.ThermalRelaxationChannel(0, t1, t2, time=time,
-        excited_population=excpop)
-    c.add(gate)
-    final_rho = c(np.copy(initial_rho))
-
-    exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
-    if t2 > t1:
-        matrix = np.diag([1 - p1, p0, p1, 1 - p0])
-        matrix[0, -1], matrix[-1, 0] = exp, exp
-        matrix = matrix.reshape(4 * (2,))
-        # Apply matrix using Eq. (3.28) from arXiv:1111.6950
-        target_rho = np.copy(initial_rho).reshape(6 * (2,))
-        target_rho = np.einsum("abcd,aJKcjk->bJKdjk", matrix, target_rho)
-        target_rho = target_rho.reshape(initial_rho.shape)
-    else:
-        pz = exp
-        pi = 1 - pz - p0 - p1
-        dtype = initial_rho.dtype
-        collapsed_rho = np.copy(initial_rho).reshape(6 * (2,))
-        collapsed_rho[0, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho[1, :, :, 0, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho[1, :, :, 1, :, :] = np.zeros(4 * (2,), dtype=dtype)
-        collapsed_rho = collapsed_rho.reshape((8, 8))
-        collapsed_rho /= np.trace(collapsed_rho)
-        mx = np.kron(np.array([[0, 1], [1, 0]]), np.eye(4))
-        mz = np.kron(np.array([[1, 0], [0, -1]]), np.eye(4))
-        z_rho = mz.dot(initial_rho.dot(mz))
-        flipped_rho = mx.dot(collapsed_rho.dot(mx))
-        target_rho = (pi * initial_rho + pz * z_rho + p0 * collapsed_rho +
-                      p1 * flipped_rho)
-    np.testing.assert_allclose(final_rho, target_rho)
-    # Try to apply to state vector if t1 < t2
-    if t1 < t2:
-        with pytest.raises(ValueError):
-            gate.state_vector_call(initial_rho) # pylint: disable=no-member
-    qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("t1,t2,time,excpop",
-                         [(1.0, 0.5, 1.5, 1.5), (1.0, 0.5, -0.5, 0.5),
-                          (1.0, -0.5, 1.5, 0.5), (-1.0, 0.5, 1.5, 0.5),
-                          (1.0, 3.0, 1.5, 0.5)])
-def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    with pytest.raises(ValueError):
-        gate = gates.ThermalRelaxationChannel(
-            0, t1, t2, time, excited_population=excpop)
     qibo.set_backend(original_backend)
 
 
