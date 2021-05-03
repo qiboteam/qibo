@@ -98,9 +98,9 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if K.name != "custom":
+        if K.op is None:
             raise_error(NotImplementedError, "Distributed circuit does not "
-                                             "support native tensorflow gates.")
+                                             "support non-custom gates.")
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")

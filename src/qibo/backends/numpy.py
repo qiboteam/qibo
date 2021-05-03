@@ -13,7 +13,6 @@ class NumpyBackend(abstract.AbstractBackend):
         self.backend = np
         self.name = "numpy"
         self.np = np
-        self.custom_gates = False
 
         self.numeric_types = (np.int, np.float, np.complex, np.int32,
                               np.int64, np.float32, np.float64,

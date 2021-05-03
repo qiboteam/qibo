@@ -185,7 +185,7 @@ def test_entropy_in_compiled_circuit(backend):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    if backend == "custom":
+    if backend == "qibotf":
         with pytest.raises(RuntimeError):
             c.compile()
     else:

@@ -22,7 +22,6 @@ class TensorflowBackend(numpy.NumpyBackend):
         import tensorflow as tf  # pylint: disable=E0401
         self.backend = tf
         self.name = "tensorflow"
-        self.custom_gates = False
 
         self.cpu_devices = tf.config.list_logical_devices("CPU")
         self.gpu_devices = tf.config.list_logical_devices("GPU")
@@ -210,9 +209,7 @@ class TensorflowCustomBackend(TensorflowBackend):
                                       "compiled.")
         from qibotf import custom_operators as op  # pylint: disable=E0401
         super().__init__()
-        self.name = "custom"
-        self.custom_gates = True
-        self.custom_einsum = None
+        self.name = "qibotf"
         self.op = op
         from qibo.config import get_threads
         self.get_threads = get_threads

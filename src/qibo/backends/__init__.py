@@ -25,8 +25,8 @@ class Backend:
             active_backend = "tensorflow"
             if self.check_availability("qibotf"):
                 from qibo.backends.tensorflow import TensorflowCustomBackend
-                self.available_backends["custom"] = TensorflowCustomBackend
-                active_backend = "custom"
+                self.available_backends["qibotf"] = TensorflowCustomBackend
+                active_backend = "qibotf"
             else: # pragma: no cover
                 log.warning("Einsum will be used to apply gates with Tensorflow. "
                             "Removing custom operators from available backends.")
@@ -108,11 +108,11 @@ K = Backend()
 numpy_matrices = K.qnp.matrices
 
 
-def set_backend(backend="custom"):
+def set_backend(backend="qibotf"):
     """Sets backend used for mathematical operations and applying gates.
 
     The following backends are available:
-    'custom': Tensorflow backend with custom operators for applying gates,
+    'qibotf': Tensorflow backend with custom operators for applying gates,
     'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
     'numpy': Numpy backend that applies gates using ``np.einsum``.
 

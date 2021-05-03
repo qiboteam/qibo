@@ -18,8 +18,7 @@ def test_set_backend(backend):
     assert repr(K) == backend
     assert K.executing_eagerly()
     h = gates.H(0)
-    if backend == "custom":
-        assert K.custom_einsum is None
+    if backend == "qibotf":
         assert h.gate_op
     else:
         assert h.gate_op is None

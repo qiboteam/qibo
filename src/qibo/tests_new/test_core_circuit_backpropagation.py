@@ -7,7 +7,7 @@ from qibo.models import Circuit
 
 
 def test_variable_backpropagation(backend):
-    if backend == "custom":
+    if backend == "qibotf":
         pytest.skip("Custom gates do not support automatic differentiation.")
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -34,7 +34,7 @@ def test_variable_backpropagation(backend):
 
 
 def test_two_variables_backpropagation(backend):
-    if backend == "custom":
+    if backend == "qibotf":
         pytest.skip("Custom gates do not support automatic differentiation.")
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)

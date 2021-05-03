@@ -16,6 +16,7 @@ class AbstractBackend(ABC):
         self.gpu_devices = []
         self.default_device = []
 
+        self.op = None
         self._matrices = None
         self.numeric_types = None
         self.tensor_types = None

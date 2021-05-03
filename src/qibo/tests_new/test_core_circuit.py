@@ -75,8 +75,9 @@ def test_compiled_execute(backend):
     r1 = c1.execute()
 
     # Run compiled circuit
+    from qibo import K
     c2 = create_circuit()
-    if backend == "custom":
+    if K.op is not None:
         with pytest.raises(RuntimeError):
             c2.compile()
     else:
