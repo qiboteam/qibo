@@ -34,10 +34,7 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("accelerators", accelerators)
 
     if "backend" in metafunc.fixturenames:
-        backends = ["tensorflow"]
-        if "custom" in K.available_backends:
-            backends.append("custom")
-        metafunc.parametrize("backend", backends)
+        metafunc.parametrize("backend", K.available_backends)
 
     # skip distributed tests if "custom" backend is not available
     module_name = "qibo.tests.test_distributed"
