@@ -10,7 +10,7 @@ from qibo import K
 _available_backends = set(K.available_backends.keys())
 _ACCELERATORS = None
 if "tensorflow" in _available_backends:
-    if "custom" in _available_backends:
+    if "qibotf" in _available_backends:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
 
@@ -33,7 +33,7 @@ def pytest_configure(config):
 
 def pytest_addoption(parser):
     parser.addoption("--backends", type=str, default=_BACKENDS,
-                     help="Calculation schemes (eg. custom, tensorflow, numpy etc.) to test.")
+                     help="Calculation schemes (eg. qibotf, tensorflow, numpy etc.) to test.")
     parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
                      help="Accelerator configurations for testing the distributed circuit.")
     # see `_ACCELERATORS` for the string format of the `--accelerators` flag
@@ -49,7 +49,7 @@ def pytest_generate_tests(metafunc):
 
     Test functions may have one or more of the following arguments:
         engine: Backend library (eg. numpy, tensorflow, etc.),
-        backend: Calculation backend (eg. custom, tensorflow, numpy),
+        backend: Calculation backend (eg. qibotf, tensorflow, numpy),
         accelerators: Dictionary with the accelerator configuration for
             distributed circuits, for example: {'/GPU:0': 1, '/GPU:1': 1},
         tested_backend: The first backend when testing agreement between
@@ -63,13 +63,9 @@ def pytest_generate_tests(metafunc):
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
 
-    if "custom" not in backends: # pragma: no cover
+    if "qibotf" not in backends: # pragma: no cover
         # skip tests that require custom operators
-        tests_to_skip = {
-            "qibo.tests_new.test_core_states_distributed"
-        }
-        # for `test_tensorflow_custom_operators.py`
-        if metafunc.module.__name__ in tests_to_skip:
+        if metafunc.module.__name__  == "qibo.tests_new.test_core_states_distributed":
             pytest.skip("Custom operator tests require Tensorflow engine.")
 
     # for `test_backends_agreement.py`
@@ -87,10 +83,10 @@ def pytest_generate_tests(metafunc):
                 metafunc.parametrize("accelerators", [None])
             else:
                 config = [(b, None) for b in backends]
-                if "custom" in backends:
+                if "qibotf" in backends:
                     for x in accelerators.split(","):
                         devdict = {dev[1:]: int(dev[0]) for dev in x.split("+")}
-                        config.append(("custom", devdict))
+                        config.append(("qibotf", devdict))
                 metafunc.parametrize("backend,accelerators", config)
         else:
             metafunc.parametrize("backend", backends)

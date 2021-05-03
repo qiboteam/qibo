@@ -27,7 +27,7 @@ def pytest_configure(config):
 def pytest_generate_tests(metafunc):
     from qibo import K
     if "accelerators" in metafunc.fixturenames:
-        if "custom" in K.available_backends:
+        if "qibotf" in K.available_backends:
             accelerators = [None, {"/GPU:0": 1, "/GPU:1": 1}]
         else: # pragma: no cover
             accelerators = [None]

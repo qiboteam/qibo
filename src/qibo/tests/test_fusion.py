@@ -124,7 +124,7 @@ def test_fusion_errors():
 
     # Fuse distributed circuit after gates are set
     import qibo
-    if qibo.get_backend() == "custom":
+    if qibo.get_backend() == "qibotf":
         c = Circuit(4, accelerators={"/GPU:0": 2})
         c.add((gates.H(i) for i in range(4)))
         final_state = c()
@@ -157,7 +157,7 @@ def test_circuit_fuse_variational_layer(backend, nqubits, nlayers, accelerators)
     """Check fused variational layer execution."""
     import qibo
     if accelerators:
-        backend = "custom"
+        backend = "qibotf"
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
