@@ -39,7 +39,7 @@ def pytest_generate_tests(metafunc):
     # skip distributed tests if "custom" backend is not available
     module_name = "qibo.tests.test_distributed"
     if metafunc.module.__name__ == module_name:
-        if "custom" not in K.available_backends: # pragma: no cover
+        if "qibotf" not in K.available_backends: # pragma: no cover
             pytest.skip("Distributed circuits require custom operators.")
 
     # skip parallel tests on Windows
