@@ -92,7 +92,7 @@ def test_compiling_twice_exception():
     """Check that compiling a circuit a second time raises error."""
     from qibo import K
     original_backend = qibo.get_backend()
-    if "tensorflow" not in K.available_backends:
+    if "tensorflow" not in K.available_backends: # pragma: no cover
         pytest.skip("Skipping compilation test because Tensorflow is not available.")
     qibo.set_backend("tensorflow")
     c = Circuit(2)
