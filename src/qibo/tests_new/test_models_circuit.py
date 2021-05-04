@@ -6,7 +6,20 @@ from qibo import gates, models
 from qibo.tests_new.utils import random_state
 
 _atol = 1e-7
-# TODO: Test `Circuit` class from `qibo/models/circuit.py`
+
+
+def test_circuit_constructor():
+    from qibo.core.circuit import Circuit, DensityMatrixCircuit
+    from qibo.core.distcircuit import DistributedCircuit
+    c = models.Circuit(5)
+    assert isinstance(c, Circuit)
+    c = models.Circuit(5, density_matrix=True)
+    assert isinstance(c, DensityMatrixCircuit)
+    c = models.Circuit(5, accelerators={"/GPU:0": 2})
+    assert isinstance(c, DistributedCircuit)
+    with pytest.raises(NotImplementedError):
+        c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
+
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
     """Creates exact QFT matrix.
