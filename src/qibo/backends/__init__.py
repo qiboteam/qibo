@@ -13,8 +13,10 @@ class Backend:
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
             self.available_backends["numpy"] = NumpyBackend
-        else:  # pragma: no cover
-            raise_error(ModuleNotFoundError, "Numpy is not installed.")
+        else: # pragma: no cover
+            raise_error(ModuleNotFoundError, "Numpy is not installed. "
+                                             "Please install it using "
+                                             "`pip install numpy`.")
 
         # check if tensorflow is installed and use it as default backend.
         if self.check_availability("tensorflow"):
@@ -28,13 +30,18 @@ class Backend:
                 self.available_backends["qibotf"] = TensorflowCustomBackend
                 active_backend = "qibotf"
             else: # pragma: no cover
-                log.warning("Einsum will be used to apply gates with Tensorflow. "
-                            "Removing custom operators from available backends.")
+                log.warning("qibotf library was not found. `tf.einsum` will be "
+                            "used to apply gates. In order to install Qibo's "
+                            "high performance custom operators please use "
+                            "`pip install qibotf`.")
         else:  # pragma: no cover
             # case not tested because CI has tf installed
-            log.warning("Tensorflow is not installed. Falling back to numpy. "
-                        "Numpy does not support Qibo custom operators and GPU. "
-                        "Einsum will be used to apply gates on CPU.")
+            log.warning("Tensorflow is not installed, falling back to numpy. "
+                        "Numpy backend uses `np.einsum` and supports CPU only. "
+                        "To enable GPU acceleration please install Tensorflow "
+                        "with `pip install tensorflow`. To install the "
+                        "optimized Qibo custom operators please use "
+                        "`pip install qibotf` after installing Tensorflow.")
 
         self.constructed_backends = {}
         self._active_backend = None

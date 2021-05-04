@@ -29,10 +29,6 @@ def test_set_backend_errors():
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
         backends.set_backend("test")
-    with pytest.raises(ValueError):
-        backends.set_backend("numpy_custom")
-    with pytest.raises(ValueError):
-        backends.set_backend("numpy_badgates")
     if original_backend != "numpy":
         h = gates.H(0)
         with pytest.warns(RuntimeWarning):

@@ -34,7 +34,7 @@ def test_ndevices():
 
 def test_transform_queue_simple():
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = models.Circuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
@@ -55,7 +55,7 @@ def test_transform_queue_simple():
 
 def test_transform_queue_more_gates():
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = models.Circuit(4, devices)
     c.add(gates.H(0))
@@ -220,7 +220,7 @@ def test_unsupported_gates_errors():
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution(ndevices):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
     dist_c = models.Circuit(6, devices)
@@ -240,7 +240,7 @@ def test_simple_execution(ndevices):
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_execution_pretransformed_circuit(ndevices):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
     dist_c = models.Circuit(4, devices)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
@@ -262,7 +262,7 @@ def test_execution_pretransformed_circuit(ndevices):
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_simple_execution_global(ndevices):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
     dist_c = models.Circuit(6, devices)
@@ -280,7 +280,7 @@ def test_simple_execution_global(ndevices):
 
 def test_execution_with_global_swap():
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": 2, "/GPU:1": 1, "/GPU:2": 1}
 
     dist_c = models.Circuit(6, devices)
@@ -302,7 +302,7 @@ def test_execution_with_global_swap():
 @pytest.mark.parametrize("ndevices", [2, 4, 8])
 def test_execution_special_gate(ndevices):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": ndevices // 2, "/GPU:1": ndevices // 2}
 
     dist_c = models.Circuit(6, devices)
@@ -324,7 +324,7 @@ def test_execution_special_gate(ndevices):
 @pytest.mark.parametrize("ndevices", [2, 4])
 def test_controlled_execution(ndevices):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": ndevices}
     dist_c = models.Circuit(4, devices)
     dist_c.add((gates.H(i) for i in range(dist_c.nglobal, 4)))
@@ -367,7 +367,7 @@ def test_controlled_execution_large(ndevices):
 def test_distributed_circuit_addition():
     # Attempt to add circuits with different devices
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c1 = models.Circuit(6, devices)
     c2 = models.Circuit(6, {"/GPU:0": 2})
@@ -408,7 +408,7 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
                           {"/GPU:0": 2, "/GPU:1": 5, "/GPU:2": 1}])
 def test_distributed_qft_execution(nqubits, accel):
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
     dist_c = models.QFT(nqubits, accelerators=accel)
     c = models.QFT(nqubits)
 
