@@ -82,7 +82,7 @@ class VQE(object):
             loss = _loss
 
         if method != "sgd":
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
                                                              args=(self.circuit, self.hamiltonian),
