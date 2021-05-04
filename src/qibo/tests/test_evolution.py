@@ -326,7 +326,7 @@ def test_scheduling_optimization(method, options, messages, trotter, filename):
 
     if method == "sgd":
         from qibo import K
-        if K.name not in {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}:
+        if K.name != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
                                 messages=messages)

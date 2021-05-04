@@ -119,7 +119,7 @@ class single_qubit_classifier:
             from qibo import K
             circuit = self.circuit(self.training_set[0])
             for gate in circuit.queue:
-                if K.name not in {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}:
+                if K.name != "tensorflow":
                     from qibo.config import raise_error
                     raise_error(RuntimeError,
                                 'SGD VQE requires native Tensorflow '
