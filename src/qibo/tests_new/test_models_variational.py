@@ -6,7 +6,7 @@ import pathlib
 import pytest
 import qibo
 from qibo import gates, models, hamiltonians
-from qibo.tests_new.test_core_gates import random_state
+from qibo.tests_new.utils import random_state
 from scipy.linalg import expm
 
 REGRESSION_FOLDER = pathlib.Path(__file__).with_name("regressions")

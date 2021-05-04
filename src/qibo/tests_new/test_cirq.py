@@ -4,13 +4,7 @@ import cirq
 import pytest
 import qibo
 from qibo import models, gates, K
-
-
-def random_state(nqubits):
-    """Generates a random normalized state of shape (2^nqubits,)."""
-    n = 2 ** nqubits
-    state = np.random.random(n) + 1j * np.random.random(n)
-    return state / np.sqrt((np.abs(state) ** 2).sum())
+from qibo.tests_new.utils import random_state
 
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):

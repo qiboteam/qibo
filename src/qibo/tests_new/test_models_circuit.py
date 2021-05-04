@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 import qibo
 from qibo import gates, models
-from qibo.tests import utils
+from qibo.tests_new.utils import random_state
 
 _atol = 1e-7
 
@@ -58,7 +58,7 @@ def test_qft_transformation(nqubits):
 @pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
 def test_qft_transformation_random(nqubits):
     """Check QFT transformation for random initial state."""
-    initial_state = utils.random_numpy_state(nqubits)
+    initial_state = random_state(nqubits)
     exact_state = exact_qft(initial_state)
 
     c_init = models.Circuit(nqubits)
@@ -73,7 +73,7 @@ def test_qft_transformation_random(nqubits):
 def test_distributed_qft_agreement(nqubits):
     """Check ``_DistributedQFT`` agrees with normal ``QFT``."""
     from qibo.models.circuit import _DistributedQFT
-    initial_state = utils.random_numpy_state(nqubits)
+    initial_state = random_state(nqubits)
     exact_state = exact_qft(initial_state)
 
     c = _DistributedQFT(nqubits)

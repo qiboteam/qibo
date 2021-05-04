@@ -2,14 +2,14 @@
 import pytest
 import numpy as np
 import qibo
-from qibo import models, gates
+from qibo import models, gates, K
+from qibo.tests_new.utils import random_state, random_density_matrix
 
 
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4]),
                           (6, [1, 3]), (4, [0, 2])])
 def test_measurement_collapse(backend, nqubits, targets):
-    from qibo.tests_new.test_core_gates import random_state
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_state = random_state(nqubits)
@@ -32,7 +32,6 @@ def test_measurement_collapse(backend, nqubits, targets):
 @pytest.mark.parametrize("nqubits,targets",
                          [(2, [1]), (3, [1]), (4, [1, 3]), (5, [0, 3, 4])])
 def test_measurement_collapse_density_matrix(backend, nqubits, targets):
-    from qibo.tests_new.test_core_gates_density_matrix import random_density_matrix
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     initial_rho = random_density_matrix(nqubits)
@@ -68,7 +67,6 @@ def test_measurement_collapse_errors(backend):
 def test_measurement_collapse_bitflip_noise(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo import K
     K.set_seed(123)
     c = models.Circuit(4, accelerators)
     output = c.add(gates.M(0, 1, p0=0.2, collapse=True))
@@ -107,8 +105,6 @@ def test_measurement_result_parameters(backend, accelerators, effect):
 def test_measurement_result_parameters_random(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo import K
-    from qibo.tests_new.test_core_gates import random_state
     test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
@@ -133,8 +129,6 @@ def test_measurement_result_parameters_random(backend, accelerators):
 def test_measurement_result_parameters_repeated_execution(backend, accelerators, use_loop):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo import K
-    from qibo.tests_new.test_core_gates import random_state
     test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
@@ -164,8 +158,6 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo import K
-    from qibo.tests_new.test_core_gates import random_state
     test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)
     K.set_seed(123)
@@ -195,8 +187,6 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
 def test_measurement_result_parameters_multiple_qubits(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    from qibo import K
-    from qibo.tests_new.test_core_gates import random_state
     initial_state = random_state(4)
     K.set_seed(123)
     c = models.Circuit(4)

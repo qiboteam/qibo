@@ -4,24 +4,7 @@ import numpy as np
 import qibo
 from qibo import gates
 from qibo.config import raise_error
-
-
-def random_state(nqubits):
-    """Generates a random normalized state vector as numpy array."""
-    nstates = 2 ** nqubits
-    initial_state = np.random.random(nstates) + 1j * np.random.random(nstates)
-    return initial_state / np.sqrt((np.abs(initial_state) ** 2).sum())
-
-
-def random_density_matrix(nqubits):
-    """Generates a random normalized density matrix."""
-    shape = 2 * (2 ** nqubits,)
-    m = np.random.random(shape) + 1j * np.random.random(shape)
-    rho = (m + m.T.conj()) / 2.0
-    # Normalize
-    ids = np.arange(2 ** nqubits)
-    rho[ids, ids] = rho[ids, ids] / np.trace(rho)
-    return rho
+from qibo.tests_new.utils import random_state, random_density_matrix
 
 
 def apply_gates(gatelist, nqubits=None, initial_state=None):
