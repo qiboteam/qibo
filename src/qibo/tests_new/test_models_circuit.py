@@ -1,6 +1,4 @@
-"""
-Testing Quantum Fourier Transform (QFT) circuit.
-"""
+"""Test methods defined in `qibo/models/circuit.py`."""
 import numpy as np
 import pytest
 import qibo
@@ -8,7 +6,7 @@ from qibo import gates, models
 from qibo.tests_new.utils import random_state
 
 _atol = 1e-7
-
+# TODO: Test `Circuit` class from `qibo/models/circuit.py`
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:
     """Creates exact QFT matrix.
@@ -42,31 +40,22 @@ def test_qft_circuit_size(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
+# FIXME: Add accelerators to this test
 @pytest.mark.parametrize("nqubits", [4, 5])
-def test_qft_transformation(nqubits):
-    """Check QFT transformation for |00...0>."""
+@pytest.mark.parametrize("random", [False, True])
+def test_qft_execution(backend, nqubits, random):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
     c = models.QFT(nqubits)
-    final_state = c.execute().numpy()
-
-    initial_state = np.zeros_like(final_state)
-    initial_state[0] = 1.0
-    exact_state = exact_qft(initial_state)
-
-    np.testing.assert_allclose(final_state, exact_state, atol=_atol)
-
-
-@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
-def test_qft_transformation_random(nqubits):
-    """Check QFT transformation for random initial state."""
-    initial_state = random_state(nqubits)
-    exact_state = exact_qft(initial_state)
-
-    c_init = models.Circuit(nqubits)
-    c_init.add(gates.Flatten(initial_state))
-    c = c_init + models.QFT(nqubits)
-    final_state = c.execute().numpy()
-
-    np.testing.assert_allclose(final_state, exact_state, atol=_atol)
+    if random:
+        initial_state = random_state(nqubits)
+        final_state = c(np.copy(initial_state))
+    else:
+        initial_state = c.get_initial_state()
+        final_state = c()
+    target_state = exact_qft(initial_state)
+    np.testing.assert_allclose(final_state, target_state, atol=_atol)
+    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
@@ -74,15 +63,13 @@ def test_distributed_qft_agreement(nqubits):
     """Check ``_DistributedQFT`` agrees with normal ``QFT``."""
     from qibo.models.circuit import _DistributedQFT
     initial_state = random_state(nqubits)
-    exact_state = exact_qft(initial_state)
-
+    target_state = exact_qft(initial_state)
     c = _DistributedQFT(nqubits)
-    final_state = c(np.copy(initial_state)).numpy()
+    final_state = c(np.copy(initial_state))
+    np.testing.assert_allclose(final_state, target_state, atol=_atol)
 
-    np.testing.assert_allclose(final_state, exact_state, atol=_atol)
 
-
-def test_distributed_qft_error():
+def test_qft_errors():
     """Check that ``_DistributedQFT`` raises error if not sufficient qubits."""
     from qibo.models.circuit import _DistributedQFT
     with pytest.raises(NotImplementedError):
