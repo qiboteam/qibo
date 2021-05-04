@@ -106,8 +106,8 @@ def test_trotterized_evolution(nqubits, solver, dt, accel=None, h=1.0):
 
 
 def test_trotterized_evolution_distributed():
-    import qibo
-    if qibo.get_backend() != "custom": # pragma: no cover
+    from qibo import K
+    if K.op is None: # pragma: no cover
         pytest.skip("Distributed circuit works only with custom backend.")
     test_trotterized_evolution(4, "exp", 1e-2, accel={"/GPU:0": 2})
 
@@ -326,7 +326,7 @@ def test_scheduling_optimization(method, options, messages, trotter, filename):
 
     if method == "sgd":
         from qibo import K
-        if K.name not in {"tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}:
+        if K.name != "tensorflow":
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
                                 messages=messages)

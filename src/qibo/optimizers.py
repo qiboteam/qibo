@@ -164,15 +164,11 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
               - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
                 a message of the loss function.
     """
-    # check if gates are using the MatmulEinsum backend
-    compatible_backends = {
-        "tensorflow_defaulteinsum", "tensorflow_matmuleinsum"}
     from qibo import K
-    if K.name not in compatible_backends:  # pragma: no cover
-        from qibo.config import raise_error
-        raise_error(RuntimeError, "SGD requires native Tensorflow backend.")
+    from qibo.config import log, raise_error
+    if K.name != "tensorflow":
+        raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
-    from qibo.config import log
     sgd_options = {"nepochs": 1000000,
                    "nmessage": 1000,
                    "optimizer": "Adagrad",

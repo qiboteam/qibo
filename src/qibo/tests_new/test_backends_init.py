@@ -18,8 +18,7 @@ def test_set_backend(backend):
     assert repr(K) == backend
     assert K.executing_eagerly()
     h = gates.H(0)
-    if backend == "custom":
-        assert K.custom_einsum is None
+    if backend == "qibotf":
         assert h.gate_op
     else:
         assert h.gate_op is None
@@ -30,14 +29,10 @@ def test_set_backend_errors():
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
         backends.set_backend("test")
-    with pytest.raises(ValueError):
-        backends.set_backend("numpy_custom")
-    with pytest.raises(ValueError):
-        backends.set_backend("numpy_badgates")
-    h = gates.H(0)
-    if "numpy" not in original_backend:
+    if original_backend != "numpy":
+        h = gates.H(0)
         with pytest.warns(RuntimeWarning):
-            backends.set_backend("numpy_matmuleinsum")
+            backends.set_backend("numpy")
     backends.set_backend(original_backend)
 
 

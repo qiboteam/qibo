@@ -94,7 +94,7 @@ def test_vqe(backend, method, options, compile, filename):
     """Performs a VQE circuit minimization test."""
     original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
-    if (method == "sgd" or compile) and backend != "tensorflow_matmuleinsum":
+    if (method == "sgd" or compile) and backend != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
 
@@ -141,11 +141,11 @@ def test_vqe(backend, method, options, compile, filename):
 
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
-    if "custom" not in qibo.K.available_backends: # pragma: no cover
+    if "qibotf" not in qibo.K.available_backends: # pragma: no cover
         pytest.skip("Custom backend not available.")
 
     original_backend = qibo.get_backend()
-    qibo.set_backend("custom")
+    qibo.set_backend("qibotf")
 
     nqubits = 6
     circuit = models.Circuit(nqubits)
@@ -281,7 +281,7 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_qaoa_optimization(backend, method, options, trotter, filename):
     original_backend = qibo.get_backend()
-    if method == "sgd" and backend != "tensorflow_matmuleinsum":
+    if method == "sgd" and backend != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
     qibo.set_backend(backend)
     h = hamiltonians.XXZ(3, trotter=trotter)

@@ -14,7 +14,8 @@ class Optimization:
 
 class TensorflowBackend(numpy.NumpyBackend):
 
-    description = "Base class for Tensorflow backends."
+    description = "Uses `tf.einsum` to apply gates to states via matrix " \
+                  "multiplication."
 
     def __init__(self):
         super().__init__()
@@ -208,9 +209,7 @@ class TensorflowCustomBackend(TensorflowBackend):
                                       "compiled.")
         from qibotf import custom_operators as op  # pylint: disable=E0401
         super().__init__()
-        self.name = "custom"
-        self.custom_gates = True
-        self.custom_einsum = None
+        self.name = "qibotf"
         self.op = op
         from qibo.config import get_threads
         self.get_threads = get_threads
@@ -291,68 +290,3 @@ class TensorflowCustomBackend(TensorflowBackend):
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False, self.get_threads())
         return state / self.trace(state)
-
-
-class TensorflowDefaultEinsumBackend(TensorflowBackend):
-    """Gate application backend that based on default ``einsum``.
-
-    This is the most efficient implementation for GPU, however its
-    backpropagation is not working properly for complex numbers.
-    The user should switch to :class:`qibo.core.einsum.MatmulEinsum`
-    if automatic differentiation is required.
-    """
-
-    description = "Uses `tf.einsum` to apply gates to states via matrix " \
-                  "multiplication."
-
-    def __init__(self):
-        super().__init__()
-        from qibo.backends import einsum
-        self.name = "tensorflow_defaulteinsum"
-        self.custom_gates = False
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return numpy.NumpyDefaultEinsumBackend.create_einsum_cache(
-            self, qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        return numpy.NumpyDefaultEinsumBackend.einsum_call(
-            self, cache, state, matrix)
-
-
-class TensorflowMatmulEinsumBackend(TensorflowBackend):
-
-    """Gate application backend based on ``matmul``.
-
-    For Tensorflow this is more efficient than ``einsum`` on CPU but slower on GPU.
-    The matmul version implemented here is not the most efficient possible.
-    The implementation algorithm is the following.
-
-    Assume that we are applying
-    a two qubit gate of shape (4, 4) to qubits 0 and 3 of a five qubit state
-    vector of shape 5 * (2,). We perform the following steps:
-
-    * Reshape the state to (2, 4, 2, 2)
-    * Transpose to (2, 2, 4, 2) to bring the target qubits in the beginning.
-    * Reshape to (4, 8).
-    * Apply the gate using the matmul (4, 4) x (4, 8).
-    * Reshape to the original shape 5 * (2,) and traspose so that the final
-      qubit order agrees with the initial.
-    """
-
-    description = "Uses `tf.matmul` as well as transpositions and reshapes " \
-                  "to apply gates to states via matrix multiplication."
-
-    def __init__(self):
-        from qibo.backends import einsum
-        super().__init__()
-        self.name = "tensorflow_matmuleinsum"
-        self.custom_gates = False
-
-    def create_einsum_cache(self, qubits, nqubits, ncontrol=None):
-        return numpy.NumpyMatmulEinsumBackend.create_einsum_cache(
-            self, qubits, nqubits, ncontrol)
-
-    def einsum_call(self, cache, state, matrix):
-        return numpy.NumpyMatmulEinsumBackend.einsum_call(
-            self, cache, state, matrix)

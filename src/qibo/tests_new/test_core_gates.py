@@ -378,7 +378,8 @@ def test_unitary_initialization(backend):
         gate = gates.Unitary(matrix, 0, 1)
     with pytest.raises(TypeError):
         gate = gates.Unitary("abc", 0, 1)
-    if backend == "custom":
+    from qibo import K
+    if K.op is not None:
         with pytest.raises(NotImplementedError):
             gate = gates.Unitary(matrix, 0, 1, 2)
     qibo.set_backend(original_backend)
