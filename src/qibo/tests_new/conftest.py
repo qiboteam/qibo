@@ -62,10 +62,20 @@ def pytest_generate_tests(metafunc):
     """
     backends = metafunc.config.option.backends.split(",")
     accelerators = metafunc.config.option.accelerators
+    # parse accelerator stings to dicts
+    if accelerators is not None:
+        accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")}
+                        for x in accelerators.split(",")]
+    distributed_tests = {
+        "qibo.tests_new.test_core_states_distributed",
+        "qibo.tests_new.test_core_distutils",
+        "qibo.tests_new.test_core_distcircuit"
+        "qibo.tests_new.test_core_distcircuit_execution"
+    }
 
     if "qibotf" not in backends: # pragma: no cover
         # skip tests that require custom operators
-        if metafunc.module.__name__  == "qibo.tests_new.test_core_states_distributed":
+        if metafunc.module.__name__ in distributed_tests:
             pytest.skip("Custom operator tests require Tensorflow engine.")
 
     # for `test_backends_agreement.py`
@@ -76,7 +86,12 @@ def pytest_generate_tests(metafunc):
 
     # for `test_core_*.py`
     if "backend" in metafunc.fixturenames:
-        if "accelerators" in metafunc.fixturenames:
+        if metafunc.module.__name__ in distributed_tests:
+            metafunc.parametrize("backend", ["qibotf"])
+            if "accelerators" in metafunc.fixturenames:
+                metafunc.parametrize("accelerators", accelerators)
+
+        elif "accelerators" in metafunc.fixturenames:
             if accelerators is None: # pragma: no cover
                 # `accelerators` is never `None` in CI test execution
                 metafunc.parametrize("backend", backends)
@@ -84,9 +99,8 @@ def pytest_generate_tests(metafunc):
             else:
                 config = [(b, None) for b in backends]
                 if "qibotf" in backends:
-                    for x in accelerators.split(","):
-                        devdict = {dev[1:]: int(dev[0]) for dev in x.split("+")}
-                        config.append(("qibotf", devdict))
+                    config = [("qibotf", d) for d in accelerators]
                 metafunc.parametrize("backend,accelerators", config)
+
         else:
             metafunc.parametrize("backend", backends)

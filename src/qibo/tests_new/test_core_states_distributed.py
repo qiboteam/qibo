@@ -62,3 +62,29 @@ def test_distributed_state_copy():
     state = states.DistributedState.zero_state(c)
     cstate = state.copy()
     np.testing.assert_allclose(state.tensor, cstate.tensor)
+
+
+def test_distributed_state_getitem():
+    from qibo import gates
+    from qibo.models import Circuit
+    theta = np.random.random(4)
+    dist_c = Circuit(4, {"/GPU:0": 2})
+    dist_c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    state = dist_c()
+    c = Circuit(4)
+    c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
+    target_state = c()
+
+    # Check indexing
+    state_vector = np.array([state[i] for i in range(2 ** 4)])
+    np.testing.assert_allclose(state_vector, target_state)
+    # Check slicing
+    np.testing.assert_allclose(state[:], target_state)
+    np.testing.assert_allclose(state[2:5], target_state[2:5])
+    # Check list indexing
+    ids = [2, 4, 6]
+    target_state = [target_state[i] for i in ids]
+    np.testing.assert_allclose(state[ids], target_state)
+    # Check error
+    with pytest.raises(TypeError):
+        state["a"]

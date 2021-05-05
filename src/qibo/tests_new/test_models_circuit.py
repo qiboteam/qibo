@@ -5,8 +5,6 @@ import qibo
 from qibo import gates, models
 from qibo.tests_new.utils import random_state
 
-_atol = 1e-7
-
 
 def test_circuit_constructor():
     from qibo.core.circuit import Circuit, DensityMatrixCircuit
@@ -53,10 +51,9 @@ def test_qft_circuit_size(backend, nqubits):
     qibo.set_backend(original_backend)
 
 
-# FIXME: Add accelerators to this test
-@pytest.mark.parametrize("nqubits", [4, 5])
+@pytest.mark.parametrize("nqubits", [5, 6, 12])
 @pytest.mark.parametrize("random", [False, True])
-def test_qft_execution(backend, nqubits, random):
+def test_qft_execution(backend, accelerators, nqubits, random):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     c = models.QFT(nqubits)
@@ -67,19 +64,8 @@ def test_qft_execution(backend, nqubits, random):
         initial_state = c.get_initial_state()
         final_state = c()
     target_state = exact_qft(initial_state)
-    np.testing.assert_allclose(final_state, target_state, atol=_atol)
+    np.testing.assert_allclose(final_state, target_state)
     qibo.set_backend(original_backend)
-
-
-@pytest.mark.parametrize("nqubits", [4, 5, 11, 12])
-def test_distributed_qft_agreement(nqubits):
-    """Check ``_DistributedQFT`` agrees with normal ``QFT``."""
-    from qibo.models.circuit import _DistributedQFT
-    initial_state = random_state(nqubits)
-    target_state = exact_qft(initial_state)
-    c = _DistributedQFT(nqubits)
-    final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, target_state, atol=_atol)
 
 
 def test_qft_errors():
