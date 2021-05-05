@@ -8,8 +8,6 @@ from qibo.models import Circuit
 
 def test_pauli_noise_channel(backend):
     from qibo import matrices
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -26,12 +24,9 @@ def test_pauli_noise_channel(backend):
     m2 = np.kron(matrices.I, matrices.Z)
     rho = 0.6 * rho + 0.1 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
     np.testing.assert_allclose(final_rho, rho)
-    qibo.set_backend(original_backend)
 
 
 def test_noisy_circuit_reexecution(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2, density_matrix=True)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -40,7 +35,6 @@ def test_noisy_circuit_reexecution(backend):
     final_rho = c().state()
     final_rho2 = c().state()
     np.testing.assert_allclose(final_rho, final_rho2)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_gates():
@@ -54,8 +48,6 @@ def test_circuit_with_noise_gates():
 
 
 def test_circuit_with_noise_execution(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     noisy_c = c.with_noise((0.1, 0.2, 0.3))
@@ -68,12 +60,9 @@ def test_circuit_with_noise_execution(backend):
     target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.2, 0.3))
     target_state = target_c()
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_measurements(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2, density_matrix=True)
     c.add([gates.H(0), gates.H(1)])
     c.add(gates.M(0))
@@ -87,12 +76,9 @@ def test_circuit_with_noise_measurements(backend):
     target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.1, 0.1))
     target_state = target_c()
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_noise_map(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     noise_map = {0: (0.1, 0.2, 0.1), 1: (0.2, 0.3, 0.0),
                  2: (0.0, 0.0, 0.0)}
 
@@ -109,9 +95,7 @@ def test_circuit_with_noise_noise_map(backend):
     target_c.add(gates.PauliNoiseChannel(1, 0.2, 0.3, 0.0))
     target_c.add(gates.X(2))
     target_state = target_c()
-
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_noise_errors():
@@ -135,8 +119,6 @@ def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
     from qibo.tests.test_measurement_gate import assert_result
     from qibo.tests.test_measurement_gate_registers import assert_register_result
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     state = np.zeros(16)
     state[0] = 1
     init_rho = np.outer(state, state.conj())
@@ -167,7 +149,6 @@ def test_density_matrix_circuit_measurement(backend):
     target["decimal_frequencies"] = {"A": {1: 100}, "B": {2: 100}}
     target["binary_frequencies"] = {"A": {"01": 100}, "B": {"10": 100}}
     assert_register_result(result, **target)
-    qibo.set_backend(original_backend)
 
 
 def test_density_matrix_circuit_errors():
