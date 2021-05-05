@@ -1,7 +1,6 @@
 """Test measurement objects defined in `qibo/core/measurements.py`."""
 import pytest
 import numpy as np
-import qibo
 from qibo import K
 from qibo.core import measurements
 
@@ -26,8 +25,6 @@ def test_measurementresult_errors():
 
 
 def test_measurementresult_add_shots(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     result = measurements.MeasurementResult((0, 1))
     with pytest.raises(ValueError):
         result.add_shot()
@@ -41,19 +38,15 @@ def test_measurementresult_add_shots(backend):
     assert result.nshots == 2
     np.testing.assert_allclose(result.decimal, [0, 3])
     np.testing.assert_allclose(result.binary, [[0, 0], [1, 1]])
-    qibo.set_backend(original_backend)
 
 
 def test_measurementresult_outcome(backend):
     import collections
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     result = measurements.MeasurementResult((0,))
     result.decimal = np.zeros(1, dtype=np.int64)
     assert result.outcome() == 0
     result.decimal = np.ones(1, dtype=np.int64)
     assert result.outcome() == 1
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("binary", [True, False])
@@ -63,8 +56,6 @@ def test_measurementresult_outcome(backend):
                           ([0, 6, 5, 3, 1],
                            [[0, 0, 0], [1, 1, 0], [1, 0, 1], [0, 1, 1], [0, 0, 1]])])
 def test_measurementresult_conversions(backend, binary, dsamples, bsamples):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     qubits = tuple(range(len(bsamples[0])))
     result1 = measurements.MeasurementResult(qubits)
     result1.decimal = K.cast(dsamples, dtype='DTYPEINT')
@@ -77,13 +68,10 @@ def test_measurementresult_conversions(backend, binary, dsamples, bsamples):
     # test ``__getitem__``
     for i, target in enumerate(dsamples):
         np.testing.assert_allclose(result1[i], target)
-    qibo.set_backend(original_backend)
 
 
 def test_measurementresult_frequencies(backend):
     import collections
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     result = measurements.MeasurementResult((0, 1, 2))
     result.decimal = [0, 6, 5, 3, 5, 5, 6, 1, 1, 2, 4]
     dfreqs = {0: 1, 1: 2, 2: 1, 3: 1, 4: 1, 5: 3, 6: 2}
@@ -91,7 +79,6 @@ def test_measurementresult_frequencies(backend):
               "101": 3, "110": 2}
     assert result.frequencies(binary=True) == bfreqs
     assert result.frequencies(binary=False) == dfreqs
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("i,p0,p1",
@@ -99,13 +86,11 @@ def test_measurementresult_frequencies(backend):
                           (2, (0.1, 0.0, 0.2), None),
                           (3, {0: 0.2, 1: 0.1, 2: 0.0}, None)])
 def test_measurementresult_apply_bitflips(backend, i, p0, p1):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     result = measurements.MeasurementResult((0, 1, 2))
     result.decimal = K.zeros(10, dtype='DTYPEINT')
     K.set_seed(123)
     noisy_result = result.apply_bitflips(p0, p1)
-    if "numpy" in backend:
+    if "numpy" in K.name:
         targets = [
             [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
             [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
@@ -120,13 +105,10 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
             [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
         ]
     np.testing.assert_allclose(noisy_result.samples(binary=False), targets[i])
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("probs", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
 def test_measurementresult_apply_bitflips_random_samples(backend, probs):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult(qubits)
@@ -140,12 +122,9 @@ def test_measurementresult_apply_bitflips_random_samples(backend, probs):
     sprobs = np.array(K.random_uniform(samples.shape))
     target_samples = (samples + (sprobs < probs)) % 2
     np.testing.assert_allclose(noisy_result.samples(), target_samples)
-    qibo.set_backend(original_backend)
 
 
 def test_measurementresult_apply_bitflips_random_samples_asymmetric(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult(qubits)
@@ -164,7 +143,6 @@ def test_measurementresult_apply_bitflips_random_samples_asymmetric(backend):
     target_samples[ids[1]] = samples.ravel()[ids[1]] - (sprobs < p1).ravel()[ids[1]]
     target_samples = target_samples.reshape(samples.shape)
     np.testing.assert_allclose(noisy_result.samples(), target_samples)
-    qibo.set_backend(original_backend)
 
 
 def test_measurementresult_apply_bitflips_errors():
@@ -193,8 +171,6 @@ def test_measurementsymbol_counter():
 
 
 def test_measurementsymbol_evaluate(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     result = measurements.MeasurementSymbol(measurements.MeasurementResult((0, 1)))
     expr = 2 * result
     with pytest.raises(NotImplementedError):
@@ -204,12 +180,9 @@ def test_measurementsymbol_evaluate(backend):
     expr = 2 * result
     value = result.evaluate(expr)
     assert value == 2
-    qibo.set_backend(original_backend)
 
 
 def test_measurementregistersresult_samples(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult((0, 1, 2, 3))
     result.binary = samples
@@ -219,12 +192,9 @@ def test_measurementregistersresult_samples(backend):
     assert register_samples.keys() == qubits.keys()
     np.testing.assert_allclose(register_samples["a"], samples[:, [0, 2]])
     np.testing.assert_allclose(register_samples["b"], samples[:, [1, 3]])
-    qibo.set_backend(original_backend)
 
 
 def test_measurementregistersresult_frequencies(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     probs = np.random.random(16)
     probs = probs / np.sum(probs)
     result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=1000000)
@@ -240,4 +210,3 @@ def test_measurementregistersresult_frequencies(backend):
                             for k in rkeys}
     assert register_frequencies["a"] == target_frequencies_a
     assert register_frequencies["b"] == target_frequencies_b
-    qibo.set_backend(original_backend)
