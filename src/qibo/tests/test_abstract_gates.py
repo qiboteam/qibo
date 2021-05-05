@@ -19,29 +19,6 @@ def test_x_controlled_by(controls, instance):
     assert isinstance(gate, getattr(gates, instance))
 
 
-@pytest.mark.parametrize(("target", "controls", "free"),
-                         [(0, (1,), ()), (2, (0, 1), ()),
-                          (3, (0, 1, 4), (2, 5)),
-                          (7, (0, 1, 2, 3, 4), (5, 6))])
-def test_x_decompose_with_cirq(target, controls, free):
-    """Check that decomposition of multi-control ``X`` agrees with Cirq."""
-    import cirq
-    from qibo.tests import cirq_utils
-    gate = gates.X(target).controlled_by(*controls)
-    qibo_decomp = gate.decompose(*free, use_toffolis=False)
-
-    # Calculate the decomposition using Cirq.
-    nqubits = max((target,) + controls + free) + 1
-    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
-    controls = [qubits[i] for i in controls]
-    free = [qubits[i] for i in free]
-    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[target], free)
-
-    assert len(qibo_decomp) == len(cirq_decomp)
-    for qibo_gate, cirq_gate in zip(qibo_decomp, cirq_decomp):
-        cirq_utils.assert_gates_equivalent(qibo_gate, cirq_gate)
-
-
 def test_x_decompose_with_few_controls():
     """Check ``X`` decomposition with less than three controls."""
     gate = gates.X(0)

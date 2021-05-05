@@ -118,7 +118,7 @@ def test_distributed_circuit_get_initial_state_random(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     import itertools
-    from qibo.tests_new.utils import random_state
+    from qibo.tests.utils import random_state
     target_state = random_state(5)
     c = DistributedCircuit(5, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)

@@ -5,7 +5,7 @@ import qibo
 from qibo import gates
 from qibo.models import Circuit
 from qibo.core.distcircuit import DistributedCircuit
-from qibo.tests_new.utils import random_state
+from qibo.tests.utils import random_state
 
 
 @pytest.mark.parametrize("use_global_qubits", [False, True])

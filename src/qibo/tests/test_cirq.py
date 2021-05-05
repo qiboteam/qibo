@@ -4,7 +4,7 @@ import cirq
 import pytest
 import qibo
 from qibo import models, gates, K
-from qibo.tests_new.utils import random_state
+from qibo.tests.utils import random_state
 
 
 def random_unitary_matrix(nqubits, dtype=np.complex128):
@@ -64,6 +64,64 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         final_state = c(np.copy(initial_state))
         assert c.depth == target_depth
         np.testing.assert_allclose(final_state, target_state, atol=atol)
+
+
+def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
+    """Asserts that qibo gate is equivalent to cirq gate.
+
+    Checks that:
+        * Gate type agrees.
+        * Target and control qubits agree.
+        * Parameter (if applicable) agrees.
+    Cirq gate parameters are extracted by parsing the gate string.
+    """
+    import re
+    pieces = [x for x in re.split("[()]", str(cirq_gate)) if x]
+    if len(pieces) == 2:
+        gatename, targets = pieces
+        theta = None
+    elif len(pieces) == 3:
+        gatename, theta, targets = pieces
+    else: # pragma: no cover
+        # case not tested because it fails
+        raise RuntimeError("Cirq gate parsing failed with {}.".format(pieces))
+
+    qubits = list(int(x) for x in targets.replace(" ", "").split(","))
+    targets = (qubits.pop(),)
+    controls = set(qubits)
+
+    qibo_to_cirq = {"CNOT": "CNOT", "RY": "Ry", "TOFFOLI": "TOFFOLI"}
+    assert qibo_to_cirq[qibo_gate.__class__.__name__] == gatename
+    assert qibo_gate.target_qubits == targets
+    assert set(qibo_gate.control_qubits) == controls
+    if theta is not None:
+        if "π" in theta:
+            theta = np.pi * float(theta.replace("π", ""))
+        else: # pragma: no cover
+            # case doesn't happen in tests (could remove)
+            theta = float(theta)
+        np.testing.assert_allclose(theta, qibo_gate.parameters)
+
+
+@pytest.mark.parametrize(("target", "controls", "free"),
+                         [(0, (1,), ()), (2, (0, 1), ()),
+                          (3, (0, 1, 4), (2, 5)),
+                          (7, (0, 1, 2, 3, 4), (5, 6))])
+def test_x_decompose_with_cirq(target, controls, free):
+    """Check that decomposition of multi-control ``X`` agrees with Cirq."""
+    gate = gates.X(target).controlled_by(*controls)
+    qibo_decomp = gate.decompose(*free, use_toffolis=False)
+
+    # Calculate the decomposition using Cirq.
+    nqubits = max((target,) + controls + free) + 1
+    qubits = [cirq.LineQubit(i) for i in range(nqubits)]
+    controls = [qubits[i] for i in controls]
+    free = [qubits[i] for i in free]
+    cirq_decomp = cirq.decompose_multi_controlled_x(controls, qubits[target], free)
+
+    assert len(qibo_decomp) == len(cirq_decomp)
+    for qibo_gate, cirq_gate in zip(qibo_decomp, cirq_decomp):
+        assert_cirq_gates_equivalent(qibo_gate, cirq_gate)
 
 
 @pytest.mark.parametrize(("gate_name", "nqubits", "ndevices"),

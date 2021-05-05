@@ -5,7 +5,7 @@ import qibo
 from qibo import gates
 from qibo.core.distcircuit import DistributedCircuit
 from qibo.core.distutils import DistributedQubits
-from qibo.tests_new.test_core_distcircuit import check_device_queues
+from qibo.tests.test_core_distcircuit import check_device_queues
 
 
 def test_transform_queue_simple(backend):

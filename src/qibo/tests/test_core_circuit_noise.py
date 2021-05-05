@@ -133,8 +133,8 @@ def test_circuit_with_noise_errors():
 
 def test_density_matrix_circuit_measurement(backend):
     """Check measurement gate on density matrices using circuit."""
-    from qibo.tests_new.test_measurement_gate import assert_result
-    from qibo.tests_new.test_measurement_gate_registers import assert_register_result
+    from qibo.tests.test_measurement_gate import assert_result
+    from qibo.tests.test_measurement_gate_registers import assert_register_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(16)

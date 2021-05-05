@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 import qibo
 from qibo import gates, models
-from qibo.tests_new.utils import random_state
+from qibo.tests.utils import random_state
 
 
 def test_circuit_constructor():

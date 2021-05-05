@@ -4,7 +4,7 @@ import numpy as np
 import qibo
 from qibo import gates
 from qibo.models import Circuit
-from qibo.tests_new.test_core_gates import random_state
+from qibo.tests.utils import random_state
 
 
 def test_controlled_x(backend, accelerators):

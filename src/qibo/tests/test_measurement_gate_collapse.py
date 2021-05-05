@@ -3,7 +3,7 @@ import pytest
 import numpy as np
 import qibo
 from qibo import models, gates, K
-from qibo.tests_new.utils import random_state, random_density_matrix
+from qibo.tests.utils import random_state, random_density_matrix
 
 
 @pytest.mark.parametrize("nqubits,targets",

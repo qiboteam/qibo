@@ -280,7 +280,7 @@ def test_entropy_large_circuit(backend, accelerators):
 
 
 def test_entropy_density_matrix(backend):
-    from qibo.tests_new.test_core_gates import random_density_matrix
+    from qibo.tests.utils import random_density_matrix
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     rho = random_density_matrix(4)

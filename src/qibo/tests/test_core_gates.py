@@ -4,7 +4,7 @@ import numpy as np
 import qibo
 from qibo import gates
 from qibo.config import raise_error
-from qibo.tests_new.utils import random_state, random_density_matrix
+from qibo.tests.utils import random_state, random_density_matrix
 
 
 def apply_gates(gatelist, nqubits=None, initial_state=None):

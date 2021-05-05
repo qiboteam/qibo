@@ -92,7 +92,7 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     result = c(nshots=100)
 
     # Check full result
-    from qibo.tests_new.test_measurement_gate import assert_result
+    from qibo.tests.test_measurement_gate import assert_result
     target_binary_samples = np.zeros((100, 5))
     target_binary_samples[:, 1] = 1
     target_binary_samples[:, 2] = 1

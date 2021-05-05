@@ -289,7 +289,7 @@ models_config = [
 @pytest.mark.parametrize("numpy", [True, False])
 def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
-    from qibo.tests_new.test_models_variational import assert_regression_fixture
+    from qibo.tests.test_models_variational import assert_regression_fixture
     kwargs["numpy"] = numpy
     H = model(**kwargs)
     matrix = np.array(H.matrix).ravel().real
@@ -409,7 +409,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     np.testing.assert_allclose(trotter_h.dense.matrix, target_h.matrix)
 
     dt = 1e-2
-    from qibo.tests_new.utils import random_state
+    from qibo.tests.utils import random_state
     initial_state = random_state(4)
     if K.op is not None:
         with pytest.raises(NotImplementedError):

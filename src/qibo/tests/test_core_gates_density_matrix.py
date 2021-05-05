@@ -244,7 +244,7 @@ def test_controlled_by_random(backend, nqubits):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     from qibo.models import Circuit
-    from qibo.tests_new.test_core_gates import random_state
+    from qibo.tests.utils import random_state
     initial_psi = random_state(nqubits)
     initial_rho = np.outer(initial_psi, initial_psi.conj())
     c = Circuit(nqubits, density_matrix=True)
@@ -318,7 +318,7 @@ def test_channel_gate_setters(backend):
 
 
 def test_measurement_density_matrix(backend):
-    from qibo.tests_new.test_measurement_gate import assert_result
+    from qibo.tests.test_measurement_gate import assert_result
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     state = np.zeros(4)

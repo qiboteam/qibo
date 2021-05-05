@@ -45,7 +45,7 @@ def pytest_addoption(parser):
 
 
 def pytest_generate_tests(metafunc):
-    """Generates all tests defined under `src/qibo/tests_new`.
+    """Generates all tests defined under `src/qibo/tests`.
 
     Test functions may have one or more of the following arguments:
         engine: Backend library (eg. numpy, tensorflow, etc.),
@@ -67,10 +67,10 @@ def pytest_generate_tests(metafunc):
         accelerators = [{dev[1:]: int(dev[0]) for dev in x.split("+")}
                         for x in accelerators.split(",")]
     distributed_tests = {
-        "qibo.tests_new.test_core_states_distributed",
-        "qibo.tests_new.test_core_distutils",
-        "qibo.tests_new.test_core_distcircuit"
-        "qibo.tests_new.test_core_distcircuit_execution"
+        "qibo.tests.test_core_states_distributed",
+        "qibo.tests.test_core_distutils",
+        "qibo.tests.test_core_distcircuit"
+        "qibo.tests.test_core_distcircuit_execution"
     }
 
     if "qibotf" not in backends: # pragma: no cover
