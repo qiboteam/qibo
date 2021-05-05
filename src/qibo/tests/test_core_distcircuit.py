@@ -132,6 +132,19 @@ def test_distributed_circuit_get_initial_state_random(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
+def test_distributed_circuit_get_initial_state_bad_type(backend, accelerators):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    import itertools
+    from qibo.tests.utils import random_state
+    target_state = random_state(5)
+    c = DistributedCircuit(5, accelerators)
+    c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
+    with pytest.raises(TypeError):
+        c.get_initial_state("test")
+    qibo.set_backend(original_backend)
+
+
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
 def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
