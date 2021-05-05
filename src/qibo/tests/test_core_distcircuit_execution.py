@@ -100,7 +100,7 @@ def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
     qibo.set_backend(original_backend)
 
 
-def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
+def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     dist_c = DistributedCircuit(6, accelerators)

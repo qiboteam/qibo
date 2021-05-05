@@ -44,7 +44,7 @@ def test_distributed_circuit_various_errors():
     c = DistributedCircuit(5, devices)
     # Attempt to use ``.with_noise``
     with pytest.raises(NotImplementedError):
-        noisy_c = c.with_noise((0.1, 0.2, 0.1))
+        c.with_noise((0.1, 0.2, 0.1))
     # Attempt to compile
     with pytest.raises(RuntimeError):
         c.compile()
@@ -138,5 +138,5 @@ def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     from qibo.models import QFT
     c = QFT(nqubits, accelerators={"/GPU:0": ndevices})
-    c.queues.set(c.queue)
-    check_device_queues(c.queues)
+    c.queues.set(c.queue) # pylint: disable=E1101
+    check_device_queues(c.queues) # pylint: disable=E1101
