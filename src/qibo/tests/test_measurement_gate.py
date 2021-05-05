@@ -1,7 +1,6 @@
 """Test :class:`qibo.abstractions.gates.M` as standalone and as part of circuit."""
 import pytest
 import numpy as np
-import qibo
 from qibo import models, gates
 
 
@@ -20,19 +19,14 @@ def assert_result(result, decimal_samples=None, binary_samples=None,
 @pytest.mark.parametrize("n", [0, 1])
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_gate(backend, n, nshots):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     state = np.zeros(4)
     state[-n] = 1
     result = gates.M(0)(state, nshots=nshots)
     assert_result(result, n * np.ones(nshots), n * np.ones((nshots, 1)),
                   {n: nshots}, {str(n): nshots})
-    qibo.set_backend(original_backend)
 
 
 def test_multiple_qubit_measurement_gate(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     state = np.zeros(4)
     state[2] = 1
     result = gates.M(0, 1)(state, nshots=100)
@@ -40,12 +34,9 @@ def test_multiple_qubit_measurement_gate(backend):
     target_binary_samples[:, 0] = 1
     assert_result(result, 2 * np.ones((100,)), target_binary_samples,
                   {2: 100}, {"10": 100})
-    qibo.set_backend(original_backend)
 
 
 def test_measurement_gate_errors(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     gate = gates.M(0)
     # attempting to use `controlled_by`
     with pytest.raises(NotImplementedError):
@@ -56,12 +47,9 @@ def test_measurement_gate_errors(backend):
     # calling on bad state
     with pytest.raises(TypeError):
         gate("test", 100)
-    qibo.set_backend(original_backend)
 
 
 def test_measurement_circuit(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
@@ -69,12 +57,9 @@ def test_measurement_circuit(backend, accelerators):
     assert_result(result,
                   np.ones((100,)), np.ones((100, 1)),
                   {1: 100}, {"1": 100})
-    qibo.set_backend(original_backend)
 
 
 def test_gate_after_measurement_error(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(4, accelerators)
     c.add(gates.X(0))
     c.add(gates.M(0))
@@ -82,13 +67,10 @@ def test_gate_after_measurement_error(backend, accelerators):
     # TODO: Change this to NotImplementedError
     with pytest.raises(ValueError):
         c.add(gates.H(0))
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("registers", [False, True])
 def test_measurement_qubit_order_simple(backend, registers):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(2)
     c.add(gates.X(0))
     if registers:
@@ -102,13 +84,10 @@ def test_measurement_qubit_order_simple(backend, registers):
     target_binary_samples[:, 1] = 1
     assert_result(result, np.ones(100), target_binary_samples,
                   {1: 100}, {"01": 100})
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nshots", [100, 1000000])
 def test_measurement_qubit_order(backend, accelerators, nshots):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
@@ -120,12 +99,9 @@ def test_measurement_qubit_order(backend, accelerators, nshots):
     target_binary_samples[:, 3] = 1
     assert_result(result, 9 * np.ones(nshots), target_binary_samples,
                   {9: nshots}, {"1001": nshots})
-    qibo.set_backend(original_backend)
 
 
 def test_multiple_measurement_gates_circuit(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(4)
     c.add(gates.X(1))
     c.add(gates.X(2))
@@ -138,12 +114,9 @@ def test_multiple_measurement_gates_circuit(backend):
     target_binary_samples[:, 0] = 0
     assert_result(result, 3 * np.ones(100), target_binary_samples,
                   {3: 100}, {"011": 100})
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_with_unmeasured_qubits(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(5, accelerators)
     c.add(gates.X(4))
     c.add(gates.X(2))
@@ -157,12 +130,9 @@ def test_circuit_with_unmeasured_qubits(backend, accelerators):
     target_binary_samples[:, 3] = 1
     assert_result(result, 5 * np.ones(100), target_binary_samples,
                   {5: 100}, {"0101": 100})
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_addition_with_measurements(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(2)
     c.add(gates.H(0))
     c.add(gates.H(1))
@@ -173,12 +143,9 @@ def test_circuit_addition_with_measurements(backend):
     c += meas_c
     assert len(c.measurement_gate.target_qubits) == 2
     assert c.measurement_tuples == {"register0": (0, 1)}
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c1 = models.Circuit(4, accelerators)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
@@ -191,12 +158,9 @@ def test_circuit_addition_with_measurements_in_both_circuits(backend, accelerato
     c = c1 + c2
     assert len(c.measurement_gate.target_qubits) == 2
     assert c.measurement_tuples == {"a": (1,), "b": (0,)}
-    qibo.set_backend(original_backend)
 
 
 def test_gate_after_measurement_with_addition_error(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(4, accelerators)
     c.add(gates.H(0))
     c.add(gates.M(1))
@@ -211,12 +175,9 @@ def test_gate_after_measurement_with_addition_error(backend, accelerators):
     c2.add(gates.M(1, register_name="a"))
     with pytest.raises(ValueError):
         c += c2
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_copy_with_measurements(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c1 = models.Circuit(6, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.X(3)])
     c1.add(gates.M(5, 1, 3, register_name="a"))
@@ -232,12 +193,9 @@ def test_circuit_copy_with_measurements(backend, accelerators):
     assert rg1.keys() == rg2.keys()
     for k in rg1.keys():
         assert rg1[k] == rg2[k]
-    qibo.set_backend(original_backend)
 
 
 def test_measurement_compiled_circuit(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import K
     if K.op is not None:
         # use native gates because custom gates do not support compilation
@@ -256,13 +214,10 @@ def test_measurement_compiled_circuit(backend):
     target_state = np.zeros_like(c.final_state)
     target_state[2] = 1
     np.testing.assert_allclose(c.final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_final_state(backend, accelerators):
     """Check that final state is logged correctly when using measurements."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(4, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
@@ -278,7 +233,6 @@ def test_final_state(backend, accelerators):
     target_state = c()
 
     np.testing.assert_allclose(c.final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_measurement_gate_bitflip_errors():

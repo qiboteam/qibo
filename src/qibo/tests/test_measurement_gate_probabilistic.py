@@ -9,9 +9,7 @@ from qibo.tests.test_measurement_gate import assert_result
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_probabilistic_measurement(backend, accelerators, use_samples):
-    original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
-    qibo.set_backend(backend)
     # set single-thread to fix the random values generated from the frequency custom op
     qibo.set_threads(1)
     c = models.Circuit(4, accelerators)
@@ -37,15 +35,12 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
             decimal_frequencies = {0: 271, 1: 239, 2: 242, 3: 248}
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
-    qibo.set_backend(original_backend)
     qibo.set_threads(original_threads)
 
 
 @pytest.mark.parametrize("use_samples", [True, False])
 def test_unbalanced_probabilistic_measurement(backend, use_samples):
-    original_backend = qibo.get_backend()
     original_threads = qibo.get_threads()
-    qibo.set_backend(backend)
     # set single-thread to fix the random values generated from the frequency custom op
     qibo.set_threads(1)
     state = np.array([1, 1, 1, np.sqrt(3)]) / np.sqrt(6)
@@ -70,14 +65,11 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
             decimal_frequencies = {0: 168, 1: 188, 2: 154, 3: 490}
     assert sum(result.frequencies().values()) == 1000
     assert_result(result, decimal_frequencies=decimal_frequencies)
-    qibo.set_backend(original_backend)
     qibo.set_threads(original_threads)
 
 
 def test_measurements_with_probabilistic_noise(backend):
     """Check measurements when simulating noise with repeated execution."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     thetas = np.random.random(5)
     c = models.Circuit(5)
     c.add((gates.RX(i, t) for i, t in enumerate(thetas)))
@@ -102,7 +94,6 @@ def test_measurements_with_probabilistic_noise(backend):
         target_samples.append(noiseless_c(nshots=1).samples())
     target_samples = np.concatenate(target_samples, axis=0)
     np.testing.assert_allclose(samples, target_samples)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),
@@ -110,8 +101,6 @@ def test_measurements_with_probabilistic_noise(backend):
                                      (2, [0.5, 0.5, 0.5])])
 def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     """Check bitflip errors on circuit measurements."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     K.set_seed(123)
     c = models.Circuit(5, accelerators=accelerators)
     c.add([gates.X(0), gates.X(2), gates.X(3)])
@@ -125,13 +114,10 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
         targets = [{5: 30}, {5: 16, 7: 10, 6: 2, 3: 1, 4: 1},
                    {3: 6, 5: 6, 7: 5, 2: 4, 4: 3, 0: 2, 1: 2, 6: 2}]
     assert result == targets[i]
-    qibo.set_backend(original_backend)
 
 
 def test_post_measurement_bitflips_on_circuit_result(backend):
     """Check bitflip errors on ``CircuitResult`` objects."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     thetas = np.random.random(4)
     c = models.Circuit(4)
     c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
@@ -152,4 +138,3 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     # Check register samples
     np.testing.assert_allclose(register_samples["a"], target_samples[:, :2])
     np.testing.assert_allclose(register_samples["b"], target_samples[:, 2:])
-    qibo.set_backend(original_backend)
