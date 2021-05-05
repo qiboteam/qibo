@@ -497,7 +497,7 @@ def test_krauss_channel_errors(backend):
 
 def test_controlled_by_channel_error():
     with pytest.raises(ValueError):
-        gate = gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
+        gates.PauliNoiseChannel(0, px=0.5).controlled_by(1)
 
     a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
     a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
@@ -593,7 +593,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     gate = gates.ThermalRelaxationChannel(0, t1, t2, time=time,
         excited_population=excpop)
     gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho))
+    final_rho = gate(np.copy(initial_rho)) # pylint: disable=E1102
 
     exp, p0, p1 = gate.calculate_probabilities(t1, t2, time, excpop)
     if t2 > t1:

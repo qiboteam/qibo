@@ -145,8 +145,8 @@ def test_adiabatic_evolution_schedule():
     h0 = hamiltonians.X(3)
     h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    assert adev.schedule(0.2) == 0.2
-    assert adev.schedule(0.8) == 0.8
+    assert adev.schedule(0.2) == 0.2 # pylint: disable=E1102
+    assert adev.schedule(0.8) == 0.8 # pylint: disable=E1102
     # s(0) != 0
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, lambda t: t + 1, dt=1e-2)
@@ -165,7 +165,7 @@ def test_set_scheduling_parameters():
 
     target_s = lambda t: 0.5 * np.sqrt(t) + 0.5 * t
     for t in np.random.random(10):
-        assert adevp.schedule(t) == target_s(t)
+        assert adevp.schedule(t) == target_s(t) # pylint: disable=E1102
 
 
 @pytest.mark.parametrize("trotter", [False, True])
