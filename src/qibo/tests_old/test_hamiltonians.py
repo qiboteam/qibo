@@ -3,7 +3,19 @@ import pytest
 from qibo import matrices, K
 from qibo.hamiltonians import Hamiltonian, TrotterHamiltonian
 from qibo.hamiltonians import XXZ, TFIM, X, Y, Z, MaxCut
-from qibo.tests import utils
+
+
+def random_complex(shape, dtype=None):
+    x = np.random.random(shape) + 1j * np.random.random(shape)
+    if dtype is None:
+        return x
+    return x.astype(dtype)
+
+
+def random_hermitian(nqubits):
+    shape = 2 * (2 ** nqubits,)
+    m = random_complex(shape)
+    return m + m.T.conj()
 
 
 def test_hamiltonian_initialization():
@@ -119,8 +131,8 @@ def test_hamiltonian_matmul(numpy):
     np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
-    v = utils.random_numpy_complex(8, dtype=m1.dtype)
-    m = utils.random_numpy_complex((8, 8), dtype=m1.dtype)
+    v = random_complex(8)
+    m = random_complex((8, 8))
     np.testing.assert_allclose(H1 @ v, m1.dot(v))
     np.testing.assert_allclose(H1 @ m, m1 @ m)
 
@@ -155,12 +167,12 @@ def test_hamiltonian_expectation(numpy, trotter, density_matrix):
     matrix = np.array(h.matrix)
 
     if density_matrix:
-        state = utils.random_numpy_complex((8, 8))
+        state = random_complex((8, 8))
         state = state + state.T.conj()
         norm = np.trace(state)
         target_ev = np.trace(matrix.dot(state)).real
     else:
-        state = utils.random_numpy_complex(8)
+        state = random_complex(8)
         norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
@@ -170,7 +182,7 @@ def test_hamiltonian_expectation(numpy, trotter, density_matrix):
 
 def test_hamiltonian_expectation_errors():
     h = XXZ(nqubits=3, delta=0.5)
-    state = utils.random_numpy_complex((4, 4, 4))
+    state = random_complex((4, 4, 4))
     with pytest.raises(ValueError):
         h.expectation(state)
     with pytest.raises(TypeError):
@@ -355,12 +367,12 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     local_ham = TFIM(nqubits, h=1.0, trotter=True)
     dense_ham = TFIM(nqubits, h=1.0)
 
-    state = utils.random_backend_complex((2 ** nqubits,))
+    state = K.cast(random_complex((2 ** nqubits,)))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(trotter_ev, target_ev)
 
-    state = utils.random_numpy_complex((2 ** nqubits,))
+    state = random_complex((2 ** nqubits,))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(trotter_ev, target_ev)
@@ -378,9 +390,9 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     from scipy.linalg import expm
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    m1 = utils.random_numpy_hermitian(3)
-    m2 = utils.random_numpy_hermitian(2)
-    m3 = utils.random_numpy_hermitian(1)
+    m1 = random_hermitian(3)
+    m2 = random_hermitian(2)
+    m3 = random_hermitian(1)
 
     term1 = Hamiltonian(3, m1, numpy=True)
     term2 = Hamiltonian(2, m2, numpy=True)
@@ -397,7 +409,8 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     np.testing.assert_allclose(trotter_h.dense.matrix, target_h.matrix)
 
     dt = 1e-2
-    initial_state = utils.random_numpy_state(4)
+    from qibo.tests_new.utils import random_state
+    initial_state = random_state(4)
     if K.op is not None:
         with pytest.raises(NotImplementedError):
             circuit = trotter_h.circuit(dt=dt)
@@ -585,7 +598,7 @@ def test_from_symbolic_with_power(trotter):
     import sympy
     z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
     symham =  z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + + 1
-    matrix = utils.random_numpy_hermitian(1)
+    matrix = random_hermitian(1)
     symmap = {x: (i, matrix) for i, x in enumerate(z)}
     if trotter:
         ham = TrotterHamiltonian.from_symbolic(symham, symmap)
