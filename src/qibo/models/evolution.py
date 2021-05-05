@@ -224,15 +224,6 @@ class AdiabaticEvolution(StateEvolution):
             raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
         self._schedule = f
 
-    def execute(self, final_time, start_time=0.0, initial_state=None):
-        """"""
-        if start_time != 0:
-            raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
-                                             "as initial time.")
-        self.set_hamiltonian(final_time - start_time)
-        return super(AdiabaticEvolution, self).execute(
-            final_time, start_time, initial_state)
-
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
         if self._param_schedule is not None:
@@ -271,6 +262,15 @@ class AdiabaticEvolution(StateEvolution):
         if t is None or t == self.solver.t:
             return self.solver.current_hamiltonian
         return self.solver.hamiltonian(t)
+
+    def execute(self, final_time, start_time=0.0, initial_state=None):
+        """"""
+        if start_time != 0:
+            raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
+                                             "as initial time.")
+        self.set_hamiltonian(final_time - start_time)
+        return super(AdiabaticEvolution, self).execute(
+            final_time, start_time, initial_state)
 
     def get_initial_state(self, state=None):
         """Casts initial state as a tensor.
