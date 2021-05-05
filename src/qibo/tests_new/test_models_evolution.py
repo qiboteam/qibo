@@ -50,15 +50,15 @@ def test_state_evolution_get_initial_state():
         final_state = evolution(final_time=1)
 
 
-@pytest.mark.parametrize(("solver", "atol"), [("exp", 0),
-                                              ("rk4", 1e-2),
-                                              ("rk45", 1e-1)])
+@pytest.mark.parametrize(("solver", "atol"),
+                         [("exp", 0), ("rk4", 1e-2), ("rk45", 1e-1)])
 def test_state_evolution_constant_hamiltonian(backend, solver, atol):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    t = np.linspace(0, 1, 1001)
+    nsteps = 200
+    t = np.linspace(0, 1, nsteps + 1)
     phase = np.exp(2j * t)[:, np.newaxis]
-    ones = np.ones((1001, 2))
+    ones = np.ones((nsteps + 1, 2))
     target_psi = np.concatenate([phase, ones, phase.conj()], axis=1)
 
     dt = t[1] - t[0]
@@ -69,7 +69,8 @@ def test_state_evolution_constant_hamiltonian(backend, solver, atol):
     qibo.set_backend(original_backend)
 
 
-def test_state_evolution_time_dependent_hamiltonian(backend, nqubits=2, dt=1e-2):
+@pytest.mark.parametrize("nqubits,dt", [(2, 1e-2)])
+def test_state_evolution_time_dependent_hamiltonian(backend, nqubits, dt):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     ham = lambda t: np.cos(t) * hamiltonians.Z(nqubits)
@@ -85,13 +86,15 @@ def test_state_evolution_time_dependent_hamiltonian(backend, nqubits=2, dt=1e-2)
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("nqubits,solver", [(4, "exp"), (5, "exp"), (5, "rk45")])
-def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, solver, dt=1e-3, h=1.0):
+@pytest.mark.parametrize("nqubits", [5])
+@pytest.mark.parametrize("solver,dt,atol", [("exp", 1e-1, 1e-2), ("rk45", 1e-2, 1e-1)])
+def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, solver, dt, atol):
     if accelerators is not None and solver != "exp":
         pytest.skip("Distributed evolution is supported only with exp solver.")
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
-    atol = 1e-4 if solver == "exp" else 1e-2
+    h = 1.0
+
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
     ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
     prop = expm(-1j * dt * ham_matrix)
@@ -106,9 +109,11 @@ def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, sol
     final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
 
     # Change dt
-    evolution = models.StateEvolution(ham, dt / 10, accelerators=accelerators)
-    final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
-    assert_states_equal(final_psi, target_psi[-1], atol=atol)
+    if solver == "exp":
+        evolution = models.StateEvolution(ham, dt / 10, accelerators=accelerators)
+        final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
+        assert_states_equal(final_psi, target_psi[-1], atol=atol)
+
     qibo.set_backend(original_backend)
 
 
@@ -137,6 +142,8 @@ def test_adiabatic_evolution_init():
 
 
 def test_adiabatic_evolution_schedule():
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(3)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     assert adev.schedule(0.2) == 0.2
     assert adev.schedule(0.8) == 0.8
@@ -187,6 +194,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
         np.testing.assert_allclose(matrix, ham(t, 1))
 
     #try using a different total time
+    adev.set_hamiltonian(total_time=2)
     for t in [0, 0.3, 0.7, 1.0]:
         if trotter:
             matrix = adev.hamiltonian(t).dense.matrix
@@ -196,7 +204,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
     qibo.set_backend(original_backend)
 
 
-@pytest.mark.parametrize("dt", [1e-1, 1e-2])
+@pytest.mark.parametrize("dt", [1e-1])
 def test_adiabatic_evolution_execute_exp(backend, dt):
     """Test adiabatic evolution with exponential solver."""
     original_backend = qibo.get_backend()
@@ -219,9 +227,31 @@ def test_adiabatic_evolution_execute_exp(backend, dt):
     qibo.set_backend(original_backend)
 
 
+@pytest.mark.parametrize("nqubits,dt", [(4, 1e-1)])
+def test_trotterized_adiabatic_evolution(backend, accelerators, nqubits, dt):
+    """Test adiabatic evolution using Trotterization."""
+    dense_h0 = hamiltonians.X(nqubits)
+    dense_h1 = hamiltonians.TFIM(nqubits)
+
+    target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
+    ham = lambda t: dense_h0 * (1 - t) + dense_h1 * t
+    for n in range(int(1 / dt)):
+        prop = K.to_numpy(ham(n * dt).exp(dt))
+        target_psi.append(prop.dot(target_psi[-1]))
+
+    local_h0 = hamiltonians.X(nqubits, trotter=True)
+    local_h1 = hamiltonians.TFIM(nqubits, trotter=True)
+    checker = TimeStepChecker(target_psi, atol=dt)
+    adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
+                                     callbacks=[checker],
+                                     accelerators=accelerators)
+    final_psi = adev(final_time=1)
+
+
 @pytest.mark.parametrize("solver", ["rk4", "rk45"])
 @pytest.mark.parametrize("trotter", [False, True])
-def test_adiabatic_evolution_execute_rk(backend, solver, trotter, dt=1e-3):
+@pytest.mark.parametrize("dt", [0.1])
+def test_adiabatic_evolution_execute_rk(backend, solver, trotter, dt):
     """Test adiabatic evolution with Runge-Kutta solver."""
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
@@ -244,6 +274,8 @@ def test_adiabatic_evolution_execute_rk(backend, solver, trotter, dt=1e-3):
 
 
 def test_adiabatic_evolution_execute_errors():
+    h0 = hamiltonians.X(3)
+    h1 = hamiltonians.TFIM(3)
     # Non-zero ``start_time``
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     with pytest.raises(NotImplementedError):
@@ -255,21 +287,9 @@ def test_adiabatic_evolution_execute_errors():
         final_state = adevp(final_time=1)
 
 
-def test_adiabatic_evolution_get_initial_state():
-    """Test that adiabatic evolution initial state is the ground state of H0."""
-    h0 = hamiltonians.X(3)
-    h1 = hamiltonians.TFIM(3)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    target_psi = np.ones(8) / np.sqrt(8)
-    init_psi = adev.get_initial_state()
-    assert_states_equal(init_psi, target_psi)
-
-
-@pytest.mark.parametrize(("solver", "atol"),
-                         [("exp", 1e-10),
-                          ("rk4", 1e-2),
-                          ("rk45", 1e-2)])
-def test_energy_callback(solver, atol, dt=1e-2):
+@pytest.mark.parametrize("solver,dt,atol",
+                         [("exp", 1e-1, 1e-10), ("rk45", 1e-2, 1e-2)])
+def test_energy_callback(solver, dt, atol):
     """Test using energy callback in adiabatic evolution."""
     h0 = hamiltonians.X(2)
     h1 = hamiltonians.TFIM(2)
@@ -289,27 +309,6 @@ def test_energy_callback(solver, atol, dt=1e-2):
 
     assert_states_equal(final_psi, target_psi, atol=atol)
     np.testing.assert_allclose(energy[:], target_energies, atol=atol)
-
-
-@pytest.mark.parametrize("nqubits,dt", [(3, 1e-3), (4, 1e-2)])
-def test_trotterized_adiabatic_evolution(accelerators, nqubits, dt):
-    """Test adiabatic evolution using trotterization of ``TrotterHamiltonian``."""
-    dense_h0 = hamiltonians.X(nqubits)
-    dense_h1 = hamiltonians.TFIM(nqubits)
-
-    target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
-    ham = lambda t: dense_h0 * (1 - t) + dense_h1 * t
-    for n in range(int(1 / dt)):
-        prop = K.to_numpy(ham(n * dt).exp(dt))
-        target_psi.append(prop.dot(target_psi[-1]))
-
-    local_h0 = hamiltonians.X(nqubits, trotter=True)
-    local_h1 = hamiltonians.TFIM(nqubits, trotter=True)
-    checker = TimeStepChecker(target_psi, atol=dt)
-    adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
-                                     callbacks=[checker],
-                                     accelerators=accelerators)
-    final_psi = adev(final_time=1)
 
 
 test_names = "method,options,messages,trotter,filename"
