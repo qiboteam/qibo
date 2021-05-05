@@ -1,7 +1,6 @@
 """Test special features of core gates."""
 import pytest
 import numpy as np
-import qibo
 from qibo import K, gates
 from qibo.models import Circuit
 from qibo.tests.utils import random_state

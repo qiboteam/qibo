@@ -1,7 +1,6 @@
 """Test functions defined in `qibo/core/fusion.py`."""
 import numpy as np
 import pytest
-import qibo
 from qibo import gates
 from qibo.core import fusion
 from qibo.models import Circuit
@@ -71,8 +70,6 @@ def test_fusion_group_add():
 
 
 def test_fusion_group_calculate(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
              gates.X(0), gates.X(1)]
     group = fusion.FusionGroup.from_queue(queue)
@@ -92,13 +89,10 @@ def test_fusion_group_calculate(backend):
     group = fusion.FusionGroup()
     with pytest.raises(RuntimeError):
         group.calculate()
-    qibo.set_backend(original_backend)
 
 
 def test_fuse_circuit_two_qubit_only(backend):
     """Check gate fusion in circuit with two-qubit gates only."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.CNOT(0, 1))
     c.add(gates.RX(0, theta=0.1234).controlled_by(1))
@@ -107,15 +101,12 @@ def test_fuse_circuit_two_qubit_only(backend):
     c.add(gates.RY(1, theta=0.1234).controlled_by(0))
     fused_c = c.fuse()
     np.testing.assert_allclose(fused_c(), c())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 2])
 def test_variational_layer_fusion(backend, accelerators, nqubits, nlayers):
     """Check fused variational layer execution."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
 
@@ -129,15 +120,12 @@ def test_variational_layer_fusion(backend, accelerators, nqubits, nlayers):
 
     fused_c = c.fuse()
     np.testing.assert_allclose(fused_c(), c())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("ngates", [10, 20])
 def test_random_circuit_fusion(backend, accelerators, nqubits, ngates):
     """Check gate fusion in randomly generated circuits."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
     two_qubit_gates = [gates.CNOT, gates.CZ, gates.SWAP]
     thetas = np.pi * np.random.random((ngates,))
@@ -154,13 +142,10 @@ def test_random_circuit_fusion(backend, accelerators, nqubits, ngates):
 
     fused_c = c.fuse()
     np.testing.assert_allclose(fused_c(), c())
-    qibo.set_backend(original_backend)
 
 
 def test_controlled_by_gates_fusion(backend):
     """Check gate fusion in circuit that contains ``controlled_by`` gates."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(4)
     c.add((gates.H(i) for i in range(4)))
     c.add(gates.RX(1, theta=0.1234).controlled_by(0))
@@ -170,13 +155,10 @@ def test_controlled_by_gates_fusion(backend):
     c.add(gates.RX(3, theta=0.4321).controlled_by(2))
     fused_c = c.fuse()
     np.testing.assert_allclose(fused_c(), c())
-    qibo.set_backend(original_backend)
 
 
 def test_callbacks_fusion(backend, accelerators):
     """Check entropy calculation in fused circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import callbacks
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(5, accelerators)
@@ -189,13 +171,10 @@ def test_callbacks_fusion(backend, accelerators):
     np.testing.assert_allclose(fused_c(), c())
     target_entropy = [0.0, 1.0, 0.0, 1.0]
     np.testing.assert_allclose(entropy[:], target_entropy, atol=1e-7)
-    qibo.set_backend(original_backend)
 
 
 def test_set_parameters_fusion(backend):
     """Check gate fusion when ``circuit.set_parameters`` is used."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(2)
     c.add(gates.RX(0, theta=0.1234))
     c.add(gates.RX(1, theta=0.1234))
@@ -208,4 +187,3 @@ def test_set_parameters_fusion(backend):
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
     np.testing.assert_allclose(fused_c(), c())
-    qibo.set_backend(original_backend)

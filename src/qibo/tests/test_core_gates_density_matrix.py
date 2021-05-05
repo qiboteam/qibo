@@ -1,7 +1,6 @@
 """Test gates defined in `qibo/core/cgates.py` and `qibo/core/gates.py` for density matrices."""
 import pytest
 import numpy as np
-import qibo
 from qibo import gates
 from qibo.config import raise_error
 
