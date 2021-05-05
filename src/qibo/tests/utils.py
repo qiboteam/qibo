@@ -22,7 +22,7 @@ def random_state(nqubits):
 
 def random_density_matrix(nqubits):
     """Generates a random normalized density matrix."""
-    m = random_hermitian(nqubits)
+    rho = random_hermitian(nqubits)
     # Normalize
     ids = np.arange(2 ** nqubits)
     rho[ids, ids] = rho[ids, ids] / np.trace(rho)
