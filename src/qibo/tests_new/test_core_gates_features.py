@@ -180,6 +180,53 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
 
 ###############################################################################
 
+########################### Test gate decomposition ###########################
+def test_one_qubit_gate_multiplication(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    gate1 = gates.X(0)
+    gate2 = gates.H(0)
+    final_gate = gate1 @ gate2
+    assert final_gate.__class__.__name__ == "Unitary"
+    target_matrix = (np.array([[0, 1], [1, 0]]) @
+                     np.array([[1, 1], [1, -1]]) / np.sqrt(2))
+    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+
+    final_gate = gate2 @ gate1
+    assert final_gate.__class__.__name__ == "Unitary"
+    target_matrix = (np.array([[1, 1], [1, -1]]) / np.sqrt(2) @
+                     np.array([[0, 1], [1, 0]]))
+    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+
+    gate1 = gates.X(1)
+    gate2 = gates.X(1)
+    assert (gate1 @ gate2).__class__.__name__ == "I"
+    assert (gate2 @ gate1).__class__.__name__ == "I"
+    qibo.set_backend(original_backend)
+
+
+def test_two_qubit_gate_multiplication(backend):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend)
+    theta, phi = 0.1234, 0.5432
+    gate1 = gates.fSim(0, 1, theta=theta, phi=phi)
+    gate2 = gates.SWAP(0, 1)
+    final_gate = gate1 @ gate2
+    target_matrix = (np.array([[1, 0, 0, 0],
+                               [0, np.cos(theta), -1j * np.sin(theta), 0],
+                               [0, -1j * np.sin(theta), np.cos(theta), 0],
+                               [0, 0, 0, np.exp(-1j * phi)]]) @
+                     np.array([[1, 0, 0, 0], [0, 0, 1, 0],
+                               [0, 1, 0, 0], [0, 0, 0, 1]]))
+    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+    # Check that error is raised when target qubits do not agree
+    with pytest.raises(NotImplementedError):
+        final_gate = gate1 @ gates.SWAP(0, 2)
+    qibo.set_backend(original_backend)
+
+
+###############################################################################
+
 ################################# Test dagger #################################
 GATES = [
     ("H", (0,)),

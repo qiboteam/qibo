@@ -236,8 +236,6 @@ def test_flatten():
     with pytest.raises(NotImplementedError):
         gate.on_qubits(0, 2)
 
-# TODO: Test :class:`qibo.abstractions.gates.CallbackGate` in
-# `test_core_gates.py`
 
 def test_kraus_channel_init():
     import numpy as np
@@ -288,7 +286,6 @@ def test_reset_channel_init():
     assert isinstance(gate.gates[0], gates.M)
     assert isinstance(gate.gates[1], gates.X)
 
-# TODO: Add thermal relaxation channel init test
 
 def test_qubit_getter_and_setter():
     from qibo.abstractions import abstract_gates
