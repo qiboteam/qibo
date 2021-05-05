@@ -5,9 +5,9 @@ Pytest fixtures.
 """
 import sys
 import pytest
-from qibo import K
+import qibo
 
-_available_backends = set(K.available_backends.keys())
+_available_backends = set(qibo.K.available_backends.keys())
 _ACCELERATORS = None
 if "tensorflow" in _available_backends:
     if "qibotf" in _available_backends:
@@ -42,6 +42,14 @@ def pytest_addoption(parser):
     # `test_backends_agreement.py` tests that backend methods agree between
     # different backends by testing each backend in `--backends` with the
     # `--target-backend`
+
+
+@pytest.fixture
+def backend(backend_name):
+    original_backend = qibo.get_backend()
+    qibo.set_backend(backend_name)
+    yield
+    qibo.set_backend(original_backend)
 
 
 def pytest_generate_tests(metafunc):
@@ -82,23 +90,22 @@ def pytest_generate_tests(metafunc):
         metafunc.parametrize("tested_backend", [x for x in backends if x != target])
         metafunc.parametrize("target_backend", [target])
 
-    # for `test_core_*.py`
-    if "backend" in metafunc.fixturenames:
+    if "backend_name" in metafunc.fixturenames:
         if metafunc.module.__name__ in distributed_tests:
-            metafunc.parametrize("backend", ["qibotf"])
+            metafunc.parametrize("backend_name", ["qibotf"])
             if "accelerators" in metafunc.fixturenames:
                 metafunc.parametrize("accelerators", accelerators)
 
         elif "accelerators" in metafunc.fixturenames:
             if accelerators is None: # pragma: no cover
                 # `accelerators` is never `None` in CI test execution
-                metafunc.parametrize("backend", backends)
+                metafunc.parametrize("backend_name", backends)
                 metafunc.parametrize("accelerators", [None])
             else:
                 config = [(b, None) for b in backends]
                 if "qibotf" in backends:
                     config.extend(("qibotf", d) for d in accelerators)
-                metafunc.parametrize("backend,accelerators", config)
+                metafunc.parametrize("backend_name,accelerators", config)
 
         else:
-            metafunc.parametrize("backend", backends)
+            metafunc.parametrize("backend_name", backends)
