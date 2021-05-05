@@ -23,8 +23,6 @@ def test_set_nqubits(backend):
 
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_circuit_add_layer(backend, nqubits, accelerators):
-
-
     c = Circuit(nqubits, accelerators)
     qubits = list(range(nqubits))
     pairs = [(2 * i, 2 * i + 1) for i in range(nqubits // 2)]
@@ -38,8 +36,6 @@ def test_circuit_add_layer(backend, nqubits, accelerators):
 # TODO: Test `fuse`
 
 def test_eager_execute(backend, accelerators):
-
-
     c = Circuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     target_state = np.ones(16) / 4.0
@@ -47,8 +43,6 @@ def test_eager_execute(backend, accelerators):
 
 
 def test_compiled_execute(backend):
-
-
     def create_circuit(theta = 0.1234):
         c = Circuit(2)
         c.add(gates.X(0))
@@ -78,12 +72,11 @@ def test_compiled_execute(backend):
         np.testing.assert_allclose(r1, r2)
 
 
-def test_compiling_twice_exception():
+def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
     from qibo import K
     if K.name != "tensorflow": # pragma: no cover
         pytest.skip("Skipping compilation test because Tensorflow is not available.")
-    qibo.set_backend("tensorflow")
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.compile()

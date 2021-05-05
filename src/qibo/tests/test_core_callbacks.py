@@ -148,6 +148,7 @@ def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_
 
 def test_entropy_in_compiled_circuit(backend):
     """Check that entropy calculation works when circuit is compiled."""
+    from qibo import get_backend
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.CallbackGate(entropy))
@@ -155,7 +156,7 @@ def test_entropy_in_compiled_circuit(backend):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    if backend == "qibotf":
+    if get_backend() == "qibotf":
         with pytest.raises(RuntimeError):
             c.compile()
     else:

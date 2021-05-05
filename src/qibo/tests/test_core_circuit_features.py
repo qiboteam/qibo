@@ -29,7 +29,7 @@ def test_circuit_vs_gate_execution(backend, compile):
     else:
         c = custom_circuit
 
-    if backend == "qibotf" and compile:
+    if K.name == "qibotf" and compile:
         with pytest.raises(NotImplementedError):
             result = c(initial_state, theta)
     else:
