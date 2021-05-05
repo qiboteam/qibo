@@ -5,6 +5,7 @@ from numpy.random import random as rand
 
 
 METHODS = [
+    ("to_complex", [rand(3), rand(3)]),
     ("cast", [rand(4)]),
     ("diag", [rand(4)]),
     ("reshape", {"x": rand(4), "shape": (2, 2)}),

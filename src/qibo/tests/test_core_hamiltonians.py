@@ -115,8 +115,8 @@ def test_hamiltonian_matmul(numpy):
     np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
-    v = random_complex(8)
-    m = random_complex((8, 8))
+    v = random_complex(8, dtype=m1.dtype)
+    m = random_complex((8, 8), dtype=m1.dtype)
     np.testing.assert_allclose(H1 @ v, m1.dot(v))
     np.testing.assert_allclose(H1 @ m, m1 @ m)
 

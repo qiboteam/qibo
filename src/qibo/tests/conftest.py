@@ -97,7 +97,7 @@ def pytest_generate_tests(metafunc):
             else:
                 config = [(b, None) for b in backends]
                 if "qibotf" in backends:
-                    config = [("qibotf", d) for d in accelerators]
+                    config.extend(("qibotf", d) for d in accelerators)
                 metafunc.parametrize("backend,accelerators", config)
 
         else:

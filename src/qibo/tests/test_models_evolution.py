@@ -194,7 +194,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
         np.testing.assert_allclose(matrix, ham(t, 1))
 
     #try using a different total time
-    adev.set_hamiltonian(total_time=2)
+    adev.hamiltonian(0, total_time=2)
     for t in [0, 0.3, 0.7, 1.0]:
         if trotter:
             matrix = adev.hamiltonian(t).dense.matrix
