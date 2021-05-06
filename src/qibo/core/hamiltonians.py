@@ -247,6 +247,8 @@ class SymbolicHamiltonian:
                     for _ in range(int(pow) - 1):
                         matrix = matrix.dot(matrix)
                     matrices.append(matrix)
+                elif factor == self.sympy.I: # imaginary unit
+                    matrices[0] *= 1j
                 else:
                     raise_error(ValueError, f"Cannot parse factor {factor}.")
             target_ids |= set(targets)
