@@ -189,17 +189,6 @@ def test_u3(backend):
     qibo.set_backend(original_backend)
 
 
-def test_u1(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    theta = 0.1234
-    final_state = apply_gates([gates.X(0), gates.U1(0, theta)], nqubits=1)
-    target_state = np.zeros_like(final_state)
-    target_state[1] = np.exp(1j * theta)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
 @pytest.mark.parametrize("applyx", [False, True])
 def test_cnot(backend, applyx):
     original_backend = qibo.get_backend()
