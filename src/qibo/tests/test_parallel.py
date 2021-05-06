@@ -1,25 +1,27 @@
 """
 Testing parallel evaluations.
 """
+import os
 import numpy as np
 import pytest
-from qibo import get_threads, set_threads, gates, get_device
+import qibo
+from qibo import gates
 from qibo.models import Circuit, QFT
 from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 
-def test_parallel_circuit_evaluation():
+def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
-    if 'GPU' in get_device(): # pragma: no cover
+    if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
         pytest.skip("unsupported configuration")
-    original_threads = get_threads()
-    set_threads(1)
+    original_threads = qibo.get_threads()
+    qibo.set_threads(1)
 
     nqubits = 10
     np.random.seed(0)
     c = QFT(nqubits)
 
-    states = [ np.random.random(2**nqubits) for i in range(5)]
+    states = [np.random.random(2**nqubits) for i in range(5)]
 
     r1 = []
     for state in states:
@@ -27,15 +29,15 @@ def test_parallel_circuit_evaluation():
 
     r2 = parallel_execution(c, states=states, processes=2)
     np.testing.assert_allclose(r1, r2)
-    set_threads(original_threads)
+    qibo.set_threads(original_threads)
 
 
-def test_parallel_parametrized_circuit():
+def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
-    if 'GPU' in get_device(): # pragma: no cover
+    if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
         pytest.skip("unsupported configuration")
-    original_threads = get_threads()
-    set_threads(1)
+    original_threads = qibo.get_threads()
+    qibo.set_threads(1)
 
     nqubits = 5
     nlayers  = 10
@@ -50,7 +52,7 @@ def test_parallel_parametrized_circuit():
 
     size = len(c.get_parameters())
     np.random.seed(0)
-    parameters = [ np.random.uniform(0, 2*np.pi, size) for i in range(10) ]
+    parameters = [np.random.uniform(0, 2*np.pi, size) for i in range(10)]
     state = None
 
     r1 = []
@@ -60,4 +62,4 @@ def test_parallel_parametrized_circuit():
 
     r2 = parallel_parametrized_execution(c, parameters=parameters, initial_state=state, processes=2)
     np.testing.assert_allclose(r1, r2)
-    set_threads(original_threads)
+    qibo.set_threads(original_threads)
