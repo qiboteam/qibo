@@ -1,7 +1,6 @@
 """Test functions defined in `qibo/core/distcircuit.py`."""
 import pytest
 import numpy as np
-import qibo
 from qibo import gates
 from qibo.core.distcircuit import DistributedCircuit
 from qibo.core.distutils import DistributedQubits
@@ -9,8 +8,6 @@ from qibo.tests.test_core_distcircuit import check_device_queues
 
 
 def test_transform_queue_simple(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     devices = {"/GPU:0": 1, "/GPU:1": 1}
     c = DistributedCircuit(4, devices)
     c.add((gates.H(i) for i in range(4)))
@@ -26,12 +23,9 @@ def test_transform_queue_simple(backend):
     assert tqueue[4].target_qubits == (1,)
     assert isinstance(tqueue[5], gates.SWAP)
     assert tqueue[5].target_qubits == (0, 1)
-    qibo.set_backend(original_backend)
 
 
 def test_transform_queue_more_gates(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(4, devices)
     c.add(gates.H(0))
@@ -64,12 +58,9 @@ def test_transform_queue_more_gates(backend):
     assert set(tqueue[8].target_qubits) == {0, 2}
     assert isinstance(tqueue[9], gates.SWAP)
     assert set(tqueue[9].target_qubits) == {1, 3}
-    qibo.set_backend(original_backend)
 
 
 def test_create_queue_with_global_swap(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(6, devices)
     c.add([gates.H(0), gates.H(2), gates.H(3)])
@@ -88,7 +79,6 @@ def test_create_queue_with_global_swap(backend):
         assert len(device_group) == 3
     for device_group in c.queues.queues[2]:
         assert len(device_group) == 2
-    qibo.set_backend(original_backend)
 
 
 def test_create_queue_errors():

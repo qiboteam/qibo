@@ -1,7 +1,6 @@
 """Testing HEP models."""
 import numpy as np
 import pytest
-import qibo
 from qibo.models.hep import qPDF
 
 
@@ -25,11 +24,8 @@ test_values = [
 @pytest.mark.parametrize(test_names, test_values)
 def test_qpdf(backend, ansatz, layers, nqubits, multi_output, output):
     """Performs a qPDF circuit minimization test."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     model = qPDF(ansatz, layers, nqubits, multi_output)
     np.random.seed(0)
     params = np.random.rand(model.nparams)
     result = model.predict(params, [0.1])
     np.testing.assert_allclose(result, output, atol=1e-5)
-    qibo.set_backend(original_backend)

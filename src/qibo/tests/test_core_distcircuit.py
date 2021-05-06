@@ -54,14 +54,11 @@ def test_distributed_circuit_various_errors():
 
 
 def test_distributed_circuit_fusion(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = DistributedCircuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     final_state = c()
     with pytest.raises(RuntimeError):
         fused_c = c.fuse()
-    qibo.set_backend(original_backend)
 
 
 def test_distributed_circuit_set_gates():
@@ -103,20 +100,15 @@ def test_distributed_circuit_set_gates_controlled():
 
 
 def test_distributed_circuit_get_initial_state_default(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = DistributedCircuit(6, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
     final_state = c.get_initial_state()
     target_state = np.zeros_like(final_state)
     target_state[0] = 1
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_distributed_circuit_get_initial_state_random(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     import itertools
     from qibo.tests.utils import random_state
     target_state = random_state(5)
@@ -129,12 +121,9 @@ def test_distributed_circuit_get_initial_state_random(backend, accelerators):
     for i, s in enumerate(itertools.product([0, 1], repeat=c.nglobal)):
         target_piece = target_state[s].flatten()
         np.testing.assert_allclose(target_piece.ravel(), state.pieces[i])
-    qibo.set_backend(original_backend)
 
 
 def test_distributed_circuit_get_initial_state_bad_type(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     import itertools
     from qibo.tests.utils import random_state
     target_state = random_state(5)
@@ -142,7 +131,6 @@ def test_distributed_circuit_get_initial_state_bad_type(backend, accelerators):
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits)
     with pytest.raises(TypeError):
         c.get_initial_state("test")
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])

@@ -348,8 +348,6 @@ test q[2];
 
 
 def test_from_qasm_measurements(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[5];
@@ -366,12 +364,9 @@ measure q[3] -> b[1];"""
     assert isinstance(c.queue[0], gates.X)
     assert isinstance(c.measurement_gate, gates.M)
     assert c.measurement_tuples == {"a": (0, 2, 4), "b": (1, 3)}
-    qibo.set_backend(original_backend)
 
 
 def test_from_qasm_measurements_order(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     target = """OPENQASM 2.0;
 include "qelib1.inc";
 qreg q[5];
@@ -385,12 +380,9 @@ measure q[0] -> b[0];
 """
     c = Circuit.from_qasm(target)
     assert c.measurement_tuples == {"a": (4, 3, 1), "b": (0, 2)}
-    qibo.set_backend(original_backend)
 
 
 def test_from_qasm_invalid_measurements(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     # Undefined qubit
     target = """OPENQASM 2.0;
 qreg q[2];
@@ -443,7 +435,6 @@ creg a[2];
 measure q[0] -> a[1] -> a[0];"""
     with pytest.raises(ValueError):
         c = Circuit.from_qasm(target)
-    qibo.set_backend(original_backend)
 
 
 def test_from_qasm_invalid_parametrized_gates():
@@ -481,8 +472,6 @@ rx(0.123)(0.25)(0) q[0];
 
 
 def test_from_qasm_empty_spaces(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     target = """OPENQASM 2.0; qreg q[2];
 creg a[2]; h q[0];x q[1]; cx q[0], q[1];
 measure q[0] -> a[0];measure q[1]->a[1]"""
@@ -493,4 +482,3 @@ measure q[0] -> a[0];measure q[1]->a[1]"""
     assert isinstance(c.queue[1], gates.X)
     assert isinstance(c.queue[2], gates.CNOT)
     assert c.measurement_tuples == {"a": (0, 1)}
-    qibo.set_backend(original_backend)

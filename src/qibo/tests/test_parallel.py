@@ -15,9 +15,7 @@ def test_parallel_circuit_evaluation(backend):
     if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
-    original_backend = qibo.get_backend()
     qibo.set_threads(1)
-    qibo.set_backend(backend)
 
     nqubits = 10
     np.random.seed(0)
@@ -32,7 +30,6 @@ def test_parallel_circuit_evaluation(backend):
     r2 = parallel_execution(c, states=states, processes=2)
     np.testing.assert_allclose(r1, r2)
     qibo.set_threads(original_threads)
-    qibo.set_backend(original_backend)
 
 
 def test_parallel_parametrized_circuit(backend):
@@ -40,9 +37,7 @@ def test_parallel_parametrized_circuit(backend):
     if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
-    original_backend = qibo.get_backend()
     qibo.set_threads(1)
-    qibo.set_backend(backend)
 
     nqubits = 5
     nlayers  = 10
@@ -68,4 +63,3 @@ def test_parallel_parametrized_circuit(backend):
     r2 = parallel_parametrized_execution(c, parameters=parameters, initial_state=state, processes=2)
     np.testing.assert_allclose(r1, r2)
     qibo.set_threads(original_threads)
-    qibo.set_backend(original_backend)

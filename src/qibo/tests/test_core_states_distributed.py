@@ -1,14 +1,15 @@
 """Tests methods defined in `qibo/core/states.py`."""
 import pytest
 import numpy as np
-import qibo
 from qibo import K
 from qibo.core import states
+from qibo.models import Circuit
+from qibo.core.distutils import DistributedQubits
 
 
-def test_distributed_state_init():
+def test_distributed_state_init(backend, accelerators):
     from qibo.models import Circuit
-    circuit = Circuit(4, accelerators={"/GPU:0": 2})
+    circuit = Circuit(4, accelerators)
     state = states.DistributedState(circuit)
     assert state.circuit == circuit
     circuit = Circuit(4)
@@ -19,11 +20,9 @@ def test_distributed_state_init():
 
 
 @pytest.mark.parametrize("init_type", ["zero", "plus"])
-def test_distributed_state_constructors(init_type):
+def test_distributed_state_constructors(backend, accelerators, init_type):
     """Tests `zero_state` and `plus_state` for `DistributedState`."""
-    from qibo.models import Circuit
-    from qibo.core.distutils import DistributedQubits
-    c = Circuit(6, {"/GPU:0": 2, "/GPU:1": 2})
+    c = Circuit(6, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = getattr(states.DistributedState, f"{init_type}_state")(c)
 
@@ -37,13 +36,11 @@ def test_distributed_state_constructors(init_type):
 
 
 @pytest.mark.parametrize("nqubits", [5, 6])
-def test_user_initialization(nqubits):
+def test_user_initialization(backend, accelerators, nqubits):
     import itertools
-    from qibo.models import Circuit
-    from qibo.core.distutils import DistributedQubits
     target_state = (np.random.random(2 ** nqubits) +
                     1j * np.random.random(2 ** nqubits))
-    c = Circuit(nqubits, {"/GPU:0": 2, "/GPU:1": 2})
+    c = Circuit(nqubits, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = states.DistributedState.from_tensor(target_state, c)
     np.testing.assert_allclose(state.tensor, target_state)
@@ -54,21 +51,18 @@ def test_user_initialization(nqubits):
         np.testing.assert_allclose(state.pieces[i], target_piece.ravel())
 
 
-def test_distributed_state_copy():
-    from qibo.models import Circuit
-    from qibo.core.distutils import DistributedQubits
-    c = Circuit(4, {"/GPU:0": 2, "/GPU:1": 2})
+def test_distributed_state_copy(backend, accelerators):
+    c = Circuit(4, accelerators)
     c.queues.qubits = DistributedQubits(range(c.nglobal), c.nqubits) # pylint: disable=E1101
     state = states.DistributedState.zero_state(c)
     cstate = state.copy()
     np.testing.assert_allclose(state.tensor, cstate.tensor)
 
 
-def test_distributed_state_getitem():
+def test_distributed_state_getitem(backend, accelerators):
     from qibo import gates
-    from qibo.models import Circuit
     theta = np.random.random(4)
-    dist_c = Circuit(4, {"/GPU:0": 2})
+    dist_c = Circuit(4, accelerators)
     dist_c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
     state = dist_c()
     c = Circuit(4)

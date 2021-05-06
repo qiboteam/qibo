@@ -148,8 +148,6 @@ def test_trotter_hamiltonian_operation_errors():
 
 def test_trotter_hamiltonian_three_qubit_term(backend):
     """Test creating ``TrotterHamiltonian`` with three qubit term."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from scipy.linalg import expm
     m1 = random_hermitian(3)
     m2 = random_hermitian(2)
@@ -182,8 +180,6 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
         target_state = u[2].dot(u[1].dot(u[0])).dot(initial_state)
         target_state = u[0].dot(u[1].dot(u[2])).dot(target_state)
         np.testing.assert_allclose(final_state, target_state)
-
-    qibo.set_backend(original_backend)
 
 
 def test_trotter_hamiltonian_make_compatible_simple():

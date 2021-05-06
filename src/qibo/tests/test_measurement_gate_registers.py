@@ -1,7 +1,6 @@
 """Test :class:`qibo.abstractions.gates.M` when used with registers."""
 import pytest
 import numpy as np
-import qibo
 from qibo import models, gates
 
 
@@ -31,8 +30,6 @@ def assert_register_result(result, decimal_samples=None, binary_samples=None,
 
 
 def test_register_measurements(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(3)
     c.add(gates.X(0))
     c.add(gates.X(1))
@@ -49,24 +46,18 @@ def test_register_measurements(backend):
     binary_frequencies = {"register0": {"10": 100}, "register1": {"1": 100}}
     assert_register_result(result, decimal_samples, binary_samples,
                            decimal_frequencies, binary_frequencies)
-    qibo.set_backend(original_backend)
 
 
 def test_register_name_error(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(2)
     c.add(gates.X(0))
     c.add(gates.M(0, register_name="a"))
     with pytest.raises(KeyError):
         c.add(gates.M(1, register_name="a"))
-    qibo.set_backend(original_backend)
 
 
 def test_registers_with_same_name_error(backend):
     """Check that circuits that contain registers with the same name cannot be added."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c1 = models.Circuit(2)
     c1.add(gates.H(0))
     c1.add(gates.M(0))
@@ -77,12 +68,9 @@ def test_registers_with_same_name_error(backend):
 
     with pytest.raises(KeyError):
         c = c1 + c2
-    qibo.set_backend(original_backend)
 
 
 def test_measurement_qubit_order_multiple_registers(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(6, accelerators)
     c.add(gates.X(0))
     c.add(gates.X(1))
@@ -109,13 +97,10 @@ def test_measurement_qubit_order_multiple_registers(backend, accelerators):
     binary_frequencies = {"a": {"011": 100}, "b": {"01": 100}}
     assert_register_result(result, decimal_samples, binary_samples,
                            decimal_frequencies, binary_frequencies)
-    qibo.set_backend(original_backend)
 
 
 def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     """Check that register measurements are unaffected by unmeasured qubits."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.Circuit(5, accelerators)
     c.add(gates.X(1))
     c.add(gates.X(2))
@@ -133,4 +118,3 @@ def test_registers_in_circuit_with_unmeasured_qubits(backend, accelerators):
     binary_frequencies = {"A": {"01": 100}, "B": {"10": 100}}
     assert_register_result(result, decimal_samples, binary_samples,
                            decimal_frequencies, binary_frequencies)
-    qibo.set_backend(original_backend)

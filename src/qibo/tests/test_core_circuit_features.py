@@ -1,7 +1,6 @@
 """Test how features defined in :class:`qibo.abstractions.circuit.AbstractCircuit` work during circuit execution."""
 import numpy as np
 import pytest
-import qibo
 from qibo import gates
 from qibo.models import Circuit
 
@@ -10,8 +9,6 @@ from qibo.models import Circuit
 def test_circuit_vs_gate_execution(backend, compile):
     """Check consistency between executing circuit and stand alone gates."""
     from qibo import K
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     theta = 0.1234
     target_c = Circuit(2)
     target_c.add(gates.X(0))
@@ -32,18 +29,15 @@ def test_circuit_vs_gate_execution(backend, compile):
     else:
         c = custom_circuit
 
-    if backend == "qibotf" and compile:
+    if K.name == "qibotf" and compile:
         with pytest.raises(NotImplementedError):
             result = c(initial_state, theta)
     else:
         result = c(initial_state, theta)
         np.testing.assert_allclose(result, target_result)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_addition_execution(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c1 = Circuit(4, accelerators)
     c1.add(gates.H(0))
     c1.add(gates.H(1))
@@ -60,16 +54,12 @@ def test_circuit_addition_execution(backend, accelerators):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CZ(2, 3))
     np.testing.assert_allclose(c3(), c())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("deep", [False, True])
 def test_copied_circuit_execution(backend, accelerators, deep):
     """Check that circuit copy execution is equivalent to original circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     theta = 0.1234
-
     c1 = Circuit(4, accelerators)
     c1.add([gates.X(0), gates.X(1), gates.CU1(0, 1, theta)])
     c1.add([gates.H(2), gates.H(3), gates.CU1(2, 3, theta)])
@@ -79,14 +69,10 @@ def test_copied_circuit_execution(backend, accelerators, deep):
     else:
         c2 = c1.copy(deep)
         np.testing.assert_allclose(c2(), c1())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("fuse", [False, True])
 def test_inverse_circuit_execution(backend, accelerators, fuse):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     c = Circuit(4, accelerators)
     c.add(gates.RX(0, theta=0.1))
     c.add(gates.U2(1, phi=0.2, lam=0.3))
@@ -101,12 +87,9 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
     target_state = np.ones(2 ** 4) / 4
     final_state = invc(c(np.copy(target_state)))
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_invert_and_addition_execution(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     subroutine = Circuit(6)
     subroutine.add([gates.RX(i, theta=0.1) for i in range(5)])
     subroutine.add([gates.CZ(i, i + 1) for i in range(0, 5, 2)])
@@ -123,14 +106,10 @@ def test_circuit_invert_and_addition_execution(backend, accelerators):
 
     assert c.depth == circuit.depth
     np.testing.assert_allclose(circuit(), c())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("distribute_small", [False, True])
 def test_circuit_on_qubits_execution(backend, accelerators, distribute_small):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     if distribute_small:
         smallc = Circuit(3, accelerators=accelerators)
     else:
@@ -148,14 +127,10 @@ def test_circuit_on_qubits_execution(backend, accelerators, distribute_small):
     targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
     assert largec.depth == targetc.depth
     np.testing.assert_allclose(largec(), targetc())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("distribute_small", [False, True])
 def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_small):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     if distribute_small:
         smallc = Circuit(3, accelerators=accelerators)
     else:
@@ -178,13 +153,9 @@ def test_circuit_on_qubits_double_execution(backend, accelerators, distribute_sm
         targetc.add((gates.CNOT(1, 3), gates.CZ(3, 5)))
         assert largec.depth == targetc.depth
         np.testing.assert_allclose(largec(), targetc())
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     smallc = Circuit(3)
     smallc.add(gates.RX(0, theta=0.1).controlled_by(1, 2))
     smallc.add(gates.RY(1, theta=0.2).controlled_by(0))
@@ -204,14 +175,10 @@ def test_circuit_on_qubits_controlled_by_execution(backend, accelerators):
 
     assert largec.depth == targetc.depth
     np.testing.assert_allclose(largec(), targetc())
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("controlled", [False, True])
 def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, controlled):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     unitaries = np.random.random((2, 2, 2))
     smallc = Circuit(2)
     if controlled:
@@ -243,13 +210,9 @@ def test_circuit_on_qubits_with_unitary_execution(backend, accelerators, control
     targetc.add(gates.CNOT(3, 0))
     assert largec.depth == targetc.depth
     np.testing.assert_allclose(largec(), targetc())
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_on_qubits_with_varlayer_execution(backend, accelerators):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     thetas = np.random.random([2, 4])
     smallc = Circuit(4)
     smallc.add(gates.VariationalLayer(range(4), [(0, 1), (2, 3)],
@@ -271,12 +234,9 @@ def test_circuit_on_qubits_with_varlayer_execution(backend, accelerators):
                                        thetas[1]))
     assert largec.depth == targetc.depth
     np.testing.assert_allclose(largec(), targetc())
-    qibo.set_backend(original_backend)
 
 
 def test_circuit_decompose_execution(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = Circuit(6)
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
@@ -285,12 +245,9 @@ def test_circuit_decompose_execution(backend):
     c.add(gates.X(3).controlled_by(0, 1, 2, 4))
     decomp_c = c.decompose(5)
     np.testing.assert_allclose(c(), decomp_c(), atol=1e-6)
-    qibo.set_backend(original_backend)
 
 
 def test_repeated_execute_pauli_noise_channel(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     thetas = np.random.random(4)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
@@ -314,12 +271,9 @@ def test_repeated_execute_pauli_noise_channel(backend):
         target_state.append(noiseless_c())
     target_state = np.stack(target_state)
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_repeated_execute_with_noise(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     thetas = np.random.random(4)
     c = Circuit(4)
     c.add((gates.RY(i, t) for i, t in enumerate(thetas)))
@@ -340,4 +294,3 @@ def test_repeated_execute_with_noise(backend):
         target_state.append(noiseless_c())
     target_state = np.stack(target_state)
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)

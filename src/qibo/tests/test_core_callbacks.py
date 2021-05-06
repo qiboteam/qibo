@@ -1,7 +1,6 @@
 """Test methods defined in `qibo/core/callbacks.py`."""
 import pytest
 import numpy as np
-import qibo
 from qibo.models import Circuit, AdiabaticEvolution
 from qibo import gates, callbacks
 from qibo.config import EIGVAL_CUTOFF
@@ -12,8 +11,6 @@ _atol = 1e-8
 
 
 def test_getitem_bad_indexing(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.RY(0, 0.1234))
@@ -25,25 +22,19 @@ def test_getitem_bad_indexing(backend):
         entropy[1]
     with pytest.raises(IndexError):
         entropy["a"]
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_product_state(backend):
     """Check that the |++> state has zero entropy."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     entropy = callbacks.EntanglementEntropy()
     state = np.ones(4) / 2.0
 
     result = entropy(state)
     np.testing.assert_allclose(result, 0, atol=_atol)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_singlet_state(backend):
     """Check that the singlet state has maximum entropy."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import K
     entropy = callbacks.EntanglementEntropy([0])
     state = np.zeros(4)
@@ -51,22 +42,16 @@ def test_entropy_singlet_state(backend):
     state = K.cast(state / np.sqrt(2))
     result = entropy(state)
     np.testing.assert_allclose(result, 1.0)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_bad_state_type(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     entropy = callbacks.EntanglementEntropy([0])
     with pytest.raises(TypeError):
         _ = entropy("test")
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_random_state(backend):
     """Check that entropy calculation agrees with numpy."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     # Generate a random positive and hermitian density matrix
     rho = np.random.random((8, 8)) + 1j * np.random.random((8, 8))
     rho = rho + rho.conj().T
@@ -84,13 +69,10 @@ def test_entropy_random_state(backend):
     masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
     ref_spectrum = - np.log(masked_eigvals)
     np.testing.assert_allclose(callback.spectrum[0], ref_spectrum)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_switch_partition(backend):
     """Check that partition is switched to the largest counterpart."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     entropy = callbacks.EntanglementEntropy([0])
     # Prepare ghz state of 5 qubits
     state = np.zeros(2 ** 5)
@@ -99,13 +81,10 @@ def test_entropy_switch_partition(backend):
 
     result = entropy(state)
     np.testing.assert_allclose(result, 1.0)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_numerical(backend):
     """Check that entropy calculation does not fail for tiny eigenvalues."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import K
     eigvals = np.array([-1e-10, -1e-15, -2e-17, -1e-18, -5e-60, 1e-48, 4e-32,
                         5e-14, 1e-14, 9.9e-13, 9e-13, 5e-13, 1e-13, 1e-12,
@@ -118,14 +97,11 @@ def test_entropy_numerical(backend):
     target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
 
     np.testing.assert_allclose(result, target)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_entropy_in_circuit(backend, density_matrix):
     """Check that entropy calculation works in circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
     c = Circuit(2, density_matrix=density_matrix)
     c.add(gates.CallbackGate(entropy))
@@ -141,7 +117,6 @@ def test_entropy_in_circuit(backend, density_matrix):
     target_spectrum = [0, 0, np.log(2), np.log(2)]
     entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
     np.testing.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("gateconf,target_entropy",
@@ -153,8 +128,6 @@ def test_entropy_in_circuit(backend, density_matrix):
                           (["entropy", "H", "entropy", "CNOT"], [0.0, 0.0])])
 def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_entropy):
     """Check that various entropy configurations work in distributed circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     target_c = Circuit(4)
     target_c.add([gates.H(0), gates.CNOT(0, 1)])
     target_state = target_c()
@@ -171,13 +144,11 @@ def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_
     final_state = c()
     np.testing.assert_allclose(final_state, target_state)
     np.testing.assert_allclose(entropy[:], target_entropy, atol=_atol)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_in_compiled_circuit(backend):
     """Check that entropy calculation works when circuit is compiled."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
+    from qibo import get_backend
     entropy = callbacks.EntanglementEntropy([0])
     c = Circuit(2)
     c.add(gates.CallbackGate(entropy))
@@ -185,20 +156,17 @@ def test_entropy_in_compiled_circuit(backend):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    if backend == "qibotf":
+    if get_backend() == "qibotf":
         with pytest.raises(RuntimeError):
             c.compile()
     else:
         c.compile()
         final_state = c()
         np.testing.assert_allclose(entropy[:], [0, 0, 1.0], atol=_atol)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_multiple_executions(backend, accelerators):
     """Check entropy calculation when the callback is used in multiple executions."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.1234), gates.CNOT(0, 1)])
     target_state = target_c()
@@ -231,13 +199,10 @@ def test_entropy_multiple_executions(backend, accelerators):
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     np.testing.assert_allclose(entropy[:], target, atol=_atol)
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_large_circuit(backend, accelerators):
     """Check that entropy calculation works for variational like circuit."""
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     thetas = np.pi * np.random.random((3, 8))
     target_entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
     c1 = Circuit(8)
@@ -276,13 +241,10 @@ def test_entropy_large_circuit(backend, accelerators):
 
     np.testing.assert_allclose(state3, state)
     np.testing.assert_allclose(entropy[:], [0, e1, e2, e3])
-    qibo.set_backend(original_backend)
 
 
 def test_entropy_density_matrix(backend):
     from qibo.tests.utils import random_density_matrix
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     rho = random_density_matrix(4)
     # this rho is not always positive. Make rho positive for this application
     _, u = np.linalg.eigh(rho)
@@ -301,15 +263,11 @@ def test_entropy_density_matrix(backend):
     mask = eigvals > 0
     target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
     np.testing.assert_allclose(final_ent, target_ent)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_norm(backend, density_matrix):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     norm = callbacks.Norm()
-
     if density_matrix:
         norm.density_matrix = True
         state = np.random.random((2, 2)) + 1j * np.random.random((2, 2))
@@ -319,14 +277,10 @@ def test_norm(backend, density_matrix):
         target_norm = np.sqrt((np.abs(state) ** 2).sum())
 
     np.testing.assert_allclose(norm(state), target_norm)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_overlap(backend, density_matrix):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-
     state0 = np.random.random(4) + 1j * np.random.random(4)
     state1 = np.random.random(4) + 1j * np.random.random(4)
     overlap = callbacks.Overlap(state0)
@@ -337,13 +291,10 @@ def test_overlap(backend, density_matrix):
     else:
         target_overlap = np.abs((state0.conj() * state1).sum())
         np.testing.assert_allclose(overlap(state1), target_overlap)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_energy(backend, density_matrix):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import hamiltonians
     ham = hamiltonians.TFIM(4, h=1.0)
     energy = callbacks.Energy(ham)
@@ -356,14 +307,11 @@ def test_energy(backend, density_matrix):
         state = np.random.random(16) + 1j * np.random.random(16)
         target_energy = state.conj().dot(matrix.dot(state))
     np.testing.assert_allclose(energy(state), target_energy)
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("trotter", [False, True])
 @pytest.mark.parametrize("check_degenerate", [False, True])
 def test_gap(backend, trotter, check_degenerate):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     from qibo import hamiltonians
     h0 = hamiltonians.X(4, trotter=trotter)
     if check_degenerate:
@@ -391,7 +339,6 @@ def test_gap(backend, trotter, check_degenerate):
     np.testing.assert_allclose(ground[:], targets["ground"])
     np.testing.assert_allclose(excited[:], targets["excited"])
     np.testing.assert_allclose(gap[:], targets["gap"])
-    qibo.set_backend(original_backend)
 
 
 def test_gap_errors():

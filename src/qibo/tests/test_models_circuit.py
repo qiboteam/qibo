@@ -1,7 +1,6 @@
 """Test methods defined in `qibo/models/circuit.py`."""
 import numpy as np
 import pytest
-import qibo
 from qibo import gates, models
 from qibo.tests.utils import random_state
 
@@ -42,20 +41,15 @@ def exact_qft(x: np.ndarray, inverse: bool = False) -> np.ndarray:
 
 @pytest.mark.parametrize("nqubits", [4, 10, 100])
 def test_qft_circuit_size(backend, nqubits):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.QFT(nqubits)
     assert c.nqubits == nqubits
     assert c.depth == 2 * nqubits
     assert c.ngates == nqubits ** 2 // 2 + nqubits
-    qibo.set_backend(original_backend)
 
 
 @pytest.mark.parametrize("nqubits", [5, 6, 12])
 @pytest.mark.parametrize("random", [False, True])
 def test_qft_execution(backend, accelerators, nqubits, random):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
     c = models.QFT(nqubits)
     if random:
         initial_state = random_state(nqubits)
@@ -65,7 +59,6 @@ def test_qft_execution(backend, accelerators, nqubits, random):
         final_state = c()
     target_state = exact_qft(initial_state)
     np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
 
 
 def test_qft_errors():
