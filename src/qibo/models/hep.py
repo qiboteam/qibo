@@ -139,10 +139,10 @@ def ansatz_Fourier(layers, qubits=1):
 
         if qubits > 1:
             for q in range(0, qubits, 2):
-                circuit.add(gates.CZPow(q, q + 1, theta=0))
+                circuit.add(gates.CU1(q, q + 1, theta=0))
         if qubits > 2:
             for q in range(1, qubits + 1, 2):
-                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
+                circuit.add(gates.CU1(q, (q + 1) % qubits, theta=0))
 
     for q in range(qubits):
         for _ in range(2):
@@ -213,10 +213,10 @@ def ansatz_Weighted(layers, qubits=1):
             circuit.add(gates.RZ(q, theta=0))
         if qubits > 1:
             for q in range(0, qubits, 2):
-                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
+                circuit.add(gates.CU1(q, (q + 1) % qubits, theta=0))
         if qubits > 2:
             for q in range(1, qubits + 1, 2):
-                circuit.add(gates.CZPow(q, (q + 1) % qubits, theta=0))
+                circuit.add(gates.CU1(q, (q + 1) % qubits, theta=0))
     for q in range(qubits):
         circuit.add(gates.RY(q, theta=0))
         circuit.add(gates.RZ(q, theta=0))

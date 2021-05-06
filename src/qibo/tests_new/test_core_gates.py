@@ -189,11 +189,11 @@ def test_u3(backend):
     qibo.set_backend(original_backend)
 
 
-def test_zpow(backend):
+def test_u1(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    final_state = apply_gates([gates.X(0), gates.ZPow(0, theta)], nqubits=1)
+    final_state = apply_gates([gates.X(0), gates.U1(0, theta)], nqubits=1)
     target_state = np.zeros_like(final_state)
     target_state[1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
@@ -252,11 +252,11 @@ def test_cun(backend, name, params):
     qibo.set_backend(original_backend)
 
 
-def test_czpow(backend):
+def test_cu1(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
     theta = 0.1234
-    gatelist = [gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)]
+    gatelist = [gates.X(0), gates.X(1), gates.CU1(0, 1, theta)]
     final_state = apply_gates(gatelist, nqubits=2)
     target_state = np.zeros_like(final_state)
     target_state[-1] = np.exp(1j * theta)
