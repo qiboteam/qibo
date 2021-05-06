@@ -34,6 +34,13 @@ class Backend:
                             "used to apply gates. In order to install Qibo's "
                             "high performance custom operators please use "
                             "`pip install qibotf`.")
+
+        # check if IcarusQ is installed
+        if self.check_availability("qiboicarusq"):
+            from qibo.backends.hardware import IcarusQBackend, AWGBackend
+            self.available_backends["icarusq"] = IcarusQBackend
+            self.available_backends["awg"] = AWGBackend
+
         else:  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("Tensorflow is not installed, falling back to numpy. "
