@@ -612,7 +612,7 @@ def test_from_symbolic_with_complex_numbers(trotter):
     import sympy
     x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
     y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
-    symham = x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
+    symham = (1 + 2j) * x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
     symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
     symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
     if trotter:
@@ -622,7 +622,7 @@ def test_from_symbolic_with_complex_numbers(trotter):
         ham = Hamiltonian.from_symbolic(symham, symmap)
         final_matrix = ham.matrix
 
-    target_matrix = np.kron(matrices.X, matrices.X)
+    target_matrix = (1 + 2j) * np.kron(matrices.X, matrices.X)
     target_matrix += 2 * np.kron(matrices.Y, matrices.Y)
     target_matrix -= 3j * np.kron(matrices.X, matrices.Y)
     target_matrix += 1j * np.kron(matrices.Y, matrices.X)
