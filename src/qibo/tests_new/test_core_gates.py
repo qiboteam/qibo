@@ -241,18 +241,6 @@ def test_cun(backend, name, params):
     qibo.set_backend(original_backend)
 
 
-def test_cu1(backend):
-    original_backend = qibo.get_backend()
-    qibo.set_backend(backend)
-    theta = 0.1234
-    gatelist = [gates.X(0), gates.X(1), gates.CU1(0, 1, theta)]
-    final_state = apply_gates(gatelist, nqubits=2)
-    target_state = np.zeros_like(final_state)
-    target_state[-1] = np.exp(1j * theta)
-    np.testing.assert_allclose(final_state, target_state)
-    qibo.set_backend(original_backend)
-
-
 def test_swap(backend):
     original_backend = qibo.get_backend()
     qibo.set_backend(backend)
