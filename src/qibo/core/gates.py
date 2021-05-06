@@ -397,12 +397,6 @@ class U3(MatrixGate, abstract_gates.U3):
                        [eminus * sint, eplus * cost]])
 
 
-class ZPow(abstract_gates.ZPow):
-
-    def __new__(cls, q, theta, trainable=True):
-        return U1(q, theta, trainable)
-
-
 class CNOT(BackendGate, abstract_gates.CNOT):
 
     def __init__(self, q0, q1):
@@ -491,12 +485,6 @@ class CU3(_CUn_, abstract_gates.CU3):
     def __init__(self, q0, q1, theta, phi, lam, trainable=True):
         _CUn_.__init__(self, q0, q1, theta=theta, phi=phi, lam=lam,
                        trainable=trainable)
-
-
-class CZPow(abstract_gates.CZPow):
-
-    def __new__(cls, q0, q1, theta, trainable=True):
-        return CU1(q0, q1, theta, trainable)
 
 
 class SWAP(BackendGate, abstract_gates.SWAP):
