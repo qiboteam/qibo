@@ -68,7 +68,6 @@ def test_rygate_density_matrix(backend):
                          [("H", {}), ("X", {}), ("Y", {}), ("Z", {}), ("I", {}),
                           ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
                           ("RZ", {"theta": 0.123}), ("U1", {"theta": 0.123}),
-                          ("U1", {"theta": 0.123}),
                           ("U2", {"phi": 0.123, "lam": 0.321}),
                           ("U3", {"theta": 0.123, "phi": 0.321, "lam": 0.123})])
 def test_one_qubit_gates(backend, gatename, gatekwargs):
@@ -108,7 +107,6 @@ def test_controlled_by_one_qubit_gates(backend, gatename):
                          [("CNOT", {}), ("CZ", {}), ("SWAP", {}),
                           ("CRX", {"theta": 0.123}), ("CRY", {"theta": 0.123}),
                           ("CRZ", {"theta": 0.123}), ("CU1", {"theta": 0.123}),
-                          ("CU1", {"theta": 0.123}),
                           ("CU2", {"phi": 0.123, "lam": 0.321}),
                           ("CU3", {"theta": 0.123, "phi": 0.321, "lam": 0.123}),
                           ("fSim", {"theta": 0.123, "phi": 0.543})])
