@@ -39,8 +39,8 @@ to perform calculation which can be one of the backends defined in ``qibo/backen
 
 .. _generalpurpose:
 
-General circuit models
-^^^^^^^^^^^^^^^^^^^^^^
+Circuit models
+^^^^^^^^^^^^^^
 
 Abstract circuit
 """"""""""""""""
@@ -56,51 +56,9 @@ Circuit
     :members:
     :member-order: bysource
 
-Density matrix circuit
-""""""""""""""""""""""
-
-.. autoclass:: qibo.core.circuit.DensityMatrixCircuit
-    :members:
-    :member-order: bysource
-
-Distributed circuit
-"""""""""""""""""""
-
-.. autoclass:: qibo.core.distcircuit.DistributedCircuit
-    :members:
-    :member-order: bysource
-
-.. _applicationspecific:
-
-Application specific models
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-VQE
-"""
-
-.. autoclass:: qibo.models.variational.VQE
-    :members:
-    :member-order: bysource
-
-QAOA
-""""
-
-.. autoclass:: qibo.models.variational.QAOA
-    :members:
-    :member-order: bysource
-
-Grover
-""""""
-
-.. autoclass:: qibo.models.grover.Grover
-    :members:
-    :member-order: bysource
-
-
-.. _circuitaddition:
 
 Circuit addition
-^^^^^^^^^^^^^^^^
+""""""""""""""""
 
 ``Circuit`` objects also support addition. For example
 
@@ -122,11 +80,8 @@ Circuit addition
 will create a circuit that performs the Quantum Fourier Transform on four qubits
 followed by Rotation-Z gates.
 
-
-.. _circuitfusion:
-
 Circuit fusion
-^^^^^^^^^^^^^^
+""""""""""""""
 
 The gates contained in a circuit can be fused up to two-qubits using the
 :meth:`qibo.abstractions.circuit.AbstractCircuit.fuse` method. This returns a new circuit
@@ -174,6 +129,40 @@ all the gates in the group.
     :members:
     :member-order: bysource
 
+Density matrix circuit
+""""""""""""""""""""""
+
+.. autoclass:: qibo.core.circuit.DensityMatrixCircuit
+    :members:
+    :member-order: bysource
+
+Distributed circuit
+"""""""""""""""""""
+
+.. autoclass:: qibo.core.distcircuit.DistributedCircuit
+    :members:
+    :member-order: bysource
+
+VQE
+"""
+
+.. autoclass:: qibo.models.variational.VQE
+    :members:
+    :member-order: bysource
+
+QAOA
+""""
+
+.. autoclass:: qibo.models.variational.QAOA
+    :members:
+    :member-order: bysource
+
+Grover
+""""""
+
+.. autoclass:: qibo.models.grover.Grover
+    :members:
+    :member-order: bysource
 
 
 .. _timeevolution:
@@ -283,10 +272,6 @@ First general unitary (U1)
     :members:
     :member-order: bysource
 
-.. autoclass:: qibo.abstractions.gates.ZPow
-    :members:
-    :member-order: bysource
-
 Second general unitary (U2)
 ^^^^^^^^^^^^^^^
 
@@ -340,10 +325,6 @@ Controlled first general unitary (CU1)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.abstractions.gates.CU1
-    :members:
-    :member-order: bysource
-
-.. autoclass:: qibo.abstractions.gates.CZPow
     :members:
     :member-order: bysource
 
@@ -494,6 +475,16 @@ The main abstract Hamiltonian object of Qibo is:
     :members:
     :member-order: bysource
 
+In addition to the abstract model, Qibo provides the following pre-coded
+Hamiltonians:
+
+.. note::
+    Note that all pre-coded Hamiltonians can be created as either
+    :class:`qibo.abstractions.hamiltonians.Hamiltonian` or
+    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+
+Trotter Hamiltonian
+^^^^^^^^^^^^^^^^^^^
 
 Qibo provides an additional object that represents Hamiltonians without using
 their full matrix representation and can be used for time evolution using the
@@ -501,20 +492,9 @@ Trotter decomposition. The Hamiltonians represented by this object are sums of
 commuting terms, following the description of Sec. 4.1 of
 `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 
-Trotter hamiltonian
-^^^^^^^^^^^^^^^^^^^
-
 .. autoclass:: qibo.abstractions.hamiltonians.TrotterHamiltonian
     :members:
     :member-order: bysource
-
-In addition to these abstract models, Qibo provides the following pre-coded
-Hamiltonians:
-
-.. note::
-    Note that all pre-coded Hamiltonians can be created as either
-    :class:`qibo.abstractions.hamiltonians.Hamiltonian` or
-    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
 
 Heisenberg XXZ
 ^^^^^^^^^^^^^^
