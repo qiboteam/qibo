@@ -555,30 +555,6 @@ class U3(_Un_):
         return self.__class__(self.target_qubits[0], theta, phi, lam)
 
 
-class ZPow(Gate): # pragma: no cover
-    """Equivalent to :class:`qibo.abstractions.gates.U1`.
-
-    Implemented to maintain compatibility with previous versions.
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 \\\\
-        0 & e^{i \\theta} \\\\
-        \\end{pmatrix}
-
-    Args:
-        q (int): the qubit id number.
-        theta (float): the rotation angle.
-        trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
-    """
-    # This class exists only for documentation purposes.
-    def __new__(cls, q, theta, trainable=True):
-        return U1(q, theta, trainable=trainable)
-
-
 class CNOT(Gate):
     """The Controlled-NOT gate.
 
@@ -878,33 +854,6 @@ class CU3(_CUn_):
         q1 = self.target_qubits[0]
         theta, lam, phi = tuple(-x for x in self.parameters)
         return self.__class__(q0, q1, theta, phi, lam)
-
-
-class CZPow(Gate): # pragma: no cover
-    """Equivalent to :class:`qibo.abstractions.gates.CU1`.
-
-    Implemented to maintain compatibility with previous versions.
-    Corresponds to the following unitary matrix
-
-    .. math::
-        \\begin{pmatrix}
-        1 & 0 & 0 & 0 \\\\
-        0 & 1 & 0 & 0 \\\\
-        0 & 0 & 1 & 0 \\\\
-        0 & 0 & 0 & e^{i \\theta } \\\\
-        \\end{pmatrix}
-
-    Args:
-        q0 (int): the control qubit id number.
-        q1 (int): the target qubit id number.
-        theta (float): the rotation angle.
-        trainable (bool): whether gate parameters can be updated using
-            :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
-            (default is ``True``).
-    """
-    def __new__(cls, q0, q1, theta, trainable=True): # pragma: no cover
-        # code is not tested as it is substituted in backend gates
-        return CU1(q0, q1, theta, trainable=trainable)
 
 
 class SWAP(Gate):

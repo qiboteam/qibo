@@ -147,14 +147,6 @@ def test_u3(backend):
     np.testing.assert_allclose(final_state, target_state)
 
 
-def test_zpow(backend):
-    theta = 0.1234
-    final_state = apply_gates([gates.X(0), gates.ZPow(0, theta)], nqubits=1)
-    target_state = np.zeros_like(final_state)
-    target_state[1] = np.exp(1j * theta)
-    np.testing.assert_allclose(final_state, target_state)
-
-
 @pytest.mark.parametrize("applyx", [False, True])
 def test_cnot(backend, applyx):
     if applyx:
@@ -195,15 +187,6 @@ def test_cun(backend, name, params):
     gate = getattr(gates, name)(0, 1, **params)
     final_state = apply_gates([gate], initial_state=initial_state)
     target_state = np.dot(gate.unitary, initial_state)
-    np.testing.assert_allclose(final_state, target_state)
-
-
-def test_czpow(backend):
-    theta = 0.1234
-    gatelist = [gates.X(0), gates.X(1), gates.CZPow(0, 1, theta)]
-    final_state = apply_gates(gatelist, nqubits=2)
-    target_state = np.zeros_like(final_state)
-    target_state[-1] = np.exp(1j * theta)
     np.testing.assert_allclose(final_state, target_state)
 
 

@@ -55,6 +55,29 @@ def test_from_symbolic_with_power(trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
+@pytest.mark.parametrize("trotter", [False, True])
+def test_from_symbolic_with_complex_numbers(trotter):
+    """Check ``from_symbolic`` when the expression contains imaginary unit."""
+    import sympy
+    x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
+    y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
+    symham = (1 + 2j) * x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
+    symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
+    symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
+    if trotter:
+        ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+        final_matrix = ham.dense.matrix
+    else:
+        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+        final_matrix = ham.matrix
+
+    target_matrix = (1 + 2j) * np.kron(matrices.X, matrices.X)
+    target_matrix += 2 * np.kron(matrices.Y, matrices.Y)
+    target_matrix -= 3j * np.kron(matrices.X, matrices.Y)
+    target_matrix += 1j * np.kron(matrices.Y, matrices.X)
+    np.testing.assert_allclose(final_matrix, target_matrix)
+
+
 def test_from_symbolic_application_hamiltonian():
     """Check ``from_symbolic`` for a specific four-qubit Hamiltonian."""
     z1, z2, z3, z4 = sympy.symbols("z1 z2 z3 z4")
