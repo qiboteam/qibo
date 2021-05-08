@@ -40,6 +40,8 @@ This documentation refers to Qibo |release|.
     contributing
     benchmarks
 
+* :ref:`modindex`
+
 .. toctree::
     :maxdepth: 3
     :glob:
