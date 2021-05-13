@@ -49,7 +49,9 @@ setup(
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
         "tests": ["pytest", "cirq", "ply", "sklearn"],
+        # Backends dependencies
         "qibotf": ["qibotf"],
+        "tensorflow": ["tensorflow>2.4"],
     },
     python_requires=">=3.6.0",
     long_description=long_description,
