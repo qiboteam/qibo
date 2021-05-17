@@ -34,8 +34,8 @@ _______________________
 
 .. _backend-drivers:
 
-Backends drivers
-----------------
+Backend drivers
+---------------
 
 As mentioned above, we provide backends for quantum simulation on classical
 hardware and quantum hardware management and control. In the image below we
@@ -67,7 +67,7 @@ Simulation backends
 
 We provide multiple simulation backends for Qibo, which are automatically loaded if the corresponding packages are installed, following the hierarchy below:
 
-* :ref:`installing-qibotf` (*recommended*): an efficient simulation backend for CPU, GPU and multi-GPU based on TensorFlow primitives. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
+* :ref:`installing-qibotf` (*recommended*): an efficient simulation backend for CPU, GPU and multi-GPU based on TensorFlow custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
 * :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibotf` instead.
 * :ref:`installing-numpy`: a lightweight quantum simulator shipped with the :ref:`installing-qibo` base package. Use this simulator if your CPU architecture is not supported by the other backends.
 
@@ -86,11 +86,11 @@ distributed with pypi* for the packages listed above.
 +------------------+------+------------------+------------+
 | MacOS >= 10.15   | Yes  | Yes/No           | Yes        |
 +------------------+------+------------------+------------+
-| Windows          | Yes  | No/No            | No         |
+| Windows          | Yes  | No/No            | Yes        |
 +------------------+------+------------------+------------+
 
 .. note::
-      All packages are supported for Python 3.6, 3.7 and 3.8.
+      All packages are supported for Python >= 3.6.
 
 _______________________
 
@@ -270,7 +270,7 @@ In order to install the package, we recommend the installation using:
       pip install qibo[tensorflow]
 
 .. note::
-      The TensorFlow can be installed following its `documentation
+      TensorFlow can be installed following its `documentation
       <https://www.tensorflow.org/install>`_.
 
 _______________________
