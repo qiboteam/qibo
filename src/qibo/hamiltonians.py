@@ -155,7 +155,7 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
     return Hamiltonian(nqubits, ham, numpy=numpy)
 
 
-def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
+def MaxCut(nqubits, numpy=False, trotter=False):
     """Max Cut Hamiltonian.
 
     .. math::
@@ -163,7 +163,6 @@ def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
 
     Args:
         nqubits (int): number of quantum bits.
-        random_graph (bool): enable random connections between qubits.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise TensorFlow is used.
             Default option is ``numpy = False``.
@@ -178,14 +177,7 @@ def MaxCut(nqubits, random_graph=False, numpy=False, trotter=False):
     sham = - sum(V[i * nqubits + j] * (1 - Z[i] * Z[j]) for i in range(nqubits) for j in range(nqubits))
     sham /= 2
 
-    if random_graph: # pragma: no cover
-        from networkx import random_graphs, adjacency_matrix # pylint: disable=no-name-in-module
-        aa = K.np.random.randint(1, nqubits*(nqubits-1)/2+1)
-        graph = random_graphs.dense_gnm_random_graph(nqubits, aa)
-        v = adjacency_matrix(graph).toarray().flatten()
-    else:
-        v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
-
+    v = K.qnp.ones(nqubits**2, dtype='DTYPEINT')
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 

@@ -21,8 +21,8 @@ import qibo
 # -- Project information -----------------------------------------------------
 
 project = "Qibo"
-copyright = "2020 by Quantum-TII team"
-author = "Quantum-TII team"
+copyright = "2020-2021 by the Qibo team"
+author = "The Qibo team"
 
 # The full version, including alpha/beta/rc tags
 release = qibo.__version__

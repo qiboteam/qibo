@@ -6,4 +6,3 @@ cma
 joblib
 matplotlib
 psutil
-networkx
