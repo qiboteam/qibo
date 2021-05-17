@@ -87,7 +87,8 @@ def pytest_generate_tests(metafunc):
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
         target = metafunc.config.option.target_backend
-        metafunc.parametrize("tested_backend", [x for x in backends if x != target])
+        test_backends = [x for x in backends if x != target and x not in qibo.K.hardware_backends]
+        metafunc.parametrize("tested_backend", test_backends)
         metafunc.parametrize("target_backend", [target])
 
     if "backend_name" in metafunc.fixturenames:
