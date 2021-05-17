@@ -278,3 +278,26 @@ class DensityMatrixCircuit(Circuit):
             state = states.VectorState.from_tensor(state, self.nqubits)
             return state.to_density_matrix().tensor
         return super().get_initial_state(state)
+
+
+class HardwareCircuit(Circuit):
+
+    def _add_layer(self):
+        raise_error(NotImplementedError, "VariationalLayer gate is not "
+                                         "implemented for hardware backends.")
+
+    def fuse(self):
+        raise_error(NotImplementedError, "Circuit fusion is not implemented "
+                                         "for hardware backends.")
+
+    def execute(self, initial_state=None, nshots=None, measurement_level=2):
+        if initial_state is not None:
+            raise_error(ValueError, "Hardware backend does not support "
+                                    "initial state in circuits.")
+        return K.hardware_circuit.execute(self, nshots, measurement_level)
+
+    def __call__(self, initial_state=None, nshots=None, measurement_level=2):
+        return self.execute(initial_state, nshots, measurement_level)
+
+    def __getattr__(self, x):
+        return getattr(K.hardware_circuit, x)

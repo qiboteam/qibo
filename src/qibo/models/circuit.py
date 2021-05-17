@@ -9,17 +9,23 @@ class Circuit(StateCircuit):
 
     @classmethod
     def _constructor(cls, *args, **kwargs):
+        from qibo import K
         if kwargs["density_matrix"]:
             if kwargs["accelerators"] is not None:
                 raise_error(NotImplementedError,
                             "Distributed circuits are not implemented for "
                             "density matrices.")
+            if K.hardware_module:
+                raise_error(NotImplementedError,
+                            "Hardware backend does not support density matrix "
+                            "simulation.")
             from qibo.core.circuit import DensityMatrixCircuit as circuit_cls
             kwargs = {}
-        elif kwargs["accelerators"] is None:
-            circuit_cls = StateCircuit
-            kwargs = {}
-        else:
+        elif kwargs["accelerators"] is not None:
+            if K.hardware_module:
+                raise_error(NotImplementedError,
+                            "Hardware backend does not support multi-GPU "
+                            "configuration.")
             try:
                 from qibo.core.distcircuit import DistributedCircuit
             except ModuleNotFoundError: # pragma: no cover
@@ -29,6 +35,12 @@ class Circuit(StateCircuit):
                             "required libraries are missing.")
             circuit_cls = DistributedCircuit
             kwargs.pop("density_matrix")
+        else:
+            kwargs = {}
+            if K.hardware_module:
+                from qibo.core.circuit import HardwareCircuit as circuit_cls
+            else:
+                circuit_cls = StateCircuit
         return circuit_cls, args, kwargs
 
     def __new__(cls, nqubits: int,
