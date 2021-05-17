@@ -1,4 +1,5 @@
 import math
+from qibo import K
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit as StateCircuit
 from typing import Dict, Optional
