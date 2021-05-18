@@ -5,20 +5,19 @@
 [![Documentation Status](https://readthedocs.org/projects/qibo/badge/?version=latest)](https://qibo.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 
-Qibo is a Python library for classical simulation of quantum algorithms.
+Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
 
 Some of the key features of Qibo are:
-- A standard interface for the implementation and extension of quantum algorithms.
-- Modular implementation on GPU and CPU with multi-threading support.
-- Availability of multi-GPU distributed approach for circuit simulation.
-- Full support of double precision simulation.
+- Definition of a standard language for the construction and execution of quantum circuits with device agnostic approach to simulation and quantum hardware control based on plug and play backend drivers.
+- A continuously growing code-base of quantum algorithms applications presented with examples and tutorials.
+- Efficient simulation backends with GPU, multi-GPU and CPU with multi-threading support.
+- Simple mechanism for the implementation of new simulation and hardware backend drivers.
 
 ## Documentation
 
 Qibo documentation is available at [qibo.readthedocs.io](https://qibo.readthedocs.io).
 
-- [Installation](https://qibo.readthedocs.io/en/stable/installation.html)
-- [Documentation](https://qibo.readthedocs.io/)
+- [Overview and installation](https://qibo.readthedocs.io/en/stable/installation.html)
 - [Components](https://qibo.readthedocs.io/en/stable/qibo.html)
 - [Examples](https://qibo.readthedocs.io/en/stable/examples.html)
 - [Benchmarks](https://qibo.readthedocs.io/en/stable/benchmarks.html)

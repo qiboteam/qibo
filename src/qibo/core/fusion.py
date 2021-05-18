@@ -48,7 +48,7 @@ class FusionGroup:
         self.completed = False
         self.special_gate = None
         self._fused_gates = None
-        if K.custom_gates:
+        if K.op is not None:
             self.K = K.np
         else:
             self.K = K
@@ -258,7 +258,7 @@ class FusionGroup:
             4x4 matrix that corresponds to the Kronecker product of the 2x2
             gate matrices.
         """
-        if K.custom_gates:
+        if K.op is not None:
             return self.K.kron(gate0.unitary, gate1.unitary)
         else:
             matrix = self.K.tensordot(gate0.unitary, gate1.unitary, axes=0)

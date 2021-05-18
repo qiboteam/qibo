@@ -47,8 +47,6 @@ def run_script(args, script_name="main.py"):
         script_name (str): Name of the script file.
         max_time (float): Time-out time in seconds.
     """
-    import qibo
-    qibo.set_backend("custom")
     code = open(script_name, "r").read()
     end = code.find("\nif __name__ ==")
     code = code[:end] + "\n\nmain(**args)"
@@ -146,7 +144,7 @@ def test_benchmarks(nqubits, type):
     header = ("import argparse\nimport os\nimport time"
               "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
-            "backend": "custom", "precision": "double",
+            "backend": "qibotf", "precision": "double",
             "device": None, "accelerators": None,
             "nshots": None, "fuse": False, "compile": False,
             "nlayers": None, "gate_type": None, "params": {},
@@ -257,7 +255,7 @@ def test_falqon(nqubits, delta_t, max_layers):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
-    
+
 
 @pytest.mark.parametrize("nqubits", [5, 6, 7])
 def test_grover_example1(nqubits):
@@ -287,4 +285,3 @@ def test_grover_example3(nqubits, num_1):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="example3.py")
-

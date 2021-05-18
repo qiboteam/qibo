@@ -1,4 +1,3 @@
-from qibo import get_backend
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit
 from qibo.models.evolution import StateEvolution
@@ -66,31 +65,25 @@ class VQE(object):
                 ``CMAEvolutionStrategy.result``, and for ``'sgd'``
                 the options used during the optimization.
         """
+        from qibo import K
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
             final_state = circuit()
             return hamiltonian.expectation(final_state)
 
         if compile:
-            if get_backend() == "custom":
+            if K.op is not None:
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
-            from qibo import K
             for gate in self.circuit.queue:
                 _ = gate.cache
             loss = K.compile(_loss)
-
-        if method == 'sgd':
-            # check if gates are using the MatmulEinsum backend
-            from qibo import K
-            if K.name == "custom":
-                raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
-                                          'gates because gradients are not '
-                                          'supported in the custom kernels.')
-            loss = _loss
         else:
-            from qibo import K
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = _loss
+
+        if method != "sgd":
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
+
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
                                                              args=(self.circuit, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
@@ -285,7 +278,7 @@ class QAOA(object):
         if method == "sgd":
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
