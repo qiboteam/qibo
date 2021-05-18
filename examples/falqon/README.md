@@ -1,6 +1,6 @@
 # Feedback-based ALgorithm for Quantum OptimizatioN - FALQON
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/falqon](https://github.com/Quantum-TII/qibo/tree/master/examples/falqon)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/falqon](https://github.com/qiboteam/qibo/tree/master/examples/falqon)
 
 Quantum Approximate Optimisation Algorithm (QAOA) is considered as one of the most important algorithms for optimisation in Quantum Computers, see [arXiv:1411.4028](https://arxiv.org/abs/1411.4028) by Farhi, Goldstone and Gutmann for more information.
 

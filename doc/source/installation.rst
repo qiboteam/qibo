@@ -130,7 +130,7 @@ In order to install Qibo from source, you can simply clone the GitHub repository
 
 .. code-block::
 
-      git clone https://github.com/Quantum-TII/qibo.git
+      git clone https://github.com/qiboteam/qibo.git
       cd qibo
       pip install . # or pip install -e .
 
@@ -188,7 +188,7 @@ In order to install the package perform the following steps:
 
 .. code-block::
 
-      git clone https://github.com/Quantum-TII/qibotf.git
+      git clone https://github.com/qiboteam/qibotf.git
       cd qibotf
 
 then proceed with the installation of requirements with:

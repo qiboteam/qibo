@@ -1,6 +1,6 @@
 # Scaling of variational quantum circuit depth for condensed matter systems
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/aavqe](https://github.com/Quantum-TII/qibo/tree/master/examples/aavqe).
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/aavqe](https://github.com/qiboteam/qibo/tree/master/examples/aavqe).
 
 ## Problem overview
 Strongly-correlated many-body systems can give rise to exceptional quantum

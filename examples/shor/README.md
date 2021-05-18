@@ -1,6 +1,6 @@
 # Shor's factorization algorithm
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/shor/examples/shor](https://github.com/Quantum-TII/qibo/tree/shor/examples/shor)
+Code at: [https://github.com/qiboteam/qibo/tree/shor/examples/shor](https://github.com/qiboteam/qibo/tree/shor/examples/shor)
 
 The original paper by Shor [arXiv:9508027](https://arxiv.org/abs/quant-ph/9508027) stated that the discrete logarithm problem and factorization could be reduced to order finding. Then, Shor proposed an order finding algorithm using a quantum computer that would run in polynomial time. 
 

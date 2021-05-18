@@ -1,6 +1,6 @@
 # Grover's Algorithm for solving Satisfiability Problems
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/grover3sat](https://github.com/Quantum-TII/qibo/tree/master/examples/grover3sat)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/grover3sat](https://github.com/qiboteam/qibo/tree/master/examples/grover3sat)
 
 ## Introduction
 

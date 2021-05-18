@@ -46,7 +46,7 @@ setup(
     description="A framework for quantum computing with hardware acceleration.",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/Quantum-TII/qibo",
+    url="https://github.com/qiboteam/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["*.out"]},

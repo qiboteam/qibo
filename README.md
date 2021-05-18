@@ -1,7 +1,7 @@
 ![](doc/source/qibo_logo.svg)
 
-![Tests](https://github.com/Quantum-TII/qibo/workflows/Tests/badge.svg)
-[![codecov](https://codecov.io/gh/Quantum-TII/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/Quantum-TII/qibo)
+![Tests](https://github.com/qiboteam/qibo/workflows/Tests/badge.svg)
+[![codecov](https://codecov.io/gh/qiboteam/qibo/branch/master/graph/badge.svg?token=1EKZKVEVX0)](https://codecov.io/gh/qiboteam/qibo)
 [![Documentation Status](https://readthedocs.org/projects/qibo/badge/?version=latest)](https://qibo.readthedocs.io/en/latest/?badge=latest)
 [![DOI](https://zenodo.org/badge/241307936.svg)](https://zenodo.org/badge/latestdoi/241307936)
 

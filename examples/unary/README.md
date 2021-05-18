@@ -1,6 +1,6 @@
 # Quantum unary approach to option pricing
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/unary](https://github.com/Quantum-TII/qibo/tree/master/examples/unary)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/unary](https://github.com/qiboteam/qibo/tree/master/examples/unary)
 
 Based in the paper [arXiv:1912.01618](https://arxiv.org/abs/1912.01618). In this `README.md` file you can see a short
 set of instructions for the usage of the example.
