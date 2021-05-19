@@ -53,6 +53,9 @@ def create_target(name):
                              * np.sqrt(2 / 3)], dtype=complex),
                    np.array([1 / np.sqrt(3), np.exp(-1j * 2 * np.pi / 3) * np.sqrt(2 / 3)], dtype=complex)]
 
+    else:
+        raise NotImplementedError('This dataset is not implemented')
+
     return targets
 
 

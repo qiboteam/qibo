@@ -116,13 +116,15 @@ class single_qubit_classifier:
             parameters = r[1].result.xbest
 
         elif method == 'sgd':
-            from qibo.tensorflow.gates import TensorflowGate
+            from qibo import K
             circuit = self.circuit(self.training_set[0])
             for gate in circuit.queue:
-                if not isinstance(gate, TensorflowGate):
-                    raise RuntimeError('SGD VQE requires native Tensorflow '
-                                       'gates because gradients are not '
-                                       'supported in the custom kernels.')
+                if K.name != "tensorflow":
+                    from qibo.config import raise_error
+                    raise_error(RuntimeError,
+                                'SGD VQE requires native Tensorflow '
+                                'gates because gradients are not '
+                                'supported in the custom kernels.')
 
             sgd_options = {"nepochs": 5001,
                            "nmessage": 1000,
@@ -132,7 +134,7 @@ class single_qubit_classifier:
                 sgd_options.update(options)
 
             # proceed with the training
-            from qibo.config import K
+            from qibo import K
             vparams = K.Variable(self.params)
             optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
                 learning_rate=sgd_options["learning_rate"])

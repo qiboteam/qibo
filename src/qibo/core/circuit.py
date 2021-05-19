@@ -128,7 +128,7 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if K.custom_gates:
+        if K.op is not None:
             raise_error(RuntimeError, "Cannot compile circuit that uses custom "
                                       "operators.")
         for gate in self.queue:

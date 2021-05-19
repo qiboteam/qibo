@@ -24,26 +24,11 @@ jobs:
       uses: mstksg/get-package@v1
       with:
         brew: libomp
-    - name: Build linux wheels
-      if: startsWith(matrix.os, 'ubuntu')
-      run: docker run --rm -e PYTHON_VERSION -v `pwd`:/io quay.io/pypa/manylinux2010_x86_64 /io/.github/scripts/build-linux.sh
-      env:
-        PYTHON_VERSION: ${{ matrix.python-version }}
-    - name: Build macos wheels
-      if: startsWith(matrix.os, 'macos')
+    - name: Build wheels
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        python setup.py bdist_wheel
-        pip install delocate
-        cd dist
-        delocate-wheel -v `ls`
-    - name: Build windows wheels
-      if: startsWith(matrix.os, 'windows')
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        python setup.py bdist_wheel
+        pip install wheel
+        python setup.py sdist bdist_wheel
     - name: Store wheels as artifacts
       uses: actions/upload-artifact@v2
       with:
@@ -51,6 +36,14 @@ jobs:
         path: dist
     - name: Test wheels
       if: startsWith(matrix.os, 'windows') == 0
+      run: |
+        python -m pip install --upgrade pip
+        pip install qibotf pytest cirq ply sklearn
+        pip install -r requirements.txt
+        pip install qibo --no-index --find-links ./dist/
+        pytest --pyargs qibo
+    - name: Test wheels on windows
+      if: startsWith(matrix.os, 'windows')
       run: |
         python -m pip install --upgrade pip
         pip install pytest cirq ply sklearn

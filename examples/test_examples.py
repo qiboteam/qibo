@@ -47,8 +47,6 @@ def run_script(args, script_name="main.py"):
         script_name (str): Name of the script file.
         max_time (float): Time-out time in seconds.
     """
-    import qibo
-    qibo.set_backend("custom")
     code = open(script_name, "r").read()
     end = code.find("\nif __name__ ==")
     code = code[:end] + "\n\nmain(**args)"
@@ -146,7 +144,7 @@ def test_benchmarks(nqubits, type):
     header = ("import argparse\nimport os\nimport time"
               "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
-            "backend": "custom", "precision": "double",
+            "backend": "qibotf", "precision": "double",
             "device": None, "accelerators": None,
             "nshots": None, "fuse": False, "compile": False,
             "nlayers": None, "gate_type": None, "params": {},
@@ -244,3 +242,46 @@ def test_shor(N, times, A, semiclassical, enhance):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args)
+
+
+@pytest.mark.parametrize("nqubits", [4, 5])
+@pytest.mark.parametrize("delta_t", [0.5, 0.1])
+@pytest.mark.parametrize("max_layers", [10, 100])
+def test_falqon(nqubits, delta_t, max_layers):
+    if "functions" in sys.modules:
+        del sys.modules["functions"]
+    args = locals()
+    path = os.path.join(base_dir, "falqon")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args)
+
+
+@pytest.mark.parametrize("nqubits", [5, 6, 7])
+def test_grover_example1(nqubits):
+    args = locals()
+    path = os.path.join(base_dir, "grover")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="example1.py")
+
+
+@pytest.mark.parametrize("nqubits", [5, 8, 10])
+@pytest.mark.parametrize("num_1", [1, 2])
+@pytest.mark.parametrize("iterative", [False, True])
+def test_grover_example2(nqubits, num_1, iterative):
+    args = locals()
+    path = os.path.join(base_dir, "grover")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="example2.py")
+
+
+@pytest.mark.parametrize("nqubits", [5, 8, 10])
+@pytest.mark.parametrize("num_1", [1, 2])
+def test_grover_example3(nqubits, num_1):
+    args = locals()
+    path = os.path.join(base_dir, "grover")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="example3.py")

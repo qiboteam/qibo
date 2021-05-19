@@ -1,4 +1,3 @@
-from qibo import get_backend
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit
 from qibo.models.evolution import StateEvolution
@@ -66,31 +65,25 @@ class VQE(object):
                 ``CMAEvolutionStrategy.result``, and for ``'sgd'``
                 the options used during the optimization.
         """
+        from qibo import K
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
             final_state = circuit()
             return hamiltonian.expectation(final_state)
 
         if compile:
-            if get_backend() == "custom":
+            if K.op is not None:
                 raise_error(RuntimeError, "Cannot compile VQE that uses custom operators. "
                                           "Set the compile flag to False.")
-            from qibo import K
             for gate in self.circuit.queue:
                 _ = gate.cache
             loss = K.compile(_loss)
-
-        if method == 'sgd':
-            # check if gates are using the MatmulEinsum backend
-            from qibo import K
-            if K.name == "custom":
-                raise_error(RuntimeError, 'SGD VQE requires native Tensorflow '
-                                          'gates because gradients are not '
-                                          'supported in the custom kernels.')
-            loss = _loss
         else:
-            from qibo import K
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = _loss
+
+        if method != "sgd":
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
+
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
                                                              args=(self.circuit, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
@@ -115,7 +108,7 @@ class QAOA(object):
             Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
-            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+            execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
             is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.
@@ -285,7 +278,7 @@ class QAOA(object):
         if method == "sgd":
             loss = lambda p, c, h: _loss(K.cast(p), c, h)
         else:
-            loss = lambda p, c, h: K.qnp.dtypes("DTYPE")(_loss(p, c, h))
+            loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_p, args=(self, self.hamiltonian),
                                                              method=method, jac=jac, hess=hess, hessp=hessp,
@@ -294,3 +287,90 @@ class QAOA(object):
                                                              compile=compile, processes=processes)
         self.set_parameters(parameters)
         return result, parameters, extra
+
+
+class FALQON(QAOA):
+    """ Feedback-based ALgorithm for Quantum OptimizatioN (FALQON) model.
+
+    The FALQON is introduced in `arXiv:2103.08619 <https://arxiv.org/abs/2103.08619>`_.
+    It inherits the QAOA class.
+
+    Args:
+        hamiltonian (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): problem Hamiltonian
+            whose ground state is sought.
+        mixer (:class:`qibo.abstractions.hamiltonians.Hamiltonian`): mixer Hamiltonian.
+            If ``None``, :class:`qibo.hamiltonians.X` is used.
+        solver (str): solver used to apply the exponential operators.
+            Default solver is 'exp' (:class:`qibo.solvers.Exponential`).
+        callbacks (list): List of callbacks to calculate during evolution.
+        accelerators (dict): Dictionary of devices to use for distributed
+            execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
+            for more details. This option is available only when ``hamiltonian``
+            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+        memory_device (str): Name of device where the full state will be saved.
+            Relevant only for distributed execution (when ``accelerators`` is
+            given).
+
+    Example:
+        ::
+
+            import numpy as np
+            from qibo import models, hamiltonians
+            # create XXZ Hamiltonian for four qubits
+            hamiltonian = hamiltonians.XXZ(4)
+            # create FALQON model for this Hamiltonian
+            falqon = models.FALQON(hamiltonian)
+            # optimize using random initial variational parameters
+            # and default options and initial state
+            delta_t = 0.01
+            best_energy, final_parameters, extra = falqon.minimize(delta_t, max_layers)
+    """
+
+    def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
+                 accelerators=None, memory_device="/CPU:0"):
+        super().__init__(hamiltonian, mixer, solver, callbacks, accelerators, memory_device)
+        self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
+
+    def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None):
+        """Optimizes the variational parameters of the FALQON.
+
+        Args:
+            delta_t (float): initial guess for the time step. A too large delta_t will make the algorithm fail.
+            max_layers (int): maximum number of layers allowed for the FALQON.
+            initial_state (np.ndarray): initial state vector of the FALQON.
+            tol (float): Tolerance of energy change. If not specified, no check is done.
+            callback (callable): Called after each iteration for scipy optimizers.
+            options (dict): a dictionary with options for the different optimizers.
+
+        Return:
+            The final energy (expectation value of the ``hamiltonian``).
+            The corresponding best parameters.
+            extra: variable with historical data for the energy and callbacks.
+        """
+        import numpy as np
+        parameters = np.array([delta_t, 0])
+
+        def _loss(params, falqon, hamiltonian):
+            falqon.set_parameters(params)
+            state = falqon(initial_state)
+            return hamiltonian.expectation(state)
+
+        energy = [np.inf]
+        callback_result = []
+        for it in range(1, max_layers + 1):
+            beta = _loss(parameters, self, self.evol_hamiltonian)
+
+            if tol is not None:
+                energy.append(np.array(_loss(parameters, self, self.hamiltonian)))
+                if abs(energy[-1] - energy[-2]) < tol:
+                    break
+
+            if callback is not None:
+                callback_result.append(callback(parameters))
+
+            parameters = np.hstack([parameters, np.array([delta_t, delta_t * beta])])
+
+        self.set_parameters(parameters)
+        final_loss = _loss(parameters, self, self.hamiltonian)
+        extra = {'energies': energy, 'callbacks': callback_result}
+        return final_loss, parameters, extra

@@ -1,6 +1,6 @@
 # Quantum Singular Value Decomposer
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd](https://github.com/Quantum-TII/qibo/tree/master/examples/qsvd)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/qsvd](https://github.com/qiboteam/qibo/tree/master/examples/qsvd)
 
 ## Problem overview
 Much progress has been made towards a better understanding of bipartite and multipartite entanglement of quantum systems in the last decades. Among the many figures of merit that have been put forward to quantify entanglement, the von Neumann entropy stands out as it finely reveals the quantum correlations between subparts of the system. Yet, the explicit computation of this entropy, as well as many other bipartite measures of entanglement, relies on a clever decomposition of the tensor that describes a two-party system, and in general, it demands a large investment of computational resources.

@@ -1,6 +1,6 @@
 # Grover's Algorithm for solving a Toy Sponge Hash function
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/hash-grover](https://github.com/Quantum-TII/qibo/tree/master/examples/hash-grover)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/hash-grover](https://github.com/qiboteam/qibo/tree/master/examples/hash-grover)
 
 ## Introduction
 

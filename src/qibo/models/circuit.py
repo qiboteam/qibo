@@ -21,7 +21,7 @@ class Circuit(StateCircuit):
             kwargs = {}
         else:
             try:
-                from qibo.tensorflow.distcircuit import DistributedCircuit
+                from qibo.core.distcircuit import DistributedCircuit
             except ModuleNotFoundError: # pragma: no cover
                 # CI installs all required libraries by default
                 raise_error(ModuleNotFoundError,

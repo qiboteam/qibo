@@ -13,7 +13,7 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __init__(self):
-        if K.name == "custom":
+        if K.op is not None:
             if not K.executing_eagerly():
                 raise_error(NotImplementedError,
                             "Custom operator gates should not be used in "
@@ -48,7 +48,7 @@ class BackendGate(BaseBackendGate):
 
     def calculate_matrix(self):
         matrix = self.construct_unitary()
-        if K.name != "custom":
+        if K.op is None:
             rank = int(math.log2(int(matrix.shape[0])))
             matrix = K.reshape(matrix, 2 * rank * (2,))
         return matrix
@@ -182,7 +182,7 @@ class M(BackendGate, abstract_gates.M):
             cache.reduced_target_qubits = list(
                 reduced_target_qubits[i] for i in self.target_qubits)
 
-            if K.name != "custom":
+            if K.op is None:
                 sorted_qubits = sorted(self.target_qubits)
                 cache.order = list(sorted_qubits)
                 s = 1 + self.density_matrix
@@ -263,14 +263,14 @@ class M(BackendGate, abstract_gates.M):
         return result
 
     def state_vector_call(self, state):
-        if K.name == "custom":
+        if K.op is not None:
             result = self.result_tensor()
         else:
             result = self.result.binary[-1]
         return K.state_vector_collapse(self, state, result)
 
     def density_matrix_call(self, state):
-        if K.name == "custom":
+        if K.op is not None:
             result = self.result_tensor()
         else:
             result = self.result_list()
@@ -346,7 +346,7 @@ class U1(MatrixGate, abstract_gates.U1):
             self.gate_op = K.op.apply_z_pow
 
     def calculate_matrix(self):
-        if K.name == "custom":
+        if K.op is not None:
             return K.cast(K.qnp.exp(1j * self.parameters))
         else:
             return MatrixGate.calculate_matrix(self)
@@ -397,12 +397,6 @@ class U3(MatrixGate, abstract_gates.U3):
                        [eminus * sint, eplus * cost]])
 
 
-class ZPow(abstract_gates.ZPow):
-
-    def __new__(cls, q, theta, trainable=True):
-        return U1(q, theta, trainable)
-
-
 class CNOT(BackendGate, abstract_gates.CNOT):
 
     def __init__(self, q0, q1):
@@ -437,7 +431,7 @@ class _CUn_(MatrixGate):
 
     def calculate_matrix(self):
         matrix = self.base.construct_unitary(self)
-        if K.name != "custom":
+        if K.op is None:
             matrix = K.reshape(self.control_unitary(matrix), 4 * (2,))
         return matrix
 
@@ -493,12 +487,6 @@ class CU3(_CUn_, abstract_gates.CU3):
                        trainable=trainable)
 
 
-class CZPow(abstract_gates.CZPow):
-
-    def __new__(cls, q0, q1, theta, trainable=True):
-        return CU1(q0, q1, theta, trainable)
-
-
 class SWAP(BackendGate, abstract_gates.SWAP):
 
     def __init__(self, q0, q1):
@@ -520,7 +508,7 @@ class fSim(MatrixGate, abstract_gates.fSim):
             self.gate_op = K.op.apply_fsim
 
     def calculate_matrix(self):
-        if K.name == "custom":
+        if K.op is not None:
             theta, phi = self.parameters
             cos, isin = K.qnp.cos(theta) + 0j, -1j * K.qnp.sin(theta)
             phase = K.qnp.exp(-1j * phi)
@@ -550,7 +538,7 @@ class GeneralizedfSim(MatrixGate, abstract_gates.GeneralizedfSim):
             self.gate_op = K.op.apply_fsim
 
     def calculate_matrix(self):
-        if K.name == "custom":
+        if K.op is not None:
             unitary, phi = self.parameters
             matrix = K.qnp.zeros(5)
             matrix[:4] = K.qnp.reshape(unitary, (4,))
@@ -1037,7 +1025,7 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             cache.qubits_tensor = qubits + [q + self.nqubits for q in qubits]
             cache.target_qubits_dm = self.qubits + tuple(q + self.nqubits for q in self.qubits)
 
-            if K.name != "custom":
+            if K.op is None:
                 cache.calculation_cache = K.create_einsum_cache(
                     cache.target_qubits_dm, 2 * self.nqubits)
 
@@ -1057,7 +1045,7 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
                                 "state vectors when T1 < T2.")
 
     def density_matrix_call(self, state):
-        if K.name == "custom":
+        if K.op is not None:
             return self.gate_op(state, self.matrix, self.cache.qubits_tensor,
                                 2 * self.nqubits, *self.cache.target_qubits_dm,
                                 K.get_threads())
