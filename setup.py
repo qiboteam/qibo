@@ -29,13 +29,24 @@ this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
+
+# read backend versions
+BACKENDFILE = os.path.join("src", PACKAGE, "backends", "__init__.py")
+with open(BACKENDFILE, 'r') as f:
+    content = f.readlines()
+    for line in content:
+        if 'TF_MIN_VERSION' in line:
+            TF_MIN_VERSION = str(line.split()[2].replace("'", ""))
+            break
+
+
 setup(
     name="qibo",
     version=get_version(),
     description="A framework for quantum computing with hardware acceleration.",
     author="The Qibo team",
     author_email="",
-    url="https://github.com/Quantum-TII/qibo",
+    url="https://github.com/qiboteam/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
     package_data={"": ["*.out"]},
@@ -49,7 +60,9 @@ setup(
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
         "tests": ["pytest", "cirq", "ply", "sklearn"],
+        # Backends dependencies
         "qibotf": ["qibotf"],
+        "tensorflow": [f"tensorflow>={TF_MIN_VERSION}"],
     },
     python_requires=">=3.6.0",
     long_description=long_description,

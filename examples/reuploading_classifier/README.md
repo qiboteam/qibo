@@ -1,6 +1,6 @@
 # Data reuploading for a universal quantum classifier
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/reuploading_classifier](https://github.com/Quantum-TII/qibo/tree/master/examples/reuploading_classifier).
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/reuploading_classifier](https://github.com/qiboteam/qibo/tree/master/examples/reuploading_classifier).
 
 
 Based in the paper [Quantum 4, 226 (2020).](https://quantum-journal.org/papers/q-2020-02-06-226/). In this `README.md` file you can see a short

@@ -1,6 +1,6 @@
 # Measuring the tangle of three-qubit states
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/3_tangle](https://github.com/Quantum-TII/qibo/tree/master/examples/3_tangle).
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/3_tangle](https://github.com/qiboteam/qibo/tree/master/examples/3_tangle).
 
 Based in the paper [Entropy 2020, 22(4), 436](http://dx.doi.org/10.3390/e22040436). In this `README.md` file you can see a short
 set of instructions for the usage of the example and brief explanations.

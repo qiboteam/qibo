@@ -1,6 +1,6 @@
 # Quantum autoencoders with enhanced data encoding
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/EF_QAE](https://github.com/Quantum-TII/qibo/tree/master/examples/EF_QAE).
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/EF_QAE](https://github.com/qiboteam/qibo/tree/master/examples/EF_QAE).
 
 ## Problem overview
 
@@ -10,7 +10,7 @@ Remarkably, EF-QAE achieves better compression than the standard [quantum autoen
 
 ## Implementing the solution
 
-The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum autoencoders with enhanced data encoding"](https://arxiv.org/abs/2010.06599). A tutorial based on the standard QAE can be found at [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder).
+The code herein aims to implement the EF-QAE, based on the manuscript ["Quantum autoencoders with enhanced data encoding"](https://arxiv.org/abs/2010.06599). A tutorial based on the standard QAE can be found at [https://github.com/qiboteam/qibo/tree/master/examples/autoencoder](https://github.com/qiboteam/qibo/tree/master/examples/autoencoder).
 
 A graphical depiction of a quantum encoder can be seen in the following figure. In a quantum encoder the information contained in some of the input qubits must be discarded after the initial encoding. Then, fresh qubits (here initialized to the |0> state, but one may consider any other easy-to-construct reference state) are prepared and used to implement the final decoding, which is finally compared to the initial state.
 

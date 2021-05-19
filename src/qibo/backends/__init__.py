@@ -2,6 +2,9 @@ import os
 from qibo import config
 from qibo.config import raise_error, log, warnings
 
+# versions requirements
+TF_MIN_VERSION = '2.2.0'
+
 
 class Backend:
 
@@ -14,7 +17,7 @@ class Backend:
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
             self.available_backends["numpy"] = NumpyBackend
-        else: # pragma: no cover
+        else:  # pragma: no cover
             raise_error(ModuleNotFoundError, "Numpy is not installed. "
                                              "Please install it using "
                                              "`pip install numpy`.")
@@ -22,7 +25,10 @@ class Backend:
         # check if tensorflow is installed and use it as default backend.
         if self.check_availability("tensorflow"):
             os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
-            import tensorflow as tf # pylint: disable=E0401
+            import tensorflow as tf  # pylint: disable=E0401
+            if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
+                raise_error(
+                    RuntimeError, f"TensorFlow version not supported, minimum is {TF_MIN_VERSION}.")
             from qibo.backends.tensorflow import TensorflowBackend
             self.available_backends["tensorflow"] = TensorflowBackend
             active_backend = "tensorflow"
@@ -30,7 +36,7 @@ class Backend:
                 from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["qibotf"] = TensorflowCustomBackend
                 active_backend = "qibotf"
-            else: # pragma: no cover
+            else:  # pragma: no cover
                 log.warning("qibotf library was not found. `tf.einsum` will be "
                             "used to apply gates. In order to install Qibo's "
                             "high performance custom operators please use "
@@ -55,7 +61,7 @@ class Backend:
         self._active_backend = None
         self.qnp = self.construct_backend("numpy")
         # Create the default active backend
-        if "QIBO_BACKEND" in os.environ: # pragma: no cover
+        if "QIBO_BACKEND" in os.environ:  # pragma: no cover
             self.active_backend = os.environ.get("QIBO_BACKEND")
         self.active_backend = active_backend
 
