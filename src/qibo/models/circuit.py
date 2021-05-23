@@ -39,7 +39,7 @@ class Circuit(StateCircuit):
         else:
             kwargs = {}
             if K.hardware_module:
-                from qibo.core.circuit import HardwareCircuit as circuit_cls
+                circuit_cls = K.hardware_circuit
             else:
                 circuit_cls = StateCircuit
         return circuit_cls, args, kwargs
