@@ -5,11 +5,13 @@
 Welcome to Qibo!
 ================
 
-Qibo is a Python library for classical simulation of quantum algorithms.
-Qibo provides a standard interface for the implementation and extension of
-quantum algorithms in double precision. Simulation takes full advantage of
-hardware accelerators such as GPU and CPU with multi-threading support.
-The package includes a multi-GPU distributed approach for circuit simulation.
+Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
+
+Qibo key features:
+  * Definition of a standard language for the construction and execution of quantum circuits with device agnostic approach to simulation and quantum hardware control based on plug and play backend drivers.
+  * A continuously growing code-base of quantum algorithms applications presented with examples and tutorials.
+  * Efficient simulation backends with GPU, multi-GPU and CPU with multi-threading support.
+  * Simple mechanism for the implementation of new simulation and hardware backend drivers.
 
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.3997195.svg
    :target: https://doi.org/10.5281/zenodo.3997195

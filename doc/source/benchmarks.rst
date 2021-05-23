@@ -30,7 +30,7 @@ respective default simulation precision and supported hardware configurations.
    * - Library
      - Precision
      - Hardware
-   * - `Qibo 0.1.0 <https://github.com/Quantum-TII/qibo>`_
+   * - `Qibo 0.1.0 <https://github.com/qiboteam/qibo>`_
      - single/double
      - multi-thread CPU, GPU, multi-GPU
    * - `Cirq 0.8.1 <https://github.com/quantumlib/Cirq>`_
@@ -69,7 +69,7 @@ The operating system of this machine is the default Ubuntu 18.04-LTS with
 CUDA/``nvcc 10.1``, TensorFlow 2.2.0 and ``g++ 7.5``.
 
 The following sections describe how to run Qibo benchmarks using the scripts
-found at: https://github.com/Quantum-TII/qibo/tree/master/examples/benchmarks.
+found at: https://github.com/qiboteam/qibo/tree/master/examples/benchmarks.
 
 
 How to run circuit benchmarks?

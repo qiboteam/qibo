@@ -1,6 +1,6 @@
 # Maximal violation of Bell inequalities variationally
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/bell-variational](https://github.com/Quantum-TII/qibo/tree/master/examples/bell-variational)
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/bell-variational](https://github.com/qiboteam/qibo/tree/master/examples/bell-variational)
 
 ## Introduction
 

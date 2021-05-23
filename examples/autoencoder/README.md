@@ -1,6 +1,6 @@
 # Quantum autoencoder for data compression
 
-Code at: [https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder](https://github.com/Quantum-TII/qibo/tree/master/examples/autoencoder).
+Code at: [https://github.com/qiboteam/qibo/tree/master/examples/autoencoder](https://github.com/qiboteam/qibo/tree/master/examples/autoencoder).
 
 ## Problem overview
 
