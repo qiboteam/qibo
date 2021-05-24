@@ -12,7 +12,7 @@ from qibo.parallel import parallel_parametrized_execution, parallel_execution
 
 def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
-    if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
+    if 'GPU' in qibo.get_device() or os.name == 'nt' or qibo.get_backend() == "tensorflow": # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)
@@ -34,7 +34,7 @@ def test_parallel_circuit_evaluation(backend):
 
 def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
-    if 'GPU' in qibo.get_device() or os.name == 'nt': # pragma: no cover
+    if 'GPU' in qibo.get_device() or os.name == 'nt' or qibo.get_backend() == "tensorflow": # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)
