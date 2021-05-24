@@ -168,7 +168,7 @@ class Grover(object):
                     return measured, total_iterations
             k = min(lamda * k, np.sqrt(self.sup_size))
             if total_iterations > (9/4) * np.sqrt(self.sup_size):
-                log.warning("Too many total iterations, output might not be solution."
+                log.warning("Too many total iterations, output might not be solution.")
                 return measured, total_iterations
 
     def execute(self, nshots=100, freq=False, logs=False):
