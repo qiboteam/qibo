@@ -188,10 +188,14 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 
 def _check_parallel_configuration(processes):
     """Check if configuration is suitable for efficient parallel execution."""
-    import psutil
-    from qibo import get_device
+    import os, psutil
+    from qibo import get_device, get_backend
     from qibo.config import raise_error, get_threads, log
     device = get_device()
+    if os.name == "nt":  # pragma: no cover
+        raise_error(RuntimeError, "Parallel evaluations not supported on Windows.")
+    if get_backend() == "tensorflow":  # pragma: no cover
+        raise_error(RuntimeError, "tensorflow backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
     if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
