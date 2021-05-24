@@ -88,8 +88,7 @@ def test_grover_iterative(backend):
     with pytest.raises(ValueError):
         solution, iterations = grover()
     grover = Grover(oracle, superposition_qubits=5, check=check_false, iterative=True)
-    with pytest.raises(TimeoutError):
-        solution, iterations = grover()
+    solution, iterations = grover()
     grover = Grover(oracle, superposition_qubits=5, check=check, iterative=True)
     solution, iterations = grover(logs=True)
     assert solution == "11111"
