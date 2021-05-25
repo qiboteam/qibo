@@ -168,8 +168,8 @@ class Grover(object):
                     return measured, total_iterations
             k = min(lamda * k, np.sqrt(self.sup_size))
             if total_iterations > (9/4) * np.sqrt(self.sup_size):
-                raise_error(TimeoutError, "Cancelling iterative method as too "
-                                          "many iterations have taken place.")
+                log.warning("Too many total iterations, output might not be solution.")
+                return measured, total_iterations
 
     def execute(self, nshots=100, freq=False, logs=False):
         """Execute Grover's algorithm.
