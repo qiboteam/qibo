@@ -157,7 +157,7 @@ Installing with pip
 
 The installation using ``pip`` is the recommended approach to install
 ``qibotf``. We provide precompiled packages for linux x86/64 and macosx 10.15 or
-greater for Python 3.6, 3.7 and 3.8.
+greater for Python 3.6, 3.7, 3.8 and 3.9.
 
 In order to install the package use the following command:
 
@@ -197,7 +197,7 @@ then proceed with the installation of requirements with:
 
       pip install -r requirements.txt
 
-Make sure your system has a GNU ``g++ >= 6`` compiler. If you are working on
+Make sure your system has a GNU ``g++ >= 4`` compiler. If you are working on
 macosx make sure the command ``c++`` is ``clang >= 11`` and install the libomp
 library with ``brew install libomp`` command.
 
@@ -218,11 +218,11 @@ path.
 
       3. make sure the NVCC compiler is available from ``CUDA_PATH/bin/nvcc``, otherwise the compilation may fail. You can locate it with ``whereis nvcc`` and eventually link/copy to your ``CUDA_PATH/bin`` folder.
 
-      For example, TensorFlow 2.4 supports CUDA 11. After installing
-      TensorFlow proceed with the NVCC 11 installation. On linux the
-      installation path usually is ``/usr/local/cuda-11/``.
+      For example, TensorFlow 2.5.0 supports CUDA 11.2. After installing
+      TensorFlow proceed with the NVCC 11.2 installation. On linux the
+      installation path usually is ``/usr/local/cuda-11.2/``.
 
-      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-11``.
+      Before installing Qibo do ``export CUDA_PATH=/usr/local/cuda-11.2``.
 
       Note that Qibo will not enable GPU support if points 1 and 2 are not
       performed.
