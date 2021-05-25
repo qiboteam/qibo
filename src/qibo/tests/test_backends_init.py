@@ -84,7 +84,7 @@ def test_set_precision_errors(backend):
 
 
 def test_set_device(backend):
-    original_device = backends.get_device()
+    original_devices = {bk: bk.default_device for bk in K.constructed_backends.values()}
     if backends.get_backend() == "numpy":
         with pytest.warns(RuntimeWarning):
             backends.set_device("/CPU:0")
@@ -99,8 +99,8 @@ def test_set_device(backend):
             backends.set_device("/gpu:10")
         with pytest.raises(ValueError):
             backends.set_device("/GPU:10")
-    if original_device:
-        backends.set_device(original_device)
+    for bk, device in original_devices.items():
+        bk.set_device(device)
 
 
 def test_set_shot_batch_size():
