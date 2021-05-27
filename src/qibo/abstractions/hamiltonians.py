@@ -37,7 +37,8 @@ class Hamiltonian(ABC):
         self._exp = {"a": None, "result": None}
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
+    @abstractmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False): # pragma: no cover
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -56,9 +57,7 @@ class Hamiltonian(ABC):
             A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.hamiltonians import SymbolicHamiltonian as scls
-        ham = scls(symbolic_hamiltonian, symbol_map)
-        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def eigenvalues(self): # pragma: no cover
@@ -243,7 +242,8 @@ class TrotterHamiltonian(Hamiltonian):
         return cls(*parts, ground_state=ground_state)
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+    @abstractmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None): # pragma: no cover
         """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -263,10 +263,7 @@ class TrotterHamiltonian(Hamiltonian):
             A :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.hamiltonians import SymbolicHamiltonian as scls
-        terms, constant = scls(symbolic_hamiltonian, symbol_map).trotter_terms()
-        hterms = cls.construct_terms(terms)
-        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
+        raise_error(NotImplementedError)
 
     @staticmethod
     @abstractmethod

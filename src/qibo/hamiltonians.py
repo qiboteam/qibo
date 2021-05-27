@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from qibo import matrices, K
 from qibo.config import raise_error
-from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian, TrotterHamiltonian
+from qibo.core.hamiltonians import Hamiltonian, TrotterHamiltonian
+from qibo.core.symbolic import multikron
 
 
 def _build_spin_model(nqubits, matrix, condition):
     """Helper method for building nearest-neighbor spin model Hamiltonians."""
-    h = sum(SymbolicHamiltonian.multikron(
+    h = sum(multikron(
       (matrix if condition(i, j) else matrices.I for j in range(nqubits)))
             for i in range(nqubits))
     return h
