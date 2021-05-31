@@ -27,7 +27,19 @@ class Hamiltonian(hamiltonians.Hamiltonian):
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
         from qibo.core.symbolic import SymbolicHamiltonian
         ham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
-        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
+        # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
+        # in the given symbolic form. Here ``nqubits`` is the total number of
+        # qubits that the Hamiltonian acts on.
+        matrix = 0
+        for targets, matrices in ham.terms.items():
+            matrix_list = ham.nqubits * [K.np.eye(2)]
+            n = len(targets)
+            for i in range(0, len(matrices), n + 1):
+                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
+                    matrix_list[t] = m
+                matrix += matrices[i] * multikron(matrix_list)
+        matrix += ham.constant * K.np.eye(matrix.shape[0])
+        return cls(ham.nqubits, matrix, numpy=numpy)
 
     def eigenvalues(self):
         if self._eigenvalues is None:

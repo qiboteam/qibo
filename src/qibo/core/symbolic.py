@@ -106,24 +106,6 @@ class SymbolicHamiltonian:
             raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
                                     "which does not exist in the symbol map.")
 
-    def full_matrices(self):
-        """Generator of matrices for each symbolic Hamiltonian term.
-
-        Returns:
-            Matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term in
-            the given symbolic form. Here ``nqubits`` is the total number of
-            qubits that the Hamiltonian acts on.
-        """
-        for targets, matrices in self.terms.items():
-            matrix_list = self.nqubits * [K.eye(2)]
-            n = len(targets)
-            total = 0
-            for i in range(0, len(matrices), n + 1):
-                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
-                    matrix_list[t] = m
-                total += matrices[i] * multikron(matrix_list)
-            yield total
-
     def partial_matrices(self):
         """Generator of matrices for each symbolic Hamiltonian term.
 
@@ -138,19 +120,6 @@ class SymbolicHamiltonian:
             for i in range(0, len(matrices), n + 1):
                 matrix += matrices[i] * multikron(matrices[i + 1: i + n + 1])
             yield targets, matrix
-
-    def dense_matrix(self):
-        """Creates the full Hamiltonian matrix.
-
-        Useful for creating :class:`qibo.abstractions.hamiltonians.Hamiltonian`
-        object equivalent to the given symbolic Hamiltonian.
-
-        Returns:
-            Full Hamiltonian matrix of shape ``(2 ** nqubits, 2 ** nqubits)``.
-        """
-        matrix = sum(self.full_matrices())
-        eye = K.np.eye(matrix.shape[0], dtype=matrix.dtype)
-        return matrix + self.constant * eye
 
     def reduce_pairs(self, pair_sets, pair_map, free_targets):
         """Helper method for ``merge_one_qubit``.
