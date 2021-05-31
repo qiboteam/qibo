@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
 import sys
-import copy
 import math
 from qibo import K
 from qibo.abstractions import gates as abstract_gates
@@ -731,6 +730,7 @@ class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
             self.additional_unitary.parameters = additional_matrix
 
     def _dagger(self):
+        import copy
         varlayer = copy.copy(self)
         varlayer.unitaries = [u.dagger() for u in self.unitaries]
         if self.additional_unitary is not None:
