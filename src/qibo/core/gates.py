@@ -14,7 +14,8 @@ class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
     def __new__(cls, *args, **kwargs):
-        if K.hardware_module and cls.module == sys.modules[__name__]:
+        if K.hardware_module and cls.module == sys.modules[__name__]: # pragma: no cover
+            # hardware backend is not tested until `qiboicarusq` is available
             return getattr(K.hardware_gates, cls.__name__)(*args, **kwargs)
         return super().__new__(cls)
 

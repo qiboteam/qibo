@@ -38,7 +38,8 @@ class Circuit(StateCircuit):
             kwargs.pop("density_matrix")
         else:
             kwargs = {}
-            if K.hardware_module:
+            if K.hardware_module: # pragma: no cover
+                # hardware backend is not tested until `qiboicarusq` is available
                 circuit_cls = K.hardware_circuit
             else:
                 circuit_cls = StateCircuit
