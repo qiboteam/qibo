@@ -166,7 +166,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
 @pytest.mark.parametrize("sufficient", [True, False])
 def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     """Check that ``merge_one_qubit`` works both when two-qubit are sufficient and no."""
-    from qibo.core.symbolic import SymbolicHamiltonian
+    from qibo.hamiltonians import TrotterHamiltonian
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
@@ -175,9 +175,7 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     symham += sum(x_symbols)
     if sufficient:
         symham += z_symbols[0] * z_symbols[-1]
-    symham = SymbolicHamiltonian(symham, symmap)
-    terms = {t: m for t, m in symham.partial_matrices()}
-    merged = symham.merge_one_qubit(terms)
+    merged, _ = TrotterHamiltonian.symbolic_terms(symham, symmap)
 
     two_qubit_keys = {(i, i + 1) for i in range(4)}
     if sufficient:

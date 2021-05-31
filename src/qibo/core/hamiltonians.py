@@ -204,11 +204,33 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
-        from qibo.core.symbolic import SymbolicHamiltonian
+        terms, constant = cls.symbolic_terms(symbolic_hamiltonian, symbol_map)
+        terms = cls.construct_terms(terms)
+        return cls.from_dictionary(terms, ground_state=ground_state) + constant
+
+    @staticmethod
+    def symbolic_terms(symbolic_hamiltonian, symbol_map):
+        from qibo.core.symbolic import SymbolicHamiltonian, merge_one_qubit
         sham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
-        terms, constant = sham.trotter_terms()
-        hterms = cls.construct_terms(terms)
-        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
+        # Construct dictionary of terms with matrices of shape
+        # ``(2 ** ntargets, 2 ** ntargets)`` for each term in the given
+        # symbolic form. Here ``ntargets`` is the number of
+        # qubits that the corresponding term acts on.
+        terms = {}
+        for targets, matrices in sham.terms.items():
+            n = len(targets)
+            matrix = 0
+            for i in range(0, len(matrices), n + 1):
+                matrix += matrices[i] * multikron(matrices[i + 1: i + n + 1])
+            terms[targets] = matrix
+
+        if tuple() in terms:
+            constant = terms.pop(tuple()) + sham.constant
+        else:
+            constant = sham.constant
+        if set(len(t) for t in terms.keys()) == {1, 2}:
+            terms = merge_one_qubit(terms, sham.terms)
+        return terms, constant
 
     @staticmethod
     def construct_terms(terms):

@@ -106,139 +106,106 @@ class SymbolicHamiltonian:
             raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
                                     "which does not exist in the symbol map.")
 
-    def partial_matrices(self):
-        """Generator of matrices for each symbolic Hamiltonian term.
 
-        Returns:
-            Matrices of shape ``(2 ** ntargets, 2 ** ntargets)`` for each term
-            in the given symbolic form. Here ``ntargets`` is the number of
-            qubits that the corresponding term acts on.
+def reduce_pairs(pair_sets, pair_map, free_targets):
+    """Helper method for ``merge_one_qubit``.
+
+    Finds the one and two qubit term merge map using an recursive procedure.
+
+    Args:
+        pair_sets (dict): Dictionary that maps each qubit id to a set of
+            pairs that contain this qubit.
+        pair_map (dict): Map from qubit id to the pair that this qubit will
+            be merged with.
+        free_targets (set): Set of qubit ids that are still not mapped to
+            a pair in the ``pair_map``.
+
+    Returns:
+        pair_map (dict): The final map from qubit ids to pairs once the
+            recursion finishes. If the returned map is ``None`` then the
+            procedure failed and the merging is aborted.
+    """
+    def assign_target(target):
+        """Assigns a pair to a qubit.
+
+        This moves ``target`` from ``free_targets`` to ``pair_map``.
         """
-        for targets, matrices in self.terms.items():
-            n = len(targets)
-            matrix = 0
-            for i in range(0, len(matrices), n + 1):
-                matrix += matrices[i] * multikron(matrices[i + 1: i + n + 1])
-            yield targets, matrix
+        pair = pair_sets[target].pop()
+        pair_map[target] = pair
+        pair_sets.pop(target)
+        target2 = pair[1] if pair[0] == target else pair[0]
+        if target2 in pair_sets:
+            pair_sets[target2].remove(pair)
 
-    def reduce_pairs(self, pair_sets, pair_map, free_targets):
-        """Helper method for ``merge_one_qubit``.
-
-        Finds the one and two qubit term merge map using an recursive procedure.
-
-        Args:
-            pair_sets (dict): Dictionary that maps each qubit id to a set of
-                pairs that contain this qubit.
-            pair_map (dict): Map from qubit id to the pair that this qubit will
-                be merged with.
-            free_targets (set): Set of qubit ids that are still not mapped to
-                a pair in the ``pair_map``.
-
-        Returns:
-            pair_map (dict): The final map from qubit ids to pairs once the
-                recursion finishes. If the returned map is ``None`` then the
-                procedure failed and the merging is aborted.
-        """
-        def assign_target(target):
-            """Assigns a pair to a qubit.
-
-            This moves ``target`` from ``free_targets`` to ``pair_map``.
-            """
-            pair = pair_sets[target].pop()
-            pair_map[target] = pair
-            pair_sets.pop(target)
-            target2 = pair[1] if pair[0] == target else pair[0]
-            if target2 in pair_sets:
-                pair_sets[target2].remove(pair)
-
-        # Assign pairs to qubits that have a single available pair
-        flag = True
-        for target in set(free_targets):
-            if target not in pair_sets or not pair_sets[target]:
-                return None
-            if len(pair_sets[target]) == 1:
-                assign_target(target)
-                free_targets.remove(target)
-                flag = False
-        # If all qubits were mapped to pairs return the result
-        if not free_targets:
-            return pair_map
-        # If no qubits with a single available pair were found above, then
-        # assign a pair randomly (not sure about this step!)
-        if flag:
-            target = free_targets.pop()
+    # Assign pairs to qubits that have a single available pair
+    flag = True
+    for target in set(free_targets):
+        if target not in pair_sets or not pair_sets[target]:
+            return None
+        if len(pair_sets[target]) == 1:
             assign_target(target)
-        # Recurse
-        return self.reduce_pairs(pair_sets, pair_map, free_targets)
+            free_targets.remove(target)
+            flag = False
+    # If all qubits were mapped to pairs return the result
+    if not free_targets:
+        return pair_map
+    # If no qubits with a single available pair were found above, then
+    # assign a pair randomly (not sure about this step!)
+    if flag:
+        target = free_targets.pop()
+        assign_target(target)
+    # Recurse
+    return reduce_pairs(pair_sets, pair_map, free_targets)
 
-    def merge_one_qubit(self, terms):
-        """Merges one-qubit matrices to the two-qubit terms for efficiency.
 
-        This works for Hamiltonians with one and two qubit terms only.
-        The two qubit terms should be sufficiently many so that every
-        qubit appears as the first target at least once.
+def merge_one_qubit(terms, symbolic_terms):
+    """Merges one-qubit matrices to the two-qubit terms for efficiency.
 
-        Args:
-            terms (dict): Dictionary that maps tuples of targets to the matrix
-                          that acts on these on targets.
+    This works for Hamiltonians with one and two qubit terms only.
+    The two qubit terms should be sufficiently many so that every
+    qubit appears as the first target at least once.
 
-        Returns:
-            The given ``terms`` dictionary updated so that one-qubit terms
-            are merged to two-qubit ones.
-        """
-        one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
-        for targets, matrix in terms.items():
-            assert len(targets) in {1, 2}
-            if len(targets) == 1:
-                one_qubit[targets[0]] = matrix
-            else:
-                two_qubit[targets] = matrix
-                for t in targets:
-                    if t in pair_sets:
-                        pair_sets[t].add(targets)
-                    else:
-                        pair_sets[t] = {targets}
+    Args:
+        terms (dict): Dictionary that maps tuples of targets to the matrix
+                      that acts on these on targets.
 
-        free_targets = set(one_qubit.keys())
-        pair_map = self.reduce_pairs(pair_sets, dict(), free_targets)
-        if pair_map is None:
-            log.info("Aborting merge of one and two-qubit terms during "
-                     "TrotterHamiltonian creation because the two-qubit "
-                     "terms are not sufficiently many.")
-            return terms
-
-        merged = dict()
-        for target, pair in pair_map.items():
-            two_qubit.pop(pair)
-            if target == pair[0]:
-                matrix = terms[pair]
-            else:
-                matrices = self.terms[pair]
-                pair = (pair[1], pair[0])
-                matrix = 0
-                for i in range(0, len(matrices), 3):
-                    matrix += matrices[i] * multikron(matrices[i + 2: i:-1])
-            eye = K.np.eye(2, dtype=matrix.dtype)
-            merged[pair] = K.np.kron(one_qubit[target], eye) + matrix
-        merged.update(two_qubit)
-        return merged
-
-    def trotter_terms(self):
-        """Creates a dictionary of targets and matrices.
-
-        Useful for creating :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`
-        objects.
-
-        Returns:
-            terms (dict): Dictionary that maps tuples of targets to the matrix
-                          that acts on these on targets.
-            constant (float): The overall constant term of the Hamiltonian.
-        """
-        terms = {t: m for t, m in self.partial_matrices()}
-        if tuple() in terms:
-            constant = terms.pop(tuple()) + self.constant
+    Returns:
+        The given ``terms`` dictionary updated so that one-qubit terms
+        are merged to two-qubit ones.
+    """
+    one_qubit, two_qubit, pair_sets = dict(), dict(), dict()
+    for targets, matrix in terms.items():
+        assert len(targets) in {1, 2}
+        if len(targets) == 1:
+            one_qubit[targets[0]] = matrix
         else:
-            constant = self.constant
-        if set(len(t) for t in terms.keys()) == {1, 2}:
-            terms = self.merge_one_qubit(terms)
-        return terms, constant
+            two_qubit[targets] = matrix
+            for t in targets:
+                if t in pair_sets:
+                    pair_sets[t].add(targets)
+                else:
+                    pair_sets[t] = {targets}
+
+    free_targets = set(one_qubit.keys())
+    pair_map = reduce_pairs(pair_sets, dict(), free_targets)
+    if pair_map is None:
+        log.info("Aborting merge of one and two-qubit terms during "
+                 "TrotterHamiltonian creation because the two-qubit "
+                 "terms are not sufficiently many.")
+        return terms
+
+    merged = dict()
+    for target, pair in pair_map.items():
+        two_qubit.pop(pair)
+        if target == pair[0]:
+            matrix = terms[pair]
+        else:
+            matrices = symbolic_terms[pair]
+            pair = (pair[1], pair[0])
+            matrix = 0
+            for i in range(0, len(matrices), 3):
+                matrix += matrices[i] * multikron(matrices[i + 2: i:-1])
+        eye = K.np.eye(2, dtype=matrix.dtype)
+        merged[pair] = K.np.kron(one_qubit[target], eye) + matrix
+    merged.update(two_qubit)
+    return merged
