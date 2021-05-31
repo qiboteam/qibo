@@ -71,7 +71,6 @@ def parse_symbolic(hamiltonian, symbol_map):
     if 1 in term_dict:
         constant = dtype(term_dict.pop(1))
     terms = dict()
-    target_ids = set()
     for term, coeff in term_dict.items():
         targets, matrices = [], [dtype(coeff)]
         for factor in term.as_ordered_factors():
@@ -97,14 +96,12 @@ def parse_symbolic(hamiltonian, symbol_map):
                 matrices[0] *= 1j
             else:
                 raise_error(ValueError, f"Cannot parse factor {factor}.")
-        target_ids |= set(targets)
         targets, matrices = tuple(targets), tuple(matrices)
         if targets in terms:
             terms[targets] += matrices
         else:
             terms[targets] = matrices
-    nqubits = max(target_ids) + 1
-    return terms, constant, nqubits
+    return terms, constant
 
 
 def reduce_pairs(pair_sets, pair_map, free_targets):

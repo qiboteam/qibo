@@ -26,7 +26,8 @@ class Hamiltonian(hamiltonians.Hamiltonian):
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
         from qibo.core.symbolic import parse_symbolic
-        terms, constant, nqubits = parse_symbolic(symbolic_hamiltonian, symbol_map)
+        terms, constant = parse_symbolic(symbolic_hamiltonian, symbol_map)
+        nqubits = max(set(q for targets in terms.keys() for q in targets)) + 1
         # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
         # in the given symbolic form. Here ``nqubits`` is the total number of
         # qubits that the Hamiltonian acts on.
@@ -211,7 +212,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
     @staticmethod
     def symbolic_terms(symbolic_hamiltonian, symbol_map):
         from qibo.core.symbolic import parse_symbolic, merge_one_qubit
-        sterms, constant, _ = parse_symbolic(symbolic_hamiltonian, symbol_map)
+        sterms, constant = parse_symbolic(symbolic_hamiltonian, symbol_map)
         # Construct dictionary of terms with matrices of shape
         # ``(2 ** ntargets, 2 ** ntargets)`` for each term in the given
         # symbolic form. Here ``ntargets`` is the number of
