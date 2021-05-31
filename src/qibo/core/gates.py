@@ -13,6 +13,11 @@ from typing import Dict, List, Optional, Sequence, Tuple
 class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
+    def __new__(cls, *args, **kwargs):
+        if K.hardware_module and cls.module == sys.modules[__name__]:
+            return getattr(K.hardware_gates, cls.__name__)(*args, **kwargs)
+        return super().__new__(cls)
+
     def __init__(self):
         if K.op is not None:
             if not K.executing_eagerly():

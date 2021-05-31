@@ -11,9 +11,11 @@ class IcarusQBackend(NumpyBackend):
         self.name = "icarusq"
         self.custom_gates = True
         import qiboicarusq
+        from qiboicarusq import gates
         from qiboicarusq.circuit import HardwareCircuit
         self.hardware_module = qiboicarusq
-        self.hardware_circuit = HardwareCircuit
+        self.hardware_gates = qiboicarusq.gates
+        self.hardware_circuit = qiboicarusq.circuit.HardwareCircuit
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
         raise_error(NotImplementedError, "`create_einsum_cache` method is "

@@ -12,6 +12,8 @@ _ACCELERATORS = None
 if "tensorflow" in _available_backends:
     if "qibotf" in _available_backends:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
+if "icarusq" in _available_backends: # skip hardware backend for tests
+    _available_backends.remove("icarusq")
 _BACKENDS = ",".join(_available_backends)
 
 

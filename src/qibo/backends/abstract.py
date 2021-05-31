@@ -26,7 +26,10 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
+
         self.hardware_module = None
+        self.hardware_circuit = None
+        self.hardware_gates = None
 
     def dtypes(self, name):
         if name in self._dtypes:
