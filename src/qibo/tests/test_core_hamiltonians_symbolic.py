@@ -197,28 +197,28 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
 
 
 def test_symbolic_hamiltonian_errors():
-    """Check errors raised by `SymbolicHamiltonian`."""
-    from qibo.core.symbolic import SymbolicHamiltonian
+    """Check errors raised by :meth:`qibo.core.symbolic.parse_symbolic`."""
+    from qibo.core.symbolic import parse_symbolic
     a, b = sympy.symbols("a b")
     ham = a * b
     # Bad hamiltonian type
     with pytest.raises(TypeError):
-        sh = SymbolicHamiltonian("test", "test")
+        sh = parse_symbolic("test", "test")
     # Bad symbol map type
     with pytest.raises(TypeError):
-        sh = SymbolicHamiltonian(ham, "test")
+        sh = parse_symbolic(ham, "test")
     # Bad symbol map key
     with pytest.raises(TypeError):
-        sh = SymbolicHamiltonian(ham, {"a": 2})
+        sh = parse_symbolic(ham, {"a": 2})
     # Bad symbol map value
     with pytest.raises(TypeError):
-        sh = SymbolicHamiltonian(ham, {a: 2})
+        sh = parse_symbolic(ham, {a: 2})
     with pytest.raises(ValueError):
-        sh = SymbolicHamiltonian(ham, {a: (1, 2, 3)})
+        sh = parse_symbolic(ham, {a: (1, 2, 3)})
     # Missing symbol
     with pytest.raises(ValueError):
-        sh = SymbolicHamiltonian(ham, {a: (0, matrices.X)})
+        sh = parse_symbolic(ham, {a: (0, matrices.X)})
     # Factor that cannot be parsed
     ham = a * b + sympy.cos(a) * b
     with pytest.raises(ValueError):
-        sh = SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})
+        sh = parse_symbolic(ham, {a: (0, matrices.X), b: (1, matrices.Z)})

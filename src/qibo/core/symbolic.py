@@ -20,7 +20,7 @@ def multikron(matrix_list):
     return h
 
 
-class SymbolicHamiltonian:
+def parse_symbolic(hamiltonian, symbol_map):
     """Parses symbolic Hamiltonians defined using ``sympy``.
 
     This class should not be used by users.
@@ -37,74 +37,74 @@ class SymbolicHamiltonian:
         symbol_map (dict): Dictionary that maps each symbol to a pair of
             (target, matrix).
     """
+    if not issubclass(hamiltonian.__class__, sympy.Expr):
+        raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
+                               "expression but is {}."
+                               "".format(type(hamiltonian)))
+    if not isinstance(symbol_map, dict):
+        raise_error(TypeError, "Symbol map must be a dictionary but is "
+                               "{}.".format(type(symbol_map)))
+    for k, v in symbol_map.items():
+        if not isinstance(k, sympy.Symbol):
+            raise_error(TypeError, "Symbol map keys must be `sympy.Symbol` "
+                                   "but {} was found.".format(type(k)))
+        if not isinstance(v, tuple):
+            raise_error(TypeError, "Symbol map values must be tuples but "
+                                   "{} was found.".format(type(v)))
+        if len(v) != 2:
+            raise_error(ValueError, "Symbol map values must be tuples of "
+                                    "length 2 but length {} was found."
+                                    "".format(len(v)))
 
-    def __init__(self, hamiltonian, symbol_map):
-        if not issubclass(hamiltonian.__class__, sympy.Expr):
-            raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
-                                   "expression but is {}."
-                                   "".format(type(hamiltonian)))
-        if not isinstance(symbol_map, dict):
-            raise_error(TypeError, "Symbol map must be a dictionary but is "
-                                   "{}.".format(type(symbol_map)))
-        for k, v in symbol_map.items():
-            if not isinstance(k, sympy.Symbol):
-                raise_error(TypeError, "Symbol map keys must be `sympy.Symbol` "
-                                       "but {} was found.".format(type(k)))
-            if not isinstance(v, tuple):
-                raise_error(TypeError, "Symbol map values must be tuples but "
-                                       "{} was found.".format(type(v)))
-            if len(v) != 2:
-                raise_error(ValueError, "Symbol map values must be tuples of "
-                                        "length 2 but length {} was found."
-                                        "".format(len(v)))
-        self.symbolic = sympy.expand(hamiltonian)
-        self.map = symbol_map
-
-        term_dict = self.symbolic.as_coefficients_dict()
-        self.constant = 0
-        dtype = K.qnp.dtypes('DTYPECPX')
-        if 1 in term_dict:
-            self.constant = dtype(term_dict.pop(1))
-        self.terms = dict()
-        target_ids = set()
-        for term, coeff in term_dict.items():
-            targets, matrices = [], [dtype(coeff)]
-            for factor in term.as_ordered_factors():
-                if factor.is_symbol:
-                    self._check_symbolmap(factor)
-                    itarget = self.map[factor][0]
-                    ivalues = self.map[factor][1]
-                    if isinstance(ivalues, K.numeric_types):
-                        matrices[0] *= ivalues
-                    else:
-                        targets.append(itarget)
-                        matrices.append(ivalues)
-                elif isinstance(factor, sympy.Pow):
-                    base, pow = factor.args
-                    assert isinstance(pow, sympy.Integer)
-                    self._check_symbolmap(base)
-                    targets.append(self.map[base][0])
-                    matrix = self.map[base][1]
-                    for _ in range(int(pow) - 1):
-                        matrix = matrix.dot(matrix)
-                    matrices.append(matrix)
-                elif factor == sympy.I: # imaginary unit
-                    matrices[0] *= 1j
-                else:
-                    raise_error(ValueError, f"Cannot parse factor {factor}.")
-            target_ids |= set(targets)
-            targets, matrices = tuple(targets), tuple(matrices)
-            if targets in self.terms:
-                self.terms[targets] += matrices
-            else:
-                self.terms[targets] = matrices
-        self.nqubits = max(target_ids) + 1
-
-    def _check_symbolmap(self, s):
+    def check_symbolmap(s):
         """Checks if symbol exists in the given symbol map."""
-        if s not in self.map:
-            raise_error(ValueError, f"Symbolic Hamiltonian contains symbol {s} "
-                                    "which does not exist in the symbol map.")
+        if s not in symbol_map:
+            raise_error(ValueError, "Symbolic Hamiltonian contains symbol "
+                                    "{} which does not exist in the symbol "
+                                    "map.".format(s))
+
+    symbolic = sympy.expand(hamiltonian)
+
+    term_dict = symbolic.as_coefficients_dict()
+    constant = 0
+    dtype = K.qnp.dtypes('DTYPECPX')
+    if 1 in term_dict:
+        constant = dtype(term_dict.pop(1))
+    terms = dict()
+    target_ids = set()
+    for term, coeff in term_dict.items():
+        targets, matrices = [], [dtype(coeff)]
+        for factor in term.as_ordered_factors():
+            if factor.is_symbol:
+                check_symbolmap(factor)
+                itarget = symbol_map[factor][0]
+                ivalues = symbol_map[factor][1]
+                if isinstance(ivalues, K.numeric_types):
+                    matrices[0] *= ivalues
+                else:
+                    targets.append(itarget)
+                    matrices.append(ivalues)
+            elif isinstance(factor, sympy.Pow):
+                base, pow = factor.args
+                assert isinstance(pow, sympy.Integer)
+                check_symbolmap(base)
+                targets.append(symbol_map[base][0])
+                matrix = symbol_map[base][1]
+                for _ in range(int(pow) - 1):
+                    matrix = matrix.dot(matrix)
+                matrices.append(matrix)
+            elif factor == sympy.I: # imaginary unit
+                matrices[0] *= 1j
+            else:
+                raise_error(ValueError, f"Cannot parse factor {factor}.")
+        target_ids |= set(targets)
+        targets, matrices = tuple(targets), tuple(matrices)
+        if targets in terms:
+            terms[targets] += matrices
+        else:
+            terms[targets] = matrices
+    nqubits = max(target_ids) + 1
+    return terms, constant, nqubits
 
 
 def reduce_pairs(pair_sets, pair_map, free_targets):

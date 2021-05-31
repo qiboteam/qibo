@@ -25,21 +25,21 @@ class Hamiltonian(hamiltonians.Hamiltonian):
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
-        from qibo.core.symbolic import SymbolicHamiltonian
-        ham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
+        from qibo.core.symbolic import parse_symbolic
+        terms, constant, nqubits = parse_symbolic(symbolic_hamiltonian, symbol_map)
         # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
         # in the given symbolic form. Here ``nqubits`` is the total number of
         # qubits that the Hamiltonian acts on.
         matrix = 0
-        for targets, matrices in ham.terms.items():
-            matrix_list = ham.nqubits * [K.np.eye(2)]
+        for targets, matrices in terms.items():
+            matrix_list = nqubits * [K.np.eye(2)]
             n = len(targets)
             for i in range(0, len(matrices), n + 1):
                 for t, m in zip(targets, matrices[i + 1: i + n + 1]):
                     matrix_list[t] = m
                 matrix += matrices[i] * multikron(matrix_list)
-        matrix += ham.constant * K.np.eye(matrix.shape[0])
-        return cls(ham.nqubits, matrix, numpy=numpy)
+        matrix += constant * K.np.eye(matrix.shape[0])
+        return cls(nqubits, matrix, numpy=numpy)
 
     def eigenvalues(self):
         if self._eigenvalues is None:
@@ -210,14 +210,14 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
 
     @staticmethod
     def symbolic_terms(symbolic_hamiltonian, symbol_map):
-        from qibo.core.symbolic import SymbolicHamiltonian, merge_one_qubit
-        sham = SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
+        from qibo.core.symbolic import parse_symbolic, merge_one_qubit
+        sterms, constant, _ = parse_symbolic(symbolic_hamiltonian, symbol_map)
         # Construct dictionary of terms with matrices of shape
         # ``(2 ** ntargets, 2 ** ntargets)`` for each term in the given
         # symbolic form. Here ``ntargets`` is the number of
         # qubits that the corresponding term acts on.
         terms = {}
-        for targets, matrices in sham.terms.items():
+        for targets, matrices in sterms.items():
             n = len(targets)
             matrix = 0
             for i in range(0, len(matrices), n + 1):
@@ -225,11 +225,9 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             terms[targets] = matrix
 
         if tuple() in terms:
-            constant = terms.pop(tuple()) + sham.constant
-        else:
-            constant = sham.constant
+            constant += terms.pop(tuple())
         if set(len(t) for t in terms.keys()) == {1, 2}:
-            terms = merge_one_qubit(terms, sham.terms)
+            terms = merge_one_qubit(terms, sterms)
         return terms, constant
 
     @staticmethod
