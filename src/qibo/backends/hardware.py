@@ -2,7 +2,8 @@ from qibo.backends.numpy import NumpyBackend
 from qibo.config import raise_error
 
 
-class IcarusQBackend(NumpyBackend):
+class IcarusQBackend(NumpyBackend): # pragma: no cover
+    # hardware backend is not tested until `qiboicarusq` is available
 
     description = "Uses QPU controlled by the IcarusQ FPGA."
 

@@ -43,7 +43,8 @@ class Backend:
                             "`pip install qibotf`.")
 
         # check if IcarusQ is installed
-        if self.check_availability("qiboicarusq"):
+        if self.check_availability("qiboicarusq"): # pragma: no cover
+            # hardware backend is not tested until `qiboicarusq` is available
             from qibo.backends.hardware import IcarusQBackend
             self.available_backends["icarusq"] = IcarusQBackend
             self.hardware_backends["icarusq"] = IcarusQBackend
