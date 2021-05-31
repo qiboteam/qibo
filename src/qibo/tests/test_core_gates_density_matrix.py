@@ -58,7 +58,8 @@ def test_rygate_density_matrix(backend):
 
 
 @pytest.mark.parametrize("gatename,gatekwargs",
-                         [("H", {}), ("X", {}), ("Y", {}), ("Z", {}), ("I", {}),
+                         [("H", {}), ("X", {}), ("Y", {}), ("Z", {}),
+                          ("I", {}), ("Align", {}),
                           ("RX", {"theta": 0.123}), ("RY", {"theta": 0.123}),
                           ("RZ", {"theta": 0.123}), ("U1", {"theta": 0.123}),
                           ("U2", {"phi": 0.123, "lam": 0.321}),
