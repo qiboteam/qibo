@@ -1538,7 +1538,7 @@ class _ThermalRelaxationChannelB(Gate):
 
     def __init__(self, q, t1, t2, time, excited_population=0, seed=None):
         probs = self.calculate_probabilities(t1, t2, time, excited_population)
-        self.exp_t2, self.preset0, self.preset1 = probs
+        self.exp_t2, self.preset0, self.preset1 = probs # pylint: disable=E0633
 
         super(_ThermalRelaxationChannelB, self).__init__()
         self.target_qubits = (q,)
