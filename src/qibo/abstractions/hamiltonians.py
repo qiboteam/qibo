@@ -36,7 +36,9 @@ class Hamiltonian(ABC):
         self._eigenvalues = None
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
+
         self.terms = None
+        self._gates = None
 
     @classmethod
     @abstractmethod

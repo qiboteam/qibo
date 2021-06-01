@@ -174,6 +174,31 @@ class Hamiltonian(hamiltonians.Hamiltonian):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
 
+    def term_gates(self):
+        """Creates single-qubit unitary gates corresponding to each Hamiltonian term."""
+        if self._gates is None:
+            from qibo import gates
+            self._gates = []
+            constant = self.terms.pop(tuple())
+            for targets, matrices in self.terms.items():
+                n = len(targets)
+                for i in range(0, len(matrices), n + 1):
+                    self._gates.append([matrices[i]])
+                    for t, m in zip(targets, matrices[i + 1: i + n + 1]):
+                        self._gates[-1].append(gates.Unitary(m, t))
+            self.terms[tuple()] = constant
+        return self._gates
+
+    def gate_matmul(self, state):
+        """Multiplies the Hamiltonian to state term by term using unitary gates."""
+        total = self.terms[tuple()] * state
+        for gatelist in self.term_gates():
+            temp_state = self.K.copy(state)
+            for gate in gatelist[1:]:
+                temp_state = gate(temp_state)
+            total += gatelist[0] * temp_state
+        return total
+
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
@@ -185,7 +210,10 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
+                if self._matrix is None: # TODO: Expand `gate_matmul` for density matrices
+                    return self.gate_matmul(o)
+                else:
+                    return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
             elif rank == 2: # matrix
                 return self.K.matmul(self.matrix, o)
             else:
