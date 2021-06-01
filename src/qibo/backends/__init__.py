@@ -10,6 +10,7 @@ class Backend:
 
     def __init__(self):
         self.available_backends = {}
+        self.hardware_backends = {}
         active_backend = "numpy"
 
         # check if numpy is installed
@@ -40,6 +41,14 @@ class Backend:
                             "used to apply gates. In order to install Qibo's "
                             "high performance custom operators please use "
                             "`pip install qibotf`.")
+
+        # check if IcarusQ is installed
+        if self.check_availability("qiboicarusq"): # pragma: no cover
+            # hardware backend is not tested until `qiboicarusq` is available
+            from qibo.backends.hardware import IcarusQBackend
+            self.available_backends["icarusq"] = IcarusQBackend
+            self.hardware_backends["icarusq"] = IcarusQBackend
+
         else:  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("Tensorflow is not installed, falling back to numpy. "

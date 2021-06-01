@@ -12,6 +12,12 @@ from typing import Dict, List, Optional, Sequence, Tuple
 class BackendGate(BaseBackendGate):
     module = sys.modules[__name__]
 
+    def __new__(cls, *args, **kwargs):
+        if K.hardware_module and cls.module == sys.modules[__name__]: # pragma: no cover
+            # hardware backend is not tested until `qiboicarusq` is available
+            return getattr(K.hardware_gates, cls.__name__)(*args, **kwargs)
+        return super().__new__(cls)
+
     def __init__(self):
         if K.op is not None:
             if not K.executing_eagerly():
@@ -136,6 +142,22 @@ class I(BackendGate, abstract_gates.I):
     def __init__(self, *q):
         BackendGate.__init__(self)
         abstract_gates.I.__init__(self, *q)
+
+    def construct_unitary(self):
+        return K.eye(2 ** len(self.target_qubits))
+
+    def state_vector_call(self, state):
+        return state
+
+    def density_matrix_call(self, state):
+        return state
+
+
+class Align(BackendGate, abstract_gates.Align):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        abstract_gates.Align.__init__(self, *q)
 
     def construct_unitary(self):
         return K.eye(2 ** len(self.target_qubits))
