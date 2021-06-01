@@ -17,24 +17,26 @@ class Hamiltonian(ABC):
             Default option is ``numpy = False``.
     """
 
-    def __init__(self, nqubits, matrix, numpy=False):
+    def __init__(self, nqubits, matrix=None, numpy=False):
         if not isinstance(nqubits, int):
             raise_error(RuntimeError, "nqubits must be an integer but is "
                                             "{}.".format(type(nqubits)))
         if nqubits < 1:
             raise_error(ValueError, "nqubits must be a positive integer but is "
                                     "{}".format(nqubits))
-        shape = tuple(matrix.shape)
-        if shape != 2 * (2 ** nqubits,):
-            raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
-                                    "while the given matrix has shape {}."
-                                    "".format(nqubits, shape))
+        if matrix is not None:
+            shape = tuple(matrix.shape)
+            if shape != 2 * (2 ** nqubits,):
+                raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
+                                        "while the given matrix has shape {}."
+                                        "".format(nqubits, shape))
 
         self.nqubits = nqubits
-        self.matrix = matrix
+        self._matrix = matrix
         self._eigenvalues = None
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
+        self.terms = None
 
     @classmethod
     @abstractmethod
@@ -57,6 +59,16 @@ class Hamiltonian(ABC):
             A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
+        raise_error(NotImplementedError)
+
+    @property
+    def matrix(self):
+        if self._matrix is None:
+            self._matrix = self.calculate_dense_matrix()
+        return self._matrix
+
+    @abstractmethod
+    def calculate_dense_matrix(self): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -365,10 +377,6 @@ class TrotterHamiltonian(Hamiltonian):
             that is equivalent to ``o`` but has the same part structure as
             ``self``.
         """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def calculate_dense_matrix(self, a): # pragma: no cover
         raise_error(NotImplementedError)
 
     @property

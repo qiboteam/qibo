@@ -8,8 +8,8 @@ from qibo.core.symbolic import multikron
 class Hamiltonian(hamiltonians.Hamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
 
-    def __new__(cls, nqubits, matrix, numpy=False):
-        if not isinstance(matrix, K.tensor_types):
+    def __new__(cls, nqubits, matrix=None, numpy=False):
+        if matrix is not None and not isinstance(matrix, K.tensor_types):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
@@ -18,30 +18,41 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         else:
             return super().__new__(cls)
 
-    def __init__(self, nqubits, matrix, numpy=False):
+    def __init__(self, nqubits, matrix=None, numpy=False):
         assert not numpy
         self.K = K
-        super().__init__(nqubits, self.K.cast(matrix), numpy=numpy)
+        if matrix is not None:
+            matrix = self.K.cast(matrix)
+        super().__init__(nqubits, matrix, numpy=numpy)
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
         from qibo.core.symbolic import parse_symbolic
         terms = parse_symbolic(symbolic_hamiltonian, symbol_map)
         nqubits = max(set(q for targets in terms.keys() for q in targets)) + 1
-        constant = terms.pop(tuple())
         # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
         # in the given symbolic form. Here ``nqubits`` is the total number of
         # qubits that the Hamiltonian acts on.
+        ham = cls(nqubits, matrix=None, numpy=numpy)
+        ham.terms = terms
+        return ham
+
+    def calculate_dense_matrix(self):
+        if self.terms is None:
+            raise_error(ValueError, "Cannot construct Hamiltonian matrix "
+                                    "because terms are not available.")
         matrix = 0
-        for targets, matrices in terms.items():
-            matrix_list = nqubits * [K.np.eye(2)]
+        constant = self.terms.pop(tuple())
+        for targets, matrices in self.terms.items():
+            matrix_list = self.nqubits * [K.np.eye(2)]
             n = len(targets)
             for i in range(0, len(matrices), n + 1):
                 for t, m in zip(targets, matrices[i + 1: i + n + 1]):
                     matrix_list[t] = m
                 matrix += matrices[i] * multikron(matrix_list)
         matrix += constant * K.np.eye(matrix.shape[0])
-        return cls(nqubits, matrix, numpy=numpy)
+        self.terms[tuple()] = constant
+        return matrix
 
     def eigenvalues(self):
         if self._eigenvalues is None:
@@ -193,8 +204,9 @@ class NumpyHamiltonian(Hamiltonian):
     def __init__(self, nqubits, matrix, numpy=True):
         assert numpy
         self.K = K.qnp
-        hamiltonians.Hamiltonian.__init__(self, nqubits, self.K.cast(matrix),
-                                          numpy=numpy)
+        if matrix is not None:
+            matrix = self.K.cast(matrix)
+        hamiltonians.Hamiltonian.__init__(self, nqubits, matrix, numpy)
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
