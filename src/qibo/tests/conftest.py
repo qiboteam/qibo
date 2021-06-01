@@ -12,6 +12,9 @@ _ACCELERATORS = None
 if "tensorflow" in _available_backends:
     if "qibotf" in _available_backends:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
+if "icarusq" in _available_backends: # pragma: no cover
+    # skip hardware backend for tests
+    _available_backends.remove("icarusq")
 _BACKENDS = ",".join(_available_backends)
 
 
@@ -87,7 +90,8 @@ def pytest_generate_tests(metafunc):
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
         target = metafunc.config.option.target_backend
-        metafunc.parametrize("tested_backend", [x for x in backends if x != target])
+        test_backends = [x for x in backends if x != target and x not in qibo.K.hardware_backends]
+        metafunc.parametrize("tested_backend", test_backends)
         metafunc.parametrize("target_backend", [target])
 
     if "backend_name" in metafunc.fixturenames:

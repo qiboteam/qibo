@@ -3,7 +3,7 @@ import pytest
 from qibo.abstractions import gates
 
 
-@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "I"])
+@pytest.mark.parametrize("gatename", ["H", "X", "Y", "Z", "I", "Align"])
 def test_one_qubit_gates_init(gatename):
     gate = getattr(gates, gatename)(0)
     assert gate.target_qubits == (0,)

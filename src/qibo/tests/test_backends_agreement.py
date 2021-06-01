@@ -124,3 +124,8 @@ def test_backend_unique(tested_backend, target_backend, return_counts):
     else:
         idx = np.argsort(test_result)
         np.testing.assert_allclose(np.array(test_result)[idx], target_result)
+
+
+def test_hardware_backend_import():
+    # TODO: Remove this test once the hardware backend is tested properly
+    from qibo.backends.hardware import IcarusQBackend

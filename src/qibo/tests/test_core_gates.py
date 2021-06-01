@@ -75,6 +75,17 @@ def test_identity(backend):
     final_state = apply_gates(gatelist, nqubits=2)
     np.testing.assert_allclose(final_state, target_state)
 
+
+def test_align(backend):
+    gate = gates.Align(0, 1)
+    gatelist = [gates.H(0), gates.H(1), gate]
+    final_state = apply_gates(gatelist, nqubits=2)
+    target_state = np.ones_like(final_state) / 2.0
+    np.testing.assert_allclose(final_state, target_state)
+    gate_matrix = gate.construct_unitary()
+    np.testing.assert_allclose(gate_matrix, np.eye(4))
+
+
 # :class:`qibo.core.cgates.M` is tested seperately in `test_measurement_gate.py`
 
 def test_rx(backend):

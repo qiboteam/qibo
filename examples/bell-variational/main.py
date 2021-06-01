@@ -11,7 +11,7 @@ def main(nshots, backend):
     Args:
         nshots: number of shots to use for the minimization.
         backend: choice of backend to run the example in.
-        
+
     '''
     set_backend(backend)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2)
@@ -33,6 +33,6 @@ def main(nshots, backend):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nshots", default=10000, type=int, help='Number of shots for each circuit base')
-    parser.add_argument("--backend", default='custom', type=str, help='Backend to use for the example')
+    parser.add_argument("--backend", default='qibotf', type=str, help='Backend to use for the example')
     args = vars(parser.parse_args())
     main(**args)
