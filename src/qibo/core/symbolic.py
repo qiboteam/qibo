@@ -36,6 +36,11 @@ def parse_symbolic(hamiltonian, symbol_map):
             symbols.
         symbol_map (dict): Dictionary that maps each symbol to a pair of
             (target, matrix).
+
+    Returns:
+        terms (dict): Dictionary that maps tuple of qubit ids to tuple of the
+            corresponding matrices. Each dictionary element corresponds to
+            a Hamiltonian term.
     """
     if not issubclass(hamiltonian.__class__, sympy.Expr):
         raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
@@ -66,11 +71,10 @@ def parse_symbolic(hamiltonian, symbol_map):
     symbolic = sympy.expand(hamiltonian)
 
     term_dict = symbolic.as_coefficients_dict()
-    constant = 0
+    terms = {tuple(): (0,)}
     dtype = K.qnp.dtypes('DTYPECPX')
     if 1 in term_dict:
-        constant = dtype(term_dict.pop(1))
-    terms = dict()
+        terms[tuple()] += (dtype(term_dict.pop(1)),)
     for term, coeff in term_dict.items():
         targets, matrices = [], [dtype(coeff)]
         for factor in term.as_ordered_factors():
@@ -101,7 +105,8 @@ def parse_symbolic(hamiltonian, symbol_map):
             terms[targets] += matrices
         else:
             terms[targets] = matrices
-    return terms, constant
+    terms[tuple()] = sum(terms[tuple()]) # sum of constant terms
+    return terms
 
 
 def reduce_pairs(pair_sets, pair_map, free_targets):
