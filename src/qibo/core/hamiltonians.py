@@ -382,7 +382,8 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                     "rank-{} tensor.".format(rank))
         result = self.K.zeros_like(state)
-        for gate in self.terms():
+        for gate in self.terms(): # pylint: disable=E1120
+            # TODO: Fix pylint here
             # Create copy of state so that the original is not modified
             statec = self.K.copy(state)
             result += gate(statec)

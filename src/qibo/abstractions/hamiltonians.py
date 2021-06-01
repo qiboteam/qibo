@@ -471,7 +471,8 @@ class TrotterHamiltonian(Hamiltonian):
                 self.expgate_sets[term].add(gate)
                 self._circuit.add(gate)
 
-    def terms(self):
+    def terms(self): # pylint: disable=E0202
+        # TODO: Fix pylint here (`self.terms` of `Hamiltonian` hides this method)
         if self._terms is None:
             self._terms = [gates.Unitary(term.matrix, *targets)
                            for targets, term in self]
