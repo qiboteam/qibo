@@ -42,13 +42,6 @@ class Backend:
                             "high performance custom operators please use "
                             "`pip install qibotf`.")
 
-        # check if IcarusQ is installed
-        if self.check_availability("qiboicarusq"): # pragma: no cover
-            # hardware backend is not tested until `qiboicarusq` is available
-            from qibo.backends.hardware import IcarusQBackend
-            self.available_backends["icarusq"] = IcarusQBackend
-            self.hardware_backends["icarusq"] = IcarusQBackend
-
         else:  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("Tensorflow is not installed, falling back to numpy. "
@@ -57,6 +50,13 @@ class Backend:
                         "with `pip install tensorflow`. To install the "
                         "optimized Qibo custom operators please use "
                         "`pip install qibotf` after installing Tensorflow.")
+
+        # check if IcarusQ is installed
+        if self.check_availability("qiboicarusq"): # pragma: no cover
+            # hardware backend is not tested until `qiboicarusq` is available
+            from qibo.backends.hardware import IcarusQBackend
+            self.available_backends["icarusq"] = IcarusQBackend
+            self.hardware_backends["icarusq"] = IcarusQBackend
 
         self.constructed_backends = {}
         self._active_backend = None
