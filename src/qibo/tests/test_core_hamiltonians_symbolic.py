@@ -35,59 +35,54 @@ def test_symbolic_hamiltonian_to_dense(nqubits):
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
 
-@pytest.mark.skip
-def test_trotter_hamiltonian_scalar_mul(nqubits=3):
+def test_symbolic_hamiltonian_scalar_mul(nqubits=3):
     """Test multiplication of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 * local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     local_dense = (local_ham * 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-@pytest.mark.skip
-def test_trotter_hamiltonian_scalar_add(nqubits=4):
+def test_symbolic_hamiltonian_scalar_add(nqubits=4):
     """Test addition of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 + local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     local_dense = (local_ham + 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-@pytest.mark.skip
 def test_symbolic_hamiltonian_scalar_sub(nqubits=3):
     """Test subtraction of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 - local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     target_ham = hamiltonians.TFIM(nqubits, h=1.0, numpy=True) - 2
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     local_dense = (local_ham - 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-@pytest.mark.skip
 def test_symbolic_hamiltonian_operator_add_and_sub(nqubits=3):
     """Test addition and subtraction between Trotter Hamiltonians."""
-    local_ham1 = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
-    local_ham2 = hamiltonians.TFIM(nqubits, h=0.5, trotter=True)
-
-    local_ham = local_ham1 + local_ham2
+    local_ham = (hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) +
+                 hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5)))
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) +
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
 
-    local_ham = local_ham1 - local_ham2
+    local_ham = (hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) -
+                 hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5)))
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) -
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense

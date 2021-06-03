@@ -262,6 +262,68 @@ class SymbolicHamiltonian:
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
 
+    def __add__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be added.")
+            new_ham = self.__class__(self.form + o.form)
+            if self._dense is not None and o._dense is not None:
+                new_ham._dense = self.dense + o.dense
+        elif isinstance(o, K.numeric_types):
+            new_ham = self.__class__(self.form + o)
+            if self._dense is not None:
+                new_ham._dense = self.dense + o
+        else:
+            raise_error(NotImplementedError, "SymbolicHamiltonian addition to {} not "
+                                             "implemented.".format(type(o)))
+        return new_ham
+
+    def __radd__(self, o):
+        # TODO: Remove this once abstract Hamiltonian is updated
+        return self.__add__(o)
+
+    def __sub__(self, o):
+        if isinstance(o, self.__class__):
+            if self.nqubits != o.nqubits:
+                raise_error(RuntimeError, "Only hamiltonians with the same "
+                                          "number of qubits can be subtracted.")
+            new_ham = self.__class__(self.form - o.form)
+            if self._dense is not None and o._dense is not None:
+                new_ham._dense = self.dense - o.dense
+        elif isinstance(o, K.numeric_types):
+            new_ham = self.__class__(self.form - o)
+            if self._dense is not None:
+                new_ham._dense = self.dense - o
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return new_ham
+
+    def __rsub__(self, o):
+        if isinstance(o, K.numeric_types):
+            new_ham = self.__class__(o - self.form)
+            if self._dense is not None:
+                new_ham._dense = o - self.dense
+        else:
+            raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
+                                             "not implemented.".format(type(o)))
+        return new_ham
+
+    def __mul__(self, o):
+        if not (isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types)):
+            raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
+                                             "not implemented.".format(type(o)))
+        new_form = o * self.form
+        new_ham = self.__class__(new_form)
+        if self._dense is not None:
+            new_ham._dense = o * self._dense
+        return new_ham
+
+    def __rmul__(self, o):
+        # TODO: Remove this once abstract Hamiltonian is updated
+        return self.__mul__(o)
+
     def apply_gates(self, state):
         total = 0
         for term in self.terms:
@@ -275,7 +337,10 @@ class SymbolicHamiltonian:
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
             new_form = self.form * o.form
-            return self.__class__(new_form)
+            new_ham = self.__class__(new_form)
+            if self._dense is not None and o._dense is not None:
+                new_ham._dense = self.dense @ o.dense
+            return new_ham
 
         if isinstance(o, states.AbstractState):
             o = o.tensor
