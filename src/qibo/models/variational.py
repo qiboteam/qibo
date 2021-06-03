@@ -131,10 +131,10 @@ class QAOA(object):
     """
     from qibo import hamiltonians, optimizers
     from qibo.core import states
-    from qibo.abstractions.hamiltonians import AbstractHamiltonian
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
+        from qibo.abstractions.hamiltonians import AbstractHamiltonian
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian

@@ -1,5 +1,6 @@
 import sympy
 from qibo import gates, matrices, K
+from qibo.config import raise_error
 
 
 class Symbol(sympy.Symbol):
@@ -24,7 +25,7 @@ class Symbol(sympy.Symbol):
         return self._gate
 
     def calculate_gate(self):
-        return gates.Unitary(self.matrix, *self.target_qubits)
+        return gates.Unitary(self.matrix, self.target_qubit)
 
 
 class PauliSymbol(Symbol):
