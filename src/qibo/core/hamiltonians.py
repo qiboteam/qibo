@@ -216,12 +216,13 @@ class SymbolicHamiltonian:
             self.form = sympy.expand(form)
             termsdict = self.form.as_coefficients_dict()
             self.terms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
-        else:
+        else: # TODO: Fix this case
+            raise_error(NotImplementedError)
             if terms is None:
                 raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
                                         "if no form or terms are given.")
             self.terms = terms
-            self.form = 0 # TODO: Fix this
+            self.form = 0
 
         self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
         self._dense = None
@@ -229,6 +230,8 @@ class SymbolicHamiltonian:
     @property
     def dense(self):
         if self._dense is None:
+            log.warn("Calculating the dense form of a symbolic Hamiltonian. "
+                     "This operation is memory inefficient.")
             matrix = self.calculate_dense_matrix()
             self._dense = Hamiltonian(self.nqubits, matrix)
         return self._dense
@@ -246,6 +249,49 @@ class SymbolicHamiltonian:
                 kronlist[q] = kronlist[q] @ factor.matrix
             matrix += term.coefficient * multikron(kronlist)
         return matrix
+
+    def eigenvalues(self):
+        return self.dense.eigenvalues()
+
+    def eigenvectors(self):
+        return self.dense.eigenvectors()
+
+    def exp(self, a):
+        return self.dense.exp(a)
+
+    def expectation(self, state, normalize=False):
+        return Hamiltonian.expectation(self, state, normalize)
+
+    def apply_gates(self, state):
+        total = 0
+        for term in self.terms:
+            temp_state = K.copy(state)
+            for factor in term:
+                temp_state = factor.gate(temp_state)
+            total += term.coefficient * temp_state
+        return total
+
+    def __matmul__(self, o):
+        """Matrix multiplication with other Hamiltonians or state vectors."""
+        if isinstance(o, self.__class__):
+            new_form = self.form * o.form
+            return self.__class__(new_form)
+
+        if isinstance(o, states.AbstractState):
+            o = o.tensor
+        if isinstance(o, K.tensor_types):
+            rank = len(tuple(o.shape))
+            if rank == 1: # vector
+                return self.apply_gates(o)
+            elif rank == 2: # matrix # TODO: Fix this
+                raise_error(NotImplementedError, "Cannot multiply `SymbolicHamiltonian` "
+                                                 "with density matrix.")
+            else:
+                raise_error(ValueError, "Cannot multiply Hamiltonian with "
+                                        "rank-{} tensor.".format(rank))
+
+        raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
+                                         "implemented.".format(type(o)))
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):

@@ -58,7 +58,6 @@ class SymbolicTerm(list):
 
     def __init__(self, coefficient, factors):
         super().__init__()
-        self.coefficient = coefficient
 
         ordered_factors = []
         if factors != 1:
@@ -77,8 +76,10 @@ class SymbolicTerm(list):
                 if isinstance(factor.matrix, K.qnp.tensor_types):
                     self.extend(pow * [factor])
                 else:
-                    self.coefficient *= factor.matrix
+                    coefficient *= factor.matrix
             elif factor == sympy.I:
-                self.coefficient *= 1j
+                coefficient *= 1j
             else:
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+
+        self.coefficient = complex(coefficient)
