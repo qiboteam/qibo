@@ -166,6 +166,7 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
 @pytest.mark.parametrize("sufficient", [True, False])
 def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     """Check that ``merge_one_qubit`` works both when two-qubit are sufficient and no."""
+    from qibo.hamiltonians import TrotterHamiltonian
     x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(5))))
     z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(5))))
     symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
@@ -174,9 +175,7 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
     symham += sum(x_symbols)
     if sufficient:
         symham += z_symbols[0] * z_symbols[-1]
-    symham = hamiltonians.SymbolicHamiltonian(symham, symmap)
-    terms = {t: m for t, m in symham.partial_matrices()}
-    merged = symham.merge_one_qubit(terms)
+    merged, _ = TrotterHamiltonian.symbolic_terms(symham, symmap)
 
     two_qubit_keys = {(i, i + 1) for i in range(4)}
     if sufficient:
@@ -198,27 +197,28 @@ def test_symbolic_hamiltonian_merge_one_qubit(sufficient):
 
 
 def test_symbolic_hamiltonian_errors():
-    """Check errors raised by `SymbolicHamiltonian`."""
+    """Check errors raised by :meth:`qibo.core.symbolic.parse_symbolic`."""
+    from qibo.core.symbolic import parse_symbolic
     a, b = sympy.symbols("a b")
     ham = a * b
     # Bad hamiltonian type
     with pytest.raises(TypeError):
-        sh = hamiltonians.SymbolicHamiltonian("test", "test")
+        sh = parse_symbolic("test", "test")
     # Bad symbol map type
     with pytest.raises(TypeError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, "test")
+        sh = parse_symbolic(ham, "test")
     # Bad symbol map key
     with pytest.raises(TypeError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, {"a": 2})
+        sh = parse_symbolic(ham, {"a": 2})
     # Bad symbol map value
     with pytest.raises(TypeError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, {a: 2})
+        sh = parse_symbolic(ham, {a: 2})
     with pytest.raises(ValueError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, {a: (1, 2, 3)})
+        sh = parse_symbolic(ham, {a: (1, 2, 3)})
     # Missing symbol
     with pytest.raises(ValueError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, {a: (0, matrices.X)})
+        sh = parse_symbolic(ham, {a: (0, matrices.X)})
     # Factor that cannot be parsed
     ham = a * b + sympy.cos(a) * b
     with pytest.raises(ValueError):
-        sh = hamiltonians.SymbolicHamiltonian(ham, {a: (0, matrices.X), b: (1, matrices.Z)})
+        sh = parse_symbolic(ham, {a: (0, matrices.X), b: (1, matrices.Z)})

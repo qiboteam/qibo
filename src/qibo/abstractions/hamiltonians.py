@@ -17,27 +17,32 @@ class Hamiltonian(ABC):
             Default option is ``numpy = False``.
     """
 
-    def __init__(self, nqubits, matrix, numpy=False):
+    def __init__(self, nqubits, matrix=None, numpy=False):
         if not isinstance(nqubits, int):
             raise_error(RuntimeError, "nqubits must be an integer but is "
                                             "{}.".format(type(nqubits)))
         if nqubits < 1:
             raise_error(ValueError, "nqubits must be a positive integer but is "
                                     "{}".format(nqubits))
-        shape = tuple(matrix.shape)
-        if shape != 2 * (2 ** nqubits,):
-            raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
-                                    "while the given matrix has shape {}."
-                                    "".format(nqubits, shape))
+        if matrix is not None:
+            shape = tuple(matrix.shape)
+            if shape != 2 * (2 ** nqubits,):
+                raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
+                                        "while the given matrix has shape {}."
+                                        "".format(nqubits, shape))
 
         self.nqubits = nqubits
-        self.matrix = matrix
+        self._matrix = matrix
         self._eigenvalues = None
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
 
+        self.terms = None
+        self._gates = None
+
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
+    @abstractmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False): # pragma: no cover
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -56,9 +61,17 @@ class Hamiltonian(ABC):
             A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.hamiltonians import SymbolicHamiltonian as scls
-        ham = scls(symbolic_hamiltonian, symbol_map)
-        return cls(ham.nqubits, ham.dense_matrix(), numpy=numpy)
+        raise_error(NotImplementedError)
+
+    @property
+    def matrix(self):
+        if self._matrix is None:
+            self._matrix = self.calculate_dense_matrix()
+        return self._matrix
+
+    @abstractmethod
+    def calculate_dense_matrix(self): # pragma: no cover
+        raise_error(NotImplementedError)
 
     @abstractmethod
     def eigenvalues(self): # pragma: no cover
@@ -243,7 +256,8 @@ class TrotterHamiltonian(Hamiltonian):
         return cls(*parts, ground_state=ground_state)
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+    @abstractmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None): # pragma: no cover
         """Creates a ``TrotterHamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -263,10 +277,7 @@ class TrotterHamiltonian(Hamiltonian):
             A :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` object that
             implements the given symbolic Hamiltonian.
         """
-        from qibo.hamiltonians import SymbolicHamiltonian as scls
-        terms, constant = scls(symbolic_hamiltonian, symbol_map).trotter_terms()
-        hterms = cls.construct_terms(terms)
-        return cls.from_dictionary(hterms, ground_state=ground_state) + constant
+        raise_error(NotImplementedError)
 
     @staticmethod
     @abstractmethod
@@ -370,10 +381,6 @@ class TrotterHamiltonian(Hamiltonian):
         """
         raise_error(NotImplementedError)
 
-    @abstractmethod
-    def calculate_dense_matrix(self, a): # pragma: no cover
-        raise_error(NotImplementedError)
-
     @property
     def dense(self):
         """Creates an equivalent Hamiltonian model that holds the full matrix.
@@ -464,7 +471,8 @@ class TrotterHamiltonian(Hamiltonian):
                 self.expgate_sets[term].add(gate)
                 self._circuit.add(gate)
 
-    def terms(self):
+    def terms(self): # pylint: disable=E0202
+        # TODO: Fix pylint here (`self.terms` of `Hamiltonian` hides this method)
         if self._terms is None:
             self._terms = [gates.Unitary(term.matrix, *targets)
                            for targets, term in self]
