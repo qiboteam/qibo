@@ -5,11 +5,11 @@ from qibo.abstractions import hamiltonians, states
 from qibo.core.symbolic import multikron
 
 
-class Hamiltonian(hamiltonians.Hamiltonian):
+class Hamiltonian(hamiltonians.MatrixHamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
 
     def __new__(cls, nqubits, matrix, numpy=False):
-        if matrix is not None and not isinstance(matrix, K.tensor_types):
+        if not isinstance(matrix, K.tensor_types):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
@@ -22,7 +22,7 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         assert not numpy
         self.K = K
         matrix = self.K.cast(matrix)
-        super().__init__(nqubits, matrix, numpy=numpy)
+        super().__init__(nqubits, matrix)
 
     @classmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
@@ -42,9 +42,7 @@ class Hamiltonian(hamiltonians.Hamiltonian):
                     matrix_list[t] = m
                 matrix += matrices[i] * multikron(matrix_list)
         matrix += constant * K.np.eye(matrix.shape[0])
-
-        ham = cls(nqubits, matrix=matrix, numpy=numpy)
-        return ham
+        return cls(nqubits, matrix, numpy)
 
     def eigenvalues(self):
         if self._eigenvalues is None:
@@ -191,16 +189,16 @@ class Hamiltonian(hamiltonians.Hamiltonian):
 class NumpyHamiltonian(Hamiltonian):
 
     def __new__(cls, nqubits, matrix, numpy=True):
-        return hamiltonians.Hamiltonian.__new__(cls)
+        return hamiltonians.MatrixHamiltonian.__new__(cls)
 
     def __init__(self, nqubits, matrix, numpy=True):
         assert numpy
         self.K = K.qnp
         matrix = self.K.cast(matrix)
-        hamiltonians.Hamiltonian.__init__(self, nqubits, matrix, numpy)
+        hamiltonians.MatrixHamiltonian.__init__(self, nqubits, matrix)
 
 
-class SymbolicHamiltonian:
+class SymbolicHamiltonian(hamiltonians.AbstractHamiltonian):
 
     def __init__(self, form=None, terms=None):
         import sympy
@@ -279,10 +277,6 @@ class SymbolicHamiltonian:
                                              "implemented.".format(type(o)))
         return new_ham
 
-    def __radd__(self, o):
-        # TODO: Remove this once abstract Hamiltonian is updated
-        return self.__add__(o)
-
     def __sub__(self, o):
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
@@ -319,10 +313,6 @@ class SymbolicHamiltonian:
         if self._dense is not None:
             new_ham._dense = o * self._dense
         return new_ham
-
-    def __rmul__(self, o):
-        # TODO: Remove this once abstract Hamiltonian is updated
-        return self.__mul__(o)
 
     def apply_gates(self, state):
         total = 0

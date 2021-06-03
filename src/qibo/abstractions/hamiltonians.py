@@ -4,67 +4,24 @@ from qibo import gates
 from qibo.config import log, raise_error
 
 
-class Hamiltonian(ABC):
-    """Abstract Hamiltonian operator using full matrix representation.
+class AbstractHamiltonian(ABC):
 
-    Args:
-        nqubits (int): number of quantum bits.
-        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
-            computational basis as an array of shape
-            ``(2 ** nqubits, 2 ** nqubits)``.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise the selected backend is used.
-            Default option is ``numpy = False``.
-    """
-
-    def __init__(self, nqubits, matrix=None, numpy=False):
-        if not isinstance(nqubits, int):
-            raise_error(RuntimeError, "nqubits must be an integer but is "
-                                            "{}.".format(type(nqubits)))
-        if nqubits < 1:
-            raise_error(ValueError, "nqubits must be a positive integer but is "
-                                    "{}".format(nqubits))
-        if matrix is not None:
-            shape = tuple(matrix.shape)
-            if shape != 2 * (2 ** nqubits,):
-                raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
-                                        "while the given matrix has shape {}."
-                                        "".format(nqubits, shape))
-
-        self.nqubits = nqubits
-        self._matrix = matrix
-        self._eigenvalues = None
-        self._eigenvectors = None
-        self._exp = {"a": None, "result": None}
-
-    @classmethod
-    @abstractmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False): # pragma: no cover
-        """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
-
-        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
-        example for more details.
-
-        Args:
-            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
-                with symbols.
-            symbol_map (dict): Dictionary that maps each symbol that appears in
-                the Hamiltonian to a pair of (target, matrix).
-            numpy (bool): If ``True`` the Hamiltonian is created using numpy as
-                the calculation backend, otherwise the selected backend is used.
-                Default option is ``numpy = False``.
-
-        Returns:
-            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
-            implements the given symbolic Hamiltonian.
-        """
-        raise_error(NotImplementedError)
+    def __init__(self):
+        self._nqubits = None
 
     @property
-    def matrix(self):
-        if self._matrix is None:
-            self._matrix = self.calculate_dense_matrix()
-        return self._matrix
+    def nqubits(self):
+        return self._nqubits
+
+    @nqubits.setter
+    def nqubits(self, n):
+        if not isinstance(n, int):
+            raise_error(RuntimeError, "nqubits must be an integer but is "
+                                      "{}.".format(type(n)))
+        if n < 1:
+            raise_error(ValueError, "nqubits must be a positive integer but is "
+                                    "{}".format(n))
+        self._nqubits = n
 
     @abstractmethod
     def eigenvalues(self): # pragma: no cover
@@ -142,7 +99,64 @@ class Hamiltonian(ABC):
         raise_error(NotImplementedError)
 
 
-class TrotterHamiltonian(Hamiltonian):
+class MatrixHamiltonian(AbstractHamiltonian):
+    """Abstract Hamiltonian operator using full matrix representation.
+
+    Args:
+        nqubits (int): number of quantum bits.
+        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
+            computational basis as an array of shape
+            ``(2 ** nqubits, 2 ** nqubits)``.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise the selected backend is used.
+            Default option is ``numpy = False``.
+    """
+
+    def __init__(self, nqubits, matrix=None):
+        self.nqubits = nqubits
+        self.matrix = matrix
+        self._eigenvalues = None
+        self._eigenvectors = None
+        self._exp = {"a": None, "result": None}
+
+    @classmethod
+    @abstractmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False): # pragma: no cover
+        """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
+
+        We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+        example for more details.
+
+        Args:
+            symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written
+                with symbols.
+            symbol_map (dict): Dictionary that maps each symbol that appears in
+                the Hamiltonian to a pair of (target, matrix).
+            numpy (bool): If ``True`` the Hamiltonian is created using numpy as
+                the calculation backend, otherwise the selected backend is used.
+                Default option is ``numpy = False``.
+
+        Returns:
+            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
+            implements the given symbolic Hamiltonian.
+        """
+        raise_error(NotImplementedError)
+
+    @property
+    def matrix(self):
+        return self._matrix
+
+    @matrix.setter
+    def matrix(self, m):
+        shape = tuple(m.shape)
+        if shape != 2 * (2 ** self.nqubits,):
+            raise_error(ValueError, "The Hamiltonian is defined for {} qubits "
+                                    "while the given matrix has shape {}."
+                                    "".format(self.nqubits, shape))
+        self._matrix = m
+
+
+class TrotterHamiltonian(AbstractHamiltonian):
     """Hamiltonian operator used for Trotterized time evolution.
 
     The Hamiltonian represented by this class has the form of Eq. (57) in
@@ -194,7 +208,7 @@ class TrotterHamiltonian(Hamiltonian):
                                        "dictionary but is {}."
                                        "".format(type(part)))
             for targets, term in part.items():
-                if not issubclass(type(term), Hamiltonian):
+                if not issubclass(type(term), AbstractHamiltonian):
                     raise_error(TypeError, "Invalid term type {}."
                                            "".format(type(term)))
                 if len(targets) != term.nqubits:
@@ -583,6 +597,3 @@ class TrotterHamiltonian(Hamiltonian):
         """Matrix multiplication with state vectors."""
         # abstract method
         raise_error(NotImplementedError)
-
-
-HAMILTONIAN_TYPES = (Hamiltonian, TrotterHamiltonian)
