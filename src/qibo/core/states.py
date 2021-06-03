@@ -153,8 +153,8 @@ class MatrixState(VectorState):
         return K.reshape(K.cast(state, dtype='DTYPE'), len(qubits) * (2,))
 
     def expectation(self, hamiltonian, normalize=False):
-        from qibo.abstractions.hamiltonians import TrotterHamiltonian
-        if isinstance(hamiltonian, TrotterHamiltonian):
+        from qibo.abstractions.hamiltonians import SymbolicHamiltonian
+        if isinstance(hamiltonian, SymbolicHamiltonian):
             # use dense form of Trotter Hamiltonians because their
             # multiplication to rank-2 tensors is not implemented
             hamiltonian = hamiltonian.dense
