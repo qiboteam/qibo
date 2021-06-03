@@ -8,7 +8,7 @@ from qibo.core.symbolic import multikron
 class Hamiltonian(hamiltonians.Hamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
 
-    def __new__(cls, nqubits, matrix=None, numpy=False):
+    def __new__(cls, nqubits, matrix, numpy=False):
         if matrix is not None and not isinstance(matrix, K.tensor_types):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
@@ -18,11 +18,10 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         else:
             return super().__new__(cls)
 
-    def __init__(self, nqubits, matrix=None, numpy=False):
+    def __init__(self, nqubits, matrix, numpy=False):
         assert not numpy
         self.K = K
-        if matrix is not None:
-            matrix = self.K.cast(matrix)
+        matrix = self.K.cast(matrix)
         super().__init__(nqubits, matrix, numpy=numpy)
 
     @classmethod
@@ -33,26 +32,19 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
         # in the given symbolic form. Here ``nqubits`` is the total number of
         # qubits that the Hamiltonian acts on.
-        ham = cls(nqubits, matrix=None, numpy=numpy)
-        ham.terms = terms
-        return ham
-
-    def calculate_dense_matrix(self):
-        if self.terms is None:
-            raise_error(ValueError, "Cannot construct Hamiltonian matrix "
-                                    "because terms are not available.")
         matrix = 0
-        constant = self.terms.pop(tuple())
-        for targets, matrices in self.terms.items():
-            matrix_list = self.nqubits * [K.np.eye(2)]
+        constant = terms.pop(tuple())
+        for targets, matrices in terms.items():
+            matrix_list = nqubits * [K.np.eye(2)]
             n = len(targets)
             for i in range(0, len(matrices), n + 1):
                 for t, m in zip(targets, matrices[i + 1: i + n + 1]):
                     matrix_list[t] = m
                 matrix += matrices[i] * multikron(matrix_list)
         matrix += constant * K.np.eye(matrix.shape[0])
-        self.terms[tuple()] = constant
-        return matrix
+
+        ham = cls(nqubits, matrix=matrix, numpy=numpy)
+        return ham
 
     def eigenvalues(self):
         if self._eigenvalues is None:
@@ -174,31 +166,6 @@ class Hamiltonian(hamiltonians.Hamiltonian):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
 
-    def term_gates(self):
-        """Creates single-qubit unitary gates corresponding to each Hamiltonian term."""
-        if self._gates is None:
-            from qibo import gates
-            self._gates = []
-            constant = self.terms.pop(tuple())
-            for targets, matrices in self.terms.items():
-                n = len(targets)
-                for i in range(0, len(matrices), n + 1):
-                    self._gates.append([matrices[i]])
-                    for t, m in zip(targets, matrices[i + 1: i + n + 1]):
-                        self._gates[-1].append(gates.Unitary(m, t))
-            self.terms[tuple()] = constant
-        return self._gates
-
-    def gate_matmul(self, state):
-        """Multiplies the Hamiltonian to state term by term using unitary gates."""
-        total = self.terms[tuple()] * state
-        for gatelist in self.term_gates():
-            temp_state = self.K.copy(state)
-            for gate in gatelist[1:]:
-                temp_state = gate(temp_state)
-            total += gatelist[0] * temp_state
-        return total
-
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
@@ -210,10 +177,7 @@ class Hamiltonian(hamiltonians.Hamiltonian):
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                if self._matrix is None: # TODO: Expand `gate_matmul` for density matrices
-                    return self.gate_matmul(o)
-                else:
-                    return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
+                return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
             elif rank == 2: # matrix
                 return self.K.matmul(self.matrix, o)
             else:
@@ -232,8 +196,7 @@ class NumpyHamiltonian(Hamiltonian):
     def __init__(self, nqubits, matrix, numpy=True):
         assert numpy
         self.K = K.qnp
-        if matrix is not None:
-            matrix = self.K.cast(matrix)
+        matrix = self.K.cast(matrix)
         hamiltonians.Hamiltonian.__init__(self, nqubits, matrix, numpy)
 
 
@@ -382,8 +345,7 @@ class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
             raise_error(ValueError, "Cannot multiply Hamiltonian with "
                                     "rank-{} tensor.".format(rank))
         result = self.K.zeros_like(state)
-        for gate in self.terms(): # pylint: disable=E1102
-            # TODO: Fix pylint here
+        for gate in self.terms():
             # Create copy of state so that the original is not modified
             statec = self.K.copy(state)
             result += gate(statec)

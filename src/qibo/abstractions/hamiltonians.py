@@ -37,9 +37,6 @@ class Hamiltonian(ABC):
         self._eigenvectors = None
         self._exp = {"a": None, "result": None}
 
-        self.terms = None
-        self._gates = None
-
     @classmethod
     @abstractmethod
     def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False): # pragma: no cover
@@ -68,10 +65,6 @@ class Hamiltonian(ABC):
         if self._matrix is None:
             self._matrix = self.calculate_dense_matrix()
         return self._matrix
-
-    @abstractmethod
-    def calculate_dense_matrix(self): # pragma: no cover
-        raise_error(NotImplementedError)
 
     @abstractmethod
     def eigenvalues(self): # pragma: no cover
@@ -471,8 +464,7 @@ class TrotterHamiltonian(Hamiltonian):
                 self.expgate_sets[term].add(gate)
                 self._circuit.add(gate)
 
-    def terms(self): # pylint: disable=E0202
-        # TODO: Fix pylint here (`self.terms` of `Hamiltonian` hides this method)
+    def terms(self):
         if self._terms is None:
             self._terms = [gates.Unitary(term.matrix, *targets)
                            for targets, term in self]
