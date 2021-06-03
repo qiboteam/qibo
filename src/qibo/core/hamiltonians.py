@@ -232,13 +232,12 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             self.form = sympy.expand(form)
             termsdict = self.form.as_coefficients_dict()
             self.terms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
-        else: # TODO: Fix this case
-            raise_error(NotImplementedError)
+        else:
             if terms is None:
                 raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
                                         "if no form or terms are given.")
             self.terms = terms
-            self.form = 0
+            self.form = sum(term.full() for term in self.terms)
 
         self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
         self._dense = None

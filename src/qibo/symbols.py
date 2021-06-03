@@ -84,3 +84,9 @@ class SymbolicTerm(list):
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
         self.coefficient = complex(coefficient)
+
+    def full(self):
+        term = self.coefficient
+        for factor in self:
+            term *= factor
+        return term
