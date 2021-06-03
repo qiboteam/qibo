@@ -12,7 +12,7 @@ class Symbol(sympy.Symbol):
         self.target_qubit = q
         self._gate = None
         if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
-                isinstance(K.qnp.tensor_types)):
+                isinstance(matrix, K.qnp.tensor_types)):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
         self.matrix = matrix

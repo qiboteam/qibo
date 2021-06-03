@@ -200,6 +200,54 @@ class NumpyHamiltonian(Hamiltonian):
         hamiltonians.Hamiltonian.__init__(self, nqubits, matrix, numpy)
 
 
+class SymbolicHamiltonian:
+
+    def __init__(self, form=None, terms=None):
+        import sympy
+        from qibo.symbols import SymbolicTerm
+        if form is not None:
+            if not issubclass(form.__class__, sympy.Expr):
+                raise_error(TypeError, "Symbolic Hamiltonian should be a "
+                                       "`sympy` expression but is {}."
+                                       "".format(type(form)))
+            if terms is not None:
+                raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
+                                        "when both form and terms are given.")
+            self.form = sympy.expand(form)
+            termsdict = self.form.as_coefficients_dict()
+            self.terms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
+        else:
+            if terms is None:
+                raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
+                                        "if no form or terms are given.")
+            self.terms = terms
+            self.form = 0 # TODO: Fix this
+
+        self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
+        self._dense = None
+
+    @property
+    def dense(self):
+        if self._dense is None:
+            matrix = self.calculate_dense_matrix()
+            self._dense = Hamiltonian(self.nqubits, matrix)
+        return self._dense
+
+    @property
+    def matrix(self):
+        return self.dense.matrix
+
+    def calculate_dense_matrix(self):
+        matrix = 0
+        for term in self.terms:
+            kronlist = self.nqubits * [K.qnp.eye(2)]
+            for factor in term:
+                q = factor.target_qubit
+                kronlist[q] = kronlist[q] @ factor.matrix
+            matrix += term.coefficient * multikron(kronlist)
+        return matrix
+
+
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`."""
 

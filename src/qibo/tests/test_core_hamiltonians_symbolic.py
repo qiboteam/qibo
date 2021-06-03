@@ -7,44 +7,58 @@ from qibo.tests.utils import random_hermitian
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("trotter", [False, True])
-def test_tfim_hamiltonian_from_symbols(nqubits, trotter):
+@pytest.mark.parametrize("hamtype", ["normal", "symbolic", "trotter"])
+def test_tfim_hamiltonian_from_symbols(nqubits, hamtype):
     """Check creating TFIM Hamiltonian using sympy."""
-    import sympy
-    h = 0.5
-    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
-    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
-
-    symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
-    symham += z_symbols[0] * z_symbols[-1]
-    symham += h * sum(x_symbols)
-    symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
-    symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
-
-    target_matrix = hamiltonians.TFIM(nqubits, h=h).matrix
-    if trotter:
-        trotter_ham = hamiltonians.TrotterHamiltonian.from_symbolic(-symham, symmap)
-        final_matrix = trotter_ham.dense.matrix
+    if hamtype == "symbolic":
+        from qibo.symbols import X, Z
+        h = 0.5
+        symham = sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
+        symham += Z(0) * Z(nqubits - 1)
+        symham += h * sum(X(i) for i in range(nqubits))
+        ham = hamiltonians.SymbolicHamiltonian(-symham)
     else:
-        full_ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap)
-        final_matrix = full_ham.matrix
+        h = 0.5
+        z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(nqubits))))
+        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+
+        symham = sum(z_symbols[i] * z_symbols[i + 1] for i in range(nqubits - 1))
+        symham += z_symbols[0] * z_symbols[-1]
+        symham += h * sum(x_symbols)
+        symmap = {z: (i, matrices.Z) for i, z in enumerate(z_symbols)}
+        symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
+        if hamtype == "trotter":
+            ham = hamiltonians.TrotterHamiltonian.from_symbolic(-symham, symmap)
+            ham = ham.dense
+        else:
+            ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap)
+
+    final_matrix = ham.matrix
+    target_matrix = hamiltonians.TFIM(nqubits, h=h).matrix
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("trotter", [False, True])
-def test_from_symbolic_with_power(trotter):
+@pytest.mark.parametrize("hamtype", ["normal", "symbolic", "trotter"])
+def test_from_symbolic_with_power(hamtype):
     """Check ``from_symbolic`` when the expression contains powers."""
-    z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
-    symham =  z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + + 1
-    matrix = random_hermitian(1)
-    symmap = {x: (i, matrix) for i, x in enumerate(z)}
-    if trotter:
-        ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
-        final_matrix = ham.dense.matrix
+    if hamtype == "symbolic":
+        from qibo.symbols import Symbol
+        matrix = random_hermitian(1)
+        symham =  (Symbol(0, matrix) ** 2 - Symbol(1, matrix) ** 2 +
+                   3 * Symbol(1, matrix) - 2 * Symbol(0, matrix) * Symbol(2, matrix) + 1)
+        ham = hamiltonians.SymbolicHamiltonian(symham)
     else:
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
-        final_matrix = ham.matrix
+        z = sympy.symbols(" ".join((f"Z{i}" for i in range(3))))
+        symham =  z[0] ** 2 - z[1] ** 2 + 3 * z[1] - 2 * z[0] * z[2] + 1
+        matrix = random_hermitian(1)
+        symmap = {x: (i, matrix) for i, x in enumerate(z)}
+        if hamtype == "trotter":
+            ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+            ham = ham.dense
+        else:
+            ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
 
+    final_matrix = ham.matrix
     matrix2 = matrix.dot(matrix)
     eye = np.eye(2, dtype=matrix.dtype)
     target_matrix = np.kron(np.kron(matrix2, eye), eye)
@@ -55,22 +69,26 @@ def test_from_symbolic_with_power(trotter):
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("trotter", [False, True])
-def test_from_symbolic_with_complex_numbers(trotter):
+@pytest.mark.parametrize("hamtype", ["normal", "symbolic", "trotter"])
+def test_from_symbolic_with_complex_numbers(hamtype):
     """Check ``from_symbolic`` when the expression contains imaginary unit."""
-    import sympy
-    x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
-    y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
-    symham = (1 + 2j) * x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
-    symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
-    symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
-    if trotter:
-        ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
-        final_matrix = ham.dense.matrix
+    if hamtype == "symbolic":
+        from qibo.symbols import X, Y
+        symham = (1 + 2j) * X(0) * X(1) + 2 * Y(0) * Y(1) - 3j * X(0) * Y(1) + 1j * Y(0) * X(1)
+        ham = hamiltonians.SymbolicHamiltonian(symham)
     else:
-        ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
-        final_matrix = ham.matrix
+        x = sympy.symbols(" ".join((f"X{i}" for i in range(2))))
+        y = sympy.symbols(" ".join((f"Y{i}" for i in range(2))))
+        symham = (1 + 2j) * x[0] * x[1] + 2 * y[0] * y[1] - 3j * x[0] * y[1] + 1j * y[0] * x[1]
+        symmap = {s: (i, matrices.X) for i, s in enumerate(x)}
+        symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
+        if hamtype == "trotter":
+            ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+            ham = ham.dense
+        else:
+            ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
 
+    final_matrix = ham.matrix
     target_matrix = (1 + 2j) * np.kron(matrices.X, matrices.X)
     target_matrix += 2 * np.kron(matrices.Y, matrices.Y)
     target_matrix -= 3j * np.kron(matrices.X, matrices.Y)
@@ -87,7 +105,12 @@ def test_from_symbolic_application_hamiltonian():
     # Check that Trotter dense matrix agrees will full Hamiltonian matrix
     fham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
     tham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+    from qibo.symbols import Z
+    symham = (Z(0) * Z(1) - 0.5 * Z(0) * Z(2) + 2 * Z(1) * Z(2) + 0.35 * Z(1)
+              + 0.25 * Z(2) * Z(3) + 0.5 * Z(2) + Z(3) - Z(0))
+    sham = hamiltonians.SymbolicHamiltonian(symham)
     np.testing.assert_allclose(tham.dense.matrix, fham.matrix)
+    np.testing.assert_allclose(sham.matrix, fham.matrix)
     # Check that no one-qubit terms exist in the Trotter Hamiltonian
     # (this means that merging was successful)
     first_targets = set()
@@ -106,40 +129,57 @@ def test_from_symbolic_application_hamiltonian():
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
-@pytest.mark.parametrize("trotter", [False, True])
-def test_x_hamiltonian_from_symbols(nqubits, trotter):
+@pytest.mark.parametrize("hamtype", ["normal", "symbolic", "trotter"])
+def test_x_hamiltonian_from_symbols(nqubits, hamtype):
     """Check creating sum(X) Hamiltonian using sympy."""
-    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
-    symham =  -sum(x_symbols)
-    symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-
-    target_matrix = hamiltonians.X(nqubits).matrix
-    if trotter:
-        trotter_ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
-        final_matrix = trotter_ham.dense.matrix
+    if hamtype == "symbolic":
+        from qibo.symbols import X
+        symham = -sum(X(i) for i in range(nqubits))
+        ham = hamiltonians.SymbolicHamiltonian(symham)
     else:
-        full_ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
-        final_matrix = full_ham.matrix
+        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(nqubits))))
+        symham =  -sum(x_symbols)
+        symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
+        if hamtype == "trotter":
+            ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+            ham = ham.dense
+        else:
+            ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+    final_matrix = ham.matrix
+    target_matrix = hamiltonians.X(nqubits).matrix
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 
-@pytest.mark.parametrize("trotter", [False, True])
-def test_three_qubit_term_hamiltonian_from_symbols(trotter):
+@pytest.mark.parametrize("hamtype", ["normal", "symbolic", "trotter"])
+def test_three_qubit_term_hamiltonian_from_symbols(hamtype):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
-    x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
-    y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
-    z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(4))))
-    symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
-    symmap.update({x: (i, matrices.Y) for i, x in enumerate(y_symbols)})
-    symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
+    if hamtype == "symbolic":
+        from qibo.symbols import X, Y, Z
+        symham = X(0) * Y(1) * Z(2) + 0.5 * Y(0) * Z(1) * X(3) + Z(0) * X(2)
+        symham += Y(2) + 1.5 * Z(1) - 2 - 3 * X(1) * Y(3)
+        ham = hamiltonians.SymbolicHamiltonian(symham)
+    else:
+        x_symbols = sympy.symbols(" ".join((f"X{i}" for i in range(4))))
+        y_symbols = sympy.symbols(" ".join((f"Y{i}" for i in range(4))))
+        z_symbols = sympy.symbols(" ".join((f"Z{i}" for i in range(4))))
+        symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
+        symmap.update({x: (i, matrices.Y) for i, x in enumerate(y_symbols)})
+        symmap.update({x: (i, matrices.Z) for i, x in enumerate(z_symbols)})
 
-    symham = x_symbols[0] * y_symbols[1] * z_symbols[2]
-    symham += 0.5 * y_symbols[0] * z_symbols[1] * x_symbols[3]
-    symham += z_symbols[0] * x_symbols[2]
-    symham += -3 * x_symbols[1] * y_symbols[3]
-    symham += y_symbols[2]
-    symham += 1.5 * z_symbols[1]
-    symham -= 2
+        symham = x_symbols[0] * y_symbols[1] * z_symbols[2]
+        symham += 0.5 * y_symbols[0] * z_symbols[1] * x_symbols[3]
+        symham += z_symbols[0] * x_symbols[2]
+        symham += -3 * x_symbols[1] * y_symbols[3]
+        symham += y_symbols[2]
+        symham += 1.5 * z_symbols[1]
+        symham -= 2
+        if hamtype == "trotter":
+            ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
+            ham = ham.dense
+        else:
+            ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+
+    final_matrix = ham.matrix
 
     target_matrix = np.kron(np.kron(matrices.X, matrices.Y),
                             np.kron(matrices.Z, matrices.I))
@@ -154,12 +194,6 @@ def test_three_qubit_term_hamiltonian_from_symbols(trotter):
     target_matrix += 1.5 * np.kron(np.kron(matrices.I, matrices.Z),
                                    np.kron(matrices.I, matrices.I))
     target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
-    if trotter:
-        trotter_ham = hamiltonians.TrotterHamiltonian.from_symbolic(symham, symmap)
-        final_matrix = trotter_ham.dense.matrix
-    else:
-        full_ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
-        final_matrix = full_ham.matrix
     np.testing.assert_allclose(final_matrix, target_matrix)
 
 

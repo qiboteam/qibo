@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from qibo import matrices, K
 from qibo.config import raise_error
-from qibo.core.hamiltonians import Hamiltonian, TrotterHamiltonian
+from qibo.core.hamiltonians import Hamiltonian, TrotterHamiltonian, SymbolicHamiltonian
 from qibo.core.symbolic import multikron
 
 
