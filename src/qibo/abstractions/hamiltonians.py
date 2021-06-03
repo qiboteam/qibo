@@ -111,6 +111,7 @@ class MatrixHamiltonian(AbstractHamiltonian):
     """
 
     def __init__(self, nqubits, matrix=None):
+        super().__init__()
         self.nqubits = nqubits
         self.matrix = matrix
         self._eigenvalues = None
@@ -134,6 +135,7 @@ class MatrixHamiltonian(AbstractHamiltonian):
 class SymbolicHamiltonian(AbstractHamiltonian):
 
     def __init__(self):
+        super().__init__()
         self._dense = None
 
     @property

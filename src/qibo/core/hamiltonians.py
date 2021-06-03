@@ -219,6 +219,7 @@ class NumpyHamiltonian(Hamiltonian):
 class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def __init__(self, form=None, terms=None):
+        super().__init__()
         import sympy
         from qibo.symbols import SymbolicTerm
         if form is not None:
