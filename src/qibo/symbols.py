@@ -132,14 +132,7 @@ class SymbolicTerm(list):
                     coefficient *= factor.matrix
             elif factor == sympy.I:
                 coefficient *= 1j
-            else:
+            else: # pragma: no cover
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
         self.coefficient = complex(coefficient)
-
-    def full(self):
-        """Recreates the full ``sympy.Expr`` corresponding to the term."""
-        term = self.coefficient
-        for factor in self:
-            term *= factor
-        return term

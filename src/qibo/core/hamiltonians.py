@@ -244,11 +244,11 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                           "number of qubits can be added.")
             new_ham = self.__class__(self.form + o.form)
             if self._dense is not None and o._dense is not None:
-                new_ham._dense = self.dense + o.dense
+                new_ham.dense = self.dense + o.dense
         elif isinstance(o, K.numeric_types):
             new_ham = self.__class__(self.form + o)
             if self._dense is not None:
-                new_ham._dense = self.dense + o
+                new_ham.dense = self.dense + o
         else:
             raise_error(NotImplementedError, "SymbolicHamiltonian addition to {} not "
                                              "implemented.".format(type(o)))
@@ -261,11 +261,11 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                           "number of qubits can be subtracted.")
             new_ham = self.__class__(self.form - o.form)
             if self._dense is not None and o._dense is not None:
-                new_ham._dense = self.dense - o.dense
+                new_ham.dense = self.dense - o.dense
         elif isinstance(o, K.numeric_types):
             new_ham = self.__class__(self.form - o)
             if self._dense is not None:
-                new_ham._dense = self.dense - o
+                new_ham.dense = self.dense - o
         else:
             raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
                                              "not implemented.".format(type(o)))
@@ -275,7 +275,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         if isinstance(o, K.numeric_types):
             new_ham = self.__class__(o - self.form)
             if self._dense is not None:
-                new_ham._dense = o - self.dense
+                new_ham.dense = o - self.dense
         else:
             raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
                                              "not implemented.".format(type(o)))
@@ -288,7 +288,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         new_form = o * self.form
         new_ham = self.__class__(new_form)
         if self._dense is not None:
-            new_ham._dense = o * self._dense
+            new_ham.dense = o * self._dense
         return new_ham
 
     def apply_gates(self, state):
@@ -306,7 +306,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             new_form = self.form * o.form
             new_ham = self.__class__(new_form)
             if self._dense is not None and o._dense is not None:
-                new_ham._dense = self.dense @ o.dense
+                new_ham.dense = self.dense @ o.dense
             return new_ham
 
         if isinstance(o, states.AbstractState):
@@ -319,8 +319,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 raise_error(NotImplementedError, "Cannot multiply `SymbolicHamiltonian` "
                                                  "with density matrix.")
             else:
-                raise_error(ValueError, "Cannot multiply Hamiltonian with "
-                                        "rank-{} tensor.".format(rank))
+                raise_error(NotImplementedError, "Cannot multiply Hamiltonian with "
+                                                 "rank-{} tensor.".format(rank))
 
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))
