@@ -3,6 +3,7 @@ from qibo.config import log, raise_error
 
 
 class AbstractHamiltonian(ABC):
+    """Qibo abstraction for Hamiltonian objects."""
 
     def __init__(self):
         self._nqubits = None
@@ -98,13 +99,12 @@ class AbstractHamiltonian(ABC):
 
 
 class MatrixHamiltonian(AbstractHamiltonian):
-    """Abstract Hamiltonian operator using full matrix representation.
+    """Abstract Hamiltonian based on full matrix representation.
 
     Args:
         nqubits (int): number of quantum bits.
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
-            computational basis as an array of shape
-            ``(2 ** nqubits, 2 ** nqubits)``.
+            computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
         numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
             calculation backend, otherwise the selected backend is used.
             Default option is ``numpy = False``.
@@ -120,6 +120,7 @@ class MatrixHamiltonian(AbstractHamiltonian):
 
     @property
     def matrix(self):
+        """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
         return self._matrix
 
     @matrix.setter
@@ -133,6 +134,14 @@ class MatrixHamiltonian(AbstractHamiltonian):
 
 
 class SymbolicHamiltonian(AbstractHamiltonian):
+    """Abstract Hamiltonian based on symbolic representation.
+
+    Unlike :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian` this
+    object does not create the full ``(2 ** nqubits, 2 ** nqubits)``
+    Hamiltonian matrix leading to more efficient calculations.
+    Note that the matrix is required and will be created automatically if
+    specific methods, such as ``.eigenvectors()`` or ``.exp()`` are called.
+    """
 
     def __init__(self):
         super().__init__()
@@ -140,6 +149,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def dense(self):
+        """Creates the equivalent :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`."""
         if self._dense is None:
             log.warn("Calculating the dense form of a symbolic Hamiltonian. "
                      "This operation is memory inefficient.")
@@ -160,6 +170,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     @property
     def matrix(self):
+        """Returns the full ``(2 ** nqubits, 2 ** nqubits)`` matrix representation."""
         return self.dense.matrix
 
     def eigenvalues(self):

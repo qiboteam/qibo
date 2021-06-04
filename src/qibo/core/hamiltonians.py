@@ -6,8 +6,16 @@ from qibo.core.symbolic import multikron
 
 
 class Hamiltonian(hamiltonians.MatrixHamiltonian):
-    """Backend implementation of :class:`qibo.abstractions.hamiltonians.Hamiltonian`."""
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`.
 
+    Args:
+        nqubits (int): number of quantum bits.
+        matrix (np.ndarray): Matrix representation of the Hamiltonian in the
+            computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
+        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
+            calculation backend, otherwise the selected backend is used.
+            Default option is ``numpy = False``.
+    """
     def __new__(cls, nqubits, matrix, numpy=False):
         if not isinstance(matrix, K.tensor_types):
             raise_error(TypeError, "Matrix of invalid type {} given during "
@@ -73,12 +81,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self._eigenvectors
 
     def exp(self, a):
-        """Computes a tensor corresponding to exp(-1j * a * H).
-
-        Args:
-            a (complex): Complex number to multiply Hamiltonian before
-                exponentiation.
-        """
         if self._exp.get("a") != a:
             self._exp["a"] = a
             if self._eigenvectors is None:
@@ -118,7 +120,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.K.eye(n, dtype=self.matrix.dtype)
 
     def __add__(self, o):
-        """Add operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
@@ -132,7 +133,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __sub__(self, o):
-        """Subtraction operator."""
         if isinstance(o, self.__class__):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
@@ -146,7 +146,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __rsub__(self, o):
-        """Right subtraction operator."""
         if isinstance(o, self.__class__): # pragma: no cover
             # impractical case because it will be handled by `__sub__`
             if self.nqubits != o.nqubits:
@@ -161,7 +160,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __mul__(self, o):
-        """Multiplication to scalar operator."""
         if isinstance(o, self.K.Tensor):
             o = self.K.cast(o, dtype=self.matrix.dtype)
         if isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types):
@@ -183,7 +181,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
                                              "not implemented.".format(type(o)))
 
     def __matmul__(self, o):
-        """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
             new_matrix = self.K.matmul(self.matrix, o.matrix)
             return self.__class__(self.nqubits, new_matrix)
@@ -217,6 +214,13 @@ class NumpyHamiltonian(Hamiltonian):
 
 
 class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
+    """Backend implementation of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
+
+    Args:
+        form (sympy.Expr): Hamiltonian form as a ``sympy.Expr``. The Hamiltonian
+            should be created using Qibo symbols.
+            See ... # TODO: Add example here for more details.
+    """
 
     def __init__(self, form=None, terms=None):
         super().__init__()

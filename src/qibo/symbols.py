@@ -4,6 +4,16 @@ from qibo.config import raise_error
 
 
 class Symbol(sympy.Symbol):
+    """Qibo specialization for ``sympy`` symbols.
+
+    These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+
+    Args:
+        q (int): Target qubit id.
+        matrix (np.ndarray): 2x2 matrix represented by this symbol.
+        name (str): Name of the symbol which defines how it is represented in
+            symbolic expressions.
+    """
 
     def __new__(cls, q, matrix=None, name="Symbol"):
         name = "{}{}".format(name, q)
@@ -20,6 +30,7 @@ class Symbol(sympy.Symbol):
 
     @property
     def gate(self):
+        """Qibo gate that implements the action of the symbol on states."""
         if self._gate is None:
             self._gate = self.calculate_gate()
         return self._gate
@@ -44,18 +55,51 @@ class PauliSymbol(Symbol):
 
 
 class X(PauliSymbol):
+    """Qibo symbol for the Pauli-X operator.
+
+    Args:
+        q (int): Target qubit id.
+    """
     pass
 
 
 class Y(PauliSymbol):
+    """Qibo symbol for the Pauli-X operator.
+
+    Args:
+        q (int): Target qubit id.
+    """
     pass
 
 
 class Z(PauliSymbol):
+    """Qibo symbol for the Pauli-X operator.
+
+    Args:
+        q (int): Target qubit id.
+    """
     pass
 
 
 class SymbolicTerm(list):
+    """Helper method for parsing symbolic Hamiltonian terms.
+
+    Each :class:`qibo.symbols.SymbolicTerm` corresponds to a term in the
+    Hamiltonian.
+
+    Example:
+        ::
+
+            from qibo.symbols import X, Y, SymbolicTerm
+            sham = X(0) * X(1) + 2 * Y(0) * Y(1)
+            termsdict = sham.as_coefficients_dict()
+            sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
+
+    Args:
+        coefficient (complex): Complex number coefficient of the underlying
+            term in the Hamiltonian.
+        factors (sympy.Expr): Sympy expression for the underlying term.
+    """
 
     def __init__(self, coefficient, factors):
         super().__init__()
@@ -86,6 +130,7 @@ class SymbolicTerm(list):
         self.coefficient = complex(coefficient)
 
     def full(self):
+        """Recreates the full ``sympy.Expr`` corresponding to the term."""
         term = self.coefficient
         for factor in self:
             term *= factor
