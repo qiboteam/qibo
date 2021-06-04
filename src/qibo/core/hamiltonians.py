@@ -54,6 +54,9 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
             expression.
         """
         # TODO: Remove ``numpy`` feature from Hamiltonians?
+        log.warn("`Hamiltonian.from_symbolic` and the use of symbol maps is "
+                 "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
+                 "to construct Hamiltonians using symbols.")
         return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
     def eigenvalues(self):
