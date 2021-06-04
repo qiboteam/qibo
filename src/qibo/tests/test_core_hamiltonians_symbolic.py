@@ -20,9 +20,6 @@ def test_symbolic_hamiltonian_init():
     # Wrong type of symbolic expression
     with pytest.raises(TypeError):
         ham = hamiltonians.SymbolicHamiltonian("test")
-    # Give both form and terms
-    with pytest.raises(ValueError):
-        ham = hamiltonians.SymbolicHamiltonian(sympy.Symbol("x"), "test")
     # TODO: Complete this when `SymbolicHamiltonian.__init__` is completed
 
 

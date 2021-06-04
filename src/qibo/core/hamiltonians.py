@@ -222,30 +222,27 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             See ... # TODO: Add example here for more details.
     """
 
-    def __init__(self, form=None, terms=None):
+    def __init__(self, form, terms=None):
         super().__init__()
         import sympy
         from qibo.symbols import SymbolicTerm
-        if form is not None:
-            if not issubclass(form.__class__, sympy.Expr):
-                raise_error(TypeError, "Symbolic Hamiltonian should be a "
-                                       "`sympy` expression but is {}."
-                                       "".format(type(form)))
-            if terms is not None:
-                raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
-                                        "when both form and terms are given.")
-            self.form = sympy.expand(form)
+        if not issubclass(form.__class__, sympy.Expr):
+            raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
+                                   "expression but is {}.".format(type(form)))
+        self.form = sympy.expand(form)
+        if terms is None:
             termsdict = self.form.as_coefficients_dict()
             self.terms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
         else:
-            if terms is None:
-                raise_error(ValueError, "Cannot construct `SymbolicHamiltonian` "
-                                        "if no form or terms are given.")
             self.terms = terms
-            self.form = sum(term.full() for term in self.terms)
 
         self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
         self._dense = None
+
+    @classmethod
+    def from_terms(cls, terms):
+        form = sum(term.full() for term in terms)
+        return cls(form, terms)
 
     def calculate_dense(self):
         matrix = 0
