@@ -17,7 +17,7 @@ class Symbol(sympy.Symbol):
 
     def __new__(cls, q, matrix=None, name="Symbol"):
         name = "{}{}".format(name, q)
-        return super().__new__(cls=cls, name=name)
+        return super().__new__(cls=cls, name=name, commutative=False)
 
     def __init__(self, q, matrix=None, name="Symbol"):
         self.target_qubit = q

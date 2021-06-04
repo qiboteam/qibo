@@ -4,7 +4,7 @@ import numpy as np
 import sympy
 import qibo
 from qibo import hamiltonians, K
-from qibo.tests.utils import random_state, random_complex, random_hermitian
+from qibo.tests.utils import random_complex
 
 
 def symbolic_tfim(nqubits, h=1.0):
@@ -87,17 +87,26 @@ def test_symbolic_hamiltonian_scalar_sub(calcdense, nqubits=3):
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
-def test_symbolic_hamiltonian_operator_add_and_sub(nqubits=3):
+@pytest.mark.parametrize("calcdense", [False, True])
+def test_symbolic_hamiltonian_operator_add_and_sub(calcdense, nqubits=3):
     """Test addition and subtraction between Trotter Hamiltonians."""
-    local_ham = (hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) +
-                 hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5)))
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    if calcdense:
+        _ = local_ham1.dense
+        _ = local_ham2.dense
+    local_ham = local_ham1 + local_ham2
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) +
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
 
-    local_ham = (hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) -
-                 hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5)))
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    if calcdense:
+        _ = local_ham1.dense
+        _ = local_ham2.dense
+    local_ham = local_ham1 - local_ham2
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) -
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense
@@ -107,7 +116,6 @@ def test_symbolic_hamiltonian_operator_add_and_sub(nqubits=3):
 @pytest.mark.parametrize("calcdense", [False, True])
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
 def test_symbolic_hamiltonian_matmul(calcdense, nqubits, normalize):
-    """Test Trotter Hamiltonian expectation value."""
     local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     if calcdense:
         _ = local_ham.dense
@@ -128,6 +136,31 @@ def test_symbolic_hamiltonian_matmul(calcdense, nqubits, normalize):
     local_matmul = local_ham @ state
     target_matmul = dense_ham @ state
     np.testing.assert_allclose(local_matmul, target_matmul)
+
+
+def test_symbolic_hamiltonian_abstract_symbol_ev():
+    from qibo.symbols import X, Symbol
+    matrix = np.random.random((2, 2))
+    form = X(0) * Symbol(1, matrix) + Symbol(0, matrix) * X(1)
+    local_ham = hamiltonians.SymbolicHamiltonian(form)
+    state = K.cast(random_complex((4,)))
+    local_ev = local_ham.expectation(state)
+    target_ev = local_ham.dense.expectation(state)
+    np.testing.assert_allclose(local_ev, target_ev)
+
+
+@pytest.mark.parametrize("calcdense", [False, True])
+def test_symbolic_hamiltonian_hamiltonianmatmul(calcdense, nqubits=5):
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    dense_ham1 = hamiltonians.TFIM(nqubits, h=1.0)
+    dense_ham2 = hamiltonians.TFIM(nqubits, h=0.5)
+    if calcdense:
+        _ = local_ham1.dense
+        _ = local_ham2.dense
+    local_matmul = local_ham1 @ local_ham2
+    target_matmul = dense_ham1 @ dense_ham2
+    np.testing.assert_allclose(local_matmul.matrix, target_matmul.matrix)
 
 
 def test_trotter_hamiltonian_operation_errors():

@@ -315,7 +315,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
                 return self.apply_gates(o)
-            elif rank == 2: # matrix # TODO: Fix this
+            elif rank == 2: # pragma: no cover
+                # matrix # TODO: Fix this
                 raise_error(NotImplementedError, "Cannot multiply `SymbolicHamiltonian` "
                                                  "with density matrix.")
             else:
