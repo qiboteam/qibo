@@ -99,11 +99,15 @@ class SymbolicTerm(list):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (sympy.Expr): Sympy expression for the underlying term.
+        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
+            expression to tuples of (target qubit id, matrix).
+            This is required only if the expression is not created using Qibo
+            symbols and to keep compatibility with older versions where Qibo
+            symbols were not available.
     """
 
-    def __init__(self, coefficient, factors):
+    def __init__(self, coefficient, factors, symbol_map=None):
         super().__init__()
-
         ordered_factors = []
         if factors != 1:
             ordered_factors = factors.as_ordered_factors()
@@ -116,6 +120,10 @@ class SymbolicTerm(list):
                 pow = int(pow)
             else:
                 pow = 1
+
+            if symbol_map is not None and factor in symbol_map:
+                q, matrix = symbol_map.get(factor)
+                factor = Symbol(q, matrix, name=factor.name)
 
             if isinstance(factor, sympy.Symbol):
                 if isinstance(factor.matrix, K.qnp.tensor_types):

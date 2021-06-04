@@ -49,26 +49,12 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
                 Default option is ``numpy = False``.
 
         Returns:
-            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object that
-            implements the given symbolic Hamiltonian.
+            A :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian` object
+            that implements the Hamiltonian represented by the given symbolic
+            expression.
         """
-        from qibo.core.symbolic import parse_symbolic
-        terms = parse_symbolic(symbolic_hamiltonian, symbol_map)
-        nqubits = max(set(q for targets in terms.keys() for q in targets)) + 1
-        # Add matrices of shape ``(2 ** nqubits, 2 ** nqubits)`` for each term
-        # in the given symbolic form. Here ``nqubits`` is the total number of
-        # qubits that the Hamiltonian acts on.
-        matrix = 0
-        constant = terms.pop(tuple())
-        for targets, matrices in terms.items():
-            matrix_list = nqubits * [K.np.eye(2)]
-            n = len(targets)
-            for i in range(0, len(matrices), n + 1):
-                for t, m in zip(targets, matrices[i + 1: i + n + 1]):
-                    matrix_list[t] = m
-                matrix += matrices[i] * multikron(matrix_list)
-        matrix += constant * K.np.eye(matrix.shape[0])
-        return cls(nqubits, matrix, numpy)
+        # TODO: Remove ``numpy`` feature from Hamiltonians?
+        return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
     def eigenvalues(self):
         if self._eigenvalues is None:
@@ -222,7 +208,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             See ... # TODO: Add example here for more details.
     """
 
-    def __init__(self, form, terms=None):
+    def __init__(self, form, symbol_map=None):
         super().__init__()
         import sympy
         from qibo.symbols import SymbolicTerm
@@ -230,19 +216,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                    "expression but is {}.".format(type(form)))
         self.form = sympy.expand(form)
-        if terms is None:
-            termsdict = self.form.as_coefficients_dict()
-            self.terms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
-        else:
-            self.terms = terms
-
+        termsdict = self.form.as_coefficients_dict()
+        self.terms = [SymbolicTerm(c, f, symbol_map) for f, c in termsdict.items()]
         self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
         self._dense = None
-
-    @classmethod
-    def from_terms(cls, terms):
-        form = sum(term.full() for term in terms)
-        return cls(form, terms)
 
     def calculate_dense(self):
         matrix = 0
