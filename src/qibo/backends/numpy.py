@@ -325,8 +325,20 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
         return self.reshape(state, gate.cache.flat_shape)
 
+    def density_matrix_half_call(self, gate, state):
+        if gate.is_controlled_by: # pragma: no cover
+            raise_error(NotImplementedError, "Gate density matrix half call is "
+                                             "not implemented for ``controlled_by``"
+                                             "gates.")
+        state = self.reshape(state, gate.cache.tensor_shape)
+        state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
+        return self.reshape(state, gate.cache.flat_shape)
+
     def density_matrix_matrix_call(self, gate, state):
         return self.density_matrix_call(gate, state)
+
+    def density_matrix_half_matrix_call(self, gate, state):
+        return self.density_matrix_half_call(gate, state)
 
     def _append_zeros(self, state, qubits, results):
         """Helper method for `state_vector_collapse` and `density_matrix_collapse`."""

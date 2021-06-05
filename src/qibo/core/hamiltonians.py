@@ -303,6 +303,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             temp_state = K.copy(state)
             for factor in term:
                 if density_matrix:
+                    factor.gate.density_matrix = True
                     temp_state = factor.gate.density_matrix_half_call(temp_state)
                 else:
                     temp_state = factor.gate(temp_state)

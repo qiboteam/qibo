@@ -481,6 +481,16 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
+    def density_matrix_half_call(self, gate, state): # pragma: no cover
+        """Half gate application to density matrix."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def density_matrix_half_matrix_call(self, gate, state): # pragma: no cover
+        """Half gate application to density matrix using the gate's unitary matrix representation."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
     def state_vector_collapse(self, gate, state, result): # pragma: no cover
         """Collapses state vector to a given result."""
         raise_error(NotImplementedError)
