@@ -54,12 +54,12 @@ class StateEvolution:
         self.dt = dt
 
         if (accelerators is not None and
-            (not isinstance(ham, hamiltonians.SymbolicHamiltonian)
+            (not isinstance(ham, hamiltonians.TrotterHamiltonian)
              or solver != "exp")):
             raise_error(NotImplementedError, "Distributed evolution is only "
                                              "implemented using the Trotter "
                                              "exponential solver.")
-        if isinstance(ham, hamiltonians.SymbolicHamiltonian):
+        if isinstance(ham, hamiltonians.TrotterHamiltonian):
             ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
@@ -174,7 +174,7 @@ class AdiabaticEvolution(StateEvolution):
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
-        if isinstance(h0, hamiltonians.SymbolicHamiltonian):
+        if isinstance(h0, hamiltonians.TrotterHamiltonian):
             if not h1.is_compatible(h0):
                 h0 = h1.make_compatible(h0)
         super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,

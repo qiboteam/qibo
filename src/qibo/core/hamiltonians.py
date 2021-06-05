@@ -327,7 +327,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                          "implemented.".format(type(o)))
 
 
-class TrotterHamiltonian(hamiltonians.SymbolicHamiltonian):
+class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
     """Hamiltonian operator used for Trotterized time evolution.
 
     The Hamiltonian represented by this class has the form of Eq. (57) in
