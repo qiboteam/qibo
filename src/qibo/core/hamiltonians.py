@@ -297,12 +297,15 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             new_ham.dense = o * self._dense
         return new_ham
 
-    def apply_gates(self, state):
+    def apply_gates(self, state, density_matrix=False):
         total = 0
         for term in self.terms:
             temp_state = K.copy(state)
             for factor in term:
-                temp_state = factor.gate(temp_state)
+                if density_matrix:
+                    temp_state = factor.gate.density_matrix_half_call(temp_state)
+                else:
+                    temp_state = factor.gate(temp_state)
             total += term.coefficient * temp_state
         return total
 
@@ -319,12 +322,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             o = o.tensor
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
-            if rank == 1: # vector
+            if rank == 1: # state vector
                 return self.apply_gates(o)
-            elif rank == 2: # pragma: no cover
-                # matrix # TODO: Fix this
-                raise_error(NotImplementedError, "Cannot multiply `SymbolicHamiltonian` "
-                                                 "with density matrix.")
+            elif rank == 2: # density matrix
+                return self.apply_gates(o, density_matrix=True)
             else:
                 raise_error(NotImplementedError, "Cannot multiply Hamiltonian with "
                                                  "rank-{} tensor.".format(rank))

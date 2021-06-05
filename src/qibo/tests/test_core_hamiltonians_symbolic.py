@@ -115,7 +115,7 @@ def test_symbolic_hamiltonian_operator_add_and_sub(calcdense, nqubits=3):
 
 @pytest.mark.parametrize("calcdense", [False, True])
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
-def test_symbolic_hamiltonian_matmul(calcdense, nqubits, normalize):
+def test_symbolic_hamiltonian_state_ev(calcdense, nqubits, normalize):
     local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
     if calcdense:
         _ = local_ham.dense
@@ -131,19 +131,35 @@ def test_symbolic_hamiltonian_matmul(calcdense, nqubits, normalize):
     target_ev = dense_ham.expectation(state, normalize)
     np.testing.assert_allclose(local_ev, target_ev)
 
-    from qibo.core.states import VectorState
-    state = VectorState.from_tensor(state)
+
+@pytest.mark.parametrize("density_matrix", [False, True])
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_symbolic_hamiltonian_matmul(density_matrix, nqubits):
+    if density_matrix:
+        from qibo.core.states import MatrixState
+        shape = (2 ** nqubits, 2 ** nqubits)
+        state = MatrixState.from_tensor(random_complex(shape))
+    else:
+        from qibo.core.states import VectorState
+        shape = (2 ** nqubits,)
+        state = VectorState.from_tensor(random_complex(shape))
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
     local_matmul = local_ham @ state
     target_matmul = dense_ham @ state
     np.testing.assert_allclose(local_matmul, target_matmul)
 
 
-def test_symbolic_hamiltonian_abstract_symbol_ev():
+@pytest.mark.parametrize("density_matrix", [False, True])
+def test_symbolic_hamiltonian_abstract_symbol_ev(density_matrix):
     from qibo.symbols import X, Symbol
     matrix = np.random.random((2, 2))
     form = X(0) * Symbol(1, matrix) + Symbol(0, matrix) * X(1)
     local_ham = hamiltonians.SymbolicHamiltonian(form)
-    state = K.cast(random_complex((4,)))
+    if density_matrix:
+        state = K.cast(random_complex((4, 4)))
+    else:
+        state = K.cast(random_complex((4,)))
     local_ev = local_ham.expectation(state)
     target_ev = local_ham.dense.expectation(state)
     np.testing.assert_allclose(local_ev, target_ev)
