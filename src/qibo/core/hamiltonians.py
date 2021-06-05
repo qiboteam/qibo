@@ -208,7 +208,13 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     Args:
         form (sympy.Expr): Hamiltonian form as a ``sympy.Expr``. The Hamiltonian
             should be created using Qibo symbols.
-            See ... # TODO: Add example here for more details.
+            See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+            example for more details.
+        symbol_map (dict): Dictionary that maps each ``sympy.Symbol`` to the
+            corresponding target qubit and matrix representation. This feature
+            is kept for compatibility with older versions where Qibo symbols
+            were not available and will be deprecated in the future.
+            It is not required if the Hamiltonian is constructed using Qibo symbols.
     """
 
     def __init__(self, form, symbol_map=None):
