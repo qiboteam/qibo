@@ -220,7 +220,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __init__(self, form, symbol_map=None):
         super().__init__()
         import sympy
-        from qibo.symbols import SymbolicTerm
+        from qibo.core.symbolic import SymbolicTerm
         if not issubclass(form.__class__, sympy.Expr):
             raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                    "expression but is {}.".format(type(form)))
