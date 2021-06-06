@@ -28,7 +28,7 @@ def test_symbolic_hamiltonian_init():
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 #@pytest.mark.parametrize("model", ["TFIM", "XXZ", "Y", "MaxCut"])
-def test_symbolic_hamiltonian_to_dense(nqubits):
+def test_symbolic_hamiltonian_to_dense(backend, nqubits):
     # TODO: Extend this to other models when `hamiltonians.py` is updated
     final_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1))
     target_ham = hamiltonians.TFIM(nqubits, h=1, numpy=True)

@@ -262,16 +262,6 @@ class TensorflowCustomBackend(TensorflowBackend):
                             gate.nqubits, *gate.target_qubits,
                             self.get_threads())
 
-    def density_matrix_half_call(self, gate, state):
-        return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.get_threads())
-
-    def density_matrix_half_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
-                            2 * gate.nqubits, *gate.target_qubits,
-                            self.get_threads())
-
     def density_matrix_call(self, gate, state):
         state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
                              2 * gate.nqubits, *gate.target_qubits,
@@ -289,6 +279,16 @@ class TensorflowCustomBackend(TensorflowBackend):
                              2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              self.get_threads())
         return state
+
+    def density_matrix_half_call(self, gate, state):
+        return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
+                            2 * gate.nqubits, *gate.target_qubits,
+                            self.get_threads())
+
+    def density_matrix_half_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
+                            2 * gate.nqubits, *gate.target_qubits,
+                            self.get_threads())
 
     def state_vector_collapse(self, gate, state, result):
         return gate.gate_op(state, gate.cache.qubits_tensor, result,
