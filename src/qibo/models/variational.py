@@ -131,14 +131,14 @@ class QAOA(object):
     """
     from qibo import hamiltonians, optimizers
     from qibo.core import states
-    from qibo.abstractions.hamiltonians import HAMILTONIAN_TYPES
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
+        from qibo.abstractions.hamiltonians import AbstractHamiltonian
         # list of QAOA variational parameters (angles)
         self.params = None
         # problem hamiltonian
-        if not isinstance(hamiltonian, self.HAMILTONIAN_TYPES):
+        if not isinstance(hamiltonian, AbstractHamiltonian):
             raise_error(TypeError, "Invalid Hamiltonian type {}."
                                    "".format(type(hamiltonian)))
         self.hamiltonian = hamiltonian

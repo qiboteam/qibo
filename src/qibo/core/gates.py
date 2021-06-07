@@ -69,6 +69,10 @@ class BackendGate(BaseBackendGate):
     def density_matrix_call(self, state):
         return K.density_matrix_call(self, state)
 
+    def density_matrix_half_call(self, state):
+        self.set_nqubits(state)
+        return K.density_matrix_half_call(self, state)
+
 
 class MatrixGate(BackendGate):
     """Gate that uses matrix multiplication to be applied to states."""
@@ -78,6 +82,10 @@ class MatrixGate(BackendGate):
 
     def density_matrix_call(self, state):
         return K.density_matrix_matrix_call(self, state)
+
+    def density_matrix_half_call(self, state):
+        self.set_nqubits(state)
+        return K.density_matrix_half_matrix_call(self, state)
 
 
 class H(MatrixGate, abstract_gates.H):

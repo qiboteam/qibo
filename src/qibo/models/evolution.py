@@ -41,11 +41,11 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if isinstance(hamiltonian, hamiltonians.HAMILTONIAN_TYPES):
+        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
             ham = hamiltonian
         else:
             ham = hamiltonian(0)
-            if not isinstance(ham, hamiltonians.HAMILTONIAN_TYPES):
+            if not isinstance(ham, hamiltonians.AbstractHamiltonian):
                 raise TypeError("Hamiltonian type {} not understood."
                                 "".format(type(ham)))
         self.nqubits = ham.nqubits
@@ -165,7 +165,7 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if not issubclass(type(h0), hamiltonians.HAMILTONIAN_TYPES):
+        if not issubclass(type(h0), hamiltonians.AbstractHamiltonian):
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
         if type(h1) != type(h0):

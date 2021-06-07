@@ -466,6 +466,7 @@ Thermal relaxation channel
 
 _______________________
 
+
 .. _Hamiltonians:
 
 Hamiltonians
@@ -473,17 +474,46 @@ Hamiltonians
 
 The main abstract Hamiltonian object of Qibo is:
 
-.. autoclass:: qibo.abstractions.hamiltonians.Hamiltonian
+.. autoclass:: qibo.abstractions.hamiltonians.AbstractHamiltonian
     :members:
     :member-order: bysource
 
-In addition to the abstract model, Qibo provides the following pre-coded
-Hamiltonians:
 
-.. note::
-    Note that all pre-coded Hamiltonians can be created as either
-    :class:`qibo.abstractions.hamiltonians.Hamiltonian` or
-    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+Matrix Hamiltonian
+^^^^^^^^^^^^^^^^^^
+
+The first implementation of Hamiltonians uses the full matrix representation
+of the Hamiltonian operator in the computational basis. This matrix has size
+``(2 ** nqubits, 2 ** nqubits)`` and therefore its construction is feasible
+only when number of qubits is small.
+
+.. autoclass:: qibo.abstractions.hamiltonians.MatrixHamiltonian
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.core.hamiltonians.Hamiltonian
+    :members:
+    :member-order: bysource
+
+
+Symbolic Hamiltonian
+^^^^^^^^^^^^^^^^^^^^
+
+Qibo allows the user to define Hamiltonians using ``sympy`` symbols. In this
+case the full Hamiltonian matrix is not constructed unless it is required
+for specific operations, making the implementation more efficient for larger
+qubit numbers. For more information on constructing Hamiltonians using symbols
+we refer to the
+:ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>` example.
+
+.. autoclass:: qibo.abstractions.hamiltonians.SymbolicHamiltonian
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.core.hamiltonians.SymbolicHamiltonian
+    :members:
+    :member-order: bysource
+
 
 Trotter Hamiltonian
 ^^^^^^^^^^^^^^^^^^^
@@ -494,9 +524,19 @@ Trotter decomposition. The Hamiltonians represented by this object are sums of
 commuting terms, following the description of Sec. 4.1 of
 `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 
-.. autoclass:: qibo.abstractions.hamiltonians.TrotterHamiltonian
+.. autoclass:: qibo.core.hamiltonians.TrotterHamiltonian
     :members:
     :member-order: bysource
+
+
+In addition to the above abstract models, Qibo provides the following pre-coded
+Hamiltonians:
+
+.. note::
+    Note that all pre-coded Hamiltonians can be created as either
+    :class:`qibo.abstractions.hamiltonians.Hamiltonian` or
+    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+
 
 Heisenberg XXZ
 ^^^^^^^^^^^^^^
@@ -537,6 +577,34 @@ Max Cut
 ^^^^^^^
 
 .. autoclass:: qibo.hamiltonians.MaxCut
+    :members:
+    :member-order: bysource
+
+_______________________
+
+
+.. _Symbols:
+
+Symbols
+-------
+
+Qibo provides a basic set of symbols which inherit the ``sympy.Symbol`` object
+and can be used to construct :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`
+objects as described in the previous section.
+
+.. autoclass:: qibo.symbols.Symbol
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.symbols.X
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.symbols.Y
+    :members:
+    :member-order: bysource
+
+.. autoclass:: qibo.symbols.Z
     :members:
     :member-order: bysource
 

@@ -513,6 +513,27 @@ class BaseBackendGate(Gate, ABC):
         """Applies the gate on a density matrix."""
         raise_error(NotImplementedError)
 
+    @abstractmethod
+    def density_matrix_half_call(self, state): # pragma: no cover
+        """Half application of gate to density matrix.
+
+        For an arbitrary unitary gate U the
+        :meth:`qibo.abstractions.abstract_gates.BaseBackendGate.density_matrix_call`
+        calculates
+
+        .. math::
+            U\\rho U^\\dagger
+
+        while this method calculates only
+
+        .. math::
+            U\\rho
+
+        This is useful for :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`
+        multiplication to density matrices. 
+        """
+        raise_error(NotImplementedError)
+
     def __call__(self, state):
         """Applies the gate on a state.
 

@@ -44,8 +44,8 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
         H1 = hamiltonians.TrotterHamiltonian.from_symbolic(sh1, smap1)
     else:
         print('Using the full Hamiltonian evolution\n')
-        H0 = hamiltonians.Hamiltonian.from_symbolic(sh0, smap0)
-        H1 = hamiltonians.Hamiltonian.from_symbolic(sh1, smap1)
+        H0 = hamiltonians.Hamiltonian.from_symbolic(sh0, smap0).dense
+        H1 = hamiltonians.Hamiltonian.from_symbolic(sh1, smap1).dense
 
     print('-'*20+'\n')
     if plot and nqubits >= 14:

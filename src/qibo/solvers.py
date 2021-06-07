@@ -14,7 +14,7 @@ class BaseSolver:
 
     def __init__(self, dt, hamiltonian):
         self.dt = dt
-        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
+        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
             self.hamiltonian = lambda t: hamiltonian
         else:
             self.hamiltonian = hamiltonian
@@ -61,11 +61,11 @@ class Exponential(BaseSolver):
     """
 
     def __new__(cls, dt, hamiltonian):
-        if issubclass(type(hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
+        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
             h0 = hamiltonian
         else:
             h0 = hamiltonian(0)
-        if isinstance(h0, hamiltonians.TrotterHamiltonian):
+        if isinstance(h0, hamiltonians.SymbolicHamiltonian):
             return TrotterizedExponential(dt, hamiltonian)
         else:
             return super(Exponential, cls).__new__(cls)
