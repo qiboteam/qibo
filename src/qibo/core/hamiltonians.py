@@ -325,7 +325,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def __rsub__(self, o):
         if isinstance(o, K.numeric_types):
-            new_ham = self.__class__.from_terms(self.terms)
+            new_ham = self.__class__.from_terms([-1 * x for x in self.terms])
             new_ham.constant = o - self.constant
             if self.form is not None:
                 new_ham.form = o - self.form
@@ -361,7 +361,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             total += term.coefficient * temp_state
         if self.constant:
             total += self.constant * state
-        return state
+        return total
 
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""

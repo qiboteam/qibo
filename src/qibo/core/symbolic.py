@@ -47,7 +47,7 @@ class HamiltonianTerm:
         return gates.Unitary(matrix, *self.target_qubits)
 
     def __mul__(self, x):
-        return self.__class__(x * matrix, *self.target_qubits)
+        return self.__class__(x * self.matrix, *self.target_qubits)
 
     def __rmul__(self, x):
         return self.__mul__(x)
