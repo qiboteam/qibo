@@ -141,12 +141,12 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
             it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     if trotter:
-        term_matrix = - K.np.kron(matrices.Z, matrices.Z)
-        term_matrix -= h * K.np.kron(matrices.X, matrices.I)
-        term = Hamiltonian(2, term_matrix, numpy=True)
-        terms = {(i, i + 1): term for i in range(nqubits - 1)}
-        terms[(nqubits - 1, 0)] = term
-        return TrotterHamiltonian.from_dictionary(terms)
+        from qibo.core.symbolic import HamiltonianTerm
+        matrix = -(K.np.kron(matrices.Z, matrices.Z) +
+                   h * K.np.kron(matrices.X, matrices.I))
+        terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
+        terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
+        return SymbolicHamiltonian.from_terms(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     ham = -_build_spin_model(nqubits, matrices.Z, condition)

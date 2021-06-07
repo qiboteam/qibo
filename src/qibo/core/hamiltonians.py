@@ -221,6 +221,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         super().__init__()
         self._dense = None
         self.terms = None
+        self.constant = 0
         self.form = None
         if form is not None:
             self.set_form(form, symbol_map)
@@ -236,8 +237,14 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                    "expression but is {}.".format(type(form)))
         self.form = sympy.expand(form)
-        termsdict = self.form.as_coefficients_dict()
-        self.set_terms([SymbolicTerm(c, f, symbol_map) for f, c in termsdict.items()])
+        terms = []
+        for f, c in self.form.as_coefficients_dict().items():
+            term = SymbolicTerm.from_factors(c, f, symbol_map)
+            if term.target_qubits:
+                terms.append(term)
+            else:
+                self.constant += term.coefficient
+        self.set_terms(terms)
 
     @classmethod
     def from_terms(cls, terms):
@@ -262,7 +269,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             ec = "".join((c for c in chars if c not in tc))
             matrix += K.np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         matrix = K.np.reshape(matrix, 2 * (2 ** self.nqubits,))
-        return Hamiltonian(self.nqubits, matrix)
+        return Hamiltonian(self.nqubits, matrix) + self.constant
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)
@@ -272,13 +279,20 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be added.")
-            new_ham = self.__class__(self.form + o.form)
+            new_ham = self.__class__.from_terms(self.terms + o.terms)
+            if self.form is not None and o.form is not None:
+                new_ham.form = self.form + o.form
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense + o.dense
+
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__(self.form + o)
+            new_ham = self.__class__.from_terms(self.terms)
+            new_ham.constant = self.constant + o
+            if self.form is not None:
+                new_ham.form = self.form + o
             if self._dense is not None:
                 new_ham.dense = self.dense + o
+
         else:
             raise_error(NotImplementedError, "SymbolicHamiltonian addition to {} not "
                                              "implemented.".format(type(o)))
@@ -289,13 +303,21 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be subtracted.")
-            new_ham = self.__class__(self.form - o.form)
+            new_terms = self.terms + [-1 * x for x in o.terms]
+            new_ham = self.__class__.from_terms(new_terms)
+            if self.form is not None and o.form is not None:
+                new_ham.form = self.form - o.form
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense - o.dense
+
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__(self.form - o)
+            new_ham = self.__class__.from_terms(self.terms)
+            new_ham.constant = self.constant - o
+            if self.form is not None:
+                new_ham.form = self.form - o
             if self._dense is not None:
                 new_ham.dense = self.dense - o
+
         else:
             raise_error(NotImplementedError, "Hamiltonian subtraction to {} "
                                              "not implemented.".format(type(o)))
@@ -303,7 +325,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def __rsub__(self, o):
         if isinstance(o, K.numeric_types):
-            new_ham = self.__class__(o - self.form)
+            new_ham = self.__class__.from_terms(self.terms)
+            new_ham.constant = o - self.constant
+            if self.form is not None:
+                new_ham.form = o - self.form
             if self._dense is not None:
                 new_ham.dense = o - self.dense
         else:
@@ -315,8 +340,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         if not (isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types)):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
-        new_form = o * self.form
-        new_ham = self.__class__(new_form)
+        new_ham = self.__class__.from_terms([o * x for x in self.terms])
+        new_ham.constant = self.constant * o
+        if self.form is not None:
+            new_ham.form = o * self.form
         if self._dense is not None:
             new_ham.dense = o * self._dense
         return new_ham
@@ -332,11 +359,16 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 else:
                     temp_state = factor.gate(temp_state)
             total += term.coefficient * temp_state
-        return total
+        if self.constant:
+            total += self.constant * state
+        return state
 
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
+            if self.form is None or o.form is None:
+                raise_error(NotImplementedError, "Multiplication of symbolic Hamiltonians "
+                                                 "without symbolic form is not implemented.")
             new_form = self.form * o.form
             new_ham = self.__class__(new_form)
             if self._dense is not None and o._dense is not None:

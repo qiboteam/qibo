@@ -46,6 +46,12 @@ class HamiltonianTerm:
         matrix = K.qnp.expm(-1j * dt * self.matrix)
         return gates.Unitary(matrix, *self.target_qubits)
 
+    def __mul__(self, x):
+        return self.__class__(x * matrix, *self.target_qubits)
+
+    def __rmul__(self, x):
+        return self.__mul__(x)
+
 
 class SymbolicTerm(HamiltonianTerm):
     """Helper method for parsing symbolic Hamiltonian terms.
@@ -72,17 +78,28 @@ class SymbolicTerm(HamiltonianTerm):
             symbols were not available.
     """
 
-    def __init__(self, coefficient, factors, symbol_map=None):
-        self._factors = []
-        self._matrix_map = {}
+    def __init__(self, coefficient, factors=[], matrix_map={}):
+        self.coefficient = complex(coefficient)
+        self.factors = factors
+        self.matrix_map = matrix_map
         self._matrix = None
         self._gate = None
+        self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
-        ordered_factors = []
-        if factors != 1:
-            ordered_factors = factors.as_ordered_factors()
+    def copy(self):
+        new = self.__class__(self.coefficient, self.factors, self.matrix_map)
+        new._matrix = self._matrix
+        new._gate = self._gate
+        return new
 
-        for factor in ordered_factors:
+    @classmethod
+    def from_factors(cls, coefficient, factors, symbol_map=None):
+        if factors == 1:
+            return cls(coefficient)
+
+        _factors = []
+        _matrix_map = {}
+        for factor in factors.as_ordered_factors():
             if isinstance(factor, sympy.Pow):
                 factor, pow = factor.args
                 assert isinstance(pow, sympy.Integer)
@@ -98,12 +115,12 @@ class SymbolicTerm(HamiltonianTerm):
 
             if isinstance(factor, sympy.Symbol):
                 if isinstance(factor.matrix, K.qnp.tensor_types):
-                    self._factors.extend(pow * [factor])
+                    _factors.extend(pow * [factor])
                     q = factor.target_qubit
-                    if q in self._matrix_map:
-                        self._matrix_map[q].extend(pow * [factor.matrix])
+                    if q in _matrix_map:
+                        _matrix_map[q].extend(pow * [factor.matrix])
                     else:
-                        self._matrix_map[q] = pow * [factor.matrix]
+                        _matrix_map[q] = pow * [factor.matrix]
                 else:
                     coefficient *= factor.matrix
             elif factor == sympy.I:
@@ -111,11 +128,10 @@ class SymbolicTerm(HamiltonianTerm):
             else: # pragma: no cover
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
-        self.coefficient = complex(coefficient)
-        self.target_qubits = tuple(sorted(self._matrix_map.keys()))
+        return cls(coefficient, _factors, _matrix_map)
 
     def __iter__(self):
-        for factor in self._factors:
+        for factor in self.factors:
             yield factor
 
     @property
@@ -138,9 +154,14 @@ class SymbolicTerm(HamiltonianTerm):
 
             self._matrix = self.coefficient
             for q in self.target_qubits:
-                matrix = matrices_product(self._matrix_map.get(q))
+                matrix = matrices_product(self.matrix_map.get(q))
                 self._matrix = K.np.kron(self._matrix, matrix)
         return self._matrix
+
+    def __mul__(self, x):
+        new = self.copy()
+        new.coefficient *= x
+        return new
 
 
 def parse_symbolic(hamiltonian, symbol_map):
