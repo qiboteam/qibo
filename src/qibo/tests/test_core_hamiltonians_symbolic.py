@@ -114,22 +114,17 @@ def test_symbolic_hamiltonian_operator_add_and_sub(backend, calcdense, nqubits=3
 
 
 @pytest.mark.parametrize("calcdense", [False, True])
-@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
-def test_symbolic_hamiltonian_state_ev(backend, calcdense, nqubits, normalize):
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+def test_symbolic_hamiltonian_hamiltonianmatmul(backend, calcdense, nqubits=5):
+    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
+    dense_ham1 = hamiltonians.TFIM(nqubits, h=1.0)
+    dense_ham2 = hamiltonians.TFIM(nqubits, h=0.5)
     if calcdense:
-        _ = local_ham.dense
-    dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
-
-    state = K.cast(random_complex((2 ** nqubits,)))
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(local_ev, target_ev)
-
-    state = random_complex((2 ** nqubits,))
-    local_ev = local_ham.expectation(state, normalize)
-    target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(local_ev, target_ev)
+        _ = local_ham1.dense
+        _ = local_ham2.dense
+    local_matmul = local_ham1 @ local_ham2
+    target_matmul = dense_ham1 @ dense_ham2
+    np.testing.assert_allclose(local_matmul.matrix, target_matmul.matrix)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -150,6 +145,25 @@ def test_symbolic_hamiltonian_matmul(backend, density_matrix, nqubits):
     np.testing.assert_allclose(local_matmul, target_matmul)
 
 
+@pytest.mark.parametrize("calcdense", [False, True])
+@pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
+def test_symbolic_hamiltonian_state_ev(backend, calcdense, nqubits, normalize):
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    if calcdense:
+        _ = local_ham.dense
+    dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
+
+    state = K.cast(random_complex((2 ** nqubits,)))
+    local_ev = local_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(local_ev, target_ev)
+
+    state = random_complex((2 ** nqubits,))
+    local_ev = local_ham.expectation(state, normalize)
+    target_ev = dense_ham.expectation(state, normalize)
+    np.testing.assert_allclose(local_ev, target_ev)
+
+
 @pytest.mark.parametrize("density_matrix", [False, True])
 def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix):
     from qibo.symbols import X, Symbol
@@ -163,20 +177,6 @@ def test_symbolic_hamiltonian_abstract_symbol_ev(backend, density_matrix):
     local_ev = local_ham.expectation(state)
     target_ev = local_ham.dense.expectation(state)
     np.testing.assert_allclose(local_ev, target_ev)
-
-
-@pytest.mark.parametrize("calcdense", [False, True])
-def test_symbolic_hamiltonian_hamiltonianmatmul(backend, calcdense, nqubits=5):
-    local_ham1 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
-    local_ham2 = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=0.5))
-    dense_ham1 = hamiltonians.TFIM(nqubits, h=1.0)
-    dense_ham2 = hamiltonians.TFIM(nqubits, h=0.5)
-    if calcdense:
-        _ = local_ham1.dense
-        _ = local_ham2.dense
-    local_matmul = local_ham1 @ local_ham2
-    target_matmul = dense_ham1 @ dense_ham2
-    np.testing.assert_allclose(local_matmul.matrix, target_matmul.matrix)
 
 
 def test_trotter_hamiltonian_operation_errors():
