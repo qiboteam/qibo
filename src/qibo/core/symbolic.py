@@ -20,7 +20,7 @@ def multikron(matrix_list):
     return h
 
 
-class SymbolicTerm(list):
+class SymbolicTerm:
     """Helper method for parsing symbolic Hamiltonian terms.
 
     Each :class:`qibo.symbols.SymbolicTerm` corresponds to a term in the
@@ -46,7 +46,10 @@ class SymbolicTerm(list):
     """
 
     def __init__(self, coefficient, factors, symbol_map=None):
-        super().__init__()
+        self._factors = []
+        self._target_qubits = {}
+        self._full_matrix = None
+
         ordered_factors = []
         if factors != 1:
             ordered_factors = factors.as_ordered_factors()
@@ -67,7 +70,12 @@ class SymbolicTerm(list):
 
             if isinstance(factor, sympy.Symbol):
                 if isinstance(factor.matrix, K.qnp.tensor_types):
-                    self.extend(pow * [factor])
+                    self._factors.extend(pow * [factor])
+                    q = factor.target_qubit
+                    if q in self.target_qubits:
+                        self._target_qubits[q].extend(pow * [factor])
+                    else:
+                        self._target_qubits[q] = pow * [factor]
                 else:
                     coefficient *= factor.matrix
             elif factor == sympy.I:
@@ -76,6 +84,37 @@ class SymbolicTerm(list):
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
         self.coefficient = complex(coefficient)
+
+    def __iter__(self):
+        for factor in self._factors:
+            yield factor
+
+    @property
+    def target_qubits(self):
+        return set(self._target_qubits.keys())
+
+    def full_matrix(self):
+        """Calculates the full matrix corresponding to this term.
+
+        Returns:
+            Matrix as a ``np.ndarray`` of shape ``(2 ** ntargets, 2 ** ntargets)``
+            where ``ntargets`` is the number of qubits included in the factors
+            of this term.
+        """
+        if self._full_matrix is None:
+            def matrices_product(matrices):
+                if len(matrices) == 1:
+                    return matrices[0]
+                matrix = K.np.copy(matrices[0])
+                for m in matrices[1:]:
+                    matrix = matrix @ m
+                return matrix
+
+            self._full_matrix = self.coefficient
+            for q in sorted(self._target_qubits.keys()):
+                matrix = matrices_product(self._target_qubits.get(q))
+                self._full_matrix = K.np.kron(self._full_matrix, matrix)
+        return self._full_matrix
 
 
 def parse_symbolic(hamiltonian, symbol_map):
