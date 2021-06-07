@@ -220,8 +220,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __init__(self, form=None, symbol_map=None):
         super().__init__()
         self._dense = None
-        self.form = None
         self.terms = None
+        self.form = None
         if form is not None:
             self.set_form(form, symbol_map)
 
@@ -254,7 +254,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         chars = EINSUM_CHARS[:2 * self.nqubits]
         for term in self.terms:
             ntargets = len(term.target_qubits)
-            print(term.matrix)
             tmat = K.np.reshape(term.matrix, 2 * ntargets * (2,))
             n = self.nqubits - ntargets
             emat = K.np.reshape(K.np.eye(2 ** n, dtype=tmat.dtype), 2 * n * (2,))
@@ -363,7 +362,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         from qibo.models import Circuit
         circuit = Circuit(self.nqubits, accelerators=accelerators,
                           memory_device=memory_device)
-        for term in itertools.chain(self.parts, self.parts[::-1]):
+        for term in itertools.chain(self.terms, self.terms[::-1]):
             circuit.add(term.exp(dt / 2.0))
         return circuit
 

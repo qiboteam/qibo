@@ -20,7 +20,34 @@ def multikron(matrix_list):
     return h
 
 
-class SymbolicTerm:
+class HamiltonianTerm:
+
+    def __init__(self, matrix, *q):
+        self.target_qubits = tuple(q)
+        self._gate = None
+        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
+                isinstance(matrix, K.qnp.tensor_types)):
+            raise_error(TypeError, "Invalid type {} of symbol matrix."
+                                   "".format(type(matrix)))
+        self._matrix = matrix
+
+    @property
+    def matrix(self):
+        return self._matrix
+
+    @property
+    def gate(self):
+        """Qibo gate that implements the action of the term on states."""
+        if self._gate is None:
+            self._gate = gates.Unitary(self.matrix, *self.target_qubits)
+        return self._gate
+
+    def exp(self, dt):
+        matrix = K.qnp.expm(-1j * dt * self.matrix)
+        return gates.Unitary(matrix, *self.target_qubits)
+
+
+class SymbolicTerm(HamiltonianTerm):
     """Helper method for parsing symbolic Hamiltonian terms.
 
     Each :class:`qibo.symbols.SymbolicTerm` corresponds to a term in the
@@ -47,7 +74,7 @@ class SymbolicTerm:
 
     def __init__(self, coefficient, factors, symbol_map=None):
         self._factors = []
-        self._target_qubits = {}
+        self._matrix_map = {}
         self._matrix = None
         self._gate = None
 
@@ -73,10 +100,10 @@ class SymbolicTerm:
                 if isinstance(factor.matrix, K.qnp.tensor_types):
                     self._factors.extend(pow * [factor])
                     q = factor.target_qubit
-                    if q in self.target_qubits:
-                        self._target_qubits[q].extend(pow * [factor.matrix])
+                    if q in self._matrix_map:
+                        self._matrix_map[q].extend(pow * [factor.matrix])
                     else:
-                        self._target_qubits[q] = pow * [factor.matrix]
+                        self._matrix_map[q] = pow * [factor.matrix]
                 else:
                     coefficient *= factor.matrix
             elif factor == sympy.I:
@@ -85,14 +112,11 @@ class SymbolicTerm:
                 raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
         self.coefficient = complex(coefficient)
+        self.target_qubits = tuple(sorted(self._matrix_map.keys()))
 
     def __iter__(self):
         for factor in self._factors:
             yield factor
-
-    @property
-    def target_qubits(self):
-        return tuple(sorted(self._target_qubits.keys()))
 
     @property
     def matrix(self):
@@ -114,43 +138,9 @@ class SymbolicTerm:
 
             self._matrix = self.coefficient
             for q in self.target_qubits:
-                matrix = matrices_product(self._target_qubits.get(q))
+                matrix = matrices_product(self._matrix_map.get(q))
                 self._matrix = K.np.kron(self._matrix, matrix)
         return self._matrix
-
-    @property
-    def gate(self):
-        """Qibo gate that implements the action of the term on states."""
-        if self._gate is None:
-            self._gate = gates.Unitary(self.matrix, *self.target_qubits)
-        return self._gate
-
-    def exp(self, dt):
-        matrix = K.qnp.expm(-1j * dt * self.matrix)
-        return gates.Unitary(matrix, *self.target_qubits)
-
-
-class TrotterTerm:
-
-    def __init__(self, matrix, *q):
-        self.target_qubits = tuple(q)
-        self._gate = None
-        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
-                isinstance(matrix, K.qnp.tensor_types)):
-            raise_error(TypeError, "Invalid type {} of symbol matrix."
-                                   "".format(type(matrix)))
-        self.matrix = matrix
-
-    @property
-    def gate(self):
-        """Qibo gate that implements the action of the term on states."""
-        if self._gate is None:
-            self._gate = gates.Unitary(self.matrix, *self.target_qubits)
-        return self._gate
-
-    def exp(self, dt):
-        matrix = K.qnp.expm(-1j * dt * self.matrix)
-        return gates.Unitary(matrix, *self.target_qubits)
 
 
 def parse_symbolic(hamiltonian, symbol_map):
