@@ -1,6 +1,6 @@
 import itertools
 import sympy
-from qibo import K
+from qibo import gates, K
 from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.abstractions import hamiltonians, states
 
@@ -52,6 +52,12 @@ class HamiltonianTerm:
     def __rmul__(self, x):
         return self.__mul__(x)
 
+    def __call__(self, state, density_matrix=False):
+        if density_matrix:
+            self.gate.density_matrix = True
+            return self.gate.density_matrix_half_call(state)
+        return self.gate(state)
+
 
 class SymbolicTerm(HamiltonianTerm):
     """Helper method for parsing symbolic Hamiltonian terms.
@@ -85,12 +91,6 @@ class SymbolicTerm(HamiltonianTerm):
         self._matrix = None
         self._gate = None
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
-
-    def copy(self):
-        new = self.__class__(self.coefficient, self.factors, self.matrix_map)
-        new._matrix = self._matrix
-        new._gate = self._gate
-        return new
 
     @classmethod
     def from_factors(cls, coefficient, factors, symbol_map=None):
@@ -130,10 +130,6 @@ class SymbolicTerm(HamiltonianTerm):
 
         return cls(coefficient, _factors, _matrix_map)
 
-    def __iter__(self):
-        for factor in self.factors:
-            yield factor
-
     @property
     def matrix(self):
         """Calculates the full matrix corresponding to this term.
@@ -159,9 +155,20 @@ class SymbolicTerm(HamiltonianTerm):
         return self._matrix
 
     def __mul__(self, x):
-        new = self.copy()
+        new = self.__class__(self.coefficient, self.factors, self.matrix_map)
+        new._matrix = self._matrix
+        new._gate = self._gate
         new.coefficient *= x
         return new
+
+    def __call__(self, state, density_matrix=False):
+        for factor in self.factors:
+            if density_matrix:
+                factor.gate.density_matrix = True
+                state = factor.gate.density_matrix_half_call(state)
+            else:
+                state = factor.gate(state)
+        return self.coefficient * state
 
 
 def parse_symbolic(hamiltonian, symbol_map):

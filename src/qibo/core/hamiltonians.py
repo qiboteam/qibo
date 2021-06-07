@@ -351,14 +351,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def apply_gates(self, state, density_matrix=False):
         total = 0
         for term in self.terms:
-            temp_state = K.copy(state)
-            for factor in term:
-                if density_matrix:
-                    factor.gate.density_matrix = True
-                    temp_state = factor.gate.density_matrix_half_call(temp_state)
-                else:
-                    temp_state = factor.gate(temp_state)
-            total += term.coefficient * temp_state
+            total += term(K.copy(state), density_matrix)
         if self.constant:
             total += self.constant * state
         return total
