@@ -2,7 +2,7 @@
 from qibo import matrices, K
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, TrotterHamiltonian, SymbolicHamiltonian
-from qibo.core.symbolic import multikron
+from qibo.core.symbolic import multikron, HamiltonianTerm
 
 
 def _build_spin_model(nqubits, matrix, condition):
@@ -141,7 +141,6 @@ def TFIM(nqubits, h=0.0, numpy=False, trotter=False):
             it creates a :class:`qibo.abstractions.hamiltonians.Hamiltonian` object.
     """
     if trotter:
-        from qibo.core.symbolic import HamiltonianTerm
         matrix = -(K.np.kron(matrices.Z, matrices.Z) +
                    h * K.np.kron(matrices.X, matrices.I))
         terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
