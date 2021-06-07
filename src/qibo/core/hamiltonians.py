@@ -217,8 +217,19 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             It is not required if the Hamiltonian is constructed using Qibo symbols.
     """
 
-    def __init__(self, form, symbol_map=None):
+    def __init__(self, form=None, symbol_map=None):
         super().__init__()
+        self._dense = None
+        self.form = None
+        self.terms = None
+        if form is not None:
+            self.set_form(form, symbol_map)
+
+    def set_terms(self, terms):
+        self.terms = terms
+        self.nqubits = max(q for term in self.terms for q in term.target_qubits) + 1
+
+    def set_form(self, form, symbol_map=None):
         import sympy
         from qibo.core.symbolic import SymbolicTerm
         if not issubclass(form.__class__, sympy.Expr):
@@ -226,18 +237,32 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                    "expression but is {}.".format(type(form)))
         self.form = sympy.expand(form)
         termsdict = self.form.as_coefficients_dict()
-        self.terms = [SymbolicTerm(c, f, symbol_map) for f, c in termsdict.items()]
-        self.nqubits = max(factor.target_qubit for term in self.terms for factor in term) + 1
-        self._dense = None
+        self.set_terms([SymbolicTerm(c, f, symbol_map) for f, c in termsdict.items()])
+
+    @classmethod
+    def from_terms(cls, terms):
+        ham = cls()
+        ham.set_terms(terms)
+        return ham
 
     def calculate_dense(self):
+        if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
+            # case not tested because it only happens in large examples
+            raise_error(NotImplementedError, "Not enough einsum characters.")
+
         matrix = 0
+        chars = EINSUM_CHARS[:2 * self.nqubits]
         for term in self.terms:
-            kronlist = self.nqubits * [K.qnp.eye(2)]
-            for factor in term:
-                q = factor.target_qubit
-                kronlist[q] = kronlist[q] @ factor.matrix
-            matrix += term.coefficient * multikron(kronlist)
+            ntargets = len(term.target_qubits)
+            print(term.matrix)
+            tmat = K.np.reshape(term.matrix, 2 * ntargets * (2,))
+            n = self.nqubits - ntargets
+            emat = K.np.reshape(K.np.eye(2 ** n, dtype=tmat.dtype), 2 * n * (2,))
+            gen = lambda x: (chars[i + x] for i in term.target_qubits)
+            tc = "".join(itertools.chain(gen(0), gen(self.nqubits)))
+            ec = "".join((c for c in chars if c not in tc))
+            matrix += K.np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
+        matrix = K.np.reshape(matrix, 2 * (2 ** self.nqubits,))
         return Hamiltonian(self.nqubits, matrix)
 
     def expectation(self, state, normalize=False):
@@ -333,6 +358,14 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))
+
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
+        from qibo.models import Circuit
+        circuit = Circuit(self.nqubits, accelerators=accelerators,
+                          memory_device=memory_device)
+        for term in itertools.chain(self.parts, self.parts[::-1]):
+            circuit.add(term.exp(dt / 2.0))
+        return circuit
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):

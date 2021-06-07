@@ -48,7 +48,8 @@ class SymbolicTerm:
     def __init__(self, coefficient, factors, symbol_map=None):
         self._factors = []
         self._target_qubits = {}
-        self._full_matrix = None
+        self._matrix = None
+        self._gate = None
 
         ordered_factors = []
         if factors != 1:
@@ -73,9 +74,9 @@ class SymbolicTerm:
                     self._factors.extend(pow * [factor])
                     q = factor.target_qubit
                     if q in self.target_qubits:
-                        self._target_qubits[q].extend(pow * [factor])
+                        self._target_qubits[q].extend(pow * [factor.matrix])
                     else:
-                        self._target_qubits[q] = pow * [factor]
+                        self._target_qubits[q] = pow * [factor.matrix]
                 else:
                     coefficient *= factor.matrix
             elif factor == sympy.I:
@@ -91,9 +92,10 @@ class SymbolicTerm:
 
     @property
     def target_qubits(self):
-        return set(self._target_qubits.keys())
+        return tuple(sorted(self._target_qubits.keys()))
 
-    def full_matrix(self):
+    @property
+    def matrix(self):
         """Calculates the full matrix corresponding to this term.
 
         Returns:
@@ -101,7 +103,7 @@ class SymbolicTerm:
             where ``ntargets`` is the number of qubits included in the factors
             of this term.
         """
-        if self._full_matrix is None:
+        if self._matrix is None:
             def matrices_product(matrices):
                 if len(matrices) == 1:
                     return matrices[0]
@@ -110,11 +112,45 @@ class SymbolicTerm:
                     matrix = matrix @ m
                 return matrix
 
-            self._full_matrix = self.coefficient
-            for q in sorted(self._target_qubits.keys()):
+            self._matrix = self.coefficient
+            for q in self.target_qubits:
                 matrix = matrices_product(self._target_qubits.get(q))
-                self._full_matrix = K.np.kron(self._full_matrix, matrix)
-        return self._full_matrix
+                self._matrix = K.np.kron(self._matrix, matrix)
+        return self._matrix
+
+    @property
+    def gate(self):
+        """Qibo gate that implements the action of the term on states."""
+        if self._gate is None:
+            self._gate = gates.Unitary(self.matrix, *self.target_qubits)
+        return self._gate
+
+    def exp(self, dt):
+        matrix = K.qnp.expm(-1j * dt * self.matrix)
+        return gates.Unitary(matrix, *self.target_qubits)
+
+
+class TrotterTerm:
+
+    def __init__(self, matrix, *q):
+        self.target_qubits = tuple(q)
+        self._gate = None
+        if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
+                isinstance(matrix, K.qnp.tensor_types)):
+            raise_error(TypeError, "Invalid type {} of symbol matrix."
+                                   "".format(type(matrix)))
+        self.matrix = matrix
+
+    @property
+    def gate(self):
+        """Qibo gate that implements the action of the term on states."""
+        if self._gate is None:
+            self._gate = gates.Unitary(self.matrix, *self.target_qubits)
+        return self._gate
+
+    def exp(self, dt):
+        matrix = K.qnp.expm(-1j * dt * self.matrix)
+        return gates.Unitary(matrix, *self.target_qubits)
 
 
 def parse_symbolic(hamiltonian, symbol_map):
