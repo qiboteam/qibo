@@ -228,6 +228,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def set_terms(self, terms):
         self.terms = terms
+        for term in self.terms:
+            print(term.target_qubits)
         self.nqubits = max(q for term in self.terms for q in term.target_qubits) + 1
 
     def set_form(self, form, symbol_map=None):

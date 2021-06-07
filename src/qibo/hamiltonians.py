@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from qibo import matrices, K
 from qibo.config import raise_error
-from qibo.core.hamiltonians import Hamiltonian, TrotterHamiltonian, SymbolicHamiltonian
+from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
 from qibo.core.symbolic import multikron, HamiltonianTerm
 
 
@@ -39,10 +39,10 @@ def XXZ(nqubits, delta=0.5, numpy=False, trotter=False):
         hx = K.np.kron(matrices.X, matrices.X)
         hy = K.np.kron(matrices.Y, matrices.Y)
         hz = K.np.kron(matrices.Z, matrices.Z)
-        term = Hamiltonian(2, hx + hy + delta * hz, numpy=True)
-        terms = {(i, i + 1): term for i in range(nqubits - 1)}
-        terms[(nqubits - 1, 0)] = term
-        return TrotterHamiltonian.from_dictionary(terms)
+        matrix = hx + hy + delta * hz
+        terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
+        terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
+        return SymbolicHamiltonian.from_terms(terms)
 
     condition = lambda i, j: i in {j % nqubits, (j+1) % nqubits}
     hx = _build_spin_model(nqubits, matrices.X, condition)
@@ -60,9 +60,9 @@ def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
         ham = -_build_spin_model(nqubits, matrix, condition)
         return Hamiltonian(nqubits, ham, numpy=numpy)
 
-    term = Hamiltonian(1, -matrix, numpy=True)
-    terms = {(i,): term for i in range(nqubits)}
-    return TrotterHamiltonian.from_dictionary(terms, ground_state=ground_state)
+    matrix = - matrix
+    terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
+    return SymbolicHamiltonian.from_terms(terms) # TODO: Add ground state argument
 
 
 def X(nqubits, numpy=False, trotter=False):
@@ -181,8 +181,7 @@ def MaxCut(nqubits, numpy=False, trotter=False):
     smap = {s: (i, matrices.Z) for i, s in enumerate(Z)}
     smap.update({s: (i, v[i]) for i, s in enumerate(V)})
 
+    ham = SymbolicHamiltonian(sham, smap)
     if trotter:
-        ham = TrotterHamiltonian.from_symbolic(sham, smap)
-    else:
-        ham = Hamiltonian.from_symbolic(sham, smap, numpy=numpy)
-    return ham
+        return ham
+    return ham.dense
