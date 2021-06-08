@@ -2,7 +2,6 @@ import itertools
 from qibo import K, gates
 from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.abstractions import hamiltonians, states
-from qibo.core.symbolic import multikron
 
 
 class Hamiltonian(hamiltonians.MatrixHamiltonian):
@@ -239,7 +238,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def set_form(self, form, symbol_map=None):
         import sympy
-        from qibo.core.symbolic import SymbolicTerm
+        from qibo.core.terms import SymbolicTerm
         if not issubclass(form.__class__, sympy.Expr):
             raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                    "expression but is {}.".format(type(form)))

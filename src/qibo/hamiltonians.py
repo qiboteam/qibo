@@ -2,7 +2,22 @@
 from qibo import matrices, K
 from qibo.config import raise_error
 from qibo.core.hamiltonians import Hamiltonian, SymbolicHamiltonian
-from qibo.core.symbolic import multikron, HamiltonianTerm
+from qibo.core.terms import HamiltonianTerm
+
+
+def multikron(matrix_list):
+    """Calculates Kronecker product of a list of matrices.
+
+    Args:
+        matrices (list): List of matrices as ``np.ndarray``s.
+
+    Returns:
+        ``np.ndarray`` of the Kronecker product of all ``matrices``.
+    """
+    h = 1
+    for m in matrix_list:
+        h = K.np.kron(h, m)
+    return h
 
 
 def _build_spin_model(nqubits, matrix, condition):

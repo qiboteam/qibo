@@ -97,7 +97,7 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
 def test_trotter_hamiltonian_three_qubit_term(backend):
     """Test creating ``TrotterHamiltonian`` with three qubit term."""
     from scipy.linalg import expm
-    from qibo.core.symbolic import HamiltonianTerm
+    from qibo.core.terms import HamiltonianTerm
     m1 = random_hermitian(3)
     m2 = random_hermitian(2)
     m3 = random_hermitian(1)
