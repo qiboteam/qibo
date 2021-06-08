@@ -62,7 +62,7 @@ def _OneBodyPauli(nqubits, matrix, numpy=False, trotter=False,
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    return SymbolicHamiltonian.from_terms(terms) # TODO: Add ground state argument
+    return SymbolicHamiltonian.from_terms(terms, ground_state)
 
 
 def X(nqubits, numpy=False, trotter=False):

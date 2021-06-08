@@ -217,8 +217,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             It is not required if the Hamiltonian is constructed using Qibo symbols.
     """
 
-    def __init__(self, form=None, symbol_map=None):
-        super().__init__()
+    def __init__(self, form=None, symbol_map=None, ground_state=None):
+        super().__init__(ground_state)
         self._dense = None
         self.terms = None
         self.constant = 0
@@ -226,6 +226,12 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         self.trotter_circuit = None
         if form is not None:
             self.set_form(form, symbol_map)
+
+    @classmethod
+    def from_terms(cls, terms, ground_state=None):
+        ham = cls(ground_state=ground_state)
+        ham.set_terms(terms)
+        return ham
 
     def set_terms(self, terms):
         self.terms = terms
@@ -246,12 +252,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             else:
                 self.constant += term.coefficient
         self.set_terms(terms)
-
-    @classmethod
-    def from_terms(cls, terms):
-        ham = cls()
-        ham.set_terms(terms)
-        return ham
 
     def calculate_dense(self):
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
