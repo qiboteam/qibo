@@ -157,32 +157,5 @@ def test_three_qubit_term_hamiltonian_from_symbols(hamtype):
     target_matrix += 1.5 * np.kron(np.kron(matrices.I, matrices.Z),
                                    np.kron(matrices.I, matrices.I))
     target_matrix -= 2 * np.eye(2**4, dtype=target_matrix.dtype)
+
     np.testing.assert_allclose(final_matrix, target_matrix)
-
-
-def test_symbolic_hamiltonian_errors():
-    """Check errors raised by :meth:`qibo.core.symbolic.parse_symbolic`."""
-    from qibo.core.symbolic import parse_symbolic
-    a, b = sympy.symbols("a b")
-    ham = a * b
-    # Bad hamiltonian type
-    with pytest.raises(TypeError):
-        sh = parse_symbolic("test", "test")
-    # Bad symbol map type
-    with pytest.raises(TypeError):
-        sh = parse_symbolic(ham, "test")
-    # Bad symbol map key
-    with pytest.raises(TypeError):
-        sh = parse_symbolic(ham, {"a": 2})
-    # Bad symbol map value
-    with pytest.raises(TypeError):
-        sh = parse_symbolic(ham, {a: 2})
-    with pytest.raises(ValueError):
-        sh = parse_symbolic(ham, {a: (1, 2, 3)})
-    # Missing symbol
-    with pytest.raises(ValueError):
-        sh = parse_symbolic(ham, {a: (0, matrices.X)})
-    # Factor that cannot be parsed
-    ham = a * b + sympy.cos(a) * b
-    with pytest.raises(ValueError):
-        sh = parse_symbolic(ham, {a: (0, matrices.X), b: (1, matrices.Z)})

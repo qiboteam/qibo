@@ -58,7 +58,7 @@ class HamiltonianTerm:
         if density_matrix:
             self.gate.density_matrix = True
             return self.gate.density_matrix_half_call(state)
-        return self.gate(state)
+        return self.gate(state) # pylint: disable=E1102
 
 
 class SymbolicTerm(HamiltonianTerm):
@@ -171,95 +171,6 @@ class SymbolicTerm(HamiltonianTerm):
             else:
                 state = factor.gate(state)
         return self.coefficient * state
-
-
-def parse_symbolic(hamiltonian, symbol_map):
-    """Parses symbolic Hamiltonians defined using ``sympy``.
-
-    This class should not be used by users.
-    It is used internally to help creating
-    :class:`qibo.abstractions.hamiltonians.Hamiltonian` and
-    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` objects for Hamiltonians
-    defined using symbols. For more information we refer to the
-    :meth:`qibo.abstractions.hamiltonians.Hamiltonian.from_symbolic`
-    and :meth:`qibo.abstractions.hamiltonians.TrotterHamiltonian.from_symbolic` methods.
-
-    Args:
-        symbolic_hamiltonian (sympy.Expr): The full Hamiltonian written with
-            symbols.
-        symbol_map (dict): Dictionary that maps each symbol to a pair of
-            (target, matrix).
-
-    Returns:
-        terms (dict): Dictionary that maps tuple of qubit ids to tuple of the
-            corresponding matrices. Each dictionary element corresponds to
-            a Hamiltonian term.
-    """
-    if not issubclass(hamiltonian.__class__, sympy.Expr):
-        raise_error(TypeError, "Symbolic Hamiltonian should be a `sympy` "
-                               "expression but is {}."
-                               "".format(type(hamiltonian)))
-    if not isinstance(symbol_map, dict):
-        raise_error(TypeError, "Symbol map must be a dictionary but is "
-                               "{}.".format(type(symbol_map)))
-    for k, v in symbol_map.items():
-        if not isinstance(k, sympy.Symbol):
-            raise_error(TypeError, "Symbol map keys must be `sympy.Symbol` "
-                                   "but {} was found.".format(type(k)))
-        if not isinstance(v, tuple):
-            raise_error(TypeError, "Symbol map values must be tuples but "
-                                   "{} was found.".format(type(v)))
-        if len(v) != 2:
-            raise_error(ValueError, "Symbol map values must be tuples of "
-                                    "length 2 but length {} was found."
-                                    "".format(len(v)))
-
-    def check_symbolmap(s):
-        """Checks if symbol exists in the given symbol map."""
-        if s not in symbol_map:
-            raise_error(ValueError, "Symbolic Hamiltonian contains symbol "
-                                    "{} which does not exist in the symbol "
-                                    "map.".format(s))
-
-    symbolic = sympy.expand(hamiltonian)
-
-    term_dict = symbolic.as_coefficients_dict()
-    terms = {tuple(): (0,)}
-    dtype = K.qnp.dtypes('DTYPECPX')
-    if 1 in term_dict:
-        terms[tuple()] += (dtype(term_dict.pop(1)),)
-    for term, coeff in term_dict.items():
-        targets, matrices = [], [dtype(coeff)]
-        for factor in term.as_ordered_factors():
-            if factor.is_symbol:
-                check_symbolmap(factor)
-                itarget = symbol_map[factor][0]
-                ivalues = symbol_map[factor][1]
-                if isinstance(ivalues, K.numeric_types):
-                    matrices[0] *= ivalues
-                else:
-                    targets.append(itarget)
-                    matrices.append(ivalues)
-            elif isinstance(factor, sympy.Pow):
-                base, pow = factor.args
-                assert isinstance(pow, sympy.Integer)
-                check_symbolmap(base)
-                targets.append(symbol_map[base][0])
-                matrix = symbol_map[base][1]
-                for _ in range(int(pow) - 1):
-                    matrix = matrix.dot(matrix)
-                matrices.append(matrix)
-            elif factor == sympy.I: # imaginary unit
-                matrices[0] *= 1j
-            else:
-                raise_error(ValueError, f"Cannot parse factor {factor}.")
-        targets, matrices = tuple(targets), tuple(matrices)
-        if targets in terms:
-            terms[targets] += matrices
-        else:
-            terms[targets] = matrices
-    terms[tuple()] = sum(terms[tuple()]) # sum of constant terms
-    return terms
 
 
 def reduce_pairs(pair_sets, pair_map, free_targets):
