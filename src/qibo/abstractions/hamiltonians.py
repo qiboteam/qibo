@@ -182,17 +182,6 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def exp(self, a):
         return self.dense.exp(a)
 
-
-class TrotterHamiltonian(SymbolicHamiltonian):
-
-    @abstractmethod
-    def is_compatible(self, o): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def make_compatible(self, o): # pragma: no cover
-        raise_error(NotImplementedError)
-
     @abstractmethod
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"): # pragma: no cover
         raise_error(NotImplementedError)
