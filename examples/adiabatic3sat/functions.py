@@ -1,6 +1,6 @@
 import sympy
 import numpy as np
-from qibo import matrices, hamiltonians, symbols
+from qibo import K, matrices, hamiltonians, symbols
 import matplotlib.pyplot as plt
 
 
@@ -50,6 +50,7 @@ def h_problem(qubits, clauses):
         smap (dict): Dictionary that maps the symbols that appear in the
             Hamiltonian to the corresponding matrices and target qubits.
     """
+    z_matrix = (matrices.I - matrices.Z) / 2.0
     z = [symbols.Symbol(i, z_matrix) for i in range(qubits)]
     return sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
 
@@ -65,7 +66,7 @@ def h_initial(qubits, times):
         smap (dict): Dictionary that maps the symbols that appear in the
             Hamiltonian to the corresponding matrices and target qubits.
     """
-    return sum(0.5 * times[i] * (1 - X(i)) for i in range(qubits))
+    return sum(0.5 * times[i] * (1 - symbols.X(i)) for i in range(qubits))
 
 
 def spolynomial(t, params):
@@ -77,10 +78,7 @@ def spolynomial(t, params):
 
 def ground_state(nqubits):
     """Returns |++...+> state to be used as the ground state of the easy Hamiltonian."""
-    import tensorflow as tf
-    from qibo.config import DTYPES
-    s = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    return tf.cast(s, dtype=DTYPES.get('DTYPECPX'))
+    return K.cast(np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits))
 
 
 def plot(qubits, ground, first, gap, dt, T):
