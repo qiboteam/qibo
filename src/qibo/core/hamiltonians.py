@@ -220,11 +220,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __init__(self, form=None, symbol_map=None):
         super().__init__()
         self._dense = None
-        self._circuit = None
-        self._circuitdt = None
         self.terms = None
         self.constant = 0
         self.form = None
+        self.trotter_circuit = None
         if form is not None:
             self.set_form(form, symbol_map)
 
@@ -386,18 +385,28 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))
 
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
-        if self._circuit is None:
+    class TrotterCircuit:
+
+        def __init__(self, nqubits, terms, dt, accelerators, memory_device):
             from qibo.models import Circuit
-            self._circuit = Circuit(self.nqubits, accelerators=accelerators,
-                                    memory_device=memory_device)
-            for term in itertools.chain(self.terms, self.terms[::-1]):
-                self._circuit.add(term.exp(dt / 2.0))
-            self._circuitdt = dt
-        elif dt != self._circuitdt:
-            init_kwargs = self._circuit.init_kwargs
-            self._circuit = self._circuit.__class__(**init_kwargs)
-            for term in itertools.chain(self.terms, self.terms[::-1]):
-                self._circuit.add(term.exp(dt / 2.0))
-            self._circuitdt = dt
-        return self._circuit
+            self.gates = {}
+            self.dt = dt
+            self.circuit = Circuit(nqubits, accelerators=accelerators,
+                                   memory_device=memory_device)
+            for term in itertools.chain(terms, terms[::-1]):
+                gate = term.expgate(dt / 2.0)
+                self.gates[gate] = term
+                self.circuit.add(gate)
+
+        def set_dt(self, dt):
+            params = {gate: term.exp(dt / 2.0) for gate, term in self.gates.items()}
+            self.dt = dt
+            self.circuit.set_parameters(params)
+
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
+        if self.trotter_circuit is None:
+            self.trotter_circuit = self.TrotterCircuit(self.nqubits, self.terms, dt,
+                                                       accelerators, memory_device)
+        elif dt != self.trotter_circuit.dt:
+            self.trotter_circuit.set_dt(dt)
+        return self.trotter_circuit.circuit

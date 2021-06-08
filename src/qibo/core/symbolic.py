@@ -43,8 +43,10 @@ class HamiltonianTerm:
         return self._gate
 
     def exp(self, dt):
-        matrix = K.qnp.expm(-1j * dt * self.matrix)
-        return gates.Unitary(matrix, *self.target_qubits)
+        return K.qnp.expm(-1j * dt * self.matrix)
+
+    def expgate(self, dt):
+        return gates.Unitary(self.exp(dt), *self.target_qubits)
 
     def __mul__(self, x):
         return self.__class__(x * self.matrix, *self.target_qubits)
