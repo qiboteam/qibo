@@ -1,6 +1,6 @@
 import sympy
 import numpy as np
-from qibo import matrices, hamiltonians
+from qibo import matrices, hamiltonians, symbols
 import matplotlib.pyplot as plt
 
 
@@ -50,11 +50,8 @@ def h_problem(qubits, clauses):
         smap (dict): Dictionary that maps the symbols that appear in the
             Hamiltonian to the corresponding matrices and target qubits.
     """
-    z = sympy.symbols(" ".join((f"z{i}" for i in range(qubits))))
-    z_matrix = (matrices.I - matrices.Z) / 2.0
-    smap = {s: (i, z_matrix) for i, s in enumerate(z)}
-    sham = sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
-    return sham, smap
+    z = [symbols.Symbol(i, z_matrix) for i in range(qubits)]
+    return sum((sum(z[i - 1] for i in clause) - 1) ** 2 for clause in clauses)
 
 
 def h_initial(qubits, times):
@@ -68,10 +65,7 @@ def h_initial(qubits, times):
         smap (dict): Dictionary that maps the symbols that appear in the
             Hamiltonian to the corresponding matrices and target qubits.
     """
-    x = sympy.symbols(" ".join((f"x{i}" for i in range(qubits))))
-    smap = {s: (i, matrices.X) for i, s in enumerate(x)}
-    sham = sum(0.5 * times[i] * (1 - s) for i, s in enumerate(x))
-    return sham, smap
+    return sum(0.5 * times[i] * (1 - X(i)) for i in range(qubits))
 
 
 def spolynomial(t, params):

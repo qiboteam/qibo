@@ -34,18 +34,16 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     nqubits = int(control[0])
     # Define "easy" and "problem" Hamiltonians
     times = functions.times(nqubits, clauses)
-    sh0, smap0 = functions.h_initial(nqubits, times)
-    sh1, smap1 = functions.h_problem(nqubits, clauses)
+    sh0 = functions.h_initial(nqubits, times)
+    sh1 = functions.h_problem(nqubits, clauses)
+    gs = lambda: functions.ground_state(nqubits)
+    H0 = hamiltonians.SymbolicHamiltonian(sh0, ground_state=gs)
+    H1 = hamiltonians.SymbolicHamiltonian(sh1)
     if trotter:
         print('Using Trotter decomposition for the Hamiltonian\n')
-        gs = lambda: functions.ground_state(nqubits)
-        H0 = hamiltonians.TrotterHamiltonian.from_symbolic(
-          sh0, smap0, ground_state=gs)
-        H1 = hamiltonians.TrotterHamiltonian.from_symbolic(sh1, smap1)
     else:
         print('Using the full Hamiltonian evolution\n')
-        H0 = hamiltonians.Hamiltonian.from_symbolic(sh0, smap0).dense
-        H1 = hamiltonians.Hamiltonian.from_symbolic(sh1, smap1).dense
+        H0, H1 = H0.dense, H1.dense
 
     print('-'*20+'\n')
     if plot and nqubits >= 14:
