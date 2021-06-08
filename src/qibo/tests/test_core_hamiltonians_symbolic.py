@@ -24,6 +24,10 @@ def test_symbolic_hamiltonian_init():
     from qibo.symbols import Symbol
     with pytest.raises(TypeError):
         s = Symbol(0, "test")
+    # Wrong HamiltonianTerm matrix
+    from qibo.core.terms import HamiltonianTerm
+    with pytest.raises(TypeError):
+        t = HamiltonianTerm("test", 0, 1)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
@@ -148,10 +152,10 @@ def test_symbolic_hamiltonian_matmul(backend, density_matrix, nqubits):
 @pytest.mark.parametrize("calcdense", [False, True])
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
 def test_symbolic_hamiltonian_state_ev(backend, calcdense, nqubits, normalize):
-    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0))
+    local_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1.0)) + 2
     if calcdense:
         _ = local_ham.dense
-    dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
+    dense_ham = hamiltonians.TFIM(nqubits, h=1.0) + 2
 
     state = K.cast(random_complex((2 ** nqubits,)))
     local_ev = local_ham.expectation(state, normalize)
@@ -201,3 +205,6 @@ def test_trotter_hamiltonian_operation_errors():
         h = h1 @ "test"
     with pytest.raises(NotImplementedError):
         h = h1 @ np.ones((2, 2, 2, 2))
+    h2 = hamiltonians.XXZ(3, trotter=True)
+    with pytest.raises(NotImplementedError):
+        h = h1 @ h2
