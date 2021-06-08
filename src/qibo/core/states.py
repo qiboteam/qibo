@@ -187,7 +187,7 @@ class DistributedState(VectorState):
         self.circuit_cls = DistributedCircuit
         if not isinstance(circuit, self.circuit_cls):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
-                                   "distributed state.")
+                                   "distributed state.".format(type(circuit)))
         self.circuit = circuit
         # List of length ``ndevices`` holding ``tf.Variable``s with
         # the state pieces (created in ``self.create_pieces()``)

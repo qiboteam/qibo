@@ -110,7 +110,7 @@ class QAOA(object):
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+            is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).
@@ -146,7 +146,7 @@ class QAOA(object):
         # mixer hamiltonian (default = -sum(sigma_x))
         if mixer is None:
             trotter = isinstance(
-                self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+                self.hamiltonian, self.hamiltonians.SymbolicHamiltonian)
             self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
         else:
             if type(mixer) != type(hamiltonian):
@@ -158,12 +158,12 @@ class QAOA(object):
 
         # create circuits for Trotter Hamiltonians
         if (accelerators is not None and (
-            not isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian)
+            not isinstance(self.hamiltonian, self.hamiltonians.SymbolicHamiltonian)
             or solver != "exp")):
             raise_error(NotImplementedError, "Distributed QAOA is implemented "
-                                             "only with TrotterHamiltonian and "
+                                             "only with SymbolicHamiltonian and "
                                              "exponential solver.")
-        if isinstance(self.hamiltonian, self.hamiltonians.TrotterHamiltonian):
+        if isinstance(self.hamiltonian, self.hamiltonians.SymbolicHamiltonian):
             self.hamiltonian.circuit(1e-2, accelerators, memory_device)
             self.mixer.circuit(1e-2, accelerators, memory_device)
 
@@ -306,7 +306,7 @@ class FALQON(QAOA):
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
-            is a :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
+            is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
         memory_device (str): Name of device where the full state will be saved.
             Relevant only for distributed execution (when ``accelerators`` is
             given).

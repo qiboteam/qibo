@@ -123,11 +123,6 @@ def test_adiabatic_evolution_init():
     s = lambda t, a, b: t + a + b
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
-    # make Trotter Hamiltonian's compatible
-    h0 = hamiltonians.X(3, trotter=True)
-    h1 = hamiltonians.TFIM(3, trotter=True)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    assert adev.h0.is_compatible(adev.h1)
 
 
 def test_adiabatic_evolution_schedule():
@@ -238,8 +233,6 @@ def test_adiabatic_evolution_execute_rk(backend, solver, trotter, dt):
     """Test adiabatic evolution with Runge-Kutta solver."""
     h0 = hamiltonians.X(3, trotter=trotter)
     h1 = hamiltonians.TFIM(3, trotter=trotter)
-    if trotter:
-        h0 = h1.make_compatible(h0)
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t

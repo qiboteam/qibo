@@ -220,6 +220,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __init__(self, form=None, symbol_map=None):
         super().__init__()
         self._dense = None
+        self._circuit = None
+        self._circuitdt = None
         self.terms = None
         self.constant = 0
         self.form = None
@@ -340,6 +342,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         if not (isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types)):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
+        o = complex(o)
         new_ham = self.__class__.from_terms([o * x for x in self.terms])
         new_ham.constant = self.constant * o
         if self.form is not None:
@@ -384,12 +387,20 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                          "implemented.".format(type(o)))
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
-        from qibo.models import Circuit
-        circuit = Circuit(self.nqubits, accelerators=accelerators,
-                          memory_device=memory_device)
-        for term in itertools.chain(self.terms, self.terms[::-1]):
-            circuit.add(term.exp(dt / 2.0))
-        return circuit
+        if self._circuit is None:
+            from qibo.models import Circuit
+            self._circuit = Circuit(self.nqubits, accelerators=accelerators,
+                                    memory_device=memory_device)
+            for term in itertools.chain(self.terms, self.terms[::-1]):
+                self._circuit.add(term.exp(dt / 2.0))
+            self._circuitdt = dt
+        elif dt != self._circuitdt:
+            init_kwargs = self._circuit.init_kwargs
+            self._circuit = self._circuit.__class__(**init_kwargs)
+            for term in itertools.chain(self.terms, self.terms[::-1]):
+                self._circuit.add(term.exp(dt / 2.0))
+            self._circuitdt = dt
+        return self._circuit
 
 
 class TrotterHamiltonian(hamiltonians.TrotterHamiltonian):
