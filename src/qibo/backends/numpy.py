@@ -352,14 +352,14 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def state_vector_collapse(self, gate, state, result):
         state = self.reshape(state, gate.cache.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.cache.order), result)
+        substate = self.gather_nd(self.transpose(state, gate.cache.order), [result])
         norm = self.sum(self.square(self.abs(substate)))
         state = substate / self.cast(self.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, sorted(gate.target_qubits), result)
+        state = self._append_zeros(state, sorted(gate.target_qubits), [result])
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_collapse(self, gate, state, result):
-        density_matrix_result = 2 * result
+        density_matrix_result = 2 * [result]
         sorted_qubits = sorted(gate.target_qubits)
         sorted_qubits = sorted_qubits + [q + gate.nqubits for q in sorted_qubits]
         state = self.reshape(state, gate.cache.tensor_shape)
@@ -448,38 +448,47 @@ class NumpyJitBackend(NumpyBackend):
 
     def density_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
-        state = gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
-                             qubits)
+        shape = state.shape
+        state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
+                             *gate.target_qubits, qubits)
         state = gate.gate_op(state, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
-        return state
+        return self.reshape(state, shape)
 
     def density_matrix_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
-        state = gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
-                             qubits)
+        shape = state.shape
+        state = gate.gate_op(state.flatten(), gate.matrix, 2 * gate.nqubits,
+                             *gate.target_qubits, qubits)
         adjmatrix = self.conj(gate.matrix)
         state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
-        return state
+        return self.reshape(state, shape)
 
     def density_matrix_half_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
-        return gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
-                            qubits)
+        shape = state.shape
+        state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
+                             *gate.target_qubits, qubits)
+        return self.reshape(state, shape)
 
     def density_matrix_half_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
-        return gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
-                            qubits)
+        shape = state.shape
+        state = gate.gate_op(state.flatten(), gate.matrix, 2 * gate.nqubits,
+                             *gate.target_qubits, qubits)
+        return self.reshape(state, shape)
 
     def state_vector_collapse(self, gate, state, result):
-        return gate.gate_op(state, gate.cache.qubits_tensor, result,
+        return gate.gate_op(state, gate.cache.qubits_tensor, int(result),
                             gate.nqubits, True)
 
     def density_matrix_collapse(self, gate, state, result):
+        result = int(result)
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
-        state = gate.gate_op(state, qubits, result, 2 * gate.nqubits, False)
+        shape = state.shape
+        state = gate.gate_op(state.flatten(), qubits, result, 2 * gate.nqubits, False)
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False)
+        state = self.reshape(state, shape)
         return state / self.trace(state)

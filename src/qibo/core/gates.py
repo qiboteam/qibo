@@ -967,11 +967,11 @@ class ResetChannel(UnitaryChannel, abstract_gates.ResetChannel):
     def state_vector_call(self, state):
         not_collapsed = True
         if K.qnp.random.random() < self.probs[-2]:
-            state = K.state_vector_collapse(self.gates[-2], state, [0])
+            state = K.state_vector_collapse(self.gates[-2], state, 0)
             not_collapsed = False
         if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
-                state = K.state_vector_collapse(self.gates[-2], state, [0])
+                state = K.state_vector_collapse(self.gates[-2], state, 0)
             state = self.gates[-1](state)
         return state
 
@@ -979,7 +979,7 @@ class ResetChannel(UnitaryChannel, abstract_gates.ResetChannel):
         new_state = (1 - self.psum) * state
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inverse_gates):
             if isinstance(gate, M):
-                state = K.density_matrix_collapse(gate, state, [0])
+                state = K.density_matrix_collapse(gate, state, 0)
             else:
                 state = gate(state)
             new_state += p * state
