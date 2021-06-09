@@ -433,7 +433,7 @@ class NumpyJitBackend(NumpyBackend):
         cache = self.GateCache()
         qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
         qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
-        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
+        cache.qubits_tensor = tuple(sorted(qubits))
         if gate.density_matrix:
             cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
         return cache
@@ -447,35 +447,39 @@ class NumpyJitBackend(NumpyBackend):
                             gate.cache.qubits_tensor)
 
     def density_matrix_call(self, gate, state):
+        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         state = gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
-                             gate.cache.qubits_tensor + gate.nqubits,)
+                             qubits)
         state = gate.gate_op(state, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
         return state
 
     def density_matrix_matrix_call(self, gate, state):
+        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         state = gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
-                             gate.cache.qubits_tensor + gate.nqubits)
+                             qubits)
         adjmatrix = self.conj(gate.matrix)
         state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
         return state
 
     def density_matrix_half_call(self, gate, state):
+        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         return gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
-                            gate.cache.qubits_tensor + gate.nqubits)
+                            qubits)
 
     def density_matrix_half_matrix_call(self, gate, state):
+        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         return gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
-                            gate.cache.qubits_tensor + gate.nqubits)
+                            qubits)
 
     def state_vector_collapse(self, gate, state, result):
         return gate.gate_op(state, gate.cache.qubits_tensor, result,
                             gate.nqubits, True)
 
     def density_matrix_collapse(self, gate, state, result):
-        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
-                             2 * gate.nqubits, False)
+        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        state = gate.gate_op(state, qubits, result, 2 * gate.nqubits, False)
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False)
         return state / self.trace(state)
