@@ -98,9 +98,9 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if K.op is None:
-            raise_error(NotImplementedError, "Distributed circuit does not "
-                                             "support non-custom gates.")
+        if K.name != "qibotf":
+            raise_error(NotImplementedError, "Distributed circuit is implemented "
+                                             "only for the qibotf backend.")
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
