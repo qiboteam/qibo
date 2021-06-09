@@ -18,7 +18,7 @@ def test_set_backend(backend_name):
     assert repr(K) == backend_name
     assert K.executing_eagerly()
     h = gates.H(0)
-    if backend_name == "qibotf":
+    if backend_name == "qibotf" or backend_name == "qibojit":
         assert h.gate_op
     else:
         assert h.gate_op is None

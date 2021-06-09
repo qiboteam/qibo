@@ -51,6 +51,12 @@ class Backend:
                         "optimized Qibo custom operators please use "
                         "`pip install qibotf` after installing Tensorflow.")
 
+        # check if qibojit is installed
+        if self.check_availability("qibojit"): # pragma: no cover
+            # qibojit backend is not tested until `qibojit` is available
+            from qibo.backends.numpy import NumpyJitBackend
+            self.available_backends["qibojit"] = NumpyJitBackend
+
         # check if IcarusQ is installed
         if self.check_availability("qiboicarusq"): # pragma: no cover
             # hardware backend is not tested until `qiboicarusq` is available

@@ -370,3 +370,112 @@ class NumpyBackend(abstract.AbstractBackend):
         state = substate / norm
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
+
+
+class NumpyJitBackend(NumpyBackend):
+
+    def __init__(self):
+        from qibo.backends import Backend
+        if not Backend.check_availability("qibojit"): # pragma: no cover
+            # CI can compile custom operators so this case is not tested
+            raise_error(RuntimeError, "Cannot initialize qibojit "
+                                      "if the qibojit is not installed.")
+        from qibojit import custom_operators as op
+        super().__init__()
+        self.name = "qibojit"
+        self.op = op
+
+        try:
+            from cupy import cuda
+            ngpu = cuda.runtime.getDeviceCount()
+        except:
+            ngpu = 0
+
+        # TODO: reconsider device management
+        self.cpu_devices = ["/CPU:0"]
+        self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
+        if self.gpu_devices: # pragma: no cover
+            # CI does not use GPUs
+            self.default_device = self.gpu_devices[0]
+        elif self.cpu_devices:
+            self.default_device = self.cpu_devices[0]
+
+    def set_device(self, name):
+        abstract.AbstractBackend.set_device(self, name)
+        if "GPU" in name:
+            self.op.set_backend("cupy")
+        else:
+            self.op.set_backend("numba")
+
+    def to_numpy(self, x):
+        return self.op.to_numpy(x)
+
+    def cast(self, x, dtype='DTYPECPX'):
+        if isinstance(dtype, str):
+            dtype = self.dtypes(dtype)
+        return self.op.cast(x, dtype=dtype)
+
+    def initial_state(self, nqubits, is_matrix=False):
+        return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
+                                    is_matrix=is_matrix)
+
+    def sample_frequencies(self, probs, nshots):
+        from qibo.backends.tensorflow import TensorflowCustomBackend
+        return TensorflowCustomBackend.sample_frequencies(self, probs, nshots)
+
+    def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def einsum_call(self, cache, state, matrix): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    def create_gate_cache(self, gate):
+        cache = self.GateCache()
+        qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
+        qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
+        cache.qubits_tensor = self.cast(sorted(qubits), "int32")
+        if gate.density_matrix:
+            cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
+        return cache
+
+    def state_vector_call(self, gate, state):
+        return gate.gate_op(state, gate.nqubits, *gate.target_qubits,
+                            gate.cache.qubits_tensor)
+
+    def state_vector_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, gate.nqubits, *gate.target_qubits,
+                            gate.cache.qubits_tensor)
+
+    def density_matrix_call(self, gate, state):
+        state = gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
+                             gate.cache.qubits_tensor + gate.nqubits,)
+        state = gate.gate_op(state, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             gate.cache.qubits_tensor)
+        return state
+
+    def density_matrix_matrix_call(self, gate, state):
+        state = gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
+                             gate.cache.qubits_tensor + gate.nqubits)
+        adjmatrix = self.conj(gate.matrix)
+        state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             gate.cache.qubits_tensor)
+        return state
+
+    def density_matrix_half_call(self, gate, state):
+        return gate.gate_op(state, 2 * gate.nqubits, *gate.target_qubits,
+                            gate.cache.qubits_tensor + gate.nqubits)
+
+    def density_matrix_half_matrix_call(self, gate, state):
+        return gate.gate_op(state, gate.matrix, 2 * gate.nqubits, *gate.target_qubits,
+                            gate.cache.qubits_tensor + gate.nqubits)
+
+    def state_vector_collapse(self, gate, state, result):
+        return gate.gate_op(state, gate.cache.qubits_tensor, result,
+                            gate.nqubits, True)
+
+    def density_matrix_collapse(self, gate, state, result):
+        state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
+                             2 * gate.nqubits, False)
+        state = gate.gate_op(state, gate.cache.qubits_tensor, result,
+                             2 * gate.nqubits, False)
+        return state / self.trace(state)
