@@ -352,14 +352,14 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def state_vector_collapse(self, gate, state, result):
         state = self.reshape(state, gate.cache.tensor_shape)
-        substate = self.gather_nd(self.transpose(state, gate.cache.order), [result])
+        substate = self.gather_nd(self.transpose(state, gate.cache.order), result)
         norm = self.sum(self.square(self.abs(substate)))
         state = substate / self.cast(self.sqrt(norm), dtype=state.dtype)
-        state = self._append_zeros(state, sorted(gate.target_qubits), [result])
+        state = self._append_zeros(state, sorted(gate.target_qubits), result)
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_collapse(self, gate, state, result):
-        density_matrix_result = 2 * [result]
+        density_matrix_result = 2 * result
         sorted_qubits = sorted(gate.target_qubits)
         sorted_qubits = sorted_qubits + [q + gate.nqubits for q in sorted_qubits]
         state = self.reshape(state, gate.cache.tensor_shape)

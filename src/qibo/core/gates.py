@@ -123,14 +123,21 @@ class Y(BackendGate, abstract_gates.Y):
         return K.matrices.Y
 
     def _custom_density_matrix_call(self, state):
-        state = self.gate_op(state, self.cache.qubits_tensor + self.nqubits,
-                             2 * self.nqubits, *self.target_qubits,
-                             K.get_threads())
+        state = K.density_matrix_half_call(self, state)
         matrix = K.conj(K.matrices.Y)
-        state = K.op.apply_gate(state, matrix, self.cache.qubits_tensor,
-                                2 * self.nqubits, *self.cache.target_qubits_dm,
-                                K.get_threads())
-        return state
+        shape = state.shape
+        state = K.reshape(state, (K.np.prod(shape),))
+        original_targets = tuple(self.target_qubits)
+        self._target_qubits = self.cache.target_qubits_dm
+        self._nqubits *= 2
+        self.gate_op = K.op.apply_gate
+        self._matrix = K.conj(K.matrices.Y)
+        state = K.state_vector_matrix_call(self, state)
+        self._matrix = K.matrices.Y
+        self.gate_op = K.op.apply_y
+        self._nqubits //= 2
+        self._target_qubits = original_targets
+        return K.reshape(state, shape)
 
 
 class Z(BackendGate, abstract_gates.Z):
@@ -966,20 +973,28 @@ class ResetChannel(UnitaryChannel, abstract_gates.ResetChannel):
 
     def state_vector_call(self, state):
         not_collapsed = True
+        if K.op is not None:
+            result = 0
+        else:
+            result = [0]
         if K.qnp.random.random() < self.probs[-2]:
-            state = K.state_vector_collapse(self.gates[-2], state, 0)
+            state = K.state_vector_collapse(self.gates[-2], state, result)
             not_collapsed = False
         if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
-                state = K.state_vector_collapse(self.gates[-2], state, 0)
+                state = K.state_vector_collapse(self.gates[-2], state, result)
             state = self.gates[-1](state)
         return state
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
+        if K.op is not None:
+            result = 0
+        else:
+            result = [0]
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inverse_gates):
             if isinstance(gate, M):
-                state = K.density_matrix_collapse(gate, state, 0)
+                state = K.density_matrix_collapse(gate, state, result)
             else:
                 state = gate(state)
             new_state += p * state
@@ -1076,7 +1091,13 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
 
     def density_matrix_call(self, state):
         if K.op is not None:
-            return self.gate_op(state, self.matrix, self.cache.qubits_tensor,
-                                2 * self.nqubits, *self.cache.target_qubits_dm,
-                                K.get_threads())
+            shape = state.shape
+            state = K.reshape(state, (K.np.prod(shape),))
+            original_targets = tuple(self.target_qubits)
+            self._target_qubits = self.cache.target_qubits_dm
+            self._nqubits *= 2
+            state = K.state_vector_matrix_call(self, state)
+            self._nqubits //= 2
+            self._target_qubits = original_targets
+            return K.reshape(state, shape)
         return K.state_vector_call(self, state)
