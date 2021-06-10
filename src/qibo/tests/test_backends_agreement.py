@@ -58,6 +58,8 @@ def test_backend_methods(tested_backend, target_backend, method, kwargs):
     target_func = getattr(target_backend, method)
     if isinstance(kwargs, dict):
         np.testing.assert_allclose(tested_func(**kwargs), target_func(**kwargs))
+    else:
+        np.testing.assert_allclose(tested_func(*kwargs), target_func(*kwargs))
 
 
 METHODS = [
