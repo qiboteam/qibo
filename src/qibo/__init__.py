@@ -1,7 +1,10 @@
 __version__ = "0.1.6.dev1"
-from qibo.config import set_threads, get_threads, set_batch_size, get_batch_size
-from qibo.backends import set_precision, set_backend, set_device
-from qibo.backends import get_backend, get_precision, get_device
+from qibo.config import set_threads, get_threads
+from qibo.config import set_batch_size, get_batch_size
+from qibo.config import set_metropolis_threshold, get_metropolis_threshold
+from qibo.backends import set_backend, get_backend
+from qibo.backends import set_precision, get_precision
+from qibo.backends import set_device, get_device
 from qibo.backends import numpy_matrices as matrices
 from qibo.backends import K
 from qibo import callbacks, gates, hamiltonians, models

@@ -26,7 +26,7 @@ EIGVAL_CUTOFF = 1e-14
 SHOT_BATCH_SIZE = 2 ** 18
 
 # Threshold size for sampling shots in measurements frequencies with custom operator
-SHOT_CUSTOM_OP_THREASHOLD = 100000
+SHOT_METROPOLIS_THRESHOLD = 100000
 
 # Flag for raising warning in ``set_precision`` and ``set_backend``
 ALLOW_SWITCHERS = True
@@ -86,6 +86,19 @@ def set_batch_size(batch_size):
          raise_error(ValueError, "Shot batch size cannot be greater than 2^31.")
     global SHOT_BATCH_SIZE
     SHOT_BATCH_SIZE = batch_size
+
+
+def get_metropolis_threshold():
+    """Returns threshold for using Metropolis algorithm for sampling measurement shots."""
+    return SHOT_METROPOLIS_THRESHOLD
+
+def set_metropolis_threshold(threshold):
+    if not isinstance(threshold, int):
+        raise_error(TypeError, "Shot threshold must be integer.")
+    elif threshold < 1:
+        raise_error(ValueError, "Shot threshold be a positive integer.")
+    global SHOT_METROPOLIS_THRESHOLD
+    SHOT_METROPOLIS_THRESHOLD = threshold
 
 
 # Configuration for logging mechanism
