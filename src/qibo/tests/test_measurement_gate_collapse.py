@@ -23,7 +23,6 @@ def test_measurement_collapse(backend, nqubits, targets):
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
     np.testing.assert_allclose(final_state, target_state)
-    assert len(gate.result.frequencies()) == 1
 
 
 @pytest.mark.parametrize("nqubits,targets",
@@ -86,6 +85,7 @@ def test_measurement_result_parameters_random(backend, accelerators):
     c.add(gates.RY(0, theta=np.pi * output / 5))
     c.add(gates.RX(2, theta=np.pi * output / 4))
     result = c(initial_state=np.copy(initial_state))
+    assert len(output.frequencies()) == 1
 
     K.set_seed(123)
     with K.device(test_device):
