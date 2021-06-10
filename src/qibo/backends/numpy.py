@@ -372,7 +372,7 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
 
-class NumpyJitBackend(NumpyBackend):
+class NumpyCustomBackend(NumpyBackend): # pragma: no cover
 
     def __init__(self):
         from qibo.backends import Backend
@@ -380,13 +380,13 @@ class NumpyJitBackend(NumpyBackend):
             # CI can compile custom operators so this case is not tested
             raise_error(RuntimeError, "Cannot initialize qibojit "
                                       "if the qibojit is not installed.")
-        from qibojit import custom_operators as op
+        from qibojit import custom_operators as op # pylint: disable=E0401
         super().__init__()
         self.name = "qibojit"
         self.op = op
 
         try:
-            from cupy import cuda
+            from cupy import cuda # pylint: disable=E0401
             ngpu = cuda.runtime.getDeviceCount()
         except:
             ngpu = 0
