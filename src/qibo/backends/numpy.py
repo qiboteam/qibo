@@ -491,12 +491,16 @@ class NumpyJitBackend(NumpyBackend):
                              *gate.target_qubits, qubits)
         return self.reshape(state, shape)
 
+    def _result_tensor(self, result):
+        n = len(result)
+        return int(sum(2 ** (n - i - 1) * r for i, r in enumerate(result)))
+
     def state_vector_collapse(self, gate, state, result):
-        return gate.gate_op(state, gate.cache.qubits_tensor, int(result),
-                            gate.nqubits, True)
+        result = self._result_tensor(result)
+        return gate.gate_op(state, gate.cache.qubits_tensor, result, gate.nqubits, True)
 
     def density_matrix_collapse(self, gate, state, result):
-        result = int(result)
+        result = self._result_tensor(result)
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), qubits, result, 2 * gate.nqubits, False)

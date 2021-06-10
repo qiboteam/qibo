@@ -196,7 +196,6 @@ class M(BackendGate, abstract_gates.M):
                                   collapse=collapse, p0=p0, p1=p1)
         self.result = None
         self._result_list = None
-        self._result_tensor = None
         if collapse:
             self.result = self.measurements.MeasurementResult(self.qubits)
         if self.gate_op:
@@ -254,14 +253,6 @@ class M(BackendGate, abstract_gates.M):
             self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
         return self._result_list
 
-    def result_tensor(self):
-        if self._result_tensor is None:
-            n = len(self.result_list())
-            result = sum(2 ** (n - i - 1) * r
-                         for i, r in enumerate(self.result_list()))
-            self._result_tensor = K.cast(result, dtype='DTYPEINT')
-        return self._result_tensor
-
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             self.set_nqubits(state)
@@ -300,18 +291,10 @@ class M(BackendGate, abstract_gates.M):
         return result
 
     def state_vector_call(self, state):
-        if K.op is not None:
-            result = self.result_tensor()
-        else:
-            result = self.result.binary[-1]
-        return K.state_vector_collapse(self, state, result)
+        return K.state_vector_collapse(self, state, self.result.binary[-1])
 
     def density_matrix_call(self, state):
-        if K.op is not None:
-            result = self.result_tensor()
-        else:
-            result = self.result_list()
-        return K.density_matrix_collapse(self, state, result)
+        return K.density_matrix_collapse(self, state, self.result_list())
 
     def __call__(self, state, nshots=1):
         self.result = self.measure(state, nshots)
@@ -973,28 +956,20 @@ class ResetChannel(UnitaryChannel, abstract_gates.ResetChannel):
 
     def state_vector_call(self, state):
         not_collapsed = True
-        if K.op is not None:
-            result = 0
-        else:
-            result = [0]
         if K.qnp.random.random() < self.probs[-2]:
-            state = K.state_vector_collapse(self.gates[-2], state, result)
+            state = K.state_vector_collapse(self.gates[-2], state, [0])
             not_collapsed = False
         if K.qnp.random.random() < self.probs[-1]:
             if not_collapsed:
-                state = K.state_vector_collapse(self.gates[-2], state, result)
+                state = K.state_vector_collapse(self.gates[-2], state, [0])
             state = self.gates[-1](state)
         return state
 
     def density_matrix_call(self, state):
         new_state = (1 - self.psum) * state
-        if K.op is not None:
-            result = 0
-        else:
-            result = [0]
         for p, gate, inv_gate in zip(self.probs, self.gates, self.inverse_gates):
             if isinstance(gate, M):
-                state = K.density_matrix_collapse(gate, state, result)
+                state = K.density_matrix_collapse(gate, state, [0])
             else:
                 state = gate(state)
             new_state += p * state

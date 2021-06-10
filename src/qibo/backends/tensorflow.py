@@ -290,11 +290,18 @@ class TensorflowCustomBackend(TensorflowBackend):
                             2 * gate.nqubits, *gate.target_qubits,
                             self.get_threads())
 
+    def _result_tensor(self, result):
+        n = len(result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
+        return self.cast(result, dtype="DTYPEINT")
+
     def state_vector_collapse(self, gate, state, result):
+        result = self._result_tensor(result)
         return gate.gate_op(state, gate.cache.qubits_tensor, result,
                             gate.nqubits, True, self.get_threads())
 
     def density_matrix_collapse(self, gate, state, result):
+        result = self._result_tensor(result)
         state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
                              2 * gate.nqubits, False, self.get_threads())
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
