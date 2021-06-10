@@ -78,6 +78,7 @@ def get_batch_size():
     return SHOT_BATCH_SIZE
 
 def set_batch_size(batch_size):
+    """Sets batch size used for sampling measurement shots."""
     if not isinstance(batch_size, int):
         raise_error(TypeError, "Shot batch size must be integer.")
     elif batch_size < 1:
@@ -93,6 +94,7 @@ def get_metropolis_threshold():
     return SHOT_METROPOLIS_THRESHOLD
 
 def set_metropolis_threshold(threshold):
+    """Sets threshold for using Metropolis algorithm for sampling measurement shots."""
     if not isinstance(threshold, int):
         raise_error(TypeError, "Shot threshold must be integer.")
     elif threshold < 1:

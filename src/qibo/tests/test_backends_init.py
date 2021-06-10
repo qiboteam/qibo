@@ -120,7 +120,8 @@ def test_set_shot_batch_size():
 
 def test_set_metropolis_threshold():
     import qibo
-    assert qibo.get_metropolis_threshold() == 100000
+    original_threshold = qibo.get_metropolis_threshold()
+    assert original_threshold == 100000
     qibo.set_metropolis_threshold(100)
     assert qibo.get_metropolis_threshold() == 100
     from qibo.config import SHOT_METROPOLIS_THRESHOLD
@@ -129,3 +130,4 @@ def test_set_metropolis_threshold():
         qibo.set_metropolis_threshold("test")
     with pytest.raises(ValueError):
         qibo.set_metropolis_threshold(-10)
+    qibo.set_metropolis_threshold(original_threshold)
