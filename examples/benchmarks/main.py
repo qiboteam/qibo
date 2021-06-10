@@ -13,7 +13,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=20, type=int)
 parser.add_argument("--type", default="qft", type=str)
-parser.add_argument("--backend", default="custom", type=str)
+parser.add_argument("--backend", default="qibotf", type=str)
 parser.add_argument("--precision", default="double", type=str)
 
 parser.add_argument("--device", default=None, type=str)
@@ -172,6 +172,10 @@ def main(nqubits, type,
         # in the simulation time
         result = circuit(nshots=nshots)
         logs[-1]["compile_time"] = time.time() - start_time
+
+    start_time = time.time()
+    result = circuit(nshots=nshots)
+    logs[-1]["dry_run_time"] = time.time() - start_time
 
     start_time = time.time()
     result = circuit(nshots=nshots)
