@@ -279,10 +279,6 @@ class M(BackendGate, abstract_gates.M):
             self._result_list = None
             self._result_tensor = None
             self.result.add_shot(probs)
-            # optional bitflip noise
-            if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-                noisy_result = self.result.apply_bitflips(*self.bitflip_map)
-                self.result.binary = noisy_result.binary
             return self.result
 
         result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
