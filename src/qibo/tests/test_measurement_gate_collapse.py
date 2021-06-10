@@ -23,6 +23,7 @@ def test_measurement_collapse(backend, nqubits, targets):
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
     np.testing.assert_allclose(final_state, target_state)
+    assert len(gate.result.frequencies()) == 1
 
 
 @pytest.mark.parametrize("nqubits,targets",

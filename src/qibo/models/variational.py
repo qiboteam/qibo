@@ -81,7 +81,10 @@ class VQE(object):
         else:
             loss = _loss
 
-        if method != "sgd":
+        if method == "cma":
+            dtype = getattr(K.np, K._dtypes.get('DTYPE'))
+            loss = lambda p, c, h: dtype(_loss(p, c, h))
+        elif method != "sgd":
             loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
