@@ -89,6 +89,10 @@ def test_compiling_twice_exception(backend):
 @pytest.mark.linux
 def test_memory_error(backend, accelerators):
     """Check that ``RuntimeError`` is raised if device runs out of memory."""
+    import qibo
+    # TODO: Remove this skip
+    if qibo.get_backend() == "qibojit": # pragma: no cover
+        pytest.skip("qibojit leads to segfault that is not captured here")
     c = Circuit(40, accelerators)
     c.add((gates.H(i) for i in range(0, 40, 5)))
     with pytest.raises(RuntimeError):
