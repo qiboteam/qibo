@@ -19,6 +19,7 @@ parser.add_argument("--precision", default="double", type=str)
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--accelerators", default=None, type=str)
 
+parser.add_argument("--nreps", default=1, type=int)
 parser.add_argument("--nshots", default=None, type=int)
 parser.add_argument("--fuse", action="store_true")
 parser.add_argument("--compile", action="store_true")
@@ -94,7 +95,7 @@ def parse_accelerators(accelerators):
 def main(nqubits, type,
          backend="custom", precision="double",
          device=None, accelerators=None,
-         nshots=None, fuse=False, compile=False,
+         nreps=1, nshots=None, fuse=False, compile=False,
          nlayers=None, gate_type=None, params={},
          filename=None):
     """Runs benchmarks for different circuit types.
@@ -107,6 +108,8 @@ def main(nqubits, type,
             If ``None`` the first available device is used.
         accelerators (dict): Dictionary that specifies the accelarator devices
             for multi-GPU setups.
+        nreps (int): Number of repetitions of circuit execution.
+            Dry run is not included. Default is 1.
         nshots (int): Number of measurement shots.
             Logs the time required to sample frequencies (no samples).
             If ``None`` no measurements are performed.
@@ -178,8 +181,9 @@ def main(nqubits, type,
     logs[-1]["dry_run_time"] = time.time() - start_time
 
     start_time = time.time()
-    result = circuit(nshots=nshots)
-    logs[-1]["simulation_time"] = time.time() - start_time
+    for _ in range(nreps):
+        result = circuit(nshots=nshots)
+    logs[-1]["simulation_time"] = (time.time() - start_time) / nreps
     logs[-1]["dtype"] = str(result.dtype)
 
     if nshots is not None:
