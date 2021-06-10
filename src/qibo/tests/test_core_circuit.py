@@ -62,7 +62,7 @@ def test_compiled_execute(backend):
     # Run compiled circuit
     from qibo import K
     c2 = create_circuit()
-    if K.op is not None:
+    if K.name == "qibotf":
         with pytest.raises(RuntimeError):
             c2.compile()
     else:

@@ -94,9 +94,8 @@ def test_vqe(backend, method, options, compile, filename):
 
     if method == 'parallel_L-BFGS-B':
         device = qibo.get_device()
-        if qibo.get_backend() == "tensorflow":
-            pytest.skip("unsupported backend")
-        if device is not None and "GPU" in device: # pragma: no cover
+        backend = qibo.get_backend()
+        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
             pytest.skip("unsupported configuration")
         import os
         if os.name == 'nt': # pragma: no cover
