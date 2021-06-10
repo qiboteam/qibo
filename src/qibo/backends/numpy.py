@@ -420,8 +420,20 @@ class NumpyJitBackend(NumpyBackend):
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.backends.tensorflow import TensorflowCustomBackend
-        return TensorflowCustomBackend.sample_frequencies(self, probs, nshots)
+        # TODO: Fix code repetition with `TensorflowCustomBackend` here
+        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
+        if nshots < SHOT_CUSTOM_OP_THREASHOLD:
+            return super().sample_frequencies(probs, nshots)
+        # Generate random seed using tf
+        dtype = self.dtypes('DTYPEINT')
+        seed = self.backend.random.uniform(
+            shape=tuple(), maxval=int(1e8), dtype=dtype)
+        nqubits = int(self.np.log2(tuple(probs.shape)[0]))
+        shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
+        frequencies = self.zeros(shape, dtype='DTYPEINT')
+        frequencies = self.op.measure_frequencies(
+            frequencies, probs, nshots, nqubits, seed, self.get_threads())
+        return frequencies
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
         raise_error(NotImplementedError)
