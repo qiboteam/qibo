@@ -7,6 +7,7 @@ import argparse
 import os
 import time
 import json
+import numpy as np
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 
 
@@ -180,11 +181,15 @@ def main(nqubits, type,
     result = circuit(nshots=nshots)
     logs[-1]["dry_run_time"] = time.time() - start_time
 
-    start_time = time.time()
+    simulation_time = []
     for _ in range(nreps):
+        start_time = time.time()
         result = circuit(nshots=nshots)
-    logs[-1]["simulation_time"] = (time.time() - start_time) / nreps
+        simulation_time.append(time.time() - start_time)
     logs[-1]["dtype"] = str(result.dtype)
+    logs[-1]["simulation_time"] = np.mean(simulation_time)
+    logs[-1]["simulation_time_std"] = np.std(simulation_time)
+
 
     if nshots is not None:
         start_time = time.time()
