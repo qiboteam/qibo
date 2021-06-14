@@ -428,6 +428,13 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
             dtype = self.dtypes(dtype)
         return self.op.cast(x, dtype=dtype)
 
+    def expm(self, x):
+        if self.op.get_backend() == "cupy":
+            # FIXME: This has bad performance because of CPU-GPU communication
+            # but scipy.linalg.expm is not available for GPU
+            return self.cast(super().expm(x.get()))
+        return super().expm(x)
+
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix)
