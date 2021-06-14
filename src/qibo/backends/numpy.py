@@ -397,15 +397,28 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         if self.gpu_devices: # pragma: no cover
             # CI does not use GPUs
             self.default_device = self.gpu_devices[0]
+            self.set_engine("cupy")
         elif self.cpu_devices:
             self.default_device = self.cpu_devices[0]
+            self.set_engine("numba")
+
+    def set_engine(self, name): # pragma: no cover
+        """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
+        if name == "numba":
+            import numpy as xp
+        elif name == "cupy":
+            import cupy as xp
+        else:
+            raise_error(ValueError, "Unknown engine {}.".format(name))
+        self.backend = xp
+        self.op.set_backend(name)
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
         if "GPU" in name:
-            self.op.set_backend("cupy")
+            self.set_engine("cupy")
         else:
-            self.op.set_backend("numba")
+            self.set_engine("numba")
 
     def to_numpy(self, x):
         return self.op.to_numpy(x)
