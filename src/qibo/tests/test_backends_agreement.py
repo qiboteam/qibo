@@ -122,8 +122,13 @@ def test_backend_eigh(tested_backend, target_backend):
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
     m = rand((5, 5))
-    eigvals1, eigvecs1 = tested_backend.eigh(m)
     eigvals2, eigvecs2 = target_backend.eigh(m)
+    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
+        eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m))
+        eigvals1 = tested_backend.to_numpy(eigvals1)
+        eigvecs1 = tested_backend.to_numpy(eigvecs1)
+    else:
+        eigvals1, eigvecs1 = tested_backend.eigh(m)
     np.testing.assert_allclose(eigvals1, eigvals2)
     np.testing.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2))
 

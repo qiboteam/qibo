@@ -411,6 +411,8 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         else:
             raise_error(ValueError, "Unknown engine {}.".format(name))
         self.backend = xp
+        self.tensor_types = (xp.ndarray,)
+        self.native_types = (xp.ndarray,)
         self.op.set_backend(name)
 
     def set_device(self, name):
