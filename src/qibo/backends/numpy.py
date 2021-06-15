@@ -67,10 +67,10 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         return self.backend.arange(start, finish, step, dtype=dtype)
 
-    def eye(self, dim, dtype='DTYPECPX'):
+    def eye(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
-        return self.backend.eye(dim, dtype=dtype)
+        return self.backend.eye(shape, dtype=dtype)
 
     def zeros(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -371,8 +371,8 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
-    def assert_allclose(self, value, target):
-        self.np.testing.assert_allclose(value, target)
+    def assert_allclose(self, value, target, atol=0.0):
+        self.np.testing.assert_allclose(value, target, atol=atol)
 
 
 class NumpyCustomBackend(NumpyBackend): # pragma: no cover
@@ -417,6 +417,7 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         self.tensor_types = (xp.ndarray,)
         self.native_types = (xp.ndarray,)
         self.Tensor = xp.ndarray
+        self.random = xp.random
         self.op.set_backend(name)
 
     def set_device(self, name):
@@ -427,12 +428,31 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
             self.set_engine("numba")
 
     def to_numpy(self, x):
+        if isinstance(x, self.np.ndarray):
+            return x
         return self.op.to_numpy(x)
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         return self.op.cast(x, dtype=dtype)
+
+    def check_shape(self, shape):
+        if self.op.get_backend() == "cupy" and isinstance(shape, self.Tensor):
+            shape = shape.get()
+        return shape
+
+    def reshape(self, x, shape):
+        return super().reshape(x, self.check_shape(shape))
+
+    def eye(self, shape, dtype='DTYPECPX'):
+        return super().eye(self.check_shape(shape), dtype=dtype)
+
+    def zeros(self, shape, dtype='DTYPECPX'):
+        return super().zeros(self.check_shape(shape), dtype=dtype)
+
+    def ones(self, shape, dtype='DTYPECPX'):
+        return super().ones(self.check_shape(shape), dtype=dtype)
 
     def expm(self, x):
         if self.op.get_backend() == "cupy":
@@ -534,10 +554,10 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         state = self.reshape(state, shape)
         return state / self.trace(state)
 
-    def assert_allclose(self, value, target):
+    def assert_allclose(self, value, target, atol=0.0):
         if self.op.get_backend() == "cupy":
             if isinstance(value, self.backend.ndarray):
                 value = value.get()
             if isinstance(target, self.backend.ndarray):
                 target = target.get()
-        self.np.testing.assert_allclose(value, target)
+        self.np.testing.assert_allclose(value, target, atol=atol)

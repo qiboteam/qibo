@@ -453,6 +453,7 @@ def test_pauli_noise_channel(backend):
     K.assert_allclose(final_rho, target_rho)
 
 
+@pytest.mark.skip
 def test_reset_channel(backend):
     initial_rho = random_density_matrix(3)
     gate = gates.ResetChannel(0, p0=0.2, p1=0.2)
