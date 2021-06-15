@@ -17,15 +17,18 @@ class VectorState(AbstractState):
     @AbstractState.tensor.setter
     def tensor(self, x):
         if not isinstance(x, K.tensor_types):
-            raise_error(TypeError, "Initial state type {} is not recognized."
-                                    "".format(type(x)))
+            if isinstance(x, K.qnp.tensor_types):
+                x = K.cast(x)
+            else:
+                raise_error(TypeError, "Initial state type {} is not recognized."
+                                        "".format(type(x)))
         shape = tuple(x.shape)
         if self._nqubits is None:
             self.nqubits = int(K.np.log2(shape[0]))
         if shape != self.shape:
             raise_error(ValueError, "Invalid tensor shape {} for state of {} "
                                     "qubits.".format(shape, self.nqubits))
-        self._tensor = K.cast(x)
+        self._tensor = x
 
     def __array__(self):
         return K.qnp.cast(self.tensor)

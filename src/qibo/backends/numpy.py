@@ -371,6 +371,9 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
+    def assert_allclose(self, value, target):
+        self.np.testing.assert_allclose(value, target)
+
 
 class NumpyCustomBackend(NumpyBackend): # pragma: no cover
 
@@ -413,6 +416,7 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         self.backend = xp
         self.tensor_types = (xp.ndarray,)
         self.native_types = (xp.ndarray,)
+        self.Tensor = xp.ndarray
         self.op.set_backend(name)
 
     def set_device(self, name):
@@ -529,3 +533,11 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
                              2 * gate.nqubits, False)
         state = self.reshape(state, shape)
         return state / self.trace(state)
+
+    def assert_allclose(self, value, target):
+        if self.op.get_backend() == "cupy":
+            if isinstance(value, self.backend.ndarray):
+                value = value.get()
+            if isinstance(target, self.backend.ndarray):
+                target = target.get()
+        self.np.testing.assert_allclose(value, target)
