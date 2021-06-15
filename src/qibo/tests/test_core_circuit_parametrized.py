@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 import qibo
-from qibo import gates
+from qibo import K, gates
 from qibo.models import Circuit
 
 
@@ -38,7 +38,7 @@ def test_set_parameters_with_list(backend, trainable):
             c.set_parameters(new_params[1:])
     target_params = [new_params[0], new_params[1], (new_params[2], new_params[3])]
     target_c.set_parameters(target_params)
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -74,7 +74,7 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
     target_c.add(gates.CU2(0, 2, *params[3]))
     target_c.add(gates.U3(1, *params[4]))
     c.set_parameters(trainable_params)
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
     # Attempt using a flat list
     npparams = np.random.random(8)
@@ -92,7 +92,7 @@ def test_circuit_set_parameters_ungates(backend, trainable, accelerators):
     target_c.add(gates.CU2(0, 2, *npparams[3:5]))
     target_c.add(gates.U3(1, *npparams[5:]))
     c.set_parameters(trainable_params)
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -114,7 +114,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     target_c.add(gates.RX(0, theta=params[0]))
     target_c.add(gates.Unitary(params[1], 1, 2))
     c.set_parameters(trainable_params)
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
     # Attempt using a flat list / np.ndarray
     new_params = np.random.random(17)
@@ -126,7 +126,7 @@ def test_circuit_set_parameters_with_unitary(backend, trainable, accelerators):
     target_c = Circuit(4)
     target_c.add(gates.RX(0, theta=new_params[0]))
     target_c.add(gates.Unitary(new_params[1:].reshape((4, 4)), 1, 2))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -141,19 +141,19 @@ def test_set_parameters_with_variationallayer(backend, nqubits, accelerators):
     target_c = Circuit(nqubits)
     target_c.add((gates.RY(i, theta[i]) for i in range(nqubits)))
     target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
     # Test setting VariationalLayer using a list
     new_theta = np.random.random(nqubits)
     c.set_parameters([np.copy(new_theta)])
     target_c.set_parameters(np.copy(new_theta))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
     # Test setting VariationalLayer using an array
     new_theta = np.random.random(nqubits)
     c.set_parameters(np.copy(new_theta))
     target_c.set_parameters(np.copy(new_theta))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -174,7 +174,7 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     target_c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
     target_c.add((gates.RY(i, theta[1, i]) for i in range(nqubits)))
     target_c.add((gates.RX(i, theta[2, i]) for i in range(nqubits)))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
     new_theta = np.random.random(3 * nqubits)
     if trainable:
@@ -183,7 +183,7 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
         c.set_parameters(np.copy(new_theta[2 * nqubits:]))
         new_theta[:2 * nqubits] = theta[:2].ravel()
     target_c.set_parameters(np.copy(new_theta))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 @pytest.mark.parametrize("trainable", [True, False])
@@ -202,7 +202,7 @@ def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
     c.add(gates.RZ(1, theta=params[8]))
 
     fused_c = c.fuse()
-    np.testing.assert_allclose(c(), fused_c())
+    K.assert_allclose(c(), fused_c())
 
     if trainable:
         new_params = np.random.random(9)
@@ -218,7 +218,7 @@ def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
 
     c.set_parameters(new_params_list)
     fused_c.set_parameters(new_params_list)
-    np.testing.assert_allclose(c(), fused_c())
+    K.assert_allclose(c(), fused_c())
 
 
 def test_variable_theta(backend):
@@ -226,7 +226,6 @@ def test_variable_theta(backend):
     backend = qibo.get_backend()
     if backend != "tensorflow" and backend != "qibotf":
         pytest.skip("Numpy backends do not support variable parameters.")
-    from qibo import K
     theta1 = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
     theta2 = K.optimization.Variable(0.4321, dtype=K.dtypes('DTYPE'))
     cvar = Circuit(2)
@@ -238,4 +237,4 @@ def test_variable_theta(backend):
     c.add(gates.RX(0, 0.1234))
     c.add(gates.RY(1, 0.4321))
     target_state = c()
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)

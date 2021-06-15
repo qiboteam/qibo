@@ -93,7 +93,7 @@ def test_measurements_with_probabilistic_noise(backend):
         noiseless_c.add(gates.M(*range(5)))
         target_samples.append(noiseless_c(nshots=1).samples())
     target_samples = np.concatenate(target_samples, axis=0)
-    np.testing.assert_allclose(samples, target_samples)
+    K.assert_allclose(samples, target_samples)
 
 
 @pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),
@@ -134,7 +134,7 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     sprobs = np.array(K.random_uniform(samples.shape))
     flipper = sprobs < np.array([0.2, 0.4, 0.3])
     target_samples = (samples + flipper) % 2
-    np.testing.assert_allclose(noisy_samples, target_samples)
+    K.assert_allclose(noisy_samples, target_samples)
     # Check register samples
-    np.testing.assert_allclose(register_samples["a"], target_samples[:, :2])
-    np.testing.assert_allclose(register_samples["b"], target_samples[:, 2:])
+    K.assert_allclose(register_samples["a"], target_samples[:, :2])
+    K.assert_allclose(register_samples["b"], target_samples[:, 2:])
