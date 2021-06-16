@@ -156,13 +156,9 @@ def test_entropy_in_compiled_circuit(backend):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    if get_backend() == "qibotf":
-        with pytest.raises(RuntimeError):
-            c.compile()
-    else:
-        c.compile()
-        final_state = c()
-        np.testing.assert_allclose(entropy[:], [0, 0, 1.0], atol=_atol)
+    c.compile()
+    final_state = c()
+    np.testing.assert_allclose(entropy[:], [0, 0, 1.0], atol=_atol)
 
 
 def test_entropy_multiple_executions(backend, accelerators):

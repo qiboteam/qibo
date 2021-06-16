@@ -324,7 +324,6 @@ def test_noise_channel_repeated(backend):
     K.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_reset_channel_repeated(backend):
     initial_state = random_state(5)
     c = Circuit(5)
@@ -347,7 +346,6 @@ def test_reset_channel_repeated(backend):
     K.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.skip
 def test_thermal_relaxation_channel_repeated(backend):
     initial_state = random_state(5)
     c = Circuit(5)

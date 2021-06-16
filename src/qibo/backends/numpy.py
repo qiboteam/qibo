@@ -375,7 +375,7 @@ class NumpyBackend(abstract.AbstractBackend):
         self.np.testing.assert_allclose(value, target, atol=atol)
 
 
-class NumpyCustomBackend(NumpyBackend): # pragma: no cover
+class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def __init__(self):
         from qibo.backends import Backend
@@ -410,14 +410,18 @@ class NumpyCustomBackend(NumpyBackend): # pragma: no cover
         if name == "numba":
             import numpy as xp
         elif name == "cupy":
-            import cupy as xp
+            import cupy as xp # pylint: disable=E0401
         else:
             raise_error(ValueError, "Unknown engine {}.".format(name))
         self.backend = xp
+        self.numeric_types = (xp.int, xp.float, xp.complex, xp.int32,
+                              xp.int64, xp.float32, xp.float64,
+                              xp.complex64, xp.complex128)
         self.tensor_types = (xp.ndarray,)
         self.native_types = (xp.ndarray,)
         self.Tensor = xp.ndarray
         self.random = xp.random
+        self.newaxis = xp.newaxis
         self.op.set_backend(name)
 
     def set_device(self, name):
