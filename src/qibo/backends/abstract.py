@@ -499,3 +499,8 @@ class AbstractBackend(ABC):
     def density_matrix_collapse(self, gate, state, result): # pragma: no cover
         """Collapses density matrix to a given result."""
         raise_error(NotImplementedError)
+
+    @abstractmethod
+    def assert_allclose(self, value, target, atol=0.0): # pragma: no cover
+        """Check that two arrays are equal. Useful for testing."""
+        raise_error(NotImplementedError)
