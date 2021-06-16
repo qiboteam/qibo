@@ -30,7 +30,7 @@ def test_circuit_vs_gate_execution(backend, compile):
         c = custom_circuit
 
     result = c(initial_state, theta)
-    np.testing.assert_allclose(result, target_result)
+    K.assert_allclose(result, target_result)
 
 
 def test_circuit_addition_execution(backend, accelerators):

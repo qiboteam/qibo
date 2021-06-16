@@ -213,7 +213,7 @@ class NumpyBackend(abstract.AbstractBackend):
         from qibo.config import SHOT_BATCH_SIZE
         def update_frequencies(nsamples, frequencies):
             samples = self.random.choice(range(len(probs)), size=nsamples, p=probs)
-            res, counts = self.unique(samples, return_counts=True)
+            res, counts = self.backend.unique(samples, return_counts=True)
             frequencies[res] += counts
             return frequencies
 
@@ -460,26 +460,36 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def expm(self, x):
         if self.op.get_backend() == "cupy":
-            # FIXME: This has bad performance because of CPU-GPU communication
-            # but scipy.linalg.expm is not available for GPU
-            return self.cast(super().expm(x.get()))
+            # Fallback to numpy because cupy does not have expm
+            return self.backend.asarray(super().expm(x.get()))
         return super().expm(x)
+
+    def unique(self, x, return_counts=False):
+        if self.op.get_backend() == "cupy":
+            # Uses numpy backend always
+            x = x.get()
+        return super().unique(x, return_counts)
+
+    def gather(self, x, indices=None, condition=None, axis=0):
+        if self.op.get_backend() == "cupy":
+            # Fallback to numpy because cupy does not support tuple indexing
+            return self.backend.asarray(super().gather(x.get(), indices, condition, axis))
+        return super().gather(x, indices, condition, axis)
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-        # TODO: Fix code repetition with `TensorflowCustomBackend` here
         from qibo.config import SHOT_CUSTOM_OP_THREASHOLD, get_threads
         if nshots < SHOT_CUSTOM_OP_THREASHOLD:
             return super().sample_frequencies(probs, nshots)
-        # Generate random seed using tf
-        dtype = self.dtypes('DTYPEINT')
-        seed = self.backend.random.randint(0, int(1e8), dtype=dtype)
+        if self.op.get_backend() == "cupy":
+            probs = probs.get()
+        dtype = self._dtypes.get('DTYPEINT')
+        seed = self.np.random.randint(0, int(1e8), dtype=dtype)
         nqubits = int(self.np.log2(tuple(probs.shape)[0]))
-        shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
-        frequencies = self.zeros(shape, dtype='DTYPEINT')
+        frequencies = self.np.zeros(2 ** nqubits, dtype=dtype)
         frequencies = self.op.measure_frequencies(
             frequencies, probs, nshots, nqubits, seed, get_threads())
         return frequencies

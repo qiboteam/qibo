@@ -131,8 +131,8 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     register_samples = noisy_result.samples(binary=True, registers=True)
 
     K.set_seed(123)
-    sprobs = np.array(K.random_uniform(samples.shape))
-    flipper = sprobs < np.array([0.2, 0.4, 0.3])
+    sprobs = K.to_numpy(K.random_uniform(samples.shape))
+    flipper = K.cast(sprobs < np.array([0.2, 0.4, 0.3]), dtype=samples.dtype)
     target_samples = (samples + flipper) % 2
     K.assert_allclose(noisy_samples, target_samples)
     # Check register samples
