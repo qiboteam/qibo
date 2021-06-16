@@ -20,7 +20,7 @@ class BackendGate(BaseBackendGate):
 
     def __init__(self):
         if K.op is not None:
-            if not K.executing_eagerly():
+            if not K.executing_eagerly(): # pragma: no cover
                 raise_error(NotImplementedError,
                             "Custom operator gates should not be used in "
                             "compiled mode.")
