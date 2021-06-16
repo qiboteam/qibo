@@ -407,7 +407,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         if name == "numba":
             import numpy as xp
         elif name == "cupy":
-            import cupy as xp
+            import cupy as xp # pylint: disable=E0401
         else:
             raise_error(ValueError, "Unknown engine {}.".format(name))
         self.backend = xp
