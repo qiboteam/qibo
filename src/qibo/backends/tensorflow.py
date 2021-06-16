@@ -307,3 +307,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False, self.get_threads())
         return state / self.trace(state)
+
+    def compile(self, func):
+        return func

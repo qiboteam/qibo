@@ -128,9 +128,6 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if K.name == "qibotf":
-            raise_error(RuntimeError, "Cannot compile circuit that uses custom "
-                                      "operators.")
         for gate in self.queue:
             # create gate cache before compilation
             _ = gate.cache

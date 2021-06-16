@@ -62,14 +62,10 @@ def test_compiled_execute(backend):
     # Run compiled circuit
     from qibo import K
     c2 = create_circuit()
-    if K.name == "qibotf":
-        with pytest.raises(RuntimeError):
-            c2.compile()
-    else:
-        c2.compile()
-        r2 = c2()
-        init_state = c2.get_initial_state()
-        np.testing.assert_allclose(r1, r2)
+    c2.compile()
+    r2 = c2()
+    init_state = c2.get_initial_state()
+    np.testing.assert_allclose(r1, r2)
 
 
 def test_compiling_twice_exception(backend):
