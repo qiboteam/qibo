@@ -1,12 +1,11 @@
 """Test all methods defined in `qibo/core/circuit.py`."""
 import numpy as np
 import pytest
-from qibo import gates
+from qibo import gates, K
 from qibo.models import Circuit
 
 
 def test_circuit_init(backend, accelerators):
-    from qibo import K
     c = Circuit(2, accelerators)
     assert c.param_tensor_types == K.tensor_types
 
@@ -60,7 +59,6 @@ def test_compiled_execute(backend):
     r1 = c1.execute()
 
     # Run compiled circuit
-    from qibo import K
     c2 = create_circuit()
     c2.compile()
     r2 = c2()
@@ -70,7 +68,6 @@ def test_compiled_execute(backend):
 
 def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
-    from qibo import K
     if K.name != "tensorflow": # pragma: no cover
         pytest.skip("Skipping compilation test because Tensorflow is not available.")
     c = Circuit(2)
