@@ -54,8 +54,8 @@ class Backend:
         # check if qibojit is installed
         if self.check_availability("qibojit"): # pragma: no cover
             # qibojit backend is not tested until `qibojit` is available
-            from qibo.backends.numpy import NumpyCustomBackend
-            self.available_backends["qibojit"] = NumpyCustomBackend
+            from qibo.backends.numpy import JITCustomBackend
+            self.available_backends["qibojit"] = JITCustomBackend
 
         # check if IcarusQ is installed
         if self.check_availability("qiboicarusq"): # pragma: no cover

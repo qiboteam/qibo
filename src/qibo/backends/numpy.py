@@ -372,7 +372,7 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
 
-class NumpyCustomBackend(NumpyBackend): # pragma: no cover
+class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def __init__(self):
         from qibo.backends import Backend
