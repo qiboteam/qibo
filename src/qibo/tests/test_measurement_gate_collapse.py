@@ -127,7 +127,6 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
     K.assert_allclose(final_states, target_states)
 
 
-@pytest.mark.skip
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend, accelerators):
     test_device = K.cpu_devices[0] if accelerators else K.default_device
     initial_state = random_state(4)

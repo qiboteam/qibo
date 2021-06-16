@@ -647,12 +647,11 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
         true_shape = (2 ** self.rank, 2 ** self.rank)
         if shape == (2 ** (2 * self.rank),):
             x = K.reshape(x, true_shape)
-        if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
-        else:
+        elif shape != true_shape:
             raise_error(ValueError, "Invalid shape {} of unitary matrix "
                                     "acting on {} target qubits."
                                     "".format(shape, self.rank))
+        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
