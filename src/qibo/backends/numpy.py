@@ -481,13 +481,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-<<<<<<< HEAD
-        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD, get_threads
-        if nshots < SHOT_CUSTOM_OP_THREASHOLD:
-=======
         from qibo.config import SHOT_METROPOLIS_THRESHOLD, get_threads
         if nshots < SHOT_METROPOLIS_THRESHOLD:
->>>>>>> qibojit
             return super().sample_frequencies(probs, nshots)
         if self.op.get_backend() == "cupy":
             probs = probs.get()
