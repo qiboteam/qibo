@@ -137,7 +137,8 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     c.add(gates.RY(2, theta=np.pi * output / 4))
     c.add(gates.M(0, 1, 2, 3))
     result = c(initial_state=np.copy(initial_state), nshots=30)
-
+    final_samples = result.samples(binary=False)
+    
     K.set_seed(123)
     target_samples = []
     with K.device(test_device):
@@ -150,7 +151,8 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
             with K.device(K.default_device):
                 target_result = gates.M(0, 1, 2, 3)(target_state)
                 target_samples.append(target_result.decimal[0])
-    K.assert_allclose(result.samples(binary=False), target_samples)
+    target_samples = K.stack(target_samples)
+    K.assert_allclose(final_samples, target_samples)
 
 
 def test_measurement_result_parameters_multiple_qubits(backend):
