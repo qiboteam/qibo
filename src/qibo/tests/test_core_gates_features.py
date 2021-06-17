@@ -328,7 +328,7 @@ def test_reset_channel_repeated(backend):
     initial_state = random_state(5)
     c = Circuit(5)
     c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30)
+    final_state = c(K.cast(np.copy(initial_state)), nshots=30)
 
     np.random.seed(123)
     target_state = []
@@ -336,13 +336,14 @@ def test_reset_channel_repeated(backend):
     collapse.nqubits = 5
     xgate = gates.X(2)
     for _ in range(30):
-        state = np.copy(initial_state)
+        state = K.cast(np.copy(initial_state))
         if np.random.random() < 0.3:
             state = K.state_vector_collapse(collapse, state, [0])
         if np.random.random() < 0.3:
             state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
-        target_state.append(np.copy(state))
+        target_state.append(K.copy(state))
+    target_state = K.stack(target_state)
     K.assert_allclose(final_state, target_state)
 
 
@@ -351,7 +352,7 @@ def test_thermal_relaxation_channel_repeated(backend):
     c = Circuit(5)
     c.add(gates.ThermalRelaxationChannel(4, t1=1.0, t2=0.6, time=0.8,
                                          excited_population=0.8, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30)
+    final_state = c(K.cast(np.copy(initial_state)), nshots=30)
 
     pz, p0, p1 = c.queue[0].calculate_probabilities(1.0, 0.6, 0.8, 0.8)
     np.random.seed(123)
@@ -360,7 +361,7 @@ def test_thermal_relaxation_channel_repeated(backend):
     collapse.nqubits = 5
     zgate, xgate = gates.Z(4), gates.X(4)
     for _ in range(30):
-        state = np.copy(initial_state)
+        state = K.cast(np.copy(initial_state))
         if np.random.random() < pz:
             state = zgate(state)
         if np.random.random() < p0:
@@ -368,7 +369,8 @@ def test_thermal_relaxation_channel_repeated(backend):
         if np.random.random() < p1:
             state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
-        target_state.append(np.copy(state))
+        target_state.append(K.copy(state))
+    target_state = K.stack(target_state)
     K.assert_allclose(final_state, target_state)
 
 ###############################################################################
