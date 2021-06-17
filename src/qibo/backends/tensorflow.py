@@ -224,8 +224,8 @@ class TensorflowCustomBackend(TensorflowBackend):
                                        self.get_threads())
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD
-        if nshots < SHOT_CUSTOM_OP_THREASHOLD:
+        from qibo.config import SHOT_METROPOLIS_THRESHOLD
+        if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
         # Generate random seed using tf
         dtype = self.dtypes('DTYPEINT')
