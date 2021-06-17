@@ -196,6 +196,29 @@ obtain more measurement shots without having to re-execute the full simulation.
 For applications that require the state vector to be collapsed during measurements
 we refer to the :ref:`How to collapse state during measurements? <collapse-examples>`
 
+The measured shots are obtained using pseudo-random number generators of the
+underlying backend (numpy or Tensorflow). If the user has installed a custom
+backend (eg. qibotf) and asks for frequencies with more than 100000 shots,
+a custom Metropolis algorithm will be used to obtain the corresponding samples,
+for increase performance. The user can change the threshold for which this
+algorithm is used using the ``qibo.set_metropolis_threshold()`` method,
+for example:
+
+.. code-block:: python
+
+    import qibo
+
+    print(qibo.get_metropolis_threshold()) # prints 100000
+    qibo.set_metropolis_threshold(int(1e8))
+    print(qibo.get_metropolis_threshold()) # prints 10^8
+
+
+If the Metropolis algorithm is not used and the user asks for frequencies with
+a high number of shots then the corresponding samples are generated in batches.
+The batch size can be controlled using the ``qibo.get_batch_size()`` and
+``qibo.set_batch_size()`` functions similarly to the above example.
+The default batch size is 2^18.
+
 
 How to write a Quantum Fourier Transform?
 -----------------------------------------
