@@ -441,9 +441,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-        # TODO: Fix code repetition with `TensorflowCustomBackend` here
-        from qibo.config import SHOT_CUSTOM_OP_THREASHOLD, get_threads
-        if nshots < SHOT_CUSTOM_OP_THREASHOLD:
+        from qibo.config import SHOT_METROPOLIS_THRESHOLD, get_threads
+        if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
         # Generate random seed using tf
         dtype = self.dtypes('DTYPEINT')
