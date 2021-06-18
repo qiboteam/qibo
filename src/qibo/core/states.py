@@ -48,7 +48,7 @@ class VectorState(AbstractState):
     @classmethod
     def plus_state(cls, nqubits):
         state = cls(nqubits)
-        shape = K.cast(state.nstates, dtype='DTYPEINT')
+        shape = K.cast((state.nstates,), dtype='DTYPEINT')
         state.tensor = K.ones(shape) / K.cast(K.qnp.sqrt(state.nstates))
         return state
 

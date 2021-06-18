@@ -21,11 +21,11 @@ def test_vector_state_tensor_setter(backend, nqubits):
         tensor = state.tensor
     state.tensor = np.ones(4)
     assert state.nqubits == 2
-    np.testing.assert_allclose(state.tensor, np.ones(4))
-    np.testing.assert_allclose(np.array(state), np.ones(4))
-    np.testing.assert_allclose(state.numpy(), np.ones(4))
-    np.testing.assert_allclose(state.state(numpy=True), np.ones(4))
-    np.testing.assert_allclose(state.state(numpy=False), np.ones(4))
+    K.assert_allclose(state.tensor, np.ones(4))
+    K.assert_allclose(np.array(state), np.ones(4))
+    K.assert_allclose(state.numpy(), np.ones(4))
+    K.assert_allclose(state.state(numpy=True), np.ones(4))
+    K.assert_allclose(state.state(numpy=False), np.ones(4))
     with pytest.raises(ValueError):
         state.tensor = np.zeros(5)
 
@@ -40,20 +40,20 @@ def test_zero_state_initialization(backend):
     state = states.VectorState.zero_state(4)
     target_state = np.zeros(16)
     target_state[0] = 1
-    np.testing.assert_allclose(state.tensor, target_state)
+    K.assert_allclose(state.tensor, target_state)
     state = states.MatrixState.zero_state(3)
     target_state = np.zeros((8, 8))
     target_state[0, 0] = 1
-    np.testing.assert_allclose(state.tensor, target_state)
+    K.assert_allclose(state.tensor, target_state)
 
 
 def test_plus_state_initialization(backend):
     state = states.VectorState.plus_state(4)
     target_state = np.ones(16) / 4
-    np.testing.assert_allclose(state.tensor, target_state)
+    K.assert_allclose(state.tensor, target_state)
     state = states.MatrixState.plus_state(3)
     target_state = np.ones((8, 8)) / 8
-    np.testing.assert_allclose(state.tensor, target_state)
+    K.assert_allclose(state.tensor, target_state)
 
 
 def test_vector_state_to_density_matrix(backend):
@@ -62,7 +62,7 @@ def test_vector_state_to_density_matrix(backend):
     state = states.VectorState.from_tensor(vector)
     mstate = state.to_density_matrix()
     target_matrix = np.outer(vector, vector.conj())
-    np.testing.assert_allclose(mstate.tensor, target_matrix)
+    K.assert_allclose(mstate.tensor, target_matrix)
     state = states.MatrixState.from_tensor(target_matrix)
     with pytest.raises(RuntimeError):
         state.to_density_matrix()
@@ -79,7 +79,7 @@ def test_state_probabilities(backend, state_type, use_gate):
     else:
         probs = state.probabilities(qubits=[0, 1])
     target_probs = np.ones((2, 2)) / 4
-    np.testing.assert_allclose(probs, target_probs)
+    K.assert_allclose(probs, target_probs)
 
 
 def test_state_probabilities_errors():
@@ -103,7 +103,7 @@ def test_state_measure(registers):
         samples = state.samples()
     state.measure(mgate, nshots=100, registers=registers)
     target_samples = np.zeros((100, 2))
-    np.testing.assert_allclose(state.samples(), target_samples)
+    K.assert_allclose(state.samples(), target_samples)
     assert state.frequencies() == {"00": 100}
     if registers is not None:
         target_freqs = {"a": {"0": 100}, "b": {"0": 100}}
@@ -119,7 +119,7 @@ def test_state_set_measurements(registers):
     samples = np.array(50 * [0] + 50 * [1])
     state.set_measurements([0, 2], samples, registers)
     target_samples = np.array(50 * [[0, 0]] + 50 * [[0, 1]])
-    np.testing.assert_allclose(state.samples(), target_samples)
+    K.assert_allclose(state.samples(), target_samples)
     assert state.frequencies() == {"00": 50, "01": 50}
     if registers is not None:
         target_freqs = {"a": {"0": 100}, "b": {"0": 50, "1": 50}}
@@ -139,22 +139,22 @@ def test_state_apply_bitflips():
 def test_vector_state_expectation(backend, trotter):
     from qibo.hamiltonians import XXZ
     ham = XXZ(nqubits=5, delta=0.5, trotter=trotter)
-    matrix = np.array(ham.matrix)
+    matrix = K.to_numpy(ham.matrix)
 
     state = np.random.random(32) + 1j * np.random.random(32)
     norm = np.sum(np.abs(state) ** 2)
     target_ev = np.sum(state.conj() * matrix.dot(state)).real
     state = states.VectorState.from_tensor(state)
 
-    np.testing.assert_allclose(state.expectation(ham), target_ev)
-    np.testing.assert_allclose(state.expectation(ham, True), target_ev / norm)
+    K.assert_allclose(state.expectation(ham), target_ev)
+    K.assert_allclose(state.expectation(ham, True), target_ev / norm)
 
 
 @pytest.mark.parametrize("trotter", [True, False])
 def test_matrix_state_expectation(backend, trotter):
     from qibo.hamiltonians import TFIM
     ham = TFIM(nqubits=2, h=1.0, trotter=trotter)
-    matrix = np.array(ham.matrix)
+    matrix = K.to_numpy(ham.matrix)
 
     state = np.random.random((4, 4)) + 1j * np.random.random((4, 4))
     state = state + state.T.conj()
@@ -162,5 +162,5 @@ def test_matrix_state_expectation(backend, trotter):
     target_ev = np.trace(matrix.dot(state)).real
     state = states.MatrixState.from_tensor(state)
 
-    np.testing.assert_allclose(state.expectation(ham), target_ev)
-    np.testing.assert_allclose(state.expectation(ham, True), target_ev / norm)
+    K.assert_allclose(state.expectation(ham), target_ev)
+    K.assert_allclose(state.expectation(ham, True), target_ev / norm)
