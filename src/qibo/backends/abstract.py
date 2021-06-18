@@ -501,6 +501,6 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def assert_allclose(self, value, target, atol=0.0): # pragma: no cover
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         """Check that two arrays are equal. Useful for testing."""
         raise_error(NotImplementedError)
