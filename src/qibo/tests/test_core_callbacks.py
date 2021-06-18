@@ -331,6 +331,7 @@ def test_gap(backend, trotter, check_degenerate):
     evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
+    targets = {k: K.stack(v) for k, v in targets.items()}
     K.assert_allclose(ground[:], targets["ground"])
     K.assert_allclose(excited[:], targets["excited"])
     K.assert_allclose(gap[:], targets["gap"])
