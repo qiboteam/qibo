@@ -51,18 +51,15 @@ def test_backend_methods_list(tested_backend, target_backend, method, args):
     target_func = getattr(target_backend, method)
     target_result = target_func(*args)
     if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
-        new_args = (tested_backend.cast(v) if isinstance(v, np.ndarray) else v
-                    for v in args)
-        tested_result = tested_func(*new_args)
-        tested_result = tested_backend.to_numpy(tested_result)
-    else:
-        try:
-            tested_result = tested_func(*args)
-        except NotImplementedError:
-            with pytest.raises(NotImplementedError):
-                tested_func(*args)
-            return
-    np.testing.assert_allclose(tested_result, target_result)
+        args = [tested_backend.cast(v) if isinstance(v, np.ndarray) else v
+                for v in args]
+    try:
+        tested_result = tested_func(*args)
+    except NotImplementedError:
+        with pytest.raises(NotImplementedError):
+            tested_func(*args)
+        return
+    tested_backend.assert_allclose(tested_result, target_result)
 
 
 @pytest.mark.parametrize("method,kwargs", [
@@ -80,14 +77,10 @@ def test_backend_methods_dict(tested_backend, target_backend, method, kwargs):
     tested_func = getattr(tested_backend, method)
     target_func = getattr(target_backend, method)
     target_result = target_func(**kwargs)
-    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
-        new_kwargs = {k: tested_backend.cast(v) if isinstance(v, np.ndarray) else v
-                      for k, v in kwargs.items()}
-        tested_result = tested_func(**new_kwargs)
-        tested_result = tested_backend.to_numpy(tested_result)
-    else:
-        tested_result = tested_func(**kwargs)
-    np.testing.assert_allclose(tested_result, target_result)
+    kwargs = {k: tested_backend.cast(v) if isinstance(v, np.ndarray) else v
+              for k, v in kwargs.items()}
+    tested_result = tested_func(**kwargs)
+    tested_backend.assert_allclose(tested_result, target_result)
 
 
 def test_backend_concatenate(tested_backend, target_backend):
@@ -95,13 +88,9 @@ def test_backend_concatenate(tested_backend, target_backend):
     target_backend = K.construct_backend(target_backend)
     tensors = [rand((2, 3)), rand((2, 4))]
     target_result = target_backend.concatenate(tensors, axis=1)
-    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
-        gtensors = [tested_backend.cast(x) for x in tensors]
-        tested_result = tested_backend.concatenate(gtensors, axis=1)
-        tested_result = tested_backend.to_numpy(tested_result)
-    else:
-        tested_result = tested_backend.concatenate(tensors, axis=1)
-    np.testing.assert_allclose(tested_result, target_result)
+    tensors = [tested_backend.cast(x) for x in tensors]
+    tested_result = tested_backend.concatenate(tensors, axis=1)
+    tested_backend.assert_allclose(tested_result, target_result)
 
 
 def test_backend_stack(tested_backend, target_backend):
@@ -109,13 +98,9 @@ def test_backend_stack(tested_backend, target_backend):
     target_backend = K.construct_backend(target_backend)
     tensors = [rand(4), rand(4)]
     target_result = target_backend.stack(tensors)
-    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
-        gtensors = [tested_backend.cast(x) for x in tensors]
-        tested_result = tested_backend.stack(gtensors)
-        tested_result = tested_backend.to_numpy(tested_result)
-    else:
-        tested_result = tested_backend.stack(tensors)
-    np.testing.assert_allclose(tested_result, target_result)
+    tensors = [tested_backend.cast(x) for x in tensors]
+    tested_result = tested_backend.stack(tensors)
+    tested_backend.assert_allclose(tested_result, target_result)
 
 
 def test_backend_eigh(tested_backend, target_backend):
@@ -123,14 +108,9 @@ def test_backend_eigh(tested_backend, target_backend):
     target_backend = K.construct_backend(target_backend)
     m = rand((5, 5))
     eigvals2, eigvecs2 = target_backend.eigh(m)
-    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
-        eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m))
-        eigvals1 = tested_backend.to_numpy(eigvals1)
-        eigvecs1 = tested_backend.to_numpy(eigvecs1)
-    else:
-        eigvals1, eigvecs1 = tested_backend.eigh(m)
-    np.testing.assert_allclose(eigvals1, eigvals2)
-    np.testing.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2))
+    eigvals1, eigvecs1 = tested_backend.eigh(tested_backend.cast(m))
+    tested_backend.assert_allclose(eigvals1, eigvals2)
+    tested_backend.assert_allclose(np.abs(eigvecs1), np.abs(eigvecs2))
 
 
 def test_backend_compile(tested_backend, target_backend):
@@ -140,7 +120,7 @@ def test_backend_compile(tested_backend, target_backend):
     x = rand(5)
     cfunc1 = tested_backend.compile(func)
     cfunc2 = target_backend.compile(func)
-    np.testing.assert_allclose(cfunc1(x), cfunc2(x))
+    tested_backend.assert_allclose(cfunc1(x), cfunc2(x))
 
 
 def test_backend_gather(tested_backend, target_backend):
@@ -149,15 +129,15 @@ def test_backend_gather(tested_backend, target_backend):
     x = rand(5)
     target_result = target_backend.gather(x, indices=[0, 1, 3])
     test_result = tested_backend.gather(x, indices=[0, 1, 3])
-    np.testing.assert_allclose(test_result, target_result)
+    tested_backend.assert_allclose(test_result, target_result)
     x = rand((5, 5))
     target_result = target_backend.gather(x, indices=[0, 1, 3], axis=-1)
     test_result = tested_backend.gather(x, indices=[0, 1, 3], axis=-1)
-    np.testing.assert_allclose(test_result, target_result)
+    tested_backend.assert_allclose(test_result, target_result)
     x = rand(3)
     target_result = target_backend.gather(x, condition=[True, False, True])
     test_result = tested_backend.gather(x, condition=[True, False, True])
-    np.testing.assert_allclose(test_result, target_result)
+    tested_backend.assert_allclose(test_result, target_result)
 
     with pytest.raises(ValueError):
         result1 = target_backend.gather(x)
@@ -174,11 +154,11 @@ def test_backend_unique(tested_backend, target_backend, return_counts):
     test_result = tested_backend.unique(x, return_counts=return_counts)
     if return_counts:
         idx = np.argsort(test_result[0])
-        np.testing.assert_allclose(np.array(test_result[0])[idx], target_result[0])
-        np.testing.assert_allclose(np.array(test_result[1])[idx], target_result[1])
+        tested_backend.assert_allclose(np.array(test_result[0])[idx], target_result[0])
+        tested_backend.assert_allclose(np.array(test_result[1])[idx], target_result[1])
     else:
         idx = np.argsort(test_result)
-        np.testing.assert_allclose(np.array(test_result)[idx], target_result)
+        tested_backend.assert_allclose(np.array(test_result)[idx], target_result)
 
 
 def test_hardware_backend_import():

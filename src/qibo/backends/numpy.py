@@ -462,13 +462,16 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def expm(self, x):
         if self.op.get_backend() == "cupy":
             # Fallback to numpy because cupy does not have expm
-            return self.backend.asarray(super().expm(x.get()))
+            if isinstance(x, self.native_types):
+                x = x.get()
+            return self.backend.asarray(super().expm(x))
         return super().expm(x)
 
     def unique(self, x, return_counts=False):
         if self.op.get_backend() == "cupy":
+            if isinstance(x, self.native_types):
+                x = x.get()
             # Uses numpy backend always
-            x = x.get()
         return super().unique(x, return_counts)
 
     def gather(self, x, indices=None, condition=None, axis=0):

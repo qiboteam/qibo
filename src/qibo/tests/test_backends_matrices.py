@@ -29,8 +29,8 @@ def test_matrices(backend, dtype):
                              [0, 0, 0, 0, 0, 0, 1, 0]])
     }
     for matrixname, target in target_matrices.items():
-        matrix = K.to_numpy(getattr(mobj, matrixname))
-        np.testing.assert_allclose(matrix, target)
+        matrix = getattr(mobj, matrixname)
+        K.assert_allclose(matrix, target)
 
 
 def test_modifying_matrices_error():
