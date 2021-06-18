@@ -474,7 +474,14 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def gather(self, x, indices=None, condition=None, axis=0):
         if self.op.get_backend() == "cupy":
             # Fallback to numpy because cupy does not support tuple indexing
-            return self.backend.asarray(super().gather(x.get(), indices, condition, axis))
+            if isinstance(x, self.native_types):
+                x = x.get()
+            if isinstance(indices, self.native_types):
+                indices = indices.get()
+            if isinstance(condition, self.native_types):
+                condition = condition.get()
+            result = super().gather(x, indices, condition, axis)
+            return self.backend.asarray(result)
         return super().gather(x, indices, condition, axis)
 
     def initial_state(self, nqubits, is_matrix=False):
