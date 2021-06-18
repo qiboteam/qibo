@@ -46,4 +46,4 @@ def test_maxcut(nqubits, numpy):
             ham += M
     target_ham = K.cast(- ham / 2)
     final_ham = hamiltonians.MaxCut(nqubits, numpy=numpy)
-    np.testing.assert_allclose(final_ham.matrix, target_ham)
+    K.assert_allclose(final_ham.matrix, target_ham)
