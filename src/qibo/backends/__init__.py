@@ -174,7 +174,6 @@ def set_precision(dtype='double'):
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
         bk.set_precision(dtype)
-        bk.matrices.allocate_matrices()
 
 
 def get_precision():
@@ -199,8 +198,6 @@ def set_device(name):
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
         bk.set_device(name)
-        with bk.device(bk.default_device):
-            bk.matrices.allocate_matrices()
 
 
 def get_device():

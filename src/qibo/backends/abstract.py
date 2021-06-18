@@ -48,6 +48,7 @@ class AbstractBackend(ABC):
         else:
             raise_error(ValueError, f'dtype {dtype} not supported.')
         self.precision = dtype
+        self.matrices.allocate_matrices()
 
     def set_device(self, name):
         parts = name[1:].split(":")
@@ -64,6 +65,8 @@ class AbstractBackend(ABC):
         if device_number >= ndevices:
             raise_error(ValueError, f"Device {name} does not exist.")
         self.default_device = name
+        with self.device(self.default_device):
+            self.matrices.allocate_matrices()
 
     def get_cpu(self): # pragma: no cover
         """Returns default CPU device to use for OOM fallback."""
