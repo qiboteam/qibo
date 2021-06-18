@@ -409,15 +409,16 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
         if name == "numba":
             import numpy as xp
+            self.tensor_types = (xp.ndarray,)
         elif name == "cupy":
             import cupy as xp # pylint: disable=E0401
+            self.tensor_types = (self.np.ndarray, xp.ndarray)
         else:
             raise_error(ValueError, "Unknown engine {}.".format(name))
         self.backend = xp
         self.numeric_types = (xp.int, xp.float, xp.complex, xp.int32,
                               xp.int64, xp.float32, xp.float64,
                               xp.complex64, xp.complex128)
-        self.tensor_types = (xp.ndarray,)
         self.native_types = (xp.ndarray,)
         self.Tensor = xp.ndarray
         self.random = xp.random
