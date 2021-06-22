@@ -160,14 +160,14 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     # try accessing hamiltonian before setting it
     with pytest.raises(RuntimeError):
-        adev.hamiltonian()
+        adev.hamiltonian(0.1)
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
     m2 = np.diag([2, -2, -2, 2])
     ham = lambda t, T: - (1 - t / T) * m1 - (t / T) * m2
 
-    adev.set_hamiltonian(total_time=1)
+    adev.hamiltonian.total_time = 1
     for t in [0, 0.3, 0.7, 1.0]:
         if trotter:
             matrix = adev.hamiltonian(t).dense.matrix
@@ -176,7 +176,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
         np.testing.assert_allclose(matrix, ham(t, 1))
 
     #try using a different total time
-    adev.hamiltonian(0, total_time=2)
+    adev.hamiltonian.total_time = 2
     for t in [0, 0.3, 0.7, 1.0]:
         if trotter:
             matrix = adev.hamiltonian(t).dense.matrix

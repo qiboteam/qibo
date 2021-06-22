@@ -44,8 +44,16 @@ class TrotterizedExponential(BaseSolver):
     :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian`.
     """
 
+    def __init__(self, dt, hamiltonian):
+        super().__init__(dt, hamiltonian)
+        from qibo.core.hamiltonians import AdiabaticHamiltonian
+        if isinstance(self.hamiltonian, AdiabaticHamiltonian):
+            self.circuit = lambda t, dt: self.hamiltonian.circuit(self.dt, t=self.t)
+        else:
+            self.circuit = lambda t, dt: self.hamiltonian(self.t).circuit(self.dt)
+
     def __call__(self, state):
-        circuit = self.hamiltonian(self.t).circuit(self.dt)
+        circuit = self.circuit(self.t, self.dt)
         self.t += self.dt
         return circuit(state)
 

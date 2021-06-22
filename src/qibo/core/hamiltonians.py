@@ -407,3 +407,50 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         elif dt != self.trotter_circuit.dt:
             self.trotter_circuit.set_dt(dt)
         return self.trotter_circuit.circuit
+
+
+class AdiabaticHamiltonian:
+
+    def __init__(self, h0, h1):
+        if not issubclass(type(h0), hamiltonians.AbstractHamiltonian):
+            raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
+                                   "object but is {}.".format(type(h0)))
+        if type(h1) != type(h0):
+            raise_error(TypeError, "h1 should be of the same type {} of h0 but "
+                                   "is {}.".format(type(h0), type(h1)))
+        if h0.nqubits != h1.nqubits:
+            raise_error(ValueError, "H0 has {} qubits while H1 has {}."
+                                    "".format(h0.nqubits, h1.nqubits))
+        #if isinstance(h0, hamiltonians.TrotterHamiltonian):
+        #    if not h1.is_compatible(h0):
+        #        h0 = h1.make_compatible(h0)
+        # TODO: Recheck `make_compatible` functionality
+        self.h0, self.h1 = h0, h1
+        self.schedule = None
+        self.total_time = None
+        self.accelerators = None
+        self.memory_device = None
+        self.trotter_circuit = None
+
+    def ground_state(self):
+        return self.h0.ground_state()
+
+    def __call__(self, t):
+        if self.total_time is None:
+            if t == 0:
+                return self.h0
+            raise_error(RuntimeError, "Cannot access adiabatic evolution "
+                                      "Hamiltonian before setting the "
+                                      "the total evolution time.")
+        st = self.schedule(t / self.total_time) # pylint: disable=E1102
+        return self.h0 * (1 - st) + self.h1 * st
+
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
+        # TODO: Make this more efficient
+        ham = self(t)
+        if accelerators is not None:
+            self.accelerators = accelerators
+            self.memory_device = memory_device
+        self.trotter_circuit = SymbolicHamiltonian.TrotterCircuit(
+            ham.nqubits, ham.terms, dt, self.accelerators, self.memory_device)
+        return self.trotter_circuit.circuit

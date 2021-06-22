@@ -4,6 +4,7 @@ from qibo.abstractions import hamiltonians
 from qibo.core import circuit, states
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
+from qibo.core.hamiltonians import AdiabaticHamiltonian
 
 
 class StateEvolution:
@@ -53,9 +54,8 @@ class StateEvolution:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
-        if (accelerators is not None and
-            (not isinstance(ham, hamiltonians.SymbolicHamiltonian)
-             or solver != "exp")):
+        if ((not isinstance(ham, hamiltonians.SymbolicHamiltonian) or solver != "exp") and
+            accelerators is not None):
             raise_error(NotImplementedError, "Distributed evolution is only "
                                              "implemented using the Trotter "
                                              "exponential solver.")
@@ -165,31 +165,14 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if not issubclass(type(h0), hamiltonians.AbstractHamiltonian):
-            raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
-                                   "object but is {}.".format(type(h0)))
-        if type(h1) != type(h0):
-            raise_error(TypeError, "h1 should be of the same type {} of h0 but "
-                                   "is {}.".format(type(h0), type(h1)))
-        if h0.nqubits != h1.nqubits:
-            raise_error(ValueError, "H0 has {} qubits while H1 has {}."
-                                    "".format(h0.nqubits, h1.nqubits))
-        #if isinstance(h0, hamiltonians.TrotterHamiltonian):
-        #    if not h1.is_compatible(h0):
-        #        h0 = h1.make_compatible(h0)
-        # TODO: Recheck `make_compatible` functionality
-        super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,
+        self.hamiltonian = AdiabaticHamiltonian(h0, h1)
+        super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver, callbacks,
                                                  accelerators, memory_device)
-        self.h0 = h0
-        self.h1 = h1
 
         # Set evolution model to "Gap" callback if one exists
         for callback in self.callbacks:
             if isinstance(callback, Gap):
                 callback.evolution = self
-
-        # Flag that remembers if ``set_hamiltonian`` have not been called
-        self.set_hamiltonian_flag = True
 
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
@@ -224,52 +207,20 @@ class AdiabaticEvolution(StateEvolution):
         if abs(s1 - 1) > self.ATOL:
             raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
         self._schedule = f
+        self.hamiltonian.schedule = f
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
         if self._param_schedule is not None:
             self.schedule = lambda t: self._param_schedule(t, params[:-1])
-        self.set_hamiltonian(params[-1])
-
-    def set_hamiltonian(self, total_time):
-        self.set_hamiltonian_flag = False
-        def hamiltonian(t):
-            # Disable warning that ``schedule`` is not Callable
-            st = self.schedule(t / total_time) # pylint: disable=E1102
-            return self.h0 * (1 - st) + self.h1 * st
-        self.solver.hamiltonian = hamiltonian
-
-    def hamiltonian(self, t=None, total_time=None):
-        """Returns the adiabatic evolution Hamiltonian at a given time.
-
-        Args:
-            t (float): Time to calculate the Hamiltonian. If no time is given
-                the current time set in the solver is used.
-            total_time (float): Total time of adiabatic evolution. Required
-                only if the user wants to access the Hamiltonian before
-                executing the model.
-
-        Returns:
-            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object representing
-            the adiabatic evolution Hamiltonian at time ``t``.
-        """
-        if total_time is not None:
-            self.set_hamiltonian(total_time)
-        else:
-            if self.set_hamiltonian_flag:
-                raise_error(RuntimeError, "Cannot access adiabatic evolution "
-                                          "Hamiltonian before setting the "
-                                          "the total evolution time.")
-        if t is None or t == self.solver.t:
-            return self.solver.current_hamiltonian
-        return self.solver.hamiltonian(t)
+        self.hamiltonian.total_time = params[-1]
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """"""
         if start_time != 0:
             raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
                                              "as initial time.")
-        self.set_hamiltonian(final_time - start_time)
+        self.hamiltonian.total_time = final_time - start_time
         return super(AdiabaticEvolution, self).execute(
             final_time, start_time, initial_state)
 
@@ -281,10 +232,10 @@ class AdiabaticEvolution(StateEvolution):
         """
         if state is None:
             if self.accelerators is None:
-                return self.h0.ground_state()
+                return self.hamiltonian.ground_state()
             else:
                 from qibo.core.states import DistributedState
-                c = self.hamiltonian(0).circuit(self.solver.dt)
+                c = self.hamiltonian.circuit(self.solver.dt)
                 state = DistributedState.plus_state(c)
                 return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)
