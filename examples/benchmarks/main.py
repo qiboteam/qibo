@@ -59,8 +59,9 @@ def limit_gpu_memory(memory_limit=None):
         print("Limiting memory of {} to {}.".format(gpu.name, memory_limit))
     print()
 
-limit_gpu_memory(args.pop("memory"))
-
+memory = args.pop("memory")
+if args.get("backend") in {"qibotf", "tensorflow"}:
+    limit_gpu_memory(memory)
 import qibo
 import circuits
 
