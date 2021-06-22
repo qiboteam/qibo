@@ -50,7 +50,8 @@ def test_backend_methods_list(tested_backend, target_backend, method, args):
     tested_func = getattr(tested_backend, method)
     target_func = getattr(target_backend, method)
     target_result = target_func(*args)
-    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy":
+    if tested_backend.name == "qibojit" and tested_backend.op.get_backend() == "cupy": # pragma: no cover
+        # cupy is not tested by CI!
         args = [tested_backend.cast(v) if isinstance(v, np.ndarray) else v
                 for v in args]
     try:

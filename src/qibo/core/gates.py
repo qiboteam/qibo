@@ -607,11 +607,8 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
 
     def __init__(self, unitary, *q, trainable=True, name: Optional[str] = None):
         if not isinstance(unitary, K.tensor_types):
-            if isinstance(unitary, K.qnp.tensor_types):
-                unitary = K.cast(unitary)
-            else:
-                raise_error(TypeError, "Unknown type {} of unitary matrix."
-                                       "".format(type(unitary)))
+            raise_error(TypeError, "Unknown type {} of unitary matrix."
+                                   "".format(type(unitary)))
         MatrixGate.__init__(self)
         abstract_gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
         rank = self.rank

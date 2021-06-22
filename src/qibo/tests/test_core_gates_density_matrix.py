@@ -270,7 +270,6 @@ def test_channel_gate_setters(backend):
             assert gate.density_matrix
 
 
-@pytest.mark.skip
 def test_measurement_density_matrix(backend):
     from qibo.tests.test_measurement_gate import assert_result
     state = np.zeros(4)
