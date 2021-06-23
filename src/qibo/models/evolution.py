@@ -179,24 +179,23 @@ class AdiabaticEvolution(StateEvolution):
         self.opt_messages = False
         self.opt_history = {"params": [], "loss": []}
 
-        self._schedule = None
-        self._param_schedule = None
+        self.parametrized_schedule = None
         nparams = s.__code__.co_argcount
         if nparams == 1: # given ``s`` is a function of time only
             self.schedule = s
         elif nparams == 2: # given ``s`` has undefined parameters
-            self._param_schedule = s
+            self.parametrized_schedule = s
         else:
-            raise_error(ValueError, f"Scheduling function shoud take one or two "
-                                     "arguments but it takes {nparams}.")
+            raise_error(ValueError, f"Scheduling function shoud take one or "
+                                     "two arguments but it takes {nparams}.")
 
     @property
     def schedule(self):
         """Returns scheduling as a function of time."""
-        if self._schedule is None:
-            raise_error(ValueError, "Cannot access scheduling function before setting "
-                                    "its free parameters.")
-        return self._schedule
+        if self.hamiltonian.schedule is None:
+            raise_error(ValueError, "Cannot access scheduling function before "
+                                    "setting its free parameters.")
+        return self.hamiltonian.schedule
 
     @schedule.setter
     def schedule(self, f):
@@ -207,13 +206,12 @@ class AdiabaticEvolution(StateEvolution):
         s1 = f(1)
         if abs(s1 - 1) > self.ATOL:
             raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
-        self._schedule = f
         self.hamiltonian.schedule = f
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
-        if self._param_schedule is not None:
-            self.schedule = lambda t: self._param_schedule(t, params[:-1])
+        if self.parametrized_schedule is not None:
+            self.schedule = lambda t: self.parametrized_schedule(t, params[:-1])
         self.hamiltonian.total_time = params[-1]
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
