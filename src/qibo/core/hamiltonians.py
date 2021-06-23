@@ -456,5 +456,4 @@ class AdiabaticHamiltonian:
             self.memory_device = memory_device
         self.trotter_circuit = SymbolicHamiltonian.TrotterCircuit(
             ham.nqubits, ham.terms, dt, self.accelerators, self.memory_device)
-        print(self.trotter_circuit.circuit)
         return self.trotter_circuit.circuit
