@@ -42,7 +42,8 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
+        hamtypes = (hamiltonians.AbstractHamiltonian, AdiabaticHamiltonian)
+        if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
         else:
             ham = hamiltonian(0)
@@ -54,12 +55,12 @@ class StateEvolution:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
-        if ((not isinstance(ham, hamiltonians.SymbolicHamiltonian) or solver != "exp") and
-            accelerators is not None):
-            raise_error(NotImplementedError, "Distributed evolution is only "
-                                             "implemented using the Trotter "
-                                             "exponential solver.")
-        if isinstance(ham, hamiltonians.SymbolicHamiltonian):
+        disthamtypes = (hamiltonians.SymbolicHamiltonian, AdiabaticHamiltonian)
+        if accelerators is not None:
+            if not isinstance(ham, disthamtypes) or solver != "exp":
+                raise_error(NotImplementedError, "Distributed evolution is only "
+                                                 "implemented using the Trotter "
+                                                 "exponential solver.")
             ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
@@ -236,6 +237,7 @@ class AdiabaticEvolution(StateEvolution):
             else:
                 from qibo.core.states import DistributedState
                 c = self.hamiltonian.circuit(self.solver.dt)
+                print(c)
                 state = DistributedState.plus_state(c)
                 return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)

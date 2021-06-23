@@ -421,10 +421,12 @@ class AdiabaticHamiltonian:
         if h0.nqubits != h1.nqubits:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
+        self.nqubits = h0.nqubits
         #if isinstance(h0, hamiltonians.TrotterHamiltonian):
         #    if not h1.is_compatible(h0):
         #        h0 = h1.make_compatible(h0)
         # TODO: Recheck `make_compatible` functionality
+
         self.h0, self.h1 = h0, h1
         self.schedule = None
         self.total_time = None
@@ -436,12 +438,13 @@ class AdiabaticHamiltonian:
         return self.h0.ground_state()
 
     def __call__(self, t):
-        if self.total_time is None:
-            if t == 0:
-                return self.h0
+        if t == 0:
+            return self.h0
+        if self.total_time is None or self.schedule is None:
             raise_error(RuntimeError, "Cannot access adiabatic evolution "
                                       "Hamiltonian before setting the "
-                                      "the total evolution time.")
+                                      "the total evolution time and "
+                                      "scheduling.")
         st = self.schedule(t / self.total_time) # pylint: disable=E1102
         return self.h0 * (1 - st) + self.h1 * st
 
@@ -453,4 +456,5 @@ class AdiabaticHamiltonian:
             self.memory_device = memory_device
         self.trotter_circuit = SymbolicHamiltonian.TrotterCircuit(
             ham.nqubits, ham.terms, dt, self.accelerators, self.memory_device)
+        print(self.trotter_circuit.circuit)
         return self.trotter_circuit.circuit

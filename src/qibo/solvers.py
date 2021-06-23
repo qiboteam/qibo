@@ -1,6 +1,7 @@
 from qibo import K
 from qibo.abstractions import hamiltonians
 from qibo.config import raise_error
+from qibo.core.hamiltonians import AdiabaticHamiltonian
 
 
 class BaseSolver:
@@ -46,7 +47,6 @@ class TrotterizedExponential(BaseSolver):
 
     def __init__(self, dt, hamiltonian):
         super().__init__(dt, hamiltonian)
-        from qibo.core.hamiltonians import AdiabaticHamiltonian
         if isinstance(self.hamiltonian, AdiabaticHamiltonian):
             self.circuit = lambda t, dt: self.hamiltonian.circuit(self.dt, t=self.t)
         else:
@@ -71,6 +71,8 @@ class Exponential(BaseSolver):
     def __new__(cls, dt, hamiltonian):
         if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
             h0 = hamiltonian
+        elif isinstance(hamiltonian, AdiabaticHamiltonian):
+            h0 = hamiltonian.h0
         else:
             h0 = hamiltonian(0)
         if isinstance(h0, hamiltonians.SymbolicHamiltonian):

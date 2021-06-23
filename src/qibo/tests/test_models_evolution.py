@@ -256,7 +256,7 @@ def test_adiabatic_evolution_execute_errors():
     # execute without specifying variational parameters
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         final_state = adevp(final_time=1)
 
 
