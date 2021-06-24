@@ -31,6 +31,20 @@ class HamiltonianTerm:
     def expgate(self, dt):
         return gates.Unitary(self.exp(dt), *self.target_qubits)
 
+    def merge(self, term):
+        """Creates a new term by merging the given term to the current one.
+
+        The target qubits of the given term should be a subset of the target
+        qubits of the current term.
+        """
+        # FIXME: This doesn't take into account qubits
+        qubits = self.target_qubits + term.target_qubits
+        matrix = K.kron(self.matrix, term.matrix)
+        return self.__class__(matrix, *qubits)
+
+    def __len__(self):
+        return len(self.target_qubits)
+
     def __mul__(self, x):
         return self.__class__(x * self.matrix, *self.target_qubits)
 
