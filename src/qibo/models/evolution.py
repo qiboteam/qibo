@@ -1,10 +1,9 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
 from qibo.abstractions import hamiltonians
-from qibo.core import circuit, states
+from qibo.core import adiabatic, circuit, states
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
-from qibo.core.hamiltonians import AdiabaticHamiltonian
 
 
 class StateEvolution:
@@ -42,7 +41,7 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        hamtypes = (hamiltonians.AbstractHamiltonian, AdiabaticHamiltonian)
+        hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
         else:
@@ -55,7 +54,7 @@ class StateEvolution:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
-        disthamtypes = (hamiltonians.SymbolicHamiltonian, AdiabaticHamiltonian)
+        disthamtypes = (hamiltonians.SymbolicHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
         if accelerators is not None:
             if not isinstance(ham, disthamtypes) or solver != "exp":
                 raise_error(NotImplementedError, "Distributed evolution is only "
@@ -166,7 +165,7 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        self.hamiltonian = AdiabaticHamiltonian(h0, h1)
+        self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1)
         super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver, callbacks,
                                                  accelerators, memory_device)
 
