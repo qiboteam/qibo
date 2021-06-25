@@ -199,6 +199,26 @@ class NumpyHamiltonian(Hamiltonian):
         hamiltonians.MatrixHamiltonian.__init__(self, nqubits, matrix)
 
 
+class TrotterCircuit:
+
+    def __init__(self, nqubits, terms, dt, accelerators, memory_device):
+        from qibo.models import Circuit
+        from qibo.core.terms import TermGroup
+        self.gates = {}
+        self.dt = dt
+        self.circuit = Circuit(nqubits, accelerators=accelerators, memory_device=memory_device)
+        reduced_terms = [group.to_term() for group in TermGroup.from_terms(terms)]
+        for term in itertools.chain(reduced_terms, reduced_terms[::-1]):
+            gate = term.expgate(dt / 2.0)
+            self.gates[gate] = term
+            self.circuit.add(gate)
+
+    def set_dt(self, dt):
+        params = {gate: term.exp(dt / 2.0) for gate, term in self.gates.items()}
+        self.dt = dt
+        self.circuit.set_parameters(params)
+
+
 class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
 
@@ -384,7 +404,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
         if self.trotter_circuit is None:
-            from qibo.core.trotter import TrotterCircuit
             self.trotter_circuit = TrotterCircuit(self.nqubits, self.terms, dt,
                                                   accelerators, memory_device)
         elif dt != self.trotter_circuit.dt:

@@ -1,6 +1,5 @@
 from qibo.config import raise_error
 from qibo.core import hamiltonians
-from qibo.core.trotter import TrotterCircuit
 
 
 class AdiabaticHamiltonian:
@@ -64,6 +63,6 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         if accelerators is not None:
             self.accelerators = accelerators
             self.memory_device = memory_device
-        self.trotter_circuit = TrotterCircuit(
+        self.trotter_circuit = hamiltonians.TrotterCircuit(
             ham.nqubits, ham.terms, dt, self.accelerators, self.memory_device)
         return self.trotter_circuit.circuit

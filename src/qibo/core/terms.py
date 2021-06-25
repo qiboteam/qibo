@@ -8,6 +8,7 @@ class HamiltonianTerm:
     def __init__(self, matrix, *q):
         self.target_qubits = tuple(q)
         self._gate = None
+        self.hamiltonian = None
         if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
                 isinstance(matrix, K.qnp.tensor_types)):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
@@ -99,6 +100,7 @@ class SymbolicTerm(HamiltonianTerm):
         self.matrix_map = matrix_map
         self._matrix = None
         self._gate = None
+        self.hamiltonian = None
         self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
     @classmethod
@@ -178,3 +180,47 @@ class SymbolicTerm(HamiltonianTerm):
             else:
                 state = factor.gate(state)
         return self.coefficient * state
+
+
+class TermGroup(list):
+
+    def __init__(self, term):
+        super().__init__([term])
+        self.target_qubits = set(term.target_qubits)
+
+    def append(self, term):
+        super().append(term)
+        self.target_qubits |= set(term.target_qubits)
+
+    def can_append(self, term):
+        return set(term.target_qubits).issubset(self.target_qubits)
+
+    @classmethod
+    def from_terms(cls, terms):
+        orders = {}
+        for term in terms:
+            if len(term) in orders:
+                orders[len(term)].append(term)
+            else:
+                orders[len(term)] = [term]
+
+        groups = []
+        for order in sorted(orders.keys())[::-1]:
+            for child in orders[order]:
+                flag = True
+                for i, group in enumerate(groups):
+                    if group.can_append(child):
+                        group.append(child)
+                        flag = False
+                        break
+                if flag:
+                    groups.append(cls(child))
+        return groups
+
+    def to_term(self, coefficients={}):
+        c = coefficients.get(self[0].hamiltonian)
+        merged = c * self[0] if c else self[0]
+        for term in self[1:]:
+            c = coefficients.get(term.hamiltonian)
+            merged = merged.merge(c * term if c else term)
+        return merged
