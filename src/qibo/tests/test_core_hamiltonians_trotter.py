@@ -121,8 +121,9 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
             circuit = ham.circuit(dt=dt)
     else:
         circuit = ham.circuit(dt=dt)
+        print(circuit.queue)
         final_state = circuit(np.copy(initial_state))
-        u = [expm(-0.5j * dt * m) for m in [mm1, mm2, mm3]]
-        target_state = u[2].dot(u[1].dot(u[0])).dot(initial_state)
-        target_state = u[0].dot(u[1].dot(u[2])).dot(target_state)
+        u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
+        target_state = u[1].dot(u[0].dot(initial_state))
+        target_state = u[0].dot(u[1].dot(target_state))
         np.testing.assert_allclose(final_state, target_state)

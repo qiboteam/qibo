@@ -1,6 +1,6 @@
 import sympy
 from qibo import gates, K
-from qibo.config import raise_error
+from qibo.config import raise_error, EINSUM_CHARS
 
 
 class HamiltonianTerm:
@@ -37,10 +37,20 @@ class HamiltonianTerm:
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
-        # FIXME: This doesn't take into account qubits
-        qubits = self.target_qubits + term.target_qubits
-        matrix = K.kron(self.matrix, term.matrix)
-        return self.__class__(matrix, *qubits)
+        matrix = K.np.kron(term.matrix, K.eye(2 ** (len(self) - len(term))))
+        matrix = K.np.reshape(matrix, 2 * len(self) * (2,))
+        order = []
+        i = len(term)
+        for qubit in self.target_qubits:
+            if qubit in term.target_qubits:
+                order.append(term.target_qubits.index(qubit))
+            else:
+                order.append(i)
+                i += 1
+        order.extend([x + len(order) for x in order])
+        matrix = K.np.transpose(matrix, order)
+        matrix = K.np.reshape(matrix, 2 * (2 ** len(self),))
+        return self.__class__(self.matrix + matrix, *self.target_qubits)
 
     def __len__(self):
         return len(self.target_qubits)
