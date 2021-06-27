@@ -7,7 +7,7 @@ import qibo
 from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default=4, type=str)
+parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--trotter", action="store_true")
@@ -68,7 +68,8 @@ def main(nqubits, dt, solver, backend, trotter=False, accelerators=None,
     logs.append({
         "nqubits": nqubits, "dt": dt, "solver": solver, "trotter": trotter,
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
-        "device": qibo.get_device(), "accelerators": accelerators
+        "device": qibo.get_device(), "threads": qibo.get_threads(),
+        "accelerators": accelerators
         })
     print(f"Using {solver} solver and dt = {dt}.")
     print(f"Accelerators: {accelerators}")

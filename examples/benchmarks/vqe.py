@@ -67,7 +67,8 @@ def main(nqubits, nlayers, backend, varlayer=False, method="Powell",
     logs.append({
         "nqubits": nqubits, "nlayers": nlayers, "varlayer": varlayer,
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
-        "device": qibo.get_device(), "method": method, "maxiter": maxiter
+        "device": qibo.get_device(), "threads": qibo.get_threads(),
+        "method": method, "maxiter": maxiter
         })
     print("Number of qubits:", nqubits)
     print("Number of layers:", nlayers)
