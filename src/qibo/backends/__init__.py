@@ -197,7 +197,8 @@ def set_device(name):
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
-        bk.set_device(name)
+        if bk.name != "numpy":
+            bk.set_device(name)
 
 
 def get_device():
