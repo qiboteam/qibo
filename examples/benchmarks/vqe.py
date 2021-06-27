@@ -95,10 +95,12 @@ def main(nqubits, nlayers, backend, varlayer=False, method="Powell",
     best, params, _ = vqe.minimize(initial_parameters, method=method,
                                    options=options, compile=False)
     logs[-1]["minimization_time"] = time.time() - start_time
-    logs[-1]["epsilon"] = np.log10(1 / np.abs(best - target))
+    epsilon = np.log10(1 / np.abs(best - target))
     print("Found state =", best)
-    print("Final eps =", logs[-1]["epsilon"])
-    logs[-1]["best_energy"] = best
+    print("Final eps =", epsilon)
+
+    logs[-1]["best_energy"] = float(best)
+    logs[-1]["epsilon_energy"] = float(epsilon)
 
     print("\nCreation time =", logs[-1]["creation_time"])
     print("Minimization time =", logs[-1]["minimization_time"])
