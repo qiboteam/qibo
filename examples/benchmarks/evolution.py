@@ -1,40 +1,19 @@
 """Adiabatic evolution for the Ising Hamiltonian using linear scaling."""
+import os
 import argparse
+import json
 import time
+import qibo
 from qibo import callbacks, hamiltonians, models
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--nqubits", default="4", type=str)
+parser.add_argument("--nqubits", default=4, type=str)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
 parser.add_argument("--trotter", action="store_true")
 parser.add_argument("--accelerators", default=None, type=str)
-
-
-def parse_nqubits(nqubits_str):
-    """Transforms a string that specifies number of qubits to list.
-
-    Supported string formats are the following:
-        * 'a-b' with a and b integers.
-            Then the returned list is range(a, b + 1).
-        * 'a,b,c,d,...' with a, b, c, d, ... integers.
-            Then the returned list is [a, b, c, d]
-    """
-    # TODO: Support usage of both `-` and `,` in the same string.
-    if "-" in nqubits_str:
-        if "," in nqubits_str:
-            raise ValueError("String that specifies qubits cannot contain "
-                             "both , and -.")
-
-        nqubits_split = nqubits_str.split("-")
-        if len(nqubits_split) != 2:
-            raise ValueError("Invalid string that specifies nqubits "
-                             "{}.".format(nqubits_str))
-
-        n_start, n_end = nqubits_split
-        return list(range(int(n_start), int(n_end) + 1))
-
-    return [int(x) for x in nqubits_str.split(",")]
+parser.add_argument("--backend", default="qibotf", type=str)
+parser.add_argument("--filename", default=None, type=str)
 
 
 def parse_accelerators(accelerators):
@@ -67,39 +46,59 @@ def parse_accelerators(accelerators):
     return acc_dict
 
 
-def main(nqubits_list, dt, solver, trotter=False, accelerators=None):
+def main(nqubits, dt, solver, backend, trotter=False, accelerators=None,
+         filename=None):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian."""
+    qibo.set_backend(backend)
     if accelerators is not None:
         trotter = True
         solver = "exp"
 
+    if filename is not None:
+        if os.path.isfile(filename):
+            with open(filename, "r") as file:
+                logs = json.load(file)
+            print("Extending existing logs from {}.".format(filename))
+        else:
+            print("Creating new logs in {}.".format(filename))
+            logs = []
+    else:
+        logs = []
+
+    logs.append({
+        "nqubits": nqubits, "dt": dt, "solver": solver, "trotter": trotter,
+        "backend": qibo.get_backend(), "precision": qibo.get_precision(),
+        "device": qibo.get_device(), "accelerators": accelerators
+        })
     print(f"Using {solver} solver and dt = {dt}.")
     print(f"Accelerators: {accelerators}")
+    print("Backend:", logs[-1]["backend"])
 
-    for nqubits in nqubits_list:
-        start_time = time.time()
-        h0 = hamiltonians.X(nqubits, trotter=trotter)
-        h1 = hamiltonians.TFIM(nqubits, h=1.0, trotter=trotter)
-        ham_creation_time = time.time() - start_time
-        print(f"\nnqubits = {nqubits}, solver = {solver}")
-        print(f"trotter = {trotter}, accelerators = {accelerators}")
-        print("Hamiltonians created in:", ham_creation_time)
+    start_time = time.time()
+    h0 = hamiltonians.X(nqubits, trotter=trotter)
+    h1 = hamiltonians.TFIM(nqubits, h=1.0, trotter=trotter)
+    logs[-1]["hamiltonian_creation_time"] = time.time() - start_time
+    print(f"\nnqubits = {nqubits}, solver = {solver}")
+    print(f"trotter = {trotter}, accelerators = {accelerators}")
+    print("Hamiltonians created in:", logs[-1]["hamiltonian_creation_time"])
 
-        start_time = time.time()
-        evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt,
-                                              solver=solver,
-                                              accelerators=accelerators)
-        creation_time = time.time() - start_time
-        print("Evolution model created in:", creation_time)
+    start_time = time.time()
+    evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=dt, solver=solver,
+                                          accelerators=accelerators)
+    logs[-1]["creation_time"] = time.time() - start_time
+    print("Evolution model created in:", logs[-1]["creation_time"])
 
-        start_time = time.time()
-        final_psi = evolution(final_time=1.0)
-        simulation_time = time.time() - start_time
-        print("Simulation time:", simulation_time)
+    start_time = time.time()
+    final_psi = evolution(final_time=1.0)
+    logs[-1]["simulation_time"] = time.time() - start_time
+    print("Simulation time:", logs[-1]["simulation_time"])
+
+    if filename is not None:
+        with open(filename, "w") as file:
+            json.dump(logs, file)
 
 
 if __name__ == "__main__":
     args = vars(parser.parse_args())
-    args["nqubits_list"] = parse_nqubits(args.pop("nqubits"))
     args["accelerators"] = parse_accelerators(args.pop("accelerators"))
     main(**args)

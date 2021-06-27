@@ -1,7 +1,9 @@
 """
 Testing Variational Quantum Eigensolver.
 """
+import os
 import argparse
+import json
 import time
 import numpy as np
 import qibo
@@ -13,7 +15,7 @@ parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
 parser.add_argument("--nlayers", default=4, help="Number of layers.", type=int)
 parser.add_argument("--method", default="Powell", help="Optimization method.", type=str)
 parser.add_argument("--maxiter", default=None, help="Maximum optimization iterations.", type=int)
-parser.add_argument("--backend", default=None, help="Qibo backend to use.", type=str)
+parser.add_argument("--backend", default="qibotf", help="Qibo backend to use.", type=str)
 parser.add_argument("--varlayer", action="store_true", help="Use VariationalLayer gate.")
 parser.add_argument("--filename", default=None, help="Name of file to save logs.", type=str)
 
@@ -46,10 +48,10 @@ def varlayer_circuit(nqubits, nlayers):
     return circuit
 
 
-def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None,
-         backend=None, filename=None):
+def main(nqubits, nlayers, backend, varlayer=False, method="Powell",
+         maxiter=None, filename=None):
     """Performs a VQE circuit minimization test."""
-    qibo.set_backend()
+    qibo.set_backend(backend)
 
     if filename is not None:
         if os.path.isfile(filename):
