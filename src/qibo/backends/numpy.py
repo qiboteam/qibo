@@ -487,6 +487,14 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
             return self.backend.asarray(result)
         return super().gather(x, indices, condition, axis)
 
+    def device(self, device_name):
+        # assume tf naming convention '/GPU:0'
+        if self.op.get_backend() == "numba":
+            return super().device(device_name)
+        else: # pragma: no cover
+            device_id = int(device_name.split(":")[-1])
+            return self.backend.cuda.Device(device_id)
+
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix)
