@@ -4,6 +4,7 @@ Testing Variational Quantum Eigensolver.
 import argparse
 import time
 import numpy as np
+import qibo
 from qibo import gates, models, hamiltonians
 
 
@@ -12,7 +13,9 @@ parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
 parser.add_argument("--nlayers", default=4, help="Number of layers.", type=int)
 parser.add_argument("--method", default="Powell", help="Optimization method.", type=str)
 parser.add_argument("--maxiter", default=None, help="Maximum optimization iterations.", type=int)
+parser.add_argument("--backend", default=None, help="Qibo backend to use.", type=str)
 parser.add_argument("--varlayer", action="store_true", help="Use VariationalLayer gate.")
+parser.add_argument("--filename", default=None, help="Name of file to save logs.", type=str)
 
 
 def standard_circuit(nqubits, nlayers):
@@ -43,11 +46,30 @@ def varlayer_circuit(nqubits, nlayers):
     return circuit
 
 
-def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
+def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None,
+         backend=None, filename=None):
     """Performs a VQE circuit minimization test."""
+    qibo.set_backend()
 
+    if filename is not None:
+        if os.path.isfile(filename):
+            with open(filename, "r") as file:
+                logs = json.load(file)
+            print("Extending existing logs from {}.".format(filename))
+        else:
+            print("Creating new logs in {}.".format(filename))
+            logs = []
+    else:
+        logs = []
+
+    logs.append({
+        "nqubits": nqubits, "nlayers": nlayers, "varlayer": varlayer,
+        "backend": qibo.get_backend(), "precision": qibo.get_precision(),
+        "device": qibo.get_device(), "method": method, "maxiter": maxiter
+        })
     print("Number of qubits:", nqubits)
     print("Number of layers:", nlayers)
+    print("Backend:", logs[-1]["backend"])
 
     start_time = time.time()
     if varlayer:
@@ -56,7 +78,7 @@ def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
         circuit = standard_circuit(nqubits, nlayers)
     hamiltonian = hamiltonians.XXZ(nqubits=nqubits)
     vqe = models.VQE(circuit, hamiltonian)
-    creation_time = time.time() - start_time
+    logs[-1]["creation_time"] = time.time() - start_time
 
     target = np.real(np.min(hamiltonian.eigenvalues()))
     print("\nTarget state =", target)
@@ -66,17 +88,22 @@ def main(nqubits, nlayers, varlayer=False, method="Powell", maxiter=None):
     initial_parameters = np.random.uniform(0, 2 * np.pi, nparams)
 
     start_time = time.time()
-    options = {'disp': True, 'maxiter': maxiter}
+    options = {'disp': False, 'maxiter': maxiter}
     best, params, _ = vqe.minimize(initial_parameters, method=method,
                                    options=options, compile=False)
-    minimization_time = time.time() - start_time
-    epsilon = np.log10(1/np.abs(best-target))
+    logs[-1]["minimization_time"] = time.time() - start_time
+    logs[-1]["epsilon"] = np.log10(1 / np.abs(best - target))
     print("Found state =", best)
-    print("Final eps =", epsilon)
+    print("Final eps =", logs[-1]["epsilon"])
+    logs[-1]["best_energy"] = best
 
-    print("\nCreation time =", creation_time)
-    print("Minimization time =", minimization_time)
-    print("Total time =", minimization_time + creation_time)
+    print("\nCreation time =", logs[-1]["creation_time"])
+    print("Minimization time =", logs[-1]["minimization_time"])
+    print("Total time =", logs[-1]["minimization_time"] + logs[-1]["creation_time"])
+
+    if filename is not None:
+        with open(filename, "w") as file:
+            json.dump(logs, file)
 
 
 if __name__ == "__main__":
