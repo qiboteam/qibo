@@ -207,7 +207,7 @@ class TrotterCircuit:
         self.gates = {}
         self.dt = dt
         self.circuit = Circuit(nqubits, accelerators=accelerators, memory_device=memory_device)
-        reduced_terms = [group.to_term() for group in TermGroup.from_terms(terms)]
+        reduced_terms = [group.term() for group in TermGroup.from_terms(terms)]
         for term in itertools.chain(reduced_terms, reduced_terms[::-1]):
             gate = term.expgate(dt / 2.0)
             self.gates[gate] = term

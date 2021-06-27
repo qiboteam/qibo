@@ -1,5 +1,5 @@
 from qibo.config import raise_error
-from qibo.core import hamiltonians
+from qibo.core import hamiltonians, terms
 
 
 class AdiabaticHamiltonian:
@@ -32,9 +32,6 @@ class BaseAdiabaticHamiltonian:
         self.h0, self.h1 = h0, h1
         self.schedule = None
         self.total_time = None
-        self.accelerators = None
-        self.memory_device = None
-        self.trotter_circuit = None
 
     def ground_state(self):
         return self.h0.ground_state()
@@ -56,6 +53,25 @@ class BaseAdiabaticHamiltonian:
 
 
 class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
+
+    def __init__(self, h0, h1):
+        super().__init__(h0, h1)
+        self.accelerators = None
+        self.memory_device = None
+        self.trotter_circuit = None
+
+        self.groups0 = terms.TermGroup.from_terms(self.h0.terms)
+        self.groups1 = terms.TermGroup.from_terms(self.h1.terms)
+        all_terms = []
+        for group in self.groups0:
+            for term in group:
+                term.hamiltonian = self.h0
+                all_terms.append(term)
+        for group in self.groups1:
+            for term in group:
+                term.hamiltonian = self.h1
+                all_terms.append(term)
+        self.groups=  terms.TermGroup.from_terms(all_terms)
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
         # TODO: Make this more efficient

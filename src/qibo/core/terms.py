@@ -217,7 +217,7 @@ class TermGroup(list):
                     groups.append(cls(child))
         return groups
 
-    def to_term(self, coefficients={}):
+    def term(self, coefficients={}):
         c = coefficients.get(self[0].hamiltonian)
         merged = c * self[0] if c else self[0]
         for term in self[1:]:
