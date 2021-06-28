@@ -159,6 +159,7 @@ def test_benchmarks(nqubits, type):
 @pytest.mark.parametrize("varlayer", [False, True])
 def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     args = locals()
+    args["backend"] = "qibotf"
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
