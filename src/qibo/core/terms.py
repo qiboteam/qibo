@@ -187,10 +187,12 @@ class TermGroup(list):
     def __init__(self, term):
         super().__init__([term])
         self.target_qubits = set(term.target_qubits)
+        self._term = None
 
     def append(self, term):
         super().append(term)
         self.target_qubits |= set(term.target_qubits)
+        self._term = None
 
     def can_append(self, term):
         return set(term.target_qubits).issubset(self.target_qubits)
@@ -217,10 +219,16 @@ class TermGroup(list):
                     groups.append(cls(child))
         return groups
 
-    def term(self, coefficients={}):
+    @property
+    def term(self):
+        if self._term is None:
+            self._term = self.to_term()
+        return self._term
+
+    def to_term(self, coefficients={}):
         c = coefficients.get(self[0].hamiltonian)
-        merged = c * self[0] if c else self[0]
+        merged = self[0] * c if c is not None else self[0]
         for term in self[1:]:
             c = coefficients.get(term.hamiltonian)
-            merged = merged.merge(c * term if c else term)
+            merged = merged.merge(term * c if c is not None else term)
         return merged

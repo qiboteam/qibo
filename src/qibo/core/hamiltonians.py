@@ -201,22 +201,21 @@ class NumpyHamiltonian(Hamiltonian):
 
 class TrotterCircuit:
 
-    def __init__(self, nqubits, terms, dt, accelerators, memory_device):
+    def __init__(self, groups, dt, nqubits, accelerators, memory_device):
         from qibo.models import Circuit
-        from qibo.core.terms import TermGroup
         self.gates = {}
         self.dt = dt
         self.circuit = Circuit(nqubits, accelerators=accelerators, memory_device=memory_device)
-        reduced_terms = [group.term() for group in TermGroup.from_terms(terms)]
-        for term in itertools.chain(reduced_terms, reduced_terms[::-1]):
-            gate = term.expgate(dt / 2.0)
-            self.gates[gate] = term
+        for group in itertools.chain(groups, groups[::-1]):
+            gate = group.term.expgate(dt / 2.0)
+            self.gates[gate] = group
             self.circuit.add(gate)
 
-    def set_dt(self, dt):
-        params = {gate: term.exp(dt / 2.0) for gate, term in self.gates.items()}
-        self.dt = dt
-        self.circuit.set_parameters(params)
+    def set(self, dt):
+        if self.dt != dt:
+            params = {gate: group.term.exp(dt / 2.0) for gate, group in self.gates.items()}
+            self.dt = dt
+            self.circuit.set_parameters(params)
 
 
 class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
@@ -404,8 +403,9 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
         if self.trotter_circuit is None:
-            self.trotter_circuit = TrotterCircuit(self.nqubits, self.terms, dt,
+            from qibo.core.terms import TermGroup
+            groups = TermGroup.from_terms(self.terms)
+            self.trotter_circuit = TrotterCircuit(groups, dt, self.nqubits,
                                                   accelerators, memory_device)
-        elif dt != self.trotter_circuit.dt:
-            self.trotter_circuit.set_dt(dt)
+        self.trotter_circuit.set(dt)
         return self.trotter_circuit.circuit

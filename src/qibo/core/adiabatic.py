@@ -52,14 +52,19 @@ class BaseAdiabaticHamiltonian:
                                          "for full matrix Hamiltonians.")
 
 
+class TrotterCircuit(hamiltonians.TrotterCircuit):
+
+    def set(self, dt, coefficients):
+        params = {gate: group.to_term(coefficients).exp(dt / 2.0) for gate, group in self.gates.items()}
+        self.dt = dt
+        self.circuit.set_parameters(params)
+
+
 class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
 
     def __init__(self, h0, h1):
         super().__init__(h0, h1)
-        self.accelerators = None
-        self.memory_device = None
         self.trotter_circuit = None
-
         self.groups0 = terms.TermGroup.from_terms(self.h0.terms)
         self.groups1 = terms.TermGroup.from_terms(self.h1.terms)
         all_terms = []
@@ -71,14 +76,13 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
             for term in group:
                 term.hamiltonian = self.h1
                 all_terms.append(term)
-        self.groups=  terms.TermGroup.from_terms(all_terms)
+        self.groups = terms.TermGroup.from_terms(all_terms)
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
-        # TODO: Make this more efficient
-        ham = self(t)
-        if accelerators is not None:
-            self.accelerators = accelerators
-            self.memory_device = memory_device
-        self.trotter_circuit = hamiltonians.TrotterCircuit(
-            ham.nqubits, ham.terms, dt, self.accelerators, self.memory_device)
+        if self.trotter_circuit is None:
+            self.trotter_circuit = TrotterCircuit(self.groups, dt, self.nqubits,
+                                                  accelerators, memory_device)
+        st = self.schedule(t / self.total_time) if t != 0 else 0
+        coefficients = {self.h0: 1 - st, self.h1: st}
+        self.trotter_circuit.set(dt, coefficients)
         return self.trotter_circuit.circuit
