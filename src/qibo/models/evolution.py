@@ -165,7 +165,7 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1)
+        self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
         super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver, callbacks,
                                                  accelerators, memory_device)
 
@@ -233,7 +233,7 @@ class AdiabaticEvolution(StateEvolution):
                 return self.hamiltonian.ground_state()
             else:
                 from qibo.core.states import DistributedState
-                c = self.hamiltonian.circuit(self.solver.dt)
+                c = self.hamiltonian.circuit(self.solver.dt) # pylint: disable=E1111
                 state = DistributedState.plus_state(c)
                 return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)

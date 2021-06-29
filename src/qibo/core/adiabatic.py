@@ -1,8 +1,9 @@
+from abc import ABC, abstractmethod
 from qibo.config import raise_error
 from qibo.core import hamiltonians, terms
 
 
-class AdiabaticHamiltonian:
+class AdiabaticHamiltonian(ABC):
 
     def __new__(cls, h0, h1):
         if type(h1) != type(h0):
@@ -16,6 +17,21 @@ class AdiabaticHamiltonian:
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
 
+    def __init__(self, h0, h1):
+        self.h0, self.h1 = h0, h1
+
+    @abstractmethod
+    def ground_state(self): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def __call__(self, t): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0): # pragma: no cover
+        raise_error(NotImplementedError)
+
 
 class BaseAdiabaticHamiltonian:
 
@@ -24,11 +40,6 @@ class BaseAdiabaticHamiltonian:
             raise_error(ValueError, "H0 has {} qubits while H1 has {}."
                                     "".format(h0.nqubits, h1.nqubits))
         self.nqubits = h0.nqubits
-        #if isinstance(h0, hamiltonians.TrotterHamiltonian):
-        #    if not h1.is_compatible(h0):
-        #        h0 = h1.make_compatible(h0)
-        # TODO: Recheck `make_compatible` functionality
-
         self.h0, self.h1 = h0, h1
         self.schedule = None
         self.total_time = None
@@ -82,7 +93,7 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         if self.trotter_circuit is None:
             self.trotter_circuit = TrotterCircuit(self.groups, dt, self.nqubits,
                                                   accelerators, memory_device)
-        st = self.schedule(t / self.total_time) if t != 0 else 0
+        st = self.schedule(t / self.total_time) if t != 0 else 0 # pylint: disable=E1102
         coefficients = {self.h0: 1 - st, self.h1: st}
         self.trotter_circuit.set(dt, coefficients)
         return self.trotter_circuit.circuit
