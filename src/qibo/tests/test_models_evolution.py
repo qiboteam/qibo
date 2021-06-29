@@ -118,6 +118,10 @@ def test_adiabatic_evolution_init():
     # Hamiltonians with different number of qubits
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # Adiabatic Hamiltonian with bad hamiltonian types
+    from qibo.core.adiabatic import AdiabaticHamiltonian
+    with pytest.raises(TypeError):
+        h = AdiabaticHamiltonian("a", "b")
     # s with three arguments
     h0 = hamiltonians.X(2)
     s = lambda t, a, b: t + a + b
@@ -145,6 +149,10 @@ def test_set_scheduling_parameters():
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p[0]) * np.sqrt(t) + p[0] * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, 1e-2)
+    # access parametrized scheduling before setting parameters
+    with pytest.raises(ValueError):
+        s = adevp.schedule
+
     adevp.set_parameters([0.5, 1])
 
     target_s = lambda t: 0.5 * np.sqrt(t) + 0.5 * t

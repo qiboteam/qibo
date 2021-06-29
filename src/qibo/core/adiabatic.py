@@ -17,8 +17,10 @@ class AdiabaticHamiltonian(ABC):
             raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
                                    "object but is {}.".format(type(h0)))
 
-    def __init__(self, h0, h1):
+    def __init__(self, h0, h1): # pragma: no cover
         self.h0, self.h1 = h0, h1
+        self.schedule = None
+        self.total_time = None
 
     @abstractmethod
     def ground_state(self): # pragma: no cover
@@ -58,7 +60,7 @@ class BaseAdiabaticHamiltonian:
         st = self.schedule(t / self.total_time) # pylint: disable=E1102
         return self.h0 * (1 - st) + self.h1 * st
 
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
+    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0): # pragma: no cover
         raise_error(NotImplementedError, "Trotter circuit is not available "
                                          "for full matrix Hamiltonians.")
 
