@@ -121,7 +121,7 @@ def test_adiabatic_evolution_init():
     # Adiabatic Hamiltonian with bad hamiltonian types
     from qibo.core.adiabatic import AdiabaticHamiltonian
     with pytest.raises(TypeError):
-        h = AdiabaticHamiltonian("a", "b")
+        h = AdiabaticHamiltonian("a", "b") # pylint: disable=E0110
     # s with three arguments
     h0 = hamiltonians.X(2)
     s = lambda t, a, b: t + a + b
