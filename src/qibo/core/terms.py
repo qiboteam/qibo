@@ -51,13 +51,13 @@ class HamiltonianTerm:
         order.extend([x + len(order) for x in order])
         matrix = K.np.transpose(matrix, order)
         matrix = K.np.reshape(matrix, 2 * (2 ** len(self),))
-        return self.__class__(self.matrix + matrix, *self.target_qubits)
+        return HamiltonianTerm(self.matrix + matrix, *self.target_qubits)
 
     def __len__(self):
         return len(self.target_qubits)
 
     def __mul__(self, x):
-        return self.__class__(x * self.matrix, *self.target_qubits)
+        return HamiltonianTerm(x * self.matrix, *self.target_qubits)
 
     def __rmul__(self, x):
         return self.__mul__(x)
