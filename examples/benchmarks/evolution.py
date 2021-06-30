@@ -7,7 +7,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default="4", type=str)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
-parser.add_argument("--trotter", action="store_true")
+parser.add_argument("--dense", action="store_true")
 parser.add_argument("--accelerators", default=None, type=str)
 
 
@@ -67,10 +67,10 @@ def parse_accelerators(accelerators):
     return acc_dict
 
 
-def main(nqubits_list, dt, solver, trotter=False, accelerators=None):
+def main(nqubits_list, dt, solver, dense=True, accelerators=None):
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian."""
     if accelerators is not None:
-        trotter = True
+        dense = False
         solver = "exp"
 
     print(f"Using {solver} solver and dt = {dt}.")
@@ -78,11 +78,11 @@ def main(nqubits_list, dt, solver, trotter=False, accelerators=None):
 
     for nqubits in nqubits_list:
         start_time = time.time()
-        h0 = hamiltonians.X(nqubits, trotter=trotter)
-        h1 = hamiltonians.TFIM(nqubits, h=1.0, trotter=trotter)
+        h0 = hamiltonians.X(nqubits, dense=dense)
+        h1 = hamiltonians.TFIM(nqubits, h=1.0, dense=dense)
         ham_creation_time = time.time() - start_time
         print(f"\nnqubits = {nqubits}, solver = {solver}")
-        print(f"trotter = {trotter}, accelerators = {accelerators}")
+        print(f"dense = {dense}, accelerators = {accelerators}")
         print("Hamiltonians created in:", ham_creation_time)
 
         start_time = time.time()
