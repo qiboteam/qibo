@@ -220,7 +220,7 @@ def main(nqubits, type,
         freqs = result.frequencies()
         logs[-1]["measurement_time"] = time.time() - start_time
 
-    if logs[-1]["backend"] == "qibojit":
+    if logs[-1]["backend"] == "qibojit" and qibo.K.op.get_backend() == "numba":
         from numba import threading_layer
         logs[-1]["threading"] = threading_layer()
 
