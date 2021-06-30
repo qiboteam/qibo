@@ -236,7 +236,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __init__(self, form=None, symbol_map=None, ground_state=None):
         super().__init__(ground_state)
         self._dense = None
-        self.terms = None
+        self.terms = None # list of :class:`qibo.core.terms.HamiltonianTerm` objects
         self.constant = 0
         self.form = None
         self.trotter_circuit = None
@@ -245,6 +245,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     @classmethod
     def from_terms(cls, terms, ground_state=None):
+        """Constructs a symbolic Hamiltonian directly from a list of terms."""
         ham = cls(ground_state=ground_state)
         ham.set_terms(terms)
         return ham
@@ -367,6 +368,10 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         return new_ham
 
     def apply_gates(self, state, density_matrix=False):
+        """Applies gates corresponding to the Hamiltonian terms to a given state.
+
+        Helper method for ``__matmul__``.
+        """
         total = 0
         for term in self.terms:
             total += term(K.copy(state), density_matrix)
@@ -402,6 +407,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                          "implemented.".format(type(o)))
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
+        """Circuit that implements a Trotter step of this Hamiltonian for a given time step ``dt``."""
         if self.trotter_circuit is None:
             from qibo.core.terms import TermGroup
             groups = TermGroup.from_terms(self.terms)

@@ -4,6 +4,10 @@ from qibo.core import hamiltonians, terms
 
 
 class AdiabaticHamiltonian(ABC):
+    """Constructor for :class:`qibo.core.adiabatic.BaseAdiabaticHamiltonian` and :class:`qibo.core.adiabatic.SymbolicAdiabaticHamiltonian`.
+
+    This object is never constructed, it falls back to one of the above objects.
+    """
 
     def __new__(cls, h0, h1):
         if type(h1) != type(h0):
@@ -36,6 +40,7 @@ class AdiabaticHamiltonian(ABC):
 
 
 class BaseAdiabaticHamiltonian:
+    """Adiabatic Hamiltonian that is sum of :class:`qibo.core.hamiltonians.Hamiltonian`."""
 
     def __init__(self, h0, h1):
         if h0.nqubits != h1.nqubits:
@@ -74,6 +79,7 @@ class TrotterCircuit(hamiltonians.TrotterCircuit):
 
 
 class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
+    """Adiabatic Hamiltonian that is sum of :class:`qibo.core.hamiltonians.SymbolicHamiltonian`."""
 
     def __init__(self, h0, h1):
         super().__init__(h0, h1)

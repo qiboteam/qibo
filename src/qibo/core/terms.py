@@ -4,6 +4,17 @@ from qibo.config import raise_error, EINSUM_CHARS
 
 
 class HamiltonianTerm:
+    """Single term in a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+
+    This Hamiltonian is represented by a sum of such terms which are held in
+    its ``.terms`` attribute which is a list.
+
+    Args:
+        matrix (np.ndarray): Full matrix corresponding to the term representation
+            in the computational basis. Has size (2^n, 2^n) where n is the
+            number of target qubits of this term.
+        q (int): Target qubit ids.
+    """
 
     def __init__(self, matrix, *q):
         self.target_qubits = tuple(q)
@@ -27,9 +38,11 @@ class HamiltonianTerm:
         return self._gate
 
     def exp(self, dt):
+        """Matrix exponentiation of the term."""
         return K.qnp.expm(-1j * dt * self.matrix)
 
     def expgate(self, dt):
+        """Unitary gate implementing the matrix exponentiation of the term."""
         return gates.Unitary(self.exp(dt), *self.target_qubits)
 
     def merge(self, term):
@@ -63,6 +76,7 @@ class HamiltonianTerm:
         return self.__mul__(x)
 
     def __call__(self, state, density_matrix=False):
+        """Applies the term on a given state vector or density matrix."""
         if density_matrix:
             self.gate.density_matrix = True
             return self.gate.density_matrix_half_call(state)
@@ -70,10 +84,7 @@ class HamiltonianTerm:
 
 
 class SymbolicTerm(HamiltonianTerm):
-    """Helper method for parsing symbolic Hamiltonian terms.
-
-    Each :class:`qibo.symbols.SymbolicTerm` corresponds to a term in the
-    Hamiltonian.
+    """:class:`qibo.core.terms.HamiltonianTerm` constructed from ``sympy`` symbols.
 
     Example:
         ::
@@ -183,6 +194,15 @@ class SymbolicTerm(HamiltonianTerm):
 
 
 class TermGroup(list):
+    """Collection of multiple :class:`qibo.core.terms.HamiltonianTerm` objects.
+
+    Allows merging multiple terms to a single one for faster exponentiation.
+
+    Args:
+        term (:class:`qibo.core.terms.HamiltonianTerm`): Parent term of the group.
+            All terms appended later should target a subset of the parents'
+            target qubits.
+    """
 
     def __init__(self, term):
         super().__init__([term])
@@ -190,15 +210,26 @@ class TermGroup(list):
         self._term = None
 
     def append(self, term):
+        """Appends a new :class:`qibo.core.terms.HamiltonianTerm` to the collection."""
         super().append(term)
         self.target_qubits |= set(term.target_qubits)
         self._term = None
 
     def can_append(self, term):
+        """Checks if a term can be appended to the group based on its target qubits."""
         return set(term.target_qubits).issubset(self.target_qubits)
 
     @classmethod
     def from_terms(cls, terms):
+        """Groups a list of terms to multiple groups.
+
+        Args:
+            terms (list): List of :class:`qibo.core.terms.HamiltonianTerm` objects.
+
+        Returns:
+            List of :class:`qibo.core.terms.TermGroup` objects that contain
+            all the given terms.
+        """
         orders = {}
         for term in terms:
             if len(term) in orders:
@@ -221,11 +252,19 @@ class TermGroup(list):
 
     @property
     def term(self):
+        """Returns a single :class:`qibo.core.terms.HamiltonianTerm`. after merging all terms in the group."""
         if self._term is None:
             self._term = self.to_term()
         return self._term
 
     def to_term(self, coefficients={}):
+        """Calculates a single :class:`qibo.core.terms.HamiltonianTerm` by merging all terms in the group.
+
+        Args:
+            coefficients (dict): Optional dictionary that allows passing a different
+                coefficient to each term according to its parent Hamiltonian.
+                Useful for :class:`qibo.core.adiabatic.AdiabaticHamiltonian` calculations.
+        """
         c = coefficients.get(self[0].hamiltonian)
         merged = self[0] * c if c is not None else self[0]
         for term in self[1:]:
