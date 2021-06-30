@@ -147,7 +147,7 @@ class QAOA(object):
         if mixer is None:
             trotter = isinstance(
                 self.hamiltonian, self.hamiltonians.SymbolicHamiltonian)
-            self.mixer = self.hamiltonians.X(self.nqubits, trotter=trotter)
+            self.mixer = self.hamiltonians.X(self.nqubits, dense=not trotter)
         else:
             if type(mixer) != type(hamiltonian):
                   raise_error(TypeError, "Given Hamiltonian is of type {} "
