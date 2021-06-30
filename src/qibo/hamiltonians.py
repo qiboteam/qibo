@@ -70,13 +70,13 @@ def XXZ(nqubits, delta=0.5, numpy=False, dense=True):
 def _OneBodyPauli(nqubits, matrix, numpy=False, dense=True, ground_state=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     if dense:
-        matrix = - matrix
-        terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-        return SymbolicHamiltonian.from_terms(terms, ground_state)
+        condition = lambda i, j: i == j % nqubits
+        ham = -_build_spin_model(nqubits, matrix, condition)
+        return Hamiltonian(nqubits, ham, numpy=numpy)
 
-    condition = lambda i, j: i == j % nqubits
-    ham = -_build_spin_model(nqubits, matrix, condition)
-    return Hamiltonian(nqubits, ham, numpy=numpy)
+    matrix = - matrix
+    terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
+    return SymbolicHamiltonian.from_terms(terms, ground_state)
 
 
 def X(nqubits, numpy=False, dense=True):

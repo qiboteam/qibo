@@ -10,7 +10,7 @@ from qibo.tests.utils import random_state, random_complex, random_hermitian
 @pytest.mark.parametrize("model", ["TFIM", "XXZ", "Y", "MaxCut"])
 def test_trotter_hamiltonian_to_dense(backend, nqubits, model):
     """Test that Trotter Hamiltonian dense form agrees with normal Hamiltonian."""
-    local_ham = getattr(hamiltonians, model)(nqubits, trotter=True)
+    local_ham = getattr(hamiltonians, model)(nqubits, dense=False)
     target_ham = getattr(hamiltonians, model)(nqubits, numpy=True)
     final_ham = local_ham.dense
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
@@ -18,45 +18,45 @@ def test_trotter_hamiltonian_to_dense(backend, nqubits, model):
 
 def test_trotter_hamiltonian_scalar_mul(nqubits=3):
     """Test multiplication of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 * local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham * 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_add(nqubits=4):
     """Test addition of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 + local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham + 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_sub(nqubits=3):
     """Test subtraction of Trotter Hamiltonian with scalar."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 - local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     target_ham = hamiltonians.TFIM(nqubits, h=1.0, numpy=True) - 2
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham - 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
     """Test addition and subtraction between Trotter Hamiltonians."""
-    local_ham1 = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
-    local_ham2 = hamiltonians.TFIM(nqubits, h=0.5, trotter=True)
+    local_ham1 = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
+    local_ham2 = hamiltonians.TFIM(nqubits, h=0.5, dense=False)
 
     local_ham = local_ham1 + local_ham2
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) +
@@ -74,7 +74,7 @@ def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
 def test_trotter_hamiltonian_matmul(nqubits, normalize):
     """Test Trotter Hamiltonian expectation value."""
-    local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
+    local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     dense_ham = hamiltonians.TFIM(nqubits, h=1.0)
 
     state = K.cast(random_complex((2 ** nqubits,)))

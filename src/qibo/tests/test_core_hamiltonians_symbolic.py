@@ -205,6 +205,6 @@ def test_trotter_hamiltonian_operation_errors():
         h = h1 @ "test"
     with pytest.raises(NotImplementedError):
         h = h1 @ np.ones((2, 2, 2, 2))
-    h2 = hamiltonians.XXZ(3, trotter=True)
+    h2 = hamiltonians.XXZ(3, dense=False)
     with pytest.raises(NotImplementedError):
         h = h1 @ h2

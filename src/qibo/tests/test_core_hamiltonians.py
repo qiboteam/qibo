@@ -131,23 +131,23 @@ def test_hamiltonian_matmul(numpy):
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [True, False])
-def test_hamiltonian_exponentiation(numpy, trotter):
+@pytest.mark.parametrize("dense", [True, False])
+def test_hamiltonian_exponentiation(numpy, dense):
     from scipy.linalg import expm
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
+    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
     target_matrix = expm(-0.5j * np.array(H.matrix))
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
+    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
     _ = H.eigenvectors()
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
 
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [True, False])
+@pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("density_matrix", [True, False])
-def test_hamiltonian_expectation(numpy, trotter, density_matrix):
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5, numpy=numpy, trotter=trotter)
+def test_hamiltonian_expectation(numpy, dense, density_matrix):
+    h = hamiltonians.XXZ(nqubits=3, delta=0.5, numpy=numpy, dense=dense)
     matrix = np.array(h.matrix)
 
     if density_matrix:
@@ -175,10 +175,10 @@ def test_hamiltonian_expectation_errors():
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [True, False])
-def test_hamiltonian_eigenvalues(dtype, numpy, trotter):
+@pytest.mark.parametrize("dense", [True, False])
+def test_hamiltonian_eigenvalues(dtype, numpy, dense):
     """Testing hamiltonian eigenvalues scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
 
     H1_eigen = H1.eigenvalues()
     hH1_eigen = np.linalg.eigvalsh(H1.matrix)
@@ -197,10 +197,10 @@ def test_hamiltonian_eigenvalues(dtype, numpy, trotter):
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
 @pytest.mark.parametrize("numpy", [True, False])
-@pytest.mark.parametrize("trotter", [True, False])
-def test_hamiltonian_eigenvectors(dtype, numpy, trotter):
+@pytest.mark.parametrize("dense", [True, False])
+def test_hamiltonian_eigenvectors(dtype, numpy, dense):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, trotter=trotter)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
 
     V1 = np.array(H1.eigenvectors())
     U1 = np.array(H1.eigenvalues())
