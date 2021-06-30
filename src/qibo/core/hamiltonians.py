@@ -11,28 +11,19 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         nqubits (int): number of quantum bits.
         matrix (np.ndarray): Matrix representation of the Hamiltonian in the
             computational basis as an array of shape ``(2 ** nqubits, 2 ** nqubits)``.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise the selected backend is used.
-            Default option is ``numpy = False``.
     """
-    def __new__(cls, nqubits, matrix, numpy=False):
+
+    def __init__(self, nqubits, matrix):
         if not isinstance(matrix, K.tensor_types):
             raise_error(TypeError, "Matrix of invalid type {} given during "
                                    "Hamiltonian initialization"
                                    "".format(type(matrix)))
-        if numpy:
-            return NumpyHamiltonian(nqubits, matrix, numpy=True)
-        else:
-            return super().__new__(cls)
-
-    def __init__(self, nqubits, matrix, numpy=False):
-        assert not numpy
         self.K = K
         matrix = self.K.cast(matrix)
         super().__init__(nqubits, matrix)
 
     @classmethod
-    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, numpy=False):
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map):
         """Creates a ``Hamiltonian`` from a symbolic Hamiltonian.
 
         We refer to the :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
@@ -43,16 +34,12 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
                 with symbols.
             symbol_map (dict): Dictionary that maps each symbol that appears in
                 the Hamiltonian to a pair of (target, matrix).
-            numpy (bool): If ``True`` the Hamiltonian is created using numpy as
-                the calculation backend, otherwise the selected backend is used.
-                Default option is ``numpy = False``.
 
         Returns:
             A :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian` object
             that implements the Hamiltonian represented by the given symbolic
             expression.
         """
-        # TODO: Remove ``numpy`` feature from Hamiltonians?
         log.warn("`Hamiltonian.from_symbolic` and the use of symbol maps is "
                  "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
                  "to construct Hamiltonians using symbols.")
@@ -185,18 +172,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
 
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))
-
-
-class NumpyHamiltonian(Hamiltonian):
-
-    def __new__(cls, nqubits, matrix, numpy=True):
-        return hamiltonians.MatrixHamiltonian.__new__(cls)
-
-    def __init__(self, nqubits, matrix, numpy=True):
-        assert numpy
-        self.K = K.qnp
-        matrix = self.K.cast(matrix)
-        hamiltonians.MatrixHamiltonian.__init__(self, nqubits, matrix)
 
 
 class TrotterCircuit:

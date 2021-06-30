@@ -19,19 +19,16 @@ models_config = [
     ("MaxCut", {"nqubits": 5}, "maxcut_N5.out"),
 ]
 @pytest.mark.parametrize(("model", "kwargs", "filename"), models_config)
-@pytest.mark.parametrize("numpy", [True, False])
-def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
+def test_tfim_model_hamiltonian(model, kwargs, filename):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
     from qibo.tests.test_models_variational import assert_regression_fixture
-    kwargs["numpy"] = numpy
     H = getattr(hamiltonians, model)(**kwargs)
     matrix = np.array(H.matrix).flatten().real
     assert_regression_fixture(matrix, filename)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-@pytest.mark.parametrize("numpy", [True, False])
-def test_maxcut(nqubits, numpy):
+def test_maxcut(nqubits):
     size = 2 ** nqubits
     ham = np.zeros(shape=(size, size), dtype=np.complex128)
     for i in range(nqubits):
@@ -45,5 +42,5 @@ def test_maxcut(nqubits, numpy):
             M = np.eye(2**nqubits) - h
             ham += M
     target_ham = K.cast(- ham / 2)
-    final_ham = hamiltonians.MaxCut(nqubits, numpy=numpy)
+    final_ham = hamiltonians.MaxCut(nqubits)
     np.testing.assert_allclose(final_ham.matrix, target_ham)

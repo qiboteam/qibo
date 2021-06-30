@@ -28,7 +28,7 @@ def _build_spin_model(nqubits, matrix, condition):
     return h
 
 
-def XXZ(nqubits, delta=0.5, numpy=False, dense=True):
+def XXZ(nqubits, delta=0.5, dense=True):
     """Heisenberg XXZ model with periodic boundary conditions.
 
     .. math::
@@ -37,9 +37,6 @@ def XXZ(nqubits, delta=0.5, numpy=False, dense=True):
     Args:
         nqubits (int): number of quantum bits.
         delta (float): coefficient for the Z component (default 0.5).
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
@@ -56,7 +53,7 @@ def XXZ(nqubits, delta=0.5, numpy=False, dense=True):
         hy = _build_spin_model(nqubits, matrices.Y, condition)
         hz = _build_spin_model(nqubits, matrices.Z, condition)
         matrix = hx + hy + delta * hz
-        return Hamiltonian(nqubits, matrix, numpy=numpy)
+        return Hamiltonian(nqubits, matrix)
 
     hx = K.np.kron(matrices.X, matrices.X)
     hy = K.np.kron(matrices.Y, matrices.Y)
@@ -67,19 +64,19 @@ def XXZ(nqubits, delta=0.5, numpy=False, dense=True):
     return SymbolicHamiltonian.from_terms(terms)
 
 
-def _OneBodyPauli(nqubits, matrix, numpy=False, dense=True, ground_state=None):
+def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None):
     """Helper method for constracting non-interacting X, Y, Z Hamiltonians."""
     if dense:
         condition = lambda i, j: i == j % nqubits
         ham = -_build_spin_model(nqubits, matrix, condition)
-        return Hamiltonian(nqubits, ham, numpy=numpy)
+        return Hamiltonian(nqubits, ham)
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
     return SymbolicHamiltonian.from_terms(terms, ground_state)
 
 
-def X(nqubits, numpy=False, dense=True):
+def X(nqubits, dense=True):
     """Non-interacting Pauli-X Hamiltonian.
 
     .. math::
@@ -87,9 +84,6 @@ def X(nqubits, numpy=False, dense=True):
 
     Args:
         nqubits (int): number of quantum bits.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
@@ -99,10 +93,10 @@ def X(nqubits, numpy=False, dense=True):
         n = K.cast(2 ** nqubits, dtype='DTYPEINT')
         state = K.ones(n, dtype='DTYPECPX')
         return state / K.sqrt(K.cast(n, dtype=state.dtype))
-    return _OneBodyPauli(nqubits, matrices.X, numpy, dense, ground_state)
+    return _OneBodyPauli(nqubits, matrices.X, dense, ground_state)
 
 
-def Y(nqubits, numpy=False, dense=True):
+def Y(nqubits, dense=True):
     """Non-interacting Pauli-Y Hamiltonian.
 
     .. math::
@@ -110,17 +104,14 @@ def Y(nqubits, numpy=False, dense=True):
 
     Args:
         nqubits (int): number of quantum bits.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    return _OneBodyPauli(nqubits, matrices.Y, numpy, dense)
+    return _OneBodyPauli(nqubits, matrices.Y, dense)
 
 
-def Z(nqubits, numpy=False, dense=True):
+def Z(nqubits, dense=True):
     """Non-interacting Pauli-Z Hamiltonian.
 
     .. math::
@@ -128,17 +119,14 @@ def Z(nqubits, numpy=False, dense=True):
 
     Args:
         nqubits (int): number of quantum bits.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
     """
-    return _OneBodyPauli(nqubits, matrices.Z, numpy, dense)
+    return _OneBodyPauli(nqubits, matrices.Z, dense)
 
 
-def TFIM(nqubits, h=0.0, numpy=False, dense=True):
+def TFIM(nqubits, h=0.0, dense=True):
     """Transverse field Ising model with periodic boundary conditions.
 
     .. math::
@@ -147,9 +135,6 @@ def TFIM(nqubits, h=0.0, numpy=False, dense=True):
     Args:
         nqubits (int): number of quantum bits.
         h (float): value of the transverse field.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
@@ -160,7 +145,7 @@ def TFIM(nqubits, h=0.0, numpy=False, dense=True):
         if h != 0:
             condition = lambda i, j: i == j % nqubits
             ham -= h * _build_spin_model(nqubits, matrices.X, condition)
-        return Hamiltonian(nqubits, ham, numpy=numpy)
+        return Hamiltonian(nqubits, ham)
 
     matrix = -(K.np.kron(matrices.Z, matrices.Z) + h * K.np.kron(matrices.X, matrices.I))
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
@@ -168,7 +153,7 @@ def TFIM(nqubits, h=0.0, numpy=False, dense=True):
     return SymbolicHamiltonian.from_terms(terms)
 
 
-def MaxCut(nqubits, numpy=False, dense=True):
+def MaxCut(nqubits, dense=True):
     """Max Cut Hamiltonian.
 
     .. math::
@@ -176,9 +161,6 @@ def MaxCut(nqubits, numpy=False, dense=True):
 
     Args:
         nqubits (int): number of quantum bits.
-        numpy (bool): If ``True`` the Hamiltonian is created using numpy as the
-            calculation backend, otherwise TensorFlow is used.
-            Default option is ``numpy = False``.
         dense (bool): If ``True`` it creates the Hamiltonian as a
             :class:`qibo.core.hamiltonians.Hamiltonian`, otherwise it creates
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.

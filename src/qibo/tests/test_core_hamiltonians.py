@@ -9,9 +9,9 @@ def test_hamiltonian_init():
     with pytest.raises(TypeError):
         H = hamiltonians.Hamiltonian(2, "test")
     H1 = hamiltonians.Hamiltonian(2, np.eye(4))
-    H1 = hamiltonians.Hamiltonian(2, np.eye(4), numpy=True)
+    H1 = hamiltonians.Hamiltonian(2, np.eye(4))
     H1 = hamiltonians.Hamiltonian(2, K.eye(4))
-    H1 = hamiltonians.Hamiltonian(2, K.eye(4), numpy=True)
+    H1 = hamiltonians.Hamiltonian(2, K.eye(4))
     with pytest.raises(ValueError):
         H1 = hamiltonians.Hamiltonian(-2, np.eye(4))
     with pytest.raises(RuntimeError):
@@ -21,8 +21,7 @@ def test_hamiltonian_init():
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
-@pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_algebraic_operations(dtype, numpy):
+def test_hamiltonian_algebraic_operations(dtype):
     """Test basic hamiltonian overloading."""
 
     def transformation_a(a, b):
@@ -46,8 +45,8 @@ def test_hamiltonian_algebraic_operations(dtype, numpy):
         else:
             return c1 - a + c2 * b
 
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy)
-    H2 = hamiltonians.XXZ(nqubits=2, delta=1, numpy=numpy)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
+    H2 = hamiltonians.XXZ(nqubits=2, delta=1)
 
     hH1 = transformation_a(H1.matrix, H2.matrix)
     hH2 = transformation_b(H1.matrix, H2.matrix)
@@ -65,10 +64,9 @@ def test_hamiltonian_algebraic_operations(dtype, numpy):
     np.testing.assert_allclose(hH4, HT4.matrix)
 
 
-@pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_addition(numpy):
-    H1 = hamiltonians.Y(nqubits=3, numpy=numpy)
-    H2 = hamiltonians.TFIM(nqubits=3, h=1.0, numpy=numpy)
+def test_hamiltonian_addition():
+    H1 = hamiltonians.Y(nqubits=3)
+    H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
     np.testing.assert_allclose(H.matrix, matrix)
@@ -76,19 +74,18 @@ def test_hamiltonian_addition(numpy):
     matrix = H1.matrix - 0.5 * H2.matrix
     np.testing.assert_allclose(H.matrix, matrix)
 
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy)
-    H2 = hamiltonians.XXZ(nqubits=3, delta=0.1, numpy=numpy)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
+    H2 = hamiltonians.XXZ(nqubits=3, delta=0.1)
     with pytest.raises(RuntimeError):
         R = H1 + H2
     with pytest.raises(RuntimeError):
         R = H1 - H2
 
 
-@pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_operation_errors(numpy):
+def test_hamiltonian_operation_errors():
     """Testing hamiltonian not implemented errors."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy)
-    H2 = hamiltonians.XXZ(nqubits=2, delta=0.1, numpy=numpy)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
+    H2 = hamiltonians.XXZ(nqubits=2, delta=0.1)
 
     with pytest.raises(NotImplementedError):
         R = H1 * H2
@@ -100,17 +97,12 @@ def test_hamiltonian_operation_errors(numpy):
         R = [3] - H1
 
 
-@pytest.mark.parametrize("numpy", [True, False])
-def test_hamiltonian_matmul(numpy):
+def test_hamiltonian_matmul():
     """Test matrix multiplication between Hamiltonians and state vectors."""
-    H1 = hamiltonians.TFIM(nqubits=3, h=1.0, numpy=numpy)
-    H2 = hamiltonians.Y(nqubits=3, numpy=numpy)
-    if numpy:
-        m1 = H1.matrix
-        m2 = H2.matrix
-    else:
-        m1 = K.to_numpy(H1.matrix)
-        m2 = K.to_numpy(H2.matrix)
+    H1 = hamiltonians.TFIM(nqubits=3, h=1.0)
+    H2 = hamiltonians.Y(nqubits=3)
+    m1 = K.to_numpy(H1.matrix)
+    m2 = K.to_numpy(H2.matrix)
 
     np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
     np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
@@ -130,24 +122,22 @@ def test_hamiltonian_matmul(numpy):
         H1 @ 2
 
 
-@pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("dense", [True, False])
-def test_hamiltonian_exponentiation(numpy, dense):
+def test_hamiltonian_exponentiation(dense):
     from scipy.linalg import expm
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
+    H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
     target_matrix = expm(-0.5j * np.array(H.matrix))
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
-    H = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
+    H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
     _ = H.eigenvectors()
     np.testing.assert_allclose(H.exp(0.5), target_matrix)
 
 
-@pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("density_matrix", [True, False])
-def test_hamiltonian_expectation(numpy, dense, density_matrix):
-    h = hamiltonians.XXZ(nqubits=3, delta=0.5, numpy=numpy, dense=dense)
+def test_hamiltonian_expectation(dense, density_matrix):
+    h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense)
     matrix = np.array(h.matrix)
 
     if density_matrix:
@@ -174,11 +164,10 @@ def test_hamiltonian_expectation_errors():
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
-@pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("dense", [True, False])
-def test_hamiltonian_eigenvalues(dtype, numpy, dense):
+def test_hamiltonian_eigenvalues(dtype, dense):
     """Testing hamiltonian eigenvalues scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
     H1_eigen = H1.eigenvalues()
     hH1_eigen = np.linalg.eigvalsh(H1.matrix)
@@ -196,11 +185,10 @@ def test_hamiltonian_eigenvalues(dtype, numpy, dense):
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
-@pytest.mark.parametrize("numpy", [True, False])
 @pytest.mark.parametrize("dense", [True, False])
-def test_hamiltonian_eigenvectors(dtype, numpy, dense):
+def test_hamiltonian_eigenvectors(dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
-    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy, dense=dense)
+    H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
     V1 = np.array(H1.eigenvectors())
     U1 = np.array(H1.eigenvalues())

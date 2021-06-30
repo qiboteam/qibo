@@ -11,7 +11,7 @@ from qibo.tests.utils import random_state, random_complex, random_hermitian
 def test_trotter_hamiltonian_to_dense(backend, nqubits, model):
     """Test that Trotter Hamiltonian dense form agrees with normal Hamiltonian."""
     local_ham = getattr(hamiltonians, model)(nqubits, dense=False)
-    target_ham = getattr(hamiltonians, model)(nqubits, numpy=True)
+    target_ham = getattr(hamiltonians, model)(nqubits)
     final_ham = local_ham.dense
     np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
@@ -19,7 +19,7 @@ def test_trotter_hamiltonian_to_dense(backend, nqubits, model):
 def test_trotter_hamiltonian_scalar_mul(nqubits=3):
     """Test multiplication of Trotter Hamiltonian with scalar."""
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
-    target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
+    target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 * local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
@@ -31,7 +31,7 @@ def test_trotter_hamiltonian_scalar_mul(nqubits=3):
 def test_trotter_hamiltonian_scalar_add(nqubits=4):
     """Test addition of Trotter Hamiltonian with scalar."""
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
-    target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
+    target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 + local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
@@ -43,11 +43,11 @@ def test_trotter_hamiltonian_scalar_add(nqubits=4):
 def test_trotter_hamiltonian_scalar_sub(nqubits=3):
     """Test subtraction of Trotter Hamiltonian with scalar."""
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
-    target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
+    target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 - local_ham).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
 
-    target_ham = hamiltonians.TFIM(nqubits, h=1.0, numpy=True) - 2
+    target_ham = hamiltonians.TFIM(nqubits, h=1.0) - 2
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham - 2).dense
     np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
@@ -59,14 +59,14 @@ def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
     local_ham2 = hamiltonians.TFIM(nqubits, h=0.5, dense=False)
 
     local_ham = local_ham1 + local_ham2
-    target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) +
-                  hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
+    target_ham = (hamiltonians.TFIM(nqubits, h=1.0) +
+                  hamiltonians.TFIM(nqubits, h=0.5))
     dense = local_ham.dense
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
 
     local_ham = local_ham1 - local_ham2
-    target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) -
-                  hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
+    target_ham = (hamiltonians.TFIM(nqubits, h=1.0) -
+                  hamiltonians.TFIM(nqubits, h=0.5))
     dense = local_ham.dense
     np.testing.assert_allclose(dense.matrix, target_ham.matrix)
 
