@@ -500,10 +500,9 @@ Symbolic Hamiltonian
 ^^^^^^^^^^^^^^^^^^^^
 
 Qibo allows the user to define Hamiltonians using ``sympy`` symbols. In this
-case the full Hamiltonian matrix is not constructed unless it is required
-for specific operations, making the implementation more efficient for larger
-qubit numbers. For more information on constructing Hamiltonians using symbols
-we refer to the
+case the full Hamiltonian matrix is not constructed unless this is required.
+This makes the implementation more efficient for larger qubit numbers.
+For more information on constructing Hamiltonians using symbols we refer to the
 :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>` example.
 
 .. autoclass:: qibo.abstractions.hamiltonians.SymbolicHamiltonian
@@ -515,27 +514,16 @@ we refer to the
     :member-order: bysource
 
 
-Trotter Hamiltonian
-^^^^^^^^^^^^^^^^^^^
-
-Qibo provides an additional object that represents Hamiltonians without using
-their full matrix representation and can be used for time evolution using the
-Trotter decomposition. The Hamiltonians represented by this object are sums of
-commuting terms, following the description of Sec. 4.1 of
+When a :class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used for time
+evolution then Qibo will automatically perform this evolution using the Trotter
+of the evolution operator. This is done by automatically splitting the Hamiltonian
+to sums of commuting terms, following the description of Sec. 4.1 of
 `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
+For more information on time evolution we refer to the
+:ref:`How to simulate time evolution? <timeevol-example>` example.
 
-.. autoclass:: qibo.core.hamiltonians.TrotterHamiltonian
-    :members:
-    :member-order: bysource
-
-
-In addition to the above abstract models, Qibo provides the following pre-coded
-Hamiltonians:
-
-.. note::
-    Note that all pre-coded Hamiltonians can be created as either
-    :class:`qibo.abstractions.hamiltonians.Hamiltonian` or
-    :class:`qibo.abstractions.hamiltonians.TrotterHamiltonian` using the ``trotter`` flag.
+In addition to the abstract Hamiltonian models, Qibo provides the following
+pre-coded Hamiltonians:
 
 
 Heisenberg XXZ
@@ -579,6 +567,12 @@ Max Cut
 .. autoclass:: qibo.hamiltonians.MaxCut
     :members:
     :member-order: bysource
+
+
+.. note::
+    All pre-coded Hamiltonians can be created as either as the dense
+    :class:`qibo.core.hamiltonians.Hamiltonian` or the memory efficient
+    :class:`qibo.core.hamiltonians.SymbolicHamiltonian` using the ``dense`` flag.
 
 _______________________
 
