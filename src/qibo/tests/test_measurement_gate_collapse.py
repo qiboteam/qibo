@@ -11,18 +11,18 @@ from qibo.tests.utils import random_state, random_density_matrix
 def test_measurement_collapse(backend, nqubits, targets):
     initial_state = random_state(nqubits)
     gate = gates.M(*targets, collapse=True)
-    final_state = gate(np.copy(initial_state), nshots=1)
+    final_state = gate(K.cast(np.copy(initial_state)), nshots=1)
     results = gate.result.binary[0]
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, results):
-        slicer[t] = r
+        slicer[t] = int(r)
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
     target_state = np.zeros_like(initial_state)
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("nqubits,targets",
@@ -31,10 +31,11 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
     initial_rho = random_density_matrix(nqubits)
     gate = gates.M(*targets, collapse=True)
     gate.density_matrix = True
-    final_rho = gate(np.copy(initial_rho), nshots=1)
+    final_rho = gate(K.cast(np.copy(initial_rho)), nshots=1)
     results = gate.result.binary[0]
     target_rho = np.reshape(initial_rho, 2 * nqubits * (2,))
     for q, r in zip(targets, results):
+        r = int(r)
         slicer = 2 * nqubits * [slice(None)]
         slicer[q], slicer[q + nqubits] = 1 - r, 1 - r
         target_rho[tuple(slicer)] = 0
@@ -44,14 +45,14 @@ def test_measurement_collapse_density_matrix(backend, nqubits, targets):
         target_rho[tuple(slicer)] = 0
     target_rho = np.reshape(target_rho, initial_rho.shape)
     target_rho = target_rho / np.trace(target_rho)
-    np.testing.assert_allclose(final_rho, target_rho)
+    K.assert_allclose(final_rho, target_rho)
 
 
 def test_measurement_collapse_errors(backend):
     gate = gates.M(0, 1, collapse=True)
     state = np.ones(4) / 4
     with pytest.raises(ValueError):
-        state = gate(state, nshots=100)
+        state = gate(K.cast(state), nshots=100)
 
 
 def test_measurement_collapse_bitflip_noise(backend, accelerators):
@@ -73,7 +74,7 @@ def test_measurement_result_parameters(backend, accelerators, effect):
     if effect:
         target_c.add(gates.X(0))
         target_c.add(gates.RX(1, theta=np.pi / 4))
-    np.testing.assert_allclose(c(), target_c())
+    K.assert_allclose(c(), target_c())
 
 
 def test_measurement_result_parameters_random(backend, accelerators):
@@ -90,11 +91,11 @@ def test_measurement_result_parameters_random(backend, accelerators):
     K.set_seed(123)
     with K.device(test_device):
         collapse = gates.M(1, collapse=True)
-        target_state = collapse(np.copy(initial_state))
+        target_state = collapse(K.cast(np.copy(initial_state)))
         if int(collapse.result.outcome()):
             target_state = gates.RY(0, theta=np.pi / 5)(target_state)
             target_state = gates.RX(2, theta=np.pi / 4)(target_state)
-    np.testing.assert_allclose(result, target_state)
+    K.assert_allclose(result, target_state)
 
 
 @pytest.mark.parametrize("use_loop", [True, False])
@@ -117,11 +118,13 @@ def test_measurement_result_parameters_repeated_execution(backend, accelerators,
     with K.device(test_device):
         for _ in range(20):
             collapse = gates.M(1, collapse=True)
-            target_state = collapse(np.copy(initial_state))
+            target_state = collapse(K.cast(np.copy(initial_state)))
             if int(collapse.result.outcome()):
                 target_state = gates.RX(2, theta=np.pi / 4)(target_state)
             target_states.append(np.copy(target_state))
-    np.testing.assert_allclose(final_states, target_states)
+    final_states = K.stack(final_states)
+    target_states = K.stack(target_states)
+    K.assert_allclose(final_states, target_states)
 
 
 def test_measurement_result_parameters_repeated_execution_final_measurements(backend, accelerators):
@@ -134,20 +137,22 @@ def test_measurement_result_parameters_repeated_execution_final_measurements(bac
     c.add(gates.RY(2, theta=np.pi * output / 4))
     c.add(gates.M(0, 1, 2, 3))
     result = c(initial_state=np.copy(initial_state), nshots=30)
-
+    final_samples = result.samples(binary=False)
+    
     K.set_seed(123)
     target_samples = []
     with K.device(test_device):
         for _ in range(30):
             collapse = gates.M(1, collapse=True)
-            target_state = collapse(np.copy(initial_state))
+            target_state = collapse(K.cast(np.copy(initial_state)))
             if int(collapse.result.outcome()):
                 target_state = gates.RY(0, theta=np.pi / 3)(target_state)
                 target_state = gates.RY(2, theta=np.pi / 4)(target_state)
             with K.device(K.default_device):
                 target_result = gates.M(0, 1, 2, 3)(target_state)
                 target_samples.append(target_result.decimal[0])
-    np.testing.assert_allclose(result.samples(binary=False), target_samples)
+    target_samples = K.stack(target_samples)
+    K.assert_allclose(final_samples, target_samples)
 
 
 def test_measurement_result_parameters_multiple_qubits(backend):
@@ -161,9 +166,9 @@ def test_measurement_result_parameters_multiple_qubits(backend):
 
     K.set_seed(123)
     collapse = gates.M(0, 1, 2, collapse=True)
-    target_state = collapse(np.copy(initial_state))
+    target_state = collapse(K.cast(np.copy(initial_state)))
     if int(collapse.result.outcome(0)):
         target_state = gates.RY(1, theta=np.pi / 5)(target_state)
     if int(collapse.result.outcome(2)):
         target_state = gates.RX(3, theta=np.pi / 3)(target_state)
-    np.testing.assert_allclose(result, target_state)
+    K.assert_allclose(result, target_state)

@@ -51,6 +51,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         abstract.AbstractBackend.set_device(self, name)
 
     def to_numpy(self, x):
+        if isinstance(x, self.np.ndarray):
+            return x
         return x.numpy()
 
     def to_complex(self, re, img):

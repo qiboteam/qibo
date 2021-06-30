@@ -67,10 +67,10 @@ class NumpyBackend(abstract.AbstractBackend):
             dtype = self.dtypes(dtype)
         return self.backend.arange(start, finish, step, dtype=dtype)
 
-    def eye(self, dim, dtype='DTYPECPX'):
+    def eye(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
-        return self.backend.eye(dim, dtype=dtype)
+        return self.backend.eye(shape, dtype=dtype)
 
     def zeros(self, shape, dtype='DTYPECPX'):
         if isinstance(dtype, str):
@@ -213,7 +213,7 @@ class NumpyBackend(abstract.AbstractBackend):
         from qibo.config import SHOT_BATCH_SIZE
         def update_frequencies(nsamples, frequencies):
             samples = self.random.choice(range(len(probs)), size=nsamples, p=probs)
-            res, counts = self.unique(samples, return_counts=True)
+            res, counts = self.backend.unique(samples, return_counts=True)
             frequencies[res] += counts
             return frequencies
 
@@ -371,6 +371,9 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
+
 
 class JITCustomBackend(NumpyBackend): # pragma: no cover
 
@@ -406,15 +409,16 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
         if name == "numba":
             import numpy as xp
+            self.tensor_types = (xp.ndarray,)
         elif name == "cupy":
             import cupy as xp # pylint: disable=E0401
+            self.tensor_types = (self.np.ndarray, xp.ndarray)
         else:
             raise_error(ValueError, "Unknown engine {}.".format(name))
         self.backend = xp
-        self.numeric_types = (xp.int, xp.float, xp.complex, xp.int32,
+        self.numeric_types = (int, float, complex, xp.int32,
                               xp.int64, xp.float32, xp.float64,
                               xp.complex64, xp.complex128)
-        self.tensor_types = (xp.ndarray,)
         self.native_types = (xp.ndarray,)
         self.Tensor = xp.ndarray
         self.random = xp.random
@@ -422,19 +426,74 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         self.op.set_backend(name)
 
     def set_device(self, name):
-        abstract.AbstractBackend.set_device(self, name)
         if "GPU" in name:
             self.set_engine("cupy")
         else:
             self.set_engine("numba")
+        abstract.AbstractBackend.set_device(self, name)
 
     def to_numpy(self, x):
+        if isinstance(x, self.np.ndarray):
+            return x
         return self.op.to_numpy(x)
 
     def cast(self, x, dtype='DTYPECPX'):
         if isinstance(dtype, str):
             dtype = self.dtypes(dtype)
         return self.op.cast(x, dtype=dtype)
+
+    def check_shape(self, shape):
+        if self.op.get_backend() == "cupy" and isinstance(shape, self.Tensor):
+            shape = shape.get()
+        return shape
+
+    def reshape(self, x, shape):
+        return super().reshape(x, self.check_shape(shape))
+
+    def eye(self, shape, dtype='DTYPECPX'):
+        return super().eye(self.check_shape(shape), dtype=dtype)
+
+    def zeros(self, shape, dtype='DTYPECPX'):
+        return super().zeros(self.check_shape(shape), dtype=dtype)
+
+    def ones(self, shape, dtype='DTYPECPX'):
+        return super().ones(self.check_shape(shape), dtype=dtype)
+
+    def expm(self, x):
+        if self.op.get_backend() == "cupy":
+            # Fallback to numpy because cupy does not have expm
+            if isinstance(x, self.native_types):
+                x = x.get()
+            return self.backend.asarray(super().expm(x))
+        return super().expm(x)
+
+    def unique(self, x, return_counts=False):
+        if self.op.get_backend() == "cupy":
+            if isinstance(x, self.native_types):
+                x = x.get()
+            # Uses numpy backend always
+        return super().unique(x, return_counts)
+
+    def gather(self, x, indices=None, condition=None, axis=0):
+        if self.op.get_backend() == "cupy":
+            # Fallback to numpy because cupy does not support tuple indexing
+            if isinstance(x, self.native_types):
+                x = x.get()
+            if isinstance(indices, self.native_types):
+                indices = indices.get()
+            if isinstance(condition, self.native_types):
+                condition = condition.get()
+            result = super().gather(x, indices, condition, axis)
+            return self.backend.asarray(result)
+        return super().gather(x, indices, condition, axis)
+
+    def device(self, device_name):
+        # assume tf naming convention '/GPU:0'
+        if self.op.get_backend() == "numba":
+            return super().device(device_name)
+        else: # pragma: no cover
+            device_id = int(device_name.split(":")[-1])
+            return self.backend.cuda.Device(device_id)
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
@@ -444,12 +503,12 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         from qibo.config import SHOT_METROPOLIS_THRESHOLD, get_threads
         if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
-        # Generate random seed using tf
-        dtype = self.dtypes('DTYPEINT')
-        seed = self.backend.random.randint(0, int(1e8), dtype=dtype)
+        if self.op.get_backend() == "cupy":
+            probs = probs.get()
+        dtype = self._dtypes.get('DTYPEINT')
+        seed = self.np.random.randint(0, int(1e8), dtype=dtype)
         nqubits = int(self.np.log2(tuple(probs.shape)[0]))
-        shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
-        frequencies = self.zeros(shape, dtype='DTYPEINT')
+        frequencies = self.np.zeros(2 ** nqubits, dtype=dtype)
         frequencies = self.op.measure_frequencies(
             frequencies, probs, nshots, nqubits, seed, get_threads())
         return frequencies
@@ -527,3 +586,11 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                              2 * gate.nqubits, False)
         state = self.reshape(state, shape)
         return state / self.trace(state)
+
+    def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
+        if self.op.get_backend() == "cupy":
+            if isinstance(value, self.backend.ndarray):
+                value = value.get()
+            if isinstance(target, self.backend.ndarray):
+                target = target.get()
+        self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

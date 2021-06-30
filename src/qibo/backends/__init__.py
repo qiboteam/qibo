@@ -174,7 +174,6 @@ def set_precision(dtype='double'):
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
         bk.set_precision(dtype)
-        bk.matrices.allocate_matrices()
 
 
 def get_precision():
@@ -198,9 +197,8 @@ def set_device(name):
         warnings.warn("Device should not be changed after allocating gates.",
                       category=RuntimeWarning)
     for bk in K.constructed_backends.values():
-        bk.set_device(name)
-        with bk.device(bk.default_device):
-            bk.matrices.allocate_matrices()
+        if bk.name != "numpy":
+            bk.set_device(name)
 
 
 def get_device():

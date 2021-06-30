@@ -1,7 +1,7 @@
 """Test functions defined in `qibo/core/fusion.py`."""
 import numpy as np
 import pytest
-from qibo import gates
+from qibo import gates, K
 from qibo.core import fusion
 from qibo.models import Circuit
 
@@ -84,7 +84,7 @@ def test_fusion_group_calculate(backend):
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    np.testing.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.unitary, target_matrix)
 
     group = fusion.FusionGroup()
     with pytest.raises(RuntimeError):
@@ -100,7 +100,7 @@ def test_fuse_circuit_two_qubit_only(backend):
     c.add(gates.fSim(1, 0, theta=0.1234, phi=0.324))
     c.add(gates.RY(1, theta=0.1234).controlled_by(0))
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
@@ -119,7 +119,7 @@ def test_variational_layer_fusion(backend, accelerators, nqubits, nlayers):
         c.add(gates.CZ(0, nqubits - 1))
 
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -141,7 +141,7 @@ def test_random_circuit_fusion(backend, accelerators, nqubits, ngates):
         c.add(gate(q0, q1))
 
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
 
 def test_controlled_by_gates_fusion(backend):
@@ -154,7 +154,7 @@ def test_controlled_by_gates_fusion(backend):
     c.add(gates.RX(1, theta=0.1234).controlled_by(0))
     c.add(gates.RX(3, theta=0.4321).controlled_by(2))
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
 
 def test_callbacks_fusion(backend, accelerators):
@@ -168,9 +168,9 @@ def test_callbacks_fusion(backend, accelerators):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
     target_entropy = [0.0, 1.0, 0.0, 1.0]
-    np.testing.assert_allclose(entropy[:], target_entropy, atol=1e-7)
+    K.assert_allclose(entropy[:], target_entropy, atol=1e-7)
 
 
 def test_set_parameters_fusion(backend):
@@ -182,8 +182,8 @@ def test_set_parameters_fusion(backend):
     c.add(gates.RY(0, theta=0.1234))
     c.add(gates.RY(1, theta=0.1234))
     fused_c = c.fuse()
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())
 
     c.set_parameters(4 * [0.4321])
     fused_c.set_parameters(4 * [0.4321])
-    np.testing.assert_allclose(fused_c(), c())
+    K.assert_allclose(fused_c(), c())

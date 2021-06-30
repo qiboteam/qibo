@@ -31,7 +31,7 @@ GATES = [
 def test_construct_unitary(backend, gate, qubits, target_matrix):
     """Check that `construct_unitary` method constructs the proper matrix."""
     gate = getattr(gates, gate)(*qubits)
-    np.testing.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.unitary, target_matrix)
 
 
 GATES = [
@@ -51,7 +51,7 @@ def test_construct_unitary_rotations(backend, gate, target_matrix):
         gate = getattr(gates, gate)(0, 1, theta)
     else:
         gate = getattr(gates, gate)(0, theta)
-    np.testing.assert_allclose(gate.unitary, target_matrix(theta))
+    K.assert_allclose(gate.unitary, target_matrix(theta))
 
 
 def test_construct_unitary_controlled(backend):
@@ -61,7 +61,7 @@ def test_construct_unitary_controlled(backend):
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)
-    np.testing.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.unitary, target_matrix)
 
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
@@ -78,14 +78,14 @@ def test_measurement_collapse_distributed(backend, accelerators, nqubits, target
     result = c(np.copy(initial_state))
     slicer = nqubits * [slice(None)]
     for t, r in zip(targets, output.samples()[0]):
-        slicer[t] = r
+        slicer[t] = int(r)
     slicer = tuple(slicer)
     initial_state = initial_state.reshape(nqubits * (2,))
     target_state = np.zeros_like(initial_state)
     target_state[slicer] = initial_state[slicer]
     norm = (np.abs(target_state) ** 2).sum()
     target_state = target_state.ravel() / np.sqrt(norm)
-    np.testing.assert_allclose(result.state(), target_state)
+    K.assert_allclose(result.state(), target_state)
 
 
 def test_collapse_after_measurement(backend):
@@ -104,7 +104,7 @@ def test_collapse_after_measurement(backend):
             ct.add(gates.X(i))
     ct.add((gates.H(i) for i in qubits))
     target_state = ct()
-    np.testing.assert_allclose(final_state, target_state, atol=1e-15)
+    K.assert_allclose(final_state, target_state, atol=1e-15)
 
 ###############################################################################
 
@@ -122,14 +122,14 @@ def test_rx_parameter_setter(backend):
     initial_state = K.cast(np.ones(2) / np.sqrt(2))
     final_state = gate(initial_state)
     target_state = exact_state(theta)
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
     theta = 0.4321
     gate.parameters = theta
     initial_state = K.cast(np.ones(2) / np.sqrt(2))
     final_state = gate(initial_state)
     target_state = exact_state(theta)
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 ###############################################################################
 
@@ -152,7 +152,7 @@ def test_x_decomposition_execution(backend, target, controls, free, use_toffolis
     c = Circuit(nqubits)
     c.add(gate.decompose(*free, use_toffolis=use_toffolis))
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, target_state, atol=1e-6)
+    K.assert_allclose(final_state, target_state, atol=1e-6)
 
 ###############################################################################
 
@@ -164,13 +164,13 @@ def test_one_qubit_gate_multiplication(backend):
     assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[0, 1], [1, 0]]) @
                      np.array([[1, 1], [1, -1]]) / np.sqrt(2))
-    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.unitary, target_matrix)
 
     final_gate = gate2 @ gate1
     assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[1, 1], [1, -1]]) / np.sqrt(2) @
                      np.array([[0, 1], [1, 0]]))
-    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.unitary, target_matrix)
 
     gate1 = gates.X(1)
     gate2 = gates.X(1)
@@ -189,7 +189,7 @@ def test_two_qubit_gate_multiplication(backend):
                                [0, 0, 0, np.exp(-1j * phi)]]) @
                      np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                                [0, 1, 0, 0], [0, 0, 0, 1]]))
-    np.testing.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.unitary, target_matrix)
     # Check that error is raised when target qubits do not agree
     with pytest.raises(NotImplementedError):
         final_gate = gate1 @ gates.SWAP(0, 2)
@@ -225,7 +225,7 @@ def test_dagger(backend, gate, args):
     c.add((gate, gate.dagger()))
     initial_state = random_state(nqubits)
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
+    K.assert_allclose(final_state, initial_state)
 
 
 GATES = [
@@ -243,7 +243,7 @@ def test_controlled_dagger(backend, gate, args):
     c.add((gate, gate.dagger()))
     initial_state = random_state(4)
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
+    K.assert_allclose(final_state, initial_state)
 
 
 @pytest.mark.parametrize("nqubits", [1, 2])
@@ -256,7 +256,7 @@ def test_unitary_dagger(backend, nqubits):
     final_state = c(np.copy(initial_state))
     target_state = np.dot(matrix, initial_state)
     target_state = np.dot(np.conj(matrix).T, target_state)
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_controlled_unitary_dagger(backend):
@@ -268,7 +268,7 @@ def test_controlled_unitary_dagger(backend):
     c.add((gate, gate.dagger()))
     initial_state = random_state(5)
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
+    K.assert_allclose(final_state, initial_state)
 
 
 def test_generalizedfsim_dagger(backend):
@@ -281,7 +281,7 @@ def test_generalizedfsim_dagger(backend):
     c.add((gate, gate.dagger()))
     initial_state = random_state(2)
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
+    K.assert_allclose(final_state, initial_state)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -295,7 +295,7 @@ def test_variational_layer_dagger(backend, nqubits):
     c.add((gate, gate.dagger()))
     initial_state = random_state(nqubits)
     final_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(final_state, initial_state)
+    K.assert_allclose(final_state, initial_state)
 
 ###############################################################################
 
@@ -321,14 +321,14 @@ def test_noise_channel_repeated(backend):
                 if np.random.random() < p:
                     noiseless_c.add(gate(i))
         target_state.append(noiseless_c())
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_reset_channel_repeated(backend):
     initial_state = random_state(5)
     c = Circuit(5)
     c.add(gates.ResetChannel(2, p0=0.3, p1=0.3, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30)
+    final_state = c(K.cast(np.copy(initial_state)), nshots=30)
 
     np.random.seed(123)
     target_state = []
@@ -336,14 +336,15 @@ def test_reset_channel_repeated(backend):
     collapse.nqubits = 5
     xgate = gates.X(2)
     for _ in range(30):
-        state = np.copy(initial_state)
+        state = K.cast(np.copy(initial_state))
         if np.random.random() < 0.3:
             state = K.state_vector_collapse(collapse, state, [0])
         if np.random.random() < 0.3:
             state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
-        target_state.append(np.copy(state))
-    np.testing.assert_allclose(final_state, target_state)
+        target_state.append(K.copy(state))
+    target_state = K.stack(target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_thermal_relaxation_channel_repeated(backend):
@@ -351,7 +352,7 @@ def test_thermal_relaxation_channel_repeated(backend):
     c = Circuit(5)
     c.add(gates.ThermalRelaxationChannel(4, t1=1.0, t2=0.6, time=0.8,
                                          excited_population=0.8, seed=123))
-    final_state = c(np.copy(initial_state), nshots=30)
+    final_state = c(K.cast(np.copy(initial_state)), nshots=30)
 
     pz, p0, p1 = c.queue[0].calculate_probabilities(1.0, 0.6, 0.8, 0.8)
     np.random.seed(123)
@@ -360,7 +361,7 @@ def test_thermal_relaxation_channel_repeated(backend):
     collapse.nqubits = 5
     zgate, xgate = gates.Z(4), gates.X(4)
     for _ in range(30):
-        state = np.copy(initial_state)
+        state = K.cast(np.copy(initial_state))
         if np.random.random() < pz:
             state = zgate(state)
         if np.random.random() < p0:
@@ -368,7 +369,8 @@ def test_thermal_relaxation_channel_repeated(backend):
         if np.random.random() < p1:
             state = K.state_vector_collapse(collapse, state, [0])
             state = xgate(state)
-        target_state.append(np.copy(state))
-    np.testing.assert_allclose(final_state, target_state)
+        target_state.append(K.copy(state))
+    target_state = K.stack(target_state)
+    K.assert_allclose(final_state, target_state)
 
 ###############################################################################

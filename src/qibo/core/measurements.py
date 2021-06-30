@@ -193,7 +193,7 @@ class MeasurementResult:
                                           "frequencies without a probability "
                                           "distribution or  samples.")
             freqs = K.sample_frequencies(self.probabilities, self.nshots)
-            freqs = K.np.array(freqs)
+            freqs = K.to_numpy(freqs)
             return collections.Counter(
                 {k: v for k, v in enumerate(freqs) if v > 0})
 

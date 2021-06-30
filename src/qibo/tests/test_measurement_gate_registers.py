@@ -1,7 +1,7 @@
 """Test :class:`qibo.abstractions.gates.M` when used with registers."""
 import pytest
 import numpy as np
-from qibo import models, gates
+from qibo import K, models, gates
 
 
 def assert_dicts_equal(d1, d2):
@@ -10,7 +10,7 @@ def assert_dicts_equal(d1, d2):
         if isinstance(v, dict):
             assert v == d2[k]
         else:
-            np.testing.assert_allclose(v, d2[k])
+            K.assert_allclose(v, d2[k])
 
 
 def assert_register_result(result, decimal_samples=None, binary_samples=None,

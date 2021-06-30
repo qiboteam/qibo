@@ -31,21 +31,21 @@ def test_measurementresult_add_shots(backend):
     probs = np.array([1, 0, 0, 0], dtype=np.float64)
     result.add_shot(probabilities=probs)
     assert result.nshots == 1
-    np.testing.assert_allclose(result.decimal, [0])
-    np.testing.assert_allclose(result.binary, [[0, 0]])
+    K.assert_allclose(result.decimal, [0])
+    K.assert_allclose(result.binary, [[0, 0]])
     probs = np.array([0, 0, 0, 1], dtype=np.float64)
     result.add_shot(probabilities=probs)
     assert result.nshots == 2
-    np.testing.assert_allclose(result.decimal, [0, 3])
-    np.testing.assert_allclose(result.binary, [[0, 0], [1, 1]])
+    K.assert_allclose(result.decimal, [0, 3])
+    K.assert_allclose(result.binary, [[0, 0], [1, 1]])
 
 
 def test_measurementresult_outcome(backend):
     import collections
     result = measurements.MeasurementResult((0,))
-    result.decimal = np.zeros(1, dtype=np.int64)
+    result.decimal = K.zeros(1, dtype='DTYPEINT')
     assert result.outcome() == 0
-    result.decimal = np.ones(1, dtype=np.int64)
+    result.decimal = K.ones(1, dtype='DTYPEINT')
     assert result.outcome() == 1
 
 
@@ -61,19 +61,19 @@ def test_measurementresult_conversions(backend, binary, dsamples, bsamples):
     result1.decimal = K.cast(dsamples, dtype='DTYPEINT')
     result2 = measurements.MeasurementResult(qubits)
     result2.binary = K.cast(bsamples, dtype='DTYPEINT')
-    np.testing.assert_allclose(result1.samples(binary=True), bsamples)
-    np.testing.assert_allclose(result2.samples(binary=True), bsamples)
-    np.testing.assert_allclose(result1.samples(binary=False), dsamples)
-    np.testing.assert_allclose(result2.samples(binary=False), dsamples)
+    K.assert_allclose(result1.samples(binary=True), bsamples)
+    K.assert_allclose(result2.samples(binary=True), bsamples)
+    K.assert_allclose(result1.samples(binary=False), dsamples)
+    K.assert_allclose(result2.samples(binary=False), dsamples)
     # test ``__getitem__``
     for i, target in enumerate(dsamples):
-        np.testing.assert_allclose(result1[i], target)
+        K.assert_allclose(result1[i], target)
 
 
 def test_measurementresult_frequencies(backend):
     import collections
     result = measurements.MeasurementResult((0, 1, 2))
-    result.decimal = [0, 6, 5, 3, 5, 5, 6, 1, 1, 2, 4]
+    result.decimal = K.cast([0, 6, 5, 3, 5, 5, 6, 1, 1, 2, 4], dtype='DTYPEINT')
     dfreqs = {0: 1, 1: 2, 2: 1, 3: 1, 4: 1, 5: 3, 6: 2}
     bfreqs = {"000": 1, "001": 2, "010": 1, "011": 1, "100": 1,
               "101": 3, "110": 2}
@@ -90,7 +90,15 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
     result.decimal = K.zeros(10, dtype='DTYPEINT')
     K.set_seed(123)
     noisy_result = result.apply_bitflips(p0, p1)
-    if K.name == "numpy" or K.name == "qibojit":
+    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+        # cupy is not tested by CI!
+        targets = [
+            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
+            [0, 0, 0, 6, 4, 1, 1, 4, 0, 2],
+            [0, 0, 0, 0, 4, 1, 1, 4, 0, 0],
+            [0, 0, 0, 6, 4, 0, 0, 4, 0, 2]
+        ]
+    elif K.name == "numpy" or K.name == "qibojit":
         targets = [
             [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
             [0, 0, 0, 0, 2, 3, 0, 0, 0, 0],
@@ -104,7 +112,7 @@ def test_measurementresult_apply_bitflips(backend, i, p0, p1):
             [4, 0, 0, 1, 0, 0, 0, 4, 4, 0],
             [4, 0, 0, 0, 0, 0, 0, 4, 4, 0]
         ]
-    np.testing.assert_allclose(noisy_result.samples(binary=False), targets[i])
+    K.assert_allclose(noisy_result.samples(binary=False), targets[i])
 
 
 @pytest.mark.parametrize("probs", [0.2, {0: 0.1, 1: 0.2, 2: 0.8, 3: 0.3}])
@@ -112,23 +120,23 @@ def test_measurementresult_apply_bitflips_random_samples(backend, probs):
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult(qubits)
-    result.binary = np.copy(samples)
+    result.binary = K.cast(np.copy(samples))
     K.set_seed(123)
     noisy_result = result.apply_bitflips(probs)
 
     K.set_seed(123)
     if isinstance(probs, dict):
         probs = np.array([probs[q] for q in qubits])
-    sprobs = np.array(K.random_uniform(samples.shape))
+    sprobs = K.to_numpy(K.random_uniform(samples.shape))
     target_samples = (samples + (sprobs < probs)) % 2
-    np.testing.assert_allclose(noisy_result.samples(), target_samples)
+    K.assert_allclose(noisy_result.samples(), target_samples)
 
 
 def test_measurementresult_apply_bitflips_random_samples_asymmetric(backend):
     qubits = tuple(range(4))
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult(qubits)
-    result.binary = np.copy(samples)
+    result.binary = K.cast(np.copy(samples))
     p1_map = {0: 0.2, 1: 0.0, 2: 0.0, 3: 0.1}
     K.set_seed(123)
     noisy_result = result.apply_bitflips(p0=0.2, p1=p1_map)
@@ -136,13 +144,13 @@ def test_measurementresult_apply_bitflips_random_samples_asymmetric(backend):
     p0 = 0.2 * np.ones(4)
     p1 = np.array([0.2, 0.0, 0.0, 0.1])
     K.set_seed(123)
-    sprobs = np.array(K.random_uniform(samples.shape))
+    sprobs = K.to_numpy(K.random_uniform(samples.shape))
     target_samples = np.copy(samples).ravel()
     ids = (np.where(target_samples == 0)[0], np.where(target_samples == 1)[0])
     target_samples[ids[0]] = samples.ravel()[ids[0]] + (sprobs < p0).ravel()[ids[0]]
     target_samples[ids[1]] = samples.ravel()[ids[1]] - (sprobs < p1).ravel()[ids[1]]
     target_samples = target_samples.reshape(samples.shape)
-    np.testing.assert_allclose(noisy_result.samples(), target_samples)
+    K.assert_allclose(noisy_result.samples(), target_samples)
 
 
 def test_measurementresult_apply_bitflips_errors():
@@ -185,18 +193,18 @@ def test_measurementsymbol_evaluate(backend):
 def test_measurementregistersresult_samples(backend):
     samples = np.random.randint(0, 2, (20, 4))
     result = measurements.MeasurementResult((0, 1, 2, 3))
-    result.binary = samples
+    result.binary = K.cast(samples)
     qubits = {"a": (0, 2), "b": (1, 3)}
     result = measurements.MeasurementRegistersResult(qubits, result)
     register_samples = result.samples(registers=True)
     assert register_samples.keys() == qubits.keys()
-    np.testing.assert_allclose(register_samples["a"], samples[:, [0, 2]])
-    np.testing.assert_allclose(register_samples["b"], samples[:, [1, 3]])
+    K.assert_allclose(register_samples["a"], samples[:, [0, 2]])
+    K.assert_allclose(register_samples["b"], samples[:, [1, 3]])
 
 
 def test_measurementregistersresult_frequencies(backend):
     probs = np.random.random(16)
-    probs = probs / np.sum(probs)
+    probs = K.cast(probs / np.sum(probs), dtype='DTYPE')
     result = measurements.MeasurementResult((0, 1, 2, 3), probs, nshots=1000000)
     frequencies = result.frequencies()
     qubits = {"a": (0, 1), "b": (2, 3)}

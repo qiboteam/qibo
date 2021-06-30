@@ -25,7 +25,10 @@ def test_probabilistic_measurement(backend, accelerators, use_samples):
         _ = result.samples()
 
     # update reference values based on backend and device
-    if K.name == "numpy" or K.name == "qibojit":
+    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+        # cupy is not tested by CI!
+        decimal_frequencies = {0: 264, 1: 235, 2: 269, 3: 232}
+    elif K.name == "numpy" or K.name == "qibojit":
         decimal_frequencies = {0: 249, 1: 231, 2: 253, 3: 267}
     else:
         if K.gpu_devices: # pragma: no cover
@@ -55,7 +58,10 @@ def test_unbalanced_probabilistic_measurement(backend, use_samples):
         # otherwise it uses the frequency-only calculation
         _ = result.samples()
     # update reference values based on backend and device
-    if K.name == "numpy" or K.name == "qibojit":
+    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+        # cupy is not tested by CI!
+        decimal_frequencies = {0: 170, 1: 154, 2: 167, 3: 509}
+    elif K.name == "numpy" or K.name == "qibojit":
         decimal_frequencies = {0: 171, 1: 148, 2: 161, 3: 520}
     else:
         if K.gpu_devices: # pragma: no cover
@@ -93,7 +99,7 @@ def test_measurements_with_probabilistic_noise(backend):
         noiseless_c.add(gates.M(*range(5)))
         target_samples.append(noiseless_c(nshots=1).samples())
     target_samples = np.concatenate(target_samples, axis=0)
-    np.testing.assert_allclose(samples, target_samples)
+    K.assert_allclose(samples, target_samples)
 
 
 @pytest.mark.parametrize("i,probs", [(0, [0.0, 0.0, 0.0]),
@@ -107,7 +113,11 @@ def test_post_measurement_bitflips_on_circuit(backend, accelerators, i, probs):
     c.add(gates.M(0, 1, p0={0: probs[0], 1: probs[1]}))
     c.add(gates.M(3, p0=probs[2]))
     result = c(nshots=30).frequencies(binary=False)
-    if K.name == "numpy" or K.name == "qibojit":
+    if K.name == "qibojit" and K.op.get_backend() == "cupy": # pragma: no cover
+        # cupy is not tested by CI!
+        targets = [{5: 30}, {5: 12, 7: 7, 6: 5, 4: 3, 1: 2, 2: 1},
+                   {2: 10, 6: 5, 5: 4, 0: 3, 7: 3, 1: 2, 3: 2, 4: 1}]
+    elif K.name == "numpy" or K.name == "qibojit":
         targets = [{5: 30}, {5: 18, 4: 5, 7: 4, 1: 2, 6: 1},
                    {4: 8, 2: 6, 5: 5, 1: 3, 3: 3, 6: 2, 7: 2, 0: 1}]
     else:
@@ -131,10 +141,10 @@ def test_post_measurement_bitflips_on_circuit_result(backend):
     register_samples = noisy_result.samples(binary=True, registers=True)
 
     K.set_seed(123)
-    sprobs = np.array(K.random_uniform(samples.shape))
-    flipper = sprobs < np.array([0.2, 0.4, 0.3])
+    sprobs = K.to_numpy(K.random_uniform(samples.shape))
+    flipper = K.cast(sprobs < np.array([0.2, 0.4, 0.3]), dtype=samples.dtype)
     target_samples = (samples + flipper) % 2
-    np.testing.assert_allclose(noisy_samples, target_samples)
+    K.assert_allclose(noisy_samples, target_samples)
     # Check register samples
-    np.testing.assert_allclose(register_samples["a"], target_samples[:, :2])
-    np.testing.assert_allclose(register_samples["b"], target_samples[:, 2:])
+    K.assert_allclose(register_samples["a"], target_samples[:, :2])
+    K.assert_allclose(register_samples["b"], target_samples[:, 2:])

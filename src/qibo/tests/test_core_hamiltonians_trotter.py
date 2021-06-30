@@ -33,7 +33,7 @@ def test_trotter_hamiltonian_to_dense(nqubits, model):
     local_ham = getattr(hamiltonians, model)(nqubits, trotter=True)
     target_ham = getattr(hamiltonians, model)(nqubits, numpy=True)
     final_ham = local_ham.dense
-    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
+    K.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
 
 def test_trotter_hamiltonian_scalar_mul(nqubits=3):
@@ -41,11 +41,11 @@ def test_trotter_hamiltonian_scalar_mul(nqubits=3):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 * local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     local_dense = (local_ham * 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_add(nqubits=4):
@@ -53,11 +53,11 @@ def test_trotter_hamiltonian_scalar_add(nqubits=4):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 + local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     local_dense = (local_ham + 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_sub(nqubits=3):
@@ -65,12 +65,12 @@ def test_trotter_hamiltonian_scalar_sub(nqubits=3):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0, numpy=True)
     local_dense = (2 - local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     target_ham = hamiltonians.TFIM(nqubits, h=1.0, numpy=True) - 2
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, trotter=True)
     local_dense = (local_ham - 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
@@ -82,13 +82,13 @@ def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) +
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense
-    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+    K.assert_allclose(dense.matrix, target_ham.matrix)
 
     local_ham = local_ham1 - local_ham2
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0, numpy=True) -
                   hamiltonians.TFIM(nqubits, h=0.5, numpy=True))
     dense = local_ham.dense
-    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+    K.assert_allclose(dense.matrix, target_ham.matrix)
 
 
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
@@ -100,18 +100,18 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     state = K.cast(random_complex((2 ** nqubits,)))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(trotter_ev, target_ev)
+    K.assert_allclose(trotter_ev, target_ev)
 
     state = random_complex((2 ** nqubits,))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(trotter_ev, target_ev)
+    K.assert_allclose(trotter_ev, target_ev)
 
     from qibo.core.states import VectorState
     state = VectorState.from_tensor(state)
     trotter_matmul = local_ham @ state
     target_matmul = dense_ham @ state
-    np.testing.assert_allclose(trotter_matmul, target_matmul)
+    K.assert_allclose(trotter_matmul, target_matmul)
 
 
 def test_trotter_hamiltonian_operation_errors():
@@ -165,7 +165,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     mm2 = np.kron(np.kron(eye, eye), m2)
     mm3 = np.kron(np.kron(eye, m3), np.kron(eye, eye))
     target_h = hamiltonians.Hamiltonian(4, mm1 + mm2 + mm3)
-    np.testing.assert_allclose(trotter_h.dense.matrix, target_h.matrix)
+    K.assert_allclose(trotter_h.dense.matrix, target_h.matrix)
 
     dt = 1e-2
     initial_state = random_state(4)
@@ -179,7 +179,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
         u = [expm(-0.5j * dt * m) for m in [mm1, mm2, mm3]]
         target_state = u[2].dot(u[1].dot(u[0])).dot(initial_state)
         target_state = u[0].dot(u[1].dot(u[2])).dot(target_state)
-        np.testing.assert_allclose(final_state, target_state)
+        K.assert_allclose(final_state, target_state)
 
 
 def test_trotter_hamiltonian_make_compatible_simple():
@@ -194,7 +194,7 @@ def test_trotter_hamiltonian_make_compatible_simple():
     h0c = h1.make_compatible(h0)
     assert not h1.is_compatible(h0)
     assert h1.is_compatible(h0c)
-    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+    K.assert_allclose(h0c.matrix, h0target.matrix)
 
 
 def test_trotter_hamiltonian_make_compatible_redundant():
@@ -208,7 +208,7 @@ def test_trotter_hamiltonian_make_compatible_redundant():
     h0c = h1.make_compatible(h0)
     assert not h1.is_compatible(h0)
     assert h1.is_compatible(h0c)
-    np.testing.assert_allclose(h0c.matrix, target_matrix)
+    K.assert_allclose(h0c.matrix, target_matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
@@ -219,14 +219,14 @@ def test_trotter_hamiltonian_make_compatible(nqubits):
     h1 = hamiltonians.XXZ(nqubits, delta=0.5, trotter=True)
     assert not h1.is_compatible(h0)
     assert not h0.is_compatible(h1)
-    np.testing.assert_allclose(h0.matrix, h0target.matrix)
+    K.assert_allclose(h0.matrix, h0target.matrix)
 
     h0c = h1.make_compatible(h0)
     assert not h1.is_compatible(h0)
     assert h1.is_compatible(h0c)
     assert h0c.is_compatible(h1)
-    np.testing.assert_allclose(h0.matrix, h0target.matrix)
-    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+    K.assert_allclose(h0.matrix, h0target.matrix)
+    K.assert_allclose(h0c.matrix, h0target.matrix)
     # for coverage
     h0c = h1.make_compatible(h0c)
     assert not h1.is_compatible("test")
@@ -248,7 +248,7 @@ def test_trotter_hamiltonian_make_compatible_repeating(nqubits):
     h0c = h1.make_compatible(h0)
     assert not h1.is_compatible(h0)
     assert h1.is_compatible(h0c)
-    np.testing.assert_allclose(h0c.matrix, h0target.matrix)
+    K.assert_allclose(h0c.matrix, h0target.matrix)
 
 
 def test_trotter_hamiltonian_make_compatible_onequbit_terms():
@@ -268,4 +268,4 @@ def test_trotter_hamiltonian_make_compatible_onequbit_terms():
     cxham = tham.make_compatible(xham)
     assert not tham.is_compatible(xham)
     assert tham.is_compatible(cxham)
-    np.testing.assert_allclose(xham.dense.matrix, cxham.dense.matrix)
+    K.assert_allclose(xham.dense.matrix, cxham.dense.matrix)

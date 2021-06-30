@@ -32,6 +32,8 @@ class BackendGate(BaseBackendGate):
     @staticmethod
     def control_unitary(unitary):
         shape = tuple(unitary.shape)
+        if not isinstance(unitary, K.Tensor):
+            unitary = K.cast(unitary)
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method for "
                                     "input matrix of shape {}.".format(shape))
@@ -625,36 +627,28 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
                                                  "this operation.".format(n))
 
     def construct_unitary(self):
-        unitary = self.parameters
-        if isinstance(unitary, K.qnp.Tensor):
-            return K.qnp.cast(unitary)
-        if isinstance(unitary, K.Tensor): # pragma: no cover
-            return K.copy(K.cast(unitary))
+        return self.parameters
 
     def _dagger(self) -> "Unitary":
-        unitary = self.parameters
-        if isinstance(unitary, K.Tensor):
-            ud = K.conj(K.transpose(unitary))
-        else:
-            ud = unitary.conj().T
+        ud = K.conj(K.transpose(self.parameters))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):
-        x = K.qnp.cast(x)
+        if not isinstance(x, K.Tensor):
+            x = K.cast(x)
         shape = tuple(x.shape)
         if len(shape) > 2 and shape[0] == 1:
             shape = shape[1:]
             x = K.squeeze(x, axis=0)
         true_shape = (2 ** self.rank, 2 ** self.rank)
-        if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
-        elif shape == (2 ** (2 * self.rank),):
-            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
-        else:
+        if shape == (2 ** (2 * self.rank),):
+            x = K.reshape(x, true_shape)
+        elif shape != true_shape:
             raise_error(ValueError, "Invalid shape {} of unitary matrix "
                                     "acting on {} target qubits."
                                     "".format(shape, self.rank))
+        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):

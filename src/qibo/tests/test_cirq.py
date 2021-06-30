@@ -62,7 +62,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
         c.add(qibo_gate)
         final_state = c(np.copy(initial_state))
         assert c.depth == target_depth
-        np.testing.assert_allclose(final_state, target_state, atol=atol)
+        K.assert_allclose(final_state, target_state, atol=atol)
 
 
 def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
@@ -99,7 +99,7 @@ def assert_cirq_gates_equivalent(qibo_gate, cirq_gate):
         else: # pragma: no cover
             # case doesn't happen in tests (could remove)
             theta = float(theta)
-        np.testing.assert_allclose(theta, qibo_gate.parameters)
+        K.assert_allclose(theta, qibo_gate.parameters)
 
 
 @pytest.mark.parametrize(("target", "controls", "free"),
@@ -263,4 +263,4 @@ def test_qft(backend, accelerators, nqubits):
     final_state = c(np.copy(initial_state))
     cirq_gates = [(cirq.qft, list(range(nqubits)))]
     target_state, _ = execute_cirq(cirq_gates, nqubits, np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state, atol=1e-6)
+    K.assert_allclose(target_state, final_state, atol=1e-6)
