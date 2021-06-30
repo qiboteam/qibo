@@ -5,7 +5,7 @@ import functions
 import argparse
 
 
-def main(nqubits, instance, T, dt, solver, plot, trotter, params,
+def main(nqubits, instance, T, dt, solver, plot, dense, params,
          method, maxiter):
     """Adiabatic evoluition to find the solution of an exact cover instance.
 
@@ -17,7 +17,7 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
         dt (float): time interval for the evolution.
         solver (str): solver used for the adiabatic evolution.
         plot (bool): decides if plots of the energy and gap will be returned.
-        trotter (bool): decides if a Trotter Hamiltonian will be used.
+        dense (bool): decides if the full Hamiltonian matrix will be used.
         params (list): list of polynomial coefficients for scheduling function.
             Default is linear scheduling.
         method (str): Method to use for scheduling optimization (optional).
@@ -39,11 +39,11 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     gs = lambda: functions.ground_state(nqubits)
     H0 = hamiltonians.SymbolicHamiltonian(sh0, ground_state=gs)
     H1 = hamiltonians.SymbolicHamiltonian(sh1)
-    if trotter:
-        print('Using Trotter decomposition for the Hamiltonian\n')
-    else:
+    if dense:
         print('Using the full Hamiltonian evolution\n')
         H0, H1 = H0.dense, H1.dense
+    else:
+        print('Using Trotter decomposition for the Hamiltonian\n')
 
     print('-'*20+'\n')
     if plot and nqubits >= 14:
@@ -92,9 +92,9 @@ def main(nqubits, instance, T, dt, solver, plot, trotter, params,
     # Perform evolution
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=T, initial_state=initial_state)
-    output_dec = (np.abs(final_state.numpy())**2).argmax()
+    output_dec = (np.abs(final_state)**2).argmax()
     max_output = "{0:0{bits}b}".format(output_dec, bits = nqubits)
-    max_prob = (np.abs(final_state.numpy())**2).max()
+    max_prob = (np.abs(final_state)**2).max()
     print("Exact cover instance with {} qubits.\n".format(nqubits))
     if solution:
         print('Known solution: {}\n'.format(''.join(solution)))
@@ -117,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--dt", default=1e-2, type=float)
     parser.add_argument("--solver", default="exp", type=str)
     parser.add_argument("--plot", action="store_true")
-    parser.add_argument("--trotter", action="store_true")
+    parser.add_argument("--dense", action="store_true")
     parser.add_argument("--params", default=None, type=str)
     parser.add_argument("--method", default=None, type=str)
     parser.add_argument("--maxiter", default=None, type=int)
