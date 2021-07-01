@@ -394,6 +394,11 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         except:
             ngpu = 0
 
+        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
+        if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
+
         # TODO: reconsider device management
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]

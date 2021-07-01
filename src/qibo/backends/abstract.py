@@ -17,14 +17,9 @@ class AbstractBackend(ABC):
         self.gpu_devices = []
         self.default_device = []
         self.nthreads = None
-        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
-            self.nthreads = int(os.environ.get("OMP_NUM_THREADS"))
-        elif "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
-            self.nthreads = int(os.environ.get("NUMBA_NUM_THREADS"))
-        else:
-            import psutil
-            # using physical cores by default
-            self.nthreads = psutil.cpu_count(logical=False)
+        import psutil
+        # using physical cores by default
+        self.nthreads = psutil.cpu_count(logical=False)
 
         self.op = None
         self._matrices = None

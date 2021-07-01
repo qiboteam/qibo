@@ -213,6 +213,8 @@ class TensorflowCustomBackend(TensorflowBackend):
         super().__init__()
         self.name = "qibotf"
         self.op = op
+        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
