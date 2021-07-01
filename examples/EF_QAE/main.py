@@ -85,7 +85,7 @@ def main(layers, autoencoder, example):
                 circuit.set_parameters(params) # this will change all thetas to the appropriate values
                 for i in range(len(ising_groundstates)):
                     final_state = circuit.execute(np.copy(ising_groundstates[i]))
-                    cost += encoder.expectation(final_state).real
+                    cost += K.to_numpy(encoder.expectation(final_state)).real
 
                 cost_function_steps.append(cost/len(ising_groundstates)) # save cost function value after each step
 
