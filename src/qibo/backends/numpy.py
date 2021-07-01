@@ -500,7 +500,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_METROPOLIS_THRESHOLD, get_threads
+        from qibo.config import SHOT_METROPOLIS_THRESHOLD
         if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
         if self.op.get_backend() == "cupy":
@@ -510,7 +510,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         nqubits = int(self.np.log2(tuple(probs.shape)[0]))
         frequencies = self.np.zeros(2 ** nqubits, dtype=dtype)
         frequencies = self.op.measure_frequencies(
-            frequencies, probs, nshots, nqubits, seed, get_threads())
+            frequencies, probs, nshots, nqubits, seed, self.nthreads)
         return frequencies
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
