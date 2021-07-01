@@ -394,6 +394,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         except:
             ngpu = 0
 
+        import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover

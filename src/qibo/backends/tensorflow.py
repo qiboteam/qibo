@@ -1,4 +1,3 @@
-import os
 from qibo.backends import abstract, numpy
 from qibo.config import raise_error, log
 
@@ -213,6 +212,7 @@ class TensorflowCustomBackend(TensorflowBackend):
         super().__init__()
         self.name = "qibotf"
         self.op = op
+        import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
 
