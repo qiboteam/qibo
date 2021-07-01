@@ -404,6 +404,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         elif self.cpu_devices:
             self.default_device = self.cpu_devices[0]
             self.set_engine("numba")
+            self.set_threads(self.nthreads)
 
     def set_engine(self, name): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
