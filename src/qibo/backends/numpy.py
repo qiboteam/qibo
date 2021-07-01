@@ -434,8 +434,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def set_threads(self, nthreads):
         super().set_threads(nthreads)
-        import os
-        os.environ["NUMBA_NUM_THREADS"] = str(nthreads)
+        import numba
+        numba.set_num_threads(nthreads)
 
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
