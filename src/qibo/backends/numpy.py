@@ -435,7 +435,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def set_threads(self, nthreads):
         super().set_threads(nthreads)
-        import numba
+        import numba # pylint: disable=E0401
         numba.set_num_threads(nthreads)
 
     def to_numpy(self, x):
