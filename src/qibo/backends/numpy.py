@@ -394,6 +394,12 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         except:
             ngpu = 0
 
+        import os
+        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
+        if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
+
         # TODO: reconsider device management
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
@@ -404,6 +410,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         elif self.cpu_devices:
             self.default_device = self.cpu_devices[0]
             self.set_engine("numba")
+            self.set_threads(self.nthreads)
 
     def set_engine(self, name): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
@@ -431,6 +438,11 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         else:
             self.set_engine("numba")
         abstract.AbstractBackend.set_device(self, name)
+
+    def set_threads(self, nthreads):
+        super().set_threads(nthreads)
+        import numba # pylint: disable=E0401
+        numba.set_num_threads(nthreads)
 
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
@@ -500,7 +512,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
-        from qibo.config import SHOT_METROPOLIS_THRESHOLD, get_threads
+        from qibo.config import SHOT_METROPOLIS_THRESHOLD
         if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
         if self.op.get_backend() == "cupy":
@@ -510,7 +522,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         nqubits = int(self.np.log2(tuple(probs.shape)[0]))
         frequencies = self.np.zeros(2 ** nqubits, dtype=dtype)
         frequencies = self.op.measure_frequencies(
-            frequencies, probs, nshots, nqubits, seed, get_threads())
+            frequencies, probs, nshots, nqubits, seed, self.nthreads)
         return frequencies
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover

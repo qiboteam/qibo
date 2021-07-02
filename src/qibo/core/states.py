@@ -1,5 +1,5 @@
 from qibo import K
-from qibo.config import raise_error, get_threads
+from qibo.config import raise_error
 from qibo.core import measurements
 from qibo.abstractions.states import AbstractState
 

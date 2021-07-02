@@ -1,7 +1,7 @@
 import copy
 from qibo import K
 from qibo.abstractions import gates
-from qibo.config import raise_error, get_threads
+from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
 
 

@@ -189,8 +189,8 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 def _check_parallel_configuration(processes):
     """Check if configuration is suitable for efficient parallel execution."""
     import os, psutil
-    from qibo import get_device, get_backend
-    from qibo.config import raise_error, get_threads, log
+    from qibo import get_device, get_backend, get_threads
+    from qibo.config import raise_error, log
     device = get_device()
     if os.name == "nt":  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations not supported on Windows.")

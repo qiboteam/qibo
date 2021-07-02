@@ -203,3 +203,18 @@ def set_device(name):
 
 def get_device():
     return K.default_device
+
+
+def set_threads(nthreads):
+    """Set number of CPU threads.
+
+    Args:
+        nthreads (int): number of threads.
+    """
+    for bk in K.constructed_backends.values():
+        bk.set_threads(nthreads)
+
+
+def get_threads():
+    """Returns number of threads."""
+    return K.nthreads

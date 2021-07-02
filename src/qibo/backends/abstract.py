@@ -1,3 +1,4 @@
+import os
 from abc import ABC, abstractmethod
 from qibo.config import raise_error, log
 
@@ -15,6 +16,10 @@ class AbstractBackend(ABC):
         self.cpu_devices = []
         self.gpu_devices = []
         self.default_device = []
+        self.nthreads = None
+        import psutil
+        # using physical cores by default
+        self.nthreads = psutil.cpu_count(logical=False)
 
         self.op = None
         self._matrices = None
@@ -67,6 +72,18 @@ class AbstractBackend(ABC):
         self.default_device = name
         with self.device(self.default_device):
             self.matrices.allocate_matrices()
+
+    def set_threads(self, nthreads):
+        """Set number of OpenMP threads.
+
+        Args:
+            num_threads (int): number of threads.
+        """
+        if not isinstance(nthreads, int): # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be integer.")
+        if nthreads < 1: # pragma: no cover
+            raise_error(RuntimeError, "Number of threads must be positive.")
+        self.nthreads = nthreads
 
     def get_cpu(self): # pragma: no cover
         """Returns default CPU device to use for OOM fallback."""
