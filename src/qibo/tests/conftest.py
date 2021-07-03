@@ -84,7 +84,7 @@ def pytest_generate_tests(metafunc):
         "qibo.tests.test_core_distcircuit_execution"
     }
     # skip tests that require custom operators
-    if "qibotf" not in backends and metafunc.module.__name__ in distributed_tests: # pragma: no cover
+    if metafunc.module.__name__ in distributed_tests and "qibotf" not in backends: # pragma: no cover
         pytest.skip("Skipping tests because custom operators are not available.")
 
     # for `test_backends_agreement.py`
