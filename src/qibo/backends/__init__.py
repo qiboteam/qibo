@@ -1,6 +1,6 @@
 import os
 from qibo import config
-from qibo.config import raise_error, log, warnings
+from qibo.config import raise_error, log
 
 # versions requirements
 TF_MIN_VERSION = '2.2.0'
@@ -151,8 +151,7 @@ def set_backend(backend="qibotf"):
         backend (str): A backend from the above options.
     """
     if not config.ALLOW_SWITCHERS and backend != K.name:
-        warnings.warn("Backend should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Backend should not be changed after allocating gates.")
     K.active_backend = backend
 
 
@@ -173,8 +172,7 @@ def set_precision(dtype='double'):
             (complex64) and 'double' for double precision (complex128).
     """
     if not config.ALLOW_SWITCHERS and dtype != K.precision:
-        warnings.warn("Precision should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Precision should not be changed after allocating gates.")
     for bk in K.constructed_backends.values():
         bk.set_precision(dtype)
 
@@ -197,8 +195,7 @@ def set_device(name):
             CPU or GPU.
     """
     if not config.ALLOW_SWITCHERS and name != K.default_device:
-        warnings.warn("Device should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Device should not be changed after allocating gates.")
     for bk in K.constructed_backends.values():
         if bk.name != "numpy":
             bk.set_device(name)

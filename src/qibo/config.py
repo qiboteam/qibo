@@ -3,7 +3,6 @@ Define the default circuit, constants and types.
 """
 import os
 import logging
-import warnings
 
 # Logging level from 0 (all) to 3 (errors)
 LOG_LEVEL = 3
