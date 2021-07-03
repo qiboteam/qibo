@@ -36,11 +36,6 @@ class Backend:
                 from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["qibotf"] = TensorflowCustomBackend
                 active_backend = "qibotf"
-            else:  # pragma: no cover
-                log.warning("qibotf library was not found. `tf.einsum` will be "
-                            "used to apply gates. In order to install Qibo's "
-                            "high performance custom operators please use "
-                            "`pip install qibotf`.")
 
         # check if qibojit is installed and use it as default backend.
         if self.check_availability("qibojit"): # pragma: no cover
@@ -64,8 +59,11 @@ class Backend:
                         "increased performance and to enable GPU acceleration.")
         elif active_backend == "tensorflow": # pragma: no cover
             # case not tested because CI has tf installed
-            log.warning("Consider installing the qibojit or qibotf backend for "
-                        "increased circuit simulation performance.")
+            log.warning("qibotf library was not found. `tf.einsum` will be "
+                        "used to apply gates. In order to install Qibo's "
+                        "high performance custom operators for TensorFlow "
+                        "please use `pip install qibotf`. Alternatively, "
+                        "consider installing the qibojit backend.")
 
         self.constructed_backends = {}
         self._active_backend = None
@@ -139,10 +137,11 @@ K = Backend()
 numpy_matrices = K.qnp.matrices
 
 
-def set_backend(backend="qibotf"):
+def set_backend(backend="qibojit"):
     """Sets backend used for mathematical operations and applying gates.
 
     The following backends are available:
+    'qibojit': Numba/cupy backend with custom operators for applying gates,
     'qibotf': Tensorflow backend with custom operators for applying gates,
     'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
     'numpy': Numpy backend that applies gates using ``np.einsum``.
@@ -164,7 +163,7 @@ def get_backend():
     return K.name
 
 
-def set_precision(dtype='double'):
+def set_precision(dtype="double"):
     """Set precision for states and gates simulation.
 
     Args:
