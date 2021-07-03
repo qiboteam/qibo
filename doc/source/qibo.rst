@@ -275,7 +275,7 @@ First general unitary (U1)
     :member-order: bysource
 
 Second general unitary (U2)
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.abstractions.gates.U2
     :members:
