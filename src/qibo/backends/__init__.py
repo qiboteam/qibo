@@ -24,7 +24,7 @@ class Backend:
 
         # check if tensorflow is installed and use it as default backend.
         if self.check_availability("tensorflow"):
-            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.TF_LOG_LEVEL)
             import tensorflow as tf  # pylint: disable=E0401
             if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
                 raise_error(
