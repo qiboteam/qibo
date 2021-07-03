@@ -83,11 +83,11 @@ def test_set_precision_errors(backend, caplog):
     backends.set_precision(original_precision)
 
 
-def test_set_device(backend):
+def test_set_device(backend, caplog):
     original_devices = {bk: bk.default_device for bk in K.constructed_backends.values()}
     if backends.get_backend() == "numpy":
-        with pytest.warns(RuntimeWarning):
-            backends.set_device("/CPU:0")
+        backends.set_device("/CPU:0")
+        assert "WARNING" in caplog.text
     else:
         backends.set_device("/CPU:0")
         assert backends.get_device() == "/CPU:0"

@@ -436,11 +436,11 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         self.op.set_backend(name)
 
     def set_device(self, name):
+        abstract.AbstractBackend.set_device(self, name)
         if "GPU" in name:
             self.set_engine("cupy")
         else:
             self.set_engine("numba")
-        abstract.AbstractBackend.set_device(self, name)
 
     def set_threads(self, nthreads):
         super().set_threads(nthreads)
