@@ -42,20 +42,12 @@ class Backend:
                             "high performance custom operators please use "
                             "`pip install qibotf`.")
 
-        else:  # pragma: no cover
-            # case not tested because CI has tf installed
-            log.warning("Tensorflow is not installed, falling back to numpy. "
-                        "Numpy backend uses `np.einsum` and supports CPU only. "
-                        "To enable GPU acceleration please install Tensorflow "
-                        "with `pip install tensorflow`. To install the "
-                        "optimized Qibo custom operators please use "
-                        "`pip install qibotf` after installing Tensorflow.")
-
-        # check if qibojit is installed
+        # check if qibojit is installed and use it as default backend.
         if self.check_availability("qibojit"): # pragma: no cover
             # qibojit backend is not tested until `qibojit` is available
             from qibo.backends.numpy import JITCustomBackend
             self.available_backends["qibojit"] = JITCustomBackend
+            active_backend = "qibojit"
 
         # check if IcarusQ is installed
         if self.check_availability("qiboicarusq"): # pragma: no cover
@@ -63,6 +55,17 @@ class Backend:
             from qibo.backends.hardware import IcarusQBackend
             self.available_backends["icarusq"] = IcarusQBackend
             self.hardware_backends["icarusq"] = IcarusQBackend
+
+        # raise performance warning if qibojit and qibotf are not available
+        log.info("Using {} backend.".format(active_backend))
+        if active_backend == "numpy": # pragma: no cover
+            log.warning("numpy backend uses `np.einsum` and supports CPU only. "
+                        "Consider installing the qibojit or qibotf backends for "
+                        "increased performance and to enable GPU acceleration.")
+        elif active_backend == "tensorflow": # pragma: no cover
+            # case not tested because CI has tf installed
+            log.warning("Consider installing the qibojit or qibotf backend for "
+                        "increased circuit simulation performance.")
 
         self.constructed_backends = {}
         self._active_backend = None

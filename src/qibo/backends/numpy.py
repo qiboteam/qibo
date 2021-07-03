@@ -377,6 +377,9 @@ class NumpyBackend(abstract.AbstractBackend):
 
 class JITCustomBackend(NumpyBackend): # pragma: no cover
 
+    description = "Uses custom operators based on numba.jit for CPU and " \
+                  "custom CUDA kernels loaded with cupy GPU."
+
     def __init__(self):
         from qibo.backends import Backend
         if not Backend.check_availability("qibojit"): # pragma: no cover
