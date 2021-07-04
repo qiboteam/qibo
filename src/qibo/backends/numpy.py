@@ -434,6 +434,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         self.random = xp.random
         self.newaxis = xp.newaxis
         self.op.set_backend(name)
+        with self.device(self.default_device):
+            self.matrices.allocate_matrices()
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
