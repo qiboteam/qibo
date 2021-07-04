@@ -62,6 +62,7 @@ setup(
         "tests": ["pytest", "cirq", "ply", "sklearn"],
         # Backends dependencies
         "qibotf": ["qibotf"],
+        "qibojit": ["qibojit"],
         "tensorflow": [f"tensorflow>={TF_MIN_VERSION}"],
     },
     python_requires=">=3.6.0",
