@@ -175,6 +175,22 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
 
 
 class TrotterCircuit:
+    """Object that caches the Trotterized evolution circuit.
+
+    This object holds a reference to the circuit models and updates its
+    parameters if a different time step ``dt`` is given without recreating
+    every gate from scratch.
+
+    Args:
+        groups (list): List of :class:`qibo.core.terms.TermGroup` objects that
+            correspond to the Trotter groups of terms in the time evolution
+            exponential operator.
+        dt (float): Time step for the Trotterization.
+        nqubits (int): Number of qubits in the system that evolves.
+        accelerators (dict): Dictionary with accelerators for distributed
+            circuits.
+        memory_device (str): Memory device for distributed circuits.
+    """
 
     def __init__(self, groups, dt, nqubits, accelerators, memory_device):
         from qibo.models import Circuit

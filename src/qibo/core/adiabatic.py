@@ -4,9 +4,14 @@ from qibo.core import hamiltonians, terms
 
 
 class AdiabaticHamiltonian(ABC):
-    """Constructor for :class:`qibo.core.adiabatic.BaseAdiabaticHamiltonian` and :class:`qibo.core.adiabatic.SymbolicAdiabaticHamiltonian`.
+    """Constructor for Hamiltonians used in adiabatic evolution.
 
-    This object is never constructed, it falls back to one of the above objects.
+    This object is never constructed, it falls back to one of
+    :class:`qibo.core.adiabatic.BaseAdiabaticHamiltonian` or
+    :class:`qibo.core.adiabatic.SymbolicAdiabaticHamiltonian`.
+
+    These objects allow constructing the adiabatic Hamiltonian of the
+    form ``(1 - s) * H0 + s * H1`` efficiently.
     """
 
     def __new__(cls, h0, h1):
@@ -28,10 +33,15 @@ class AdiabaticHamiltonian(ABC):
 
     @abstractmethod
     def ground_state(self): # pragma: no cover
+        """Returns the ground state of the ``H0`` Hamiltonian.
+
+        Usually used as the initial state for adiabatic evolution.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def __call__(self, t): # pragma: no cover
+        """Hamiltonian object corresponding to the given time."""
         raise_error(NotImplementedError)
 
     @abstractmethod
@@ -40,7 +50,7 @@ class AdiabaticHamiltonian(ABC):
 
 
 class BaseAdiabaticHamiltonian:
-    """Adiabatic Hamiltonian that is sum of :class:`qibo.core.hamiltonians.Hamiltonian`."""
+    """Adiabatic Hamiltonian that is a sum of :class:`qibo.core.hamiltonians.Hamiltonian`."""
 
     def __init__(self, h0, h1):
         if h0.nqubits != h1.nqubits:
@@ -55,6 +65,12 @@ class BaseAdiabaticHamiltonian:
         return self.h0.ground_state()
 
     def __call__(self, t):
+        """Hamiltonian object corresponding to the given time.
+
+        Returns:
+            A :class:`qibo.core.hamiltonians.Hamiltonian` object corresponding
+            to the adiabatic Hamiltonian at a given time.
+        """
         if t == 0:
             return self.h0
         if self.total_time is None or self.schedule is None:
@@ -71,9 +87,19 @@ class BaseAdiabaticHamiltonian:
 
 
 class TrotterCircuit(hamiltonians.TrotterCircuit):
+    """Object that caches the Trotterized evolution circuit.
+
+    See :class:`qibo.core.hamiltonians.TrotterCircuit` for more details.
+    """
 
     def set(self, dt, coefficients):
-        params = {gate: group.to_term(coefficients).exp(dt / 2.0) for gate, group in self.gates.items()}
+        """Updates the circuit parameters for different values of ``t`` and ``dt``.
+
+        The update is done using the ``circuit.set_parameters`` method to avoid
+        recreating the circuit and gates.
+        """
+        params = {gate: group.to_term(coefficients).exp(dt / 2.0)
+                  for gate, group in self.gates.items()}
         self.dt = dt
         self.circuit.set_parameters(params)
 
@@ -98,6 +124,18 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         self.groups = terms.TermGroup.from_terms(all_terms)
 
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
+        """Circuit that implements the Trotterized evolution under the adiabatic Hamiltonian.
+
+        Args:
+            dt (float): Time step to use for exponentiation of the Hamiltonian.
+            accelerators (dict): Dictionary with accelerators for distributed
+                circuits.
+            memory_device (str): Memory device for distributed circuits.
+            t (float): Time that the Hamiltonian should be calculated.
+
+        Returns:
+            A :class:`qibo.models.Circuit` implementing the Trotterized evolution.
+        """
         if self.trotter_circuit is None:
             self.trotter_circuit = TrotterCircuit(self.groups, dt, self.nqubits,
                                                   accelerators, memory_device)
