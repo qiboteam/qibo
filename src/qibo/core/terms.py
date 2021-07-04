@@ -89,7 +89,8 @@ class SymbolicTerm(HamiltonianTerm):
     Example:
         ::
 
-            from qibo.symbols import X, Y, SymbolicTerm
+            from qibo.symbols import X, Y
+            from qibo.core.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
             sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
@@ -98,7 +99,7 @@ class SymbolicTerm(HamiltonianTerm):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (sympy.Expr): Sympy expression for the underlying term.
-        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
+        matrix_map (dict): Dictionary that maps symbols in the given ``factors``
             expression to tuples of (target qubit id, matrix).
             This is required only if the expression is not created using Qibo
             symbols and to keep compatibility with older versions where Qibo

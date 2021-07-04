@@ -1142,7 +1142,7 @@ Hamiltonian object is defined as a sum of commuting parts that consist of terms
 that can be exponentiated efficiently.
 Such Hamiltonian can be implemented in Qibo using
 :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
-The implementation of Trotter decmoposition is based in Sec.
+The implementation of Trotter decomposition is based on Sec.
 4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 Below is an example of how to use this object in practice:
 
@@ -1345,7 +1345,7 @@ How to define custom Hamiltonians using symbols?
 
 In order to use the VQE, QAOA and time evolution models in Qibo the user has to
 define Hamiltonians based on :class:`qibo.core.hamiltonians.Hamiltonian` which
-uses the full matrix represntation of the corresponding operator or
+uses the full matrix representation of the corresponding operator or
 :class:`qibo.core.hamiltonians.SymbolicHamiltonian` which uses a more efficient
 term representation. Qibo provides pre-coded Hamiltonians for some common models,
 such as the transverse field Ising model (TFIM) and the Heisenberg model
