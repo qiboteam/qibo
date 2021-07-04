@@ -49,10 +49,11 @@ def test_hamiltonian_algebraic_operations(dtype, numpy):
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, numpy=numpy)
     H2 = hamiltonians.XXZ(nqubits=2, delta=1, numpy=numpy)
 
-    hH1 = transformation_a(H1.matrix, H2.matrix)
-    hH2 = transformation_b(H1.matrix, H2.matrix)
-    hH3 = transformation_c(H1.matrix, H2.matrix, use_eye=True)
-    hH4 = transformation_d(H1.matrix, H2.matrix, use_eye=True)
+    mH1, mH2 = K.to_numpy(H1.matrix), K.to_numpy(H2.matrix)
+    hH1 = transformation_a(mH1, mH2)
+    hH2 = transformation_b(mH1, mH2)
+    hH3 = transformation_c(mH1, mH2, use_eye=True)
+    hH4 = transformation_d(mH1, mH2, use_eye=True)
 
     HT1 = transformation_a(H1, H2)
     HT2 = transformation_b(H1, H2)
@@ -100,7 +101,7 @@ def test_hamiltonian_operation_errors(numpy):
         R = [3] - H1
 
 
-@pytest.mark.parametrize("numpy", [True, False])
+@pytest.mark.parametrize("numpy", [False, True])
 def test_hamiltonian_matmul(numpy):
     """Test matrix multiplication between Hamiltonians and state vectors."""
     H1 = hamiltonians.TFIM(nqubits=3, h=1.0, numpy=numpy)
@@ -117,12 +118,19 @@ def test_hamiltonian_matmul(numpy):
 
     v = random_complex(8, dtype=m1.dtype)
     m = random_complex((8, 8), dtype=m1.dtype)
-    K.assert_allclose(H1 @ v, m1.dot(v))
-    K.assert_allclose(H1 @ m, m1 @ m)
+    if numpy:
+        H1v = H1 @ v
+        H1m = H1 @ m
+    else:
+        H1v = H1 @ K.cast(v)
+        H1m = H1 @ K.cast(m)
+    K.assert_allclose(H1v, m1.dot(v))
+    K.assert_allclose(H1m, m1 @ m)
 
     from qibo.core.states import VectorState
-    state = VectorState.from_tensor(v)
-    K.assert_allclose(H1 @ state, m1.dot(v))
+    if not numpy:
+        H1state = H1 @ VectorState.from_tensor(K.cast(v))
+        K.assert_allclose(H1state, m1.dot(v))
 
     with pytest.raises(ValueError):
         H1 @ np.zeros((8, 8, 8), dtype=m1.dtype)
