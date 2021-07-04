@@ -145,22 +145,36 @@ Distributed circuit
     :members:
     :member-order: bysource
 
-VQE
-"""
+Quantum Fourier Transform (QFT)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.circuit.QFT
+    :members:
+    :member-order: bysource
+
+Variational Quantum Eigensolver (VQE)
+"""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.VQE
     :members:
     :member-order: bysource
 
-QAOA
-""""
+Quantum Approximate Optimization Algorithm (QAOA)
+"""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.QAOA
     :members:
     :member-order: bysource
 
-Grover
-""""""
+Feedback-based Algorithm for Quantum Optimization (FALQON)
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.variational.FALQON
+    :members:
+    :member-order: bysource
+
+Grover's Algorithm
+""""""""""""""""""
 
 .. autoclass:: qibo.models.grover.Grover
     :members:

@@ -1,4 +1,4 @@
-# Measurement shots
+# Measurement Shots Benchmark
 
 Qibo simulates quantum measurements using its standard dense state vector
 simulator, followed by sampling from the distribution corresponding to the final
