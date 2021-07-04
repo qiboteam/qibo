@@ -116,7 +116,7 @@ def test_state_measure(registers):
 def test_state_set_measurements(registers):
     from qibo import gates
     state = states.VectorState.zero_state(3)
-    samples = np.array(50 * [0] + 50 * [1])
+    samples = K.cast(50 * [0] + 50 * [1], dtype=K.dtypes("DTYPEINT"))
     state.set_measurements([0, 2], samples, registers)
     target_samples = np.array(50 * [[0, 0]] + 50 * [[0, 1]])
     K.assert_allclose(state.samples(), target_samples)

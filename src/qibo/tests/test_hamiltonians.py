@@ -25,7 +25,7 @@ def test_tfim_model_hamiltonian(model, kwargs, filename, numpy):
     from qibo.tests.test_models_variational import assert_regression_fixture
     kwargs["numpy"] = numpy
     H = getattr(hamiltonians, model)(**kwargs)
-    matrix = np.array(H.matrix).flatten().real
+    matrix = K.to_numpy(H.matrix).flatten().real
     assert_regression_fixture(matrix, filename)
 
 

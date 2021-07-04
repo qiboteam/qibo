@@ -288,7 +288,7 @@ def test_energy_callback(solver, dt, atol):
         target_energies.append(calc_energy(target_psi))
 
     assert_states_equal(final_psi, target_psi, atol=atol)
-    target_energies = K.stack(target_energies)
+    target_energies = K.cast(target_energies)
     K.assert_allclose(energy[:], target_energies, atol=atol)
 
 

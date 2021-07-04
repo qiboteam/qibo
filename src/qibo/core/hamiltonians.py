@@ -179,8 +179,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         if isinstance(o, K.tensor_types):
             rank = len(tuple(o.shape))
             if rank == 1: # vector
-                print(type(self.matrix))
-                print(type(o))
                 return self.K.matmul(self.matrix, o[:, self.K.newaxis])[:, 0]
             elif rank == 2: # matrix
                 return self.K.matmul(self.matrix, o)
