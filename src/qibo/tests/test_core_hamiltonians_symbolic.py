@@ -28,6 +28,12 @@ def test_symbolic_hamiltonian_init():
     from qibo.core.terms import HamiltonianTerm
     with pytest.raises(TypeError):
         t = HamiltonianTerm("test", 0, 1)
+    # Passing negative target qubits in HamiltonianTerm
+    with pytest.raises(ValueError):
+        t = HamiltonianTerm("test", 0, -1)
+    # Passing matrix shape incompatible with number of qubits
+    with pytest.raises(ValueError):
+        t = HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

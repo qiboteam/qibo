@@ -17,13 +17,23 @@ class HamiltonianTerm:
     """
 
     def __init__(self, matrix, *q):
-        self.target_qubits = tuple(q)
-        self._gate = None
-        self.hamiltonian = None
+        for qi in q:
+            if qi < 0:
+                raise_error(ValueError, "Invalid qubit id {} < 0 was given "
+                                        "in Hamiltonian term".format(qi))
         if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
                 isinstance(matrix, K.qnp.tensor_types)):
             raise_error(TypeError, "Invalid type {} of symbol matrix."
                                    "".format(type(matrix)))
+        dim = int(matrix.shape[0])
+        if 2 ** len(q) != dim:
+            raise_error(ValueError, "Matrix dimension {} given in Hamiltonian "
+                                    "term is not compatible with the number "
+                                    "of target qubits {}."
+                                    "".format(dim, len(q)))
+        self.target_qubits = tuple(q)
+        self._gate = None
+        self.hamiltonian = None
         self._matrix = matrix
 
     @property
