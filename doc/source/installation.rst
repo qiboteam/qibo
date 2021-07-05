@@ -191,14 +191,12 @@ In order to install the package use the following command:
 
       pip install qibo[qibojit]
 
-
-The ``pip`` program will download and install all the required
-dependencies.
-
 .. note::
-      The ``pip`` package requires a cupy pre-compiled version with CUDA
-      support, so make sure the `cupy <https://cupy.dev/>`_ version installed
-      matches the specifics of your GPU and drivers.
+      The ``pip`` program will download and install all the required
+      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
+      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      instructions from the `official website
+      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
 
 
 Installing from source
