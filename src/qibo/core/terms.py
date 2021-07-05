@@ -1,6 +1,6 @@
 import sympy
 from qibo import gates, K
-from qibo.config import raise_error, EINSUM_CHARS
+from qibo.config import raise_error
 
 
 class HamiltonianTerm:
@@ -47,13 +47,13 @@ class HamiltonianTerm:
             self._gate = gates.Unitary(self.matrix, *self.target_qubits)
         return self._gate
 
-    def exp(self, dt):
+    def exp(self, x):
         """Matrix exponentiation of the term."""
-        return K.qnp.expm(-1j * dt * self.matrix)
+        return K.qnp.expm(-1j * x * self.matrix)
 
-    def expgate(self, dt):
+    def expgate(self, x):
         """Unitary gate implementing the matrix exponentiation of the term."""
-        return gates.Unitary(self.exp(dt), *self.target_qubits)
+        return gates.Unitary(self.exp(x), *self.target_qubits)
 
     def merge(self, term):
         """Creates a new term by merging the given term to the current one.
