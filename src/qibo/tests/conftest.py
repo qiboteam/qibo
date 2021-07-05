@@ -36,7 +36,7 @@ def pytest_configure(config):
 
 def pytest_addoption(parser):
     parser.addoption("--backends", type=str, default=_BACKENDS,
-                     help="Calculation schemes (eg. qibotf, tensorflow, numpy etc.) to test.")
+                     help="Calculation schemes (eg. qibojit, qibotf, tensorflow, numpy etc.) to test.")
     parser.addoption("--accelerators", type=str, default=_ACCELERATORS,
                      help="Accelerator configurations for testing the distributed circuit.")
     # see `_ACCELERATORS` for the string format of the `--accelerators` flag
@@ -60,7 +60,7 @@ def pytest_generate_tests(metafunc):
 
     Test functions may have one or more of the following arguments:
         engine: Backend library (eg. numpy, tensorflow, etc.),
-        backend: Calculation backend (eg. qibotf, tensorflow, numpy),
+        backend: Calculation backend (eg. qibojit, qibotf, tensorflow, numpy),
         accelerators: Dictionary with the accelerator configuration for
             distributed circuits, for example: {'/GPU:0': 1, '/GPU:1': 1},
         tested_backend: The first backend when testing agreement between
