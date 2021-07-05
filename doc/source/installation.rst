@@ -49,6 +49,8 @@ for chips based on superconducting qubits.
 
 _______________________
 
+.. _packages:
+
 Packages
 --------
 
