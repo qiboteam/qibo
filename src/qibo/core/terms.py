@@ -13,7 +13,7 @@ class HamiltonianTerm:
         matrix (np.ndarray): Full matrix corresponding to the term representation
             in the computational basis. Has size (2^n, 2^n) where n is the
             number of target qubits of this term.
-        q (int): Target qubit ids.
+        q (list): List of target qubit ids.
     """
 
     def __init__(self, matrix, *q):

@@ -570,9 +570,20 @@ Max Cut
 
 
 .. note::
-    All pre-coded Hamiltonians can be created as either as the dense
-    :class:`qibo.core.hamiltonians.Hamiltonian` or the memory efficient
-    :class:`qibo.core.hamiltonians.SymbolicHamiltonian` using the ``dense`` flag.
+    All pre-coded Hamiltonians can be created as
+    :class:`qibo.core.hamiltonians.Hamiltonian` using ``dense=True``
+    or :class:`qibo.core.hamiltonians.SymbolicHamiltonian`
+    using the ``dense=False``. In the first case the Hamiltonian is created
+    using its full matrix representation of size ``(2 ** n, 2 ** n)``
+    where ``n`` is the number of qubits that the Hamiltonian acts on. This
+    matrix is used to calculate expectation values by direct matrix multiplication
+    to the state and for time evolution by exact exponentiation.
+    In contrast, when ``dense=False`` the Hamiltonian contains a more compact
+    representation as a sum of local terms. This compact representation can be
+    used to calculate expectation values via a sum of the local term expectations
+    and time evolution via the Trotter decomposition of the evolution operator.
+    This is useful for systems that contain many qubits for which constructing
+    the full matrix is intractable.
 
 _______________________
 

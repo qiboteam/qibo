@@ -1164,8 +1164,12 @@ exponentials of the Trotter decomposition and can be executed on any state.
 Note that in the transverse field Ising model (TFIM) that was used in this
 example is among the pre-coded Hamiltonians in Qibo and could be created as
 a :class:`qibo.core.hamiltonians.SymbolicHamiltonian` simply using the
-``dense=False`` flag. Defining custom Hamiltonians from terms can be more
-complicated, however Qibo simplifies this process by providing the option
+``dense=False`` flag. For more information on the difference between dense
+and non-dense Hamiltonians we refer to the :ref:`Hamiltonians <Hamiltonians>` 
+section.
+
+Defining custom Hamiltonians from terms can be more complicated,
+however Qibo simplifies this process by providing the option
 to define Hamiltonians symbolically through the use of ``sympy``.
 For more information on this we refer to the
 :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
