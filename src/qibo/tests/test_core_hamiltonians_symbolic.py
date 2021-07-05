@@ -34,6 +34,11 @@ def test_symbolic_hamiltonian_init():
     # Passing matrix shape incompatible with number of qubits
     with pytest.raises(ValueError):
         t = HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
+    # Merging terms with invalid qubits
+    t1 = HamiltonianTerm(np.random.random((4, 4)), 0, 1)
+    t2 = HamiltonianTerm(np.random.random((4, 4)), 1, 2)
+    with pytest.raises(ValueError):
+        t = t1.merge(t2)
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

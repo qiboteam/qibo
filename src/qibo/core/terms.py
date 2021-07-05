@@ -61,6 +61,10 @@ class HamiltonianTerm:
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
+        if not set(term.target_qubits).issubset(set(self.target_qubits)):
+            raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
+                                    "qubits {} to term on qubits {}."
+                                    "".format(term.target_qubits, self.target_qubits))
         matrix = K.np.kron(term.matrix, K.eye(2 ** (len(self) - len(term))))
         matrix = K.np.reshape(matrix, 2 * len(self) * (2,))
         order = []
