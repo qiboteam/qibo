@@ -194,8 +194,8 @@ def _check_parallel_configuration(processes):
     device = get_device()
     if os.name == "nt":  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations not supported on Windows.")
-    if get_backend() == "tensorflow":  # pragma: no cover
-        raise_error(RuntimeError, "tensorflow backend does not support parallel evaluations.")
+    if get_backend() == "tensorflow" or get_backend() == "qibojit":  # pragma: no cover
+        raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
     if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or
