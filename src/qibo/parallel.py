@@ -10,11 +10,7 @@ class ParallelResources:  # pragma: no cover
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
     """
-    import os
-    from sys import platform
     import multiprocessing as mp
-    if platform == 'darwin':
-        mp.set_start_method('fork')  # enforce on Darwin
 
     # private objects holding the state
     _instance = None
@@ -188,12 +184,12 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 
 def _check_parallel_configuration(processes):
     """Check if configuration is suitable for efficient parallel execution."""
-    import os, psutil
+    import sys, psutil
     from qibo import get_device, get_backend, get_threads
     from qibo.config import raise_error, log
     device = get_device()
-    if os.name == "nt":  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations not supported on Windows.")
+    if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
+        raise_error(RuntimeError, "Parallel evaluations is supported only on linux.")
     if get_backend() == "tensorflow" or get_backend() == "qibojit":  # pragma: no cover
         raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
