@@ -205,6 +205,7 @@ def test_grover3sat(nqubits, instance):
     run_script(args)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("nqubits,instance,T,dt", [(4, 1, 10, 1e-1)])
 @pytest.mark.parametrize("solver", ["exp", "rk4"])
 @pytest.mark.parametrize("trotter", [True, False])
@@ -221,6 +222,7 @@ def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
     run_script(args)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("layers", [3, 2])
 @pytest.mark.parametrize("autoencoder", [0, 1])
 @pytest.mark.parametrize("example", [0, 1])
