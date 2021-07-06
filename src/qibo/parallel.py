@@ -26,7 +26,7 @@ class ParallelResources:  # pragma: no cover
         if cls._instance is None:
             cls._instance = super(ParallelResources, cls).__new__(
                 cls, *args, **kwargs)
-            if cls.sys.platform == 'win32' or cls.sys.paltform == 'darwin': # pragma: no cover
+            if cls.sys.platform == 'win32' or cls.sys.platform == 'darwin': # pragma: no cover
                 from qibo.config import raise_error
                 raise_error(NotImplementedError,
                     "Parallel evaluation supported only on linux.")
