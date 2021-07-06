@@ -1165,8 +1165,12 @@ Note that in the transverse field Ising model (TFIM) that was used in this
 example is among the pre-coded Hamiltonians in Qibo and could be created as
 a :class:`qibo.core.hamiltonians.SymbolicHamiltonian` simply using the
 ``dense=False`` flag. For more information on the difference between dense
-and non-dense Hamiltonians we refer to the :ref:`Hamiltonians <Hamiltonians>` 
-section.
+and non-dense Hamiltonians we refer to the :ref:`Hamiltonians <Hamiltonians>`
+section. Note that only non-dense Hamiltonians created using ``dense=False``
+or through the :class:`qibo.core.hamiltonians.SymbolicHamiltonian` object
+can be used for evolution using Trotter decomposition. If a dense Hamiltonian
+is used then evolution will be done by exponentiating the full Hamiltonian
+matrix.
 
 Defining custom Hamiltonians from terms can be more complicated,
 however Qibo simplifies this process by providing the option
