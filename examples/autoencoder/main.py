@@ -2,13 +2,13 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 from qibo.models import Circuit
-from qibo import hamiltonians, gates, models
+from qibo import hamiltonians, gates, models, K
 from scipy.optimize import minimize
 import argparse
 
 
 def main(nqubits, layers, compress, lambdas):
-    
+
     def encoder_hamiltonian_simple(nqubits, ncompress):
         """Creates the encoding Hamiltonian.
         Args:
@@ -50,7 +50,7 @@ def main(nqubits, layers, compress, lambdas):
         circuit.set_parameters(params) # this will change all thetas to the appropriate values
         for i in range(len(ising_groundstates)):
             final_state = circuit(np.copy(ising_groundstates[i]))
-            cost += encoder.expectation(final_state).numpy().real
+            cost += K.real(encoder.expectation(final_state))
 
         if count[0] % 50 == 0:
             print(count[0], cost/len(ising_groundstates))
