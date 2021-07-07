@@ -406,3 +406,17 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                                                   accelerators, memory_device)
         self.trotter_circuit.set(dt)
         return self.trotter_circuit.circuit
+
+
+class TrotterHamiltonian:
+    """"""
+
+    def __init__(self, *parts, ground_state=None):
+        raise_error(NotImplementedError,
+                    "`TrotterHamiltonian` is substituted by `SymbolicHamiltonian` "
+                    "and is no longer supported. Please check the documentation "
+                    "of `SymbolicHamiltonian` for more details.")
+
+    @classmethod
+    def from_symbolic(cls, symbolic_hamiltonian, symbol_map, ground_state=None):
+        return cls()

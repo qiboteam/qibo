@@ -127,3 +127,11 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
         target_state = u[1].dot(u[0].dot(initial_state))
         target_state = u[0].dot(u[1].dot(target_state))
         np.testing.assert_allclose(final_state, target_state)
+
+
+def test_old_trotter_hamiltonian_errors():
+    """Check errors when creating the deprecated ``TrotterHamiltonian`` object."""
+    with pytest.raises(NotImplementedError):
+        h = hamiltonians.TrotterHamiltonian()
+    with pytest.raises(NotImplementedError):
+        h = hamiltonians.TrotterHamiltonian.from_symbolic(0, 1)
