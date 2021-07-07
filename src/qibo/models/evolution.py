@@ -21,9 +21,11 @@ class StateEvolution:
             When the 'exp' solver is used to evolve a
             :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
             Trotter decomposition of the evolution operator will be calculated
-            and used automatically, while if it is used on a dense
+            and used automatically. If the 'exp' is used on a dense
             :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
             matrix will be exponentiated to obtain the exact evolution operator.
+            Runge-Kutta solvers use simple matrix multiplications of the
+            Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
@@ -167,9 +169,11 @@ class AdiabaticEvolution(StateEvolution):
             When the 'exp' solver is used to evolve a
             :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
             Trotter decomposition of the evolution operator will be calculated
-            and used automatically, while if it is used on a dense
+            and used automatically. If the 'exp' is used on a dense
             :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
             matrix will be exponentiated to obtain the exact evolution operator.
+            Runge-Kutta solvers use simple matrix multiplications of the
+            Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
