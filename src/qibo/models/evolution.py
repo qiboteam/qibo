@@ -15,6 +15,15 @@ class StateEvolution:
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
+            Available solvers are 'exp' which uses the exact unitary evolution
+            operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
+            integrate the Schordinger's time-dependent equation in time.
+            When the 'exp' solver is used to evolve a
+            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            Trotter decomposition of the evolution operator will be calculated
+            and used automatically, while if it is used on a dense
+            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            matrix will be exponentiated to obtain the exact evolution operator.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
@@ -152,6 +161,15 @@ class AdiabaticEvolution(StateEvolution):
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
+            Available solvers are 'exp' which uses the exact unitary evolution
+            operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
+            integrate the Schordinger's time-dependent equation in time.
+            When the 'exp' solver is used to evolve a
+            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            Trotter decomposition of the evolution operator will be calculated
+            and used automatically, while if it is used on a dense
+            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            matrix will be exponentiated to obtain the exact evolution operator.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
