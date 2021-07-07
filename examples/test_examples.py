@@ -232,6 +232,7 @@ def test_ef_qae(layers, autoencoder, example):
     run_script(args)
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("N", [15])
 @pytest.mark.parametrize("times", [2, 10])
 @pytest.mark.parametrize("A", [None])
