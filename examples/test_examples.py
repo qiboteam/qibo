@@ -144,7 +144,7 @@ def test_benchmarks(nqubits, type):
     header = ("import argparse\nimport os\nimport time\nimport numpy as np"
               "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
-            "backend": "qibotf", "precision": "double",
+            "backend": "qibojit", "precision": "double",
             "device": None, "accelerators": None,
             "nshots": None, "fuse": False, "compile": False,
             "nlayers": None, "gate_type": None, "params": {},
@@ -159,7 +159,7 @@ def test_benchmarks(nqubits, type):
 @pytest.mark.parametrize("varlayer", [False, True])
 def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     args = locals()
-    args["backend"] = "qibotf"
+    args["backend"] = "qibojit"
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
@@ -232,8 +232,7 @@ def test_ef_qae(layers, autoencoder, example):
     run_script(args)
 
 
-@pytest.mark.skip
-@pytest.mark.parametrize("N", [15])
+@pytest.mark.parametrize("N", [15, 21])
 @pytest.mark.parametrize("times", [2, 10])
 @pytest.mark.parametrize("A", [None])
 @pytest.mark.parametrize("semiclassical", [True, False])
