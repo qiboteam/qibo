@@ -9,8 +9,8 @@ _______________________
 Applications by topic
 ---------------------
 
-Complexity theory
-^^^^^^^^^^^^^^^^^
+Classical Combinatorial Problems
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. toctree::
     :maxdepth: 1
@@ -54,6 +54,14 @@ High-Energy Physics
 
     tutorials/qPDF/qPDF.ipynb
 
+Quantum Algorithms
+^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/falqon/README.md
+    tutorials/grover/README.md
 
 Quantum Physics
 ^^^^^^^^^^^^^^^
@@ -66,8 +74,6 @@ Quantum Physics
     tutorials/adiabatic/README.md
     tutorials/shor/README.md
     tutorials/bell-variational/README.md
-    tutorials/falqon/README.md
-    tutorials/grover/README.md
 
 Quantum Machine Learning
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -85,6 +91,14 @@ _______________________
 Applications by algorithm
 -------------------------
 
+Amplitude Estimation
+^^^^^^^^^^^^^^^^^^^^
+
+.. toctree::
+    :maxdepth: 1
+
+    tutorials/unary/README.md
+
 Variational Quantum Circuits
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -98,7 +112,6 @@ Variational Quantum Circuits
     tutorials/qsvd/README.md
     tutorials/3_tangle/README.md
     tutorials/EF_QAE/README.md
-    tutorials/unary/README.md
     tutorials/bell-variational/README.md
     tutorials/qPDF/qPDF.ipynb
 
