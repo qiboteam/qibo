@@ -224,7 +224,8 @@ def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
 @pytest.mark.parametrize("layers", [3, 2])
 @pytest.mark.parametrize("autoencoder", [0, 1])
 @pytest.mark.parametrize("example", [0, 1])
-def test_ef_qae(layers, autoencoder, example):
+@pytest.mark.parametrize("maxiter", [1])
+def test_ef_qae(layers, autoencoder, example, maxiter):
     args = locals()
     os.chdir(os.path.join(base_dir, "EF_QAE"))
     run_script(args)
