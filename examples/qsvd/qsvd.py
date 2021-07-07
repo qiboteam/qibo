@@ -51,7 +51,7 @@ class QSVD():
             rotations: Function that generates rotation gates (defined in __init__)
 
         Returns:
-            qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
+            Circuit model implementing the variational ansatz
         """
         c = Circuit(self.nqubits)
         for _ in range(nlayers):
@@ -74,7 +74,7 @@ class QSVD():
             theta: list or numpy.array with the angles to be used in the circuit
 
         Returns:
-            qibo.tensorflow.circuit.TensorflowCircuit with the variational circuit for the QSVD
+            Circuit model implementing the variational ansatz for QSVD
         """
         self._circuit.set_parameters(theta)
         return self._circuit
