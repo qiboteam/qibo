@@ -1,6 +1,6 @@
-from qibo.models import Circuit
-from qibo import gates
 import numpy as np
+from qibo.models import Circuit
+from qibo import gates, K
 from datasets import create_dataset, create_target, fig_template, world_map_template
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
@@ -270,4 +270,4 @@ class single_qubit_classifier:
 
 
 def fidelity(state1, state2):
-    return tf.constant(tf.abs(tf.reduce_sum(tf.math.conj(state2) * state1))**2)
+    return K.abs(K.sum(K.conj(state2) * state1))**2)
