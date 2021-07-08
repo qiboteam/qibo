@@ -83,10 +83,7 @@ def spolynomial(t, params):
 
 def ground_state(nqubits):
     """Returns |++...+> state to be used as the ground state of the easy Hamiltonian."""
-    import tensorflow as tf
-    from qibo.config import DTYPES
-    s = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
-    return tf.cast(s, dtype=DTYPES.get('DTYPECPX'))
+    return np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
 
 
 def plot(qubits, ground, first, gap, dt, T):

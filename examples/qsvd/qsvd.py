@@ -51,7 +51,7 @@ class QSVD():
             rotations: Function that generates rotation gates (defined in __init__)
 
         Returns:
-            qibo.tensorflow.circuit.TensorflowCircuit with the ansatz to be used in the variational circuit
+            Circuit model implementing the variational ansatz
         """
         c = Circuit(self.nqubits)
         for _ in range(nlayers):
@@ -74,7 +74,7 @@ class QSVD():
             theta: list or numpy.array with the angles to be used in the circuit
 
         Returns:
-            qibo.tensorflow.circuit.TensorflowCircuit with the variational circuit for the QSVD
+            Circuit model implementing the variational ansatz for QSVD
         """
         self._circuit.set_parameters(theta)
         return self._circuit
@@ -111,7 +111,7 @@ class QSVD():
         return loss/nshots
 
     def minimize(self, init_theta, init_state=None, nshots=100000,
-                 method='Powell'):
+                 method='Powell', maxiter=None):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
@@ -125,7 +125,7 @@ class QSVD():
         from scipy.optimize import minimize
 
         result = minimize(self.QSVD_cost, init_theta, args=(init_state, nshots),
-                          method=method, options={'disp': True})
+                          method=method, options={'disp': True, 'maxiter': maxiter})
         loss = result.fun
         optimal_angles = result.x
 

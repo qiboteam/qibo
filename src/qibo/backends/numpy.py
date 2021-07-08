@@ -1,3 +1,4 @@
+from qibo.abstractions.states import AbstractState
 from qibo.backends import abstract, einsum_utils
 from qibo.config import raise_error, log
 
@@ -452,6 +453,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
             return x
+        elif isinstance(x, AbstractState):
+            x = x.numpy()
         return self.op.to_numpy(x)
 
     def cast(self, x, dtype='DTYPECPX'):

@@ -10,11 +10,8 @@ class ParallelResources:  # pragma: no cover
     This class takes care of duplicating resources for each process
     and calling the respective loss function.
     """
-    import os
-    from sys import platform
+    import sys
     import multiprocessing as mp
-    if platform == 'darwin':
-        mp.set_start_method('fork')  # enforce on Darwin
 
     # private objects holding the state
     _instance = None
@@ -29,10 +26,10 @@ class ParallelResources:  # pragma: no cover
         if cls._instance is None:
             cls._instance = super(ParallelResources, cls).__new__(
                 cls, *args, **kwargs)
-            if cls.platform == 'win32': # pragma: no cover
+            if cls.sys.platform == 'win32' or cls.sys.platform == 'darwin': # pragma: no cover
                 from qibo.config import raise_error
                 raise_error(NotImplementedError,
-                    "Parallel evaluation not supported on Windows")
+                    "Parallel evaluation supported only on linux.")
         return cls._instance
 
     def run(self, params=None):
@@ -188,14 +185,14 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
 
 def _check_parallel_configuration(processes):
     """Check if configuration is suitable for efficient parallel execution."""
-    import os, psutil
+    import sys, psutil
     from qibo import get_device, get_backend, get_threads
     from qibo.config import raise_error, log
     device = get_device()
-    if os.name == "nt":  # pragma: no cover
-        raise_error(RuntimeError, "Parallel evaluations not supported on Windows.")
-    if get_backend() == "tensorflow":  # pragma: no cover
-        raise_error(RuntimeError, "tensorflow backend does not support parallel evaluations.")
+    if sys.platform == "win32" or sys.platform == 'darwin':  # pragma: no cover
+        raise_error(RuntimeError, "Parallel evaluations supported only on linux.")
+    if get_backend() == "tensorflow" or get_backend() == "qibojit":  # pragma: no cover
+        raise_error(RuntimeError, f"{get_backend()} backend does not support parallel evaluations.")
     if device is not None and "GPU" in device:  # pragma: no cover
         raise_error(RuntimeError, "Parallel evaluations cannot be used with GPU.")
     if ((processes is not None and processes * get_threads() > psutil.cpu_count()) or

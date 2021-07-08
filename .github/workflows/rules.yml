@@ -43,7 +43,7 @@ jobs:
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
       run: |
-        pytest examples/
+        OMP_NUM_THREADS=1 pytest examples/
     - name: Upload coverage to Codecov
       if: startsWith(matrix.os, 'ubuntu')
       uses: codecov/codecov-action@v1

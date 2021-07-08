@@ -17,9 +17,11 @@ parser.add_argument("--RY", action="store_true",
                     help="Use Ry rotations or RxRzRx rotations in the ansatz")
 parser.add_argument("--method", default='Powell',
                     help="Classical otimizer employed", type=str)
+parser.add_argument("--maxiter", default=None,
+                    help="Maximum number of iterations.", type=int)
 
 
-def main(nqubits, subsize, nlayers, nshots, RY, method):
+def main(nqubits, subsize, nlayers, nshots, RY, method, maxiter):
 
     # We initialize the QSVD
     Qsvd = QSVD(nqubits, subsize, nlayers, RY=RY)
@@ -60,7 +62,7 @@ def main(nqubits, subsize, nlayers, nshots, RY, method):
     # We train the QSVD
     print('Training QSVD...')
     cost_function, optimal_angles = Qsvd.minimize(initial_parameters, init_state=initial_state,
-                                                  nshots=nshots, method=method)
+                                                  nshots=nshots, method=method, maxiter=maxiter)
 
     # We use the optimal angles to compute the Schmidt coefficients of the bipartion
     Schmidt_coefficients = Qsvd.Schmidt_coeff(

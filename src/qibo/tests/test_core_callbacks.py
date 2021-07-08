@@ -204,20 +204,20 @@ def test_entropy_large_circuit(backend, accelerators):
     c1.add((gates.RY(i, thetas[0, i]) for i in range(8)))
     c1.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state1 = c1()
-    e1 = target_entropy(state1)
+    e1 = K.to_numpy(target_entropy(state1))
 
     c2 = Circuit(8)
     c2.add((gates.RY(i, thetas[1, i]) for i in range(8)))
     c2.add((gates.CZ(i, i + 1) for i in range(1, 7, 2)))
     c2.add(gates.CZ(0, 7))
     state2 = (c1 + c2)()
-    e2 = target_entropy(state2)
+    e2 = K.to_numpy(target_entropy(state2))
 
     c3 = Circuit(8)
     c3.add((gates.RY(i, thetas[2, i]) for i in range(8)))
     c3.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state3 = (c1 + c2 + c3)()
-    e3 = target_entropy(state3)
+    e3 = K.to_numpy(target_entropy(state3))
 
     entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
     c = Circuit(8, accelerators)
@@ -235,7 +235,7 @@ def test_entropy_large_circuit(backend, accelerators):
     state = c()
 
     K.assert_allclose(state3, state)
-    K.assert_allclose(entropy[:], K.cast([0, e1, e2, e3]))
+    K.assert_allclose(entropy[:], [0, e1, e2, e3])
 
 
 def test_entropy_density_matrix(backend):

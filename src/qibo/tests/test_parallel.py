@@ -1,7 +1,7 @@
 """
 Testing parallel evaluations.
 """
-import os
+import sys
 import numpy as np
 import pytest
 import qibo
@@ -14,7 +14,7 @@ def test_parallel_circuit_evaluation(backend):
     """Evaluate circuit for multiple input states."""
     device = qibo.get_device()
     backend = qibo.get_backend()
-    if 'GPU' in qibo.get_device() or os.name == 'nt' or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
+    if 'GPU' in qibo.get_device() or sys.platform == "win32" or sys.platform == "darwin" or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)
@@ -38,7 +38,7 @@ def test_parallel_parametrized_circuit(backend):
     """Evaluate circuit for multiple parameters."""
     device = qibo.get_device()
     backend = qibo.get_backend()
-    if 'GPU' in qibo.get_device() or os.name == 'nt' or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
+    if 'GPU' in qibo.get_device() or sys.platform == "win32" or sys.platform == "darwin" or backend == "tensorflow" or backend == "qibojit": # pragma: no cover
         pytest.skip("unsupported configuration")
     original_threads = qibo.get_threads()
     qibo.set_threads(1)

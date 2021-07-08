@@ -29,7 +29,7 @@ The `FALQON` class behaves similarly to the `QAOA` one. It admits the following 
             Default solver is 'exp'.
 - `callbacks`: List of callbacks to calculate during evolution.
 - `accelerators`: Dictionary of devices to use for distributed
-            execution. See `qibo.tensorflow.distcircuit.DistributedCircuit`
+            execution. See `qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
             is a `qibo.abstractions.hamiltonians.TrotterHamiltonian`.
 - `memory_device`: Name of device where the full state will be saved.
