@@ -51,8 +51,16 @@ class Backend:
             self.available_backends["icarusq"] = IcarusQBackend
             self.hardware_backends["icarusq"] = IcarusQBackend
 
+        self.constructed_backends = {}
+        self._active_backend = None
+        self.qnp = self.construct_backend("numpy")
+        # Create the default active backend
+        if "QIBO_BACKEND" in os.environ:  # pragma: no cover
+            self.active_backend = os.environ.get("QIBO_BACKEND")
+        self.active_backend = active_backend
+
         # raise performance warning if qibojit and qibotf are not available
-        log.info("Using {} backend.".format(active_backend))
+        self.show_config()
         if active_backend == "numpy": # pragma: no cover
             log.warning("numpy backend uses `np.einsum` and supports CPU only. "
                         "Consider installing the qibojit or qibotf backends for "
@@ -64,14 +72,6 @@ class Backend:
                         "high performance custom operators for TensorFlow "
                         "please use `pip install qibotf`. Alternatively, "
                         "consider installing the qibojit backend.")
-
-        self.constructed_backends = {}
-        self._active_backend = None
-        self.qnp = self.construct_backend("numpy")
-        # Create the default active backend
-        if "QIBO_BACKEND" in os.environ:  # pragma: no cover
-            self.active_backend = os.environ.get("QIBO_BACKEND")
-        self.active_backend = active_backend
 
     @property
     def active_backend(self):
@@ -119,6 +119,9 @@ class Backend:
     def __repr__(self):
         return str(self)
 
+    def show_config(self):
+        log.info(f"Using {self.active_backend.name} backend on {self.active_backend.default_device}")
+
     @staticmethod
     def check_availability(module_name):
         """Check if module is installed.
@@ -152,6 +155,7 @@ def set_backend(backend="qibojit"):
     if not config.ALLOW_SWITCHERS and backend != K.name:
         log.warning("Backend should not be changed after allocating gates.")
     K.active_backend = backend
+    K.show_config()
 
 
 def get_backend():
