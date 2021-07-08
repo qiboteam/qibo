@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 import argparse
 
 
-def main(nqubits, layers, compress, lambdas):
+def main(nqubits, layers, compress, lambdas, maxiter):
 
     def encoder_hamiltonian_simple(nqubits, ncompress):
         """Creates the encoding Hamiltonian.
@@ -69,7 +69,7 @@ def main(nqubits, layers, compress, lambdas):
 
     count = [0]
     result = minimize(lambda p: cost_function(p, count), initial_params,
-                      method='L-BFGS-B', options={'maxiter': 2.0e3, 'maxfun': 2.0e3})
+                      method='L-BFGS-B', options={'maxiter': maxiter, 'maxfun': 2.0e3})
 
     print('Final parameters: ', result.x)
     print('Final cost function: ', result.fun)
@@ -81,5 +81,6 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=2, type=int)
     parser.add_argument("--compress", default=2, type=int)
     parser.add_argument("--lambdas", default=[0.9, 0.95, 1.0, 1.05, 1.10], type=list)
+    parser.add_argument("--maxiter", default=2000, type=int)
     args = parser.parse_args()
     main(**vars(args))

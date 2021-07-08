@@ -78,7 +78,8 @@ def test_aavqe(nqubits, layers, maxsteps, T_max):
 @pytest.mark.parametrize("layers", [1, 2])
 @pytest.mark.parametrize("compress", [1])
 @pytest.mark.parametrize("lambdas", [[0.9, 0.95, 1.0, 1.05, 1.10]])
-def test_autoencoder(nqubits, layers, compress, lambdas):
+@pytest.mark.parametrize("maxiter", [1])
+def test_autoencoder(nqubits, layers, compress, lambdas, maxiter):
     args = locals()
     os.chdir(os.path.join(base_dir, "autoencoder"))
     run_script(args)
@@ -102,7 +103,7 @@ def test_hash_grover(h_value, collisions, b):
 @pytest.mark.parametrize("nlayers", [1, 2])
 @pytest.mark.parametrize("nshots", [1000])
 @pytest.mark.parametrize("RY", [False, True])
-def test_qsvd(nqubits, subsize, nlayers, nshots, RY, method="Powell"):
+def test_qsvd(nqubits, subsize, nlayers, nshots, RY, method="Powell", maxiter=1):
     args = locals()
     path = os.path.join(base_dir, "qsvd")
     sys.path[-1] = path

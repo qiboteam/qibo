@@ -111,7 +111,7 @@ class QSVD():
         return loss/nshots
 
     def minimize(self, init_theta, init_state=None, nshots=100000,
-                 method='Powell'):
+                 method='Powell', maxiter=None):
         """
         Args:
             theta: list or numpy.array with the angles to be used in the circuit
@@ -125,7 +125,7 @@ class QSVD():
         from scipy.optimize import minimize
 
         result = minimize(self.QSVD_cost, init_theta, args=(init_state, nshots),
-                          method=method, options={'disp': True})
+                          method=method, options={'disp': True, 'maxiter': maxiter})
         loss = result.fun
         optimal_angles = result.x
 
