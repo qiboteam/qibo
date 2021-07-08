@@ -223,7 +223,7 @@ class single_qubit_classifier:
         norm_class = Normalize(vmin=0, vmax=10)
         for i, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = K.to_numpy(C.execute())
+            state = C.execute()
             angles[i, 0] = np.pi / 2 - \
                 np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
             angles[i, 1] = np.angle(state[1] / state[0])
@@ -268,4 +268,4 @@ class single_qubit_classifier:
 
 
 def fidelity(state1, state2):
-    return K.abs(K.sum(K.conj(state2) * state1)) ** 2
+    return K.abs(K.sum(K.qnp.conj(state2) * state1)) ** 2

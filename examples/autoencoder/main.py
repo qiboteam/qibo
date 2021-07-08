@@ -56,7 +56,7 @@ def main(nqubits, layers, compress, lambdas, maxiter):
             print(count[0], cost/len(ising_groundstates))
         count[0] += 1
 
-        return cost/len(ising_groundstates)
+        return K.to_numpy(cost)/len(ising_groundstates)
 
     nparams = 2 * nqubits * layers + nqubits
     initial_params = np.random.uniform(0, 2*np.pi, nparams)
