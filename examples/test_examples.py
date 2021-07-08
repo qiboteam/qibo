@@ -122,7 +122,7 @@ def test_reuploading_classifier(dataset, layers):
 
 
 @pytest.mark.parametrize("data", [(2, 0.4, 0.05, 0.1, 1.9)])
-@pytest.mark.parametrize("bins", [8, 16])
+@pytest.mark.parametrize("bins", [8, 10])
 def test_unary(data, bins, M=10, shots=1000):
     args = locals()
     if "functions" in sys.modules:
