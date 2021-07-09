@@ -214,8 +214,7 @@ def set_threads(nthreads):
     Args:
         nthreads (int): number of threads.
     """
-    for bk in K.constructed_backends.values():
-        bk.set_threads(nthreads)
+    K.set_threads(nthreads)
 
 
 def get_threads():

@@ -30,6 +30,10 @@ class NumpyBackend(abstract.AbstractBackend):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
 
+    def set_threads(self, nthreads):
+        log.warning("Numpy backend supports only single-thread execution."
+                    "Cannot change the number of threads.")
+
     def to_numpy(self, x):
         return x
 
@@ -446,7 +450,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
             self.set_engine("numba")
 
     def set_threads(self, nthreads):
-        super().set_threads(nthreads)
+        abstract.AbstractBackend.set_threads(self, nthreads)
         import numba # pylint: disable=E0401
         numba.set_num_threads(nthreads)
 
