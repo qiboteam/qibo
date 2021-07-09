@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import numpy as np
-from qibo.models import Circuit
 from qibo import hamiltonians, gates, models, K
 from qibo.hamiltonians import Hamiltonian
 from scipy.optimize import minimize
@@ -20,7 +19,7 @@ def main(layers, autoencoder, example, maxiter):
         Returns:
             Encoding Hamiltonian.
         """
-        m0 = hamiltonians.Z(ncompress, numpy=True).matrix
+        m0 = K.to_numpy(hamiltonians.Z(ncompress).matrix)
         m1 = np.eye(2 ** (nqubits - ncompress), dtype=m0.dtype)
         ham = hamiltonians.Hamiltonian(nqubits, np.kron(m1, m0))
         return 0.5 * (ham + ncompress)

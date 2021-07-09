@@ -163,7 +163,7 @@ def test_vqe_custom_gates_errors():
 
 
 def test_initial_state(backend, accelerators):
-    h = hamiltonians.TFIM(5, h=1.0, trotter=True)
+    h = hamiltonians.TFIM(5, h=1.0, dense=False)
     qaoa = models.QAOA(h, accelerators=accelerators)
     qaoa.set_parameters(np.random.random(4))
     target_state = np.ones(2 ** 5) / np.sqrt(2 ** 5)
@@ -171,20 +171,20 @@ def test_initial_state(backend, accelerators):
     K.assert_allclose(final_state, target_state)
 
 
-@pytest.mark.parametrize("solver,trotter",
+@pytest.mark.parametrize("solver,dense",
                          [("exp", False), ("exp", True),
                           ("rk4", False),  ("rk4", True),
                           ("rk45", False), ("rk45", True)])
-def test_qaoa_execution(backend, solver, trotter, accel=None):
-    h = hamiltonians.TFIM(6, h=1.0, trotter=trotter)
-    m = hamiltonians.X(6, trotter=trotter)
+def test_qaoa_execution(backend, solver, dense, accel=None):
+    h = hamiltonians.TFIM(6, h=1.0, dense=dense)
+    m = hamiltonians.X(6, dense=dense)
     # Trotter and RK require small p's!
     params = 0.01 * (1 - 2 * np.random.random(4))
     state = random_state(6)
     # set absolute test tolerance according to solver
     if "rk" in solver:
         atol = 1e-2
-    elif trotter:
+    elif not dense:
         atol = 1e-5
     else:
         atol = 0
@@ -206,7 +206,7 @@ def test_qaoa_execution(backend, solver, trotter, accel=None):
 
 
 def test_qaoa_distributed_execution(backend, accelerators):
-    test_qaoa_execution(backend, "exp", True, accelerators)
+    test_qaoa_execution(backend, "exp", False, accelerators)
 
 
 def test_qaoa_callbacks(backend, accelerators):
@@ -218,7 +218,7 @@ def test_qaoa_callbacks(backend, accelerators):
     params = 0.1 * np.random.random(4)
     state = random_state(5)
 
-    ham = hamiltonians.Y(5, trotter=True)
+    ham = hamiltonians.Y(5, dense=False)
     qaoa = models.QAOA(ham, callbacks=[energy], accelerators=accelerators)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
@@ -243,8 +243,8 @@ def test_qaoa_errors():
     with pytest.raises(TypeError):
         qaoa = models.QAOA("test")
     # Hamiltonians of different type
-    h = hamiltonians.TFIM(4, h=1.0, trotter=True)
-    m = hamiltonians.X(4, trotter=False)
+    h = hamiltonians.TFIM(4, h=1.0, dense=False)
+    m = hamiltonians.X(4, dense=True)
     with pytest.raises(TypeError):
         qaoa = models.QAOA(h, mixer=m)
     # distributed execution with RK solver
@@ -256,18 +256,18 @@ def test_qaoa_errors():
         qaoa.minimize(np.random.random(5))
 
 
-test_names = "method,options,trotter,filename"
+test_names = "method,options,dense,filename"
 test_values = [
-    ("BFGS", {'maxiter': 1}, False, "qaoa_bfgs.out"),
-    ("BFGS", {'maxiter': 1}, True, "trotter_qaoa_bfgs.out"),
-    ("Powell", {'maxiter': 1}, True, "trotter_qaoa_powell.out"),
-    ("sgd", {"nepochs": 5}, False, None)
+    ("BFGS", {'maxiter': 1}, True, "qaoa_bfgs.out"),
+    ("BFGS", {'maxiter': 1}, False, "trotter_qaoa_bfgs.out"),
+    ("Powell", {'maxiter': 1}, False, "trotter_qaoa_powell.out"),
+    ("sgd", {"nepochs": 5}, True, None)
     ]
 @pytest.mark.parametrize(test_names, test_values)
-def test_qaoa_optimization(backend, method, options, trotter, filename):
+def test_qaoa_optimization(backend, method, options, dense, filename):
     if method == "sgd" and qibo.get_backend() != "tensorflow":
         pytest.skip("Skipping SGD test for unsupported backend.")
-    h = hamiltonians.XXZ(3, trotter=trotter)
+    h = hamiltonians.XXZ(3, dense=dense)
     qaoa = models.QAOA(h)
     initial_p = [0.05, 0.06, 0.07, 0.08]
     best, params, _ = qaoa.minimize(initial_p, method=method, options=options)

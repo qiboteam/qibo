@@ -148,7 +148,7 @@ class Gap(BackendCallback, abstract_callbacks.Gap):
         if self.evolution is None:
             raise_error(ValueError, "Gap callback can only be used in "
                                     "adiabatic evolution models.")
-        hamiltonian = self.evolution.hamiltonian()
+        hamiltonian = self.evolution.solver.current_hamiltonian
         # Call the eigenvectors so that they are cached for the ``exp`` call
         hamiltonian.eigenvectors()
         eigvals = hamiltonian.eigenvalues()

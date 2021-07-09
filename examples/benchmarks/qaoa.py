@@ -10,20 +10,20 @@ from qibo import models, hamiltonians, K
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, help="Number of qubits.", type=int)
 parser.add_argument("--nangles", default=4, help="Number of layers.", type=int)
-parser.add_argument("--trotter", action="store_true", help="Use TrotterHamiltonian.")
+parser.add_argument("--dense", action="store_true", help="Use dense Hamiltonian or terms.")
 parser.add_argument("--solver", default="exp", help="Solver to apply gates.", type=str)
 parser.add_argument("--method", default="Powell", help="Optimization method.", type=str)
 parser.add_argument("--maxiter", default=None, help="Maximum optimization iterations.", type=int)
 
 
-def main(nqubits, nangles, trotter=False, solver="exp",
+def main(nqubits, nangles, dense=True, solver="exp",
          method="Powell", maxiter=None):
     """Performs a QAOA minimization test."""
 
     print("Number of qubits:", nqubits)
     print("Number of angles:", nangles)
 
-    hamiltonian = hamiltonians.XXZ(nqubits=nqubits, trotter=trotter)
+    hamiltonian = hamiltonians.XXZ(nqubits=nqubits, dense=dense)
     start_time = time.time()
     qaoa = models.QAOA(hamiltonian, solver=solver)
     creation_time = time.time() - start_time

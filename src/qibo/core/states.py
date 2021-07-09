@@ -158,11 +158,6 @@ class MatrixState(VectorState):
         return K.reshape(K.cast(state, dtype='DTYPE'), len(qubits) * (2,))
 
     def expectation(self, hamiltonian, normalize=False):
-        from qibo.abstractions.hamiltonians import TrotterHamiltonian
-        if isinstance(hamiltonian, TrotterHamiltonian):
-            # use dense form of Trotter Hamiltonians because their
-            # multiplication to rank-2 tensors is not implemented
-            hamiltonian = hamiltonian.dense
         ev = K.real(K.trace(hamiltonian @ self.tensor))
         if normalize:
             norm = K.real(K.trace(self.tensor))
@@ -192,7 +187,7 @@ class DistributedState(VectorState):
         self.circuit_cls = DistributedCircuit
         if not isinstance(circuit, self.circuit_cls):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
-                                   "distributed state.")
+                                   "distributed state.".format(type(circuit)))
         self.circuit = circuit
         # List of length ``ndevices`` holding ``tf.Variable``s with
         # the state pieces (created in ``self.create_pieces()``)

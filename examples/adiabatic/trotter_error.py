@@ -33,7 +33,7 @@ def main(nqubits, hfield, T, save):
         save (bool): Whether to save the plots.
     """
     dense_h = hamiltonians.TFIM(nqubits, h=hfield)
-    trotter_h = hamiltonians.TFIM(nqubits, h=hfield, trotter=True)
+    trotter_h = hamiltonians.TFIM(nqubits, h=hfield, dense=False)
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
 
     nsteps_list = np.arange(50, 550, 50)

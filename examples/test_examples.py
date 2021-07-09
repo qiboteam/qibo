@@ -169,9 +169,9 @@ def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
 
 @pytest.mark.parametrize("nqubits", [3, 4])
 @pytest.mark.parametrize("nangles", [2])
-@pytest.mark.parametrize("trotter", [False, True])
+@pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("solver", ["exp", "rk4"])
-def test_qaoa_benchmarks(nqubits, nangles, trotter, solver, method="Powell"):
+def test_qaoa_benchmarks(nqubits, nangles, dense, solver, method="Powell"):
     args = locals()
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
@@ -208,10 +208,10 @@ def test_grover3sat(nqubits, instance):
 
 @pytest.mark.parametrize("nqubits,instance,T,dt", [(4, 1, 10, 1e-1)])
 @pytest.mark.parametrize("solver", ["exp", "rk4"])
-@pytest.mark.parametrize("trotter", [True, False])
+@pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("params", [[0.5, 0.5]])
 @pytest.mark.parametrize("method,maxiter", [("BFGS", 1)])
-def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
+def test_adiabatic3sat(nqubits, instance, T, dt, solver, dense, params,
                        method, maxiter, plot=False):
     if "functions" in sys.modules:
         del sys.modules["functions"]

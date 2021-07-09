@@ -677,7 +677,7 @@ to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>` section.
 When a :class:`qibo.abstractions.hamiltonians.Hamiltonian` is used then solvers will
 exponentiate it using its full matrix. Alternatively, if a
-:class:`qibo.core.hamiltonians.TrotterHamiltonian` is used then solvers
+:class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used then solvers
 will fall back to traditional Qibo circuits that perform Trotter steps. For
 more information on how the Trotter decomposition is implemented in Qibo we
 refer to the :ref:`Using Trotter decomposition <trotterdecomp-example>` example.
@@ -690,7 +690,7 @@ the model. For example the previous example would have to be modified as:
 
     from qibo import models, hamiltonians
 
-    hamiltonian = hamiltonians.XXZ(6, trotter=True)
+    hamiltonian = hamiltonians.XXZ(6, dense=False)
     qaoa = models.QAOA(hamiltonian, accelerators={"/GPU:0": 1, "/GPU:1": 1})
 
 
@@ -1140,8 +1140,8 @@ functionality to perform this transformation automatically, if the underlying
 Hamiltonian object is defined as a sum of commuting parts that consist of terms
 that can be exponentiated efficiently.
 Such Hamiltonian can be implemented in Qibo using
-:class:`qibo.core.hamiltonians.TrotterHamiltonian`.
-The implementation of Trotter decmoposition is based in Sec.
+:class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+The implementation of Trotter decomposition is based on Sec.
 4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 Below is an example of how to use this object in practice:
 
@@ -1149,8 +1149,8 @@ Below is an example of how to use this object in practice:
 
     from qibo import hamiltonians
 
-    # Define TFIM model as a ``TrotterHamiltonian``
-    ham = hamiltonians.TFIM(nqubits=5, trotter=True)
+    # Define TFIM model as a non-dense ``SymbolicHamiltonian``
+    ham = hamiltonians.TFIM(nqubits=5, dense=False)
     # This object can be used to create the circuit that
     # implements a single Trotter time step ``dt``
     circuit = ham.circuit(dt=1e-2)
@@ -1162,20 +1162,25 @@ exponentials of the Trotter decomposition and can be executed on any state.
 
 Note that in the transverse field Ising model (TFIM) that was used in this
 example is among the pre-coded Hamiltonians in Qibo and could be created as
-a :class:`qibo.core.hamiltonians.TrotterHamiltonian` simply using the
-``trotter`` flag. Defining custom Hamiltonians can be more complicated, however
-Qibo simplifies this process by providing the option to define Hamiltonians
-symbolically through the use of ``sympy``. For more information on this we
-refer to the
+a :class:`qibo.core.hamiltonians.SymbolicHamiltonian` simply using the
+``dense=False`` flag. For more information on the difference between dense
+and non-dense Hamiltonians we refer to the :ref:`Hamiltonians <Hamiltonians>`
+section. Note that only non-dense Hamiltonians created using ``dense=False``
+or through the :class:`qibo.core.hamiltonians.SymbolicHamiltonian` object
+can be used for evolution using Trotter decomposition. If a dense Hamiltonian
+is used then evolution will be done by exponentiating the full Hamiltonian
+matrix.
+
+Defining custom Hamiltonians from terms can be more complicated,
+however Qibo simplifies this process by providing the option
+to define Hamiltonians symbolically through the use of ``sympy``.
+For more information on this we refer to the
 :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
 example.
 
-A :class:`qibo.core.hamiltonians.TrotterHamiltonian` can also be used to
+A :class:`qibo.core.hamiltonians.SymbolicHamiltonian` can also be used to
 simulate time evolution. This can be done by passing the Hamiltonian to a
 :class:`qibo.evolution.StateEvolution` model and using the exponential solver.
-Qibo automatically finds that this Hamiltonian is a
-:class:`qibo.core.hamiltonians.TrotterHamiltonian` object
-and uses the Trotter decomposition to perform the evolution.
 For example:
 
 .. code-block::  python
@@ -1184,8 +1189,8 @@ For example:
     from qibo import models, hamiltonians
 
     nqubits = 5
-    # Create a critical TFIM Hamiltonian as ``TrotterHamiltonian``
-    ham = hamiltonians.TFIM(nqubits=nqubits, h=1.0, trotter=True)
+    # Create a critical TFIM Hamiltonian as ``SymbolicHamiltonian``
+    ham = hamiltonians.TFIM(nqubits=nqubits, h=1.0, dense=False)
     # Define the |+++++> initial state
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     # Define the evolution model
@@ -1280,7 +1285,7 @@ used for simulating adiabatic evolution. The solver can be specified during the
 initialization of the :class:`qibo.models.AdiabaticEvolution` model and a
 Trotter decomposition may be used with the exponential solver. The Trotter
 decomposition will be used automatically if ``h0`` and ``h1`` are defined
-using as :class:`qibo.core.hamiltonians.TrotterHamiltonian` objects. For
+using as :class:`qibo.core.hamiltonians.SymbolicHamiltonian` objects. For
 pre-coded Hamiltonians this can be done simply as:
 
 .. code-block::  python
@@ -1288,9 +1293,9 @@ pre-coded Hamiltonians this can be done simply as:
     from qibo import hamiltonians, models
 
     nqubits = 4
-    # Define ``TrotterHamiltonian``s
-    h0 = hamiltonians.X(nqubits, trotter=True)
-    h1 = hamiltonians.TFIM(nqubits, h=0, trotter=True)
+    # Define ``SymolicHamiltonian``s
+    h0 = hamiltonians.X(nqubits, dense=False)
+    h1 = hamiltonians.TFIM(nqubits, h=0, dense=False)
     # Perform adiabatic evolution using the Trotter decomposition
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1)
     final_state = evolution(final_time=1.0)
@@ -1302,19 +1307,7 @@ devices by passing an ``accelerators`` dictionary in the creation of the
 
 Note that ``h0`` and ``h1`` should have the same type, either both
 :class:`qibo.core.hamiltonians.Hamiltonian` or both
-:class:`qibo.core.hamiltonians.TrotterHamiltonian`.
-When :class:`qibo.core.hamiltonians.TrotterHamiltonian` is used, then ``h0`` and
-``h1`` should also have the same part structure, otherwise it will not be
-possible to add them in order to create the total Hamiltonian. For more
-information on this we refer to
-:meth:`qibo.core.hamiltonians.TrotterHamiltonian.is_compatible`.
-If the given Hamiltonians do not have the same part structure and ``h0``
-consists of one-body terms only then Qibo will use an automatic algorithm
-(:meth:`qibo.core.hamiltonians.TrotterHamiltonian.make_compatible`)
-to rearrange the terms of ``h0`` so that it matches the part structure of ``h1``.
-It is important to note that in some applications making ``h0`` and ``h1``
-compatible manually may take better advantage of caching and lead to better
-execution performance compared to using the automatic functionality.
+:class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
 
 
 Optimizing the scheduling function
@@ -1358,12 +1351,12 @@ How to define custom Hamiltonians using symbols?
 ------------------------------------------------
 
 In order to use the VQE, QAOA and time evolution models in Qibo the user has to
-define Hamiltonians based on :class:`qibo.abstractions.hamiltonians.AbstractHamiltonian`, or
-:class:`qibo.core.hamiltonians.TrotterHamiltonian` when the Trotter
-decomposition is to be used. Qibo provides pre-coded Hamiltonians for some
-common physics models, such as the transverse field Ising model (TFIM) and the
-Heisenberg model (see :ref:`Hamiltonians <Hamiltonians>` for a complete list
-of the pre-coded models).
+define Hamiltonians based on :class:`qibo.core.hamiltonians.Hamiltonian` which
+uses the full matrix representation of the corresponding operator or
+:class:`qibo.core.hamiltonians.SymbolicHamiltonian` which uses a more efficient
+term representation. Qibo provides pre-coded Hamiltonians for some common models,
+such as the transverse field Ising model (TFIM) and the Heisenberg model
+(see :ref:`Hamiltonians <Hamiltonians>` for a complete list of the pre-coded models).
 In order to explore other problems the user needs to define the Hamiltonian
 objects from scratch.
 
@@ -1430,21 +1423,7 @@ For example, the TFIM on four qubits could be constructed as:
 
 
 Defining Hamiltonians from symbols is usually a simple process as the symbolic
-form is very close to the form of the Hamiltonian on paper. Note that in the
-case of :class:`qibo.core.hamiltonians.TrotterHamiltonian`, Qibo handles
-automatically the Trotter decomposition by splitting to the appropriate terms.
-In order to construct ``TrotterHamiltonian`` from symbols one can use the
-:meth:`qibo.core.hamiltonians.TrotterHamiltonian.from_symbolic` method.
-
-As noted in the :ref:`How to simulate adiabatic time evolution? <adevol-example>`,
-when using Trotter decomposition to simulate adiabatic evolution, then ``h0``
-and ``h1`` should be compatible in order to add them.
-This is usually not true when constructing Hamiltonians using symbols.
-However, if the constructed Hamiltonians are not compatible but ``h0`` consists
-of one-body terms only (which is the case in most adiabatic evolution
-applications) then Qibo will use an automatic algorithm
-(:meth:`qibo.core.hamiltonians.TrotterHamiltonian.make_compatible`) to make it
-compatible to ``h1``. We note that in some applications, making the Hamiltonians
-compatible  manually instead of relying on the automatic functionality,
-may take better advantage of caching compared and lead to better execution
-performance.
+form is very close to the form of the Hamiltonian on paper. Note that when a
+:class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used for time evolution,
+Qibo handles automatically automatically the Trotter decomposition by splitting
+to the appropriate terms.

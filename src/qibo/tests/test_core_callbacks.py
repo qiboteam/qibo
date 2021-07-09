@@ -304,16 +304,16 @@ def test_energy(backend, density_matrix):
     K.assert_allclose(energy(K.cast(state)), target_energy)
 
 
-@pytest.mark.parametrize("trotter", [False, True])
+@pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("check_degenerate", [False, True])
-def test_gap(backend, trotter, check_degenerate):
+def test_gap(backend, dense, check_degenerate):
     from qibo import hamiltonians
-    h0 = hamiltonians.X(4, trotter=trotter)
+    h0 = hamiltonians.X(4, dense=dense)
     if check_degenerate:
         # use h=0 to make this Hamiltonian degenerate
-        h1 = hamiltonians.TFIM(4, h=0, trotter=trotter)
+        h1 = hamiltonians.TFIM(4, h=0, dense=dense)
     else:
-        h1 = hamiltonians.TFIM(4, h=1, trotter=trotter)
+        h1 = hamiltonians.TFIM(4, h=1, dense=dense)
 
     ham = lambda t: (1 - t) * h0.matrix + t * h1.matrix
     targets = {"ground": [], "excited": [], "gap": []}

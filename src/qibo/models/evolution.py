@@ -1,7 +1,7 @@
 """Models for time evolution of state vectors."""
 from qibo import solvers, optimizers, K
 from qibo.abstractions import hamiltonians
-from qibo.core import circuit, states
+from qibo.core import adiabatic, circuit, states
 from qibo.config import log, raise_error
 from qibo.callbacks import Norm, Gap
 
@@ -15,6 +15,17 @@ class StateEvolution:
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
+            Available solvers are 'exp' which uses the exact unitary evolution
+            operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
+            integrate the Schordinger's time-dependent equation in time.
+            When the 'exp' solver is used to evolve a
+            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            Trotter decomposition of the evolution operator will be calculated
+            and used automatically. If the 'exp' is used on a dense
+            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            matrix will be exponentiated to obtain the exact evolution operator.
+            Runge-Kutta solvers use simple matrix multiplications of the
+            Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
@@ -41,7 +52,8 @@ class StateEvolution:
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if isinstance(hamiltonian, hamiltonians.AbstractHamiltonian):
+        hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
+        if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
         else:
             ham = hamiltonian(0)
@@ -53,13 +65,12 @@ class StateEvolution:
             raise_error(ValueError, f"Time step dt should be positive but is {dt}.")
         self.dt = dt
 
-        if (accelerators is not None and
-            (not isinstance(ham, hamiltonians.TrotterHamiltonian)
-             or solver != "exp")):
-            raise_error(NotImplementedError, "Distributed evolution is only "
-                                             "implemented using the Trotter "
-                                             "exponential solver.")
-        if isinstance(ham, hamiltonians.TrotterHamiltonian):
+        disthamtypes = (hamiltonians.SymbolicHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
+        if accelerators is not None:
+            if not isinstance(ham, disthamtypes) or solver != "exp":
+                raise_error(NotImplementedError, "Distributed evolution is only "
+                                                 "implemented using the Trotter "
+                                                 "exponential solver.")
             ham.circuit(dt, accelerators, memory_device)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
@@ -152,6 +163,17 @@ class AdiabaticEvolution(StateEvolution):
         dt (float): Time step to use for the numerical integration of
             Schrondiger's equation.
         solver (str): Solver to use for integrating Schrodinger's equation.
+            Available solvers are 'exp' which uses the exact unitary evolution
+            operator and 'rk4' or 'rk45' which use Runge-Kutta methods to
+            integrate the Schordinger's time-dependent equation in time.
+            When the 'exp' solver is used to evolve a
+            :class:`qibo.core.hamiltonians.SymbolicHamiltonian` then the
+            Trotter decomposition of the evolution operator will be calculated
+            and used automatically. If the 'exp' is used on a dense
+            :class:`qibo.core.hamiltonians.Hamiltonian` the full Hamiltonian
+            matrix will be exponentiated to obtain the exact evolution operator.
+            Runge-Kutta solvers use simple matrix multiplications of the
+            Hamiltonian to the state and no exponentiation is involved.
         callbacks (list): List of callbacks to calculate during evolution.
         accelerators (dict): Dictionary of devices to use for distributed
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
@@ -165,53 +187,36 @@ class AdiabaticEvolution(StateEvolution):
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
                  accelerators=None, memory_device="/CPU:0"):
-        if not issubclass(type(h0), hamiltonians.AbstractHamiltonian):
-            raise_error(TypeError, "h0 should be a hamiltonians.Hamiltonian "
-                                   "object but is {}.".format(type(h0)))
-        if type(h1) != type(h0):
-            raise_error(TypeError, "h1 should be of the same type {} of h0 but "
-                                   "is {}.".format(type(h0), type(h1)))
-        if h0.nqubits != h1.nqubits:
-            raise_error(ValueError, "H0 has {} qubits while H1 has {}."
-                                    "".format(h0.nqubits, h1.nqubits))
-        if isinstance(h0, hamiltonians.TrotterHamiltonian):
-            if not h1.is_compatible(h0):
-                h0 = h1.make_compatible(h0)
-        super(AdiabaticEvolution, self).__init__(h0, dt, solver, callbacks,
+        self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
+        super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver, callbacks,
                                                  accelerators, memory_device)
-        self.h0 = h0
-        self.h1 = h1
 
         # Set evolution model to "Gap" callback if one exists
         for callback in self.callbacks:
             if isinstance(callback, Gap):
                 callback.evolution = self
 
-        # Flag that remembers if ``set_hamiltonian`` have not been called
-        self.set_hamiltonian_flag = True
-
         # Flag to control if loss messages are shown during optimization
         self.opt_messages = False
         self.opt_history = {"params": [], "loss": []}
 
-        self._schedule = None
-        self._param_schedule = None
+        self.parametrized_schedule = None
         nparams = s.__code__.co_argcount
         if nparams == 1: # given ``s`` is a function of time only
             self.schedule = s
         elif nparams == 2: # given ``s`` has undefined parameters
-            self._param_schedule = s
+            self.parametrized_schedule = s
         else:
-            raise_error(ValueError, f"Scheduling function shoud take one or two "
-                                     "arguments but it takes {nparams}.")
+            raise_error(ValueError, f"Scheduling function shoud take one or "
+                                     "two arguments but it takes {nparams}.")
 
     @property
     def schedule(self):
         """Returns scheduling as a function of time."""
-        if self._schedule is None:
-            raise_error(ValueError, "Cannot access scheduling function before setting "
-                                    "its free parameters.")
-        return self._schedule
+        if self.hamiltonian.schedule is None:
+            raise_error(ValueError, "Cannot access scheduling function before "
+                                    "setting its free parameters.")
+        return self.hamiltonian.schedule
 
     @schedule.setter
     def schedule(self, f):
@@ -222,53 +227,20 @@ class AdiabaticEvolution(StateEvolution):
         s1 = f(1)
         if abs(s1 - 1) > self.ATOL:
             raise_error(ValueError, f"s(1) should be 1 but is {s1}.")
-        self._schedule = f
+        self.hamiltonian.schedule = f
 
     def set_parameters(self, params):
         """Sets the variational parameters of the scheduling function."""
-        if self._param_schedule is not None:
-            self.schedule = lambda t: self._param_schedule(t, params[:-1])
-        self.set_hamiltonian(params[-1])
-
-    def set_hamiltonian(self, total_time):
-        self.set_hamiltonian_flag = False
-        def hamiltonian(t):
-            # Disable warning that ``schedule`` is not Callable
-            st = complex(self.schedule(t / total_time)) # pylint: disable=E1102
-            return self.h0 * (1 - st) + self.h1 * st
-        self.solver.hamiltonian = hamiltonian
-
-    def hamiltonian(self, t=None, total_time=None):
-        """Returns the adiabatic evolution Hamiltonian at a given time.
-
-        Args:
-            t (float): Time to calculate the Hamiltonian. If no time is given
-                the current time set in the solver is used.
-            total_time (float): Total time of adiabatic evolution. Required
-                only if the user wants to access the Hamiltonian before
-                executing the model.
-
-        Returns:
-            A :class:`qibo.abstractions.hamiltonians.Hamiltonian` object representing
-            the adiabatic evolution Hamiltonian at time ``t``.
-        """
-        if total_time is not None:
-            self.set_hamiltonian(total_time)
-        else:
-            if self.set_hamiltonian_flag:
-                raise_error(RuntimeError, "Cannot access adiabatic evolution "
-                                          "Hamiltonian before setting the "
-                                          "the total evolution time.")
-        if t is None or t == self.solver.t:
-            return self.solver.current_hamiltonian
-        return self.solver.hamiltonian(t)
+        if self.parametrized_schedule is not None:
+            self.schedule = lambda t: self.parametrized_schedule(t, params[:-1])
+        self.hamiltonian.total_time = params[-1]
 
     def execute(self, final_time, start_time=0.0, initial_state=None):
         """"""
         if start_time != 0:
             raise_error(NotImplementedError, "Adiabatic evolution supports only t=0 "
                                              "as initial time.")
-        self.set_hamiltonian(final_time - start_time)
+        self.hamiltonian.total_time = final_time - start_time
         return super(AdiabaticEvolution, self).execute(
             final_time, start_time, initial_state)
 
@@ -280,10 +252,10 @@ class AdiabaticEvolution(StateEvolution):
         """
         if state is None:
             if self.accelerators is None:
-                return self.h0.ground_state()
+                return self.hamiltonian.ground_state()
             else:
                 from qibo.core.states import DistributedState
-                c = self.hamiltonian(0).circuit(self.solver.dt)
+                c = self.hamiltonian.circuit(self.solver.dt) # pylint: disable=E1111
                 state = DistributedState.plus_state(c)
                 return c.get_initial_state(state)
         return super(AdiabaticEvolution, self).get_initial_state(state)
@@ -326,9 +298,9 @@ class AdiabaticEvolution(StateEvolution):
         else:
             loss = lambda p, ae, h1, msg, hist: K.to_numpy(self._loss(p, ae, h1, msg, hist))
 
-        result, parameters, extra = optimizers.optimize(loss, initial_parameters,
-                                                 args=(self, self.h1, self.opt_messages, self.opt_history),
-                                                 method=method, options=options)
+        args = (self, self.hamiltonian.h1, self.opt_messages, self.opt_history)
+        result, parameters, extra = optimizers.optimize(
+            loss, initial_parameters, args=args, method=method, options=options)
         if isinstance(parameters, K.tensor_types) and not len(parameters.shape): # pragma: no cover
             # some optimizers like ``Powell`` return number instead of list
             parameters = [parameters]

@@ -92,7 +92,7 @@ def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, sol
     for n in range(int(1 / dt)):
         target_psi.append(prop.dot(target_psi[-1]))
 
-    ham = hamiltonians.TFIM(nqubits, h=h, trotter=True)
+    ham = hamiltonians.TFIM(nqubits, h=h, dense=False)
     checker = TimeStepChecker(target_psi, atol=atol)
     evolution = models.StateEvolution(ham, dt, solver=solver,
                                       callbacks=[checker],
@@ -118,16 +118,15 @@ def test_adiabatic_evolution_init():
     # Hamiltonians with different number of qubits
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
+    # Adiabatic Hamiltonian with bad hamiltonian types
+    from qibo.core.adiabatic import AdiabaticHamiltonian
+    with pytest.raises(TypeError):
+        h = AdiabaticHamiltonian("a", "b") # pylint: disable=E0110
     # s with three arguments
     h0 = hamiltonians.X(2)
     s = lambda t, a, b: t + a + b
     with pytest.raises(ValueError):
         adev = models.AdiabaticEvolution(h0, h1, s, dt=1e-2)
-    # make Trotter Hamiltonian's compatible
-    h0 = hamiltonians.X(3, trotter=True)
-    h1 = hamiltonians.TFIM(3, trotter=True)
-    adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
-    assert adev.h0.is_compatible(adev.h1)
 
 
 def test_adiabatic_evolution_schedule():
@@ -150,6 +149,10 @@ def test_set_scheduling_parameters():
     h1 = hamiltonians.TFIM(3)
     sp = lambda t, p: (1 - p[0]) * np.sqrt(t) + p[0] * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, 1e-2)
+    # access parametrized scheduling before setting parameters
+    with pytest.raises(ValueError):
+        s = adevp.schedule
+
     adevp.set_parameters([0.5, 1])
 
     target_s = lambda t: 0.5 * np.sqrt(t) + 0.5 * t
@@ -157,36 +160,36 @@ def test_set_scheduling_parameters():
         assert adevp.schedule(t) == target_s(t) # pylint: disable=E1102
 
 
-@pytest.mark.parametrize("trotter", [False, True])
-def test_adiabatic_evolution_hamiltonian(backend, trotter):
+@pytest.mark.parametrize("dense", [False, True])
+def test_adiabatic_evolution_hamiltonian(backend, dense):
     """Test adiabatic evolution hamiltonian as a function of time."""
-    h0 = hamiltonians.X(2, trotter=trotter)
-    h1 = hamiltonians.TFIM(2, trotter=trotter)
+    h0 = hamiltonians.X(2, dense=dense)
+    h1 = hamiltonians.TFIM(2, dense=dense)
     adev = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-2)
     # try accessing hamiltonian before setting it
     with pytest.raises(RuntimeError):
-        adev.hamiltonian()
+        adev.hamiltonian(0.1)
 
     m1 = np.array([[0, 1, 1, 0], [1, 0, 0, 1],
                    [1, 0, 0, 1], [0, 1, 1, 0]])
     m2 = np.diag([2, -2, -2, 2])
     ham = lambda t, T: - (1 - t / T) * m1 - (t / T) * m2
 
-    adev.set_hamiltonian(total_time=1)
+    adev.hamiltonian.total_time = 1
     for t in [0, 0.3, 0.7, 1.0]:
-        if trotter:
-            matrix = adev.hamiltonian(t).dense.matrix
-        else:
+        if dense:
             matrix = adev.hamiltonian(t).matrix
+        else:
+            matrix = adev.hamiltonian(t).dense.matrix
         K.assert_allclose(matrix, ham(t, 1))
 
     #try using a different total time
-    adev.hamiltonian(0, total_time=2)
+    adev.hamiltonian.total_time = 2
     for t in [0, 0.3, 0.7, 1.0]:
-        if trotter:
-            matrix = adev.hamiltonian(t).dense.matrix
-        else:
+        if dense:
             matrix = adev.hamiltonian(t).matrix
+        else:
+            matrix = adev.hamiltonian(t).dense.matrix
         K.assert_allclose(matrix, ham(t, 2))
 
 
@@ -222,8 +225,8 @@ def test_trotterized_adiabatic_evolution(backend, accelerators, nqubits, dt):
         prop = K.to_numpy(ham(n * dt).exp(dt))
         target_psi.append(prop.dot(target_psi[-1]))
 
-    local_h0 = hamiltonians.X(nqubits, trotter=True)
-    local_h1 = hamiltonians.TFIM(nqubits, trotter=True)
+    local_h0 = hamiltonians.X(nqubits, dense=False)
+    local_h1 = hamiltonians.TFIM(nqubits, dense=False)
     checker = TimeStepChecker(target_psi, atol=dt)
     adev = models.AdiabaticEvolution(local_h0, local_h1, lambda t: t, dt,
                                      callbacks=[checker],
@@ -232,14 +235,12 @@ def test_trotterized_adiabatic_evolution(backend, accelerators, nqubits, dt):
 
 
 @pytest.mark.parametrize("solver", ["rk4", "rk45"])
-@pytest.mark.parametrize("trotter", [False, True])
+@pytest.mark.parametrize("dense", [False, True])
 @pytest.mark.parametrize("dt", [0.1])
-def test_adiabatic_evolution_execute_rk(backend, solver, trotter, dt):
+def test_adiabatic_evolution_execute_rk(backend, solver, dense, dt):
     """Test adiabatic evolution with Runge-Kutta solver."""
-    h0 = hamiltonians.X(3, trotter=trotter)
-    h1 = hamiltonians.TFIM(3, trotter=trotter)
-    if trotter:
-        h0 = h1.make_compatible(h0)
+    h0 = hamiltonians.X(3, dense=dense)
+    h1 = hamiltonians.TFIM(3, dense=dense)
 
     target_psi = [np.ones(8) / np.sqrt(8)]
     ham = lambda t: h0 * (1 - t) + h1 * t
@@ -263,7 +264,7 @@ def test_adiabatic_evolution_execute_errors():
     # execute without specifying variational parameters
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
-    with pytest.raises(ValueError):
+    with pytest.raises(RuntimeError):
         final_state = adevp(final_time=1)
 
 
@@ -292,18 +293,18 @@ def test_energy_callback(solver, dt, atol):
     K.assert_allclose(energy[:], target_energies, atol=atol)
 
 
-test_names = "method,options,messages,trotter,filename"
+test_names = "method,options,messages,dense,filename"
 test_values = [
-    ("BFGS", {'maxiter': 1}, True, False, "adiabatic_bfgs.out"),
-    ("BFGS", {'maxiter': 1}, True, True, "trotter_adiabatic_bfgs.out"),
-    ("sgd", {"nepochs": 5}, False, False, None)
+    ("BFGS", {'maxiter': 1}, True, True, "adiabatic_bfgs.out"),
+    ("BFGS", {'maxiter': 1}, True, False, "trotter_adiabatic_bfgs.out"),
+    ("sgd", {"nepochs": 5}, False, True, None)
     ]
 @pytest.mark.parametrize(test_names, test_values)
-def test_scheduling_optimization(method, options, messages, trotter, filename):
+def test_scheduling_optimization(method, options, messages, dense, filename):
     """Test optimization of s(t)."""
     from qibo.tests.test_models_variational import assert_regression_fixture
-    h0 = hamiltonians.X(3, trotter=trotter)
-    h1 = hamiltonians.TFIM(3, trotter=trotter)
+    h0 = hamiltonians.X(3, dense=dense)
+    h1 = hamiltonians.TFIM(3, dense=dense)
     sp = lambda t, p: (1 - p) * np.sqrt(t) + p * t
     adevp = models.AdiabaticEvolution(h0, h1, sp, dt=1e-1)
 

@@ -135,10 +135,10 @@ def test_state_apply_bitflips():
     # Bitflips are tested in measurement tests
 
 
-@pytest.mark.parametrize("trotter", [True, False])
-def test_vector_state_expectation(backend, trotter):
+@pytest.mark.parametrize("dense", [True, False])
+def test_vector_state_expectation(backend, dense):
     from qibo.hamiltonians import XXZ
-    ham = XXZ(nqubits=5, delta=0.5, trotter=trotter)
+    ham = XXZ(nqubits=5, delta=0.5, dense=dense)
     matrix = K.to_numpy(ham.matrix)
 
     state = np.random.random(32) + 1j * np.random.random(32)
@@ -150,10 +150,10 @@ def test_vector_state_expectation(backend, trotter):
     K.assert_allclose(state.expectation(ham, True), target_ev / norm)
 
 
-@pytest.mark.parametrize("trotter", [True, False])
-def test_matrix_state_expectation(backend, trotter):
+@pytest.mark.parametrize("dense", [True, False])
+def test_matrix_state_expectation(backend, dense):
     from qibo.hamiltonians import TFIM
-    ham = TFIM(nqubits=2, h=1.0, trotter=trotter)
+    ham = TFIM(nqubits=2, h=1.0, dense=dense)
     matrix = K.to_numpy(ham.matrix)
 
     state = np.random.random((4, 4)) + 1j * np.random.random((4, 4))

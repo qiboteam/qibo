@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=4, type=int)
 parser.add_argument("--dt", default=1e-2, type=float)
 parser.add_argument("--solver", default="exp", type=str)
-parser.add_argument("--trotter", action="store_true")
+parser.add_argument("--dense", action="store_true")
 parser.add_argument("--accelerators", default=None, type=str)
 parser.add_argument("--backend", default="qibotf", type=str)
 parser.add_argument("--filename", default=None, type=str)
@@ -51,7 +51,7 @@ def main(nqubits, dt, solver, backend, trotter=False, accelerators=None,
     """Performs adiabatic evolution with critical TFIM as the "hard" Hamiltonian."""
     qibo.set_backend(backend)
     if accelerators is not None:
-        trotter = True
+        dense = False
         solver = "exp"
 
     if filename is not None:

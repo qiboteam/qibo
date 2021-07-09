@@ -129,7 +129,9 @@ class TensorflowBackend(numpy.NumpyBackend):
         return self.tensordot(x, y, axes=0)
 
     def kron(self, x, y):
-        raise_error(NotImplementedError)
+        dim = int(x.shape[0]) * int(y.shape[0])
+        z = self.transpose(self.outer(x, y), axes=[0, 2, 1, 3])
+        return self.reshape(z, (dim, dim))
 
     def inv(self, x):
         raise_error(NotImplementedError)

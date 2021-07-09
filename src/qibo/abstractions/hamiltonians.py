@@ -143,9 +143,10 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     specific methods, such as ``.eigenvectors()`` or ``.exp()`` are called.
     """
 
-    def __init__(self):
+    def __init__(self, ground_state=None):
         super().__init__()
         self._dense = None
+        self._ground_state = ground_state
 
     @property
     def dense(self):
@@ -179,19 +180,14 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def eigenvectors(self):
         return self.dense.eigenvectors()
 
+    def ground_state(self):
+        if self._ground_state is None:
+            log.warn("Ground state for this Hamiltonian was not given.")
+            return self.eigenvectors()[:, 0]
+        return self._ground_state()
+
     def exp(self, a):
         return self.dense.exp(a)
-
-
-class TrotterHamiltonian(SymbolicHamiltonian):
-
-    @abstractmethod
-    def is_compatible(self, o): # pragma: no cover
-        raise_error(NotImplementedError)
-
-    @abstractmethod
-    def make_compatible(self, o): # pragma: no cover
-        raise_error(NotImplementedError)
 
     @abstractmethod
     def circuit(self, dt, accelerators=None, memory_device="/CPU:0"): # pragma: no cover
