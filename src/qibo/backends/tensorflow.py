@@ -51,9 +51,9 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def set_threads(self, nthreads):
         log.warning("`set_threads` is not supported by the tensorflow "
-                    "backend. Please use tensorflow's thread setters:"
-                    "`tf.config.threading.set_inter_op_parallelism_threads`"
-                    "or `tf.config.threading.set_intra_op_parallelism_threads`"
+                    "backend. Please use tensorflow's thread setters: "
+                    "`tf.config.threading.set_inter_op_parallelism_threads` "
+                    "or `tf.config.threading.set_intra_op_parallelism_threads` "
                     "to switch the number of threads.")
         abstract.AbstractBackend.set_threads(self, nthreads)
 

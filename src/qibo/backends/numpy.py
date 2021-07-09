@@ -31,7 +31,7 @@ class NumpyBackend(abstract.AbstractBackend):
                     "Aborting device change.")
 
     def set_threads(self, nthreads):
-        log.warning("Numpy backend supports only single-thread execution."
+        log.warning("Numpy backend supports only single-thread execution. "
                     "Cannot change the number of threads.")
         abstract.AbstractBackend.set_threads(self, nthreads)
 
