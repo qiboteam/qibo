@@ -13,7 +13,7 @@ def test_trotter_hamiltonian_to_dense(backend, nqubits, model):
     local_ham = getattr(hamiltonians, model)(nqubits, dense=False)
     target_ham = getattr(hamiltonians, model)(nqubits)
     final_ham = local_ham.dense
-    np.testing.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
+    K.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
 
 def test_trotter_hamiltonian_scalar_mul(nqubits=3):
@@ -21,11 +21,11 @@ def test_trotter_hamiltonian_scalar_mul(nqubits=3):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 * hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 * local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham * 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_add(nqubits=4):
@@ -33,11 +33,11 @@ def test_trotter_hamiltonian_scalar_add(nqubits=4):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 + hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 + local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham + 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_scalar_sub(nqubits=3):
@@ -45,12 +45,12 @@ def test_trotter_hamiltonian_scalar_sub(nqubits=3):
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     target_ham = 2 - hamiltonians.TFIM(nqubits, h=1.0)
     local_dense = (2 - local_ham).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
     target_ham = hamiltonians.TFIM(nqubits, h=1.0) - 2
     local_ham = hamiltonians.TFIM(nqubits, h=1.0, dense=False)
     local_dense = (local_ham - 2).dense
-    np.testing.assert_allclose(local_dense.matrix, target_ham.matrix)
+    K.assert_allclose(local_dense.matrix, target_ham.matrix)
 
 
 def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
@@ -62,13 +62,13 @@ def test_trotter_hamiltonian_operator_add_and_sub(nqubits=3):
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0) +
                   hamiltonians.TFIM(nqubits, h=0.5))
     dense = local_ham.dense
-    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+    K.assert_allclose(dense.matrix, target_ham.matrix)
 
     local_ham = local_ham1 - local_ham2
     target_ham = (hamiltonians.TFIM(nqubits, h=1.0) -
                   hamiltonians.TFIM(nqubits, h=0.5))
     dense = local_ham.dense
-    np.testing.assert_allclose(dense.matrix, target_ham.matrix)
+    K.assert_allclose(dense.matrix, target_ham.matrix)
 
 
 @pytest.mark.parametrize("nqubits,normalize", [(3, False), (4, False)])
@@ -80,18 +80,18 @@ def test_trotter_hamiltonian_matmul(nqubits, normalize):
     state = K.cast(random_complex((2 ** nqubits,)))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(trotter_ev, target_ev)
+    K.assert_allclose(trotter_ev, target_ev)
 
     state = random_complex((2 ** nqubits,))
     trotter_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(trotter_ev, target_ev)
+    K.assert_allclose(trotter_ev, target_ev)
 
     from qibo.core.states import VectorState
     state = VectorState.from_tensor(state)
     trotter_matmul = local_ham @ state
     target_matmul = dense_ham @ state
-    np.testing.assert_allclose(trotter_matmul, target_matmul)
+    K.assert_allclose(trotter_matmul, target_matmul)
 
 
 def test_trotter_hamiltonian_three_qubit_term(backend):
@@ -112,7 +112,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
     mm2 = np.kron(np.kron(eye, eye), m2)
     mm3 = np.kron(np.kron(eye, m3), np.kron(eye, eye))
     target_ham = hamiltonians.Hamiltonian(4, mm1 + mm2 + mm3)
-    np.testing.assert_allclose(ham.matrix, target_ham.matrix)
+    K.assert_allclose(ham.matrix, target_ham.matrix)
 
     dt = 1e-2
     initial_state = random_state(4)
@@ -121,12 +121,11 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
             circuit = ham.circuit(dt=dt)
     else:
         circuit = ham.circuit(dt=dt)
-        print(circuit.queue)
         final_state = circuit(np.copy(initial_state))
         u = [expm(-0.5j * dt * (mm1 + mm3)), expm(-0.5j * dt * mm2)]
         target_state = u[1].dot(u[0].dot(initial_state))
         target_state = u[0].dot(u[1].dot(target_state))
-        np.testing.assert_allclose(final_state, target_state)
+        K.assert_allclose(final_state, target_state)
 
 
 def test_old_trotter_hamiltonian_errors():

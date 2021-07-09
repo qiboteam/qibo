@@ -35,7 +35,6 @@ class BackendCallback(abstract_callbacks.Callback, ABC):
 
 
 class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntropy):
-    _log2 = K.cast(math.log(2.0), dtype='DTYPE')
 
     def __init__(self, partition=None, compute_spectrum=False):
         abstract_callbacks.EntanglementEntropy.__init__(
@@ -72,7 +71,7 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
         if self.compute_spectrum:
             self.spectrum.append(spectrum)
         entropy = K.sum(masked_eigvals * spectrum)
-        return entropy / self._log2
+        return entropy / math.log(2.0)
 
     def set_nqubits(self, state):
         if not isinstance(state, K.tensor_types):

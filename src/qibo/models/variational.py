@@ -1,3 +1,4 @@
+from qibo import K
 from qibo.config import raise_error
 from qibo.core.circuit import Circuit
 from qibo.models.evolution import StateEvolution
@@ -65,7 +66,6 @@ class VQE(object):
                 ``CMAEvolutionStrategy.result``, and for ``'sgd'``
                 the options used during the optimization.
         """
-        from qibo import K
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
             final_state = circuit()
@@ -81,7 +81,10 @@ class VQE(object):
         else:
             loss = _loss
 
-        if method != "sgd":
+        if method == "cma":
+            dtype = getattr(K.np, K._dtypes.get('DTYPE'))
+            loss = lambda p, c, h: dtype(_loss(p, c, h))
+        elif method != "sgd":
             loss = lambda p, c, h: K.to_numpy(_loss(p, c, h))
 
         result, parameters, extra = self.optimizers.optimize(loss, initial_state,
@@ -264,7 +267,6 @@ class QAOA(object):
                 ``CMAEvolutionStrategy.result``, and for ``'sgd'``
                 the options used during the optimization.
         """
-        from qibo import K
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
                                     "contain an even number of values but "
@@ -358,17 +360,17 @@ class FALQON(QAOA):
         energy = [np.inf]
         callback_result = []
         for it in range(1, max_layers + 1):
-            beta = _loss(parameters, self, self.evol_hamiltonian)
+            beta = K.to_numpy(_loss(parameters, self, self.evol_hamiltonian))
 
             if tol is not None:
-                energy.append(np.array(_loss(parameters, self, self.hamiltonian)))
+                energy.append(K.to_numpy(_loss(parameters, self, self.hamiltonian)))
                 if abs(energy[-1] - energy[-2]) < tol:
                     break
 
             if callback is not None:
                 callback_result.append(callback(parameters))
 
-            parameters = np.hstack([parameters, np.array([delta_t, delta_t * beta])])
+            parameters = np.concatenate([parameters, [delta_t, delta_t * beta]])
 
         self.set_parameters(parameters)
         final_loss = _loss(parameters, self, self.hamiltonian)

@@ -8,7 +8,7 @@ from sklearn.datasets import load_digits
 import argparse
 
 
-def main(layers, autoencoder, example):
+def main(layers, autoencoder, example, maxiter):
 
     def encoder_hamiltonian_simple(nqubits, ncompress):
         """Creates the encoding Hamiltonian.
@@ -99,7 +99,7 @@ def main(layers, autoencoder, example):
             initial_params = np.random.uniform(0, 2*np.pi, nparams)
 
             result = minimize(cost_function_QAE_Ising, initial_params,
-                              args=(count), method='BFGS', options={'maxiter': 5.0e4})
+                              args=(count), method='BFGS', options={'maxiter': maxiter})
 
         elif autoencoder == 0:
             circuit = models.Circuit(nqubits)
@@ -150,7 +150,7 @@ def main(layers, autoencoder, example):
             initial_params = np.random.uniform(0, 2*np.pi, nparams)
 
             result = minimize(cost_function_EF_QAE_Ising, initial_params,
-                              args=(count), method='BFGS', options={'maxiter': 5.0e4})
+                              args=(count), method='BFGS', options={'maxiter': maxiter})
 
         else:
             raise ValueError("You have to introduce a value of 0 or 1 in the autoencoder argument.")
@@ -214,7 +214,7 @@ def main(layers, autoencoder, example):
             initial_params = np.random.uniform(0, 2*np.pi, nparams)
 
             result = minimize(cost_function_QAE_Digits, initial_params,
-                              args=(count), method='BFGS', options={'maxiter': 5.0e4})
+                              args=(count), method='BFGS', options={'maxiter': maxiter})
 
         elif autoencoder == 0:
             circuit = models.Circuit(nqubits)
@@ -270,7 +270,7 @@ def main(layers, autoencoder, example):
             initial_params = np.random.uniform(0, 2*np.pi, nparams)
 
             result = minimize(cost_function_EF_QAE_Digits, initial_params,
-                              args=(count), method='BFGS', options={'maxiter': 5.0e4})
+                              args=(count), method='BFGS', options={'maxiter': maxiter})
 
         else:
             raise ValueError("You have to introduce a value of 0 or 1 in the autoencoder argument.")
@@ -287,5 +287,6 @@ if __name__ == "__main__":
     parser.add_argument("--layers", default=3, type=int, help='(int): number of ansatz layers')
     parser.add_argument("--autoencoder", default=0, type=int, help='(int): 0 to run the EF-QAE or 1 to run the QAE')
     parser.add_argument("--example", default=0, type=int, help='(int): 0 to run Ising model example or 1 to run the Handwritten digits example')
+    parser.add_argument("--maxiter", default=50000, type=int, help='(int): maximum number of iterations')
     args = parser.parse_args()
     main(**vars(args))

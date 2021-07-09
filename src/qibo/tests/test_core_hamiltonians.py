@@ -48,20 +48,21 @@ def test_hamiltonian_algebraic_operations(dtype):
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
     H2 = hamiltonians.XXZ(nqubits=2, delta=1)
 
-    hH1 = transformation_a(H1.matrix, H2.matrix)
-    hH2 = transformation_b(H1.matrix, H2.matrix)
-    hH3 = transformation_c(H1.matrix, H2.matrix, use_eye=True)
-    hH4 = transformation_d(H1.matrix, H2.matrix, use_eye=True)
+    mH1, mH2 = K.to_numpy(H1.matrix), K.to_numpy(H2.matrix)
+    hH1 = transformation_a(mH1, mH2)
+    hH2 = transformation_b(mH1, mH2)
+    hH3 = transformation_c(mH1, mH2, use_eye=True)
+    hH4 = transformation_d(mH1, mH2, use_eye=True)
 
     HT1 = transformation_a(H1, H2)
     HT2 = transformation_b(H1, H2)
     HT3 = transformation_c(H1, H2)
     HT4 = transformation_d(H1, H2)
 
-    np.testing.assert_allclose(hH1, HT1.matrix)
-    np.testing.assert_allclose(hH2, HT2.matrix)
-    np.testing.assert_allclose(hH3, HT3.matrix)
-    np.testing.assert_allclose(hH4, HT4.matrix)
+    K.assert_allclose(hH1, HT1.matrix)
+    K.assert_allclose(hH2, HT2.matrix)
+    K.assert_allclose(hH3, HT3.matrix)
+    K.assert_allclose(hH4, HT4.matrix)
 
 
 def test_hamiltonian_addition():
@@ -69,10 +70,10 @@ def test_hamiltonian_addition():
     H2 = hamiltonians.TFIM(nqubits=3, h=1.0)
     H = H1 + H2
     matrix = H1.matrix + H2.matrix
-    np.testing.assert_allclose(H.matrix, matrix)
+    K.assert_allclose(H.matrix, matrix)
     H = H1 - 0.5 * H2
     matrix = H1.matrix - 0.5 * H2.matrix
-    np.testing.assert_allclose(H.matrix, matrix)
+    K.assert_allclose(H.matrix, matrix)
 
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5)
     H2 = hamiltonians.XXZ(nqubits=3, delta=0.1)
@@ -104,17 +105,19 @@ def test_hamiltonian_matmul():
     m1 = K.to_numpy(H1.matrix)
     m2 = K.to_numpy(H2.matrix)
 
-    np.testing.assert_allclose((H1 @ H2).matrix, m1 @ m2)
-    np.testing.assert_allclose((H2 @ H1).matrix, m2 @ m1)
+    K.assert_allclose((H1 @ H2).matrix, m1 @ m2)
+    K.assert_allclose((H2 @ H1).matrix, m2 @ m1)
 
     v = random_complex(8, dtype=m1.dtype)
     m = random_complex((8, 8), dtype=m1.dtype)
-    np.testing.assert_allclose(H1 @ v, m1.dot(v))
-    np.testing.assert_allclose(H1 @ m, m1 @ m)
+    H1v = H1 @ K.cast(v)
+    H1m = H1 @ K.cast(m)
+    K.assert_allclose(H1v, m1.dot(v))
+    K.assert_allclose(H1m, m1 @ m)
 
     from qibo.core.states import VectorState
-    state = VectorState.from_tensor(v)
-    np.testing.assert_allclose(H1 @ state, m1.dot(v))
+    H1state = H1 @ VectorState.from_tensor(K.cast(v))
+    K.assert_allclose(H1state, m1.dot(v))
 
     with pytest.raises(ValueError):
         H1 @ np.zeros((8, 8, 8), dtype=m1.dtype)
@@ -127,18 +130,18 @@ def test_hamiltonian_exponentiation(dense):
     from scipy.linalg import expm
     H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
     target_matrix = expm(-0.5j * np.array(H.matrix))
-    np.testing.assert_allclose(H.exp(0.5), target_matrix)
+    K.assert_allclose(H.exp(0.5), target_matrix)
 
     H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
     _ = H.eigenvectors()
-    np.testing.assert_allclose(H.exp(0.5), target_matrix)
+    K.assert_allclose(H.exp(0.5), target_matrix)
 
 
 @pytest.mark.parametrize("dense", [True, False])
 @pytest.mark.parametrize("density_matrix", [True, False])
 def test_hamiltonian_expectation(dense, density_matrix):
     h = hamiltonians.XXZ(nqubits=3, delta=0.5, dense=dense)
-    matrix = np.array(h.matrix)
+    matrix = K.to_numpy(h.matrix)
 
     if density_matrix:
         state = random_complex((8, 8))
@@ -150,8 +153,8 @@ def test_hamiltonian_expectation(dense, density_matrix):
         norm = np.sum(np.abs(state) ** 2)
         target_ev = np.sum(state.conj() * matrix.dot(state)).real
 
-    np.testing.assert_allclose(h.expectation(state), target_ev)
-    np.testing.assert_allclose(h.expectation(state, True), target_ev / norm)
+    K.assert_allclose(h.expectation(state), target_ev)
+    K.assert_allclose(h.expectation(state, True), target_ev / norm)
 
 
 def test_hamiltonian_expectation_errors():
@@ -171,17 +174,17 @@ def test_hamiltonian_eigenvalues(dtype, dense):
 
     H1_eigen = H1.eigenvalues()
     hH1_eigen = np.linalg.eigvalsh(H1.matrix)
-    np.testing.assert_allclose(H1_eigen, hH1_eigen)
+    K.assert_allclose(H1_eigen, hH1_eigen)
 
     c1 = dtype(2.5)
     H2 = c1 * H1
     hH2_eigen = np.linalg.eigvalsh(c1 * H1.matrix)
-    np.testing.assert_allclose(H2._eigenvalues, hH2_eigen)
+    K.assert_allclose(H2._eigenvalues, hH2_eigen)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
     hH3_eigen = np.linalg.eigvalsh(H1.matrix * c2)
-    np.testing.assert_allclose(H3._eigenvalues, hH3_eigen)
+    K.assert_allclose(H3._eigenvalues, hH3_eigen)
 
 
 @pytest.mark.parametrize("dtype", K.numeric_types)
@@ -190,26 +193,26 @@ def test_hamiltonian_eigenvectors(dtype, dense):
     """Testing hamiltonian eigenvectors scaling."""
     H1 = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
 
-    V1 = np.array(H1.eigenvectors())
-    U1 = np.array(H1.eigenvalues())
-    np.testing.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
+    V1 = K.to_numpy(H1.eigenvectors())
+    U1 = K.to_numpy(H1.eigenvalues())
+    K.assert_allclose(H1.matrix, V1 @ np.diag(U1) @ V1.T)
     # Check ground state
-    np.testing.assert_allclose(H1.ground_state(), V1[:, 0])
+    K.assert_allclose(H1.ground_state(), V1[:, 0])
 
     c1 = dtype(2.5)
     H2 = c1 * H1
-    V2 = np.array(H2._eigenvectors)
-    U2 = np.array(H2._eigenvalues)
-    np.testing.assert_allclose(H2.matrix, V2 @ np.diag(U2) @ V2.T)
+    V2 = K.to_numpy(H2._eigenvectors)
+    U2 = K.to_numpy(H2._eigenvalues)
+    K.assert_allclose(H2.matrix, V2 @ np.diag(U2) @ V2.T)
 
     c2 = dtype(-11.1)
     H3 = H1 * c2
-    V3 = np.array(H3.eigenvectors())
-    U3 = np.array(H3._eigenvalues)
-    np.testing.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
+    V3 = K.to_numpy(H3.eigenvectors())
+    U3 = K.to_numpy(H3._eigenvalues)
+    K.assert_allclose(H3.matrix, V3 @ np.diag(U3) @ V3.T)
 
     c3 = dtype(0)
     H4 = c3 * H1
-    V4 = np.array(H4._eigenvectors)
-    U4 = np.array(H4._eigenvalues)
-    np.testing.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)
+    V4 = K.to_numpy(H4._eigenvectors)
+    U4 = K.to_numpy(H4._eigenvalues)
+    K.assert_allclose(H4.matrix, V4 @ np.diag(U4) @ V4.T)

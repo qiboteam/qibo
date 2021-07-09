@@ -145,22 +145,36 @@ Distributed circuit
     :members:
     :member-order: bysource
 
-VQE
-"""
+Quantum Fourier Transform (QFT)
+"""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.circuit.QFT
+    :members:
+    :member-order: bysource
+
+Variational Quantum Eigensolver (VQE)
+"""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.VQE
     :members:
     :member-order: bysource
 
-QAOA
-""""
+Quantum Approximate Optimization Algorithm (QAOA)
+"""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.QAOA
     :members:
     :member-order: bysource
 
-Grover
-""""""
+Feedback-based Algorithm for Quantum Optimization (FALQON)
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+
+.. autoclass:: qibo.models.variational.FALQON
+    :members:
+    :member-order: bysource
+
+Grover's Algorithm
+""""""""""""""""""
 
 .. autoclass:: qibo.models.grover.Grover
     :members:
@@ -275,7 +289,7 @@ First general unitary (U1)
     :member-order: bysource
 
 Second general unitary (U2)
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. autoclass:: qibo.abstractions.gates.U2
     :members:
@@ -761,38 +775,32 @@ required by all Qibo models to perform simulation.
 
 Qibo currently provides two different calculation backends, one based on
 numpy and one based on Tensorflow. It is possible to define new backends by
-ineriting :class:`qibo.backends.abstract.AbstractBackend` and implementing its abstract
-methods. Tensorflow is the default backend, however Qibo will automatically
-fall back to numpy if Tensorflow is not found installed in the system.
+inheriting :class:`qibo.backends.abstract.AbstractBackend` and implementing
+its abstract methods.
 
-The Tensorflow backend is supplemented by custom operators defined under
-``tensorflow/custom_operators``, which can be used to efficiently apply gates
-to state vectors or density matrices.
-These operators are much faster than implementations based on Tensorflow
-primitives (such as ``tf.einsum``) but do not support the following
-automatic differentiation for backpropagation of variational circuits.
-It is possible to use these features in Qibo by using a backend based on
-Tensorflow primitives. There are two such backends available:
-the ``"defaulteinsum"`` backend based on ``tf.einsum``
-and the ``"matmuleinsum"`` backend based on ``tf.matmul``.
+Both backends are supplemented by custom operators defined under which can be
+used to efficiently apply gates to state vectors or density matrices.
+These custom operators are shipped as the separate libraries qibojit and qibotf.
+We refer to :ref:`Packages <packages>` section for a complete list of the
+available computation backends and instructions on how to install each of
+these libraries on top of qibo.
+
+Custom operators are much faster than implementations based on numpy or Tensorflow
+primitives (such as ``einsum``) but do not support some features, such as
+automatic differentiation for backpropagation of variational circuits which is
+only supported by the native ``tensorflow`` backend.
+
 The user can switch backends using
 
 .. code-block::  python
 
     import qibo
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend("qibotf")
+    qibo.set_backend("numpy")
 
-before creating any circuits or gates. The default backend is ``"custom"`` and
-uses the custom Tensorflow operators. One can switch to a numpy backend using
-the same approach:
+before creating any circuits or gates. The default backend is the first available
+from ``qibojit``, ``qibotf``, ``tensorflow``, ``numpy``.
 
-.. code-block::  python
-
-    import qibo
-    qibo.set_backend("numpy_defaulteinsum")
-
-
-Note that custom operators are only supported by the Tensorflow backend.
 
 .. autoclass:: qibo.backends.abstract.AbstractBackend
     :members:

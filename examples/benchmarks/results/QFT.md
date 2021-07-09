@@ -1,4 +1,4 @@
-# Quantum Fourier Transform
+# Quantum Fourier Transform Benchmark
 
 The Quantum Fourier Transform is used as a subroutine in many quantum
 algorithms and thus constitutes an example with great practical importance.
@@ -7,7 +7,7 @@ all of which are available in Qibo and other used libraries,
 except QCGPU where `SWAP` was implemented using three `CNOT` gates.
 
 
-## Quantum Fourier Transform (`complex64`)
+## Single precision (`complex64`)
 
 `nqubits` | Qibo (GPU) | Qibo (multi-GPU) | QCGPU (GPU) | Qibo (CPU) | Qibo (CPU-1) | QCGPU (CPU) | Cirq (CPU) | TFQ (CPU)
 -- | -- | -- | -- | -- | -- | -- | -- | --
@@ -25,7 +25,7 @@ except QCGPU where `SWAP` was implemented using three `CNOT` gates.
 ![qft-64](../images/qft_c64.png)
 
 
-## Quantum Fourier Transform (`complex128`)
+## Double precision (`complex128`)
 
 `nqubits` | Qibo (GPU) | Qibo (multi-GPU) | Qulacs (GPU) | Qibo (CPU) | Qibo (CPU-1) | Qulacs (CPU) | IntelQS (CPU) | Qiskit (CPU) | PyQuil (CPU)
 -- | -- | -- | -- | -- | -- | -- | -- | -- | --

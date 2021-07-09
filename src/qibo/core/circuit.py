@@ -128,9 +128,6 @@ class Circuit(circuit.AbstractCircuit):
             raise_error(RuntimeError, "Circuit is already compiled.")
         if not self.queue:
             raise_error(RuntimeError, "Cannot compile circuit without gates.")
-        if K.op is not None:
-            raise_error(RuntimeError, "Cannot compile circuit that uses custom "
-                                      "operators.")
         for gate in self.queue:
             # create gate cache before compilation
             _ = gate.cache
@@ -165,8 +162,9 @@ class Circuit(circuit.AbstractCircuit):
 
     def _repeated_execute(self, nreps, initial_state=None):
         results = []
+        initial_state = self.get_initial_state(initial_state)
         for _ in range(nreps):
-            state = self._device_execute(initial_state)
+            state = self._device_execute(K.copy(initial_state))
             if self.measurement_gate is None:
                 results.append(state.tensor)
             else:

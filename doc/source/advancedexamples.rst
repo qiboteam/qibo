@@ -64,10 +64,11 @@ raised prompting the user to switch the default device using ``qibo.set_device``
 Setting the number of CPU threads
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Qibo by default uses the ``"custom"`` operators backend. This backend uses
-OpenMP instructions for the parallelization. In most cases will utilize all
-available CPU threads. For small circuits the parallelization overhead may
-decrease performance making single thread execution preferrable.
+Qibo by default uses the ``qibojit`` or ``qibotf`` backends which are based on
+custom operators. These backends uses OpenMP instructions for parallelization.
+In most cases, utilizing all available CPU threads provides better performance.
+However, for small circuits the parallelization overhead may decrease
+performance making single thread execution preferrable.
 
 You can restrict the number of threads by exporting the ``OMP_NUM_THREADS``
 environment variable with the requested number of threads before launching Qibo,
@@ -81,8 +82,8 @@ or programmatically, during runtime, as follows:
     # retrieve the current number of threads
     current_threads = qibo.get_threads()
 
-On the other hand, when using the ``"matmuleinsum"`` or ``"defaulteinsum"``
-backends Qibo inherits Tensorflow's defaults for CPU thread configuration.
+On the other hand, when using the ``tensorflow`` backend Qibo inherits
+Tensorflow's defaults for CPU thread configuration.
 Tensorflow allows restricting the number of threads as follows:
 
 .. code-block::  python
@@ -561,7 +562,7 @@ refer to the :ref:`Optimizers <Optimizers>` section of the documentation.
 Note that if the Stochastic Gradient Descent optimizer is used then the user
 has to use a backend based on tensorflow primitives and not the default custom
 backend, as custom operators currently do not support automatic differentiation.
-To switch the backend one can do ``qibo.set_backend("matmuleinsum")``.
+To switch the backend one can do ``qibo.set_backend("tensorflow")``.
 Check the :ref:`How to use automatic differentiation? <autodiff-example>`
 section for more details.
 
@@ -707,9 +708,8 @@ function.
 
 .. code-block:: python
 
-    # switch backend to "matmuleinsum" or "defaulteinsum"
     import qibo
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend("tensorflow")
     import tensorflow as tf
     from qibo import gates, models
 
@@ -733,9 +733,8 @@ function.
         optimizer.apply_gradients(zip([grads], [params]))
 
 
-Note that a backend that uses tensorflow primitives gates
-(either ``"matmuleinsum"`` or ``"defaulteinsum"``) has to be used because
-the default ``"custom"`` backend does not support automatic differentiation.
+Note that the ``"tensorflow"`` backend has to be used here because ``"qibotf"``
+and other custom backends do not support automatic differentiation.
 
 The optimization procedure may also be compiled, however in this case it is not
 possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` as the
@@ -745,7 +744,7 @@ For example:
 .. code-block:: python
 
     import qibo
-    qibo.set_backend("matmuleinsum")
+    qibo.set_backend("tensorflow")
     import tensorflow as tf
     from qibo import gates, models
 

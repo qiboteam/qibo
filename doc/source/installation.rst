@@ -44,10 +44,12 @@ present a schematic view of the currently supported backends.
 .. image:: backends.png
 
 Quantum simulation is proposed through dedicated backends for single node
-multi-GPU and multi-threading CPU setups. Quantum hardware control is under
-development.
+multi-GPU and multi-threading CPU setups. Quantum hardware control is supported
+for chips based on superconducting qubits.
 
 _______________________
+
+.. _packages:
 
 Packages
 --------
@@ -65,11 +67,35 @@ Base package
 Simulation backends
 ^^^^^^^^^^^^^^^^^^^
 
-We provide multiple simulation backends for Qibo, which are automatically loaded if the corresponding packages are installed, following the hierarchy below:
+We provide multiple simulation backends for Qibo, which are automatically loaded
+if the corresponding packages are installed, following the hierarchy below:
 
-* :ref:`installing-qibotf` (*recommended*): an efficient simulation backend for CPU, GPU and multi-GPU based on TensorFlow custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
+* :ref:`installing-qibojit`: an efficient simulation backend for CPU and GPU based on just-in-time (JIT) compiled custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
+* :ref:`installing-qibotf`: an efficient simulation backend for CPU, GPU and multi-GPU based on TensorFlow custom operators. Install this package if you need to simulate quantum circuits with large number of qubits or complex quantum algorithms which may benefit from computing parallelism.
 * :ref:`installing-tensorflow`: a pure TensorFlow implementation for quantum simulation which provides access to gradient descent optimization and the possibility to implement classical and quantum architectures together. This backend is not optimized for memory and speed, use :ref:`installing-qibotf` instead.
-* :ref:`installing-numpy`: a lightweight quantum simulator shipped with the :ref:`installing-qibo` base package. Use this simulator if your CPU architecture is not supported by the other backends.
+* :ref:`installing-numpy`: a lightweight quantum simulator shipped with the :ref:`installing-qibo` base package. Use this simulator if your CPU architecture is not supported by the other backends. Please note that the simulation performance is quite poor in comparison to other backends.
+
+The default backend that is used is the first available from the above list.
+The user can switch to a different using the ``qibo.set_backend`` method
+(see :ref:`Backends <Backends>` section for more details).
+
+The active default backend will be printed as an info message the first time
+Qibo is imported in the code. If qibojit and qibotf are not installed,
+an additional warning will appear prompting the user to install one of the two
+for increased performance and multi-threading and/or GPU capabilities.
+The logging level can be controlled using the ``QIBO_LOG_LEVEL`` environment
+variable. This can be set to 3 to hide info messages or 4 to hide both info
+and warning messages. The default value is 1 allowing all messages to appear.
+
+
+.. _hardware-backends:
+
+Hardware backends
+^^^^^^^^^^^^^^^^^
+
+We provide the following hardware control backends for Qibo:
+
+* :ref:`installing-qiboicarusq`: a module for laboratories, containing the specifics to operate Qibo on chips based on superconducting qubits, designed specifically for the IcarusQ experiment at `CQT <https://https://www.quantumlah.org/>`_.
 
 _______________________
 
@@ -79,15 +105,15 @@ Operating systems support
 In the table below we summarize the status of *pre-compiled binaries
 distributed with pypi* for the packages listed above.
 
-+------------------+------+------------------+------------+
-| Operating System | qibo | qibotf (cpu/gpu) | tensorflow |
-+==================+======+==================+============+
-| Linux x86        | Yes  | Yes/Yes          | Yes        |
-+------------------+------+------------------+------------+
-| MacOS >= 10.15   | Yes  | Yes/No           | Yes        |
-+------------------+------+------------------+------------+
-| Windows          | Yes  | No/No            | Yes        |
-+------------------+------+------------------+------------+
++------------------+------+---------+------------------+------------+
+| Operating System | qibo | qibojit | qibotf (cpu/gpu) | tensorflow |
++==================+======+=========+==================+============+
+| Linux x86        | Yes  | Yes     | Yes/Yes          | Yes        |
++------------------+------+---------+------------------+------------+
+| MacOS >= 10.15   | Yes  | Yes     | Yes/No           | Yes        |
++------------------+------+---------+------------------+------------+
+| Windows          | Yes  | Yes     | No/No            | Yes        |
++------------------+------+---------+------------------+------------+
 
 .. note::
       All packages are supported for Python >= 3.6.
@@ -136,6 +162,77 @@ In order to install Qibo from source, you can simply clone the GitHub repository
 
 _______________________
 
+.. _installing-qibojit:
+
+qibojit
+^^^^^^^
+
+The ``qibojit`` package contains a simulator implementation based on
+just-in-time (JIT) custom kernels using `numba <https://numba.pydata.org/>`_
+and `cupy <https://cupy.dev/>`_.
+
+This backend is used by default, however, if needed, in order to switch to the
+``qibojit`` backend please do:
+
+.. code-block:: python
+
+      import qibo
+      qibo.set_backend("qibojit")
+
+Installing with pip
+"""""""""""""""""""
+
+The installation using ``pip`` is the recommended approach to install
+``qibojit``.
+
+In order to install the package use the following command:
+
+.. code-block:: bash
+
+      pip install qibo[qibojit]
+
+.. note::
+      The ``pip`` program will download and install all the required
+      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
+      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      instructions from the `official website
+      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
+
+
+Installing from source
+""""""""""""""""""""""
+
+The installation procedure presented in this section is useful if you have to
+develop the code from source.
+
+In order to install the package perform the following steps:
+
+.. code-block::
+
+      git clone https://github.com/qiboteam/qibojit.git
+      cd qibojit
+
+then proceed with the installation of requirements with:
+
+.. code-block::
+
+      pip install -r requirements.txt
+
+Then proceed with the ``qibojit`` installation using ``pip``
+
+.. code-block::
+
+      pip install .
+
+or if you prefer to manually execute all installation steps:
+
+.. code-block::
+
+      # builds binaries
+      python setup.py deve
+
+_______________________
+
 .. _installing-qibotf:
 
 qibotf
@@ -144,8 +241,7 @@ qibotf
 The ``qibotf`` package contains a custom simulator implementation based on
 TensorFlow and custom operators in CUDA/C++.
 
-This backend is used by default, however, if needed, in order to switch to the
-``qibotf`` backend please do:
+If needed, in order to switch to the ``qibotf`` backend please do:
 
 .. code-block:: python
 
@@ -169,13 +265,12 @@ The ``pip`` program will download and install all the required
 dependencies.
 
 .. note::
-    The ``pip`` packages for linux are compiled with CUDA support, so if your
-    system has a NVIDIA GPU, Qibo will perform calculations on GPU. Note that
-    ``qibotf`` uses TensorFlow for GPU management, if your system has a NVIDIA
-    GPU, make sure TensorFlow runs on GPU, please refer to the `official
-    documentation <https://www.tensorflow.org/install/gpu>`_.
+      The ``pip`` packages for linux are compiled with CUDA support, so if your
+      system has a NVIDIA GPU, Qibo will perform calculations on GPU. Note that
+      ``qibotf`` uses TensorFlow for GPU management, if your system has a NVIDIA
+      GPU, make sure TensorFlow runs on GPU, please refer to the `official
+      documentation <https://www.tensorflow.org/install/gpu>`_.
 
-.. _installing-from-source:
 
 Installing from source
 """"""""""""""""""""""
@@ -244,6 +339,8 @@ or if you prefer to manually execute all installation steps:
       # installs the Qibo packages
       python setup.py install # or python setup.py develop
 
+
+
 _______________________
 
 .. _installing-tensorflow:
@@ -291,3 +388,54 @@ please do:
 
       import qibo
       qibo.set_backend("numpy")
+
+_______________________
+
+.. _installing-qiboicarusq:
+
+qiboicarusq
+^^^^^^^^^^^
+
+The ``qiboicarusq`` package contains the hardware control drivers for chips
+based on superconducting qubits. More details are available at the code
+`repository <https://github.com/qiboteam/qiboicarusq.git>`_.
+
+This backend is designed for laboratories, in order to switch to the ``qiboicarusq``
+backend please do:
+
+.. code-block:: python
+
+      import qibo
+      qibo.set_backend("qiboicarusq")
+
+Installing from source
+""""""""""""""""""""""
+
+The installation procedure presented in this section is useful if you have to
+install and develop the code from source.
+
+In order to install the package perform the following steps:
+
+.. code-block::
+
+      git clone https://github.com/qiboteam/qiboicarusq.git
+      cd qiboicarusq
+
+then proceed with the installation of requirements with:
+
+.. code-block::
+
+      pip install -r requirements.txt
+
+Then proceed with the ``qiboicarusq`` installation using ``pip``
+
+.. code-block::
+
+      pip install .
+
+or if you prefer to manually execute all installation steps:
+
+.. code-block::
+
+      # builds binaries
+      python setup.py develop

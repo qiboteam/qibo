@@ -3,10 +3,16 @@ Define the default circuit, constants and types.
 """
 import os
 import logging
-import warnings
 
-# Logging level from 0 (all) to 3 (errors)
-LOG_LEVEL = 3
+# Logging level from 0 (all) to 4 (errors) (see https://docs.python.org/3/library/logging.html#logging-levels)
+QIBO_LOG_LEVEL = 1
+if "QIBO_LOG_LEVEL" in os.environ: # pragma: no cover
+    QIBO_LOG_LEVEL = 10 * int(os.environ.get("QIBO_LOG_LEVEL"))
+
+# Logging level from 0 (all) to 3 (errors) for TensorFlow
+TF_LOG_LEVEL = 3
+if "TF_LOG_LEVEL" in os.environ: # pragma: no cover
+    TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
 
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
@@ -46,33 +52,6 @@ def raise_error(exception, message=None, args=None):
         raise exception(message)
 
 
-# Set the number of threads from the environment variable
-OMP_NUM_THREADS = None
-if "OMP_NUM_THREADS" not in os.environ:
-    import psutil
-    # using physical cores by default
-    cores = psutil.cpu_count(logical=False)
-    OMP_NUM_THREADS = cores
-else: # pragma: no cover
-    OMP_NUM_THREADS = int(os.environ.get("OMP_NUM_THREADS"))
-
-def get_threads():
-    """Returns number of threads."""
-    return OMP_NUM_THREADS
-
-def set_threads(num_threads):
-    """Set number of OpenMP threads.
-
-    Args:
-        num_threads (int): number of threads.
-    """
-    if not isinstance(num_threads, int): # pragma: no cover
-        raise_error(RuntimeError, "Number of threads must be integer.")
-    if num_threads < 1: # pragma: no cover
-        raise_error(RuntimeError, "Number of threads must be positive.")
-    global OMP_NUM_THREADS
-    OMP_NUM_THREADS = num_threads
-
 def get_batch_size():
     """Returns batch size used for sampling measurement shots."""
     return SHOT_BATCH_SIZE
@@ -108,11 +87,12 @@ class CustomHandler(logging.StreamHandler):
     """Custom handler for logging algorithm."""
     def format(self, record):
         """Format the record with specific format."""
-        fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
+        from qibo import __version__
+        fmt = f'[Qibo {__version__}|%(levelname)s|%(asctime)s]: %(message)s'
         return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
 
 
 # allocate logger object
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(QIBO_LOG_LEVEL)
 log.addHandler(CustomHandler())

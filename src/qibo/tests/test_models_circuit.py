@@ -1,7 +1,7 @@
 """Test methods defined in `qibo/models/circuit.py`."""
 import numpy as np
 import pytest
-from qibo import gates, models
+from qibo import gates, models, K
 from qibo.tests.utils import random_state
 
 
@@ -19,7 +19,6 @@ def test_circuit_constructor():
 
 
 def test_circuit_constructor_hardware_errors():
-    from qibo import K
     K.hardware_module = "test"
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2})
@@ -63,12 +62,12 @@ def test_qft_execution(backend, accelerators, nqubits, random):
     c = models.QFT(nqubits)
     if random:
         initial_state = random_state(nqubits)
-        final_state = c(np.copy(initial_state))
+        final_state = c(K.cast(np.copy(initial_state)))
     else:
         initial_state = c.get_initial_state()
         final_state = c()
-    target_state = exact_qft(initial_state)
-    np.testing.assert_allclose(final_state, target_state)
+    target_state = exact_qft(K.to_numpy(initial_state))
+    K.assert_allclose(final_state, target_state)
 
 
 def test_qft_errors():

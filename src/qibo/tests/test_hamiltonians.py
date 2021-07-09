@@ -23,7 +23,7 @@ def test_tfim_model_hamiltonian(model, kwargs, filename):
     """Test pre-coded Hamiltonian models generate the proper matrices."""
     from qibo.tests.test_models_variational import assert_regression_fixture
     H = getattr(hamiltonians, model)(**kwargs)
-    matrix = np.array(H.matrix).flatten().real
+    matrix = K.to_numpy(H.matrix).flatten().real
     assert_regression_fixture(matrix, filename)
 
 
@@ -43,4 +43,4 @@ def test_maxcut(nqubits):
             ham += M
     target_ham = K.cast(- ham / 2)
     final_ham = hamiltonians.MaxCut(nqubits)
-    np.testing.assert_allclose(final_ham.matrix, target_ham)
+    K.assert_allclose(final_ham.matrix, target_ham)

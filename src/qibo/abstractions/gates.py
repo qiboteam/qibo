@@ -228,6 +228,9 @@ class M(Gate):
         self.init_kwargs = {"register_name": register_name,
                             "collapse": collapse,
                             "p0": p0, "p1": p1}
+        if collapse and (p0 is not None or p1 is not None):
+            raise_error(NotImplementedError, "Bitflip measurement noise is not "
+                                             "available when collapsing.")
 
         if p1 is None: p1 = p0
         if p0 is None: p0 = p1

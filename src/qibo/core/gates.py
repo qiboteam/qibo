@@ -20,7 +20,7 @@ class BackendGate(BaseBackendGate):
 
     def __init__(self):
         if K.op is not None:
-            if not K.executing_eagerly():
+            if not K.executing_eagerly(): # pragma: no cover
                 raise_error(NotImplementedError,
                             "Custom operator gates should not be used in "
                             "compiled mode.")
@@ -32,6 +32,8 @@ class BackendGate(BaseBackendGate):
     @staticmethod
     def control_unitary(unitary):
         shape = tuple(unitary.shape)
+        if not isinstance(unitary, K.Tensor):
+            unitary = K.cast(unitary)
         if shape != (2, 2):
             raise_error(ValueError, "Cannot use ``control_unitary`` method for "
                                     "input matrix of shape {}.".format(shape))
@@ -123,14 +125,21 @@ class Y(BackendGate, abstract_gates.Y):
         return K.matrices.Y
 
     def _custom_density_matrix_call(self, state):
-        state = self.gate_op(state, self.cache.qubits_tensor + self.nqubits,
-                             2 * self.nqubits, *self.target_qubits,
-                             K.get_threads())
+        state = K.density_matrix_half_call(self, state)
         matrix = K.conj(K.matrices.Y)
-        state = K.op.apply_gate(state, matrix, self.cache.qubits_tensor,
-                                2 * self.nqubits, *self.cache.target_qubits_dm,
-                                K.get_threads())
-        return state
+        shape = state.shape
+        state = K.reshape(state, (K.np.prod(shape),))
+        original_targets = tuple(self.target_qubits)
+        self._target_qubits = self.cache.target_qubits_dm
+        self._nqubits *= 2
+        self.gate_op = K.op.apply_gate
+        self._matrix = K.conj(K.matrices.Y)
+        state = K.state_vector_matrix_call(self, state)
+        self._matrix = K.matrices.Y
+        self.gate_op = K.op.apply_y
+        self._nqubits //= 2
+        self._target_qubits = original_targets
+        return K.reshape(state, shape)
 
 
 class Z(BackendGate, abstract_gates.Z):
@@ -189,7 +198,6 @@ class M(BackendGate, abstract_gates.M):
                                   collapse=collapse, p0=p0, p1=p1)
         self.result = None
         self._result_list = None
-        self._result_tensor = None
         if collapse:
             self.result = self.measurements.MeasurementResult(self.qubits)
         if self.gate_op:
@@ -247,14 +255,6 @@ class M(BackendGate, abstract_gates.M):
             self._result_list = [resdict[q] for q in sorted(self.target_qubits)]
         return self._result_list
 
-    def result_tensor(self):
-        if self._result_tensor is None:
-            n = len(self.result_list())
-            result = sum(2 ** (n - i - 1) * r
-                         for i, r in enumerate(self.result_list()))
-            self._result_tensor = K.cast(result, dtype='DTYPEINT')
-        return self._result_tensor
-
     def measure(self, state, nshots):
         if isinstance(state, K.tensor_types):
             self.set_nqubits(state)
@@ -281,10 +281,6 @@ class M(BackendGate, abstract_gates.M):
             self._result_list = None
             self._result_tensor = None
             self.result.add_shot(probs)
-            # optional bitflip noise
-            if sum(sum(x.values()) for x in self.bitflip_map) > 0:
-                noisy_result = self.result.apply_bitflips(*self.bitflip_map)
-                self.result.binary = noisy_result.binary
             return self.result
 
         result = self.measurements.MeasurementResult(self.qubits, probs, nshots)
@@ -293,18 +289,10 @@ class M(BackendGate, abstract_gates.M):
         return result
 
     def state_vector_call(self, state):
-        if K.op is not None:
-            result = self.result_tensor()
-        else:
-            result = self.result.binary[-1]
-        return K.state_vector_collapse(self, state, result)
+        return K.state_vector_collapse(self, state, self.result.binary[-1])
 
     def density_matrix_call(self, state):
-        if K.op is not None:
-            result = self.result_tensor()
-        else:
-            result = self.result_list()
-        return K.density_matrix_collapse(self, state, result)
+        return K.density_matrix_collapse(self, state, self.result_list())
 
     def __call__(self, state, nshots=1):
         self.result = self.measure(state, nshots)
@@ -639,36 +627,28 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
                                                  "this operation.".format(n))
 
     def construct_unitary(self):
-        unitary = self.parameters
-        if isinstance(unitary, K.qnp.Tensor):
-            return K.qnp.cast(unitary)
-        if isinstance(unitary, K.Tensor): # pragma: no cover
-            return K.copy(K.cast(unitary))
+        return self.parameters
 
     def _dagger(self) -> "Unitary":
-        unitary = self.parameters
-        if isinstance(unitary, K.Tensor):
-            ud = K.conj(K.transpose(unitary))
-        else:
-            ud = unitary.conj().T
+        ud = K.conj(K.transpose(self.parameters))
         return self.__class__(ud, *self.target_qubits, **self.init_kwargs)
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):
-        x = K.qnp.cast(x)
+        if not isinstance(x, K.Tensor):
+            x = K.cast(x)
         shape = tuple(x.shape)
         if len(shape) > 2 and shape[0] == 1:
             shape = shape[1:]
             x = K.squeeze(x, axis=0)
         true_shape = (2 ** self.rank, 2 ** self.rank)
-        if shape == true_shape:
-            ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
-        elif shape == (2 ** (2 * self.rank),):
-            ParametrizedGate.parameters.fset(self, x.reshape(true_shape)) # pylint: disable=no-member
-        else:
+        if shape == (2 ** (2 * self.rank),):
+            x = K.reshape(x, true_shape)
+        elif shape != true_shape:
             raise_error(ValueError, "Invalid shape {} of unitary matrix "
                                     "acting on {} target qubits."
                                     "".format(shape, self.rank))
+        ParametrizedGate.parameters.fset(self, x) # pylint: disable=no-member
 
 
 class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
@@ -1076,7 +1056,13 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
 
     def density_matrix_call(self, state):
         if K.op is not None:
-            return self.gate_op(state, self.matrix, self.cache.qubits_tensor,
-                                2 * self.nqubits, *self.cache.target_qubits_dm,
-                                K.get_threads())
+            shape = state.shape
+            state = K.reshape(state, (K.np.prod(shape),))
+            original_targets = tuple(self.target_qubits)
+            self._target_qubits = self.cache.target_qubits_dm
+            self._nqubits *= 2
+            state = K.state_vector_matrix_call(self, state)
+            self._nqubits //= 2
+            self._target_qubits = original_targets
+            return K.reshape(state, shape)
         return K.state_vector_call(self, state)
