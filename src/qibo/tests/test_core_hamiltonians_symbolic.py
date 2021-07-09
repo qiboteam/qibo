@@ -181,12 +181,12 @@ def test_symbolic_hamiltonian_state_ev(backend, calcdense, nqubits, normalize):
     state = K.cast(random_complex((2 ** nqubits,)))
     local_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(local_ev, target_ev)
+    K.assert_allclose(local_ev, target_ev)
 
     state = random_complex((2 ** nqubits,))
     local_ev = local_ham.expectation(state, normalize)
     target_ev = dense_ham.expectation(state, normalize)
-    np.testing.assert_allclose(local_ev, target_ev)
+    K.assert_allclose(local_ev, target_ev)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])

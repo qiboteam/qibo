@@ -129,7 +129,7 @@ def test_hamiltonian_matmul():
 def test_hamiltonian_exponentiation(dense):
     from scipy.linalg import expm
     H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)
-    target_matrix = expm(-0.5j * np.array(H.matrix))
+    target_matrix = expm(-0.5j * K.to_numpy(H.matrix))
     K.assert_allclose(H.exp(0.5), target_matrix)
 
     H = hamiltonians.XXZ(nqubits=2, delta=0.5, dense=dense)

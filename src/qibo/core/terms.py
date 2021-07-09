@@ -65,7 +65,7 @@ class HamiltonianTerm:
             raise_error(ValueError, "Cannot merge HamiltonianTerm acting on "
                                     "qubits {} to term on qubits {}."
                                     "".format(term.target_qubits, self.target_qubits))
-        matrix = K.np.kron(term.matrix, K.eye(2 ** (len(self) - len(term))))
+        matrix = K.np.kron(term.matrix, K.qnp.eye(2 ** (len(self) - len(term))))
         matrix = K.np.reshape(matrix, 2 * len(self) * (2,))
         order = []
         i = len(term)
