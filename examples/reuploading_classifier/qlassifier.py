@@ -1,8 +1,7 @@
-from qibo.models import Circuit
-from qibo import gates
 import numpy as np
+from qibo.models import Circuit
+from qibo import gates, K
 from datasets import create_dataset, create_target, fig_template, world_map_template
-import tensorflow as tf
 from matplotlib.cm import get_cmap
 from matplotlib.colors import Normalize
 import os
@@ -111,12 +110,11 @@ class single_qubit_classifier:
         if method == 'cma':
             # Genetic optimizer
             import cma
-            r = cma.fmin2(lambda p: loss(p).numpy(), self.params, 2)
+            r = cma.fmin2(lambda p: K.to_numpy(loss(p)), self.params, 2)
             result = r[1].result.fbest
             parameters = r[1].result.xbest
 
         elif method == 'sgd':
-            from qibo import K
             circuit = self.circuit(self.training_set[0])
             for gate in circuit.queue:
                 if K.name != "tensorflow":
@@ -134,7 +132,6 @@ class single_qubit_classifier:
                 sgd_options.update(options)
 
             # proceed with the training
-            from qibo import K
             vparams = K.Variable(self.params)
             optimizer = getattr(K.optimizers, sgd_options["optimizer"])(
                 learning_rate=sgd_options["learning_rate"])
@@ -155,15 +152,15 @@ class single_qubit_classifier:
                 if l < l_optimal:
                     l_optimal, params_optimal = l, vparams
                 if e % sgd_options["nmessage"] == 0:
-                    print('ite %d : loss %f' % (e, l.numpy()))
+                    print('ite %d : loss %f' % (e, K.to_numpy(l)))
 
-            result = self.cost_function(params_optimal).numpy()
-            parameters = params_optimal.numpy()
+            result = K.to_numpy(self.cost_function(params_optimal))
+            parameters = K.to_numpy(params_optimal)
 
         else:
             import numpy as np
             from scipy.optimize import minimize
-            m = minimize(lambda p: loss(p).numpy(), self.params,
+            m = minimize(lambda p: K.to_numpy(loss(p)), self.params,
                          method=method, options=options)
             result = m.fun
             parameters = m.x
@@ -226,7 +223,7 @@ class single_qubit_classifier:
         norm_class = Normalize(vmin=0, vmax=10)
         for i, x in enumerate(self.test_set[0]):
             C = self.circuit(x)
-            state = C.execute().numpy()
+            state = C.execute()
             angles[i, 0] = np.pi / 2 - \
                 np.arccos(np.abs(state[0]) ** 2 - np.abs(state[1]) ** 2)
             angles[i, 1] = np.angle(state[1] / state[0])
@@ -271,4 +268,4 @@ class single_qubit_classifier:
 
 
 def fidelity(state1, state2):
-    return tf.constant(tf.abs(tf.reduce_sum(tf.math.conj(state2) * state1))**2)
+    return K.abs(K.sum(K.qnp.conj(state2) * state1)) ** 2
