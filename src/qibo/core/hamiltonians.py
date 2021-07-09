@@ -135,23 +135,24 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __mul__(self, o):
-        if isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types):
-            new_matrix = self.matrix * o
-            r = self.__class__(self.nqubits, new_matrix)
-            if self._eigenvalues is not None:
-                if K.qnp.cast(o).real >= 0:
-                    r._eigenvalues = o * self._eigenvalues
-                else:
-                    r._eigenvalues = o * self._eigenvalues[::-1]
-            if self._eigenvectors is not None:
-                if K.qnp.cast(o).real > 0:
-                    r._eigenvectors = self._eigenvectors
-                elif o == 0:
-                    r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
-            return r
-        else:
+        if isinstance(o, K.tensor_types):
+            o = complex(o)
+        elif not isinstance(o, K.numeric_types):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
+        new_matrix = self.matrix * o
+        r = self.__class__(self.nqubits, new_matrix)
+        if self._eigenvalues is not None:
+            if K.qnp.cast(o).real >= 0:
+                r._eigenvalues = o * self._eigenvalues
+            else:
+                r._eigenvalues = o * self._eigenvalues[::-1]
+        if self._eigenvectors is not None:
+            if K.qnp.cast(o).real > 0:
+                r._eigenvectors = self._eigenvectors
+            elif o == 0:
+                r._eigenvectors = self.eye(int(self._eigenvectors.shape[0]))
+        return r
 
     def __matmul__(self, o):
         if isinstance(o, self.__class__):
