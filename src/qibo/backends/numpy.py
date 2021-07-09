@@ -25,6 +25,9 @@ class NumpyBackend(abstract.AbstractBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = None
+        self.cpu_devices = ["/CPU:0"]
+        self.gpu_devices = []
+        self.default_device = self.cpu_devices[0]
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
@@ -409,7 +412,6 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
 
-        # TODO: reconsider device management
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
         if self.gpu_devices: # pragma: no cover
