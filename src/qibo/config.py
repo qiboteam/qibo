@@ -87,7 +87,8 @@ class CustomHandler(logging.StreamHandler):
     """Custom handler for logging algorithm."""
     def format(self, record):
         """Format the record with specific format."""
-        fmt = '[Qibo|%(levelname)s|%(asctime)s]: %(message)s'
+        from qibo import __version__
+        fmt = f'[Qibo {__version__}|%(levelname)s|%(asctime)s]: %(message)s'
         return logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S').format(record)
 
 
