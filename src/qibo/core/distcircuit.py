@@ -6,7 +6,7 @@ from qibo import K
 from qibo import gates as gate_module
 from qibo.abstractions import gates
 from qibo.abstractions.circuit import AbstractCircuit
-from qibo.config import raise_error, get_threads
+from qibo.config import raise_error
 from qibo.core import callbacks, circuit, measurements, states
 from qibo.core.distutils import DistributedQueues
 from typing import Dict, List, Optional, Set, Tuple, Union
@@ -98,9 +98,9 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if K.op is None:
-            raise_error(NotImplementedError, "Distributed circuit does not "
-                                             "support non-custom gates.")
+        if K.name != "qibotf":
+            raise_error(NotImplementedError, "Distributed circuit is implemented "
+                                             "only for the qibotf backend.")
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
@@ -148,7 +148,7 @@ class DistributedCircuit(circuit.Circuit):
             local_eff = self.queues.qubits.reduced_local[local_qubit]
             with K.device(self.memory_device):
                 K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
-                                 local_eff, self.nlocal, get_threads())
+                                 local_eff, self.nlocal, K.nthreads)
 
     def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:

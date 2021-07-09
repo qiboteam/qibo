@@ -234,7 +234,7 @@ class AdiabaticEvolution(StateEvolution):
         self.set_hamiltonian_flag = False
         def hamiltonian(t):
             # Disable warning that ``schedule`` is not Callable
-            st = self.schedule(t / total_time) # pylint: disable=E1102
+            st = complex(self.schedule(t / total_time)) # pylint: disable=E1102
             return self.h0 * (1 - st) + self.h1 * st
         self.solver.hamiltonian = hamiltonian
 

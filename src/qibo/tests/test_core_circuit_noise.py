@@ -2,7 +2,7 @@
 import numpy as np
 import pytest
 import qibo
-from qibo import gates
+from qibo import K, gates
 from qibo.models import Circuit
 
 
@@ -23,7 +23,7 @@ def test_pauli_noise_channel(backend):
     m1 = np.kron(matrices.I, matrices.Y)
     m2 = np.kron(matrices.I, matrices.Z)
     rho = 0.6 * rho + 0.1 * m1.dot(rho.dot(m1)) + 0.3 * m2.dot(rho.dot(m2))
-    np.testing.assert_allclose(final_rho, rho)
+    K.assert_allclose(final_rho, rho)
 
 
 def test_noisy_circuit_reexecution(backend):
@@ -34,7 +34,7 @@ def test_noisy_circuit_reexecution(backend):
     c.add(gates.PauliNoiseChannel(1, pz=0.3))
     final_rho = c().state()
     final_rho2 = c().state()
-    np.testing.assert_allclose(final_rho, final_rho2)
+    K.assert_allclose(final_rho, final_rho2)
 
 
 def test_circuit_with_noise_gates():
@@ -59,7 +59,7 @@ def test_circuit_with_noise_execution(backend):
     target_c.add(gates.H(1))
     target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.2, 0.3))
     target_state = target_c()
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_noise_measurements(backend):
@@ -75,7 +75,7 @@ def test_circuit_with_noise_measurements(backend):
     target_c.add(gates.H(1))
     target_c.add(gates.PauliNoiseChannel(1, 0.1, 0.1, 0.1))
     target_state = target_c()
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_noise_noise_map(backend):
@@ -95,7 +95,7 @@ def test_circuit_with_noise_noise_map(backend):
     target_c.add(gates.PauliNoiseChannel(1, 0.2, 0.3, 0.0))
     target_c.add(gates.X(2))
     target_state = target_c()
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_circuit_with_noise_errors():

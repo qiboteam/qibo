@@ -2,7 +2,7 @@
 import pytest
 import numpy as np
 from qibo.models import Circuit, AdiabaticEvolution
-from qibo import gates, callbacks
+from qibo import gates, callbacks, K
 from qibo.config import EIGVAL_CUTOFF
 
 
@@ -27,10 +27,10 @@ def test_getitem_bad_indexing(backend):
 def test_entropy_product_state(backend):
     """Check that the |++> state has zero entropy."""
     entropy = callbacks.EntanglementEntropy()
-    state = np.ones(4) / 2.0
+    state = K.ones(4) / 2.0
 
     result = entropy(state)
-    np.testing.assert_allclose(result, 0, atol=_atol)
+    K.assert_allclose(result, 0, atol=_atol)
 
 
 def test_entropy_singlet_state(backend):
@@ -41,7 +41,7 @@ def test_entropy_singlet_state(backend):
     state[0], state[-1] = 1, 1
     state = K.cast(state / np.sqrt(2))
     result = entropy(state)
-    np.testing.assert_allclose(result, 1.0)
+    K.assert_allclose(result, 1.0)
 
 
 def test_entropy_bad_state_type(backend):
@@ -61,14 +61,14 @@ def test_entropy_random_state(backend):
     rho = u.dot(np.diag(s)).dot(u.conj().T)
 
     callback = callbacks.EntanglementEntropy(compute_spectrum=True)
-    result = callback.entropy(rho)
+    result = callback.entropy(K.cast(rho))
     target = - (s * np.log2(s)).sum()
-    np.testing.assert_allclose(result, target)
+    K.assert_allclose(result, target)
 
     ref_eigvals = np.linalg.eigvalsh(rho)
     masked_eigvals = ref_eigvals[np.where(ref_eigvals > EIGVAL_CUTOFF)]
     ref_spectrum = - np.log(masked_eigvals)
-    np.testing.assert_allclose(callback.spectrum[0], ref_spectrum)
+    K.assert_allclose(callback.spectrum[0], ref_spectrum)
 
 
 def test_entropy_switch_partition(backend):
@@ -79,8 +79,8 @@ def test_entropy_switch_partition(backend):
     state[0], state[-1] = 1, 1
     state = state / np.sqrt(2)
 
-    result = entropy(state)
-    np.testing.assert_allclose(result, 1.0)
+    result = entropy(K.cast(state))
+    K.assert_allclose(result, 1.0)
 
 
 def test_entropy_numerical(backend):
@@ -95,8 +95,7 @@ def test_entropy_numerical(backend):
 
     mask = eigvals > 0
     target = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
-
-    np.testing.assert_allclose(result, target)
+    K.assert_allclose(result, target)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -112,11 +111,11 @@ def test_entropy_in_circuit(backend, density_matrix):
     state = c()
 
     target = [0, 0, 1.0]
-    np.testing.assert_allclose(entropy[:], target, atol=_atol)
+    K.assert_allclose(entropy[:], target, atol=_atol)
 
     target_spectrum = [0, 0, np.log(2), np.log(2)]
     entropy_spectrum = np.concatenate(entropy.spectrum).ravel().tolist()
-    np.testing.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
+    K.assert_allclose(entropy_spectrum, target_spectrum, atol=_atol)
 
 
 @pytest.mark.parametrize("gateconf,target_entropy",
@@ -142,8 +141,8 @@ def test_entropy_in_distributed_circuit(backend, accelerators, gateconf, target_
         elif gate == "entropy":
             c.add(gates.CallbackGate(entropy))
     final_state = c()
-    np.testing.assert_allclose(final_state, target_state)
-    np.testing.assert_allclose(entropy[:], target_entropy, atol=_atol)
+    K.assert_allclose(final_state, target_state)
+    K.assert_allclose(entropy[:], target_entropy, atol=_atol)
 
 
 def test_entropy_in_compiled_circuit(backend):
@@ -156,13 +155,9 @@ def test_entropy_in_compiled_circuit(backend):
     c.add(gates.CallbackGate(entropy))
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
-    if get_backend() == "qibotf":
-        with pytest.raises(RuntimeError):
-            c.compile()
-    else:
-        c.compile()
-        final_state = c()
-        np.testing.assert_allclose(entropy[:], [0, 0, 1.0], atol=_atol)
+    c.compile()
+    final_state = c()
+    K.assert_allclose(entropy[:], [0, 0, 1.0], atol=_atol)
 
 
 def test_entropy_multiple_executions(backend, accelerators):
@@ -178,7 +173,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     state = c()
-    np.testing.assert_allclose(state, target_state)
+    K.assert_allclose(state, target_state)
 
     target_c = Circuit(4)
     target_c.add([gates.RY(0, 0.4321), gates.CNOT(0, 1)])
@@ -190,7 +185,7 @@ def test_entropy_multiple_executions(backend, accelerators):
     c.add(gates.CNOT(0, 1))
     c.add(gates.CallbackGate(entropy))
     state = c()
-    np.testing.assert_allclose(state, target_state)
+    K.assert_allclose(state, target_state)
 
     def target_entropy(t):
         cos = np.cos(t / 2.0) ** 2
@@ -198,7 +193,7 @@ def test_entropy_multiple_executions(backend, accelerators):
         return - cos * np.log2(cos) - sin * np.log2(sin)
 
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
-    np.testing.assert_allclose(entropy[:], target, atol=_atol)
+    K.assert_allclose(entropy[:], target, atol=_atol)
 
 
 def test_entropy_large_circuit(backend, accelerators):
@@ -209,20 +204,20 @@ def test_entropy_large_circuit(backend, accelerators):
     c1.add((gates.RY(i, thetas[0, i]) for i in range(8)))
     c1.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state1 = c1()
-    e1 = target_entropy(state1)
+    e1 = K.to_numpy(target_entropy(state1))
 
     c2 = Circuit(8)
     c2.add((gates.RY(i, thetas[1, i]) for i in range(8)))
     c2.add((gates.CZ(i, i + 1) for i in range(1, 7, 2)))
     c2.add(gates.CZ(0, 7))
     state2 = (c1 + c2)()
-    e2 = target_entropy(state2)
+    e2 = K.to_numpy(target_entropy(state2))
 
     c3 = Circuit(8)
     c3.add((gates.RY(i, thetas[2, i]) for i in range(8)))
     c3.add((gates.CZ(i, i + 1) for i in range(0, 7, 2)))
     state3 = (c1 + c2 + c3)()
-    e3 = target_entropy(state3)
+    e3 = K.to_numpy(target_entropy(state3))
 
     entropy = callbacks.EntanglementEntropy([0, 2, 4, 5])
     c = Circuit(8, accelerators)
@@ -239,8 +234,8 @@ def test_entropy_large_circuit(backend, accelerators):
     c.add(gates.CallbackGate(entropy))
     state = c()
 
-    np.testing.assert_allclose(state3, state)
-    np.testing.assert_allclose(entropy[:], [0, e1, e2, e3])
+    K.assert_allclose(state3, state)
+    K.assert_allclose(entropy[:], [0, e1, e2, e3])
 
 
 def test_entropy_density_matrix(backend):
@@ -262,7 +257,7 @@ def test_entropy_density_matrix(backend):
     assert (eigvals >= 0).prod()
     mask = eigvals > 0
     target_ent = - (eigvals[mask] * np.log2(eigvals[mask])).sum()
-    np.testing.assert_allclose(final_ent, target_ent)
+    K.assert_allclose(final_ent, target_ent)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -276,7 +271,7 @@ def test_norm(backend, density_matrix):
         state = np.random.random(4) + 1j * np.random.random(4)
         target_norm = np.sqrt((np.abs(state) ** 2).sum())
 
-    np.testing.assert_allclose(norm(state), target_norm)
+    K.assert_allclose(norm(K.cast(state)), target_norm)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -290,7 +285,7 @@ def test_overlap(backend, density_matrix):
             overlap(state1)
     else:
         target_overlap = np.abs((state0.conj() * state1).sum())
-        np.testing.assert_allclose(overlap(state1), target_overlap)
+        K.assert_allclose(overlap(K.cast(state1)), target_overlap)
 
 
 @pytest.mark.parametrize("density_matrix", [False, True])
@@ -298,7 +293,7 @@ def test_energy(backend, density_matrix):
     from qibo import hamiltonians
     ham = hamiltonians.TFIM(4, h=1.0)
     energy = callbacks.Energy(ham)
-    matrix = np.array(ham.matrix)
+    matrix = K.to_numpy(ham.matrix)
     if density_matrix:
         energy.density_matrix = True
         state = np.random.random((16, 16)) + 1j * np.random.random((16, 16))
@@ -306,7 +301,7 @@ def test_energy(backend, density_matrix):
     else:
         state = np.random.random(16) + 1j * np.random.random(16)
         target_energy = state.conj().dot(matrix.dot(state))
-    np.testing.assert_allclose(energy(state), target_energy)
+    K.assert_allclose(energy(K.cast(state)), target_energy)
 
 
 @pytest.mark.parametrize("trotter", [False, True])
@@ -336,9 +331,10 @@ def test_gap(backend, trotter, check_degenerate):
     evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                    callbacks=[gap, ground, excited])
     final_state = evolution(final_time=1.0)
-    np.testing.assert_allclose(ground[:], targets["ground"])
-    np.testing.assert_allclose(excited[:], targets["excited"])
-    np.testing.assert_allclose(gap[:], targets["gap"])
+    targets = {k: K.stack(v) for k, v in targets.items()}
+    K.assert_allclose(ground[:], targets["ground"])
+    K.assert_allclose(excited[:], targets["excited"])
+    K.assert_allclose(gap[:], targets["gap"])
 
 
 def test_gap_errors():

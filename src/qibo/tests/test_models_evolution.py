@@ -7,8 +7,8 @@ from scipy.linalg import expm
 
 def assert_states_equal(state, target_state, atol=0):
     """Asserts that two state vectors are equal up to a phase."""
-    phase = state[0] / target_state[0]
-    np.testing.assert_allclose(state, phase * target_state, atol=atol)
+    phase = K.to_numpy(state[0] / target_state[0])
+    K.assert_allclose(state, phase * target_state, atol=atol)
 
 
 class TimeStepChecker(callbacks.BackendCallback):
@@ -87,7 +87,7 @@ def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, sol
     h = 1.0
 
     target_psi = [np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)]
-    ham_matrix = np.array(hamiltonians.TFIM(nqubits, h=h).matrix)
+    ham_matrix = K.to_numpy(hamiltonians.TFIM(nqubits, h=h).matrix)
     prop = expm(-1j * dt * ham_matrix)
     for n in range(int(1 / dt)):
         target_psi.append(prop.dot(target_psi[-1]))
@@ -178,7 +178,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
             matrix = adev.hamiltonian(t).dense.matrix
         else:
             matrix = adev.hamiltonian(t).matrix
-        np.testing.assert_allclose(matrix, ham(t, 1))
+        K.assert_allclose(matrix, ham(t, 1))
 
     #try using a different total time
     adev.hamiltonian(0, total_time=2)
@@ -187,7 +187,7 @@ def test_adiabatic_evolution_hamiltonian(backend, trotter):
             matrix = adev.hamiltonian(t).dense.matrix
         else:
             matrix = adev.hamiltonian(t).matrix
-        np.testing.assert_allclose(matrix, ham(t, 2))
+        K.assert_allclose(matrix, ham(t, 2))
 
 
 @pytest.mark.parametrize("dt", [1e-1])
@@ -288,7 +288,8 @@ def test_energy_callback(solver, dt, atol):
         target_energies.append(calc_energy(target_psi))
 
     assert_states_equal(final_psi, target_psi, atol=atol)
-    np.testing.assert_allclose(energy[:], target_energies, atol=atol)
+    target_energies = K.cast(target_energies)
+    K.assert_allclose(energy[:], target_energies, atol=atol)
 
 
 test_names = "method,options,messages,trotter,filename"

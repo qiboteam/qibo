@@ -7,25 +7,30 @@ import argparse
 import os
 import time
 import json
+import numpy as np
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=20, type=int)
 parser.add_argument("--type", default="qft", type=str)
-parser.add_argument("--backend", default="custom", type=str)
+parser.add_argument("--backend", default="qibojit", type=str)
 parser.add_argument("--precision", default="double", type=str)
 
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--accelerators", default=None, type=str)
+parser.add_argument("--memory", default=None, type=int)
+parser.add_argument("--threading", default=None, type=str)
 
+parser.add_argument("--nreps", default=1, type=int)
 parser.add_argument("--nshots", default=None, type=int)
+
+parser.add_argument("--transfer", action="store_true")
 parser.add_argument("--fuse", action="store_true")
 parser.add_argument("--compile", action="store_true")
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
 
-parser.add_argument("--memory", default=None, type=int)
 parser.add_argument("--filename", default=None, type=str)
 
 # params
@@ -55,7 +60,20 @@ def limit_gpu_memory(memory_limit=None):
         print("Limiting memory of {} to {}.".format(gpu.name, memory_limit))
     print()
 
-limit_gpu_memory(args.pop("memory"))
+
+def select_numba_threading(threading):
+    from numba import config
+    print(f"\nSwitching threading to {threading}.\n")
+    config.THREADING_LAYER = threading
+
+
+threading = args.pop("threading")
+if args.get("backend") == "qibojit" and threading is not None:
+    select_numba_threading(threading)
+
+memory = args.pop("memory")
+if args.get("backend") in {"qibotf", "tensorflow"}:
+    limit_gpu_memory(memory)
 
 import qibo
 import circuits
@@ -93,8 +111,9 @@ def parse_accelerators(accelerators):
 
 def main(nqubits, type,
          backend="custom", precision="double",
-         device=None, accelerators=None,
-         nshots=None, fuse=False, compile=False,
+         device=None, accelerators=None, threadsafe=False,
+         nreps=1, nshots=None,
+         transfer=False, fuse=False, compile=False,
          nlayers=None, gate_type=None, params={},
          filename=None):
     """Runs benchmarks for different circuit types.
@@ -107,9 +126,14 @@ def main(nqubits, type,
             If ``None`` the first available device is used.
         accelerators (dict): Dictionary that specifies the accelarator devices
             for multi-GPU setups.
+        nreps (int): Number of repetitions of circuit execution.
+            Dry run is not included. Default is 1.
         nshots (int): Number of measurement shots.
             Logs the time required to sample frequencies (no samples).
             If ``None`` no measurements are performed.
+        transfer (bool): If ``True`` it transfers the array from GPU to CPU.
+            Makes execution and dry run times similar
+            (otherwise execution is much faster).
         fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
         compile: If ``True`` then the Tensorflow graph is compiled using
             ``circuit.compile()``. Compilation time is logged in this case.
@@ -140,10 +164,10 @@ def main(nqubits, type,
 
     # Create log dict
     logs.append({
-        "nqubits": nqubits, "circuit_type": type,
+        "nqubits": nqubits, "circuit_type": type, "threading": "",
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
         "device": qibo.get_device(), "accelerators": accelerators,
-        "nshots": nshots, "fuse": fuse, "compile": compile
+        "nshots": nshots, "transfer": transfer, "fuse": fuse, "compile": compile
         })
 
     params = {k: v for k, v in params.items() if v is not None}
@@ -175,17 +199,35 @@ def main(nqubits, type,
 
     start_time = time.time()
     result = circuit(nshots=nshots)
-    logs[-1]["simulation_time"] = time.time() - start_time
+    if transfer:
+        result = result.numpy()
+    logs[-1]["dry_run_time"] = time.time() - start_time
+
+    simulation_time = []
+    for _ in range(nreps):
+        start_time = time.time()
+        result = circuit(nshots=nshots)
+        if transfer:
+            result = result.numpy()
+        simulation_time.append(time.time() - start_time)
     logs[-1]["dtype"] = str(result.dtype)
+    logs[-1]["simulation_time"] = np.mean(simulation_time)
+    logs[-1]["simulation_time_std"] = np.std(simulation_time)
+
 
     if nshots is not None:
         start_time = time.time()
         freqs = result.frequencies()
         logs[-1]["measurement_time"] = time.time() - start_time
 
+    if logs[-1]["backend"] == "qibojit" and qibo.K.op.get_backend() == "numba":
+        from numba import threading_layer
+        logs[-1]["threading"] = threading_layer()
+
     print()
     for k, v in logs[-1].items():
         print("{}: {}".format(k, v))
+    print()
 
     if filename is not None:
         with open(filename, "w") as file:

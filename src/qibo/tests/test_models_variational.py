@@ -5,7 +5,7 @@ import numpy as np
 import pathlib
 import pytest
 import qibo
-from qibo import gates, models, hamiltonians
+from qibo import gates, models, hamiltonians, K
 from qibo.tests.utils import random_state
 from scipy.linalg import expm
 
@@ -33,7 +33,7 @@ def assert_regression_fixture(array, filename, rtol=1e-5):
         # case not tested in GitHub workflows because files exist
         np.savetxt(filename, array)
         array_fixture = load(filename)
-    np.testing.assert_allclose(array, array_fixture, rtol=rtol)
+    K.assert_allclose(array, array_fixture, rtol=rtol)
 
 
 test_names = "method,options,compile,filename"
@@ -47,7 +47,7 @@ def test_vqc(backend, method, options, compile, filename):
     from qibo.optimizers import optimize
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        state = circuit().tensor
+        state = K.to_numpy(circuit().tensor)
         return 1 - np.abs(np.dot(np.conj(target), state))
 
     nqubits = 6
@@ -94,13 +94,12 @@ def test_vqe(backend, method, options, compile, filename):
 
     if method == 'parallel_L-BFGS-B':
         device = qibo.get_device()
-        if qibo.get_backend() == "tensorflow":
-            pytest.skip("unsupported backend")
-        if device is not None and "GPU" in device: # pragma: no cover
+        backend = qibo.get_backend()
+        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
             pytest.skip("unsupported configuration")
-        import os
-        if os.name == 'nt': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B not supported on Windows.")
+        import sys
+        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B only supported on linux.")
         qibo.set_threads(1)
 
     nqubits = 6
@@ -169,7 +168,7 @@ def test_initial_state(backend, accelerators):
     qaoa.set_parameters(np.random.random(4))
     target_state = np.ones(2 ** 5) / np.sqrt(2 ** 5)
     final_state = qaoa.get_initial_state()
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 @pytest.mark.parametrize("solver,trotter",
@@ -191,8 +190,8 @@ def test_qaoa_execution(backend, solver, trotter, accel=None):
         atol = 0
 
     target_state = np.copy(state)
-    h_matrix = np.array(h.matrix)
-    m_matrix = np.array(m.matrix)
+    h_matrix = K.to_numpy(h.matrix)
+    m_matrix = K.to_numpy(m.matrix)
     for i, p in enumerate(params):
         if i % 2:
             u = expm(-1j * p * m_matrix)
@@ -203,7 +202,7 @@ def test_qaoa_execution(backend, solver, trotter, accel=None):
     qaoa = models.QAOA(h, mixer=m, solver=solver, accelerators=accel)
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
-    np.testing.assert_allclose(final_state, target_state, atol=atol)
+    K.assert_allclose(final_state, target_state, atol=atol)
 
 
 def test_qaoa_distributed_execution(backend, accelerators):
@@ -224,8 +223,8 @@ def test_qaoa_callbacks(backend, accelerators):
     qaoa.set_parameters(params)
     final_state = qaoa(np.copy(state))
 
-    h_matrix = np.array(h.matrix)
-    m_matrix = np.array(qaoa.mixer.matrix)
+    h_matrix = K.to_numpy(h.matrix)
+    m_matrix = K.to_numpy(qaoa.mixer.matrix)
     calc_energy = lambda s: (s.conj() * h_matrix.dot(s)).sum()
     target_state = np.copy(state)
     target_energy = [calc_energy(target_state)]
@@ -236,7 +235,7 @@ def test_qaoa_callbacks(backend, accelerators):
             u = expm(-1j * p * h_matrix)
         target_state = u @ target_state
         target_energy.append(calc_energy(target_state))
-    np.testing.assert_allclose(energy[:], target_energy)
+    K.assert_allclose(energy[:], target_energy)
 
 
 def test_qaoa_errors():
@@ -294,10 +293,8 @@ def test_falqon_optimization(backend, delta_t, max_layers, tolerance, filename):
 
 def test_falqon_optimization_callback(backend):
     class TestCallback:
-        from qibo import K
-
         def __call__(self, x):
-            return self.K.sum(x)
+            return K.sum(x)
 
     callback = TestCallback()
     h = hamiltonians.XXZ(3)

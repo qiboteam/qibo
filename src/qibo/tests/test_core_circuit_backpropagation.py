@@ -20,10 +20,10 @@ def test_variable_backpropagation(backend):
     grad = tape.gradient(loss, theta)
 
     target_loss = np.cos(theta / 2.0)
-    np.testing.assert_allclose(loss, target_loss)
+    K.assert_allclose(loss, target_loss)
 
     target_grad = - np.sin(theta / 2.0) / 2.0
-    np.testing.assert_allclose(grad, target_grad)
+    K.assert_allclose(grad, target_grad)
 
 
 def test_two_variables_backpropagation(backend):
@@ -42,9 +42,9 @@ def test_two_variables_backpropagation(backend):
 
     t = np.array([0.1234, 0.4321]) / 2.0
     target_loss = np.cos(t[0]) * np.cos(t[1])
-    np.testing.assert_allclose(loss, target_loss)
+    K.assert_allclose(loss, target_loss)
 
     target_grad1 = - np.sin(t[0]) * np.cos(t[1])
     target_grad2 = - np.cos(t[0]) * np.sin(t[1])
     target_grad = np.array([target_grad1, target_grad2]) / 2.0
-    np.testing.assert_allclose(grad, target_grad)
+    K.assert_allclose(grad, target_grad)

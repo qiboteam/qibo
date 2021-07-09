@@ -78,7 +78,8 @@ def test_aavqe(nqubits, layers, maxsteps, T_max):
 @pytest.mark.parametrize("layers", [1, 2])
 @pytest.mark.parametrize("compress", [1])
 @pytest.mark.parametrize("lambdas", [[0.9, 0.95, 1.0, 1.05, 1.10]])
-def test_autoencoder(nqubits, layers, compress, lambdas):
+@pytest.mark.parametrize("maxiter", [1])
+def test_autoencoder(nqubits, layers, compress, lambdas, maxiter):
     args = locals()
     os.chdir(os.path.join(base_dir, "autoencoder"))
     run_script(args)
@@ -102,7 +103,7 @@ def test_hash_grover(h_value, collisions, b):
 @pytest.mark.parametrize("nlayers", [1, 2])
 @pytest.mark.parametrize("nshots", [1000])
 @pytest.mark.parametrize("RY", [False, True])
-def test_qsvd(nqubits, subsize, nlayers, nshots, RY, method="Powell"):
+def test_qsvd(nqubits, subsize, nlayers, nshots, RY, method="Powell", maxiter=1):
     args = locals()
     path = os.path.join(base_dir, "qsvd")
     sys.path[-1] = path
@@ -121,7 +122,7 @@ def test_reuploading_classifier(dataset, layers):
 
 
 @pytest.mark.parametrize("data", [(2, 0.4, 0.05, 0.1, 1.9)])
-@pytest.mark.parametrize("bins", [8, 16])
+@pytest.mark.parametrize("bins", [8, 10])
 def test_unary(data, bins, M=10, shots=1000):
     args = locals()
     if "functions" in sys.modules:
@@ -141,10 +142,10 @@ def test_benchmarks(nqubits, type):
     code = open("main.py", "r").read()
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
-    header = ("import argparse\nimport os\nimport time"
+    header = ("import argparse\nimport os\nimport time\nimport numpy as np"
               "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
-            "backend": "qibotf", "precision": "double",
+            "backend": "qibojit", "precision": "double",
             "device": None, "accelerators": None,
             "nshots": None, "fuse": False, "compile": False,
             "nlayers": None, "gate_type": None, "params": {},
@@ -159,6 +160,7 @@ def test_benchmarks(nqubits, type):
 @pytest.mark.parametrize("varlayer", [False, True])
 def test_vqe_benchmarks(nqubits, nlayers, varlayer, method="Powell"):
     args = locals()
+    args["backend"] = "qibojit"
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
@@ -223,7 +225,8 @@ def test_adiabatic3sat(nqubits, instance, T, dt, solver, trotter, params,
 @pytest.mark.parametrize("layers", [3, 2])
 @pytest.mark.parametrize("autoencoder", [0, 1])
 @pytest.mark.parametrize("example", [0, 1])
-def test_ef_qae(layers, autoencoder, example):
+@pytest.mark.parametrize("maxiter", [1])
+def test_ef_qae(layers, autoencoder, example, maxiter):
     args = locals()
     os.chdir(os.path.join(base_dir, "EF_QAE"))
     run_script(args)

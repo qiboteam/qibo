@@ -1,12 +1,11 @@
 """Test all methods defined in `qibo/core/circuit.py`."""
 import numpy as np
 import pytest
-from qibo import gates
+from qibo import gates, K
 from qibo.models import Circuit
 
 
 def test_circuit_init(backend, accelerators):
-    from qibo import K
     c = Circuit(2, accelerators)
     assert c.param_tensor_types == K.tensor_types
 
@@ -39,7 +38,7 @@ def test_eager_execute(backend, accelerators):
     c = Circuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
     target_state = np.ones(16) / 4.0
-    np.testing.assert_allclose(c(), target_state)
+    K.assert_allclose(c(), target_state)
 
 
 def test_compiled_execute(backend):
@@ -60,21 +59,15 @@ def test_compiled_execute(backend):
     r1 = c1.execute()
 
     # Run compiled circuit
-    from qibo import K
     c2 = create_circuit()
-    if K.op is not None:
-        with pytest.raises(RuntimeError):
-            c2.compile()
-    else:
-        c2.compile()
-        r2 = c2()
-        init_state = c2.get_initial_state()
-        np.testing.assert_allclose(r1, r2)
+    c2.compile()
+    r2 = c2()
+    init_state = c2.get_initial_state()
+    np.testing.assert_allclose(r1, r2)
 
 
 def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
-    from qibo import K
     if K.name != "tensorflow": # pragma: no cover
         pytest.skip("Skipping compilation test because Tensorflow is not available.")
     c = Circuit(2)
@@ -102,7 +95,7 @@ def test_repeated_execute(backend, accelerators):
     c.repeated_execution = True
     target_state = np.array(20 * [c()])
     final_state = c(nshots=20)
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
 
 
 def test_final_state_property(backend):
@@ -115,7 +108,7 @@ def test_final_state_property(backend):
 
     _ = c()
     target_state = np.ones(4) / 2
-    np.testing.assert_allclose(c.final_state, target_state)
+    K.assert_allclose(c.final_state, target_state)
 
 
 def test_get_initial_state(backend):
@@ -123,7 +116,7 @@ def test_get_initial_state(backend):
     final_state = c.get_initial_state()
     target_state = np.zeros(4)
     target_state[0] = 1
-    np.testing.assert_allclose(final_state, target_state)
+    K.assert_allclose(final_state, target_state)
     with pytest.raises(ValueError):
         state = c.get_initial_state(np.zeros(2**3))
     with pytest.raises(ValueError):
@@ -159,7 +152,7 @@ def test_density_matrix_circuit(backend):
     target_rho = m1.dot(initial_rho).dot(m1.T.conj())
     target_rho = m2.dot(target_rho).dot(m2.T.conj())
     target_rho = m3.dot(target_rho).dot(m3.T.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
+    K.assert_allclose(final_rho, target_rho)
 
 
 def test_density_matrix_circuit_initial_state(backend):
@@ -168,6 +161,6 @@ def test_density_matrix_circuit_initial_state(backend):
     c = Circuit(3, density_matrix=True)
     final_rho = c(np.copy(initial_psi))
     target_rho = np.outer(initial_psi, initial_psi.conj())
-    np.testing.assert_allclose(final_rho, target_rho)
+    K.assert_allclose(final_rho, target_rho)
     final_rho = c(initial_psi)
-    np.testing.assert_allclose(final_rho, target_rho)
+    K.assert_allclose(final_rho, target_rho)

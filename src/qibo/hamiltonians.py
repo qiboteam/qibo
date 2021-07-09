@@ -82,7 +82,7 @@ def X(nqubits, numpy=False, trotter=False):
     """
     from qibo import K
     def ground_state():
-        n = K.cast(2 ** nqubits, dtype='DTYPEINT')
+        n = K.cast((2 ** nqubits,), dtype='DTYPEINT')
         state = K.ones(n, dtype='DTYPECPX')
         return state / K.sqrt(K.cast(n, dtype=state.dtype))
     return _OneBodyPauli(nqubits, matrices.X, numpy, trotter, ground_state)

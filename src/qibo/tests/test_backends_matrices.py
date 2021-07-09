@@ -1,12 +1,12 @@
 import pytest
-import qibo
 import numpy as np
+from qibo import K
 
 
 @pytest.mark.parametrize("dtype", ["complex64", "complex128"])
 def test_matrices(backend, dtype):
     from qibo.backends.matrices import Matrices
-    mobj = Matrices(qibo.K)
+    mobj = Matrices(K)
     target_matrices = {
         "I": np.array([[1, 0], [0, 1]]),
         "H": np.array([[1, 1], [1, -1]]) / np.sqrt(2),
@@ -29,7 +29,8 @@ def test_matrices(backend, dtype):
                              [0, 0, 0, 0, 0, 0, 1, 0]])
     }
     for matrixname, target in target_matrices.items():
-        np.testing.assert_allclose(getattr(mobj, matrixname), target)
+        matrix = getattr(mobj, matrixname)
+        K.assert_allclose(matrix, target)
 
 
 def test_modifying_matrices_error():

@@ -1,4 +1,3 @@
-import os
 from qibo.backends import abstract, numpy
 from qibo.config import raise_error, log
 
@@ -51,6 +50,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         abstract.AbstractBackend.set_device(self, name)
 
     def to_numpy(self, x):
+        if isinstance(x, self.np.ndarray):
+            return x
         return x.numpy()
 
     def to_complex(self, re, img):
@@ -211,17 +212,17 @@ class TensorflowCustomBackend(TensorflowBackend):
         super().__init__()
         self.name = "qibotf"
         self.op = op
-        from qibo.config import get_threads
-        self.get_threads = get_threads
+        import os
+        if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
+            self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix,
-                                    omp_num_threads=self.get_threads())
+                                    omp_num_threads=self.nthreads)
 
     def transpose_state(self, pieces, state, nqubits, order):
-        return self.op.transpose_state(pieces, state, nqubits, order,
-                                       self.get_threads())
+        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
@@ -235,7 +236,7 @@ class TensorflowCustomBackend(TensorflowBackend):
         shape = self.cast(2 ** nqubits, dtype='DTYPEINT')
         frequencies = self.zeros(shape, dtype='DTYPEINT')
         frequencies = self.op.measure_frequencies(
-            frequencies, probs, nshots, nqubits, seed, self.get_threads())
+            frequencies, probs, nshots, nqubits, seed, self.nthreads)
         return frequencies
 
     def create_einsum_cache(self, qubits, nqubits, ncontrol=None): # pragma: no cover
@@ -255,48 +256,58 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def state_vector_call(self, gate, state):
         return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
-                            *gate.target_qubits, self.get_threads())
+                            *gate.target_qubits, self.nthreads)
 
     def state_vector_matrix_call(self, gate, state):
         return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor, # pylint: disable=E1121
                             gate.nqubits, *gate.target_qubits,
-                            self.get_threads())
+                            self.nthreads)
 
     def density_matrix_call(self, gate, state):
         state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
                              2 * gate.nqubits, *gate.target_qubits,
-                             self.get_threads())
+                             self.nthreads)
         state = gate.gate_op(state, gate.cache.qubits_tensor, 2 * gate.nqubits,
-                             *gate.cache.target_qubits_dm, self.get_threads())
+                             *gate.cache.target_qubits_dm, self.nthreads)
         return state
 
     def density_matrix_matrix_call(self, gate, state):
         state = gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
                              2 * gate.nqubits, *gate.target_qubits,
-                             self.get_threads())
+                             self.nthreads)
         adjmatrix = self.conj(gate.matrix)
         state = gate.gate_op(state, adjmatrix, gate.cache.qubits_tensor,
                              2 * gate.nqubits, *gate.cache.target_qubits_dm,
-                             self.get_threads())
+                             self.nthreads)
         return state
 
     def density_matrix_half_call(self, gate, state):
         return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
                             2 * gate.nqubits, *gate.target_qubits,
-                            self.get_threads())
+                            self.nthreads)
 
     def density_matrix_half_matrix_call(self, gate, state):
         return gate.gate_op(state, gate.matrix, gate.cache.qubits_tensor + gate.nqubits, # pylint: disable=E1121
                             2 * gate.nqubits, *gate.target_qubits,
-                            self.get_threads())
+                            self.nthreads)
+
+    def _result_tensor(self, result):
+        n = len(result)
+        result = sum(2 ** (n - i - 1) * r for i, r in enumerate(result))
+        return self.cast(result, dtype="DTYPEINT")
 
     def state_vector_collapse(self, gate, state, result):
+        result = self._result_tensor(result)
         return gate.gate_op(state, gate.cache.qubits_tensor, result,
-                            gate.nqubits, True, self.get_threads())
+                            gate.nqubits, True, self.nthreads)
 
     def density_matrix_collapse(self, gate, state, result):
+        result = self._result_tensor(result)
         state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits, result,
-                             2 * gate.nqubits, False, self.get_threads())
+                             2 * gate.nqubits, False, self.nthreads)
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
-                             2 * gate.nqubits, False, self.get_threads())
+                             2 * gate.nqubits, False, self.nthreads)
         return state / self.trace(state)
+
+    def compile(self, func):
+        return func
