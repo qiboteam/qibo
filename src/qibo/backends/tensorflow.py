@@ -49,6 +49,14 @@ class TensorflowBackend(numpy.NumpyBackend):
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
 
+    def set_threads(self, nthreads):
+        log.warning("`set_threads` is not supported by the tensorflow "
+                    "backend. Please use tensorflow's thread setters: "
+                    "`tf.config.threading.set_inter_op_parallelism_threads` "
+                    "or `tf.config.threading.set_intra_op_parallelism_threads` "
+                    "to switch the number of threads.")
+        abstract.AbstractBackend.set_threads(self, nthreads)
+
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
             return x
@@ -217,6 +225,9 @@ class TensorflowCustomBackend(TensorflowBackend):
         import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
+
+    def set_threads(self, nthreads):
+        abstract.AbstractBackend.set_threads(self, nthreads)
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),

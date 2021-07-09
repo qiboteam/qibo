@@ -103,6 +103,16 @@ def test_set_device(backend, caplog):
         bk.set_device(device)
 
 
+def test_set_threads(backend, caplog):
+    original_threads = backends.get_threads()
+    bkname = backends.get_backend()
+    backends.set_threads(1)
+    if bkname == "numpy" or bkname == "tensorflow":
+        assert "WARNING" in caplog.text
+    assert backends.get_threads() == 1
+    backends.set_threads(original_threads)
+
+
 def test_set_shot_batch_size():
     import qibo
     assert qibo.get_batch_size() == 2 ** 18

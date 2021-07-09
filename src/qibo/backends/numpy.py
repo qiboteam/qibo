@@ -25,10 +25,18 @@ class NumpyBackend(abstract.AbstractBackend):
         self.newaxis = np.newaxis
         self.oom_error = MemoryError
         self.optimization = None
+        self.cpu_devices = ["/CPU:0"]
+        self.gpu_devices = []
+        self.default_device = self.cpu_devices[0]
 
     def set_device(self, name):
         log.warning("Numpy does not support device placement. "
                     "Aborting device change.")
+
+    def set_threads(self, nthreads):
+        log.warning("Numpy backend supports only single-thread execution. "
+                    "Cannot change the number of threads.")
+        abstract.AbstractBackend.set_threads(self, nthreads)
 
     def to_numpy(self, x):
         return x
@@ -404,7 +412,6 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
 
-        # TODO: reconsider device management
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
         if self.gpu_devices: # pragma: no cover
@@ -446,7 +453,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
             self.set_engine("numba")
 
     def set_threads(self, nthreads):
-        super().set_threads(nthreads)
+        abstract.AbstractBackend.set_threads(self, nthreads)
         import numba # pylint: disable=E0401
         numba.set_num_threads(nthreads)
 

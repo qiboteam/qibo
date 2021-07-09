@@ -105,8 +105,6 @@ class Backend:
             new_backend = self.available_backends.get(name)()
             if self.active_backend is not None:
                 new_backend.set_precision(self.active_backend.precision)
-                if self.active_backend.default_device:
-                    new_backend.set_device(self.active_backend.default_device)
             self.constructed_backends[name] = new_backend
         return self.constructed_backends.get(name)
 
@@ -199,8 +197,9 @@ def set_device(name):
     """
     if not config.ALLOW_SWITCHERS and name != K.default_device:
         log.warning("Device should not be changed after allocating gates.")
+    K.set_device(name)
     for bk in K.constructed_backends.values():
-        if bk.name != "numpy":
+        if bk.name != "numpy" and bk != K.active_backend:
             bk.set_device(name)
 
 
@@ -214,8 +213,7 @@ def set_threads(nthreads):
     Args:
         nthreads (int): number of threads.
     """
-    for bk in K.constructed_backends.values():
-        bk.set_threads(nthreads)
+    K.set_threads(nthreads)
 
 
 def get_threads():
