@@ -42,11 +42,21 @@ def test_symbolic_hamiltonian_init():
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])
-#@pytest.mark.parametrize("model", ["TFIM", "XXZ", "Y", "MaxCut"])
-def test_symbolic_hamiltonian_to_dense(backend, nqubits):
-    # TODO: Extend this to other models when `hamiltonians.py` is updated
+def test_symbolictfim_hamiltonian_to_dense(backend, nqubits):
     final_ham = hamiltonians.SymbolicHamiltonian(symbolic_tfim(nqubits, h=1))
     target_ham = hamiltonians.TFIM(nqubits, h=1)
+    K.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+def test_symbolicxxz_hamiltonian_to_dense(backend, nqubits):
+    from qibo.symbols import X, Y, Z
+    sham = sum(X(i) * X(i + 1) for i in range(nqubits - 1))
+    sham += sum(Y(i) * Y(i + 1) for i in range(nqubits - 1))
+    sham += 0.5 * sum(Z(i) * Z(i + 1) for i in range(nqubits - 1))
+    sham += X(0) * X(nqubits - 1) + Y(0) * Y(nqubits - 1) + 0.5 * Z(0) * Z(nqubits - 1)
+    final_ham = hamiltonians.SymbolicHamiltonian(sham)
+    target_ham = hamiltonians.XXZ(nqubits)
     K.assert_allclose(final_ham.matrix, target_ham.matrix, atol=1e-15)
 
 
