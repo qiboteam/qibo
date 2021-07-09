@@ -33,6 +33,7 @@ class NumpyBackend(abstract.AbstractBackend):
     def set_threads(self, nthreads):
         log.warning("Numpy backend supports only single-thread execution."
                     "Cannot change the number of threads.")
+        abstract.AbstractBackend.set_threads(self, nthreads)
 
     def to_numpy(self, x):
         return x
