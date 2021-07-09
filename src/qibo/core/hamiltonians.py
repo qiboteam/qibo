@@ -149,8 +149,6 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
         return self.__class__(self.nqubits, new_matrix)
 
     def __mul__(self, o):
-        if isinstance(o, self.K.Tensor):
-            o = self.K.cast(o, dtype=self.matrix.dtype)
         if isinstance(o, K.numeric_types) or isinstance(o, K.tensor_types):
             new_matrix = self.matrix * o
             r = self.__class__(self.nqubits, new_matrix)
@@ -198,7 +196,7 @@ class NumpyHamiltonian(Hamiltonian):
     def __init__(self, nqubits, matrix, numpy=True):
         assert numpy
         self.K = K.qnp
-        matrix = self.K.cast(matrix)
+        matrix = K.to_numpy(matrix)
         hamiltonians.MatrixHamiltonian.__init__(self, nqubits, matrix)
 
 

@@ -4,7 +4,7 @@ Testing Quantum Approximate Optimization Algorithm model.
 import argparse
 import time
 import numpy as np
-from qibo import models, hamiltonians
+from qibo import models, hamiltonians, K
 
 
 parser = argparse.ArgumentParser()
@@ -28,7 +28,7 @@ def main(nqubits, nangles, trotter=False, solver="exp",
     qaoa = models.QAOA(hamiltonian, solver=solver)
     creation_time = time.time() - start_time
 
-    target = np.real(np.min(hamiltonian.eigenvalues()))
+    target = np.real(np.min(K.to_numpy(hamiltonian.eigenvalues())))
     print("\nTarget state =", target)
 
     np.random.seed(0)

@@ -97,9 +97,9 @@ def test_vqe(backend, method, options, compile, filename):
         backend = qibo.get_backend()
         if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
             pytest.skip("unsupported configuration")
-        import os
-        if os.name == 'nt': # pragma: no cover
-            pytest.skip("Parallel L-BFGS-B not supported on Windows.")
+        import sys
+        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B only supported on linux.")
         qibo.set_threads(1)
 
     nqubits = 6

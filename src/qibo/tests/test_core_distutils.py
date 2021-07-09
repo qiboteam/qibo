@@ -81,7 +81,7 @@ def test_create_queue_with_global_swap(backend):
         assert len(device_group) == 2
 
 
-def test_create_queue_errors():
+def test_create_queue_errors(backend):
     c = DistributedCircuit(4, {"/GPU:0": 2})
     c.add(gates.H(0))
     c.add(gates.H(1))

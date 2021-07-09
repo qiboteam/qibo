@@ -3,10 +3,16 @@ Define the default circuit, constants and types.
 """
 import os
 import logging
-import warnings
 
-# Logging level from 0 (all) to 3 (errors)
-LOG_LEVEL = 3
+# Logging level from 0 (all) to 4 (errors) (see https://docs.python.org/3/library/logging.html#logging-levels)
+QIBO_LOG_LEVEL = 1
+if "QIBO_LOG_LEVEL" in os.environ: # pragma: no cover
+    QIBO_LOG_LEVEL = 10 * int(os.environ.get("QIBO_LOG_LEVEL"))
+
+# Logging level from 0 (all) to 3 (errors) for TensorFlow
+TF_LOG_LEVEL = 3
+if "TF_LOG_LEVEL" in os.environ: # pragma: no cover
+    TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
 
 # Choose the least significant qubit
 LEAST_SIGNIFICANT_QUBIT = 0
@@ -87,5 +93,5 @@ class CustomHandler(logging.StreamHandler):
 
 # allocate logger object
 log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+log.setLevel(QIBO_LOG_LEVEL)
 log.addHandler(CustomHandler())

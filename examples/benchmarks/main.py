@@ -14,7 +14,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=20, type=int)
 parser.add_argument("--type", default="qft", type=str)
-parser.add_argument("--backend", default="qibotf", type=str)
+parser.add_argument("--backend", default="qibojit", type=str)
 parser.add_argument("--precision", default="double", type=str)
 
 parser.add_argument("--device", default=None, type=str)

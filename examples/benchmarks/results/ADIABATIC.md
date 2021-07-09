@@ -1,4 +1,4 @@
-# Adiabatic evolution
+# Adiabatic evolution Benchmark
 
 We use Qibo to simulate adiabatic evolution under the transverse field Ising
 Hamiltonians using linear scaling `s(t) = t`. We simulate for a total time

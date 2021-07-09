@@ -1,6 +1,6 @@
 import os
 from qibo import config
-from qibo.config import raise_error, log, warnings
+from qibo.config import raise_error, log
 
 # versions requirements
 TF_MIN_VERSION = '2.2.0'
@@ -24,7 +24,7 @@ class Backend:
 
         # check if tensorflow is installed and use it as default backend.
         if self.check_availability("tensorflow"):
-            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.LOG_LEVEL)
+            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.TF_LOG_LEVEL)
             import tensorflow as tf  # pylint: disable=E0401
             if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
                 raise_error(
@@ -36,26 +36,13 @@ class Backend:
                 from qibo.backends.tensorflow import TensorflowCustomBackend
                 self.available_backends["qibotf"] = TensorflowCustomBackend
                 active_backend = "qibotf"
-            else:  # pragma: no cover
-                log.warning("qibotf library was not found. `tf.einsum` will be "
-                            "used to apply gates. In order to install Qibo's "
-                            "high performance custom operators please use "
-                            "`pip install qibotf`.")
 
-        else:  # pragma: no cover
-            # case not tested because CI has tf installed
-            log.warning("Tensorflow is not installed, falling back to numpy. "
-                        "Numpy backend uses `np.einsum` and supports CPU only. "
-                        "To enable GPU acceleration please install Tensorflow "
-                        "with `pip install tensorflow`. To install the "
-                        "optimized Qibo custom operators please use "
-                        "`pip install qibotf` after installing Tensorflow.")
-
-        # check if qibojit is installed
+        # check if qibojit is installed and use it as default backend.
         if self.check_availability("qibojit"): # pragma: no cover
             # qibojit backend is not tested until `qibojit` is available
             from qibo.backends.numpy import JITCustomBackend
             self.available_backends["qibojit"] = JITCustomBackend
+            active_backend = "qibojit"
 
         # check if IcarusQ is installed
         if self.check_availability("qiboicarusq"): # pragma: no cover
@@ -71,6 +58,20 @@ class Backend:
         if "QIBO_BACKEND" in os.environ:  # pragma: no cover
             self.active_backend = os.environ.get("QIBO_BACKEND")
         self.active_backend = active_backend
+
+        # raise performance warning if qibojit and qibotf are not available
+        self.show_config()
+        if active_backend == "numpy": # pragma: no cover
+            log.warning("numpy backend uses `np.einsum` and supports CPU only. "
+                        "Consider installing the qibojit or qibotf backends for "
+                        "increased performance and to enable GPU acceleration.")
+        elif active_backend == "tensorflow": # pragma: no cover
+            # case not tested because CI has tf installed
+            log.warning("qibotf library was not found. `tf.einsum` will be "
+                        "used to apply gates. In order to install Qibo's "
+                        "high performance custom operators for TensorFlow "
+                        "please use `pip install qibotf`. Alternatively, "
+                        "consider installing the qibojit backend.")
 
     @property
     def active_backend(self):
@@ -118,6 +119,9 @@ class Backend:
     def __repr__(self):
         return str(self)
 
+    def show_config(self):
+        log.info(f"Using {self.active_backend.name} backend on {self.active_backend.default_device}")
+
     @staticmethod
     def check_availability(module_name):
         """Check if module is installed.
@@ -136,10 +140,11 @@ K = Backend()
 numpy_matrices = K.qnp.matrices
 
 
-def set_backend(backend="qibotf"):
+def set_backend(backend="qibojit"):
     """Sets backend used for mathematical operations and applying gates.
 
     The following backends are available:
+    'qibojit': Numba/cupy backend with custom operators for applying gates,
     'qibotf': Tensorflow backend with custom operators for applying gates,
     'tensorflow': Tensorflow backend that applies gates using ``tf.einsum``,
     'numpy': Numpy backend that applies gates using ``np.einsum``.
@@ -148,9 +153,9 @@ def set_backend(backend="qibotf"):
         backend (str): A backend from the above options.
     """
     if not config.ALLOW_SWITCHERS and backend != K.name:
-        warnings.warn("Backend should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Backend should not be changed after allocating gates.")
     K.active_backend = backend
+    K.show_config()
 
 
 def get_backend():
@@ -162,7 +167,7 @@ def get_backend():
     return K.name
 
 
-def set_precision(dtype='double'):
+def set_precision(dtype="double"):
     """Set precision for states and gates simulation.
 
     Args:
@@ -170,8 +175,7 @@ def set_precision(dtype='double'):
             (complex64) and 'double' for double precision (complex128).
     """
     if not config.ALLOW_SWITCHERS and dtype != K.precision:
-        warnings.warn("Precision should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Precision should not be changed after allocating gates.")
     for bk in K.constructed_backends.values():
         bk.set_precision(dtype)
 
@@ -194,8 +198,7 @@ def set_device(name):
             CPU or GPU.
     """
     if not config.ALLOW_SWITCHERS and name != K.default_device:
-        warnings.warn("Device should not be changed after allocating gates.",
-                      category=RuntimeWarning)
+        log.warning("Device should not be changed after allocating gates.")
     for bk in K.constructed_backends.values():
         if bk.name != "numpy":
             bk.set_device(name)

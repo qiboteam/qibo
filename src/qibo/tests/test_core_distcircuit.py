@@ -18,7 +18,7 @@ def check_device_queues(queues):
             assert not queues.qubits.set & target_qubits
 
 
-def test_distributed_circuit_init():
+def test_distributed_circuit_init(backend):
     """Check if error is raised if total devices is not a power of 2."""
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(5, devices)
@@ -29,7 +29,7 @@ def test_distributed_circuit_init():
         c = DistributedCircuit(4, devices)
 
 
-def test_distributed_circuit_add_gate():
+def test_distributed_circuit_add_gate(backend):
     # Attempt to add gate so that available global qubits are not enough
     c = DistributedCircuit(2, {"/GPU:0": 2})
     with pytest.raises(ValueError):
@@ -39,7 +39,7 @@ def test_distributed_circuit_add_gate():
         c.add(gates.PauliNoiseChannel(0, px=0.1, pz=0.1))
 
 
-def test_distributed_circuit_various_errors():
+def test_distributed_circuit_various_errors(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(5, devices)
     # Attempt to use ``.with_noise``
@@ -61,7 +61,7 @@ def test_distributed_circuit_fusion(backend, accelerators):
         fused_c = c.fuse()
 
 
-def test_distributed_circuit_set_gates():
+def test_distributed_circuit_set_gates(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(6, devices)
     c.add((gates.H(i) for i in range(4)))
@@ -79,7 +79,7 @@ def test_distributed_circuit_set_gates():
         c.queues.set(c.queue)
 
 
-def test_distributed_circuit_set_gates_controlled():
+def test_distributed_circuit_set_gates_controlled(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}
     c = DistributedCircuit(6, devices)
     c.add([gates.H(0), gates.H(2), gates.H(3)])
@@ -135,7 +135,7 @@ def test_distributed_circuit_get_initial_state_bad_type(backend, accelerators):
 
 @pytest.mark.parametrize("nqubits", [28, 29, 30, 31, 32, 33, 34])
 @pytest.mark.parametrize("ndevices", [2, 4, 8, 16, 32, 64])
-def test_distributed_qft_global_qubits_validity(nqubits, ndevices):
+def test_distributed_qft_global_qubits_validity(backend, nqubits, ndevices):
     """Check that no gates are applied to global qubits for practical QFT cases."""
     from qibo.models import QFT
     c = QFT(nqubits, accelerators={"/GPU:0": ndevices})

@@ -25,14 +25,14 @@ def test_set_backend(backend_name):
     backends.set_backend(original_backend)
 
 
-def test_set_backend_errors():
+def test_set_backend_errors(caplog):
     original_backend = backends.get_backend()
     with pytest.raises(ValueError):
         backends.set_backend("test")
     if original_backend != "numpy":
         h = gates.H(0)
-        with pytest.warns(RuntimeWarning):
-            backends.set_backend("numpy")
+        backends.set_backend("numpy")
+        assert "WARNING" in caplog.text
     backends.set_backend(original_backend)
 
 
@@ -73,21 +73,21 @@ def test_set_precision_matrices(backend, precision):
     backends.set_precision(original_precision)
 
 
-def test_set_precision_errors(backend):
+def test_set_precision_errors(backend, caplog):
     original_precision = backends.get_precision()
     gate = gates.H(0)
-    with pytest.warns(RuntimeWarning):
-        backends.set_precision("single")
+    backends.set_precision("single")
+    assert "WARNING" in caplog.text
     with pytest.raises(ValueError):
         backends.set_precision("test")
     backends.set_precision(original_precision)
 
 
-def test_set_device(backend):
+def test_set_device(backend, caplog):
     original_devices = {bk: bk.default_device for bk in K.constructed_backends.values()}
     if backends.get_backend() == "numpy":
-        with pytest.warns(RuntimeWarning):
-            backends.set_device("/CPU:0")
+        backends.set_device("/CPU:0")
+        assert "WARNING" in caplog.text
     else:
         backends.set_device("/CPU:0")
         assert backends.get_device() == "/CPU:0"

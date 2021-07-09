@@ -42,7 +42,7 @@ def main(dataset, layers):
 
     ql.set_parameters(parameters)
     value_loss = ql.cost_function_fidelity()
-    print('The value of the cost function achieved is %.6f' % value_loss.numpy())
+    print('The value of the cost function achieved is %.6f' % value_loss)
     ql.paint_results()
     ql.paint_world_map()
 

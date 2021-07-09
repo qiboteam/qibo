@@ -1,3 +1,4 @@
+from qibo.abstractions.states import AbstractState
 from qibo.backends import abstract, einsum_utils
 from qibo.config import raise_error, log
 
@@ -377,6 +378,9 @@ class NumpyBackend(abstract.AbstractBackend):
 
 class JITCustomBackend(NumpyBackend): # pragma: no cover
 
+    description = "Uses custom operators based on numba.jit for CPU and " \
+                  "custom CUDA kernels loaded with cupy GPU."
+
     def __init__(self):
         from qibo.backends import Backend
         if not Backend.check_availability("qibojit"): # pragma: no cover
@@ -431,13 +435,15 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         self.random = xp.random
         self.newaxis = xp.newaxis
         self.op.set_backend(name)
+        with self.device(self.default_device):
+            self.matrices.allocate_matrices()
 
     def set_device(self, name):
+        abstract.AbstractBackend.set_device(self, name)
         if "GPU" in name:
             self.set_engine("cupy")
         else:
             self.set_engine("numba")
-        abstract.AbstractBackend.set_device(self, name)
 
     def set_threads(self, nthreads):
         super().set_threads(nthreads)
@@ -447,6 +453,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def to_numpy(self, x):
         if isinstance(x, self.np.ndarray):
             return x
+        elif isinstance(x, AbstractState):
+            x = x.numpy()
         return self.op.to_numpy(x)
 
     def cast(self, x, dtype='DTYPECPX'):

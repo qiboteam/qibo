@@ -59,8 +59,8 @@ def main(nqubits, layers, maxsteps, T_max):
 
     #We compute the difference from the exact value to check performance
     eigenvalue = problem_hamiltonian.eigenvalues()
-    print('Difference from exact value: ',best - eigenvalue[0].numpy().real)
-    print('Log difference: ',-np.log10(best - eigenvalue[0].numpy().real))
+    print('Difference from exact value: ',best - eigenvalue[0].real)
+    print('Log difference: ',-np.log10(best - eigenvalue[0].real))
 
 
 if __name__ == "__main__":

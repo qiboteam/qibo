@@ -1,4 +1,4 @@
-# Variational circuit
+# Variational Circuit Benchmark
 
 Variational circuits are typically used in quantum machine learning and similar
 applications and constitute a good candidate for applications of near-term
@@ -13,7 +13,7 @@ The configuration is repeated for five layers and the variational parameters
 are chosen randomly from 0 to 2pi in all benchmarks.
 
 
-## Variational circuit (`complex64`)
+## Single precision (`complex64`)
 
 `nqubits` | Qibo (V100) | QCGPU (V100) | Qibo (CPU) | QCGPU (CPU) | Cirq (CPU) | TFQ (CPU)
 -- | -- | -- | -- | -- | -- | --
@@ -25,13 +25,13 @@ are chosen randomly from 0 to 2pi in all benchmarks.
 30 | 3.21179 | 13.82931 | 42.34363 | 133.33737 | 3674.24012 | 454.36985
 31 | 5.8706 | 28.10267 | 86.44963 | 272.46449 | 7477.32876 | core dumped
 32 | OOM    | OOM      | 179.30808 | fails   | 14950.43044 |
-33 |         |         | 366.64664 |         | fails       |        
-34 |         |         | 759.29275 |         |         |        
+33 |         |         | 366.64664 |         | fails       |
+34 |         |         | 759.29275 |         |         |
 
 ![var5-c64](../images/var5layer_c64.png)
 
 
-## Variational circuit (`complex128`)
+## Double precision (`complex128`)
 
 `nqubits` | Qibo (V100) | Qulacs (V100) | Qibo (CPU) | Qulacs (CPU) | IntelQS (CPU) | Qiskit (CPU) | PyQuil (CPU)
 -- | -- | -- | -- | -- | -- | -- | --
@@ -41,8 +41,8 @@ are chosen randomly from 0 to 2pi in all benchmarks.
 28 | 1.6831 | 8.10374 | 14.84471 | 54.18735 | 242.76708 | 2146.48768 | 869.36062
 29 | 3.04162 | 16.42699 | 30.48203 | 110.05296 | 525.83829 | 4275.40255 | fails
 30 | 5.827   | 33.46775 | 62.2646 | 225.94718 | 1043.19987 | 9324.27692 |
-31 | OOM     | OOM      | 128.6027 | 460.50558 | 2100.28082 | fails     |        
-32 |         |          | 263.47171 | 947.05816 | 4365.85043 |         |        
-33 |         |          | 544.67465 | fails     | 8946.80753 |         |     
+31 | OOM     | OOM      | 128.6027 | 460.50558 | 2100.28082 | fails     |
+32 |         |          | 263.47171 | 947.05816 | 4365.85043 |         |
+33 |         |          | 544.67465 | fails     | 8946.80753 |         |
 
 ![var5-c128](../images/var5layer_c128.png)
