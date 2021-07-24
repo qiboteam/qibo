@@ -405,7 +405,8 @@ class ParametrizedGate(Gate):
         # pylint: disable=E1101
         if isinstance(self, BaseBackendGate):
             self._matrix = None
-            self._internal_matrix = None
+            self._native_op_matrix = None
+            self._custom_op_matrix = None
             for devgate in self.device_gates:
                 devgate.parameters = x
 

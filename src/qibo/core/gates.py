@@ -28,7 +28,8 @@ class BackendGate(BaseBackendGate):
         else:
             self.gate_op = None
         super().__init__()
-        self._internal_matrix = None
+        self._native_op_matrix = None
+        self._custom_op_matrix = None
 
     @staticmethod
     def control_unitary(unitary):
@@ -50,19 +51,16 @@ class BackendGate(BaseBackendGate):
         return self._cache
 
     @property
-    def internal_matrix(self):
-        """Gate matrix for internal custom operator usage."""
-        # TODO: Simplify numpy backend reshapes
-        if self._internal_matrix is None:
-            self._internal_matrix = self.calculate_internal_matrix()
-        return self._internal_matrix
+    def native_op_matrix(self):
+        if self._native_op_matrix is None:
+            self._native_op_matrix = self.construct_unitary()
+        return self._native_op_matrix
 
-    def calculate_internal_matrix(self):
-        matrix = self.construct_unitary()
-        if K.op is None:
-            rank = int(math.log2(int(matrix.shape[0])))
-            matrix = K.reshape(matrix, 2 * rank * (2,))
-        return matrix
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
+            self._custom_op_matrix = self.construct_unitary()
+        return self._custom_op_matrix
 
     def set_nqubits(self, state):
         if self._nqubits is None:
@@ -136,9 +134,9 @@ class Y(BackendGate, abstract_gates.Y):
         self._target_qubits = self.cache.target_qubits_dm
         self._nqubits *= 2
         self.gate_op = K.op.apply_gate
-        self._internal_matrix = K.conj(K.matrices.Y)
+        self._custom_op_matrix = K.conj(K.matrices.Y)
         state = K.state_vector_matrix_call(self, state)
-        self._internal_matrix = K.matrices.Y
+        self._custom_op_matrix = K.matrices.Y
         self.gate_op = K.op.apply_y
         self._nqubits //= 2
         self._target_qubits = original_targets
@@ -366,11 +364,11 @@ class U1(MatrixGate, abstract_gates.U1):
         if self.gate_op:
             self.gate_op = K.op.apply_z_pow
 
-    def calculate_internal_matrix(self):
-        if K.op is not None:
-            return K.cast(K.qnp.exp(1j * self.parameters))
-        else:
-            return MatrixGate.calculate_internal_matrix(self)
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
+            self._custom_op_matrix = K.cast(K.qnp.exp(1j * self.parameters))
+        return self._custom_op_matrix
 
     def construct_unitary(self):
         if isinstance(self.parameters, K.native_types): # pragma: no cover
@@ -450,14 +448,14 @@ class _CUn_(MatrixGate):
         cbase = "C{}".format(self.base.__name__)
         getattr(abstract_gates, cbase).__init__(self, q0, q1, **params)
 
-    def calculate_internal_matrix(self):
-        matrix = self.base.construct_unitary(self)
-        if K.op is None:
-            matrix = K.reshape(self.control_unitary(matrix), 4 * (2,))
-        return matrix
-
     def construct_unitary(self):
         return MatrixGate.control_unitary(self.base.construct_unitary(self))
+
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
+            self._custom_op_matrix = self.base.construct_unitary(self)
+        return self._custom_op_matrix
 
 
 class CRX(_CUn_, abstract_gates.CRX):
@@ -489,8 +487,11 @@ class CU1(_CUn_, abstract_gates.CU1):
         if self.gate_op:
             self.gate_op = K.op.apply_z_pow
 
-    def calculate_internal_matrix(self):
-        return U1.calculate_internal_matrix(self)
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
+            self._custom_op_matrix = K.cast(K.qnp.exp(1j * self.parameters))
+        return self._custom_op_matrix
 
 
 class CU2(_CUn_, abstract_gates.CU2):
@@ -528,13 +529,14 @@ class fSim(MatrixGate, abstract_gates.fSim):
         if self.gate_op:
             self.gate_op = K.op.apply_fsim
 
-    def calculate_internal_matrix(self):
-        if K.op is not None:
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
             theta, phi = self.parameters
             cos, isin = K.qnp.cos(theta) + 0j, -1j * K.qnp.sin(theta)
             phase = K.qnp.exp(-1j * phi)
-            return K.cast([cos, isin, isin, cos, phase])
-        return MatrixGate.calculate_internal_matrix(self)
+            self._custom_op_matrix = K.cast([cos, isin, isin, cos, phase])
+        return self._custom_op_matrix
 
     def construct_unitary(self):
         theta, phi = self.parameters
@@ -558,14 +560,15 @@ class GeneralizedfSim(MatrixGate, abstract_gates.GeneralizedfSim):
         if self.gate_op:
             self.gate_op = K.op.apply_fsim
 
-    def calculate_internal_matrix(self):
-        if K.op is not None:
+    @property
+    def custom_op_matrix(self):
+        if self._custom_op_matrix is None:
             unitary, phi = self.parameters
             matrix = K.qnp.zeros(5)
             matrix[:4] = K.qnp.reshape(unitary, (4,))
             matrix[4] = K.qnp.exp(-1j * phi)
-            return K.cast(matrix)
-        return MatrixGate.calculate_internal_matrix(self)
+            self._custom_op_matrix = K.cast(matrix)
+        return self._custom_op_matrix
 
     def construct_unitary(self):
         unitary, phi = self.parameters
