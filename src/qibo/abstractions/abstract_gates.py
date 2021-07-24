@@ -404,8 +404,8 @@ class ParametrizedGate(Gate):
         # ``circuit.set_parameters`` method works properly.
         # pylint: disable=E1101
         if isinstance(self, BaseBackendGate):
-            self._unitary = None
             self._matrix = None
+            self._internal_matrix = None
             for devgate in self.device_gates:
                 devgate.parameters = x
 
@@ -440,7 +440,6 @@ class BaseBackendGate(Gate, ABC):
     def __init__(self):
         Gate.__init__(self)
         self._matrix = None
-        self._unitary = None
         self._cache = None
         # Cast gate matrices to the proper device
         self.device = get_device()
@@ -455,11 +454,16 @@ class BaseBackendGate(Gate, ABC):
         if len(self.qubits) > 2:
             raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
                                              "gates that target more than two qubits.")
-        if self._unitary is None:
-            self._unitary = self.construct_unitary()
-        if self.is_controlled_by and tuple(self._unitary.shape) == (2, 2):
-            self._unitary = self.control_unitary(self._unitary)
-        return self._unitary
+        if self._matrix is None:
+            self._matrix = self.construct_unitary()
+        if self.is_controlled_by and tuple(self._matrix.shape) == (2, 2):
+            self._matrix = self.control_unitary(self._matrix)
+        return self._matrix
+
+    @property
+    def matrix(self):
+        """Unitary matrix representing the gate in the computational basis."""
+        return self.unitary
 
     def __matmul__(self, other: "Gate") -> "Gate":
         """Gate multiplication."""
@@ -530,7 +534,7 @@ class BaseBackendGate(Gate, ABC):
             U\\rho
 
         This is useful for :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`
-        multiplication to density matrices. 
+        multiplication to density matrices.
         """
         raise_error(NotImplementedError)
 

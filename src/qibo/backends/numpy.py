@@ -284,7 +284,7 @@ class NumpyBackend(abstract.AbstractBackend):
             # are active. This should be `state[-1]`
             state = self.reshape(state, (2 ** ncontrol,) + nactive * (2,))
             updates = self.einsum_call(gate.cache.calculation_cache.vector, state[-1],
-                                     gate.matrix)
+                                     gate.internal_matrix)
             # Concatenate the updated part of the state `updates` with the
             # part of of the state that remained unaffected `state[:-1]`.
             state = self.concatenate([state[:-1], updates[self.newaxis]], axis=0)
@@ -293,7 +293,7 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.transpose(state, gate.cache.control_cache.reverse(False))
         else:
             einsum_str = gate.cache.calculation_cache.vector
-            state = self.einsum_call(einsum_str, state, gate.matrix)
+            state = self.einsum_call(einsum_str, state, gate.internal_matrix)
         return self.reshape(state, gate.cache.flat_shape)
 
     def state_vector_matrix_call(self, gate, state):
@@ -310,16 +310,16 @@ class NumpyBackend(abstract.AbstractBackend):
             state01 = self.gather(state, indices=range(n - 1), axis=0)
             state01 = self.squeeze(self.gather(state01, indices=[n - 1], axis=1), axis=1)
             state01 = self.einsum_call(gate.cache.calculation_cache.right0,
-                                     state01, self.conj(gate.matrix))
+                                     state01, self.conj(gate.internal_matrix))
             state10 = self.gather(state, indices=range(n - 1), axis=1)
             state10 = self.squeeze(self.gather(state10, indices=[n - 1], axis=0), axis=0)
             state10 = self.einsum_call(gate.cache.calculation_cache.left0,
-                                       state10, gate.matrix)
+                                       state10, gate.internal_matrix)
 
             state11 = self.squeeze(self.gather(state, indices=[n - 1], axis=0), axis=0)
             state11 = self.squeeze(self.gather(state11, indices=[n - 1], axis=0), axis=0)
-            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, self.conj(gate.matrix))
-            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, gate.matrix)
+            state11 = self.einsum_call(gate.cache.calculation_cache.right, state11, self.conj(gate.internal_matrix))
+            state11 = self.einsum_call(gate.cache.calculation_cache.left, state11, gate.internal_matrix)
 
             state00 = self.gather(state, indices=range(n - 1), axis=0)
             state00 = self.gather(state00, indices=range(n - 1), axis=1)
@@ -330,8 +330,8 @@ class NumpyBackend(abstract.AbstractBackend):
             state = self.transpose(state, gate.cache.control_cache.reverse(True))
         else:
             state = self.einsum_call(gate.cache.calculation_cache.right, state,
-                                   self.conj(gate.matrix))
-            state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
+                                   self.conj(gate.internal_matrix))
+            state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.internal_matrix)
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_matrix_call(self, gate, state):
@@ -343,7 +343,7 @@ class NumpyBackend(abstract.AbstractBackend):
                                              "not implemented for ``controlled_by``"
                                              "gates.")
         state = self.reshape(state, gate.cache.tensor_shape)
-        state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.matrix)
+        state = self.einsum_call(gate.cache.calculation_cache.left, state, gate.internal_matrix)
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_half_matrix_call(self, gate, state):
@@ -560,7 +560,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                             gate.cache.qubits_tensor)
 
     def state_vector_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.matrix, gate.nqubits, *gate.target_qubits,
+        return gate.gate_op(state, gate.internal_matrix, gate.nqubits, *gate.target_qubits,
                             gate.cache.qubits_tensor)
 
     def density_matrix_call(self, gate, state):
@@ -575,9 +575,9 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def density_matrix_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
-        state = gate.gate_op(state.flatten(), gate.matrix, 2 * gate.nqubits,
+        state = gate.gate_op(state.flatten(), gate.internal_matrix, 2 * gate.nqubits,
                              *gate.target_qubits, qubits)
-        adjmatrix = self.conj(gate.matrix)
+        adjmatrix = self.conj(gate.internal_matrix)
         state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
         return self.reshape(state, shape)
@@ -592,7 +592,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
     def density_matrix_half_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
-        state = gate.gate_op(state.flatten(), gate.matrix, 2 * gate.nqubits,
+        state = gate.gate_op(state.flatten(), gate.internal_matrix, 2 * gate.nqubits,
                              *gate.target_qubits, qubits)
         return self.reshape(state, shape)
 
