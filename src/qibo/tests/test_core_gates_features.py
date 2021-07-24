@@ -52,6 +52,7 @@ def test_construct_unitary_rotations(backend, gate, target_matrix):
     else:
         gate = getattr(gates, gate)(0, theta)
     K.assert_allclose(gate.unitary, target_matrix(theta))
+    K.assert_allclose(gate.matrix, target_matrix(theta))
 
 
 def test_construct_unitary_controlled(backend):
