@@ -450,7 +450,7 @@ class BaseBackendGate(Gate, ABC):
         self.original_gate = None
 
     @property
-    def unitary(self):
+    def matrix(self):
         """Unitary matrix representing the gate in the computational basis."""
         if len(self.qubits) > 2:
             raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
@@ -460,11 +460,6 @@ class BaseBackendGate(Gate, ABC):
         if self.is_controlled_by and tuple(self._matrix.shape) == (2, 2):
             self._matrix = self.control_unitary(self._matrix)
         return self._matrix
-
-    @property
-    def matrix(self):
-        """Unitary matrix representing the gate in the computational basis."""
-        return self.unitary
 
     def __matmul__(self, other: "Gate") -> "Gate":
         """Gate multiplication."""
@@ -476,7 +471,7 @@ class BaseBackendGate(Gate, ABC):
             if self.__class__.__name__ in square_identity:
                 from qibo.gates import I
                 return I(*self.qubits)
-        return self.module.Unitary(self.unitary @ other.unitary, *self.qubits)
+        return self.module.Unitary(self.matrix @ other.matrix, *self.qubits)
 
     def __rmatmul__(self, other): # pragma: no cover
         # always falls back to left ``__matmul__``

@@ -603,7 +603,7 @@ class TOFFOLI(BackendGate, abstract_gates.TOFFOLI):
         return K.matrices.TOFFOLI
 
     @property
-    def unitary(self):
+    def matrix(self):
         if self._matrix is None:
             self._matrix = self.construct_unitary()
         return self._matrix
@@ -661,28 +661,28 @@ class VariationalLayer(BackendGate, abstract_gates.VariationalLayer):
 
     def _calculate_unitaries(self):
         matrices = K.qnp.stack([K.qnp.kron(
-            self.one_qubit_gate(q1, theta=self.params[q1]).unitary,
-            self.one_qubit_gate(q2, theta=self.params[q2]).unitary)
+            self.one_qubit_gate(q1, theta=self.params[q1]).matrix,
+            self.one_qubit_gate(q2, theta=self.params[q2]).matrix)
                              for q1, q2 in self.pairs], axis=0)
-        entangling_matrix = self.two_qubit_gate(0, 1).unitary
+        entangling_matrix = self.two_qubit_gate(0, 1).matrix
         matrices = entangling_matrix @ matrices
 
         additional_matrix = None
         q = self.additional_target
         if q is not None:
             additional_matrix = self.one_qubit_gate(
-                q, theta=self.params[q]).unitary
+                q, theta=self.params[q]).matrix
 
         if self.params2:
             matrices2 = K.qnp.stack([K.qnp.kron(
-                self.one_qubit_gate(q1, theta=self.params2[q1]).unitary,
-                self.one_qubit_gate(q2, theta=self.params2[q2]).unitary)
+                self.one_qubit_gate(q1, theta=self.params2[q1]).matrix,
+                self.one_qubit_gate(q2, theta=self.params2[q2]).matrix)
                                 for q1, q2 in self.pairs], axis=0)
             matrices = matrices2 @ matrices
 
             q = self.additional_target
             if q is not None:
-                _new = self.one_qubit_gate(q, theta=self.params2[q]).unitary
+                _new = self.one_qubit_gate(q, theta=self.params2[q]).matrix
                 additional_matrix = _new @ additional_matrix
         return matrices, additional_matrix
 

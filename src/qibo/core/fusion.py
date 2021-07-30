@@ -259,9 +259,9 @@ class FusionGroup:
             gate matrices.
         """
         if K.op is not None:
-            return self.K.kron(gate0.unitary, gate1.unitary)
+            return self.K.kron(gate0.matrix, gate1.matrix)
         else:
-            matrix = self.K.tensordot(gate0.unitary, gate1.unitary, axes=0)
+            matrix = self.K.tensordot(gate0.matrix, gate1.matrix, axes=0)
             matrix = self.K.transpose(matrix, [0, 2, 1, 3])
             return self.K.reshape(matrix, (4, 4))
 
@@ -274,7 +274,7 @@ class FusionGroup:
         Returns:
             4x4 unitary matrix corresponding to the gate.
         """
-        matrix = gate.unitary
+        matrix = gate.matrix
         if gate.qubits == (self.qubit1, self.qubit0):
             matrix = self.K.reshape(matrix, 4 * (2,))
             matrix = self.K.transpose(matrix, [1, 0, 3, 2])
