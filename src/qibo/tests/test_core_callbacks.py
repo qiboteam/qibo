@@ -195,6 +195,11 @@ def test_entropy_multiple_executions(backend, accelerators):
     target = [0, target_entropy(0.1234), 0, target_entropy(0.4321)]
     K.assert_allclose(entropy[:], target, atol=_atol)
 
+    c = Circuit(8, accelerators)
+    with pytest.raises(RuntimeError):
+        c.add(gates.CallbackGate(entropy))
+        state = c()
+
 
 def test_entropy_large_circuit(backend, accelerators):
     """Check that entropy calculation works for variational like circuit."""
