@@ -31,7 +31,7 @@ GATES = [
 def test_construct_unitary(backend, gate, qubits, target_matrix):
     """Check that `construct_unitary` method constructs the proper matrix."""
     gate = getattr(gates, gate)(*qubits)
-    K.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.matrix, target_matrix)
 
 
 GATES = [
@@ -51,7 +51,7 @@ def test_construct_unitary_rotations(backend, gate, target_matrix):
         gate = getattr(gates, gate)(0, 1, theta)
     else:
         gate = getattr(gates, gate)(0, theta)
-    K.assert_allclose(gate.unitary, target_matrix(theta))
+    K.assert_allclose(gate.matrix, target_matrix(theta))
     K.assert_allclose(gate.matrix, target_matrix(theta))
 
 
@@ -62,11 +62,11 @@ def test_construct_unitary_controlled(backend):
     target_matrix = np.eye(4, dtype=rotation.dtype)
     target_matrix[2:, 2:] = rotation
     gate = gates.RY(0, theta).controlled_by(1)
-    K.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.matrix, target_matrix)
 
     gate = gates.RY(0, theta).controlled_by(1, 2)
     with pytest.raises(NotImplementedError):
-        unitary = gate.unitary
+        unitary = gate.matrix
 
 ###############################################################################
 
@@ -165,13 +165,13 @@ def test_one_qubit_gate_multiplication(backend):
     assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[0, 1], [1, 0]]) @
                      np.array([[1, 1], [1, -1]]) / np.sqrt(2))
-    K.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.matrix, target_matrix)
 
     final_gate = gate2 @ gate1
     assert final_gate.__class__.__name__ == "Unitary"
     target_matrix = (np.array([[1, 1], [1, -1]]) / np.sqrt(2) @
                      np.array([[0, 1], [1, 0]]))
-    K.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.matrix, target_matrix)
 
     gate1 = gates.X(1)
     gate2 = gates.X(1)
@@ -190,7 +190,7 @@ def test_two_qubit_gate_multiplication(backend):
                                [0, 0, 0, np.exp(-1j * phi)]]) @
                      np.array([[1, 0, 0, 0], [0, 0, 1, 0],
                                [0, 1, 0, 0], [0, 0, 0, 1]]))
-    K.assert_allclose(final_gate.unitary, target_matrix)
+    K.assert_allclose(final_gate.matrix, target_matrix)
     # Check that error is raised when target qubits do not agree
     with pytest.raises(NotImplementedError):
         final_gate = gate1 @ gates.SWAP(0, 2)

@@ -71,7 +71,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho)
 
@@ -105,7 +105,7 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho, atol=_atol)
 
@@ -117,7 +117,7 @@ def test_toffoli_gate(backend):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho)
 

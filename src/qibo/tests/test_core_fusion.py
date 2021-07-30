@@ -84,7 +84,7 @@ def test_fusion_group_calculate(backend):
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    K.assert_allclose(gate.unitary, target_matrix)
+    K.assert_allclose(gate.matrix, target_matrix)
 
     group = fusion.FusionGroup()
     with pytest.raises(RuntimeError):

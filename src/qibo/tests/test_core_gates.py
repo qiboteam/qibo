@@ -196,7 +196,7 @@ def test_cun(backend, name, params):
     initial_state = random_state(2)
     gate = getattr(gates, name)(0, 1, **params)
     final_state = apply_gates([gate], initial_state=initial_state)
-    target_state = np.dot(K.to_numpy(gate.unitary), initial_state)
+    target_state = np.dot(K.to_numpy(gate.matrix), initial_state)
     K.assert_allclose(final_state, target_state)
 
 
