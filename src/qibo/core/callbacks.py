@@ -50,6 +50,9 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
     @abstract_callbacks.Callback.nqubits.setter
     def nqubits(self, n: int):
         from qibo import gates
+        if self._nqubits is not None and self._nqubits != n:
+            raise_error(RuntimeError,
+                        f"Changing EntanglementEntropy nqubits from {self._nqubits} to {n}.")
         self._nqubits = n
         if self.partition is None:
             self.partition = list(range(n // 2 + n % 2))
@@ -77,9 +80,7 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
         if not isinstance(state, K.tensor_types):
             raise_error(TypeError, "State of unknown type {} was given in callback "
                                    "calculation.".format(type(state)))
-        if self._nqubits is None:
-            self.nqubits = int(math.log2(tuple(state.shape)[0]))
-
+        self.nqubits = int(math.log2(tuple(state.shape)[0]))
 
     def state_vector_call(self, state):
         self.set_nqubits(state)
