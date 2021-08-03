@@ -26,15 +26,15 @@ def apply_gates(gatelist, nqubits=None, initial_state=None):
     return state
 
 
-def test_control_unitary(backend):
+def test__control_unitary(backend):
     matrix = K.cast(np.random.random((2, 2)))
     gate = gates.Unitary(matrix, 0)
-    unitary = gate.control_unitary(matrix)
+    unitary = gate._control_unitary(matrix)
     target_unitary = np.eye(4, dtype=K._dtypes.get('DTYPECPX'))
     target_unitary[2:, 2:] = K.to_numpy(matrix)
     K.assert_allclose(unitary, target_unitary)
     with pytest.raises(ValueError):
-        unitary = gate.control_unitary(np.random.random((16, 16)))
+        unitary = gate._control_unitary(np.random.random((16, 16)))
 
 
 def test_h(backend):
@@ -81,7 +81,7 @@ def test_align(backend):
     final_state = apply_gates(gatelist, nqubits=2)
     target_state = np.ones_like(final_state) / 2.0
     K.assert_allclose(final_state, target_state)
-    gate_matrix = gate.construct_unitary()
+    gate_matrix = gate._construct_unitary()
     K.assert_allclose(gate_matrix, np.eye(4))
 
 
@@ -335,12 +335,12 @@ def test_variational_layer(backend, nqubits):
     K.assert_allclose(target_state, final_state)
 
 
-def test_variational_layer_construct_unitary(backend):
+def test_variational_layer__construct_unitary(backend):
     pairs = list((i, i + 1) for i in range(0, 5, 2))
     theta = 2 * np.pi * np.random.random(6)
     gate = gates.VariationalLayer(range(6), pairs, gates.RY, gates.CZ, theta)
     with pytest.raises(ValueError):
-        gate.construct_unitary()
+        gate._construct_unitary()
 
 
 def test_flatten(backend):
@@ -351,7 +351,7 @@ def test_flatten(backend):
     target_state = np.ones(4) / 2.0
     gate = gates.Flatten(target_state)
     with pytest.raises(ValueError):
-        gate.construct_unitary()
+        gate._construct_unitary()
 
 
 def test_callback_gate_errors():
@@ -359,7 +359,7 @@ def test_callback_gate_errors():
     entropy = callbacks.EntanglementEntropy([0])
     gate = gates.CallbackGate(entropy)
     with pytest.raises(ValueError):
-        gate.construct_unitary()
+        gate._construct_unitary()
 
 
 def test_general_channel(backend):
@@ -389,7 +389,7 @@ def test_krauss_channel_errors(backend):
         channel._state_vector_call(np.random.random(4))
     # Attempt to construct unitary for KrausChannel
     with pytest.raises(ValueError):
-        channel.construct_unitary()
+        channel._construct_unitary()
 
 
 def test_controlled_by_channel_error():

@@ -73,7 +73,7 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
         entropy = K.sum(masked_eigvals * spectrum)
         return entropy / math.log(2.0)
 
-    def set_nqubits(self, state):
+    def _set_nqubits(self, state):
         if not isinstance(state, K.tensor_types):
             raise_error(TypeError, "State of unknown type {} was given in callback "
                                    "calculation.".format(type(state)))
@@ -82,12 +82,12 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
 
 
     def _state_vector_call(self, state):
-        self.set_nqubits(state)
+        self._set_nqubits(state)
         rho = self.partial_trace.state_vector_partial_trace(state)
         return self.entropy(rho)
 
     def _density_matrix_call(self, state):
-        self.set_nqubits(state)
+        self._set_nqubits(state)
         rho = self.partial_trace.density_matrix_partial_trace(state)
         return self.entropy(rho)
 

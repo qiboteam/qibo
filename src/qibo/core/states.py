@@ -65,7 +65,7 @@ class VectorState(AbstractState):
                                             "should be given to calculate measurement "
                                             "probabilities.")
                 if not measurement_gate.is_prepared:
-                    measurement_gate.set_nqubits(self.tensor)
+                    measurement_gate._set_nqubits(self.tensor)
                 qubits = measurement_gate.target_qubits
             elif measurement_gate is not None:
                 raise_error(ValueError, "Cannot calculate measurement "

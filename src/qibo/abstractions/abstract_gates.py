@@ -101,7 +101,7 @@ class Gate:
         self._set_control_qubits(qubits)
         self._check_control_target_overlap()
 
-    def set_targets_and_controls(self, target_qubits: Sequence[int],
+    def _set_targets_and_controls(self, target_qubits: Sequence[int],
                                  control_qubits: Sequence[int]):
         """Sets target and control qubits simultaneously.
 
@@ -200,6 +200,10 @@ class Gate:
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
+
+        Returns:
+            A :class:`qibo.abstractions.gates.Gate` object of the original gate
+            type targeting the given qubits.
         """
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
@@ -462,9 +466,9 @@ class BaseBackendGate(Gate, ABC):
             raise_error(NotImplementedError, "Cannot calculate unitary matrix for "
                                              "gates that target more than two qubits.")
         if self._matrix is None:
-            self._matrix = self.construct_unitary()
+            self._matrix = self._construct_unitary()
         if self.is_controlled_by and tuple(self._matrix.shape) == (2, 2):
-            self._matrix = self.control_unitary(self._matrix)
+            self._matrix = self._control_unitary(self._matrix)
         return self._matrix
 
     def __matmul__(self, other: "Gate") -> "Gate":
@@ -485,12 +489,12 @@ class BaseBackendGate(Gate, ABC):
 
     @staticmethod
     @abstractmethod
-    def control_unitary(unitary): # pragma: no cover
+    def _control_unitary(unitary): # pragma: no cover
         """Updates the unitary matrix of the gate if it is controlled."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def construct_unitary(self): # pragma: no cover
+    def _construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
 
@@ -500,7 +504,7 @@ class BaseBackendGate(Gate, ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def set_nqubits(self, state): # pragma: no cover
+    def _set_nqubits(self, state): # pragma: no cover
         """Sets ``gate.nqubits`` and prepares gates for application to states.
 
         This method is used only when gates are called directly on states
@@ -548,7 +552,7 @@ class BaseBackendGate(Gate, ABC):
         It automatically prepares the gate if it is not already prepared.
         """
         if not self.is_prepared:
-            self.set_nqubits(state)
+            self._set_nqubits(state)
         if not self.well_defined:
             self.substitute_symbols() # pylint: disable=E1101
             # method available only for parametrized gates

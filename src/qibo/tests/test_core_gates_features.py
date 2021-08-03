@@ -6,7 +6,7 @@ from qibo.models import Circuit
 from qibo.tests.utils import random_state
 
 
-####################### Test `construct_unitary` feature #######################
+####################### Test `_construct_unitary` feature #######################
 GATES = [
     ("H", (0,), np.array([[1, 1], [1, -1]]) / np.sqrt(2)),
     ("X", (0,), np.array([[0, 1], [1, 0]])),
@@ -28,8 +28,8 @@ GATES = [
                                      [0, 0, 0, 0, 0, 0, 1, 0]]))
 ]
 @pytest.mark.parametrize("gate,qubits,target_matrix", GATES)
-def test_construct_unitary(backend, gate, qubits, target_matrix):
-    """Check that `construct_unitary` method constructs the proper matrix."""
+def test__construct_unitary(backend, gate, qubits, target_matrix):
+    """Check that `_construct_unitary` method constructs the proper matrix."""
     gate = getattr(gates, gate)(*qubits)
     K.assert_allclose(gate.matrix, target_matrix)
 
@@ -44,8 +44,8 @@ GATES = [
     ("CU1", lambda x: np.diag([1, 1, 1, np.exp(1j * x)]))
 ]
 @pytest.mark.parametrize("gate,target_matrix", GATES)
-def test_construct_unitary_rotations(backend, gate, target_matrix):
-    """Check that `construct_unitary` method constructs the proper matrix."""
+def test__construct_unitary_rotations(backend, gate, target_matrix):
+    """Check that `_construct_unitary` method constructs the proper matrix."""
     theta = 0.1234
     if gate == "CU1":
         gate = getattr(gates, gate)(0, 1, theta)
@@ -55,7 +55,7 @@ def test_construct_unitary_rotations(backend, gate, target_matrix):
     K.assert_allclose(gate.matrix, target_matrix(theta))
 
 
-def test_construct_unitary_controlled(backend):
+def test__construct_unitary_controlled(backend):
     theta = 0.1234
     rotation = np.array([[np.cos(theta / 2.0), -np.sin(theta / 2.0)],
                          [np.sin(theta / 2.0), np.cos(theta / 2.0)]])
