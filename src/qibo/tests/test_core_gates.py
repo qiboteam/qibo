@@ -386,7 +386,7 @@ def test_krauss_channel_errors(backend):
     # Using KrausChannel on state vectors
     channel = gates.KrausChannel([((0,), np.eye(2))])
     with pytest.raises(ValueError):
-        channel.state_vector_call(np.random.random(4))
+        channel._state_vector_call(np.random.random(4))
     # Attempt to construct unitary for KrausChannel
     with pytest.raises(ValueError):
         channel.construct_unitary()
@@ -511,7 +511,7 @@ def test_thermal_relaxation_channel(backend, t1, t2, time, excpop):
     # Try to apply to state vector if t1 < t2
     if t1 < t2:
         with pytest.raises(ValueError):
-            gate.state_vector_call(initial_rho) # pylint: disable=no-member
+            gate._state_vector_call(initial_rho) # pylint: disable=no-member
 
 
 @pytest.mark.parametrize("t1,t2,time,excpop",

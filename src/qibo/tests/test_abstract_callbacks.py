@@ -11,10 +11,10 @@ def test_abstract_callback_properties():
     assert callback.nqubits == 5
     assert callback.results == [1, 2, 3]
     assert not callback.density_matrix
-    assert callback._active_call == "state_vector_call"
+    assert callback._active_call == "_state_vector_call"
     callback.density_matrix = True
     assert callback.density_matrix
-    assert callback._active_call == "density_matrix_call"
+    assert callback._active_call == "_density_matrix_call"
 
 
 def test_creating_abstract_callbacks():

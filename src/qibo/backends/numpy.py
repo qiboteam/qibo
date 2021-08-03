@@ -283,7 +283,7 @@ class NumpyBackend(abstract.AbstractBackend):
         rank = int(math.log2(int(matrix.shape[0])))
         return self.reshape(matrix, 2 * rank * (2,))
 
-    def state_vector_call(self, gate, state):
+    def _state_vector_call(self, gate, state):
         state = self.reshape(state, gate.cache.tensor_shape)
         matrix = self.reshape_matrix(gate.native_op_matrix)
         if gate.is_controlled_by:
@@ -306,9 +306,9 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
     def state_vector_matrix_call(self, gate, state):
-        return self.state_vector_call(gate, state)
+        return self._state_vector_call(gate, state)
 
-    def density_matrix_call(self, gate, state):
+    def _density_matrix_call(self, gate, state):
         state = self.reshape(state, gate.cache.tensor_shape)
         matrix = self.reshape_matrix(gate.native_op_matrix)
         matrixc = self.conj(matrix)
@@ -344,9 +344,9 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_matrix_call(self, gate, state):
-        return self.density_matrix_call(gate, state)
+        return self._density_matrix_call(gate, state)
 
-    def density_matrix_half_call(self, gate, state):
+    def _density_matrix_half_call(self, gate, state):
         if gate.is_controlled_by: # pragma: no cover
             raise_error(NotImplementedError, "Gate density matrix half call is "
                                              "not implemented for ``controlled_by``"
@@ -357,7 +357,7 @@ class NumpyBackend(abstract.AbstractBackend):
         return self.reshape(state, gate.cache.flat_shape)
 
     def density_matrix_half_matrix_call(self, gate, state):
-        return self.density_matrix_half_call(gate, state)
+        return self._density_matrix_half_call(gate, state)
 
     def _append_zeros(self, state, qubits, results):
         """Helper method for `state_vector_collapse` and `density_matrix_collapse`."""
@@ -565,7 +565,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
             cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
         return cache
 
-    def state_vector_call(self, gate, state):
+    def _state_vector_call(self, gate, state):
         return gate.gate_op(state, gate.nqubits, *gate.target_qubits,
                             gate.cache.qubits_tensor)
 
@@ -573,7 +573,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         return gate.gate_op(state, gate.custom_op_matrix, gate.nqubits, *gate.target_qubits,
                             gate.cache.qubits_tensor)
 
-    def density_matrix_call(self, gate, state):
+    def _density_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
@@ -592,7 +592,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                              gate.cache.qubits_tensor)
         return self.reshape(state, shape)
 
-    def density_matrix_half_call(self, gate, state):
+    def _density_matrix_half_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,

@@ -12,25 +12,28 @@ class Gate:
     """The base class for gate implementation.
 
     All base gates should inherit this class.
-
-    Attributes:
-        name (str): Name of the gate.
-        is_controlled_by (bool): ``True`` if the gate was created using the
-            :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
-            otherwise ``False``.
-        init_args (list): Arguments used to initialize the gate.
-        init_kwargs (dict): Arguments used to initialize the gate.
-        target_qubits (tuple): Tuple with ids of target qubits.
-        control_qubits (tuple): Tuple with ids of control qubits sorted in
-            increasing order.
-        nqubits (int): Number of qubits that this gate acts on.
-        nstates (int): Size of state vectors that this gate acts on.
-        density_matrix (bool): Controls if the gate acts on state vectors or
-            density matrices.
     """
+
     from qibo.abstractions import gates as module
 
     def __init__(self):
+        """
+        Attributes:
+            name (str): Name of the gate.
+            is_controlled_by (bool): ``True`` if the gate was created using the
+                :meth:`qibo.abstractions.abstract_gates.Gate.controlled_by` method,
+                otherwise ``False``.
+            init_args (list): Arguments used to initialize the gate.
+            init_kwargs (dict): Arguments used to initialize the gate.
+            target_qubits (tuple): Tuple with ids of target qubits.
+            control_qubits (tuple): Tuple with ids of control qubits sorted in
+                increasing order.
+            nqubits (int): Number of qubits that this gate acts on.
+            nstates (int): Size of state vectors that this gate acts on.
+            density_matrix (bool): Controls if the gate acts on state vectors or
+                density matrices.
+        """
+
         self.name = None
         self.is_controlled_by = False
         # args for creating gate
@@ -53,7 +56,7 @@ class Gate:
 
         # Using density matrices or state vectors
         self._density_matrix = False
-        self._active_call = "state_vector_call"
+        self._active_call = "_state_vector_call"
 
     @property
     def target_qubits(self) -> Tuple[int]:
@@ -171,9 +174,9 @@ class Gate:
                         "preparing the gate for execution.")
         self._density_matrix = x
         if x:
-            self._active_call = "density_matrix_call"
+            self._active_call = "_density_matrix_call"
         else:
-            self._active_call = "state_vector_call"
+            self._active_call = "_state_vector_call"
 
     def commutes(self, gate: "Gate") -> bool:
         """Checks if two gates commute.
@@ -421,24 +424,27 @@ class ParametrizedGate(Gate):
 
 class BaseBackendGate(Gate, ABC):
     """Abstract class for gate objects that can be used in calculations.
-
-    Attributes:
-        unitary: Unitary matrix representation of the gate in the computational
-            basis.
-        is_prepared: ``True`` if the gate is prepared for action to states.
-            A gate is prepared when its matrix and/or other tensors required
-            in the computation are calculated.
-            See :meth:`qibo.abstractions.abstract_gates.BackendGate.prepare` for more
-            details.
-            Note that gate preparation is triggered automatically when a gate
-            is added to a circuit or when it acts on a state.
-        device: Hardware device to use in order to simulate this gate.
-        density_matrix: ``True`` if the gate will act on density matrices,
-            ``False`` if the gate will act on state vectors.
     """
+
     module = None
 
     def __init__(self):
+        """
+        Attributes:
+            unitary: Unitary matrix representation of the gate in the computational
+                basis.
+            is_prepared: ``True`` if the gate is prepared for action to states.
+                A gate is prepared when its matrix and/or other tensors required
+                in the computation are calculated.
+                See :meth:`qibo.abstractions.abstract_gates.BackendGate.prepare` for more
+                details.
+                Note that gate preparation is triggered automatically when a gate
+                is added to a circuit or when it acts on a state.
+            device: Hardware device to use in order to simulate this gate.
+            density_matrix: ``True`` if the gate will act on density matrices,
+                ``False`` if the gate will act on state vectors.
+        """
+
         Gate.__init__(self)
         self._matrix = None
         self._cache = None
@@ -504,21 +510,21 @@ class BaseBackendGate(Gate, ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def state_vector_call(self, state): # pragma: no cover
+    def _state_vector_call(self, state): # pragma: no cover
         """Applies the gate on a state vector."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_call(self, state): # pragma: no cover
+    def _density_matrix_call(self, state): # pragma: no cover
         """Applies the gate on a density matrix."""
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_half_call(self, state): # pragma: no cover
+    def _density_matrix_half_call(self, state): # pragma: no cover
         """Half application of gate to density matrix.
 
         For an arbitrary unitary gate U the
-        :meth:`qibo.abstractions.abstract_gates.BaseBackendGate.density_matrix_call`
+        :meth:`qibo.abstractions.abstract_gates.BaseBackendGate._density_matrix_call`
         calculates
 
         .. math::
