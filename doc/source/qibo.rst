@@ -409,36 +409,39 @@ fSim with general rotation
     :member-order: bysource
 
 
+Special gates
+^^^^^^^^^^^^^
+
 Toffoli
-^^^^^^^
+"""""""
 
 .. autoclass:: qibo.abstractions.gates.TOFFOLI
     :members:
     :member-order: bysource
 
 Arbitrary unitary
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.Unitary
     :members:
     :member-order: bysource
 
 Variational layer
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.VariationalLayer
     :members:
     :member-order: bysource
 
 Flatten
-^^^^^^^
+"""""""
 
 .. autoclass:: qibo.abstractions.gates.Flatten
     :members:
     :member-order: bysource
 
 Callback gate
-^^^^^^^^^^^^^
+"""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CallbackGate
     :members:
