@@ -120,12 +120,12 @@ class Y(BackendGate, abstract_gates.Y):
         abstract_gates.Y.__init__(self, q)
         if self.gate_op:
             self.gate_op = K.op.apply_y
-            self._density_matrix_call = lambda state: self._custom__density_matrix_call(state)
+            self._density_matrix_call = lambda state: self._custom_density_matrix_call(state)
 
     def construct_unitary(self):
         return K.matrices.Y
 
-    def _custom__density_matrix_call(self, state):
+    def _custom_density_matrix_call(self, state):
         state = K._density_matrix_half_call(self, state)
         matrix = K.conj(K.matrices.Y)
         shape = state.shape
