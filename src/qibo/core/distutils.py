@@ -155,7 +155,7 @@ class DistributedQueues:
         new_control_qubits = tuple(q - self.qubits.reduction_number(q)
                                    for q in devgate.control_qubits
                                    if q not in self.qubits.set)
-        devgate.set_targets_and_controls(new_target_qubits, new_control_qubits)
+        devgate._set_targets_and_controls(new_target_qubits, new_control_qubits)
         devgate.original_gate = gate
         devgate.device_gates = set()
         return devgate
@@ -234,7 +234,7 @@ class DistributedQueues:
                                        for q in gate.target_qubits)
             new_control_qubits = tuple(qubit_map[q] if q in qubit_map else q
                                         for q in gate.control_qubits)
-            gate.set_targets_and_controls(new_target_qubits, new_control_qubits)
+            gate._set_targets_and_controls(new_target_qubits, new_control_qubits)
 
         return self._transform(queue, new_remaining_queue, counter)
 

@@ -6,7 +6,7 @@ class Callback:
     """Base callback class.
 
     Callbacks should inherit this class and implement its
-    `state_vector_call` and `density_matrix_call` methods.
+    `_state_vector_call` and `_density_matrix_call` methods.
 
     Results of a callback can be accessed by indexing the corresponding object.
     """
@@ -15,7 +15,7 @@ class Callback:
         self._results = []
         self._nqubits = None
         self._density_matrix = False
-        self._active_call = "state_vector_call"
+        self._active_call = "_state_vector_call"
 
     @property
     def nqubits(self): # pragma: no cover
@@ -36,9 +36,9 @@ class Callback:
     def density_matrix(self, x):
         self._density_matrix = x
         if x:
-            self._active_call = "density_matrix_call"
+            self._active_call = "_density_matrix_call"
         else:
-            self._active_call = "state_vector_call"
+            self._active_call = "_state_vector_call"
 
     @property
     def results(self):

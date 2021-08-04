@@ -31,7 +31,7 @@ class Circuit(circuit.AbstractCircuit):
         self._compiled_execute = None
         self.state_cls = states.VectorState
 
-    def set_nqubits(self, gate):
+    def _set_nqubits(self, gate):
         if gate._nqubits is not None and gate.nqubits != self.nqubits:
             raise_error(RuntimeError, "Cannot add gate {} that acts on {} "
                                       "qubits to circuit that contains {}"
@@ -41,10 +41,10 @@ class Circuit(circuit.AbstractCircuit):
 
     def _add_layer(self, gate):
         for unitary in gate.unitaries:
-            self.set_nqubits(unitary)
+            self._set_nqubits(unitary)
             self.queue.append(unitary)
         if gate.additional_unitary is not None:
-            self.set_nqubits(gate.additional_unitary)
+            self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
     def _fuse_copy(self):

@@ -21,11 +21,11 @@ class BackendCallback(abstract_callbacks.Callback, ABC):
         raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     @abstractmethod
-    def state_vector_call(self, state): # pragma: no cover
+    def _state_vector_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_call(self, state): # pragma: no cover
+    def _density_matrix_call(self, state): # pragma: no cover
         raise_error(NotImplementedError)
 
     def __call__(self, state):
@@ -73,7 +73,7 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
         entropy = K.sum(masked_eigvals * spectrum)
         return entropy / math.log(2.0)
 
-    def set_nqubits(self, state):
+    def _set_nqubits(self, state):
         if not isinstance(state, K.tensor_types):
             raise_error(TypeError, "State of unknown type {} was given in callback "
                                    "calculation.".format(type(state)))
@@ -81,23 +81,23 @@ class EntanglementEntropy(BackendCallback, abstract_callbacks.EntanglementEntrop
             self.nqubits = int(math.log2(tuple(state.shape)[0]))
 
 
-    def state_vector_call(self, state):
-        self.set_nqubits(state)
+    def _state_vector_call(self, state):
+        self._set_nqubits(state)
         rho = self.partial_trace.state_vector_partial_trace(state)
         return self.entropy(rho)
 
-    def density_matrix_call(self, state):
-        self.set_nqubits(state)
+    def _density_matrix_call(self, state):
+        self._set_nqubits(state)
         rho = self.partial_trace.density_matrix_partial_trace(state)
         return self.entropy(rho)
 
 
 class Norm(BackendCallback, abstract_callbacks.Norm):
 
-    def state_vector_call(self, state):
+    def _state_vector_call(self, state):
         return K.sqrt(K.sum(K.square(K.abs(state))))
 
-    def density_matrix_call(self, state):
+    def _density_matrix_call(self, state):
         return K.trace(state)
 
 
@@ -107,20 +107,20 @@ class Overlap(BackendCallback, abstract_callbacks.Overlap):
         super().__init__()
         self.statec = K.conj(K.cast(state, dtype='DTYPECPX'))
 
-    def state_vector_call(self, state):
+    def _state_vector_call(self, state):
         return K.abs(K.sum(self.statec * state))
 
-    def density_matrix_call(self, state):
+    def _density_matrix_call(self, state):
         raise_error(NotImplementedError, "Overlap callback is not implemented "
                                           "for density matrices.")
 
 
 class Energy(BackendCallback, abstract_callbacks.Energy):
 
-    def state_vector_call(self, state):
+    def _state_vector_call(self, state):
         return self.hamiltonian.expectation(state)
 
-    def density_matrix_call(self, state):
+    def _density_matrix_call(self, state):
         return K.trace(K.matmul(self.hamiltonian.matrix, state))
 
 
@@ -144,7 +144,7 @@ class Gap(BackendCallback, abstract_callbacks.Gap):
             raise_error(TypeError, "Cannot add gap callback to {}.".format(t))
         self._evolution = ev
 
-    def state_vector_call(self, state):
+    def _state_vector_call(self, state):
         if self.evolution is None:
             raise_error(ValueError, "Gap callback can only be used in "
                                     "adiabatic evolution models.")
@@ -169,6 +169,6 @@ class Gap(BackendCallback, abstract_callbacks.Gap):
                         "to calculate gap.".format(excited))
         return gap
 
-    def density_matrix_call(self, state):
+    def _density_matrix_call(self, state):
         raise_error(NotImplementedError, "Gap callback is not implemented for "
                                          "density matrices.")

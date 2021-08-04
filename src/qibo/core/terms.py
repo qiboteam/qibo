@@ -93,7 +93,7 @@ class HamiltonianTerm:
         """Applies the term on a given state vector or density matrix."""
         if density_matrix:
             self.gate.density_matrix = True
-            return self.gate.density_matrix_half_call(state)
+            return self.gate._density_matrix_half_call(state)
         return self.gate(state) # pylint: disable=E1102
 
 
@@ -202,7 +202,7 @@ class SymbolicTerm(HamiltonianTerm):
         for factor in self.factors:
             if density_matrix:
                 factor.gate.density_matrix = True
-                state = factor.gate.density_matrix_half_call(state)
+                state = factor.gate._density_matrix_half_call(state)
             else:
                 state = factor.gate(state)
         return self.coefficient * state

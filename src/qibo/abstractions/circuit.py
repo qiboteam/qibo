@@ -403,7 +403,7 @@ class AbstractCircuit(ABC):
         elif isinstance(gate, gates.VariationalLayer):
             self._add_layer(gate)
         else:
-            self.set_nqubits(gate)
+            self._set_nqubits(gate)
             self.queue.append(gate)
             if isinstance(gate, gates.M):
                 self.repeated_execution = True
@@ -415,7 +415,7 @@ class AbstractCircuit(ABC):
             if gate.trainable:
                 self.trainable_gates.append(gate)
 
-    def set_nqubits(self, gate: gates.Gate):
+    def _set_nqubits(self, gate: gates.Gate):
         """Sets the number of qubits and prepares all gates.
 
         Helper method for ``circuit.add(gate)``.

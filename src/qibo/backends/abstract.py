@@ -435,7 +435,7 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def state_vector_call(self, gate, state): # pragma: no cover
+    def _state_vector_call(self, gate, state): # pragma: no cover
         """Applies gate to state vector.
 
         Args:
@@ -468,7 +468,7 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_call(self, gate, state): # pragma: no cover
+    def _density_matrix_call(self, gate, state): # pragma: no cover
         """Applies gate to density matrix.
 
         Args:
@@ -501,7 +501,7 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def density_matrix_half_call(self, gate, state): # pragma: no cover
+    def _density_matrix_half_call(self, gate, state): # pragma: no cover
         """Half gate application to density matrix."""
         raise_error(NotImplementedError)
 

@@ -65,8 +65,8 @@ class DistributedCircuit(circuit.Circuit):
         self.calc_devices = accelerators
         self.queues = DistributedQueues(self, gate_module)
 
-    def set_nqubits(self, gate):
-        AbstractCircuit.set_nqubits(self, gate)
+    def _set_nqubits(self, gate):
+        AbstractCircuit._set_nqubits(self, gate)
 
     def on_qubits(self, *q):
         if self.queues.queues:
