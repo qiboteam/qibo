@@ -267,7 +267,7 @@ class TensorflowCustomBackend(TensorflowBackend):
             cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
         return cache
 
-    def state_vector_call(self, gate, state):
+    def _state_vector_call(self, gate, state):
         return gate.gate_op(state, gate.cache.qubits_tensor, gate.nqubits,
                             *gate.target_qubits, self.nthreads)
 
@@ -276,7 +276,7 @@ class TensorflowCustomBackend(TensorflowBackend):
                             gate.nqubits, *gate.target_qubits,
                             self.nthreads)
 
-    def density_matrix_call(self, gate, state):
+    def _density_matrix_call(self, gate, state):
         state = gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
                              2 * gate.nqubits, *gate.target_qubits,
                              self.nthreads)
@@ -294,7 +294,7 @@ class TensorflowCustomBackend(TensorflowBackend):
                              self.nthreads)
         return state
 
-    def density_matrix_half_call(self, gate, state):
+    def _density_matrix_half_call(self, gate, state):
         return gate.gate_op(state, gate.cache.qubits_tensor + gate.nqubits,
                             2 * gate.nqubits, *gate.target_qubits,
                             self.nthreads)

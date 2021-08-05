@@ -9,7 +9,6 @@ The Qibo package comes with the following modules:
 * Gates_
 * Hamiltonians_
 * Callbacks_
-* Solvers_
 * Optimizers_
 * Parallel_
 * Backends_
@@ -218,204 +217,231 @@ the gate on an arbitrary number of qubits. For example
 * ``gates.RY(0, np.pi).controlled_by(1, 2, 3)`` applies the Y-rotation to qubit 0 when qubits 1, 2 and 3 are in the |111> state.
 * ``gates.SWAP(0, 1).controlled_by(3, 4)`` swaps qubits 0 and 1 when qubits 3 and 4 are in the |11> state.
 
+Gate models
+^^^^^^^^^^^
+
+Abstract gates
+""""""""""""""
+
+.. autoclass:: qibo.abstractions.gates.Gate
+    :members:
+    :member-order: bysource
+
+Abstract backend gates
+""""""""""""""""""""""
+
+.. autoclass:: qibo.abstractions.abstract_gates.BaseBackendGate
+    :members:
+    :member-order: bysource
+
+Single qubit gates
+^^^^^^^^^^^^^^^^^^
+
 Hadamard (H)
-^^^^^^^^^^^^
+""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.H
    :members:
    :member-order: bysource
 
 Pauli X (X)
-^^^^^^^^^^^
+"""""""""""
 
 .. autoclass:: qibo.abstractions.gates.X
    :members:
    :member-order: bysource
 
 Pauli Y (Y)
-^^^^^^^^^^^
+"""""""""""
 
 .. autoclass:: qibo.abstractions.gates.Y
     :members:
     :member-order: bysource
 
 Pauli Z (Z)
-^^^^^^^^^^^
+"""""""""""
 
 .. autoclass:: qibo.abstractions.gates.Z
     :members:
     :member-order: bysource
 
 Identity (I)
-^^^^^^^^^^^^
+""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.I
     :members:
     :member-order: bysource
 
 Measurement (M)
-^^^^^^^^^^^^^^^
+"""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.M
     :members:
     :member-order: bysource
 
 Rotation X-axis (RX)
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.RX
     :members:
     :member-order: bysource
 
 Rotation Y-axis (RY)
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.RY
     :members:
     :member-order: bysource
 
 Rotation Z-axis (RZ)
-^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.RZ
     :members:
     :member-order: bysource
 
 First general unitary (U1)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.U1
     :members:
     :member-order: bysource
 
 Second general unitary (U2)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.U2
     :members:
     :member-order: bysource
 
 Third general unitary (U3)
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.U3
     :members:
     :member-order: bysource
 
+Two qubit gates
+^^^^^^^^^^^^^^^
+
 Controlled-NOT (CNOT)
-^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CNOT
     :members:
     :member-order: bysource
 
 Controlled-phase (CZ)
-^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CZ
     :members:
     :member-order: bysource
 
 Controlled-rotation X-axis (CRX)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CRX
     :members:
     :member-order: bysource
 
 Controlled-rotation Y-axis (CRY)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CRY
     :members:
     :member-order: bysource
 
 Controlled-rotation Z-axis (CRZ)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CRZ
     :members:
     :member-order: bysource
 
 Controlled first general unitary (CU1)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CU1
     :members:
     :member-order: bysource
 
 Controlled second general unitary (CU2)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+"""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CU2
     :members:
     :member-order: bysource
 
 Controlled third general unitary (CU3)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CU3
     :members:
     :member-order: bysource
 
 Controlled third general unitary (CU3)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CU3
     :members:
     :member-order: bysource
 
 Swap (SWAP)
-^^^^^^^^^^^
+"""""""""""
 
 .. autoclass:: qibo.abstractions.gates.SWAP
     :members:
     :member-order: bysource
 
 fSim
-^^^^
+""""
 
 .. autoclass:: qibo.abstractions.gates.fSim
     :members:
     :member-order: bysource
 
 fSim with general rotation
-^^^^^^^^^^^^^^^^^^^^^^^^^^
+""""""""""""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.GeneralizedfSim
     :members:
     :member-order: bysource
 
+
+Special gates
+^^^^^^^^^^^^^
+
 Toffoli
-^^^^^^^
+"""""""
 
 .. autoclass:: qibo.abstractions.gates.TOFFOLI
     :members:
     :member-order: bysource
 
 Arbitrary unitary
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.Unitary
     :members:
     :member-order: bysource
 
 Variational layer
-^^^^^^^^^^^^^^^^^
+"""""""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.VariationalLayer
     :members:
     :member-order: bysource
 
 Flatten
-^^^^^^^
+"""""""
 
 .. autoclass:: qibo.abstractions.gates.Flatten
     :members:
     :member-order: bysource
 
 Callback gate
-^^^^^^^^^^^^^
+"""""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CallbackGate
     :members:

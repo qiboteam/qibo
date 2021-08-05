@@ -43,7 +43,7 @@ def test_measurement_gate_errors(backend):
         gate.controlled_by(1)
     # attempting to construct unitary
     with pytest.raises(ValueError):
-        matrix = gate.unitary
+        matrix = gate.matrix
     # calling on bad state
     with pytest.raises(TypeError):
         gate("test", 100)

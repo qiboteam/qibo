@@ -71,7 +71,7 @@ def test_one_qubit_gates(backend, gatename, gatekwargs):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho)
 
@@ -105,7 +105,7 @@ def test_two_qubit_gates(backend, gatename, gatekwargs):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho, atol=_atol)
 
@@ -117,7 +117,7 @@ def test_toffoli_gate(backend):
     gate.density_matrix = True
     final_rho = gate(np.copy(initial_rho))
 
-    matrix = K.to_numpy(gate.unitary)
+    matrix = K.to_numpy(gate.matrix)
     target_rho = np.einsum("ab,bc,cd->ad", matrix, initial_rho, matrix.conj().T)
     K.assert_allclose(final_rho, target_rho)
 
@@ -246,7 +246,7 @@ def test_partial_trace_gate_errors(backend):
     gate = gates.PartialTrace(0, 1)
     # attempt to create unitary matrix
     with pytest.raises(ValueError):
-        gate.construct_unitary()
+        gate._construct_unitary()
     # attempt to call on state vector
     state = np.random.random(16) + 1j * np.random.random(16)
     with pytest.raises(RuntimeError):

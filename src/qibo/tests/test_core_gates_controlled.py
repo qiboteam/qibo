@@ -208,5 +208,5 @@ def test_controlled_unitary_matrix(backend):
     c = Circuit(2)
     c.add(gate)
     target_state = c(np.copy(initial_state))
-    final_state = np.dot(K.to_numpy(gate.unitary), initial_state)
+    final_state = np.dot(K.to_numpy(gate.matrix), initial_state)
     K.assert_allclose(final_state, target_state)

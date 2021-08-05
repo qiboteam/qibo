@@ -310,9 +310,9 @@ def test_density_matrix_getter_and_setter():
     gate = abstract_gates.Gate()
     gate.target_qubits = (0, 1)
     gate.control_qubits = (2,)
-    assert gate._active_call == "state_vector_call"
+    assert gate._active_call == "_state_vector_call"
     gate.density_matrix = True
-    assert gate._active_call == "density_matrix_call"
+    assert gate._active_call == "_density_matrix_call"
 
     gate.nqubits = 4
     gate.is_prepared = True
