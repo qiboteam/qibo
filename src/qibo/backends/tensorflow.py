@@ -206,6 +206,34 @@ class TensorflowBackend(numpy.NumpyBackend):
         self.backend.random.set_seed(seed)
 
 
+class TensorflowMultiGpu(abstract.AbstractMultiGpu):
+
+    def __init__(self, backend):
+        super().__init__(backend)
+        self.cpu = self.K.cpu_devices[0]
+
+    def create_piece(self, n): # pragma: no cover
+        with self.K.device(self.cpu):
+            piece = self.K.backend.Variable(self.K.zeros(n))
+        return piece
+
+    def calculate_tensor(self, state):
+        if state.qubits.list == list(range(state.nglobal)):
+            with self.K.device(self.cpu):
+                tensor = self.K.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
+                tensor = self.K.reshape(tensor, state.shapes["full"])
+        elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
+            with self.K.device(self.cpu):
+                tensor = self.K.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
+                tensor = self.K.reshape(tensor, state.shapes["full"])
+        else: # fall back to the transpose op
+            with self.K.device(self.cpu):
+                tensor = self.K.zeros(state.shapes["full"])
+                tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
+                                                state.qubits.reverse_transpose_order)
+        return tensor
+
+
 class TensorflowCustomBackend(TensorflowBackend):
 
     description = "Uses precompiled primitives to apply gates to states. " \
@@ -222,6 +250,7 @@ class TensorflowCustomBackend(TensorflowBackend):
         super().__init__()
         self.name = "qibotf"
         self.op = op
+        self._multigpu = TensorflowMultiGpu(self)
         import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
@@ -321,6 +350,10 @@ class TensorflowCustomBackend(TensorflowBackend):
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False, self.nthreads)
         return state / self.trace(state)
+
+    @property
+    def multigpu(self):
+        return self._multigpu
 
     def compile(self, func):
         return func

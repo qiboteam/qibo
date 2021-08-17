@@ -239,20 +239,7 @@ class DistributedState(VectorState):
         This is done by merging the state pieces to a single tensor.
         Using this method will double memory usage.
         """
-        if self.qubits.list == list(range(self.nglobal)):
-            with K.device(self.device):
-                state = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
-                state = K.reshape(state, self.shapes["full"])
-        elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
-            with K.device(self.device):
-                state = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
-                state = K.reshape(state, self.shapes["full"])
-        else: # fall back to the transpose op
-            with K.device(self.device):
-                state = K.zeros(self.shapes["full"])
-                state = K.transpose_state(self.pieces, state, self.nqubits,
-                                          self.qubits.reverse_transpose_order)
-        return state
+        return K.multigpu.calculate_tensor(self)
 
     @tensor.setter
     def tensor(self, x):
@@ -261,10 +248,9 @@ class DistributedState(VectorState):
                                          "efficiency.")
 
     def create_pieces(self):
+        # TODO: Consider removing this method and moving it to `assign_pieces`
         n = 2 ** (self.nqubits - self.nglobal)
-        with K.device(self.device):
-            self.pieces = [K.optimization.Variable(K.zeros(n))
-                           for _ in range(self.ndevices)]
+        self.pieces = [K.multigpu.create_piece(n) for _ in range(self.ndevices)]
 
     def assign_pieces(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.

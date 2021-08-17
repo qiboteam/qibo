@@ -520,7 +520,30 @@ class AbstractBackend(ABC):
         """Collapses density matrix to a given result."""
         raise_error(NotImplementedError)
 
+    @property
+    def multigpu(self): # pragma: no cover
+        raise_error(NotImplementedError, "Multigpu is not implemented for {}."
+                                         "".format(self.name))
+
     @abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         """Check that two arrays are equal. Useful for testing."""
+        raise_error(NotImplementedError)
+
+
+class AbstractMultiGpu(ABC):
+
+    def __init__(self, backend):
+        self.K = backend
+
+    @abstractmethod
+    def create_piece(self, n): # pragma: no cover
+        """Initializes a zero vector on CPU.
+
+        Relevant only for backends that support multi-GPU.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def calculate_tensor(self, state): # pragma: no cover
         raise_error(NotImplementedError)
