@@ -233,6 +233,29 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
                                                 state.qubits.reverse_transpose_order)
         return tensor
 
+    def assign_pieces(self, state, tensor):
+        with self.K.device(self.cpu):
+            tensor = self.K.reshape(tensor, state.shapes["device"])
+            pieces = [tensor[i] for i in range(state.ndevices)]
+            new_tensor = self.K.zeros(state.shapes["device"])
+            new_tensor = self.K.transpose_state(pieces, new_tensor, state.nqubits,
+                                                state.qubits.transpose_order)
+            for i in range(state.ndevices):
+                state.pieces[i].assign(new_tensor[i])
+
+    def zero_state_piece(self, nqubits):
+        with self.K.device(self.cpu):
+            piece = self.K.initial_state(nqubits=nqubits)
+            piece = self.K.backend.Variable(piece, dtype=piece.dtype)
+        return piece
+
+    def plus_state_pieces(self, nqubits, dtype):
+        with self.K.device(self.cpu):
+            norm = K.cast(2 ** float(nqubits / 2.0), dtype=dtype)
+            pieces = [self.backend.Variable(self.K.ones_like(p) / norm)
+                      for p in state.pieces]
+        return pieces
+
 
 class TensorflowCustomBackend(TensorflowBackend):
 

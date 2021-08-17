@@ -213,10 +213,6 @@ class DistributedState(VectorState):
         return self.circuit.queues.qubits
 
     @property
-    def device(self):
-        return self.circuit.memory_device
-
-    @property
     def nglobal(self):
         return self.circuit.nglobal
 
@@ -261,14 +257,7 @@ class DistributedState(VectorState):
         """
         if self.pieces is None:
             self.create_pieces()
-        with K.device(self.device):
-            full_state = K.reshape(full_state, self.shapes["device"])
-            pieces = [full_state[i] for i in range(self.ndevices)]
-            new_state = K.zeros(self.shapes["device"])
-            new_state = K.transpose_state(pieces, new_state, self.nqubits,
-                                          self.qubits.transpose_order)
-            for i in range(self.ndevices):
-                self.pieces[i].assign(new_state[i])
+        K.multigpu.assign_pieces(self, full_state)
 
     def __getitem__(self, key):
       """Implements indexing of the distributed state without the full vector."""
@@ -300,21 +289,16 @@ class DistributedState(VectorState):
 
     @classmethod
     def zero_state(cls, circuit):
-      state = cls(circuit)
-      state.create_pieces()
-      with K.device(state.device):
-          piece = K.initial_state(nqubits=state.nlocal)
-          state.pieces[0] = K.optimization.Variable(piece, dtype=piece.dtype)
-      return state
+        state = cls(circuit)
+        state.create_pieces()
+        state.pieces[0] = K.multigpu.zero_state_piece(state.nlocal)
+        return state
 
     @classmethod
     def plus_state(cls, circuit):
       state = cls(circuit)
       state.create_pieces()
-      with K.device(state.device):
-          norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
-          state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
-                          for p in state.pieces]
+      state.pieces = K.multigpu.plus_state_pieces(state.nqubits, state.dtype)
       return state
 
     def copy(self):
