@@ -45,7 +45,7 @@ class AdiabaticHamiltonian(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0): # pragma: no cover
+    def circuit(self, dt, accelerators=None, t=0): # pragma: no cover
         raise_error(NotImplementedError)
 
 
@@ -81,7 +81,7 @@ class BaseAdiabaticHamiltonian:
         st = self.schedule(t / self.total_time) # pylint: disable=E1102
         return self.h0 * (1 - st) + self.h1 * st
 
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0): # pragma: no cover
+    def circuit(self, dt, accelerators=None, t=0): # pragma: no cover
         raise_error(NotImplementedError, "Trotter circuit is not available "
                                          "for full matrix Hamiltonians.")
 
@@ -123,14 +123,13 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
                 all_terms.append(term)
         self.groups = terms.TermGroup.from_terms(all_terms)
 
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0", t=0):
+    def circuit(self, dt, accelerators=None, t=0):
         """Circuit that implements the Trotterized evolution under the adiabatic Hamiltonian.
 
         Args:
             dt (float): Time step to use for exponentiation of the Hamiltonian.
             accelerators (dict): Dictionary with accelerators for distributed
                 circuits.
-            memory_device (str): Memory device for distributed circuits.
             t (float): Time that the Hamiltonian should be calculated.
 
         Returns:
@@ -138,7 +137,7 @@ class SymbolicAdiabaticHamiltonian(BaseAdiabaticHamiltonian):
         """
         if self.trotter_circuit is None:
             self.trotter_circuit = TrotterCircuit(self.groups, dt, self.nqubits,
-                                                  accelerators, memory_device)
+                                                  accelerators)
         st = self.schedule(t / self.total_time) if t != 0 else 0 # pylint: disable=E1102
         coefficients = {self.h0: 1 - st, self.h1: st}
         self.trotter_circuit.set(dt, coefficients)

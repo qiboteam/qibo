@@ -62,9 +62,9 @@ class DistributedQueues:
         For example ``queues[2][1]`` gives the gate queue of the second gate
         group to be run in the first device.
         If ``gate[i]`` is an empty list it means that this the i-th group
-        consists of a special gate to be run on ``memory_device``.
+        consists of a special gate to be run on CPU.
     * ``special_queue``: List with special gates than run on the full state vector
-        on ``memory_device``. Special gates have no target qubits and can be
+        on CPU. Special gates have no target qubits and can be
         ``CallbackGate``, ``Flatten`` or SWAPs between local and global qubits.
     """
 
