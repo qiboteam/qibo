@@ -215,12 +215,11 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
     def on_cpu(self):
         return self.K.device(self.cpu)
 
-    def create_pieces(self, nqubits, nglobal):
-        ndevices = 2 ** nglobal
-        n = 2 ** nqubits // ndevices
+    def create_pieces(self, state):
+        n = 2 ** state.nlocal
         with self.on_cpu():
             pieces = [self.K.backend.Variable(self.K.zeros(n))
-                      for _ in range(ndevices)]
+                      for _ in range(state.ndevices)]
         return pieces
 
     def calculate_tensor(self, state):
@@ -249,20 +248,18 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             for i in range(state.ndevices):
                 state.pieces[i].assign(new_tensor[i])
 
-    def zero_state_pieces(self, nqubits, nglobal):
-        pieces = self.create_pieces(nqubits, nglobal)
+    def assign_zero_state(self, state):
+        state.pieces = self.create_pieces(state)
         with self.on_cpu():
-            piece = self.K.initial_state(nqubits=nqubits - nglobal)
-            pieces[0] = self.K.backend.Variable(piece, dtype=piece.dtype)
-        return pieces
+            piece = self.K.initial_state(nqubits=state.nlocal)
+            state.pieces[0] = self.K.backend.Variable(piece, dtype=state.dtype)
 
-    def plus_state_pieces(self, nqubits, nglobal):
-        ndevices = 2 ** nglobal
+    def assign_plus_state(self, state):
         with self.on_cpu():
-            n = self.K.cast(2 ** (nqubits - nglobal), dtype=self.K.dtypes('DTYPEINT'))
-            norm = self.K.cast(2 ** float(nqubits / 2.0))
-            pieces = [self.K.backend.Variable(self.K.ones(n) / norm) for _ in range(ndevices)]
-        return pieces
+            n = self.K.cast(2 ** state.nlocal, dtype=self.K.dtypes('DTYPEINT'))
+            norm = self.K.cast(2 ** float(state.nqubits / 2.0))
+            state.pieces = [self.K.backend.Variable(self.K.ones(n) / norm)
+                            for _ in range(state.ndevices)]
 
     def swap_pieces(self, piece0, piece1, local_eff, nlocal):
         with self.on_cpu():

@@ -250,7 +250,7 @@ class DistributedState(VectorState):
                 ``(2 ** nqubits)``.
         """
         if self.pieces is None:
-            self.pieces = K.multigpu.create_pieces(self.nqubits, self.nglobal)
+            self.pieces = K.multigpu.create_pieces(self)
         K.multigpu.assign_pieces(self, full_state)
 
     def __getitem__(self, key):
@@ -284,14 +284,14 @@ class DistributedState(VectorState):
     @classmethod
     def zero_state(cls, circuit):
         state = cls(circuit)
-        state.pieces = K.multigpu.zero_state_pieces(state.nqubits, state.nglobal)
+        K.multigpu.assign_zero_state(state)
         return state
 
     @classmethod
     def plus_state(cls, circuit):
-      state = cls(circuit)
-      state.pieces = K.multigpu.plus_state_pieces(state.nqubits, state.nglobal)
-      return state
+        state = cls(circuit)
+        K.multigpu.assign_plus_state(state)
+        return state
 
     def copy(self):
         new = self.__class__(self.circuit)
