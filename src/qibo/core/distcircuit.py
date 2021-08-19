@@ -163,7 +163,7 @@ class DistributedCircuit(circuit.Circuit):
         This method calculates the full state vector because special gates
         are not implemented for state pieces.
         """
-        with K.device(self.memory_device):
+        with K.multigpu.on_cpu():
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
             full_state = state.tensor

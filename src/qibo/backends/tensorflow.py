@@ -212,32 +212,35 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
         super().__init__(backend)
         self.cpu = self.K.cpu_devices[0]
 
+    def on_cpu(self):
+        return self.K.device(self.cpu)
+
     def create_pieces(self, nqubits, nglobal):
         ndevices = 2 ** nglobal
         n = 2 ** nqubits // ndevices
-        with self.K.device(self.cpu):
+        with self.on_cpu():
             pieces = [self.K.backend.Variable(self.K.zeros(n))
                       for _ in range(ndevices)]
         return pieces
 
     def calculate_tensor(self, state):
         if state.qubits.list == list(range(state.nglobal)):
-            with self.K.device(self.cpu):
+            with self.on_cpu():
                 tensor = self.K.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
                 tensor = self.K.reshape(tensor, state.shapes["full"])
         elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
-            with self.K.device(self.cpu):
+            with self.on_cpu():
                 tensor = self.K.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
                 tensor = self.K.reshape(tensor, state.shapes["full"])
         else: # fall back to the transpose op
-            with self.K.device(self.cpu):
+            with self.on_cpu():
                 tensor = self.K.zeros(state.shapes["full"])
                 tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
                                                 state.qubits.reverse_transpose_order)
         return tensor
 
     def assign_pieces(self, state, tensor):
-        with self.K.device(self.cpu):
+        with self.on_cpu():
             tensor = self.K.reshape(tensor, state.shapes["device"])
             pieces = [tensor[i] for i in range(state.ndevices)]
             new_tensor = self.K.zeros(state.shapes["device"])
@@ -248,14 +251,14 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
 
     def zero_state_pieces(self, nqubits, nglobal):
         pieces = self.create_pieces(nqubits, nglobal)
-        with self.K.device(self.cpu):
+        with self.on_cpu():
             piece = self.K.initial_state(nqubits=nqubits - nglobal)
             pieces[0] = self.K.backend.Variable(piece, dtype=piece.dtype)
         return pieces
 
     def plus_state_pieces(self, nqubits, nglobal):
         ndevices = 2 ** nglobal
-        with self.K.device(self.cpu):
+        with self.on_cpu():
             n = self.K.cast(2 ** (nqubits - nglobal), dtype=self.K.dtypes('DTYPEINT'))
             norm = self.K.cast(2 ** float(nqubits / 2.0))
             pieces = [self.K.backend.Variable(self.K.ones(n) / norm) for _ in range(ndevices)]
