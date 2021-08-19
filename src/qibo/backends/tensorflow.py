@@ -212,15 +212,13 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
         super().__init__(backend)
         self.cpu = self.K.cpu_devices[0]
 
-    def create_piece(self, n): # pragma: no cover
-        with self.K.device(self.cpu):
-            piece = self.K.backend.Variable(self.K.zeros(n))
-        return piece
-
     def create_pieces(self, nqubits, nglobal):
         ndevices = 2 ** nglobal
         n = 2 ** nqubits // ndevices
-        return [self.create_piece(n) for _ in range(ndevices)]
+        with self.K.device(self.cpu):
+            pieces = [self.K.backend.Variable(self.K.zeros(n))
+                      for _ in range(ndevices)]
+        return pieces
 
     def calculate_tensor(self, state):
         if state.qubits.list == list(range(state.nglobal)):

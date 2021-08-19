@@ -537,13 +537,5 @@ class AbstractMultiGpu(ABC):
         self.K = backend
 
     @abstractmethod
-    def create_piece(self, n): # pragma: no cover
-        """Initializes a zero vector on CPU.
-
-        Relevant only for backends that support multi-GPU.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def calculate_tensor(self, state): # pragma: no cover
         raise_error(NotImplementedError)
