@@ -189,8 +189,7 @@ class DistributedState(VectorState):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
                                    "distributed state.".format(type(circuit)))
         self.circuit = circuit
-        # List of length ``ndevices`` holding ``tf.Variable``s with
-        # the state pieces (created in ``self.create_pieces()``)
+        # List of length ``ndevices`` holding ``tf.Variable``s with the state pieces
         self.pieces = None
 
         # Dictionaries containing tensors that are useful for reshaping
@@ -243,11 +242,6 @@ class DistributedState(VectorState):
                                          "distributed states for memory "
                                          "efficiency.")
 
-    def create_pieces(self):
-        # TODO: Consider removing this method and moving it to `assign_pieces`
-        n = 2 ** (self.nqubits - self.nglobal)
-        self.pieces = [K.multigpu.create_piece(n) for _ in range(self.ndevices)]
-
     def assign_pieces(self, full_state):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
@@ -256,7 +250,7 @@ class DistributedState(VectorState):
                 ``(2 ** nqubits)``.
         """
         if self.pieces is None:
-            self.create_pieces()
+            self.pieces = K.multigpu.create_pieces(self.nqubits, self.nglobal)
         K.multigpu.assign_pieces(self, full_state)
 
     def __getitem__(self, key):
@@ -290,15 +284,13 @@ class DistributedState(VectorState):
     @classmethod
     def zero_state(cls, circuit):
         state = cls(circuit)
-        state.create_pieces()
-        state.pieces[0] = K.multigpu.zero_state_piece(state.nlocal)
+        state.pieces = K.multigpu.zero_state_pieces(state.nqubits, state.nglobal)
         return state
 
     @classmethod
     def plus_state(cls, circuit):
       state = cls(circuit)
-      state.create_pieces()
-      state.pieces = K.multigpu.plus_state_pieces(state.nqubits, state.dtype)
+      state.pieces = K.multigpu.plus_state_pieces(state.nqubits, state.nglobal)
       return state
 
     def copy(self):
