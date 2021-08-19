@@ -271,9 +271,9 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
                 state = gate(state)
         return state
 
-    def transfer(self, gpu_tensor, cpu_tensor):
-        cpu_tensor.assign(gpu_tensor)
-        del(gpu_tensor)
+    def assign(self, state, i, piece):
+        state.pieces[i].assign(piece)
+        del(piece)
 
 
 class TensorflowCustomBackend(TensorflowBackend):

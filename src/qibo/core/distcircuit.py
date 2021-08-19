@@ -117,7 +117,7 @@ class DistributedCircuit(circuit.Circuit):
         def device_job(ids, device):
             for i in ids:
                 piece = K.multigpu.apply_gates(state.pieces[i], queues[i], device)
-                K.multigpu.transfer(piece, state.pieces[i])
+                K.multigpu.assign(state, i, piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
@@ -165,7 +165,7 @@ class DistributedCircuit(circuit.Circuit):
         state = self.get_initial_state(initial_state)
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
-            if queues:  # standard gate
+            if queues: # standard gate
                 self._joblib_execute(state, queues)
             else: # special gate
                 gate = next(special_gates)

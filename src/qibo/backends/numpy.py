@@ -236,15 +236,15 @@ class NumpyBackend(abstract.AbstractBackend):
     def compile(self, func):
         return func
 
+    class DummyModule:
+
+        def __enter__(self, *args):
+            pass
+
+        def __exit__(self, *args):
+            pass
+
     def device(self, device_name):
-        class DummyModule:
-
-            def __enter__(self, *args):
-                pass
-
-            def __exit__(self, *args):
-                pass
-
         return DummyModule()
 
     def set_seed(self, seed):
@@ -398,7 +398,73 @@ class NumpyBackend(abstract.AbstractBackend):
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
 
-class JITCustomBackend(NumpyBackend): # pragma: no cover
+class JITMultiGpu(abstract.AbstractMultiGpu):
+
+    def __init__(self, backend):
+        super().__init__(backend)
+        self.cpu = self.K.cpu_devices[0]
+
+    def on_cpu(self):
+        return NumpyBackend.DummyModule()
+
+    def create_pieces(self, state):
+        n = 2 ** state.nlocal
+        return [self.K.qnp.zeros(n) for _ in range(state.ndevices)]
+
+    def calculate_tensor(self, state):
+        if state.qubits.list == list(range(state.nglobal)):
+            tensor = self.K.qnp.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
+            tensor = self.K.qnp.reshape(tensor, state.shapes["full"])
+        elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
+            tensor = self.K.qnp.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
+            tensor = self.K.qnp.reshape(tensor, state.shapes["full"])
+        else: # fall back to the transpose op
+            # TODO: Implement `transpose_state` in qibojit
+            raise NotImplementedError
+            tensor = self.K.zeros(state.shapes["full"])
+            tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
+                                            state.qubits.reverse_transpose_order)
+        return tensor
+
+    def assign_pieces(self, state, tensor):
+        tensor = self.K.qnp.reshape(tensor, state.shapes["device"])
+        pieces = [tensor[i] for i in range(state.ndevices)]
+        # TODO: Implement `transpose_state` in qibojit
+        raise NotImplementedError
+        new_tensor = self.K.zeros(state.shapes["device"])
+        new_tensor = self.K.transpose_state(pieces, new_tensor, state.nqubits,
+                                            state.qubits.transpose_order)
+        for i in range(state.ndevices):
+            state.pieces[i] = new_tensor[i]
+
+    def assign_zero_state(self, state):
+        nb = self.K.op.get("numba") # hack to get numba backend from qibojit
+        state.pieces = self.create_pieces(state)
+        state.pieces[0] = nb.initial_state(nqubits=state.nlocal)
+
+    def assign_plus_state(self, state):
+        n = 2 ** state.nlocal
+        norm = self.K.qnp.cast(2 ** float(state.nqubits / 2.0))
+        state.pieces = [self.K.qnp.ones(n) / norm for _ in range(state.ndevices)]
+
+    def swap_pieces(self, piece0, piece1, local_eff, nlocal):
+        # TODO: Implement `swap_pieces` for qibojit
+        raise NotImplementedError
+        return self.K.op.swap_pieces(piece0, piece1, local_eff, nlocal, self.K.nthreads)
+
+    def apply_gates(self, state, gates, device):
+        with self.K.device(device):
+            state = self.K.cast(state)
+            for gate in gates:
+                state = gate(state)
+        return state
+
+    def assign(self, state, i, piece):
+        state.pieces[i] = piece.get()
+        del(piece)
+
+
+class JITCustomBackend(NumpyBackend):
 
     description = "Uses custom operators based on numba.jit for CPU and " \
                   "custom CUDA kernels loaded with cupy GPU."
@@ -426,6 +492,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
 
+        self._multigpu = None
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
         if self.gpu_devices: # pragma: no cover
@@ -458,6 +525,8 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
         self.op.set_backend(name)
         with self.device(self.default_device):
             self.matrices.allocate_matrices()
+        if self._multigpu is None:
+            self._multigpu = JITMultiGpu(self)
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -538,7 +607,7 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
-                                    is_matrix=is_matrix)
+                                     is_matrix=is_matrix)
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
@@ -627,6 +696,10 @@ class JITCustomBackend(NumpyBackend): # pragma: no cover
                              2 * gate.nqubits, False)
         state = self.reshape(state, shape)
         return state / self.trace(state)
+
+    @property
+    def multigpu(self):
+        return self._multigpu
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if self.op.get_backend() == "cupy":
