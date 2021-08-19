@@ -245,7 +245,7 @@ class NumpyBackend(abstract.AbstractBackend):
             pass
 
     def device(self, device_name):
-        return DummyModule()
+        return self.DummyModule()
 
     def set_seed(self, seed):
         self.backend.random.seed(seed)
@@ -403,54 +403,67 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
     def __init__(self, backend):
         super().__init__(backend)
         self.cpu = self.K.cpu_devices[0]
+        # hack to get numba backend from qibojit
+        self.nb = self.K.op.backend.get("numba")
 
     def on_cpu(self):
         return NumpyBackend.DummyModule()
 
+    def cast(self, x, dtype='DTYPECPX'):
+        dtype = self.K._dtypes.get(dtype)
+        return self.K.np.array(x, dtype=dtype)
+
     def create_pieces(self, state):
         n = 2 ** state.nlocal
-        return [self.K.qnp.zeros(n) for _ in range(state.ndevices)]
+        dtype = self.K._dtypes.get('DTYPECPX')
+        return [self.K.np.zeros(n, dtype=dtype) for _ in range(state.ndevices)]
 
     def calculate_tensor(self, state):
         if state.qubits.list == list(range(state.nglobal)):
-            tensor = self.K.qnp.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
-            tensor = self.K.qnp.reshape(tensor, state.shapes["full"])
+            tensor = self.K.np.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
+            tensor = self.K.np.reshape(tensor, state.shapes["full"])
         elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
-            tensor = self.K.qnp.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
-            tensor = self.K.qnp.reshape(tensor, state.shapes["full"])
+            tensor = self.K.np.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
+            tensor = self.K.np.reshape(tensor, state.shapes["full"])
         else: # fall back to the transpose op
-            # TODO: Implement `transpose_state` in qibojit
-            raise NotImplementedError
-            tensor = self.K.zeros(state.shapes["full"])
+            tensor = self.K.np.zeros(state.shapes["full"], dtype=state.dtype)
+            # TODO: Change this to self.nb once `transpose_state` is moved to `qibojit`
             tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
                                             state.qubits.reverse_transpose_order)
         return tensor
 
     def assign_pieces(self, state, tensor):
-        tensor = self.K.qnp.reshape(tensor, state.shapes["device"])
+        tensor = self.K.np.reshape(tensor, state.shapes["device"])
         pieces = [tensor[i] for i in range(state.ndevices)]
-        # TODO: Implement `transpose_state` in qibojit
-        raise NotImplementedError
-        new_tensor = self.K.zeros(state.shapes["device"])
+        new_tensor = self.K.np.zeros(state.shapes["full"], dtype=tensor.dtype)
+        # TODO: Change this to self.nb once `transpose_state` is moved to `qibojit`
         new_tensor = self.K.transpose_state(pieces, new_tensor, state.nqubits,
                                             state.qubits.transpose_order)
+        new_tensor = self.K.np.reshape(new_tensor, state.shapes["device"])
         for i in range(state.ndevices):
             state.pieces[i] = new_tensor[i]
 
     def assign_zero_state(self, state):
-        nb = self.K.op.get("numba") # hack to get numba backend from qibojit
+        dtype = self.K._dtypes.get('DTYPECPX')
         state.pieces = self.create_pieces(state)
-        state.pieces[0] = nb.initial_state(nqubits=state.nlocal)
+        state.pieces[0] = self.nb.initial_state(nqubits=state.nlocal, dtype=dtype)
 
     def assign_plus_state(self, state):
         n = 2 ** state.nlocal
-        norm = self.K.qnp.cast(2 ** float(state.nqubits / 2.0))
-        state.pieces = [self.K.qnp.ones(n) / norm for _ in range(state.ndevices)]
+        dtype = self.K._dtypes.get('DTYPECPX')
+        norm = self.cast(2 ** float(state.nqubits / 2.0))
+        state.pieces = [self.K.np.ones(n, dtype=dtype) / norm
+                        for _ in range(state.ndevices)]
 
-    def swap_pieces(self, piece0, piece1, local_eff, nlocal):
-        # TODO: Implement `swap_pieces` for qibojit
-        raise NotImplementedError
-        return self.K.op.swap_pieces(piece0, piece1, local_eff, nlocal, self.K.nthreads)
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        m = nlocal - new_global - 1
+        tk = 1 << m
+        nstates = 1 << (nlocal - 1)
+
+        #pragma omp parallel for
+        for g in range(nstates):
+            i = ((g >> m) << (m + 1)) + (g & (tk - 1))
+            piece0[i + tk], piece1[i] = piece1[i], piece0[i + tk]
 
     def apply_gates(self, state, gates, device):
         with self.K.device(device):
@@ -603,11 +616,27 @@ class JITCustomBackend(NumpyBackend):
             return super().device(device_name)
         else: # pragma: no cover
             device_id = int(device_name.split(":")[-1])
-            return self.backend.cuda.Device(device_id)
+            return self.backend.cuda.Device(device_id % len(self.gpu_devices))
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                      is_matrix=is_matrix)
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        # TODO: Move this to qibojit backend
+        nstates = 1 << nqubits
+        ndevices = len(pieces)
+        npiece = nstates // ndevices
+        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
+
+        #pragma omp parallel for
+        for g in range(nstates):
+            k = 0
+            for q in range(nqubits):
+                if ((g >> q) % 2):
+                    k += qubit_exponents[q]
+            state[g] = pieces[k // npiece][k % npiece]
+        return state
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD

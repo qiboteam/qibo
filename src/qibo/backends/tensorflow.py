@@ -215,6 +215,11 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
     def on_cpu(self):
         return self.K.device(self.cpu)
 
+    def cast(self, x, dtype='DTYPECPX'):
+        dtype = self.K._dtypes.get(dtype)
+        with self.on_cpu():
+            return self.K.cast(x, dtype=dtype)
+
     def create_pieces(self, state):
         n = 2 ** state.nlocal
         with self.on_cpu():
@@ -261,9 +266,9 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             state.pieces = [self.K.backend.Variable(self.K.ones(n) / norm)
                             for _ in range(state.ndevices)]
 
-    def swap_pieces(self, piece0, piece1, local_eff, nlocal):
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
         with self.on_cpu():
-            return self.K.op.swap_pieces(piece0, piece1, local_eff, nlocal, self.K.nthreads)
+            return self.K.op.swap_pieces(piece0, piece1, new_global, nlocal, self.K.nthreads)
 
     def apply_gates(self, state, gates, device):
         with self.K.device(device):
@@ -306,6 +311,7 @@ class TensorflowCustomBackend(TensorflowBackend):
                                     omp_num_threads=self.nthreads)
 
     def transpose_state(self, pieces, state, nqubits, order):
+        # TODO: Move this to multi-GPU backend since it is not used by any other method
         return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
 
     def sample_frequencies(self, probs, nshots):

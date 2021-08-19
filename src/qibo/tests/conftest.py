@@ -84,8 +84,8 @@ def pytest_generate_tests(metafunc):
         "qibo.tests.test_core_distcircuit_execution"
     }
     # skip tests that require custom operators
-    if metafunc.module.__name__ in distributed_tests and "qibotf" not in backends: # pragma: no cover
-        pytest.skip("Skipping tests because custom operators are not available.")
+    #if metafunc.module.__name__ in distributed_tests and "qibotf" not in backends: # pragma: no cover
+    #    pytest.skip("Skipping tests because custom operators are not available.")
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
@@ -96,7 +96,7 @@ def pytest_generate_tests(metafunc):
 
     if "backend_name" in metafunc.fixturenames:
         if metafunc.module.__name__ in distributed_tests:
-            metafunc.parametrize("backend_name", ["qibotf"])
+            metafunc.parametrize("backend_name", ["qibotf", "qibojit"])
             if "accelerators" in metafunc.fixturenames:
                 metafunc.parametrize("accelerators", accelerators)
 
@@ -109,6 +109,8 @@ def pytest_generate_tests(metafunc):
                 config = [(b, None) for b in backends]
                 if "qibotf" in backends:
                     config.extend(("qibotf", d) for d in accelerators)
+                if "qibojit" in backends:
+                    config.extend(("qibojit", d) for d in accelerators)
                 metafunc.parametrize("backend_name,accelerators", config)
 
         else:

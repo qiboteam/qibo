@@ -196,8 +196,8 @@ class DistributedState(VectorState):
         # the state when splitting or merging the pieces.
         n = self.nstates // 2 ** self.nglobal
         self.shapes = {
-            "full": K.cast((self.nstates,), dtype='DTYPEINT'),
-            "device": K.cast((self.ndevices, n), dtype='DTYPEINT'),
+            "full": K.multigpu.cast((self.nstates,), dtype='DTYPEINT'),
+            "device": K.multigpu.cast((self.ndevices, n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
