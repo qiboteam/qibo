@@ -264,6 +264,10 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             pieces = [self.K.backend.Variable(self.K.ones(n) / norm) for _ in range(ndevices)]
         return pieces
 
+    def swap_pieces(self, piece0, piece1, local_eff, nlocal):
+        with self.on_cpu():
+            return self.K.op.swap_pieces(piece0, piece1, local_eff, nlocal, self.K.nthreads)
+
     def apply_gates(self, state, gates, device):
         with self.K.device(device):
             for gate in gates:

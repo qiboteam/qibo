@@ -35,24 +35,18 @@ class DistributedCircuit(circuit.Circuit):
             accelerators = {'/GPU:0': 2, '/GPU:1': 2}
             # Define a circuit on 32 qubits to be run in the above GPUs keeping
             # the full state vector in the CPU memory.
-            c = Circuit(32, accelerators, memory_device="/CPU:0")
+            c = Circuit(32, accelerators)
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
         accelerators (dict): Dictionary that maps device names to the number of
             times each device will be used.
             The total number of logical devices must be a power of 2.
-        memory_device (str): Name of the device where the full state will be
-            saved (usually the CPU).
     """
 
-    def __init__(self,
-                 nqubits: int,
-                 accelerators: Dict[str, int],
-                 memory_device: str = "/CPU:0"):
+    def __init__(self, nqubits: int, accelerators: Dict[str, int]):
         super().__init__(nqubits)
-        self.init_kwargs.update({"accelerators": accelerators,
-                                 "memory_device": memory_device})
+        self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(math.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
@@ -60,8 +54,6 @@ class DistributedCircuit(circuit.Circuit):
                                     "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
-
-        self.memory_device = memory_device
         self.calc_devices = accelerators
         self.queues = DistributedQueues(self, gate_module)
 
@@ -139,9 +131,8 @@ class DistributedCircuit(circuit.Circuit):
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.qubits.reduced_local[local_qubit]
-            with K.device(self.memory_device):
-                K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
-                                 local_eff, self.nlocal, K.nthreads)
+            K.multigpu.swap_pieces(state.pieces[i], state.pieces[i + t],
+                                   local_eff, self.nlocal)
 
     def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
@@ -150,7 +141,7 @@ class DistributedCircuit(circuit.Circuit):
             self._swap(state, q1, q2)
 
     def _special_gate_execute(self, state, gate: Union["BackendGate"]):
-        """Executes special gates on ``memory_device``.
+        """Executes special gates on CPU.
 
         Currently special gates are ``Flatten`` or ``CallbackGate``.
         This method calculates the full state vector because special gates
@@ -172,9 +163,6 @@ class DistributedCircuit(circuit.Circuit):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if self.measurement_gate is not None:
-            self.measurement_gate.device = self.memory_device
-
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
             if queues:  # standard gate
