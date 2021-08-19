@@ -114,9 +114,6 @@ class QAOA(object):
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
             is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
-        memory_device (str): Name of device where the full state will be saved.
-            Relevant only for distributed execution (when ``accelerators`` is
-            given).
 
     Example:
         ::
@@ -136,7 +133,7 @@ class QAOA(object):
     from qibo.core import states
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
-                 accelerators=None, memory_device="/CPU:0"):
+                 accelerators=None):
         from qibo.abstractions.hamiltonians import AbstractHamiltonian
         # list of QAOA variational parameters (angles)
         self.params = None
@@ -167,8 +164,8 @@ class QAOA(object):
                                              "only with SymbolicHamiltonian and "
                                              "exponential solver.")
         if isinstance(self.hamiltonian, self.hamiltonians.SymbolicHamiltonian):
-            self.hamiltonian.circuit(1e-2, accelerators, memory_device)
-            self.mixer.circuit(1e-2, accelerators, memory_device)
+            self.hamiltonian.circuit(1e-2, accelerators)
+            self.mixer.circuit(1e-2, accelerators)
 
         # evolution solvers
         from qibo import solvers
@@ -181,7 +178,7 @@ class QAOA(object):
         self.normalize_state = StateEvolution._create_normalize_state(
             self, solver)
         self.calculate_callbacks = StateEvolution._create_calculate_callbacks(
-            self, accelerators, memory_device)
+            self, accelerators)
 
     def set_parameters(self, p):
         """Sets the variational parameters.
@@ -309,9 +306,6 @@ class FALQON(QAOA):
             execution. See :class:`qibo.tensorflow.distcircuit.DistributedCircuit`
             for more details. This option is available only when ``hamiltonian``
             is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
-        memory_device (str): Name of device where the full state will be saved.
-            Relevant only for distributed execution (when ``accelerators`` is
-            given).
 
     Example:
         ::
@@ -329,8 +323,8 @@ class FALQON(QAOA):
     """
 
     def __init__(self, hamiltonian, mixer=None, solver="exp", callbacks=[],
-                 accelerators=None, memory_device="/CPU:0"):
-        super().__init__(hamiltonian, mixer, solver, callbacks, accelerators, memory_device)
+                 accelerators=None):
+        super().__init__(hamiltonian, mixer, solver, callbacks, accelerators)
         self.evol_hamiltonian = 1j * (self.hamiltonian @ self.mixer - self.mixer @ self.hamiltonian)
 
     def minimize(self, delta_t, max_layers, initial_state=None, tol=None, callback=None):
