@@ -264,6 +264,16 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             pieces = [self.K.backend.Variable(self.K.ones(n) / norm) for _ in range(ndevices)]
         return pieces
 
+    def apply_gates(self, state, gates, device):
+        with self.K.device(device):
+            for gate in gates:
+                state = gate(state)
+        return state
+
+    def transfer(self, gpu_tensor, cpu_tensor):
+        cpu_tensor.assign(gpu_tensor)
+        del(gpu_tensor)
+
 
 class TensorflowCustomBackend(TensorflowBackend):
 

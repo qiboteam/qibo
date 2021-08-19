@@ -114,11 +114,6 @@ class DistributedCircuit(circuit.Circuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
-    def _device_job(self, state, gates):
-        for gate in gates:
-            state = gate(state)
-        return state
-
     def _joblib_execute(self, state, queues: List[List["BackendGate"]]):
         """Executes gates in ``accelerators`` in parallel.
 
@@ -129,10 +124,8 @@ class DistributedCircuit(circuit.Circuit):
         """
         def device_job(ids, device):
             for i in ids:
-                with K.device(device):
-                    piece = self._device_job(state.pieces[i], queues[i])
-                    state.pieces[i].assign(piece)
-                    del(piece)
+                piece = K.multigpu.apply_gates(state.pieces[i], queues[i], device)
+                K.multigpu.transfer(piece, state.pieces[i])
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
