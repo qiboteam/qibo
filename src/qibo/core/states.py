@@ -298,3 +298,11 @@ class DistributedState(VectorState):
         new.pieces = self.pieces
         new.measurements = self.measurements
         return new
+
+    @VectorState.check_measured_qubits
+    def probabilities(self, qubits=None, measurement_gate=None):
+        unmeasured_qubits = tuple(i for i in range(self.nqubits)
+                                  if i not in qubits)
+        with K.multigpu.on_cpu():
+            state = K.reshape(K.square(K.abs(self.tensor)), self.nqubits * (2,))
+            return K.sum(state, axis=unmeasured_qubits)

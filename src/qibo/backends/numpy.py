@@ -398,6 +398,18 @@ class NumpyBackend(abstract.AbstractBackend):
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
 
 
+class CupyCpuDevice:
+
+    def __init__(self, K):
+        self.K = K
+
+    def __enter__(self, *args):
+        self.K.set_engine("numba")
+
+    def __exit__(self, *args):
+        self.K.set_engine("cupy")
+
+
 class JITMultiGpu(abstract.AbstractMultiGpu):
 
     def __init__(self, backend):
@@ -406,19 +418,8 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
         # hack to get numba backend from qibojit
         self.nb = self.K.op.backend.get("numba")
 
-    class OnCpu:
-
-        def __init__(self, K):
-            self.K = K
-
-        def __enter__(self, *args):
-            self.K.set_engine("numba")
-
-        def __exit__(self, *args):
-            self.K.set_engine("cupy")
-
     def on_cpu(self):
-        return self.OnCpu(self.K)
+        return CupyCpuDevice(self.K)
 
     def cast(self, x, dtype='DTYPECPX'):
         dtype = self.K._dtypes.get(dtype)
@@ -626,8 +627,11 @@ class JITCustomBackend(NumpyBackend):
         if self.op.get_backend() == "numba":
             return super().device(device_name)
         else: # pragma: no cover
-            device_id = int(device_name.split(":")[-1])
-            return self.backend.cuda.Device(device_id % len(self.gpu_devices))
+            if "GPU" in device_name:
+                device_id = int(device_name.split(":")[-1])
+                return self.backend.cuda.Device(device_id % len(self.gpu_devices))
+            else:
+                return CupyCpuDevice(self)
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
@@ -653,7 +657,7 @@ class JITCustomBackend(NumpyBackend):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
         if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
-        if self.op.get_backend() == "cupy":
+        if not isinstance(probs, self.np.ndarray):
             probs = probs.get()
         dtype = self._dtypes.get('DTYPEINT')
         seed = self.np.random.randint(0, int(1e8), dtype=dtype)

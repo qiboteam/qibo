@@ -189,7 +189,7 @@ class DistributedCircuit(circuit.Circuit):
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
 
-    def _device_placement(self):
+    def _device(self):
         return K.multigpu.on_cpu()
 
     def execute(self, initial_state=None, nshots=None):
