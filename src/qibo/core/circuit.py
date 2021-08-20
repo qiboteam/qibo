@@ -160,11 +160,17 @@ class Circuit(circuit.AbstractCircuit):
                                        "different one using ``qibo.set_device``.")
         return state
 
+    def _device_placement(self):
+        from qibo.backends.numpy import NumpyBackend
+        return NumpyBackend.DummyModule()
+
     def _repeated_execute(self, nreps, initial_state=None):
         results = []
         initial_state = self.get_initial_state(initial_state)
         for _ in range(nreps):
-            state = self._device_execute(K.copy(initial_state))
+            with self._device_placement():
+                state = K.copy(initial_state)
+            state = self._device_execute(state)
             if self.measurement_gate is None:
                 results.append(state.tensor)
             else:
@@ -172,7 +178,8 @@ class Circuit(circuit.AbstractCircuit):
                 results.append(state.measurements[0])
                 del(state)
 
-        results = K.stack(results, axis=0)
+        with self._device_placement():
+            results = K.stack(results, axis=0)
         if self.measurement_gate is None:
             return results
         state = self.state_cls(self.nqubits)

@@ -406,8 +406,19 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
         # hack to get numba backend from qibojit
         self.nb = self.K.op.backend.get("numba")
 
+    class OnCpu:
+
+        def __init__(self, K):
+            self.K = K
+
+        def __enter__(self, *args):
+            self.K.set_engine("numba")
+
+        def __exit__(self, *args):
+            self.K.set_engine("cupy")
+
     def on_cpu(self):
-        return NumpyBackend.DummyModule()
+        return self.OnCpu(self.K)
 
     def cast(self, x, dtype='DTYPECPX'):
         dtype = self.K._dtypes.get(dtype)
@@ -473,7 +484,7 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
         return state
 
     def assign(self, state, i, piece):
-        state.pieces[i] = piece.get()
+        state.pieces[i] = self.K.to_numpy(piece)
         del(piece)
 
 
