@@ -548,9 +548,12 @@ class JITCustomBackend(NumpyBackend):
         self.random = xp.random
         self.newaxis = xp.newaxis
         self.op.set_backend(name)
-        with self.device(self.default_device):
+        if "GPU" in self.default_device: # pragma: no cover
+            with self.device(self.default_device):
+                self.matrices.allocate_matrices()
+        else:
             self.matrices.allocate_matrices()
-        if self._multigpu is None:
+        if name == "cupy" and self._multigpu is None: # pragma: no cover
             self._multigpu = JITMultiGpu(self)
 
     def set_device(self, name):
