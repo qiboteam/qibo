@@ -213,7 +213,11 @@ def test_qaoa_callbacks(backend, accelerators):
     from qibo import callbacks
     # use ``Y`` Hamiltonian so that there are no errors
     # in the Trotter decomposition
-    h = hamiltonians.Y(5)
+    if accelerators:
+        with K.multigpu.on_cpu():
+            h = hamiltonians.Y(5)
+    else:
+        h = hamiltonians.Y(5)
     energy = callbacks.Energy(h)
     params = 0.1 * np.random.random(4)
     state = random_state(5)
