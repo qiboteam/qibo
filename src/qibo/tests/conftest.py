@@ -85,12 +85,7 @@ def pytest_generate_tests(metafunc):
     }
     # skip tests that require custom operators
     if metafunc.module.__name__ in distributed_tests and "qibotf" not in backends:
-        if "qibojit" not in backends:
-            pytest.skip("Skipping tests because custom operators are not available.")
-        else:
-            from qibo import K
-            if not K.constructed_backends.get("qibojit").gpu_devices:
-                pytest.skip("Skipping tests because custom operators are not available.")
+        pytest.skip("Skipping tests because custom operators are not available.")
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
