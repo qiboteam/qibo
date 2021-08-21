@@ -389,9 +389,5 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
-    @property
-    def multigpu(self): # pragma: no cover
-        raise_error(NotImplementedError, "Multigpu is not implemented for numpy backend.")
-
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

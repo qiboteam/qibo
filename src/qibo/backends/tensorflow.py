@@ -210,7 +210,6 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
 
     def __init__(self, backend):
         super().__init__(backend)
-        self.cpu = self.K.cpu_devices[0]
 
     def on_cpu(self):
         return self.K.device(self.cpu)
@@ -297,7 +296,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         super().__init__()
         self.name = "qibotf"
         self.op = op
-        self._multigpu = TensorflowMultiGpu(self)
         import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
@@ -398,10 +396,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
                              2 * gate.nqubits, False, self.nthreads)
         return state / self.trace(state)
-
-    @property
-    def multigpu(self):
-        return self._multigpu
 
     def compile(self, func):
         return func

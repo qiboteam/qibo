@@ -31,6 +31,10 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
+        # use Tensorflow for placeholder multi-GPU so that tests pass
+        # when GPU is not available
+        from qibo.backends.tensorflow import TensorflowMultiGpu
+        self.multigpu = TensorflowMultiGpu(self)
 
         self.hardware_module = None
         self.hardware_circuit = None
@@ -520,11 +524,6 @@ class AbstractBackend(ABC):
         """Collapses density matrix to a given result."""
         raise_error(NotImplementedError)
 
-    @property
-    def multigpu(self): # pragma: no cover
-        raise_error(NotImplementedError, "Multigpu is not implemented for {}."
-                                         "".format(self.name))
-
     @abstractmethod
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0): # pragma: no cover
         """Check that two arrays are equal. Useful for testing."""
@@ -536,6 +535,48 @@ class AbstractMultiGpu(ABC):
     def __init__(self, backend):
         self.K = backend
 
+    @property
+    def cpu(self):
+        if self.K.cpu_devices:
+            return self.K.cpu_devices[0]
+        return None
+
+    @abstractmethod
+    def on_cpu(self): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def create_pieces(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
     @abstractmethod
     def calculate_tensor(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def assign_pieces(self, state, tensor): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def assign_zero_state(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def assign_plus_state(self, state): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def apply_gates(self, state, gates, device): # pragma: no cover
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def assign(self, state, i, piece): # pragma: no cover
         raise_error(NotImplementedError)

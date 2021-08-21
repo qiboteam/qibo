@@ -13,14 +13,14 @@ class CupyCpuDevice:
         self.K.set_engine("numba")
 
     def __exit__(self, *args):
-        self.K.set_engine("cupy")
+        if self.K.gpu_devices:
+            self.K.set_engine("cupy")
 
 
 class JITMultiGpu(abstract.AbstractMultiGpu):
 
     def __init__(self, backend):
         super().__init__(backend)
-        self.cpu = self.K.cpu_devices[0]
         # hack to get numba backend from qibojit
         self.nb = self.K.op.backend.get("numba")
 
@@ -123,7 +123,7 @@ class JITCustomBackend(NumpyBackend):
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
 
-        self._multigpu = None
+        self.multigpu = JITMultiGpu(self)
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
         if self.gpu_devices: # pragma: no cover
@@ -159,8 +159,6 @@ class JITCustomBackend(NumpyBackend):
                 self.matrices.allocate_matrices()
         else:
             self.matrices.allocate_matrices()
-        if name == "cupy" and self._multigpu is None: # pragma: no cover
-            self._multigpu = JITMultiGpu(self)
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
@@ -349,10 +347,6 @@ class JITCustomBackend(NumpyBackend):
                              2 * gate.nqubits, False)
         state = self.reshape(state, shape)
         return state / self.trace(state)
-
-    @property
-    def multigpu(self):
-        return self._multigpu
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if self.op.get_backend() == "cupy":
