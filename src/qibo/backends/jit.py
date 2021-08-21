@@ -45,9 +45,8 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
             tensor = self.K.np.reshape(tensor, state.shapes["full"])
         else: # fall back to the transpose op
             tensor = self.K.np.zeros(state.shapes["full"], dtype=state.dtype)
-            # TODO: Change this to self.nb once `transpose_state` is moved to `qibojit`
-            tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
-                                            state.qubits.reverse_transpose_order)
+            tensor = self.transpose_state(state.pieces, tensor, state.nqubits,
+                                          state.qubits.reverse_transpose_order)
         return tensor
 
     def assign_pieces(self, state, tensor):
@@ -55,7 +54,7 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
         pieces = [tensor[i] for i in range(state.ndevices)]
         new_tensor = self.K.np.zeros(state.shapes["full"], dtype=tensor.dtype)
         # TODO: Change this to self.nb once `transpose_state` is moved to `qibojit`
-        new_tensor = self.K.transpose_state(pieces, new_tensor, state.nqubits,
+        new_tensor = self.transpose_state(pieces, new_tensor, state.nqubits,
                                             state.qubits.transpose_order)
         new_tensor = self.K.np.reshape(new_tensor, state.shapes["device"])
         for i in range(state.ndevices):
@@ -73,7 +72,24 @@ class JITMultiGpu(abstract.AbstractMultiGpu):
         state.pieces = [self.K.np.ones(n, dtype=dtype) / norm
                         for _ in range(state.ndevices)]
 
+    def transpose_state(self, pieces, state, nqubits, order):
+        # TODO: Move this to qibojit backend
+        nstates = 1 << nqubits
+        ndevices = len(pieces)
+        npiece = nstates // ndevices
+        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
+
+        #pragma omp parallel for
+        for g in range(nstates):
+            k = 0
+            for q in range(nqubits):
+                if ((g >> q) % 2):
+                    k += qubit_exponents[q]
+            state[g] = pieces[k // npiece][k % npiece]
+        return state
+
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        # TODO: Move this to qibojit backend
         m = nlocal - new_global - 1
         tk = 1 << m
         nstates = 1 << (nlocal - 1)
@@ -243,22 +259,6 @@ class JITCustomBackend(NumpyBackend):
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                      is_matrix=is_matrix)
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        # TODO: Move this to qibojit backend
-        nstates = 1 << nqubits
-        ndevices = len(pieces)
-        npiece = nstates // ndevices
-        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
-
-        #pragma omp parallel for
-        for g in range(nstates):
-            k = 0
-            for q in range(nqubits):
-                if ((g >> q) % 2):
-                    k += qubit_exponents[q]
-            state[g] = pieces[k // npiece][k % npiece]
-        return state
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD

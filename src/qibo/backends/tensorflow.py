@@ -166,10 +166,6 @@ class TensorflowBackend(numpy.NumpyBackend):
         state = self.backend.tensor_scatter_nd_update(state, idx, update)
         return state
 
-    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
-        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-        return self.reshape(self.transpose(pieces, order), state.shape)
-
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
@@ -238,8 +234,8 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
         else: # fall back to the transpose op
             with self.on_cpu():
                 tensor = self.K.zeros(state.shapes["full"])
-                tensor = self.K.transpose_state(state.pieces, tensor, state.nqubits,
-                                                state.qubits.reverse_transpose_order)
+                tensor = self.transpose_state(state.pieces, tensor, state.nqubits,
+                                              state.qubits.reverse_transpose_order)
         return tensor
 
     def assign_pieces(self, state, tensor):
@@ -247,8 +243,8 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             tensor = self.K.reshape(tensor, state.shapes["device"])
             pieces = [tensor[i] for i in range(state.ndevices)]
             new_tensor = self.K.zeros(state.shapes["device"])
-            new_tensor = self.K.transpose_state(pieces, new_tensor, state.nqubits,
-                                                state.qubits.transpose_order)
+            new_tensor = self.transpose_state(pieces, new_tensor, state.nqubits,
+                                              state.qubits.transpose_order)
             for i in range(state.ndevices):
                 state.pieces[i].assign(new_tensor[i])
 
@@ -264,6 +260,12 @@ class TensorflowMultiGpu(abstract.AbstractMultiGpu):
             norm = self.K.cast(2 ** float(state.nqubits / 2.0))
             state.pieces = [self.K.backend.Variable(self.K.ones(n) / norm)
                             for _ in range(state.ndevices)]
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        # Plain tensorflow implementation:
+        # pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+        # return self.reshape(self.transpose(pieces, order), state.shape)
+        return self.K.op.transpose_state(pieces, state, nqubits, order, self.K.nthreads)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
         with self.on_cpu():
@@ -307,10 +309,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix,
                                     omp_num_threads=self.nthreads)
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        # TODO: Move this to multi-GPU backend since it is not used by any other method
-        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
