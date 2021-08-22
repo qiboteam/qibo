@@ -523,61 +523,127 @@ class AbstractBackend(ABC):
 
 
 class AbstractMultiGpu(ABC):
-    # TODO: Add documentation
+    """Abstract methods required for the implementation of
+    :class:`qibo.core.distcircuit.DistributedCircuit`.
+
+    The ops defined here are accessible from the `K.multigpu` module.
+
+    Args:
+        backend (:class:`qibo.backends.abstract.AbstractBackend`): Backend that
+            will be used for these multi-GPU operations.
+    """
 
     def __init__(self, backend):
         self.K = backend
 
     @property
     def cpu(self):
+        """Returns the name of the available CPU device."""
         if self.K.cpu_devices:
             return self.K.cpu_devices[0]
         return None
 
     @abstractmethod
     def on_cpu(self): # pragma: no cover
+        """Used as `with on_cpu():` to perform following operations on CPU."""
         raise_error(NotImplementedError)
 
     @abstractmethod
     def cast(self, x, dtype='DTYPECPX'): # pragma: no cover
+        """Forces tensor casting on CPU.
+
+        In contrast to simply `K.cast` which uses the current default device.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def create_pieces(self, state): # pragma: no cover
+        """Creates :class:`qibo.core.states.DistributedState` pieces on CPU.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): The state object
+                to create pieces for.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def calculate_tensor(self, state): # pragma: no cover
+        """Calculates full state vector from state pieces.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): The state object
+                to calculate the corresponding vector.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def assign_pieces(self, state, tensor): # pragma: no cover
+        """Assigns state pieces from a given full state vector.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): The state object
+                to assign the pieces to.
+            tensor (K.Tensor): The full state vector as a tensor supported by
+                the underlying backend.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def assign_zero_state(self, state): # pragma: no cover
+        """Creates the |00...0> as distributed state.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): The state object
+                on which to assign the new state.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def assign_plus_state(self, state): # pragma: no cover
+        """Creates the |++...+> as distributed state.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): The state object
+                on which to assign the new state.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
-        """Transposes state pieces to the full state.
+        """Transposes distributed state pieces to obtain the full state vector.
 
-        Used by :class:`qibo.core.states.DistributedState`.
+        Used by :meth:`qibo.backends.abstract.AbstractMultiGpu.calculate_tensor`.
         """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
+        """Swaps two distributed state pieces in order to change the global qubits.
+
+        Useful to apply SWAP gates on distributed states.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def apply_gates(self, state, gates, device): # pragma: no cover
+        """Applies gates on a state using a specified device.
+
+        Args:
+            state (K.Tensor): State piece tensor to apply the gate to.
+            gates (list): List of gate objects to apply to the state piece.
+            device (str): GPU device to use for gate application.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
     def assign(self, state, i, piece): # pragma: no cover
+        """Assigns updated piece to a state object by transfering from GPU to CPU.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): State object to
+                assign the updated piece to.
+            i (int): Index to assign the updated piece to.
+            piece (K.Tensor): GPU tensor to transfer to CPU and assign to the
+                piece of given index.
+        """
         raise_error(NotImplementedError)
