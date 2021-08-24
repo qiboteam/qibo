@@ -211,6 +211,10 @@ class TensorflowBackend(numpy.NumpyBackend):
         state.pieces[i].assign(piece)
         del(piece)
 
+    def transpose_state(self, pieces, state, nqubits, order):
+        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+        return self.reshape(self.transpose(pieces, order), state.shape)
+
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
 
@@ -336,9 +340,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         return func
 
     def transpose_state(self, pieces, state, nqubits, order):
-        # Plain tensorflow implementation:
-        # pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-        # return self.reshape(self.transpose(pieces, order), state.shape)
         return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
