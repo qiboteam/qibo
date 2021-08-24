@@ -409,7 +409,7 @@ class NumpyBackend(abstract.AbstractBackend):
     def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
         raise_error(NotImplementedError,
                     "Swap pieces is not implemented for {} backend as it "
-                    "does not support multigpu.".format(name))
+                    "does not support multigpu.".format(self.name))
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)
