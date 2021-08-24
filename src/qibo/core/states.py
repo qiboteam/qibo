@@ -256,15 +256,17 @@ class DistributedState(VectorState):
                                          "efficiency.")
 
     def create_pieces(self):
+        """Creates :class:`qibo.core.states.DistributedState` pieces on CPU."""
         n = 2 ** self.nlocal
         with K.on_cpu():
             self.pieces = [K.cpu_tensor(K.zeros(n)) for _ in range(self.ndevices)]
 
     def assign_pieces(self, tensor):
-        """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
+        """Assigns state pieces from a given full state vector.
 
         Args:
-            tensor (array): Full state vector as a tensor of shape ``(2 ** nqubits,)``.
+            tensor (K.Tensor): The full state vector as a tensor supported by
+                the underlying backend.
         """
         if self.pieces is None:
             self.create_pieces()
@@ -308,6 +310,7 @@ class DistributedState(VectorState):
 
     @classmethod
     def zero_state(cls, circuit):
+        """Creates |00...0> as a distributed state."""
         state = cls(circuit)
         state.create_pieces()
         with K.on_cpu():
@@ -317,6 +320,7 @@ class DistributedState(VectorState):
 
     @classmethod
     def plus_state(cls, circuit):
+        """Creates |++...+> as a distributed state."""
         state = cls(circuit)
         with K.on_cpu():
             n = K.cast(2 ** state.nlocal, dtype=K.dtypes('DTYPEINT'))

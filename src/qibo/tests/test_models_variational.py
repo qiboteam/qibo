@@ -214,7 +214,7 @@ def test_qaoa_callbacks(backend, accelerators):
     # use ``Y`` Hamiltonian so that there are no errors
     # in the Trotter decomposition
     if accelerators:
-        with K.multigpu.on_cpu():
+        with K.on_cpu():
             h = hamiltonians.Y(5)
     else:
         h = hamiltonians.Y(5)

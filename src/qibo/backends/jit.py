@@ -256,19 +256,6 @@ class JITCustomBackend(NumpyBackend):
     def on_cpu(self):
         return CupyCpuDevice(self)
 
-    def cpu_tensor(self, x, dtype=None):
-        if dtype is None:
-            dtype = x.dtype
-        return self.np.asarray(x, dtype=dtype)
-
-    def cpu_cast(self, x, dtype='DTYPECPX'):
-        dtype = self._dtypes.get(dtype)
-        return self.np.array(x, dtype=dtype)
-
-    def cpu_assign(self, state, i, piece):
-        state.pieces[i] = self.to_numpy(piece)
-        del(piece)
-
     def transpose_state(self, pieces, state, nqubits, order):
         # TODO: Move this to qibojit backend
         original_shape = state.shape

@@ -386,5 +386,31 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
+    def on_cpu(self):
+        return self.device()
+
+    def cpu_tensor(self, x, dtype=None):
+        if dtype is None:
+            dtype = x.dtype
+        return self.np.asarray(x, dtype=dtype)
+
+    def cpu_cast(self, x, dtype='DTYPECPX'):
+        dtype = self._dtypes.get(dtype)
+        return self.np.array(x, dtype=dtype)
+
+    def cpu_assign(self, state, i, piece):
+        state.pieces[i] = self.to_numpy(piece)
+        del(piece)
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        raise_error(NotImplementedError,
+                    "State transposition is not implemented for the numpy "
+                    "as it does not support multigpu.")
+
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        raise_error(NotImplementedError,
+                    "Swap pieces is not implemented for the numpy "
+                    "as it does not support multigpu.")
+
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         self.np.testing.assert_allclose(value, target, rtol=rtol, atol=atol)

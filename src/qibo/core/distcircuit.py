@@ -109,6 +109,13 @@ class DistributedCircuit(circuit.Circuit):
 
     @staticmethod
     def _apply_gates(state, gates, device):
+        """Applies gates on a state using the specified device.
+
+        Args:
+            state (K.Tensor): State piece tensor to apply the gate to.
+            gates (list): List of gate objects to apply to the state piece.
+            device (str): GPU device to use for gate application.
+        """
         with K.device(device):
             state = K.cast(state)
             for gate in gates:
