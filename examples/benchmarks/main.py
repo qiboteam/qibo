@@ -188,36 +188,45 @@ def main(nqubits, type,
         circuit = circuit.fuse()
     logs[-1]["creation_time"] = time.time() - start_time
 
+    start_time = time.time()
     if compile:
-        start_time = time.time()
         circuit.compile()
         # Try executing here so that compile time is not included
         # in the simulation time
         result = circuit(nshots=nshots)
-        logs[-1]["compile_time"] = time.time() - start_time
+    logs[-1]["compile_time"] = time.time() - start_time
 
     start_time = time.time()
     result = circuit(nshots=nshots)
+    logs[-1]["dry_run_time"] = time.time() - start_time
+    start_time = time.time()
     if transfer:
         result = result.numpy()
-    logs[-1]["dry_run_time"] = time.time() - start_time
+    logs[-1]["dry_run_transfer_time"] = time.time() - start_time
 
-    simulation_time = []
+
+    simulation_times, transfer_times = [], []
     for _ in range(nreps):
         start_time = time.time()
         result = circuit(nshots=nshots)
+        simulation_times.append(time.time() - start_time)
+        start_time = time.time()
         if transfer:
             result = result.numpy()
-        simulation_time.append(time.time() - start_time)
+        transfer_times.append(time.time() - start_time)
+
     logs[-1]["dtype"] = str(result.dtype)
-    logs[-1]["simulation_time"] = np.mean(simulation_time)
-    logs[-1]["simulation_time_std"] = np.std(simulation_time)
+    logs[-1]["simulation_times"] = simulation_times
+    logs[-1]["transfer_times"] = transfer_times
+    logs[-1]["simulation_times_mean"] = np.mean(simulation_times)
+    logs[-1]["simulation_times_std"] = np.std(simulation_times)
+    logs[-1]["transfer_times_mean"] = np.mean(transfer_times)
+    logs[-1]["transfer_times_std"] = np.std(transfer_times)
 
-
+    start_time = time.time()
     if nshots is not None:
-        start_time = time.time()
         freqs = result.frequencies()
-        logs[-1]["measurement_time"] = time.time() - start_time
+    logs[-1]["measurement_time"] = time.time() - start_time
 
     if logs[-1]["backend"] == "qibojit" and qibo.K.op.get_backend() == "numba":
         from numba import threading_layer
