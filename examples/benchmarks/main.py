@@ -79,6 +79,18 @@ import qibo
 import circuits
 
 
+def get_active_branch_name():
+    """Returns the name of the active git branch."""
+    from pathlib import Path
+    qibo_dir = Path(qibo.__file__).parent.parent.parent
+    head_dir = qibo_dir / ".git" / "HEAD"
+    with head_dir.open("r") as f:
+        content = f.read().splitlines()
+    for line in content:
+        if line[0:4] == "ref:":
+            return line.partition("refs/heads/")[2]
+
+
 def parse_accelerators(accelerators):
     """Transforms string that specifies accelerators to dictionary.
 
@@ -167,7 +179,9 @@ def main(nqubits, type,
         "nqubits": nqubits, "circuit_type": type, "threading": "",
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
         "device": qibo.get_device(), "accelerators": accelerators,
-        "nshots": nshots, "transfer": transfer, "fuse": fuse, "compile": compile
+        "nshots": nshots, "transfer": transfer,
+        "fuse": fuse, "compile": compile,
+        "branch": get_active_branch_name()
         })
 
     params = {k: v for k, v in params.items() if v is not None}
