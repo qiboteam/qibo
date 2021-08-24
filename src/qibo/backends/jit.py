@@ -17,100 +17,6 @@ class CupyCpuDevice:
             self.K.set_engine("cupy")
 
 
-class JITMultiGpu(abstract.AbstractMultiGpu):
-
-    def __init__(self, backend):
-        super().__init__(backend)
-        # hack to get numba backend from qibojit
-        self.nb = self.K.op.backend.get("numba")
-
-    def on_cpu(self):
-        return CupyCpuDevice(self.K)
-
-    def cast(self, x, dtype='DTYPECPX'):
-        dtype = self.K._dtypes.get(dtype)
-        return self.K.np.array(x, dtype=dtype)
-
-    def create_pieces(self, state):
-        n = 2 ** state.nlocal
-        dtype = self.K._dtypes.get('DTYPECPX')
-        return [self.K.np.zeros(n, dtype=dtype) for _ in range(state.ndevices)]
-
-    def calculate_tensor(self, state):
-        if state.qubits.list == list(range(state.nglobal)):
-            tensor = self.K.np.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
-            tensor = self.K.np.reshape(tensor, state.shapes["full"])
-        elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
-            tensor = self.K.np.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
-            tensor = self.K.np.reshape(tensor, state.shapes["full"])
-        else: # fall back to the transpose op
-            tensor = self.K.np.zeros(state.shapes["full"], dtype=state.dtype)
-            tensor = self.transpose_state(state.pieces, tensor, state.nqubits,
-                                          state.qubits.reverse_transpose_order)
-        return tensor
-
-    def assign_pieces(self, state, tensor):
-        tensor = self.K.np.reshape(tensor, state.shapes["device"])
-        pieces = [tensor[i] for i in range(state.ndevices)]
-        new_tensor = self.K.np.zeros(state.shapes["full"], dtype=tensor.dtype)
-        # TODO: Change this to self.nb once `transpose_state` is moved to `qibojit`
-        new_tensor = self.transpose_state(pieces, new_tensor, state.nqubits,
-                                            state.qubits.transpose_order)
-        new_tensor = self.K.np.reshape(new_tensor, state.shapes["device"])
-        for i in range(state.ndevices):
-            state.pieces[i] = new_tensor[i]
-
-    def assign_zero_state(self, state):
-        dtype = self.K._dtypes.get('DTYPECPX')
-        state.pieces = self.create_pieces(state)
-        state.pieces[0] = self.nb.initial_state(nqubits=state.nlocal, dtype=dtype)
-
-    def assign_plus_state(self, state):
-        n = 2 ** state.nlocal
-        dtype = self.K._dtypes.get('DTYPECPX')
-        norm = self.cast(2 ** float(state.nqubits / 2.0))
-        state.pieces = [self.K.np.ones(n, dtype=dtype) / norm
-                        for _ in range(state.ndevices)]
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        # TODO: Move this to qibojit backend
-        nstates = 1 << nqubits
-        ndevices = len(pieces)
-        npiece = nstates // ndevices
-        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
-
-        #pragma omp parallel for
-        for g in range(nstates):
-            k = 0
-            for q in range(nqubits):
-                if ((g >> q) % 2):
-                    k += qubit_exponents[q]
-            state[g] = pieces[k // npiece][k % npiece]
-        return state
-
-    def swap_pieces(self, piece0, piece1, new_global, nlocal):
-        # TODO: Move this to qibojit backend
-        m = nlocal - new_global - 1
-        tk = 1 << m
-        nstates = 1 << (nlocal - 1)
-
-        #pragma omp parallel for
-        for g in range(nstates):
-            i = ((g >> m) << (m + 1)) + (g & (tk - 1))
-            piece0[i + tk], piece1[i] = piece1[i], piece0[i + tk]
-
-    def apply_gates(self, state, gates, device):
-        with self.K.device(device):
-            state = self.K.cast(state)
-            for gate in gates:
-                state = gate(state)
-        return state
-
-    def assign(self, state, i, piece):
-        state.pieces[i] = self.K.to_numpy(piece)
-        del(piece)
-
-
 class JITCustomBackend(NumpyBackend):
 
     description = "Uses custom operators based on numba.jit for CPU and " \
@@ -139,7 +45,6 @@ class JITCustomBackend(NumpyBackend):
         if "NUMBA_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("NUMBA_NUM_THREADS")))
 
-        self.multigpu = JITMultiGpu(self)
         self.cpu_devices = ["/CPU:0"]
         self.gpu_devices = [f"/GPU:{i}" for i in range(ngpu)]
         if self.gpu_devices: # pragma: no cover
@@ -347,6 +252,51 @@ class JITCustomBackend(NumpyBackend):
                              2 * gate.nqubits, False)
         state = self.reshape(state, shape)
         return state / self.trace(state)
+
+    def on_cpu(self):
+        return CupyCpuDevice(self)
+
+    def cpu_tensor(self, x, dtype=None):
+        if dtype is None:
+            dtype = x.dtype
+        return self.np.asarray(x, dtype=dtype)
+
+    def cpu_cast(self, x, dtype='DTYPECPX'):
+        dtype = self._dtypes.get(dtype)
+        return self.np.array(x, dtype=dtype)
+
+    def cpu_assign(self, state, i, piece):
+        state.pieces[i] = self.to_numpy(piece)
+        del(piece)
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        # TODO: Move this to qibojit backend
+        original_shape = state.shape
+        state = state.ravel()
+        nstates = 1 << nqubits
+        ndevices = len(pieces)
+        npiece = nstates // ndevices
+        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
+
+        #pragma omp parallel for
+        for g in range(nstates):
+            k = 0
+            for q in range(nqubits):
+                if ((g >> q) % 2):
+                    k += qubit_exponents[q]
+            state[g] = pieces[k // npiece][k % npiece]
+        return self.reshape(state, original_shape)
+
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        # TODO: Move this to qibojit backend
+        m = nlocal - new_global - 1
+        tk = 1 << m
+        nstates = 1 << (nlocal - 1)
+
+        #pragma omp parallel for
+        for g in range(nstates):
+            i = ((g >> m) << (m + 1)) + (g & (tk - 1))
+            piece0[i + tk], piece1[i] = piece1[i], piece0[i + tk]
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if self.op.get_backend() == "cupy":

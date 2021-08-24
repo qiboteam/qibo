@@ -31,10 +31,6 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
-        # use Tensorflow for placeholder multi-GPU so that tests pass
-        # when GPU is not available
-        from qibo.backends.tensorflow import TensorflowMultiGpu
-        self.multigpu = TensorflowMultiGpu(self)
 
         self.hardware_module = None
         self.hardware_circuit = None

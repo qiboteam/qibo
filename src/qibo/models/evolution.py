@@ -94,7 +94,7 @@ class StateEvolution:
             return calculate_callbacks
 
         def calculate_callbacks_distributed(state):
-            with K.multigpu.on_cpu():
+            with K.on_cpu():
                 if not isinstance(state, K.tensor_types):
                     state = state.tensor
                 calculate_callbacks(state)

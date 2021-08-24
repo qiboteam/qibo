@@ -196,8 +196,8 @@ class DistributedState(VectorState):
         # the state when splitting or merging the pieces.
         n = self.nstates // 2 ** self.nglobal
         self.shapes = {
-            "full": K.multigpu.cast((self.nstates,), dtype='DTYPEINT'),
-            "device": K.multigpu.cast((self.ndevices, n), dtype='DTYPEINT'),
+            "full": K.cpu_cast((self.nstates,), dtype='DTYPEINT'),
+            "device": K.cpu_cast((self.ndevices, n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
@@ -234,7 +234,20 @@ class DistributedState(VectorState):
         This is done by merging the state pieces to a single tensor.
         Using this method will double memory usage.
         """
-        return K.multigpu.calculate_tensor(self)
+        if self.qubits.list == list(range(self.nglobal)):
+            with K.on_cpu():
+                tensor = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
+                tensor = K.reshape(tensor, self.shapes["full"])
+        elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
+            with K.on_cpu():
+                tensor = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
+                tensor = K.reshape(tensor, self.shapes["full"])
+        else: # fall back to the transpose op
+            with K.on_cpu():
+                tensor = K.zeros(self.shapes["full"])
+                tensor = K.transpose_state(self.pieces, tensor, self.nqubits,
+                                           self.qubits.reverse_transpose_order)
+        return tensor
 
     @tensor.setter
     def tensor(self, x):
@@ -242,16 +255,28 @@ class DistributedState(VectorState):
                                          "distributed states for memory "
                                          "efficiency.")
 
-    def assign_pieces(self, full_state):
+    def create_pieces(self):
+        n = 2 ** self.nlocal
+        with K.on_cpu():
+            self.pieces = [K.cpu_tensor(K.zeros(n)) for _ in range(self.ndevices)]
+
+    def assign_pieces(self, tensor):
         """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
 
         Args:
-            full_state (array): Full state vector as a tensor of shape
-                ``(2 ** nqubits)``.
+            tensor (array): Full state vector as a tensor of shape ``(2 ** nqubits,)``.
         """
         if self.pieces is None:
-            self.pieces = K.multigpu.create_pieces(self)
-        K.multigpu.assign_pieces(self, full_state)
+            self.create_pieces()
+
+        with K.on_cpu():
+            tensor = K.reshape(tensor, self.shapes["device"])
+            pieces = [tensor[i] for i in range(self.ndevices)]
+            new_tensor = K.zeros(self.shapes["device"])
+            new_tensor = K.transpose_state(pieces, new_tensor, self.nqubits,
+                                           self.qubits.transpose_order)
+            for i in range(self.ndevices):
+                K.cpu_assign(self, i, new_tensor[i])
 
     def __getitem__(self, key):
       """Implements indexing of the distributed state without the full vector."""
@@ -284,13 +309,20 @@ class DistributedState(VectorState):
     @classmethod
     def zero_state(cls, circuit):
         state = cls(circuit)
-        K.multigpu.assign_zero_state(state)
+        state.create_pieces()
+        with K.on_cpu():
+            piece = K.initial_state(nqubits=state.nlocal)
+            state.pieces[0] = K.cpu_tensor(piece, dtype=state.dtype)
         return state
 
     @classmethod
     def plus_state(cls, circuit):
         state = cls(circuit)
-        K.multigpu.assign_plus_state(state)
+        with K.on_cpu():
+            n = K.cast(2 ** state.nlocal, dtype=K.dtypes('DTYPEINT'))
+            norm = K.cast(2 ** float(state.nqubits / 2.0))
+            state.pieces = [K.cpu_tensor(K.ones(n) / norm)
+                            for _ in range(state.ndevices)]
         return state
 
     def copy(self):
@@ -303,6 +335,6 @@ class DistributedState(VectorState):
     def probabilities(self, qubits=None, measurement_gate=None):
         unmeasured_qubits = tuple(i for i in range(self.nqubits)
                                   if i not in qubits)
-        with K.multigpu.on_cpu():
+        with K.on_cpu():
             state = K.reshape(K.square(K.abs(self.tensor)), self.nqubits * (2,))
             return K.sum(state, axis=unmeasured_qubits)

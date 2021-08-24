@@ -194,92 +194,29 @@ class TensorflowBackend(numpy.NumpyBackend):
     def device(self, device_name):
         return self.backend.device(device_name)
 
+    def on_cpu(self):
+        return self.device(self.cpu_devices[0])
+
+    def cpu_tensor(self, x, dtype=None):
+        if dtype is None:
+            dtype = x.dtype
+        return self.backend.Variable(x, dtype=dtype)
+
+    def cpu_cast(self, x, dtype='DTYPECPX'):
+        dtype = self._dtypes.get(dtype)
+        with self.on_cpu():
+            return self.cast(x, dtype=dtype)
+
+    def cpu_assign(self, state, i, piece):
+        state.pieces[i].assign(piece)
+        del(piece)
+
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
 
     def set_seed(self, seed):
         self._seed = seed
         self.backend.random.set_seed(seed)
-
-
-class TensorflowMultiGpu(abstract.AbstractMultiGpu):
-
-    def __init__(self, backend):
-        super().__init__(backend)
-
-    def on_cpu(self):
-        return self.K.device(self.cpu)
-
-    def cast(self, x, dtype='DTYPECPX'):
-        dtype = self.K._dtypes.get(dtype)
-        with self.on_cpu():
-            return self.K.cast(x, dtype=dtype)
-
-    def create_pieces(self, state):
-        n = 2 ** state.nlocal
-        with self.on_cpu():
-            pieces = [self.K.backend.Variable(self.K.zeros(n))
-                      for _ in range(state.ndevices)]
-        return pieces
-
-    def calculate_tensor(self, state):
-        if state.qubits.list == list(range(state.nglobal)):
-            with self.on_cpu():
-                tensor = self.K.concatenate([x[self.K.newaxis] for x in state.pieces], axis=0)
-                tensor = self.K.reshape(tensor, state.shapes["full"])
-        elif state.qubits.list == list(range(state.nlocal, state.nqubits)):
-            with self.on_cpu():
-                tensor = self.K.concatenate([x[:, self.K.newaxis] for x in state.pieces], axis=1)
-                tensor = self.K.reshape(tensor, state.shapes["full"])
-        else: # fall back to the transpose op
-            with self.on_cpu():
-                tensor = self.K.zeros(state.shapes["full"])
-                tensor = self.transpose_state(state.pieces, tensor, state.nqubits,
-                                              state.qubits.reverse_transpose_order)
-        return tensor
-
-    def assign_pieces(self, state, tensor):
-        with self.on_cpu():
-            tensor = self.K.reshape(tensor, state.shapes["device"])
-            pieces = [tensor[i] for i in range(state.ndevices)]
-            new_tensor = self.K.zeros(state.shapes["device"])
-            new_tensor = self.transpose_state(pieces, new_tensor, state.nqubits,
-                                              state.qubits.transpose_order)
-            for i in range(state.ndevices):
-                state.pieces[i].assign(new_tensor[i])
-
-    def assign_zero_state(self, state):
-        state.pieces = self.create_pieces(state)
-        with self.on_cpu():
-            piece = self.K.initial_state(nqubits=state.nlocal)
-            state.pieces[0] = self.K.backend.Variable(piece, dtype=state.dtype)
-
-    def assign_plus_state(self, state):
-        with self.on_cpu():
-            n = self.K.cast(2 ** state.nlocal, dtype=self.K.dtypes('DTYPEINT'))
-            norm = self.K.cast(2 ** float(state.nqubits / 2.0))
-            state.pieces = [self.K.backend.Variable(self.K.ones(n) / norm)
-                            for _ in range(state.ndevices)]
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        # Plain tensorflow implementation:
-        # pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-        # return self.reshape(self.transpose(pieces, order), state.shape)
-        return self.K.op.transpose_state(pieces, state, nqubits, order, self.K.nthreads)
-
-    def swap_pieces(self, piece0, piece1, new_global, nlocal):
-        with self.on_cpu():
-            return self.K.op.swap_pieces(piece0, piece1, new_global, nlocal, self.K.nthreads)
-
-    def apply_gates(self, state, gates, device):
-        with self.K.device(device):
-            for gate in gates:
-                state = gate(state)
-        return state
-
-    def assign(self, state, i, piece):
-        state.pieces[i].assign(piece)
-        del(piece)
 
 
 class TensorflowCustomBackend(TensorflowBackend):
@@ -397,3 +334,13 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def compile(self, func):
         return func
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        # Plain tensorflow implementation:
+        # pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+        # return self.reshape(self.transpose(pieces, order), state.shape)
+        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
+
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        with self.on_cpu():
+            return self.op.swap_pieces(piece0, piece1, new_global, nlocal, self.nthreads)

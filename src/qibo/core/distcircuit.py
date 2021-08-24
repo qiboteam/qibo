@@ -107,6 +107,14 @@ class DistributedCircuit(circuit.Circuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
+    @staticmethod
+    def _apply_gates(state, gates, device):
+        with K.device(device):
+            state = K.cast(state)
+            for gate in gates:
+                state = gate(state)
+        return state
+
     def _joblib_execute(self, state, queues: List[List["BackendGate"]]):
         """Executes gates in ``accelerators`` in parallel.
 
@@ -117,8 +125,8 @@ class DistributedCircuit(circuit.Circuit):
         """
         def device_job(ids, device):
             for i in ids:
-                piece = K.multigpu.apply_gates(state.pieces[i], queues[i], device)
-                K.multigpu.assign(state, i, piece)
+                piece = self._apply_gates(state.pieces[i], queues[i], device)
+                K.cpu_assign(state, i, piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
@@ -132,8 +140,7 @@ class DistributedCircuit(circuit.Circuit):
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.qubits.reduced_local[local_qubit]
-            K.multigpu.swap_pieces(state.pieces[i], state.pieces[i + t],
-                                   local_eff, self.nlocal)
+            K.swap_pieces(state.pieces[i], state.pieces[i + t], local_eff, self.nlocal)
 
     def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
@@ -148,7 +155,7 @@ class DistributedCircuit(circuit.Circuit):
         This method calculates the full state vector because special gates
         are not implemented for state pieces.
         """
-        with K.multigpu.on_cpu():
+        with K.on_cpu():
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
             full_state = state.tensor
@@ -190,7 +197,7 @@ class DistributedCircuit(circuit.Circuit):
                                       "different device configuration and try again.")
 
     def _device(self):
-        return K.multigpu.on_cpu()
+        return K.on_cpu()
 
     def execute(self, initial_state=None, nshots=None):
         """Equivalent to :meth:`qibo.core.circuit.Circuit.execute`.
