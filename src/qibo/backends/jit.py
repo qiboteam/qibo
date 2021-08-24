@@ -257,34 +257,20 @@ class JITCustomBackend(NumpyBackend):
     def on_cpu(self):
         return self.cupy_cpu_device
 
-    #def transpose_state(self, pieces, state, nqubits, order):
-        # TODO: Move this to qibojit backend
-    #    original_shape = state.shape
-    #    state = state.ravel()
-    #    nstates = 1 << nqubits
-    #    ndevices = len(pieces)
-    #    npiece = nstates // ndevices
-    #    qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
+    def cpu_cast(self, x, dtype='DTYPECPX'):
+        try:
+            return x.get()
+        except AttributeError:
+            return super().cpu_cast(x, dtype)
 
-        #pragma omp parallel for
-    #    for g in range(nstates):
-    #        k = 0
-    #        for q in range(nqubits):
-    #            if ((g >> q) % 2):
-    #                k += qubit_exponents[q]
-    #        state[g] = pieces[k // npiece][k % npiece]
-    #    return self.reshape(state, original_shape)
+    def transpose_state(self, pieces, state, nqubits, order):
+        original_shape = state.shape
+        state = state.ravel()
+        state = self.op.transpose_state(pieces, state, nqubits, order)
+        return self.reshape(state, original_shape)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
-        # TODO: Move this to qibojit backend
-        m = nlocal - new_global - 1
-        tk = 1 << m
-        nstates = 1 << (nlocal - 1)
-
-        #pragma omp parallel for
-        for g in range(nstates):
-            i = ((g >> m) << (m + 1)) + (g & (tk - 1))
-            piece0[i + tk], piece1[i] = piece1[i], piece0[i + tk]
+        return self.op.swap_pieces(piece0, piece1, new_global, nlocal)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
         if self.op.get_backend() == "cupy":

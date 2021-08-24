@@ -270,9 +270,8 @@ class DistributedState(VectorState):
         """
         if self.pieces is None:
             self.create_pieces()
-
         with K.on_cpu():
-            tensor = K.reshape(tensor, self.shapes["device"])
+            tensor = K.reshape(K.cpu_cast(tensor), self.shapes["device"])
             pieces = [tensor[i] for i in range(self.ndevices)]
             new_tensor = K.zeros(self.shapes["device"])
         with K.on_cpu():
