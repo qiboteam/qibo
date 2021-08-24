@@ -177,7 +177,6 @@ def main(nqubits, type,
     if gate_type is not None: kwargs["gate_type"] = gate_type
     if accelerators is not None:
         kwargs["accelerators"] = accelerators
-        kwargs["device"] = device
     logs[-1].update(kwargs)
 
     start_time = time.time()
