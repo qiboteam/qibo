@@ -402,10 +402,9 @@ class NumpyBackend(abstract.AbstractBackend):
         state.pieces[i] = self.to_numpy(piece)
         del(piece)
 
-    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
-        raise_error(NotImplementedError,
-                    "State transposition is not implemented for {} backend "
-                    "as it does not support multigpu.".format(self.name))
+    def transpose_state(self, pieces, state, nqubits, order):
+        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
+        return self.reshape(self.transpose(pieces, order), state.shape)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal): # pragma: no cover
         raise_error(NotImplementedError,

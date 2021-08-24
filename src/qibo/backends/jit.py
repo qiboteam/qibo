@@ -257,23 +257,23 @@ class JITCustomBackend(NumpyBackend):
     def on_cpu(self):
         return self.cupy_cpu_device
 
-    def transpose_state(self, pieces, state, nqubits, order):
+    #def transpose_state(self, pieces, state, nqubits, order):
         # TODO: Move this to qibojit backend
-        original_shape = state.shape
-        state = state.ravel()
-        nstates = 1 << nqubits
-        ndevices = len(pieces)
-        npiece = nstates // ndevices
-        qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
+    #    original_shape = state.shape
+    #    state = state.ravel()
+    #    nstates = 1 << nqubits
+    #    ndevices = len(pieces)
+    #    npiece = nstates // ndevices
+    #    qubit_exponents = [1 << (nqubits - x - 1) for x in order[::-1]]
 
         #pragma omp parallel for
-        for g in range(nstates):
-            k = 0
-            for q in range(nqubits):
-                if ((g >> q) % 2):
-                    k += qubit_exponents[q]
-            state[g] = pieces[k // npiece][k % npiece]
-        return self.reshape(state, original_shape)
+    #    for g in range(nstates):
+    #        k = 0
+    #        for q in range(nqubits):
+    #            if ((g >> q) % 2):
+    #                k += qubit_exponents[q]
+    #        state[g] = pieces[k // npiece][k % npiece]
+    #    return self.reshape(state, original_shape)
 
     def swap_pieces(self, piece0, piece1, new_global, nlocal):
         # TODO: Move this to qibojit backend

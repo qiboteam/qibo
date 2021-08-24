@@ -275,10 +275,11 @@ class DistributedState(VectorState):
             tensor = K.reshape(tensor, self.shapes["device"])
             pieces = [tensor[i] for i in range(self.ndevices)]
             new_tensor = K.zeros(self.shapes["device"])
+        with K.on_cpu():
             new_tensor = K.transpose_state(pieces, new_tensor, self.nqubits,
                                            self.qubits.transpose_order)
-            for i in range(self.ndevices):
-                K.cpu_assign(self, i, new_tensor[i])
+        for i in range(self.ndevices):
+            K.cpu_assign(self, i, new_tensor[i])
 
     def __getitem__(self, key):
       """Implements indexing of the distributed state without the full vector."""
