@@ -159,11 +159,13 @@ class DistributedCircuit(circuit.Circuit):
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
             full_state = state.tensor
+        with K.on_cpu():
             if isinstance(gate, gates.CallbackGate):
                 gate(full_state)
             else:
                 full_state = gate(full_state)
                 state.assign_pieces(full_state)
+        with K.on_cpu():
             # Redo all global SWAPs that happened so far
             self._revert_swaps(state, gate.swap_reset)
 
