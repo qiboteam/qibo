@@ -79,7 +79,7 @@ def test_measurement_result_parameters(backend, accelerators, effect):
 
 def set_device_seed(seed, accelerators):
     if accelerators:
-        with K.multigpu.on_cpu():
+        with K.on_cpu():
             K.set_seed(seed)
     else:
         K.set_seed(seed)

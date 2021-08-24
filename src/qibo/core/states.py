@@ -335,6 +335,7 @@ class DistributedState(VectorState):
     def probabilities(self, qubits=None, measurement_gate=None):
         unmeasured_qubits = tuple(i for i in range(self.nqubits)
                                   if i not in qubits)
+        tensor = self.tensor
         with K.on_cpu():
-            state = K.reshape(K.square(K.abs(self.tensor)), self.nqubits * (2,))
+            state = K.reshape(K.square(K.abs(tensor)), self.nqubits * (2,))
             return K.sum(state, axis=unmeasured_qubits)
