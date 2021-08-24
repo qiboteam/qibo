@@ -55,6 +55,7 @@ class JITCustomBackend(NumpyBackend):
             self.default_device = self.cpu_devices[0]
             self.set_engine("numba")
             self.set_threads(self.nthreads)
+        self.cupy_cpu_device = CupyCpuDevice(self)
 
     def set_engine(self, name): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
@@ -159,7 +160,7 @@ class JITCustomBackend(NumpyBackend):
                 device_id = int(device_name.split(":")[-1])
                 return self.backend.cuda.Device(device_id % len(self.gpu_devices))
             else:
-                return CupyCpuDevice(self)
+                return self.cupy_cpu_device
 
     def initial_state(self, nqubits, is_matrix=False):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
@@ -254,7 +255,7 @@ class JITCustomBackend(NumpyBackend):
         return state / self.trace(state)
 
     def on_cpu(self):
-        return CupyCpuDevice(self)
+        return self.cupy_cpu_device
 
     def transpose_state(self, pieces, state, nqubits, order):
         # TODO: Move this to qibojit backend
