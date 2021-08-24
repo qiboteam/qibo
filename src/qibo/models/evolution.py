@@ -97,6 +97,7 @@ class StateEvolution:
             with K.on_cpu():
                 if not isinstance(state, K.tensor_types):
                     state = state.tensor
+            with K.on_cpu():
                 calculate_callbacks(state)
 
         return calculate_callbacks_distributed
