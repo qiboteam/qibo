@@ -1,4 +1,4 @@
-__version__ = "0.1.6.dev2"
+__version__ = "0.1.6.dev2-qili"
 from qibo.config import set_batch_size, get_batch_size
 from qibo.config import set_metropolis_threshold, get_metropolis_threshold
 from qibo.backends import set_backend, get_backend

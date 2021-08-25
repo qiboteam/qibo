@@ -29,7 +29,7 @@ class Circuit(StateCircuit):
                             "configuration.")
             try:
                 from qibo.core.distcircuit import DistributedCircuit
-            except ModuleNotFoundError: # pragma: no cover
+            except ModuleNotFoundError:  # pragma: no cover
                 # CI installs all required libraries by default
                 raise_error(ModuleNotFoundError,
                             "Cannot create distributed circuit because some "
@@ -38,9 +38,12 @@ class Circuit(StateCircuit):
             kwargs.pop("density_matrix")
         else:
             kwargs = {}
-            if K.hardware_module: # pragma: no cover
+            if K.hardware_module:  # pragma: no cover
                 # hardware backend is not tested until `qiboicarusq` is available
                 circuit_cls = K.hardware_circuit
+            elif K.remote_module:  # pragma: no cover
+                # remote backend is not tested until `qilimanjaroq` is available
+                circuit_cls = K.remote_circuit
             else:
                 circuit_cls = StateCircuit
         return circuit_cls, args, kwargs
@@ -50,10 +53,10 @@ class Circuit(StateCircuit):
                 memory_device: str = "/CPU:0",
                 density_matrix: bool = False):
         circuit_cls, args, kwargs = cls._constructor(
-                  nqubits, accelerators=accelerators,
-                  memory_device=memory_device,
-                  density_matrix=density_matrix
-                )
+            nqubits, accelerators=accelerators,
+            memory_device=memory_device,
+            density_matrix=density_matrix
+        )
         return circuit_cls(*args, **kwargs)
 
     @classmethod
@@ -61,12 +64,12 @@ class Circuit(StateCircuit):
                   accelerators: Optional[Dict[str, int]] = None,
                   memory_device: str = "/CPU:0",
                   density_matrix: bool = False):
-      circuit_cls, args, kwargs = cls._constructor(
-                qasm_code, accelerators=accelerators,
-                memory_device=memory_device,
-                density_matrix=density_matrix
-              )
-      return circuit_cls.from_qasm(*args, **kwargs)
+        circuit_cls, args, kwargs = cls._constructor(
+            qasm_code, accelerators=accelerators,
+            memory_device=memory_device,
+            density_matrix=density_matrix
+        )
+        return circuit_cls.from_qasm(*args, **kwargs)
 
 
 def QFT(nqubits: int, with_swaps: bool = True,
@@ -131,11 +134,12 @@ def _DistributedQFT(nqubits: int,
     circuit = Circuit(nqubits, accelerators, memory_device)
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
-        circuit.global_qubits = range(circuit.nlocal, nqubits) # pylint: disable=E1101
-        if icrit < circuit.nglobal: # pylint: disable=E1101
+        circuit.global_qubits = range(
+            circuit.nlocal, nqubits)  # pylint: disable=E1101
+        if icrit < circuit.nglobal:  # pylint: disable=E1101
             raise_error(NotImplementedError, "Cannot implement QFT for {} qubits "
                                              "using {} global qubits."
-                                             "".format(nqubits, circuit.nglobal)) # pylint: disable=E1101
+                                             "".format(nqubits, circuit.nglobal))  # pylint: disable=E1101
 
     for i1 in range(nqubits):
         if i1 < icrit:
