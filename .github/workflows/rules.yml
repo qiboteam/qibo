@@ -47,7 +47,7 @@ jobs:
         pylint src -E -d E1123,E1120
     - name: Test with pytest core
       run: |
-        OMP_NUM_THREADS=1 pytest --cov=qibo --cov-report=xml --pyargs qibo
+        pytest --cov=qibo --cov-report=xml --pyargs qibo
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
       run: |

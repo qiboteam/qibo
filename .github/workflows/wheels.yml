@@ -49,7 +49,7 @@ jobs:
         pip install qibo --no-index --find-links ./dist/
         pip install qibotf
         pip install qibojit
-        OMP_NUM_THREADS=1 pytest --pyargs qibo
+        pytest --pyargs qibo
     - name: Test wheels on windows
       if: startsWith(matrix.os, 'windows')
       run: |
