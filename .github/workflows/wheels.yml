@@ -11,7 +11,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest, windows-latest]
         python-version: [3.6, 3.7, 3.8, 3.9]
     runs-on: ${{ matrix.os }}
     steps:
@@ -49,7 +49,7 @@ jobs:
         pip install qibo --no-index --find-links ./dist/
         pip install qibotf
         pip install qibojit
-        pytest --pyargs qibo
+        OMP_NUM_THREADS=1 pytest --pyargs qibo
     - name: Test wheels on windows
       if: startsWith(matrix.os, 'windows')
       run: |
