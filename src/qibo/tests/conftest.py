@@ -84,7 +84,7 @@ def pytest_generate_tests(metafunc):
     }
     # skip tests that require custom operators
     if ((metafunc.module.__name__ in distributed_tests) and
-        ("qibotf" not in backends) and ("qibojit" not in backends)):
+        ("qibotf" not in backends) and ("qibojit" not in backends)): # pragma: no cover
         pytest.skip("Skipping tests because custom operators are not available.")
 
     # for `test_backends_agreement.py`

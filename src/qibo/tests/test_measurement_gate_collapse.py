@@ -173,8 +173,10 @@ def test_measurement_result_parameters_multiple_qubits(backend):
     K.set_seed(123)
     collapse = gates.M(0, 1, 2, collapse=True)
     target_state = collapse(K.cast(np.copy(initial_state)))
-    if int(collapse.result.outcome(0)):
+    # not including in coverage because outcomes are probabilistic and may
+    # not occur for the CI run
+    if int(collapse.result.outcome(0)): # pragma: no cover
         target_state = gates.RY(1, theta=np.pi / 5)(target_state)
-    if int(collapse.result.outcome(2)):
+    if int(collapse.result.outcome(2)): # pragma: no cover
         target_state = gates.RX(3, theta=np.pi / 3)(target_state)
     K.assert_allclose(result, target_state)
