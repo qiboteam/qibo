@@ -96,7 +96,8 @@ def pytest_generate_tests(metafunc):
 
     if "backend_name" in metafunc.fixturenames:
         if metafunc.module.__name__ in distributed_tests:
-            metafunc.parametrize("backend_name", ["qibotf", "qibojit"])
+            distributed_backends = list(set(backends) & {"qibotf", "qibojit"})
+            metafunc.parametrize("backend_name", distributed_backends)
             if "accelerators" in metafunc.fixturenames:
                 metafunc.parametrize("accelerators", accelerators)
 
