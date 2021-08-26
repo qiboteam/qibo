@@ -386,7 +386,7 @@ class NumpyBackend(abstract.AbstractBackend):
         state = self._append_zeros(state, sorted_qubits, density_matrix_result)
         return self.reshape(state, gate.cache.flat_shape)
 
-    def on_cpu(self):
+    def on_cpu(self): # pragma: no cover
         return self.device()
 
     def cpu_tensor(self, x, dtype=None):

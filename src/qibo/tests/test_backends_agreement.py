@@ -70,7 +70,7 @@ def test_backend_methods_list(tested_backend, target_backend, method, args):
     ("range", {"start": 0, "finish": 10, "step": 2, "dtype": "DTYPE"}),
     ("pow", {"base": rand(5), "exponent": 4}),
     ("sum", {"x": rand((4, 4, 3)), "axis": 1}),
-    ("squeeze", {"x": rand((5, 1, 2)), "axis": 1})
+    ("squeeze", {"x": rand((5, 1, 2)), "axis": 1}),
 ])
 def test_backend_methods_dict(tested_backend, target_backend, method, kwargs):
     tested_backend = K.construct_backend(tested_backend)
@@ -160,6 +160,25 @@ def test_backend_unique(tested_backend, target_backend, return_counts):
     else:
         idx = np.argsort(test_result)
         tested_backend.assert_allclose(np.array(test_result)[idx], target_result)
+
+
+def test_backend_transpose_state(tested_backend, target_backend):
+    tested_backend = K.construct_backend(tested_backend)
+    target_backend = K.construct_backend(target_backend)
+    if ((tested_backend.name == "qibotf" or target_backend.name == "qibotf") and
+        ("GPU" in tested_backend.default_device or "GPU" in target_backend.default_device)):
+        pytest.skip("qibotf does not implement `transpose_state` for GPU.")
+    nqubits = 5
+    order = [0, 2, 3, 4, 1]
+    shape = (2 ** nqubits,)
+    state = np.random.random(shape) + 1j * np.random.random(shape)
+    state = state / np.sqrt(np.sum(np.abs(state) ** 2))
+    new_state = np.zeros_like(state)
+    state = np.reshape(state, (4, 8))
+    pieces = [state[i] for i in range(4)]
+    target_result = target_backend.transpose_state(pieces, new_state, 5, order)
+    tested_result = tested_backend.transpose_state(pieces, new_state, 5, order)
+    tested_backend.assert_allclose(tested_result, target_result)
 
 
 def test_hardware_backend_import():
