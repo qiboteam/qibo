@@ -13,7 +13,7 @@ class CupyCpuDevice:
         self.K.set_engine("numba")
 
     def __exit__(self, *args):
-        if self.K.gpu_devices:
+        if self.K.gpu_devices: # pragma: no cover
             self.K.set_engine("cupy")
 
 
@@ -33,7 +33,7 @@ class JITCustomBackend(NumpyBackend):
         self.name = "qibojit"
         self.op = op
 
-        try:
+        try: # pragma: no cover
             from cupy import cuda # pylint: disable=E0401
             ngpu = cuda.runtime.getDeviceCount()
         except:
@@ -84,7 +84,7 @@ class JITCustomBackend(NumpyBackend):
 
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
-        if "GPU" in name:
+        if "GPU" in name: # pragma: no cover
             self.set_engine("cupy")
         else:
             self.set_engine("numba")
@@ -107,7 +107,7 @@ class JITCustomBackend(NumpyBackend):
         return self.op.cast(x, dtype=dtype)
 
     def check_shape(self, shape):
-        if self.op.get_backend() == "cupy" and isinstance(shape, self.Tensor):
+        if self.op.get_backend() == "cupy" and isinstance(shape, self.Tensor): # pragma: no cover
             shape = shape.get()
         return shape
 
@@ -124,7 +124,7 @@ class JITCustomBackend(NumpyBackend):
         return super().ones(self.check_shape(shape), dtype=dtype)
 
     def expm(self, x):
-        if self.op.get_backend() == "cupy":
+        if self.op.get_backend() == "cupy": # pragma: no cover
             # Fallback to numpy because cupy does not have expm
             if isinstance(x, self.native_types):
                 x = x.get()
@@ -132,14 +132,14 @@ class JITCustomBackend(NumpyBackend):
         return super().expm(x)
 
     def unique(self, x, return_counts=False):
-        if self.op.get_backend() == "cupy":
+        if self.op.get_backend() == "cupy": # pragma: no cover
             if isinstance(x, self.native_types):
                 x = x.get()
             # Uses numpy backend always
         return super().unique(x, return_counts)
 
     def gather(self, x, indices=None, condition=None, axis=0):
-        if self.op.get_backend() == "cupy":
+        if self.op.get_backend() == "cupy": # pragma: no cover
             # Fallback to numpy because cupy does not support tuple indexing
             if isinstance(x, self.native_types):
                 x = x.get()
@@ -170,7 +170,8 @@ class JITCustomBackend(NumpyBackend):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
         if nshots < SHOT_METROPOLIS_THRESHOLD:
             return super().sample_frequencies(probs, nshots)
-        if not isinstance(probs, self.np.ndarray):
+        if not isinstance(probs, self.np.ndarray): # pragma: no cover
+            # not covered because GitHub CI does not have GPU
             probs = probs.get()
         dtype = self._dtypes.get('DTYPEINT')
         seed = self.np.random.randint(0, int(1e8), dtype=dtype)
@@ -273,7 +274,7 @@ class JITCustomBackend(NumpyBackend):
         return self.op.swap_pieces(piece0, piece1, new_global, nlocal)
 
     def assert_allclose(self, value, target, rtol=1e-7, atol=0.0):
-        if self.op.get_backend() == "cupy":
+        if self.op.get_backend() == "cupy": # pragma: no cover
             if isinstance(value, self.backend.ndarray):
                 value = value.get()
             if isinstance(target, self.backend.ndarray):
