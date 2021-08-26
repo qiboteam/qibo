@@ -89,7 +89,7 @@ def pytest_generate_tests(metafunc):
         pytest.skip("Skipping distributed tests because are not supported by "
                     "the available backends.")
     # skip distributed tests on mac
-    if sys.platform == "darwin":
+    if sys.platform == "darwin":  # pragma: no cover
         accelerators = None
         if module_name in distributed_tests:
             pytest.skip("Mac os does not support distributed circuits.")
