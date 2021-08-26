@@ -166,7 +166,7 @@ def test_backend_transpose_state(tested_backend, target_backend):
     tested_backend = K.construct_backend(tested_backend)
     target_backend = K.construct_backend(target_backend)
     if ((tested_backend.name == "qibotf" or target_backend.name == "qibotf") and
-        ("GPU" in tested_backend.default_device or "GPU" in target_backend.default_device)):
+        ("GPU" in tested_backend.default_device or "GPU" in target_backend.default_device)): # pragma: no cover
         pytest.skip("qibotf does not implement `transpose_state` for GPU.")
     nqubits = 5
     order = [0, 2, 3, 4, 1]
