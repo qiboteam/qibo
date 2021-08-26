@@ -79,18 +79,6 @@ import qibo
 import circuits
 
 
-def get_active_branch_name():
-    """Returns the name of the active git branch."""
-    from pathlib import Path
-    qibo_dir = Path(qibo.__file__).parent.parent.parent
-    head_dir = qibo_dir / ".git" / "HEAD"
-    with head_dir.open("r") as f:
-        content = f.read().splitlines()
-    for line in content:
-        if line[0:4] == "ref:":
-            return line.partition("refs/heads/")[2]
-
-
 def parse_accelerators(accelerators):
     """Transforms string that specifies accelerators to dictionary.
 
@@ -173,6 +161,17 @@ def main(nqubits, type,
             logs = []
     else:
         logs = []
+
+    def get_active_branch_name():
+        """Returns the name of the active git branch."""
+        from pathlib import Path
+        qibo_dir = Path(qibo.__file__).parent.parent.parent
+        head_dir = qibo_dir / ".git" / "HEAD"
+        with head_dir.open("r") as f:
+            content = f.read().splitlines()
+        for line in content:
+            if line[0:4] == "ref:":
+                return line.partition("refs/heads/")[2]
 
     # Create log dict
     logs.append({
