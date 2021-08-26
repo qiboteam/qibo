@@ -82,10 +82,17 @@ def pytest_generate_tests(metafunc):
         "qibo.tests.test_core_distcircuit",
         "qibo.tests.test_core_distcircuit_execution"
     }
-    # skip tests that require custom operators
-    if ((metafunc.module.__name__ in distributed_tests) and
-        ("qibotf" not in backends) and ("qibojit" not in backends)): # pragma: no cover
-        pytest.skip("Skipping tests because custom operators are not available.")
+    module_name = metafunc.module.__name__
+    # skip distributed tests if qibojit or qibotf are not installed
+    if ((module_name in distributed_tests) and ("qibotf" not in backends) and
+        ("qibojit" not in backends)): # pragma: no cover
+        pytest.skip("Skipping distributed tests because are not supported by "
+                    "the available backends.")
+    # skip distributed tests on mac
+    if sys.platform == "darwin":
+        accelerators = None
+        if module_name in distributed_tests:
+            pytest.skip("Mac os does not support distributed circuits.")
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
