@@ -79,6 +79,18 @@ import qibo
 import circuits
 
 
+def get_active_branch_name():
+    """Returns the name of the active git branch."""
+    from pathlib import Path
+    qibo_dir = Path(qibo.__file__).parent.parent.parent
+    head_dir = qibo_dir / ".git" / "HEAD"
+    with head_dir.open("r") as f:
+        content = f.read().splitlines()
+    for line in content:
+        if line[0:4] == "ref:":
+            return line.partition("refs/heads/")[2]
+
+
 def parse_accelerators(accelerators):
     """Transforms string that specifies accelerators to dictionary.
 
@@ -113,7 +125,7 @@ def main(nqubits, type,
          backend="custom", precision="double",
          device=None, accelerators=None, threadsafe=False,
          nreps=1, nshots=None,
-         transfer=False, fuse=False, compile=False,
+         transfer=False, fuse=False, compile=False, get_branch=True,
          nlayers=None, gate_type=None, params={},
          filename=None):
     """Runs benchmarks for different circuit types.
@@ -137,6 +149,7 @@ def main(nqubits, type,
         fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
         compile: If ``True`` then the Tensorflow graph is compiled using
             ``circuit.compile()``. Compilation time is logged in this case.
+        get_branch (bool): If ``True`` it logs the name of the enabled git branch.
         nlayers (int): Number of layers for supremacy-like or gate circuits.
             If a different circuit is used ``nlayers`` is ignored.
         gate_type (str): Type of gate for gate circuits.
@@ -162,17 +175,6 @@ def main(nqubits, type,
     else:
         logs = []
 
-    def get_active_branch_name():
-        """Returns the name of the active git branch."""
-        from pathlib import Path
-        qibo_dir = Path(qibo.__file__).parent.parent.parent
-        head_dir = qibo_dir / ".git" / "HEAD"
-        with head_dir.open("r") as f:
-            content = f.read().splitlines()
-        for line in content:
-            if line[0:4] == "ref:":
-                return line.partition("refs/heads/")[2]
-
     # Create log dict
     logs.append({
         "nqubits": nqubits, "circuit_type": type, "threading": "",
@@ -180,8 +182,9 @@ def main(nqubits, type,
         "device": qibo.get_device(), "accelerators": accelerators,
         "nshots": nshots, "transfer": transfer,
         "fuse": fuse, "compile": compile,
-        "branch": get_active_branch_name()
         })
+    if get_branch:
+        logs[-1]["branch"] = get_active_branch_name()
 
     params = {k: v for k, v in params.items() if v is not None}
     kwargs = {"nqubits": nqubits, "circuit_type": type}

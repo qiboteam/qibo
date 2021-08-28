@@ -146,7 +146,7 @@ def test_benchmarks(nqubits, type):
               "\nimport qibo\nimport circuits\n\n")
     args = {"nqubits": nqubits, "type": type,
             "backend": "qibojit", "precision": "double",
-            "device": None, "accelerators": None,
+            "device": None, "accelerators": None, "get_branch": False,
             "nshots": None, "fuse": False, "compile": False,
             "nlayers": None, "gate_type": None, "params": {},
             "filename": None}
