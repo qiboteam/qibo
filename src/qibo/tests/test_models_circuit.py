@@ -6,7 +6,7 @@ from qibo import gates, models, K
 from qibo.tests.utils import random_state
 
 
-def test_circuit_constructor():
+def test_circuit_constructor(backend):
     from qibo.core.circuit import Circuit, DensityMatrixCircuit
     from qibo.core.distcircuit import DistributedCircuit
     c = models.Circuit(5)
