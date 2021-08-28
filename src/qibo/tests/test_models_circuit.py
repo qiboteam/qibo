@@ -6,14 +6,14 @@ from qibo import gates, models, K
 from qibo.tests.utils import random_state
 
 
-def test_circuit_constructor(backend):
+def test_circuit_constructor():
     from qibo.core.circuit import Circuit, DensityMatrixCircuit
     from qibo.core.distcircuit import DistributedCircuit
     c = models.Circuit(5)
     assert isinstance(c, Circuit)
     c = models.Circuit(5, density_matrix=True)
     assert isinstance(c, DensityMatrixCircuit)
-    if K.name not in {"qibotf", "qibojit"} or sys.platform == "darwin":
+    if K.name not in {"qibotf", "qibojit"} or sys.platform == "darwin":  # pragma: no cover
         with pytest.raises(NotImplementedError):
             c = models.Circuit(5, accelerators={"/GPU:0": 2})
     else:
