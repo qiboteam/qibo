@@ -152,8 +152,8 @@ class SymbolicHamiltonian(AbstractHamiltonian):
     def dense(self):
         """Creates the equivalent :class:`qibo.abstractions.hamiltonians.MatrixHamiltonian`."""
         if self._dense is None:
-            log.warn("Calculating the dense form of a symbolic Hamiltonian. "
-                     "This operation is memory inefficient.")
+            log.warning("Calculating the dense form of a symbolic Hamiltonian. "
+                        "This operation is memory inefficient.")
             self.dense = self.calculate_dense()
         return self._dense
 
@@ -182,7 +182,7 @@ class SymbolicHamiltonian(AbstractHamiltonian):
 
     def ground_state(self):
         if self._ground_state is None:
-            log.warn("Ground state for this Hamiltonian was not given.")
+            log.warning("Ground state for this Hamiltonian was not given.")
             return self.eigenvectors()[:, 0]
         return self._ground_state()
 

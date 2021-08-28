@@ -40,9 +40,9 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
             that implements the Hamiltonian represented by the given symbolic
             expression.
         """
-        log.warn("`Hamiltonian.from_symbolic` and the use of symbol maps is "
-                 "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
-                 "to construct Hamiltonians using symbols.")
+        log.warning("`Hamiltonian.from_symbolic` and the use of symbol maps is "
+                    "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
+                    "to construct Hamiltonians using symbols.")
         return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
     def eigenvalues(self):
