@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import sys
 import math
 import joblib
 from qibo import K
@@ -45,6 +46,9 @@ class DistributedCircuit(circuit.Circuit):
     """
 
     def __init__(self, nqubits: int, accelerators: Dict[str, int]):
+        if sys.platform == "darwin":  # pragma: no cover
+            raise_error(NotImplementedError, "Distributed circuits are not "
+                                             "implemented for macos.")
         super().__init__(nqubits)
         self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())

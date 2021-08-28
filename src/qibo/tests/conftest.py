@@ -92,7 +92,7 @@ def pytest_generate_tests(metafunc):
     if sys.platform == "darwin":  # pragma: no cover
         accelerators = None
         if module_name in distributed_tests:
-            pytest.skip("Mac os does not support distributed circuits.")
+            pytest.skip("macos does not support distributed circuits.")
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
