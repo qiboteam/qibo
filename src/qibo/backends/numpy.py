@@ -400,7 +400,6 @@ class NumpyBackend(abstract.AbstractBackend):
 
     def cpu_assign(self, state, i, piece):
         state.pieces[i] = self.to_numpy(piece)
-        del(piece)
 
     def transpose_state(self, pieces, state, nqubits, order):
         pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))

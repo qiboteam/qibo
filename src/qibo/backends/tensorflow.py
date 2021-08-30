@@ -209,7 +209,6 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def cpu_assign(self, state, i, piece):
         state.pieces[i].assign(piece)
-        del(piece)
 
     def executing_eagerly(self):
         return self.backend.executing_eagerly()

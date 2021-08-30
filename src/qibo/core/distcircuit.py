@@ -138,6 +138,7 @@ class DistributedCircuit(circuit.Circuit):
             for i in ids:
                 piece = self._apply_gates(state.pieces[i], queues[i], device)
                 K.cpu_assign(state, i, piece)
+                del(piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
