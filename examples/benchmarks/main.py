@@ -232,10 +232,10 @@ def main(nqubits, type,
         if transfer:
             result = result.numpy()
         transfer_times.append(time.time() - start_time)
+        logs[-1]["dtype"] = str(result.dtype)
         if nshots is None:
             del(result)
 
-    logs[-1]["dtype"] = str(result.dtype)
     logs[-1]["simulation_times"] = simulation_times
     logs[-1]["transfer_times"] = transfer_times
     logs[-1]["simulation_times_mean"] = np.mean(simulation_times)
