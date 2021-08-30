@@ -210,6 +210,7 @@ def main(nqubits, type,
         # Try executing here so that compile time is not included
         # in the simulation time
         result = circuit(nshots=nshots)
+        del(result)
     logs[-1]["compile_time"] = time.time() - start_time
 
     start_time = time.time()
@@ -219,6 +220,7 @@ def main(nqubits, type,
     if transfer:
         result = result.numpy()
     logs[-1]["dry_run_transfer_time"] = time.time() - start_time
+    del(result)
 
 
     simulation_times, transfer_times = [], []
@@ -230,6 +232,8 @@ def main(nqubits, type,
         if transfer:
             result = result.numpy()
         transfer_times.append(time.time() - start_time)
+        if nshots is None:
+            del(result)
 
     logs[-1]["dtype"] = str(result.dtype)
     logs[-1]["simulation_times"] = simulation_times
