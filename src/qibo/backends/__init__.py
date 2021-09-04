@@ -22,7 +22,7 @@ class Backend:
             with open(profile_path) as f:
                 import yaml
                 profile = yaml.safe_load(f)
-        except FileNotFoundError:
+        except FileNotFoundError:  # pragma: no cover
             raise_error(FileNotFoundError,
                         f"Profile file {profile_path} not found.")
 
@@ -167,15 +167,6 @@ def get_backend():
         A string with the backend name.
     """
     return K.name
-
-
-def get_available_backends():
-    """Get list of available backends.
-
-    Returns:
-        A dictionnary with the names and modules for available backends.
-    """
-    return K.available_backends
 
 
 def set_precision(dtype="double"):
