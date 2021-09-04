@@ -827,6 +827,12 @@ The user can switch backends using
 before creating any circuits or gates. The default backend is the first available
 from ``qibojit``, ``qibotf``, ``tensorflow``, ``numpy``.
 
+For developers, provide a configuration file in ``qibo/backends/profiles.yml``
+containing the technical specifications for all backends supported by our team.
+If you are planning to introduce a new backend module for simulation or hardware
+please edit the profile file and include the reference to your module.
+Alternativelly, you can set a custom profile file using the ``QIBO_PROFILE``
+environment variable.
 
 .. autoclass:: qibo.backends.abstract.AbstractBackend
     :members:
