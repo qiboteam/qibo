@@ -49,7 +49,7 @@ setup(
     url="https://github.com/qiboteam/qibo",
     packages=find_packages("src"),
     package_dir={"": "src"},
-    package_data={"": ["*.out"]},
+    package_data={"": ["*.out", "*.yml"]},
     include_package_data=True,
     zip_safe=False,
     classifiers=[
