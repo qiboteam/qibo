@@ -49,7 +49,7 @@ class Backend:
                 custom_backend = getattr(importlib.import_module(
                     backend.get('from')), backend.get('class'))
                 self.available_backends[name] = custom_backend
-                if backend.get('is_hardware', False):
+                if backend.get('is_hardware', False):  # pragma: no cover
                     self.hardware_backends['qiboicarusq'] = custom_backend
                 if profile.get('default') == name:
                     active_backend = name
