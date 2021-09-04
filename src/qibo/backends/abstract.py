@@ -519,6 +519,11 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def cpu_tensor(self, x, dtype=None): # pragma: no cover
+        """Creates backend tensors to be casted on CPU only.
+
+        Used by :class:`qibo.core.states.DistributedState` to save state pieces
+        on CPU instead of GPUs during a multi-GPU simulation.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod
