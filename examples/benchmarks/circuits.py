@@ -102,16 +102,13 @@ _CIRCUITS = {"supremacy": SupremacyLikeCircuit,
 def CircuitFactory(nqubits: int,
                    circuit_type: str,
                    accelerators: Dict[str, int] = None,
-                   device: str = "/CPU:0",
                    **kwargs):
     if circuit_type == "qft":
-        circuit = models.QFT(nqubits, accelerators=accelerators,
-                             memory_device=device)
+        circuit = models.QFT(nqubits, accelerators=accelerators)
     else:
         if circuit_type not in _CIRCUITS:
             raise TypeError("Unknown benchmark circuit type {}."
                             "".format(circuit_type))
-        circuit = models.Circuit(nqubits, accelerators=accelerators,
-                                 memory_device=device)
+        circuit = models.Circuit(nqubits, accelerators=accelerators)
         circuit.add(_CIRCUITS[circuit_type](nqubits, **kwargs))
     return circuit

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 # @authors: S. Efthymiou
+import sys
 import math
 import joblib
 from qibo import K
@@ -35,24 +36,21 @@ class DistributedCircuit(circuit.Circuit):
             accelerators = {'/GPU:0': 2, '/GPU:1': 2}
             # Define a circuit on 32 qubits to be run in the above GPUs keeping
             # the full state vector in the CPU memory.
-            c = Circuit(32, accelerators, memory_device="/CPU:0")
+            c = Circuit(32, accelerators)
 
     Args:
         nqubits (int): Total number of qubits in the circuit.
         accelerators (dict): Dictionary that maps device names to the number of
             times each device will be used.
             The total number of logical devices must be a power of 2.
-        memory_device (str): Name of the device where the full state will be
-            saved (usually the CPU).
     """
 
-    def __init__(self,
-                 nqubits: int,
-                 accelerators: Dict[str, int],
-                 memory_device: str = "/CPU:0"):
+    def __init__(self, nqubits: int, accelerators: Dict[str, int]):
+        if sys.platform == "darwin":  # pragma: no cover
+            raise_error(NotImplementedError, "Distributed circuits are not "
+                                             "implemented for macos.")
         super().__init__(nqubits)
-        self.init_kwargs.update({"accelerators": accelerators,
-                                 "memory_device": memory_device})
+        self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())
         self.nglobal = float(math.log2(self.ndevices))
         if not (self.nglobal.is_integer() and self.nglobal > 0):
@@ -60,8 +58,6 @@ class DistributedCircuit(circuit.Circuit):
                                     "of 2 but is {}.".format(self.ndevices))
         self.nglobal = int(self.nglobal)
         self.nlocal = self.nqubits - self.nglobal
-
-        self.memory_device = memory_device
         self.calc_devices = accelerators
         self.queues = DistributedQueues(self, gate_module)
 
@@ -98,9 +94,10 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if K.name != "qibotf":
+        if K.name not in {"qibotf", "qibojit"}:
             raise_error(NotImplementedError, "Distributed circuit is implemented "
-                                             "only for the qibotf backend.")
+                                             "only for the qibotf and qibojit "
+                                             "backends.")
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")
@@ -114,9 +111,19 @@ class DistributedCircuit(circuit.Circuit):
         """"""
         raise_error(RuntimeError, "Cannot compile circuit that uses custom operators.")
 
-    def _device_job(self, state, gates):
-        for gate in gates:
-            state = gate(state)
+    @staticmethod
+    def _apply_gates(state, gates, device):
+        """Applies gates on a state using the specified device.
+
+        Args:
+            state (K.Tensor): State piece tensor to apply the gate to.
+            gates (list): List of gate objects to apply to the state piece.
+            device (str): GPU device to use for gate application.
+        """
+        with K.device(device):
+            state = K.cast(state)
+            for gate in gates:
+                state = gate(state)
         return state
 
     def _joblib_execute(self, state, queues: List[List["BackendGate"]]):
@@ -129,10 +136,9 @@ class DistributedCircuit(circuit.Circuit):
         """
         def device_job(ids, device):
             for i in ids:
-                with K.device(device):
-                    piece = self._device_job(state.pieces[i], queues[i])
-                    state.pieces[i].assign(piece)
-                    del(piece)
+                piece = self._apply_gates(state.pieces[i], queues[i], device)
+                K.cpu_assign(state, i, piece)
+                del(piece)
 
         pool = joblib.Parallel(n_jobs=len(self.calc_devices),
                                prefer="threads")
@@ -146,9 +152,7 @@ class DistributedCircuit(circuit.Circuit):
         for g in range(self.ndevices // 2):
             i = ((g >> m) << (m + 1)) + (g & (t - 1))
             local_eff = self.queues.qubits.reduced_local[local_qubit]
-            with K.device(self.memory_device):
-                K.op.swap_pieces(state.pieces[i], state.pieces[i + t],
-                                 local_eff, self.nlocal, K.nthreads)
+            K.swap_pieces(state.pieces[i], state.pieces[i + t], local_eff, self.nlocal)
 
     def _revert_swaps(self, state, swap_pairs: List[Tuple[int, int]]):
         for q1, q2 in swap_pairs:
@@ -157,21 +161,23 @@ class DistributedCircuit(circuit.Circuit):
             self._swap(state, q1, q2)
 
     def _special_gate_execute(self, state, gate: Union["BackendGate"]):
-        """Executes special gates on ``memory_device``.
+        """Executes special gates on CPU.
 
         Currently special gates are ``Flatten`` or ``CallbackGate``.
         This method calculates the full state vector because special gates
         are not implemented for state pieces.
         """
-        with K.device(self.memory_device):
+        with K.on_cpu():
             # Reverse all global SWAPs that happened so far
             self._revert_swaps(state, reversed(gate.swap_reset))
             full_state = state.tensor
+        with K.on_cpu():
             if isinstance(gate, gates.CallbackGate):
                 gate(full_state)
             else:
                 full_state = gate(full_state)
                 state.assign_pieces(full_state)
+        with K.on_cpu():
             # Redo all global SWAPs that happened so far
             self._revert_swaps(state, gate.swap_reset)
 
@@ -179,12 +185,9 @@ class DistributedCircuit(circuit.Circuit):
         """Performs all circuit gates on the state vector."""
         self._final_state = None
         state = self.get_initial_state(initial_state)
-        if self.measurement_gate is not None:
-            self.measurement_gate.device = self.memory_device
-
         special_gates = iter(self.queues.special_queue)
         for i, queues in enumerate(self.queues.queues):
-            if queues:  # standard gate
+            if queues: # standard gate
                 self._joblib_execute(state, queues)
             else: # special gate
                 gate = next(special_gates)
@@ -206,6 +209,9 @@ class DistributedCircuit(circuit.Circuit):
             raise_error(RuntimeError, "State does not fit in memory during distributed "
                                       "execution. Please create a new circuit with "
                                       "different device configuration and try again.")
+
+    def _device(self):
+        return K.on_cpu()
 
     def execute(self, initial_state=None, nshots=None):
         """Equivalent to :meth:`qibo.core.circuit.Circuit.execute`.

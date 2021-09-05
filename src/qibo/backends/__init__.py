@@ -40,7 +40,7 @@ class Backend:
         # check if qibojit is installed and use it as default backend.
         if self.check_availability("qibojit"): # pragma: no cover
             # qibojit backend is not tested until `qibojit` is available
-            from qibo.backends.numpy import JITCustomBackend
+            from qibo.backends.jit import JITCustomBackend
             self.available_backends["qibojit"] = JITCustomBackend
             active_backend = "qibojit"
 

@@ -1,4 +1,5 @@
 """Test methods defined in `qibo/models/circuit.py`."""
+import sys
 import numpy as np
 import pytest
 from qibo import gates, models, K
@@ -12,8 +13,12 @@ def test_circuit_constructor():
     assert isinstance(c, Circuit)
     c = models.Circuit(5, density_matrix=True)
     assert isinstance(c, DensityMatrixCircuit)
-    c = models.Circuit(5, accelerators={"/GPU:0": 2})
-    assert isinstance(c, DistributedCircuit)
+    if K.name not in {"qibotf", "qibojit"} or sys.platform == "darwin":  # pragma: no cover
+        with pytest.raises(NotImplementedError):
+            c = models.Circuit(5, accelerators={"/GPU:0": 2})
+    else:
+        c = models.Circuit(5, accelerators={"/GPU:0": 2})
+        assert isinstance(c, DistributedCircuit)
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 

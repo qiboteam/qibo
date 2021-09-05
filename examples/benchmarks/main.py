@@ -79,6 +79,18 @@ import qibo
 import circuits
 
 
+def get_active_branch_name():
+    """Returns the name of the active git branch."""
+    from pathlib import Path
+    qibo_dir = Path(qibo.__file__).parent.parent.parent
+    head_dir = qibo_dir / ".git" / "HEAD"
+    with head_dir.open("r") as f:
+        content = f.read().splitlines()
+    for line in content:
+        if line[0:4] == "ref:":
+            return line.partition("refs/heads/")[2]
+
+
 def parse_accelerators(accelerators):
     """Transforms string that specifies accelerators to dictionary.
 
@@ -113,7 +125,7 @@ def main(nqubits, type,
          backend="custom", precision="double",
          device=None, accelerators=None, threadsafe=False,
          nreps=1, nshots=None,
-         transfer=False, fuse=False, compile=False,
+         transfer=False, fuse=False, compile=False, get_branch=True,
          nlayers=None, gate_type=None, params={},
          filename=None):
     """Runs benchmarks for different circuit types.
@@ -137,6 +149,7 @@ def main(nqubits, type,
         fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
         compile: If ``True`` then the Tensorflow graph is compiled using
             ``circuit.compile()``. Compilation time is logged in this case.
+        get_branch (bool): If ``True`` it logs the name of the enabled git branch.
         nlayers (int): Number of layers for supremacy-like or gate circuits.
             If a different circuit is used ``nlayers`` is ignored.
         gate_type (str): Type of gate for gate circuits.
@@ -167,8 +180,11 @@ def main(nqubits, type,
         "nqubits": nqubits, "circuit_type": type, "threading": "",
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
         "device": qibo.get_device(), "accelerators": accelerators,
-        "nshots": nshots, "transfer": transfer, "fuse": fuse, "compile": compile
+        "nshots": nshots, "transfer": transfer,
+        "fuse": fuse, "compile": compile,
         })
+    if get_branch:
+        logs[-1]["branch"] = get_active_branch_name()
 
     params = {k: v for k, v in params.items() if v is not None}
     kwargs = {"nqubits": nqubits, "circuit_type": type}
@@ -177,7 +193,6 @@ def main(nqubits, type,
     if gate_type is not None: kwargs["gate_type"] = gate_type
     if accelerators is not None:
         kwargs["accelerators"] = accelerators
-        kwargs["device"] = device
     logs[-1].update(kwargs)
 
     start_time = time.time()
@@ -189,36 +204,49 @@ def main(nqubits, type,
         circuit = circuit.fuse()
     logs[-1]["creation_time"] = time.time() - start_time
 
+    start_time = time.time()
     if compile:
-        start_time = time.time()
         circuit.compile()
         # Try executing here so that compile time is not included
         # in the simulation time
         result = circuit(nshots=nshots)
-        logs[-1]["compile_time"] = time.time() - start_time
+        del(result)
+    logs[-1]["compile_time"] = time.time() - start_time
 
     start_time = time.time()
     result = circuit(nshots=nshots)
+    logs[-1]["dry_run_time"] = time.time() - start_time
+    start_time = time.time()
     if transfer:
         result = result.numpy()
-    logs[-1]["dry_run_time"] = time.time() - start_time
+    logs[-1]["dry_run_transfer_time"] = time.time() - start_time
+    del(result)
 
-    simulation_time = []
+
+    simulation_times, transfer_times = [], []
     for _ in range(nreps):
         start_time = time.time()
         result = circuit(nshots=nshots)
+        simulation_times.append(time.time() - start_time)
+        start_time = time.time()
         if transfer:
             result = result.numpy()
-        simulation_time.append(time.time() - start_time)
-    logs[-1]["dtype"] = str(result.dtype)
-    logs[-1]["simulation_time"] = np.mean(simulation_time)
-    logs[-1]["simulation_time_std"] = np.std(simulation_time)
+        transfer_times.append(time.time() - start_time)
+        logs[-1]["dtype"] = str(result.dtype)
+        if nshots is None:
+            del(result)
 
+    logs[-1]["simulation_times"] = simulation_times
+    logs[-1]["transfer_times"] = transfer_times
+    logs[-1]["simulation_times_mean"] = np.mean(simulation_times)
+    logs[-1]["simulation_times_std"] = np.std(simulation_times)
+    logs[-1]["transfer_times_mean"] = np.mean(transfer_times)
+    logs[-1]["transfer_times_std"] = np.std(transfer_times)
 
+    start_time = time.time()
     if nshots is not None:
-        start_time = time.time()
         freqs = result.frequencies()
-        logs[-1]["measurement_time"] = time.time() - start_time
+    logs[-1]["measurement_time"] = time.time() - start_time
 
     if logs[-1]["backend"] == "qibojit" and qibo.K.op.get_backend() == "numba":
         from numba import threading_layer

@@ -40,9 +40,9 @@ class Hamiltonian(hamiltonians.MatrixHamiltonian):
             that implements the Hamiltonian represented by the given symbolic
             expression.
         """
-        log.warn("`Hamiltonian.from_symbolic` and the use of symbol maps is "
-                 "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
-                 "to construct Hamiltonians using symbols.")
+        log.warning("`Hamiltonian.from_symbolic` and the use of symbol maps is "
+                    "deprecated. Please use `SymbolicHamiltonian` and Qibo symbols "
+                    "to construct Hamiltonians using symbols.")
         return SymbolicHamiltonian(symbolic_hamiltonian, symbol_map)
 
     def eigenvalues(self):
@@ -190,14 +190,13 @@ class TrotterCircuit:
         nqubits (int): Number of qubits in the system that evolves.
         accelerators (dict): Dictionary with accelerators for distributed
             circuits.
-        memory_device (str): Memory device for distributed circuits.
     """
 
-    def __init__(self, groups, dt, nqubits, accelerators, memory_device):
+    def __init__(self, groups, dt, nqubits, accelerators):
         from qibo.models import Circuit
         self.gates = {}
         self.dt = dt
-        self.circuit = Circuit(nqubits, accelerators=accelerators, memory_device=memory_device)
+        self.circuit = Circuit(nqubits, accelerators=accelerators)
         for group in itertools.chain(groups, groups[::-1]):
             gate = group.term.expgate(dt / 2.0)
             self.gates[gate] = group
@@ -398,13 +397,13 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         raise_error(NotImplementedError, "Hamiltonian matmul to {} not "
                                          "implemented.".format(type(o)))
 
-    def circuit(self, dt, accelerators=None, memory_device="/CPU:0"):
+    def circuit(self, dt, accelerators=None):
         """Circuit that implements a Trotter step of this Hamiltonian for a given time step ``dt``."""
         if self.trotter_circuit is None:
             from qibo.core.terms import TermGroup
             groups = TermGroup.from_terms(self.terms)
             self.trotter_circuit = TrotterCircuit(groups, dt, self.nqubits,
-                                                  accelerators, memory_device)
+                                                  accelerators)
         self.trotter_circuit.set(dt)
         return self.trotter_circuit.circuit
 

@@ -7,7 +7,7 @@ from scipy.linalg import expm
 
 def assert_states_equal(state, target_state, atol=0):
     """Asserts that two state vectors are equal up to a phase."""
-    phase = K.to_numpy(state[0] / target_state[0])
+    phase = K.to_numpy(state)[0] / K.to_numpy(target_state)[0]
     K.assert_allclose(state, phase * target_state, atol=atol)
 
 
@@ -103,7 +103,7 @@ def test_state_evolution_trotter_hamiltonian(backend, accelerators, nqubits, sol
     if solver == "exp":
         evolution = models.StateEvolution(ham, dt / 10, accelerators=accelerators)
         final_psi = evolution(final_time=1, initial_state=np.copy(target_psi[0]))
-        assert_states_equal(final_psi, target_psi[-1], atol=atol)
+        assert_states_equal(final_psi.tensor, target_psi[-1], atol=atol)
 
 
 def test_adiabatic_evolution_init():
