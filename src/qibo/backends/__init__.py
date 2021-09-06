@@ -38,7 +38,7 @@ class Backend:
         for backend in profile.get('backends'):
             name = backend.get('name')
             if self.check_availability(name):
-                if name == 'tensorflow':
+                if name == 'tensorflow' or name == 'qibotf':
                     os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(
                         config.TF_LOG_LEVEL)
                     import tensorflow as tf  # pylint: disable=E0401
@@ -50,7 +50,7 @@ class Backend:
                     backend.get('from')), backend.get('class'))
                 self.available_backends[name] = custom_backend
                 if backend.get('is_hardware', False):  # pragma: no cover
-                    self.hardware_backends['qiboicarusq'] = custom_backend
+                    self.hardware_backends[name] = custom_backend
                 if profile.get('default') == name:
                     active_backend = name
 
