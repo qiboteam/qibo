@@ -57,6 +57,11 @@ class JITCustomBackend(NumpyBackend):
             self.set_threads(self.nthreads)
         self.cupy_cpu_device = CupyCpuDevice(self)
 
+        # enable multi-GPU if no macos
+        import sys
+        if sys.platform != "darwin":
+            self.supports_multigpu = True
+
     def set_engine(self, name): # pragma: no cover
         """Switcher between ``cupy`` for GPU and ``numba`` for CPU."""
         if name == "numba":

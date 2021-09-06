@@ -54,7 +54,7 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    if accelerators and (K.name not in {"qibotf", "qibojit"} or sys.platform == "darwin"):
+    if accelerators and not K.supports_multigpu:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
             c.add(qibo_gate)

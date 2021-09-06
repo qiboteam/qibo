@@ -16,14 +16,14 @@ class Circuit(StateCircuit):
                 raise_error(NotImplementedError,
                             "Distributed circuits are not implemented for "
                             "density matrices.")
-            if K.hardware_module:
+            if K.is_hardware:
                 raise_error(NotImplementedError,
                             "Hardware backend does not support density matrix "
                             "simulation.")
             from qibo.core.circuit import DensityMatrixCircuit as circuit_cls
             kwargs = {}
         elif kwargs["accelerators"] is not None:
-            if K.hardware_module:
+            if K.is_hardware:
                 raise_error(NotImplementedError,
                             "Hardware backend does not support multi-GPU "
                             "configuration.")
@@ -38,7 +38,7 @@ class Circuit(StateCircuit):
             kwargs.pop("density_matrix")
         else:
             kwargs = {}
-            if K.hardware_module: # pragma: no cover
+            if K.is_hardware: # pragma: no cover
                 # hardware backend is not tested until `qiboicarusq` is available
                 circuit_cls = K.hardware_circuit
             else:
