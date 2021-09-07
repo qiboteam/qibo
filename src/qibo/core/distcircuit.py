@@ -46,9 +46,9 @@ class DistributedCircuit(circuit.Circuit):
     """
 
     def __init__(self, nqubits: int, accelerators: Dict[str, int]):
-        if sys.platform == "darwin":  # pragma: no cover
-            raise_error(NotImplementedError, "Distributed circuits are not "
-                                             "implemented for macos.")
+        if not K.supports_multigpu:  # pragma: no cover
+            raise_error(NotImplementedError, f"Distributed circuit is not supported "
+                                              "by the {K.name} backend.")
         super().__init__(nqubits)
         self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())
@@ -94,10 +94,6 @@ class DistributedCircuit(circuit.Circuit):
 
         Also checks that there are sufficient qubits to use as global.
         """
-        if K.name not in {"qibotf", "qibojit"}:
-            raise_error(NotImplementedError, "Distributed circuit is implemented "
-                                             "only for the qibotf and qibojit "
-                                             "backends.")
         if isinstance(gate, gates.KrausChannel):
             raise_error(NotImplementedError, "Distributed circuits do not "
                                              "support channels.")

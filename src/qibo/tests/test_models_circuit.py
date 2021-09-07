@@ -13,7 +13,7 @@ def test_circuit_constructor():
     assert isinstance(c, Circuit)
     c = models.Circuit(5, density_matrix=True)
     assert isinstance(c, DensityMatrixCircuit)
-    if K.name not in {"qibotf", "qibojit"} or sys.platform == "darwin":  # pragma: no cover
+    if not K.supports_multigpu:  # pragma: no cover
         with pytest.raises(NotImplementedError):
             c = models.Circuit(5, accelerators={"/GPU:0": 2})
     else:
@@ -24,12 +24,12 @@ def test_circuit_constructor():
 
 
 def test_circuit_constructor_hardware_errors():
-    K.hardware_module = "test"
+    K.is_hardware = True
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, density_matrix=True)
-    K.hardware_module = None
+    K.is_hardware = False
 
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:

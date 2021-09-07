@@ -46,6 +46,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         self._seed = None
         # seed can be modified using ``K.set_seed``
 
+        self.supports_gradients = True
+
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
 
@@ -237,6 +239,14 @@ class TensorflowCustomBackend(TensorflowBackend):
         import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
+
+        # enable multi-GPU if no macos
+        import sys
+        if sys.platform != "darwin":
+            self.supports_multigpu = True
+
+        # no gradient support for custom operators
+        self.supports_gradients = False
 
     def set_threads(self, nthreads):
         abstract.AbstractBackend.set_threads(self, nthreads)

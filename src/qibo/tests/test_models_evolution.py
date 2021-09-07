@@ -310,7 +310,7 @@ def test_scheduling_optimization(method, options, messages, dense, filename):
 
     if method == "sgd":
         from qibo import K
-        if K.name != "tensorflow":
+        if not K.supports_gradients:
             with pytest.raises(RuntimeError):
                 best, params, _ = adevp.minimize([0.5, 1], method=method, options=options,
                                 messages=messages)

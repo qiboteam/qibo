@@ -31,7 +31,10 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
+        self.supports_multigpu = False
+        self.supports_gradients = False
 
+        self.is_hardware = False
         self.hardware_module = None
         self.hardware_circuit = None
         self.hardware_gates = None
