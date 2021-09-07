@@ -7,13 +7,11 @@ import sys
 import pytest
 import qibo
 
-_available_backends = set(qibo.K.available_backends.keys())
+_available_backends = set(qibo.K.available_backends.keys()) - set(qibo.K.hardware_backends.keys())
 _ACCELERATORS = None
-if ("qibotf" in _available_backends or "qibojit" in _available_backends):
-    _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
-if "icarusq" in _available_backends: # pragma: no cover
-    # skip hardware backend for tests
-    _available_backends.remove("icarusq")
+for bkd in _available_backends:
+    if qibo.K.available_backends[bkd]().supports_multigpu:
+        _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
 
 

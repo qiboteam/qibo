@@ -117,12 +117,10 @@ class single_qubit_classifier:
         elif method == 'sgd':
             circuit = self.circuit(self.training_set[0])
             for gate in circuit.queue:
-                if K.name != "tensorflow":
+                if not K.supports_gradients:
                     from qibo.config import raise_error
                     raise_error(RuntimeError,
-                                'SGD VQE requires native Tensorflow '
-                                'gates because gradients are not '
-                                'supported in the custom kernels.')
+                                'Use tensorflow backend in order to compute gradients.')
 
             sgd_options = {"nepochs": 5001,
                            "nmessage": 1000,
