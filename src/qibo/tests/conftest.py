@@ -9,7 +9,7 @@ import qibo
 
 _available_backends = set(qibo.K.available_backends.keys()) - set(qibo.K.hardware_backends.keys())
 _ACCELERATORS = None
-for backend in _available_backends:
+for backend in qibo.K.available_backends:
     if backend.supports_multigpu:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
