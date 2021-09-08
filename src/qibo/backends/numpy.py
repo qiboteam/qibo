@@ -218,7 +218,8 @@ class NumpyBackend(abstract.AbstractBackend):
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_BATCH_SIZE
         def update_frequencies(nsamples, frequencies):
-            samples = self.random.choice(range(len(probs)), size=nsamples, p=probs)
+            samples = self.random.choice(
+                range(len(probs)), size=nsamples, p=probs/self.backend.sum(probs))
             res, counts = self.backend.unique(samples, return_counts=True)
             frequencies[res] += counts
             return frequencies
