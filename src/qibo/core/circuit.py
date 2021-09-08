@@ -47,32 +47,6 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
-    def _fuse_copy(self):
-        """Helper method for ``circuit.fuse``.
-
-        For standard (non-distributed) circuits this creates a copy of the
-        circuit with deep-copying the parametrized gates only.
-        For distributed circuits a fully deep copy should be created.
-        """
-        import copy
-        from qibo.abstractions.abstract_gates import ParametrizedGate
-        new_circuit = self.__class__(**self.init_kwargs)
-        for gate in self.queue:
-            if isinstance(gate, ParametrizedGate):
-                if gate.trainable:
-                    new_gate = copy.copy(gate)
-                    new_circuit.queue.append(new_gate)
-                    new_circuit.parametrized_gates.append(new_gate)
-                    new_circuit.trainable_gates.append(new_gate)
-                else:
-                    new_circuit.queue.append(gate)
-                    new_circuit.parametrized_gates.append(gate)
-            else:
-                new_circuit.queue.append(gate)
-        new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
-        return new_circuit
-
     def fuse(self):
         """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
 
@@ -89,9 +63,8 @@ class Circuit(circuit.AbstractCircuit):
                 c.add([gates.Y(0), gates.Y(1)])
                 # create circuit with fused gates
                 fused_c = c.fuse()
-                # now ``fused_c`` contains only one ``gates.Unitary`` gate
-                # that is equivalent to applying the five gates of the original
-                # circuit.
+                # now ``fused_c`` contains a single gate that is equivalent
+                # to applying the five gates of the original circuit.
         """
         from qibo import gates
         from qibo.abstractions.circuit import _Queue
