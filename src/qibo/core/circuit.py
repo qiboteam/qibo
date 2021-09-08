@@ -93,14 +93,77 @@ class Circuit(circuit.AbstractCircuit):
                 # that is equivalent to applying the five gates of the original
                 # circuit.
         """
+        from qibo import gates
         from qibo.abstractions.circuit import _Queue
-        new_circuit = self._fuse_copy()
-        new_circuit.fusion_groups = self.fusion.FusionGroup.from_queue(
-            new_circuit.queue)
-        new_circuit.queue = _Queue(self.nqubits)
-        for group in new_circuit.fusion_groups:
-            for gate in group.gates:
-                new_circuit.queue.append(gate)
+
+        # Fuse one qubit gates
+        temp_queue = _Queue(self.nqubits)
+        one_qubit_cache = {}
+        for gate in self.queue:
+            qubits = gate.qubits
+            if len(qubits) == 1:
+                q = qubits[0]
+                if q in one_qubit_cache:
+                    one_qubit_cache.get(q).add(gate)
+                else:
+                    one_qubit_cache[q] = gates.FusedGate(q)
+                    one_qubit_cache[q].add(gate)
+
+            else:
+                for q in qubits:
+                    if q in one_qubit_cache:
+                        temp_queue.append(one_qubit_cache.pop(q))
+                temp_queue.append(gate)
+
+        for gate in one_qubit_cache.values():
+            temp_queue.append(gate)
+
+        # Fuse two qubit gates
+        queue = _Queue(self.nqubits)
+        one_qubit_cache, two_qubit_cache = {}, {}
+        pair_map = {} # int -> (int, int)
+        for gate in temp_queue:
+            qubits = gate.qubits
+            if len(qubits) == 1:
+                q = qubits[0]
+                assert q not in one_qubit_cache
+                p = pair_map.get(q)
+                if p in two_qubit_cache:
+                    two_qubit_cache.get(p).add(gate)
+                else:
+                    one_qubit_cache[q] = gate
+
+            elif len(qubits) == 2:
+                p = tuple(sorted(qubits))
+                if p in two_qubit_cache:
+                    two_qubit_cache.get(p).add(gate)
+                else:
+                    two_qubit_cache[p] = gates.FusedGate(*p)
+                    for q in p:
+                        r = pair_map.get(q)
+                        if r in two_qubit_cache:
+                            queue.append(two_qubit_cache.pop(r))
+                        pair_map[q] = p
+                        if q in one_qubit_cache:
+                            two_qubit_cache[p].add(one_qubit_cache.pop(q))
+                    two_qubit_cache[p].add(gate)
+
+            else:
+                for q in qubits:
+                    if q in one_qubit_cache:
+                        queue.append(one_qubit_cache.pop(q))
+                    p = pair_map.get(q)
+                    if p in two_qubit_cache:
+                        queue.append(two_qubit_cache.pop(p))
+                queue.append(gate)
+
+        for gate in one_qubit_cache.values():
+            queue.append(gate)
+        for gate in two_qubit_cache.values():
+            queue.append(gate)
+
+        new_circuit = self.__class__(**self.init_kwargs)
+        new_circuit.queue = queue
         return new_circuit
 
     def _eager_execute(self, state):

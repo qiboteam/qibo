@@ -1072,3 +1072,31 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             self._target_qubits = original_targets
             return K.reshape(state, shape)
         return K._state_vector_call(self, state)
+
+
+class FusedGate(MatrixGate, abstract_gates.FusedGate):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        abstract_gates.FusedGate.__init__(self, *q)
+        if len(self.target_qubits) == 1:
+            self.gate_op = K.op.apply_gate
+        elif len(self.target_qubits) == 2:
+            self.gate_op = K.op.apply_two_qubit_gate
+        else:
+            raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
+
+    def _construct_unitary(self):
+        matrix = K.qnp.eye(2 ** len(self.target_qubits))
+        for gate in self.gates:
+            gmatrix = K.to_numpy(gate.matrix)
+            if len(gate.qubits) < len(self.target_qubits):
+                if gate.qubits[0] == self.target_qubits[0]:
+                    gmatrix = K.qnp.kron(gmatrix, K.qnp.eye(2))
+                else:
+                    gmatrix = K.qnp.kron(K.qnp.eye(2), gmatrix)
+            elif gate.qubits != self.target_qubits:
+                gmatrix = K.qnp.reshape(gate.matrix, 4 * (2,))
+                gmatrix = K.qnp.transpose(gmatrix, [1, 0, 3, 2])
+            matrix = gmatrix @ matrix
+        return K.cast(matrix)

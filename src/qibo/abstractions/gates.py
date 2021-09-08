@@ -1550,3 +1550,27 @@ class _ThermalRelaxationChannelB(Gate):
             seed=seed)
         # this case can only be applied to density matrices
         self.density_matrix = True
+
+
+class FusedGate(Gate):
+
+    def __init__(self, *q):
+        super().__init__()
+        self.name = "fused"
+        self.target_qubits = tuple(q)
+        self.init_args = list(q)
+        self.qubit_set = set(q)
+        self.gates = []
+
+    def add(self, gate):
+        if not set(gate.qubits).issubset(self.qubit_set):
+            raise_error(ValueError, "Cannot add gate that targets {} "
+                                    "in fused gate acting on {}."
+                                    "".format(gate.qubits, self.qubits))
+        if isinstance(gate, self.__class__):
+            self.gates.extend(gate.gates)
+        else:
+            self.gates.append(gate)
+
+    def __iter__(self):
+        return iter(self.gates)
