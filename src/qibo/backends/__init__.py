@@ -59,8 +59,9 @@ class Backend:
         self.qnp = self.construct_backend("numpy")
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ:  # pragma: no cover
-            active_backend = os.environ.get("QIBO_BACKEND")
-        self.active_backend = active_backend
+            self.active_backend = os.environ.get("QIBO_BACKEND")
+        else:
+            self.active_backend = active_backend
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()
