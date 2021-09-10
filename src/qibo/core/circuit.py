@@ -111,6 +111,10 @@ class Circuit(circuit.AbstractCircuit):
         for gate in two_qubit_cache.values():
             queue.append(gate)
 
+        for i, gate in enumerate(queue):
+            if isinstance(gate, gates.FusedGate) and len(gate.gates) == 1:
+                queue[i] = gate.gates[0]
+
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.queue = queue
         return new_circuit
