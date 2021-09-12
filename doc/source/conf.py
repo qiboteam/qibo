@@ -72,7 +72,12 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "sphinx_rtd_theme"
+html_theme = "sphinx_book_theme"
+html_theme_options = {
+    "repository_url": "https://github.com/qiboteam/qibo",
+    "use_repository_button": True,
+}
+html_title = f"{release}"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -100,6 +105,6 @@ def setup(app):
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
 
-html_logo = "logo.png"
+html_logo = "qibo_logo.svg"
 
-html_show_sourcelink = False
+html_show_sourcelink = True
