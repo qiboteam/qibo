@@ -2,7 +2,7 @@
 import os
 import pytest
 import pathlib
-
+from qibo.config import raise_error
 
 class CodeText:
     """Helper class to iterate through code text skipping the docstrings."""
@@ -61,7 +61,7 @@ class CodeText:
         """Checks if a word exists in the code text."""
         for piece in self:
             i = piece.find(target_word)
-            if i > 0: # pragma: no cover
+            if i > 0:
                 # This should not execute if the code does not contain `print` statements
                 from qibo.config import raise_error
                 line = self.get_line(i)
@@ -80,6 +80,23 @@ def python_files():
             if len(pieces) == 2 and pieces[1] == "py" and pieces[0] != "test_prints":
                 yield os.path.join(subdir, file)
 
+# Make sure the CodeText class works as intended
+text_examples = [
+    ('print("Test")', True),
+    ('print("Test")\n""" docstring """', True),
+    ('""" docstring """\nprint("Test")\n""" docstring """', True),
+    ('pass', False),
+    ('pass\n""" docstring with print """', False),
+    ('""" docstring with print """\npass\n""" docstring with print """', False)
+]
+@pytest.mark.parametrize(("text", "contains_print"), text_examples)
+def test_codetext_class(text, contains_print):
+    """Check if the CodeText class is working properly"""
+    if contains_print:
+        with pytest.raises(ValueError):
+            CodeText(text).check_exists("print")
+    else:
+        CodeText(text).check_exists("print")
 
 @pytest.mark.parametrize("filename", python_files())
 def test_qibo_code(filename):
