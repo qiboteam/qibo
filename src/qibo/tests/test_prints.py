@@ -12,7 +12,6 @@ class CodeText:
         self.filedir = filedir
         self.line_counter = 0
         self.piece_counter = 0
-        self.starts_with_docstring = (code[:3] == '"""')
         self.pieces = None
 
     @classmethod
@@ -38,14 +37,14 @@ class CodeText:
 
         if self.piece_counter < len(self.pieces):
             # skip docstrings
-            if self.piece_counter % 2 == self.starts_with_docstring:
+            if self.piece_counter % 2 == 0:
                 return self.pieces[self.piece_counter]
             else:
                 return self.__next__()
 
         raise StopIteration
 
-    def get_line(self, i): # pragma: no cover
+    def get_line(self, i):
         """Calculates line number of the identified `print`.
 
         Args:
@@ -61,9 +60,8 @@ class CodeText:
         """Checks if a word exists in the code text."""
         for piece in self:
             i = piece.find(target_word)
-            if i > 0:
+            if i >= 0:
                 # This should not execute if the code does not contain `print` statements
-                from qibo.config import raise_error
                 line = self.get_line(i)
                 raise_error(ValueError, f"Found `{target_word}` in line {line} "
                                         f"of {self.filedir}.")
