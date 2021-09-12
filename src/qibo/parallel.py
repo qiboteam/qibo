@@ -53,8 +53,9 @@ class ParallelResources:  # pragma: no cover
                     # if copy is not implemented just use the original object
                     copy = obj
                 except Exception as e:
-                    # use print otherwise the message will not appear
-                    print('Exception in ParallelResources', str(e))
+                    # otherwise the message will not appear
+                    from qibo.config import raise_error
+                    raise_error(Exception, 'Exception in ParallelResources ' + str(e))
                 args.append(copy)
             args = tuple(args)
             self._objects_per_process[pname] = args
