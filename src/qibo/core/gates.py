@@ -1079,12 +1079,13 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
     def __init__(self, *q):
         BackendGate.__init__(self)
         abstract_gates.FusedGate.__init__(self, *q)
-        if len(self.target_qubits) == 1:
-            self.gate_op = K.op.apply_gate
-        elif len(self.target_qubits) == 2:
-            self.gate_op = K.op.apply_two_qubit_gate
-        else:
-            raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
+        if self.gate_op:
+            if len(self.target_qubits) == 1:
+                self.gate_op = K.op.apply_gate
+            elif len(self.target_qubits) == 2:
+                self.gate_op = K.op.apply_two_qubit_gate
+            else:
+                raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
 
     def _construct_unitary(self):
         matrix = K.qnp.eye(2 ** len(self.target_qubits))
