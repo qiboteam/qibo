@@ -380,13 +380,6 @@ Controlled third general unitary (CU3)
     :members:
     :member-order: bysource
 
-Controlled third general unitary (CU3)
-""""""""""""""""""""""""""""""""""""""
-
-.. autoclass:: qibo.abstractions.gates.CU3
-    :members:
-    :member-order: bysource
-
 Swap (SWAP)
 """""""""""
 
