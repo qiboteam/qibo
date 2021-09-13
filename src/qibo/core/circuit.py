@@ -70,50 +70,69 @@ class Circuit(circuit.AbstractCircuit):
         from qibo.abstractions.circuit import _Queue
 
         queue = _Queue(self.nqubits)
-        one_qubit_cache, two_qubit_cache = {}, {}
-        pair_map = {} # int -> (int, int)
+        gate_map = {}
+        removed_gates = set()
         for gate in self.queue:
             qubits = gate.qubits
             if len(qubits) == 1:
                 q = qubits[0]
-                p = pair_map.get(q)
-                if p in two_qubit_cache:
-                    two_qubit_cache.get(p).add(gate)
-                else:
-                    if q not in one_qubit_cache:
-                        one_qubit_cache[q] = gates.FusedGate(q)
-                    one_qubit_cache.get(q).add(gate)
+                if q not in gate_map:
+                    gate_map[q] = gates.FusedGate(q)
+                gate_map.get(q).add(gate)
 
             elif len(qubits) == 2:
-                p = tuple(sorted(qubits))
-                if p not in two_qubit_cache:
-                    two_qubit_cache[p] = gates.FusedGate(*p)
-                    for q in p:
-                        r = pair_map.get(q)
-                        if r in two_qubit_cache and r != p:
-                            queue.append(two_qubit_cache.pop(r))
-                        pair_map[q] = p
-                        if q in one_qubit_cache:
-                            two_qubit_cache[p].add(one_qubit_cache.pop(q))
-                two_qubit_cache.get(p).add(gate)
+                q0, q1 = tuple(sorted(qubits))
+                if q0 in gate_map or q1 in gate_map:
+                    if gate_map.get(q0) == gate_map.get(q1):
+                        gate_map.get(q0).add(gate)
+                    else:
+                        fgate = gates.FusedGate(q0, q1)
+                        if q0 in gate_map:
+                            ogate = gate_map.pop(q0)
+                            if len(ogate.target_qubits) == 1:
+                                fgate.add(ogate)
+                            elif ogate in removed_gates:
+                                removed_gates.remove(ogate)
+                                queue.append(ogate)
+                            else:
+                                removed_gates.add(ogate)
+                        if q1 in gate_map:
+                            ogate = gate_map.pop(q1)
+                            if len(ogate.target_qubits) == 1:
+                                fgate.add(ogate)
+                            elif ogate in removed_gates:
+                                removed_gates.remove(ogate)
+                                queue.append(ogate)
+                            else:
+                                removed_gates.add(ogate)
+                        fgate.add(gate)
+                        gate_map[q0], gate_map[q1] = fgate, fgate
+
+                else:
+                    fgate = gates.FusedGate(q0, q1)
+                    fgate.add(gate)
+                    gate_map[q0], gate_map[q1] = fgate, fgate
 
             else:
                 for q in qubits:
-                    if q in one_qubit_cache:
-                        queue.append(one_qubit_cache.pop(q))
-                    p = pair_map.get(q)
-                    if p in two_qubit_cache:
-                        queue.append(two_qubit_cache.pop(p))
+                    if q in gate_map:
+                        ogate = gate_map.pop(q)
+                        if ogate in removed_gates:
+                            removed_gates.remove(ogate)
+                            queue.append(ogate)
+                        else:
+                            removed_gates.add(ogate)
                 queue.append(gate)
-
-        for gate in one_qubit_cache.values():
-            queue.append(gate)
-        for gate in two_qubit_cache.values():
-            queue.append(gate)
 
         for i, gate in enumerate(queue):
             if isinstance(gate, gates.FusedGate) and len(gate.gates) == 1:
                 queue[i] = gate.gates[0]
+        removed_gates |= set(gate_map.values())
+        for gate in removed_gates:
+            if len(gate.gates) == 1:
+                queue.append(gate.gates[0])
+            else:
+                queue.append(gate)
 
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.queue = queue
