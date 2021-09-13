@@ -69,15 +69,17 @@ class CodeText:
 
 def python_files():
     """Iterator that yields all python files (`.py`) in `/src/qibo/`."""
-    excluded_files = ["test_prints", "parallel"] # beware of files of the same name
+    excluded_files = ["tests/test_prints.py", "parallel.py"] # list with excluded files
     basedir = pathlib.Path(os.path.realpath(__file__)).parent.parent
     for subdir, _, files in os.walk(basedir):
         for file in files:
             pieces = file.split(".")
-            # skip non-`.py` files
-            # skip current file because it contains `print`
-            if len(pieces) == 2 and pieces[1] == "py" and (pieces[0] not in excluded_files):
-                yield os.path.join(subdir, file)
+            full_path = os.path.join(subdir, file) # get the absolute path
+            relative_path = full_path.split("/src/qibo/")[-1] # relative path from /src/qibo/
+            # skip non-`.py` files i.e. pieces should be ["filename", ".py"]
+            # skip excluded files i.e. relative path should not be in `excluded_files`
+            if len(pieces) == 2 and pieces[1] == "py" and (relative_path not in excluded_files):
+                yield full_path
 
 # Make sure the CodeText class works as intended
 text_examples = [
