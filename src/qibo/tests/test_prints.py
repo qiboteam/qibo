@@ -44,42 +44,32 @@ class CodeText:
 
         raise StopIteration
 
-    def get_line(self, i):
-        """Calculates line number of the identified `print`.
+    def check_exists(self, target_word):
+        """Checks if a word exists in the code text.
+        Raises a ValueError if the word is found.
+        Ignores a specific occurence if `CodeText:skip` occurs on the same line.
 
         Args:
-            i (int): String index that the `print` was found.
-
-        Returns:
-            The line number of the corresponding `print` in the file.
+            target_word(str): word to be searched in the code text
         """
-        piece = self.pieces[self.piece_counter][:i]
-        return self.line_counter + len(piece.split("\n"))
-
-    def check_exists(self, target_word):
-        """Checks if a word exists in the code text."""
         for piece in self:
-            i = piece.find(target_word)
-            if i >= 0:
-                # This should not execute if the code does not contain `print` statements
-                line = self.get_line(i)
-                raise_error(ValueError, f"Found `{target_word}` in line {line} "
-                                        f"of {self.filedir}.")
+            for offset, line in enumerate(piece.split("\n")):
+                if ("print" in line) and ("CodeText:skip" not in line):
+                    line_num = self.line_counter + offset + 1
+                    raise_error(ValueError, f"Found `{target_word}` in line {line_num} "
+                                            f"of {self.filedir}.")
 
 
 def python_files():
     """Iterator that yields all python files (`.py`) in `/src/qibo/`."""
-    excluded_files = ["tests/test_prints.py", "parallel.py"] # list with excluded files
     basedir = pathlib.Path(os.path.realpath(__file__)).parent.parent
     for subdir, _, files in os.walk(basedir):
         for file in files:
             pieces = file.split(".")
-            full_path = os.path.join(subdir, file) # get the absolute path
-            relative_path = full_path.split("/src/qibo/")[-1] # relative path from /src/qibo/
-            # skip non-`.py` files i.e. pieces should be ["filename", ".py"]
-            # skip excluded files i.e. relative path should not be in `excluded_files`
-            if len(pieces) == 2 and pieces[1] == "py" and (relative_path not in excluded_files):
-                yield full_path
+            # skip non-`.py` files
+            # skip current file because it contains `print`
+            if len(pieces) == 2 and pieces[1] == "py" and pieces[0] != "test_prints":
+                yield os.path.join(subdir, file)
 
 # Make sure the CodeText class works as intended
 text_examples = [
@@ -88,7 +78,11 @@ text_examples = [
     ('""" docstring """\nprint("Test")\n""" docstring """', True),
     ('pass', False),
     ('pass\n""" docstring with print """', False),
-    ('""" docstring with print """\npass\n""" docstring with print """', False)
+    ('""" docstring with print """\npass\n""" docstring with print """', False),
+    ('pass # CodeText:skip', False),
+    ('print("Test") # CodeText:skip', False),
+    ('print("Test")\nprint("Test) # CodeText:skip', True),
+    ('print("Test") # CodeText:skip\nprint("Test)', True)
 ]
 @pytest.mark.parametrize(("text", "contains_print"), text_examples)
 def test_codetext_class(text, contains_print):
