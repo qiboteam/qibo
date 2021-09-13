@@ -90,7 +90,7 @@ class Circuit(circuit.AbstractCircuit):
                     two_qubit_cache[p] = gates.FusedGate(*p)
                     for q in p:
                         r = pair_map.get(q)
-                        if r in two_qubit_cache:
+                        if r in two_qubit_cache and r != p:
                             queue.append(two_qubit_cache.pop(r))
                         pair_map[q] = p
                         if q in one_qubit_cache:
