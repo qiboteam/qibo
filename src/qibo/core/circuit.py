@@ -48,7 +48,6 @@ class Circuit(circuit.AbstractCircuit):
     Args:
         nqubits (int): Total number of qubits in the circuit.
     """
-    from qibo.core import fusion
 
     def __init__(self, nqubits):
         super(Circuit, self).__init__(nqubits)
