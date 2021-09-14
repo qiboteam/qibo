@@ -2,7 +2,6 @@
 import numpy as np
 import pytest
 from qibo import gates, K
-from qibo.core import fusion
 from qibo.models import Circuit
 
 
@@ -33,7 +32,6 @@ def test_two_fusion_gate():
         gate1, gate2 = gate2, gate1
     assert gate1.gates == [queue[0], queue[-1]]
     assert gate2.gates == queue[1:-1]
-
 
 
 @pytest.mark.skip
@@ -101,7 +99,6 @@ def test_fuse_circuit_two_qubit_only(backend):
     K.assert_allclose(fused_c(), c())
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 2])
 def test_variational_layer_fusion(backend, nqubits, nlayers):
@@ -114,14 +111,13 @@ def test_variational_layer_fusion(backend, nqubits, nlayers):
         c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
         c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
         c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
-        c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 2, 2)))
+        c.add((gates.CZ(i, i + 1) for i in range(1, nqubits - 1, 2)))
         c.add(gates.CZ(0, nqubits - 1))
 
     fused_c = c.fuse()
     K.assert_allclose(fused_c(), c())
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("ngates", [10, 20])
 def test_random_circuit_fusion(backend, nqubits, ngates):
@@ -139,7 +135,6 @@ def test_random_circuit_fusion(backend, nqubits, ngates):
         while q0 == q1:
             q0, q1 = np.random.randint(0, nqubits, (2,))
         c.add(gate(q0, q1))
-
     fused_c = c.fuse()
     K.assert_allclose(fused_c(), c())
 
