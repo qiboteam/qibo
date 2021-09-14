@@ -8,11 +8,16 @@ from qibo.core import states, measurements
 from typing import List, Tuple
 
 
-class FusedGates(dict):
+class FusedGates(collections.OrderedDict):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.removed = set()
+        self.removed = collections.OrderedDict()
+
+    def simplify(self, gate):
+        if len(gate.gates) == 1:
+            gate = gate.gates[0]
+        return gate
 
     def pop(self, key, fused_gate=None):
         if key not in self:
@@ -23,14 +28,19 @@ class FusedGates(dict):
             fused_gate.add(gate)
             return None
         elif gate in self.removed:
-            self.removed.remove(gate)
-            if len(gate.gates) == 1:
-                return gate.gates[0]
-            else:
-                return gate
+            self.removed.pop(gate)
+            return self.simplify(gate)
         else:
-            self.removed.add(gate)
+            self.removed[gate] = None
             return None
+
+    def popall(self):
+        for gate in self.removed.keys():
+            yield self.simplify(gate)
+        for gate in self.values():
+            if gate not in self.removed:
+                self.removed[gate] = None
+                yield self.simplify(gate)
 
 
 class Circuit(circuit.AbstractCircuit):
@@ -130,11 +140,7 @@ class Circuit(circuit.AbstractCircuit):
                         queue.append(ogate)
                 queue.append(gate)
 
-        for gate in fused_gates.removed | set(fused_gates.values()):
-            if len(gate.gates) == 1:
-                queue.append(gate.gates[0])
-            else:
-                queue.append(gate)
+        queue.extend(fused_gates.popall())
 
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.queue = queue
