@@ -375,3 +375,11 @@ def test_special_gate():
     assert not gate.commutes(gates.H(0))
     with pytest.raises(NotImplementedError):
         gate.on_qubits(1)
+
+
+def test_fused_gate():
+    gate = gates.FusedGate(0, 1)
+    gate.add(gates.H(0))
+    gate.add(gates.CNOT(0, 1))
+    with pytest.raises(ValueError):
+        gate.add(gates.CZ(1, 2))

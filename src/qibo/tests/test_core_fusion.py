@@ -28,7 +28,8 @@ def test_two_fusion_gate():
     c = c.fuse()
     assert len(c.queue) == 2
     gate1, gate2 = c.queue
-    if len(gate1.gates) > len(gate2.gates):
+    if len(gate1.gates) > len(gate2.gates): # pragma: no cover
+        # disabling coverage as this may not always happen
         gate1, gate2 = gate2, gate1
     assert gate1.gates == [queue[0], queue[-1]]
     assert gate2.gates == queue[1:-1]
