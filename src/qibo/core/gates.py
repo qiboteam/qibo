@@ -1097,7 +1097,7 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
                 else:
                     gmatrix = K.qnp.kron(K.qnp.eye(2), gmatrix)
             elif gate.qubits != self.target_qubits:
-                gmatrix = K.qnp.reshape(gate.matrix, 4 * (2,))
+                gmatrix = K.qnp.reshape(gmatrix, 4 * (2,))
                 gmatrix = K.qnp.transpose(gmatrix, [1, 0, 3, 2])
                 gmatrix = K.qnp.reshape(gmatrix, (4, 4))
             matrix = gmatrix @ matrix
