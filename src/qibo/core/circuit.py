@@ -103,8 +103,19 @@ class Circuit(circuit.AbstractCircuit):
         from qibo import gates
         from qibo.abstractions.circuit import _Queue
 
-        queue = _Queue(self.nqubits)
-        fused_gates = FusedGates()
+        class FusedQueue(_Queue):
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.set = set()
+
+            def append(self, gate):
+                if gate not in self.set:
+                    self.set.add(gate)
+                    super().append(gate)
+
+        fused_queue = FusedQueue(self.nqubits)
+        fused_gates = collections.OrderedDict()
         for gate in self.queue:
             qubits = gate.qubits
             if len(qubits) == 1:
@@ -115,32 +126,40 @@ class Circuit(circuit.AbstractCircuit):
 
             elif len(qubits) == 2:
                 q0, q1 = tuple(sorted(qubits))
-                if q0 in fused_gates or q1 in fused_gates:
-                    if fused_gates.get(q0) == fused_gates.get(q1):
-                        fused_gates.get(q0).add(gate)
-                    else:
-                        fgate = gates.FusedGate(q0, q1)
-                        ogate = fused_gates.pop(q0, fgate)
-                        if ogate is not None:
-                            queue.append(ogate)
-                        ogate = fused_gates.pop(q1, fgate)
-                        if ogate is not None:
-                            queue.append(ogate)
-                        fgate.add(gate)
-                        fused_gates[q0], fused_gates[q1] = fgate, fgate
+                if (q0 in fused_gates and q1 in fused_gates and
+                    fused_gates.get(q0) == fused_gates.get(q1)):
+                    fused_gates.get(q0).add(gate)
                 else:
                     fgate = gates.FusedGate(q0, q1)
+                    if q0 in fused_gates:
+                        ogate = fused_gates.pop(q0)
+                        if len(ogate.target_qubits) == 1:
+                            fgate.add(ogate)
+                        else:
+                            fused_queue.append(ogate)
+                    if q1 in fused_gates:
+                        ogate = fused_gates.pop(q1)
+                        if len(ogate.target_qubits) == 1:
+                            fgate.add(ogate)
+                        else:
+                            fused_queue.append(ogate)
                     fgate.add(gate)
                     fused_gates[q0], fused_gates[q1] = fgate, fgate
 
             else:
                 for q in qubits:
-                    ogate = fused_gates.pop(q)
-                    if ogate is not None:
-                        queue.append(ogate)
-                queue.append(gate)
+                    if q in fused_gates:
+                        fused_queue.append(fused_gates.pop(q))
+                fused_queue.append(gate)
 
-        queue.extend(fused_gates.popall())
+        for gate in fused_gates.values():
+            fused_queue.append(gate)
+
+        queue = _Queue(self.nqubits)
+        for gate in fused_queue:
+            if isinstance(gate, gates.FusedGate) and len(gate.gates) == 1:
+                gate = gate.gates[0]
+            queue.append(gate)
 
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.queue = queue
