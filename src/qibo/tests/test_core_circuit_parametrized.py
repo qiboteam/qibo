@@ -186,6 +186,7 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
     K.assert_allclose(c(), target_c())
 
 
+@pytest.mark.skip
 @pytest.mark.parametrize("trainable", [True, False])
 def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
     """Check updating parameters of fused circuit."""
