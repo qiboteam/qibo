@@ -8,41 +8,6 @@ from qibo.core import states, measurements
 from typing import List, Tuple
 
 
-class FusedGates(collections.OrderedDict):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.removed = collections.OrderedDict()
-
-    def simplify(self, gate):
-        if len(gate.gates) == 1:
-            gate = gate.gates[0]
-        return gate
-
-    def pop(self, key, fused_gate=None):
-        if key not in self:
-            return None
-
-        gate = super().pop(key)
-        if fused_gate is not None and len(gate.target_qubits) == 1:
-            fused_gate.add(gate)
-            return None
-        elif gate in self.removed:
-            self.removed.pop(gate)
-            return self.simplify(gate)
-        else:
-            self.removed[gate] = None
-            return None
-
-    def popall(self):
-        for gate in self.removed.keys():
-            yield self.simplify(gate)
-        for gate in self.values():
-            if gate not in self.removed:
-                self.removed[gate] = None
-                yield self.simplify(gate)
-
-
 class Circuit(circuit.AbstractCircuit):
     """Backend implementation of :class:`qibo.abstractions.circuit.AbstractCircuit`.
 
