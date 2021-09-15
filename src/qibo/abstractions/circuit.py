@@ -94,8 +94,6 @@ class AbstractCircuit(ABC):
         self.measurement_gate = None
         self.measurement_gate_result = None
 
-        self.fusion_groups = []
-
         self._final_state = None
         self.density_matrix = False
         self.repeated_execution = False
@@ -195,6 +193,11 @@ class AbstractCircuit(ABC):
         new_circuit = self.__class__(**self.init_kwargs)
         if deep:
             for gate in self.queue:
+                if isinstance(gate, gates.FusedGate): # pragma: no cover
+                    # impractical case
+                    raise_error(NotImplementedError, "Cannot create deep copy "
+                                                     "of fused circuit.")
+
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
                 if isinstance(gate, gates.ParametrizedGate):
@@ -202,16 +205,12 @@ class AbstractCircuit(ABC):
                     if gate.trainable:
                         new_circuit.trainable_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-            if self.fusion_groups: # pragma: no cover
-                # impractical case
-                raise_error(NotImplementedError, "Cannot create deep copy of fused "
-                                                 "circuit.")
+
         else:
             new_circuit.queue = copy.copy(self.queue)
             new_circuit.parametrized_gates = list(self.parametrized_gates)
             new_circuit.trainable_gates = list(self.trainable_gates)
             new_circuit.measurement_gate = self.measurement_gate
-            new_circuit.fusion_groups = list(self.fusion_groups)
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
@@ -500,6 +499,7 @@ class AbstractCircuit(ABC):
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
+        # TODO: Treat fused gates
         if n == len(self.trainable_gates):
             for i, gate in enumerate(self.trainable_gates):
                 gate.parameters = parameters[i]
@@ -516,9 +516,6 @@ class AbstractCircuit(ABC):
             raise_error(ValueError, "Given list of parameters has length {} while "
                                     "the circuit contains {} parametrized gates."
                                     "".format(n, len(self.trainable_gates)))
-
-        for fusion_group in self.fusion_groups:
-            fusion_group.update()
 
     def set_parameters(self, parameters):
         """Updates the parameters of the circuit's parametrized gates.
@@ -569,9 +566,10 @@ class AbstractCircuit(ABC):
         elif isinstance(parameters, self.param_tensor_types):
             self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
-            if self.fusion_groups:
-                raise_error(TypeError, "Cannot accept new parameters as dictionary "
-                                       "for fused circuits. Use list, tuple or array.")
+            for gate in self.queue:
+                if isinstance(gate, gates.FusedGate):
+                    raise_error(TypeError, "Cannot accept new parameters as dictionary "
+                                           "for fused circuits. Use list, tuple or array.")
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
                 raise_error(KeyError, "Dictionary contains gates {} which are "

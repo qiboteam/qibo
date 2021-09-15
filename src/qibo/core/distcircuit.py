@@ -76,9 +76,6 @@ class DistributedCircuit(circuit.Circuit):
                                     "circuits because they modify gate objects.")
         return super().copy(deep)
 
-    def _fuse_copy(self):
-        return self.copy(deep=True)
-
     def fuse(self):
         if self.queues.queues:
             raise_error(RuntimeError, "Cannot fuse distributed circuit after "
