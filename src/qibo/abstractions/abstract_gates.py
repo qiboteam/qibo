@@ -498,6 +498,13 @@ class BaseBackendGate(Gate, ABC):
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
 
+    def _reset_unitary(self):
+        """Resets the gate matrices back to ``None``.
+
+        Useful when the gate matrix need to be recalculated.
+        """
+        self._matrix = None
+
     @property
     @abstractmethod
     def cache(self): # pragma: no cover

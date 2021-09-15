@@ -44,6 +44,11 @@ class BackendGate(BaseBackendGate):
         part2 = K.concatenate([zeros, unitary], axis=0)
         return K.concatenate([part1, part2], axis=1)
 
+    def _reset_unitary(self):
+        super()._reset_unitary()
+        self._native_op_matrix = None
+        self._custom_op_matrix = None
+
     @property
     def cache(self):
         if self._cache is None:

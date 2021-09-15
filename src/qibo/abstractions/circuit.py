@@ -179,7 +179,8 @@ class AbstractCircuit(ABC):
             yield gate.on_qubits(*q)
 
     def _shallow_copy(self):
-        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`."""
+        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
+        and :meth:`qibo.core.circuit.Circuit.fuse`."""
         new_circuit = self.__class__(**self.init_kwargs)
         new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
         new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
@@ -571,10 +572,6 @@ class AbstractCircuit(ABC):
         elif isinstance(parameters, self.param_tensor_types):
             self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
-            for gate in self.queue:
-                if isinstance(gate, gates.FusedGate):
-                    raise_error(TypeError, "Cannot accept new parameters as dictionary "
-                                           "for fused circuits. Use list, tuple or array.")
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
                 raise_error(KeyError, "Dictionary contains gates {} which are "
@@ -585,6 +582,11 @@ class AbstractCircuit(ABC):
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
+        # Reset ``FusedGate`` matrices so that they are recalculated with the
+        # updated parameters.
+        for gate in self.queue:
+            if isinstance(gate, gates.FusedGate):
+                gate._reset_unitary()
 
     def get_parameters(self, format: str = "list",
                        include_not_trainable: bool = False

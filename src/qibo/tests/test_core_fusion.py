@@ -132,7 +132,6 @@ def test_callbacks_fusion(backend):
     K.assert_allclose(entropy[:], target_entropy, atol=1e-7)
 
 
-@pytest.mark.skip
 def test_set_parameters_fusion(backend):
     """Check gate fusion when ``circuit.set_parameters`` is used."""
     c = Circuit(2)
