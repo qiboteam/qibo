@@ -52,7 +52,7 @@ def test_fusedgate_matrix_calculation(backend):
     K.assert_allclose(fused_gate.matrix, target_matrix)
 
 
-def test_fuse_circuit_two_qubit_only(backend):
+def test_fuse_circuit_two_qubit_gates(backend):
     """Check circuit fusion in circuit with two-qubit gates only."""
     c = Circuit(2)
     c.add(gates.CNOT(0, 1))
@@ -62,6 +62,21 @@ def test_fuse_circuit_two_qubit_only(backend):
     c.add(gates.RY(1, theta=0.1234).controlled_by(0))
     fused_c = c.fuse()
     K.assert_allclose(fused_c(), c())
+
+
+def test_fuse_circuit_three_qubit_gate(backend):
+    """Check circuit fusion in circuit with three-qubit gate."""
+    c = Circuit(4)
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.CZ(0, 1))
+    c.add(gates.CZ(2, 3))
+    c.add(gates.TOFFOLI(0, 1, 2))
+    c.add(gates.SWAP(1, 2))
+    c.add((gates.H(i) for i in range(4)))
+    c.add(gates.CNOT(0, 1))
+    c.add(gates.CZ(2, 3))
+    fused_c = c.fuse()
+    K.assert_allclose(fused_c(), c(), atol=1e-12)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])

@@ -66,7 +66,7 @@ class Circuit(circuit.AbstractCircuit):
                 # to applying the five gates of the original circuit.
         """
         from qibo import gates
-        from qibo.abstractions.circuit import _Queue, _ParametrizedGates
+        from qibo.abstractions.circuit import _Queue
         from qibo.abstractions.abstract_gates import SpecialGate
 
         class FusedQueue(_Queue):
