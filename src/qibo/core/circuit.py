@@ -67,6 +67,7 @@ class Circuit(circuit.AbstractCircuit):
         """
         from qibo import gates
         from qibo.abstractions.circuit import _Queue
+        from qibo.abstractions.abstract_gates import SpecialGate
 
         class FusedQueue(_Queue):
 
@@ -110,6 +111,12 @@ class Circuit(circuit.AbstractCircuit):
                             fused_queue.append(ogate)
                     fgate.add(gate)
                     fused_gates[q0], fused_gates[q1] = fgate, fgate
+
+            elif isinstance(gate, SpecialGate):
+                for g in fused_gates.values():
+                    fused_queue.append(g)
+                fused_gates = collections.OrderedDict()
+                fused_queue.append(gate)
 
             else:
                 for q in qubits:

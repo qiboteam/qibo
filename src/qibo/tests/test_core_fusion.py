@@ -34,57 +34,21 @@ def test_two_fusion_gate():
     assert gate2.gates == queue[1:-1]
 
 
-@pytest.mark.skip
-def test_fusion_group_add():
-    group = fusion.FusionGroup()
-    group.add(gates.Flatten(np.ones(4)))
-    assert not group.can_add(gates.H(0))
-    with pytest.raises(RuntimeError):
-        group.add(gates.H(0))
-
-    group = fusion.FusionGroup()
-    group.can_add(gates.H(0))
-    group.add(gates.H(0))
-    group.can_add(gates.RX(0, theta=0.1234).controlled_by(1))
-    with pytest.raises(ValueError):
-        group.add(gates.Flatten(np.ones(4)))
-
-    group = fusion.FusionGroup()
-    group.add(gates.RX(0, theta=0.1234).controlled_by(1))
-    with pytest.raises(ValueError):
-        group.add(gates.H(2))
-
-    group = fusion.FusionGroup()
-    group.add(gates.RX(0, theta=0.1234).controlled_by(1))
-    with pytest.raises(ValueError):
-        group.add(gates.CZ(1, 2))
-
-    group = fusion.FusionGroup()
-    with pytest.raises(ValueError):
-        group.add(gates.TOFFOLI(0, 1, 2))
-
-
-@pytest.mark.skip
-def test_fusion_group_calculate(backend):
+def test_fusedgate_matrix_calculation(backend):
     queue = [gates.H(0), gates.H(1), gates.CNOT(0, 1),
              gates.X(0), gates.X(1)]
-    group = fusion.FusionGroup.from_queue(queue)
-    assert len(group) == 1
-    group = group[0]
-
-    assert len(group.gates) == 1
-    gate = group.gates[0]
+    circuit = Circuit(2)
+    circuit.add(queue)
+    circuit = circuit.fuse()
+    assert len(circuit.queue) == 1
+    fused_gate = circuit.queue[0]
 
     x = np.array([[0, 1], [1, 0]])
     h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
     cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1],
                      [0, 0, 1, 0]])
     target_matrix = np.kron(x, x) @ cnot @ np.kron(h, h)
-    K.assert_allclose(gate.matrix, target_matrix)
-
-    group = fusion.FusionGroup()
-    with pytest.raises(RuntimeError):
-        group.calculate()
+    K.assert_allclose(fused_gate.matrix, target_matrix)
 
 
 def test_fuse_circuit_two_qubit_only(backend):
@@ -152,7 +116,6 @@ def test_controlled_by_gates_fusion(backend):
     K.assert_allclose(fused_c(), c())
 
 
-@pytest.mark.skip
 def test_callbacks_fusion(backend):
     """Check entropy calculation in fused circuit."""
     from qibo import callbacks
