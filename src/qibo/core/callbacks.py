@@ -1,9 +1,14 @@
 import math
 from abc import ABC, abstractmethod
+from typing import List
+import matplotlib.pyplot as plt
+import numpy as np
 from qibo import K
 from qibo.abstractions import callbacks as abstract_callbacks
 from qibo.abstractions.states import AbstractState
 from qibo.config import EIGVAL_CUTOFF, raise_error, log
+from qibo.core.minimum_gap_class import Method_1, Method_2, Method_3
+
 
 
 class BackendCallback(abstract_callbacks.Callback, ABC):
@@ -173,3 +178,118 @@ class Gap(BackendCallback, abstract_callbacks.Gap):
     def _density_matrix_call(self, state):
         raise_error(NotImplementedError, "Gap callback is not implemented for "
                                          "density matrices.")
+
+class MinimumGap(Gap):
+
+    def __init__(self, n_steps: int, method=3, mode="gap", check_degenerate=True, precision = None, method_2_mode='minimum'):
+        Gap.__init__(self, mode, check_degenerate)
+        self._method = method
+        self._n_steps = n_steps
+        self._steps_left = n_steps
+        self._energy_levels: List[List[float]] = []
+        self._precision = precision
+        self._method_2_mode = method_2_mode
+        self._gap = None
+        self._degenerated_levels = None
+ 
+    @property
+    def minimum_gap(self):
+        if self._gap is None:
+            raise_error(ValueError, 'Gap still not computed.')
+        return min(self._gap[0])
+
+    @property
+    def gaps(self):
+        if self._gap is None:
+            raise_error(ValueError, 'Gap still not computed.')
+        return self._gap[0]
+
+    def _decrease_step(self):
+        self._steps_left -= 1
+
+    def _save_energy_levels(self, eigenvalues: List[float]):
+        if self._steps_left == self._n_steps-1:
+            self._energy_levels = [[] for _ in range(len(eigenvalues))]
+        
+        for i, eigenvalue in enumerate(list(eigenvalues)):
+            self._energy_levels[i].append(eigenvalue) 
+
+    def _state_vector_call(self, state):
+        if self.evolution is None:
+            raise_error(ValueError, "Gap callback can only be used in "
+                                    "adiabatic evolution models.")
+        self._decrease_step()
+        
+        hamiltonian = self.evolution.solver.current_hamiltonian
+        # Call the eigenvectors so that they are cached for the ``exp`` call
+        hamiltonian.eigenvectors()
+        eigvals = hamiltonian.eigenvalues()
+        self._save_energy_levels(eigvals)
+        if isinstance(self.mode, int):
+            return K.real(eigvals[self.mode])
+
+        if self._steps_left == -1:
+            if self._method == 1:
+                self._gap, self._degenerated_levels = Method_1(self._energy_levels).compute_gap()
+                return min(self._gap[0])
+
+            if self._method == 2:
+                self._gap, self._degenerated_levels = Method_2(self._energy_levels).compute_gap(self._method_2_mode)
+                return min(self._gap[0])
+
+            if self._method == 3:
+                self._gap, self._degenerated_levels = Method_3(self._energy_levels).compute_gap(precision = self._precision)
+                return min(self._gap[0])
+
+            raise_error(NotImplementedError, 'Only available methods are: 1, 2, 3')
+        return
+
+    def plot_energies(self, T=1):
+        if self._gap == None:
+            raise_error(ValueError, 'Minimum Gap not computed.')
+
+        dt = T/float(self._n_steps)
+        fig, ax = plt.subplots()
+        times = np.arange(0, T+dt, dt)
+        for i,j in enumerate(self._degenerated_levels):
+            if i==0:
+                label='ground state'
+            else:
+                label=self._ordinal(i)+' excited state'
+            ax.plot(times, j[:], label=label, color='C'+str(i))
+
+        if len(times) > 100:
+            reduction = int(len(times)/100)
+            times_reduced = times[::reduction]
+        else:
+            times_reduced = times[:]
+            reduction = 1
+
+        for i,j in enumerate(times_reduced):
+
+            plt.plot([j,j], 
+                    [self._degenerated_levels[self._gap[1][i*reduction][0]][i*reduction], 
+                    self._degenerated_levels[self._gap[1][i*reduction][1]][i*reduction]], 
+                    c='purple', 
+                    alpha=0.5)
+
+        plt.ylabel('Energy')
+        plt.xlabel('Schedule')
+        plt.title('Energy during adiabatic evolution')
+        ax.legend()
+        fig.tight_layout()
+        #fig.savefig('images/energy_levels.png', dpi=300, bbox_inches='tight')
+        fig, ax = plt.subplots()
+        ax.plot(times, self._gap[0], label='gap energy', color='C0')
+        plt.ylabel('Energy')
+        plt.xlabel('Schedule')
+        plt.title('Energy during adiabatic evolution')
+        ax.legend()
+        fig.tight_layout()
+        #fig.savefig('images/minimum_gap.png', dpi=300, bbox_inches='tight')
+        plt.show()
+
+    def _ordinal(self, number):
+        return "%d%s"%(number,{1:"st",2:"nd",3:"rd"}.get(number if number<20 else number%10,"th"))
+        
+
