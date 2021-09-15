@@ -18,13 +18,13 @@ class _ParametrizedGates(list):
     total number of parameters.
     """
 
-    def __init__(self):
-        super(_ParametrizedGates, self).__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.set = set()
         self.nparams = 0
 
-    def append(self, gate: gates.ParametrizedGate):
-        super(_ParametrizedGates, self).append(gate)
+    def append(self, gate):
+        super().append(gate)
         self.set.add(gate)
         self.nparams += gate.nparams
 
@@ -208,8 +208,8 @@ class AbstractCircuit(ABC):
 
         else:
             new_circuit.queue = copy.copy(self.queue)
-            new_circuit.parametrized_gates = list(self.parametrized_gates)
-            new_circuit.trainable_gates = list(self.trainable_gates)
+            new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
+            new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
             new_circuit.measurement_gate = self.measurement_gate
         new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
@@ -499,7 +499,6 @@ class AbstractCircuit(ABC):
 
         Also works if ``parameters`` is ``np.ndarray`` or ``tf.Tensor``.
         """
-        # TODO: Treat fused gates
         if n == len(self.trainable_gates):
             for i, gate in enumerate(self.trainable_gates):
                 gate.parameters = parameters[i]
