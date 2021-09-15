@@ -48,6 +48,8 @@ class BackendGate(BaseBackendGate):
         super()._reset_unitary()
         self._native_op_matrix = None
         self._custom_op_matrix = None
+        for gate in self.device_gates:
+            gate._reset_unitary()
 
     @property
     def cache(self):
