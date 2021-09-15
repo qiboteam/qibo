@@ -178,6 +178,15 @@ class AbstractCircuit(ABC):
         for gate in self.queue:
             yield gate.on_qubits(*q)
 
+    def _shallow_copy(self):
+        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`."""
+        new_circuit = self.__class__(**self.init_kwargs)
+        new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
+        new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
+        new_circuit.measurement_gate = self.measurement_gate
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
     def copy(self, deep: bool = False):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
@@ -190,8 +199,8 @@ class AbstractCircuit(ABC):
             The copied circuit object.
         """
         import copy
-        new_circuit = self.__class__(**self.init_kwargs)
         if deep:
+            new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
                 if isinstance(gate, gates.FusedGate): # pragma: no cover
                     # impractical case
@@ -205,13 +214,10 @@ class AbstractCircuit(ABC):
                     if gate.trainable:
                         new_circuit.trainable_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-
+            new_circuit.measurement_tuples = dict(self.measurement_tuples)
         else:
+            new_circuit = self._shallow_copy()
             new_circuit.queue = copy.copy(self.queue)
-            new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
-            new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
-            new_circuit.measurement_gate = self.measurement_gate
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
     def invert(self):

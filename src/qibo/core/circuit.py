@@ -133,7 +133,7 @@ class Circuit(circuit.AbstractCircuit):
                 gate = gate.gates[0]
             queue.append(gate)
 
-        new_circuit = self.copy(deep=False)
+        new_circuit = self._shallow_copy()
         new_circuit.queue = queue
         return new_circuit
 
