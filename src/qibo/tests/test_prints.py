@@ -2,7 +2,7 @@
 import os
 import pytest
 import pathlib
-
+from qibo.config import raise_error
 
 class CodeText:
     """Helper class to iterate through code text skipping the docstrings."""
@@ -12,7 +12,6 @@ class CodeText:
         self.filedir = filedir
         self.line_counter = 0
         self.piece_counter = 0
-        self.starts_with_docstring = (code[:3] == '"""')
         self.pieces = None
 
     @classmethod
@@ -38,35 +37,27 @@ class CodeText:
 
         if self.piece_counter < len(self.pieces):
             # skip docstrings
-            if self.piece_counter % 2 == self.starts_with_docstring:
+            if self.piece_counter % 2 == 0:
                 return self.pieces[self.piece_counter]
             else:
                 return self.__next__()
 
         raise StopIteration
 
-    def get_line(self, i): # pragma: no cover
-        """Calculates line number of the identified `print`.
+    def check_exists(self, target_word):
+        """Checks if a word exists in the code text.
+        Raises a ValueError if the word is found.
+        Ignores a specific occurence if `CodeText:skip` occurs on the same line.
 
         Args:
-            i (int): String index that the `print` was found.
-
-        Returns:
-            The line number of the corresponding `print` in the file.
+            target_word(str): word to be searched in the code text
         """
-        piece = self.pieces[self.piece_counter][:i]
-        return self.line_counter + len(piece.split("\n"))
-
-    def check_exists(self, target_word):
-        """Checks if a word exists in the code text."""
         for piece in self:
-            i = piece.find(target_word)
-            if i > 0: # pragma: no cover
-                # This should not execute if the code does not contain `print` statements
-                from qibo.config import raise_error
-                line = self.get_line(i)
-                raise_error(ValueError, f"Found `{target_word}` in line {line} "
-                                        f"of {self.filedir}.")
+            for offset, line in enumerate(piece.split("\n")):
+                if ("print" in line) and ("CodeText:skip" not in line):
+                    line_num = self.line_counter + offset + 1
+                    raise_error(ValueError, f"Found `{target_word}` in line {line_num} "
+                                            f"of {self.filedir}.")
 
 
 def python_files():
@@ -80,6 +71,27 @@ def python_files():
             if len(pieces) == 2 and pieces[1] == "py" and pieces[0] != "test_prints":
                 yield os.path.join(subdir, file)
 
+# Make sure the CodeText class works as intended
+text_examples = [
+    ('print("Test")', True),
+    ('print("Test")\n""" docstring """', True),
+    ('""" docstring """\nprint("Test")\n""" docstring """', True),
+    ('pass', False),
+    ('pass\n""" docstring with print """', False),
+    ('""" docstring with print """\npass\n""" docstring with print """', False),
+    ('pass # CodeText:skip', False),
+    ('print("Test") # CodeText:skip', False),
+    ('print("Test")\nprint("Test) # CodeText:skip', True),
+    ('print("Test") # CodeText:skip\nprint("Test)', True)
+]
+@pytest.mark.parametrize(("text", "contains_print"), text_examples)
+def test_codetext_class(text, contains_print):
+    """Check if the CodeText class is working properly"""
+    if contains_print:
+        with pytest.raises(ValueError):
+            CodeText(text).check_exists("print")
+    else:
+        CodeText(text).check_exists("print")
 
 @pytest.mark.parametrize("filename", python_files())
 def test_qibo_code(filename):
