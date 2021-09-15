@@ -202,12 +202,8 @@ def test_set_parameters_with_gate_fusion(backend, trainable):
     c.add(gates.RZ(1, theta=params[8]))
 
     fused_c = c.fuse()
-    for gate in fused_c.queue:
-        print(gate, gate.name, gate.target_qubits, gate.device_gates)
     final_state = fused_c()
     target_state = c()
-    for gate in fused_c.queue:
-        print(gate, gate.name, gate.target_qubits, gate.device_gates)
     K.assert_allclose(final_state, target_state)
 
     if trainable:
