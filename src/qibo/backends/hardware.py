@@ -9,9 +9,10 @@ class IcarusQBackend(NumpyBackend): # pragma: no cover
 
     def __init__(self):
         super().__init__()
-        self.name = "icarusq"
+        self.name = "qiboicarusq"
         self.custom_gates = True
         import qiboicarusq # pylint: disable=E0401
+        self.is_hardware = True
         self.hardware_module = qiboicarusq
         self.hardware_gates = qiboicarusq.gates
         self.hardware_circuit = qiboicarusq.circuit.HardwareCircuit

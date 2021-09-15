@@ -189,16 +189,15 @@ class DistributedState(VectorState):
             raise_error(TypeError, "Circuit of unsupported type {} was given to "
                                    "distributed state.".format(type(circuit)))
         self.circuit = circuit
-        # List of length ``ndevices`` holding ``tf.Variable``s with
-        # the state pieces (created in ``self.create_pieces()``)
+        # List of length ``ndevices`` holding ``tf.Variable``s with the state pieces
         self.pieces = None
 
         # Dictionaries containing tensors that are useful for reshaping
         # the state when splitting or merging the pieces.
         n = self.nstates // 2 ** self.nglobal
         self.shapes = {
-            "full": K.cast((self.nstates,), dtype='DTYPEINT'),
-            "device": K.cast((self.ndevices, n), dtype='DTYPEINT'),
+            "full": K.cpu_cast((self.nstates,), dtype='DTYPEINT'),
+            "device": K.cpu_cast((self.ndevices, n), dtype='DTYPEINT'),
             "tensor": self.nqubits * (2,)
             }
 
@@ -211,10 +210,6 @@ class DistributedState(VectorState):
     def qubits(self):
         # ``DistributedQubits`` object created by the ``DistributedQueues`` of the circuit.
         return self.circuit.queues.qubits
-
-    @property
-    def device(self):
-        return self.circuit.memory_device
 
     @property
     def nglobal(self):
@@ -240,19 +235,19 @@ class DistributedState(VectorState):
         Using this method will double memory usage.
         """
         if self.qubits.list == list(range(self.nglobal)):
-            with K.device(self.device):
-                state = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
-                state = K.reshape(state, self.shapes["full"])
+            with K.on_cpu():
+                tensor = K.concatenate([x[K.newaxis] for x in self.pieces], axis=0)
+                tensor = K.reshape(tensor, self.shapes["full"])
         elif self.qubits.list == list(range(self.nlocal, self.nqubits)):
-            with K.device(self.device):
-                state = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
-                state = K.reshape(state, self.shapes["full"])
+            with K.on_cpu():
+                tensor = K.concatenate([x[:, K.newaxis] for x in self.pieces], axis=1)
+                tensor = K.reshape(tensor, self.shapes["full"])
         else: # fall back to the transpose op
-            with K.device(self.device):
-                state = K.zeros(self.shapes["full"])
-                state = K.transpose_state(self.pieces, state, self.nqubits,
-                                          self.qubits.reverse_transpose_order)
-        return state
+            with K.on_cpu():
+                tensor = K.zeros(self.shapes["full"])
+                tensor = K.transpose_state(self.pieces, tensor, self.nqubits,
+                                           self.qubits.reverse_transpose_order)
+        return tensor
 
     @tensor.setter
     def tensor(self, x):
@@ -261,28 +256,29 @@ class DistributedState(VectorState):
                                          "efficiency.")
 
     def create_pieces(self):
-        n = 2 ** (self.nqubits - self.nglobal)
-        with K.device(self.device):
-            self.pieces = [K.optimization.Variable(K.zeros(n))
-                           for _ in range(self.ndevices)]
+        """Creates :class:`qibo.core.states.DistributedState` pieces on CPU."""
+        n = 2 ** self.nlocal
+        with K.on_cpu():
+            self.pieces = [K.cpu_tensor(K.zeros(n)) for _ in range(self.ndevices)]
 
-    def assign_pieces(self, full_state):
-        """Splits a full state vector and assigns it to the ``tf.Variable`` pieces.
+    def assign_pieces(self, tensor):
+        """Assigns state pieces from a given full state vector.
 
         Args:
-            full_state (array): Full state vector as a tensor of shape
-                ``(2 ** nqubits)``.
+            tensor (K.Tensor): The full state vector as a tensor supported by
+                the underlying backend.
         """
         if self.pieces is None:
             self.create_pieces()
-        with K.device(self.device):
-            full_state = K.reshape(full_state, self.shapes["device"])
-            pieces = [full_state[i] for i in range(self.ndevices)]
-            new_state = K.zeros(self.shapes["device"])
-            new_state = K.transpose_state(pieces, new_state, self.nqubits,
-                                          self.qubits.transpose_order)
-            for i in range(self.ndevices):
-                self.pieces[i].assign(new_state[i])
+        with K.on_cpu():
+            tensor = K.reshape(K.cpu_cast(tensor), self.shapes["device"])
+            pieces = [tensor[i] for i in range(self.ndevices)]
+            new_tensor = K.zeros(self.shapes["device"])
+        with K.on_cpu():
+            new_tensor = K.transpose_state(pieces, new_tensor, self.nqubits,
+                                           self.qubits.transpose_order)
+        for i in range(self.ndevices):
+            K.cpu_assign(self, i, new_tensor[i])
 
     def __getitem__(self, key):
       """Implements indexing of the distributed state without the full vector."""
@@ -314,25 +310,36 @@ class DistributedState(VectorState):
 
     @classmethod
     def zero_state(cls, circuit):
-      state = cls(circuit)
-      state.create_pieces()
-      with K.device(state.device):
-          piece = K.initial_state(nqubits=state.nlocal)
-          state.pieces[0] = K.optimization.Variable(piece, dtype=piece.dtype)
-      return state
+        """Creates |00...0> as a distributed state."""
+        state = cls(circuit)
+        state.create_pieces()
+        with K.on_cpu():
+            piece = K.initial_state(nqubits=state.nlocal)
+            state.pieces[0] = K.cpu_tensor(piece, dtype=state.dtype)
+        return state
 
     @classmethod
     def plus_state(cls, circuit):
-      state = cls(circuit)
-      state.create_pieces()
-      with K.device(state.device):
-          norm = K.cast(2 ** float(state.nqubits / 2.0), dtype=state.dtype)
-          state.pieces = [K.optimization.Variable(K.ones_like(p) / norm)
-                          for p in state.pieces]
-      return state
+        """Creates |++...+> as a distributed state."""
+        state = cls(circuit)
+        with K.on_cpu():
+            n = K.cast(2 ** state.nlocal, dtype=K.dtypes('DTYPEINT'))
+            norm = K.cast(2 ** float(state.nqubits / 2.0))
+            state.pieces = [K.cpu_tensor(K.ones(n) / norm)
+                            for _ in range(state.ndevices)]
+        return state
 
     def copy(self):
         new = self.__class__(self.circuit)
         new.pieces = self.pieces
         new.measurements = self.measurements
         return new
+
+    @VectorState.check_measured_qubits
+    def probabilities(self, qubits=None, measurement_gate=None):
+        unmeasured_qubits = tuple(i for i in range(self.nqubits)
+                                  if i not in qubits)
+        tensor = self.tensor
+        with K.on_cpu():
+            state = K.reshape(K.square(K.abs(tensor)), self.nqubits * (2,))
+            return K.sum(state, axis=unmeasured_qubits)

@@ -63,12 +63,13 @@ class AbstractCircuit(ABC):
     All backend-based circuits should inherit ``AbstractCircuit``.
 
     Qibo provides the following circuits:
-    A state vector simulation circuit:
-    :class:`qibo.core.circuit.Circuit`,
-    a density matrix simulation circuit:
-    :class:`qibo.core.circuit.DensityMatrixCircuit`
-    and a circuit that distributes state vector simulation on multiple devices:
-    :class:`qibo.core.distcircuit.DistributedCircuit`.
+
+    * A state vector simulation circuit:
+      :class:`qibo.core.circuit.Circuit`.
+    * A density matrix simulation circuit:
+      :class:`qibo.core.circuit.DensityMatrixCircuit`.
+    * A circuit that distributes state vector simulation on multiple devices:
+      :class:`qibo.core.distcircuit.DistributedCircuit`.
     All circuits use core as the computation backend.
 
     Args:
@@ -88,9 +89,6 @@ class AbstractCircuit(ABC):
         # Keep track of parametrized gates for the ``set_parameters`` method
         self.parametrized_gates = _ParametrizedGates()
         self.trainable_gates = _ParametrizedGates()
-        # Flag to keep track if the circuit was executed
-        # We do not allow adding gates in an executed circuit
-        self.is_executed = False
 
         self.measurement_tuples = dict()
         self.measurement_gate = None
@@ -236,7 +234,7 @@ class AbstractCircuit(ABC):
         return new_circuit
 
     def _check_noise_map(self, noise_map: NoiseMapType) -> NoiseMapType:
-        if isinstance(noise_map, tuple) or isinstance(noise_map, list):
+        if isinstance(noise_map, (tuple, list)):
             if len(noise_map) != 3:
                 raise_error(ValueError, "Noise map expects three probabilities "
                                         "but received {}.".format(len(noise_map)))
@@ -431,7 +429,7 @@ class AbstractCircuit(ABC):
 
         This is because measurement gates (`gates.M`) are treated differently
         than all other gates.
-        The user is not supposed to use the `add_measurement` method.
+        The user is not supposed to use the `_add_measurement` method.
         """
         # Set register's name and log the set of qubits in `self.measurement_tuples`
         name = gate.register_name
@@ -452,7 +450,9 @@ class AbstractCircuit(ABC):
 
     @abstractmethod
     def _add_layer(self, gate: gates.Gate): # pragma: no cover
-        """Called automatically by `add` when `gate` is measurement."""
+        """Called automatically by `add` when `gate` is of
+        type `qibo.abstractions.gates.VariationalLayer`.
+        """
         raise_error(NotImplementedError)
 
     @property
@@ -1028,7 +1028,7 @@ class AbstractCircuit(ABC):
                     break
                 for i, c in enumerate(chunks):
                     loutput += ['' for _ in range(self.nqubits)]
-                    suffix = f' ...\n'
+                    suffix = ' ...\n'
                     prefix = f'q{row}' + ' ' * (len(str(self.nqubits))-len(str(row))) + ': '
                     if i == 0:
                         prefix += ' ' * 4

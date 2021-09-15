@@ -68,8 +68,6 @@ def test_compiled_execute(backend):
 
 def test_compiling_twice_exception(backend):
     """Check that compiling a circuit a second time raises error."""
-    if K.name != "tensorflow": # pragma: no cover
-        pytest.skip("Skipping compilation test because Tensorflow is not available.")
     c = Circuit(2)
     c.add([gates.H(0), gates.H(1)])
     c.compile()

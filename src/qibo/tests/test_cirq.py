@@ -1,4 +1,5 @@
 """Test that Qibo gate execution agrees with Cirq."""
+import sys
 import numpy as np
 import cirq
 import pytest
@@ -53,10 +54,9 @@ def assert_gates_equivalent(qibo_gate, cirq_gates, nqubits,
     if ndevices is not None:
         accelerators = {"/GPU:0": ndevices}
 
-    if K.name != "qibotf" and accelerators:
+    if accelerators and not K.supports_multigpu:
         with pytest.raises(NotImplementedError):
             c = models.Circuit(nqubits, accelerators)
-            c.add(qibo_gate)
     else:
         c = models.Circuit(nqubits, accelerators)
         c.add(qibo_gate)

@@ -6,7 +6,7 @@ from qibo.models import Circuit
 
 
 def test_variable_backpropagation(backend):
-    if K.name != "tensorflow":
+    if not K.supports_gradients:
         pytest.skip("Backpropagation is not supported by {}.".format(K.name))
 
     theta = K.optimization.Variable(0.1234, dtype=K.dtypes('DTYPE'))
@@ -27,7 +27,7 @@ def test_variable_backpropagation(backend):
 
 
 def test_two_variables_backpropagation(backend):
-    if K.name != "tensorflow":
+    if not K.supports_gradients:
         pytest.skip("Backpropagation is not supported by {}.".format(K.name))
 
     theta = K.optimization.Variable([0.1234, 0.4321], dtype=K.dtypes('DTYPE'))
