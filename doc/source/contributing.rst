@@ -1,5 +1,5 @@
-How to contribute
-=================
+How to contribute?
+==================
 
 In the following paragraphs we describe the guidelines for contributing to Qibo.
 

@@ -1,1 +1,0 @@
-../../../../examples/qsvd/README.md

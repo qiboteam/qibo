@@ -5,18 +5,17 @@
 What is Qibo?
 =============
 
-**Qibo is an open-source full stack API for quantum simulation and quantum hardware control.**
+Qibo is an open-source full stack API for quantum simulation and quantum hardware control.
 
-**Qibo** aims to contribute as a community driven quantum middleware software.
-The project goals can be enumerated by the following concepts:
+Qibo aims to contribute as a community driven quantum middleware software with
 
-1. *Simplicity:* design agnostic primitives for quantum applications.
+1. *Simplicity:* agnostic design to quantum primitives.
 2. *Flexibility:* transparent mechanism to execute code on classical and quantum hardware.
-3. *Community:* build a collaborative repository where users, developers and laboratories can find solutions to accelerate quantum development.
-4. *Documentation:* provide an extensive description of all steps required to support new quantum devices or simulators.
+3. *Community:* a common place where find solutions to accelerate quantum development.
+4. *Documentation:* describe all steps required to support new quantum devices or simulators.
 5. *Applications:* maintain a large ecosystem of applications, quantum models and algorithms.
 
-**Qibo** key features:
+Qibo key features:
 
 * Definition of a standard language for the construction and execution of quantum circuits with device agnostic approach to simulation and quantum hardware control based on plug and play backend drivers.
 * A continuously growing code-base of quantum algorithms applications presented with examples and tutorials.
@@ -38,58 +37,25 @@ Contents
 
 .. toctree::
     :maxdepth: 2
+    :caption: Introduction
 
     getting-started/index
+    code-examples/index
+    why
 
 .. toctree::
-    :hidden:
     :maxdepth: 2
+    :caption: Main documentation
 
-    examples
-    advancedexamples
-    applications
-
-.. toctree::
-    :hidden:
-    :maxdepth: 2
-    :glob:
-    :caption: Qibo API reference
-
-    qibo
-
-.. toctree::
-    :hidden:
-    :maxdepth: 2
-    :caption: Developer guides
-
-    general
+    api-reference/index
+    developer-guides/index
     contributing
+
+.. toctree::
+    :maxdepth: 2
+    :caption: Appendix
+
     benchmarks
-
-.. toctree::
-    :hidden:
-    :maxdepth: 3
-    :glob:
-    :caption: Why use Qibo?
-
-    qibo
-
-.. toctree::
-    :hidden:
-    :maxdepth: 3
-    :glob:
-    :caption: Contributing
-
-    qibo
-
-.. toctree::
-    :hidden:
-    :maxdepth: 3
-    :glob:
-    :caption: Extra
-
-    hep
-
 
 
 Indices and tables

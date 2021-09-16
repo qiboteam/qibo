@@ -1,1 +1,0 @@
-../../../../examples/variational_classifier/README.md
