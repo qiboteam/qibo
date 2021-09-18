@@ -624,7 +624,7 @@ class CZ(Gate):
 
 
 class _CRn_(ParametrizedGate):
-    """Abstract method for defining the CU1, CU2 and CU3 gates.
+    """Abstract method for defining the CRX, CRY and CRZ gates.
 
     Args:
         q0 (int): the control qubit id number.

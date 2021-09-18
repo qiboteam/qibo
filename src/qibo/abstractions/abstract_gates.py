@@ -91,7 +91,7 @@ class Gate:
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
-        """Sets control qubits tuple."""
+        """Sets target qubits tuple."""
         self._set_target_qubits(qubits)
         self._check_control_target_overlap()
 
@@ -196,7 +196,9 @@ class Gate:
         return a or b
 
     def _on_qubits(self, *q) -> "Gate":
-        """Creates the same gate targeting different qubits.
+        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`.
+
+        Creates the same gate targeting different qubits.
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
@@ -205,6 +207,10 @@ class Gate:
             A :class:`qibo.abstractions.gates.Gate` object of the original gate
             type targeting the given qubits.
         """
+        # Note that q is interpreted as a map from the original qubits to the new ones, e.g.
+        # gates.CNOT(2, 3).on_qubits(0, 1, 2, 3) is equivalent to gates.CNOT(2, 3)
+        # gates.CNOT(2, 3).on_qubits(1, 2, 3, 0) is equivalent to gates.CNOT(3, 0)
+        # It is required for `len(q)` to be greater than the max qubit id of the original gate
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
             controls = (q[i] for i in self.control_qubits)
@@ -349,7 +355,7 @@ class Channel(Gate):
     def _on_qubits(self, *q): # pragma: no cover
         # future TODO
         raise_error(NotImplementedError, "`_on_qubits` method is not available "
-                                         "for the `GeneralChannel` gate.")
+                                         "for the `Channel` gate.")
 
 
 class ParametrizedGate(Gate):
