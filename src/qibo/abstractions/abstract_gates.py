@@ -195,7 +195,7 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, *q) -> "Gate":
+    def _on_qubits(self, *q) -> "Gate":
         """Creates the same gate targeting different qubits.
 
         Args:
@@ -292,7 +292,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def on_qubits(self, *q):
+    def _on_qubits(self, *q):
         raise_error(NotImplementedError,
                     "Cannot use special gates on subroutines.")
 
@@ -346,9 +346,9 @@ class Channel(Gate):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
-    def on_qubits(self, *q): # pragma: no cover
+    def _on_qubits(self, *q): # pragma: no cover
         # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
+        raise_error(NotImplementedError, "`_on_qubits` method is not available "
                                          "for the `GeneralChannel` gate.")
 
 

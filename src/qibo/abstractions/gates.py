@@ -1067,7 +1067,7 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
-    def on_qubits(self, *q) -> "Gate":
+    def _on_qubits(self, *q) -> "Gate":
         args = [self.init_args[0]]
         args.extend((q[i] for i in self.target_qubits))
         gate = self.__class__(*args, **self.init_kwargs)
