@@ -208,8 +208,8 @@ class Gate:
             type targeting the given qubits.
         """
         # Note that q is interpreted as a map from the original qubits to the new ones, e.g.
-        # gates.CNOT(2, 3).on_qubits(0, 1, 2, 3) is equivalent to gates.CNOT(2, 3)
-        # gates.CNOT(2, 3).on_qubits(1, 2, 3, 0) is equivalent to gates.CNOT(3, 0)
+        # gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3) is equivalent to gates.CNOT(2, 3)
+        # gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0) is equivalent to gates.CNOT(3, 0)
         # It is required for `len(q)` to be greater than the max qubit id of the original gate
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
