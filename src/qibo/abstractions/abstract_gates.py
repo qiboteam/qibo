@@ -202,15 +202,30 @@ class Gate:
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
+                Note that q is interpreted as a map from the original qubit ids
+                to the new ones. It is required for `len(q)` to be greater than
+                the max qubit id of the original gate.
 
         Returns:
             A :class:`qibo.abstractions.gates.Gate` object of the original gate
             type targeting the given qubits.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(4)
+                # Add some CNOT gates
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
+                c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                print(c.draw())
+                # q0: ───X─────
+                # q1: ───|─o─X─
+                # q2: ─o─|─|─o─
+                # q3: ─X─o─X───
         """
-        # Note that q is interpreted as a map from the original qubits to the new ones, e.g.
-        # gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3) is equivalent to gates.CNOT(2, 3)
-        # gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0) is equivalent to gates.CNOT(3, 0)
-        # It is required for `len(q)` to be greater than the max qubit id of the original gate
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
             controls = (q[i] for i in self.control_qubits)
