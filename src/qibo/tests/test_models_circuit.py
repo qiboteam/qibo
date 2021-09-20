@@ -1,4 +1,5 @@
 """Test methods defined in `qibo/models/circuit.py`."""
+import sys
 import numpy as np
 import pytest
 from qibo import gates, models, K
@@ -12,19 +13,23 @@ def test_circuit_constructor():
     assert isinstance(c, Circuit)
     c = models.Circuit(5, density_matrix=True)
     assert isinstance(c, DensityMatrixCircuit)
-    c = models.Circuit(5, accelerators={"/GPU:0": 2})
-    assert isinstance(c, DistributedCircuit)
+    if not K.supports_multigpu:  # pragma: no cover
+        with pytest.raises(NotImplementedError):
+            c = models.Circuit(5, accelerators={"/GPU:0": 2})
+    else:
+        c = models.Circuit(5, accelerators={"/GPU:0": 2})
+        assert isinstance(c, DistributedCircuit)
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2}, density_matrix=True)
 
 
 def test_circuit_constructor_hardware_errors():
-    K.hardware_module = "test"
+    K.is_hardware = True
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, accelerators={"/GPU:0": 2})
     with pytest.raises(NotImplementedError):
         c = models.Circuit(5, density_matrix=True)
-    K.hardware_module = None
+    K.is_hardware = False
 
 
 def qft_matrix(dimension: int, inverse: bool = False) -> np.ndarray:

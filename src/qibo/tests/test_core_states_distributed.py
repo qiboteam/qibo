@@ -67,7 +67,7 @@ def test_distributed_state_getitem(backend, accelerators):
     state = dist_c()
     c = Circuit(4)
     c.add((gates.RX(i, theta=theta[i]) for i in range(4)))
-    target_state = c()
+    target_state = K.to_numpy(c())
 
     # Check indexing
     state_vector = np.array([state[i] for i in range(2 ** 4)])

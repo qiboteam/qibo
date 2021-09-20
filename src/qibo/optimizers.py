@@ -166,7 +166,7 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
     """
     from qibo import K
     from qibo.config import log, raise_error
-    if K.name != "tensorflow":
+    if not K.supports_gradients:
         raise_error(RuntimeError, "SGD optimizer requires Tensorflow backend.")
 
     sgd_options = {"nepochs": 1000000,

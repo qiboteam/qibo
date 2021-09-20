@@ -16,14 +16,14 @@ class Circuit(StateCircuit):
                 raise_error(NotImplementedError,
                             "Distributed circuits are not implemented for "
                             "density matrices.")
-            if K.hardware_module:
+            if K.is_hardware:
                 raise_error(NotImplementedError,
                             "Hardware backend does not support density matrix "
                             "simulation.")
             from qibo.core.circuit import DensityMatrixCircuit as circuit_cls
             kwargs = {}
         elif kwargs["accelerators"] is not None:
-            if K.hardware_module:
+            if K.is_hardware:
                 raise_error(NotImplementedError,
                             "Hardware backend does not support multi-GPU "
                             "configuration.")
@@ -38,7 +38,7 @@ class Circuit(StateCircuit):
             kwargs.pop("density_matrix")
         else:
             kwargs = {}
-            if K.hardware_module:  # pragma: no cover
+            if K.is_hardware:  # pragma: no cover
                 # hardware backend is not tested until `qiboicarusq` is available
                 circuit_cls = K.hardware_circuit
             elif K.remote_module:  # pragma: no cover
@@ -50,11 +50,9 @@ class Circuit(StateCircuit):
 
     def __new__(cls, nqubits: int,
                 accelerators: Optional[Dict[str, int]] = None,
-                memory_device: str = "/CPU:0",
                 density_matrix: bool = False):
         circuit_cls, args, kwargs = cls._constructor(
             nqubits, accelerators=accelerators,
-            memory_device=memory_device,
             density_matrix=density_matrix
         )
         return circuit_cls(*args, **kwargs)
@@ -62,19 +60,16 @@ class Circuit(StateCircuit):
     @classmethod
     def from_qasm(cls, qasm_code: str,
                   accelerators: Optional[Dict[str, int]] = None,
-                  memory_device: str = "/CPU:0",
                   density_matrix: bool = False):
         circuit_cls, args, kwargs = cls._constructor(
             qasm_code, accelerators=accelerators,
-            memory_device=memory_device,
             density_matrix=density_matrix
         )
         return circuit_cls.from_qasm(*args, **kwargs)
 
 
 def QFT(nqubits: int, with_swaps: bool = True,
-        accelerators: Optional[Dict[str, int]] = None,
-        memory_device: str = "/CPU:0") -> Circuit:
+        accelerators: Optional[Dict[str, int]] = None) -> Circuit:
     """Creates a circuit that implements the Quantum Fourier Transform.
 
     Args:
@@ -84,8 +79,6 @@ def QFT(nqubits: int, with_swaps: bool = True,
         accelerators (dict): Accelerator device dictionary in order to use a
             distributed circuit
             If ``None`` a simple (non-distributed) circuit will be used.
-        memory_device (str): Device to use for memory in case a distributed circuit
-            is used. Ignored for non-distributed circuits.
 
     Returns:
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
@@ -107,7 +100,7 @@ def QFT(nqubits: int, with_swaps: bool = True,
         if not with_swaps:
             raise_error(NotImplementedError, "Distributed QFT is only implemented "
                                              "with SWAPs.")
-        return _DistributedQFT(nqubits, accelerators, memory_device)
+        return _DistributedQFT(nqubits, accelerators)
 
     from qibo import gates
 
@@ -125,13 +118,10 @@ def QFT(nqubits: int, with_swaps: bool = True,
     return circuit
 
 
-def _DistributedQFT(nqubits: int,
-                    accelerators: Optional[Dict[str, int]] = None,
-                    memory_device: str = "/CPU:0"):
+def _DistributedQFT(nqubits, accelerators=None):
     """QFT with the order of gates optimized for reduced multi-device communication."""
     from qibo import gates
-
-    circuit = Circuit(nqubits, accelerators, memory_device)
+    circuit = Circuit(nqubits, accelerators)
     icrit = nqubits // 2 + nqubits % 2
     if accelerators is not None:
         circuit.global_qubits = range(
