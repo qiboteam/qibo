@@ -1,0 +1,22 @@
+backends:
+  # simulation backends - numpy is available by default
+  - name: tensorflow
+    class: TensorflowBackend
+    from: qibo.backends.tensorflow
+
+  - name: qibotf
+    class: TensorflowCustomBackend
+    from: qibo.backends.tensorflow
+
+  - name: qibojit
+    class: JITCustomBackend
+    from: qibo.backends.jit
+
+  # hardware backends
+  - name: qiboicarusq
+    class: IcarusQBackend
+    from: qibo.backends.hardware
+    is_hardware: True
+
+# default active backend after importing all modules
+default: qibojit

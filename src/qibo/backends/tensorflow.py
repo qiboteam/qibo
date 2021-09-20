@@ -46,6 +46,8 @@ class TensorflowBackend(numpy.NumpyBackend):
         self._seed = None
         # seed can be modified using ``K.set_seed``
 
+        self.supports_gradients = True
+
     def set_device(self, name):
         abstract.AbstractBackend.set_device(self, name)
 
@@ -166,10 +168,6 @@ class TensorflowBackend(numpy.NumpyBackend):
         state = self.backend.tensor_scatter_nd_update(state, idx, update)
         return state
 
-    def transpose_state(self, pieces, state, nqubits, order): # pragma: no cover
-        pieces = self.reshape(self.backend.stack(pieces), nqubits * (2,))
-        return self.reshape(self.transpose(pieces, order), state.shape)
-
     def random_uniform(self, shape, dtype='DTYPE'):
         return self.backend.random.uniform(shape, dtype=self.dtypes(dtype))
 
@@ -197,6 +195,22 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     def device(self, device_name):
         return self.backend.device(device_name)
+
+    def on_cpu(self):
+        return self.device(self.cpu_devices[0])
+
+    def cpu_tensor(self, x, dtype=None):
+        if dtype is None:
+            dtype = x.dtype
+        return self.backend.Variable(x, dtype=dtype)
+
+    def cpu_cast(self, x, dtype='DTYPECPX'):
+        dtype = self._dtypes.get(dtype)
+        with self.on_cpu():
+            return self.cast(x, dtype=dtype)
+
+    def cpu_assign(self, state, i, piece):
+        state.pieces[i].assign(piece)
 
     def executing_eagerly(self):
         return self.backend.executing_eagerly()
@@ -226,6 +240,14 @@ class TensorflowCustomBackend(TensorflowBackend):
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
 
+        # enable multi-GPU if no macos
+        import sys
+        if sys.platform != "darwin":
+            self.supports_multigpu = True
+
+        # no gradient support for custom operators
+        self.supports_gradients = False
+
     def set_threads(self, nthreads):
         abstract.AbstractBackend.set_threads(self, nthreads)
 
@@ -233,9 +255,6 @@ class TensorflowCustomBackend(TensorflowBackend):
         return self.op.initial_state(nqubits, self.dtypes('DTYPECPX'),
                                     is_matrix=is_matrix,
                                     omp_num_threads=self.nthreads)
-
-    def transpose_state(self, pieces, state, nqubits, order):
-        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
 
     def sample_frequencies(self, probs, nshots):
         from qibo.config import SHOT_METROPOLIS_THRESHOLD
@@ -324,3 +343,10 @@ class TensorflowCustomBackend(TensorflowBackend):
 
     def compile(self, func):
         return func
+
+    def transpose_state(self, pieces, state, nqubits, order):
+        return self.op.transpose_state(pieces, state, nqubits, order, self.nthreads)
+
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):
+        with self.on_cpu():
+            return self.op.swap_pieces(piece0, piece1, new_global, nlocal, self.nthreads)

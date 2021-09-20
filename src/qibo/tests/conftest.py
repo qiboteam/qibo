@@ -7,14 +7,11 @@ import sys
 import pytest
 import qibo
 
-_available_backends = set(qibo.K.available_backends.keys())
+_available_backends = set(qibo.K.available_backends.keys()) - set(qibo.K.hardware_backends.keys())
 _ACCELERATORS = None
-if "tensorflow" in _available_backends:
-    if "qibotf" in _available_backends:
+for bkd in _available_backends:
+    if qibo.K.available_backends[bkd]().supports_multigpu:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
-if "icarusq" in _available_backends: # pragma: no cover
-    # skip hardware backend for tests
-    _available_backends.remove("icarusq")
 _BACKENDS = ",".join(_available_backends)
 
 
@@ -83,9 +80,17 @@ def pytest_generate_tests(metafunc):
         "qibo.tests.test_core_distcircuit",
         "qibo.tests.test_core_distcircuit_execution"
     }
-    # skip tests that require custom operators
-    if metafunc.module.__name__ in distributed_tests and "qibotf" not in backends: # pragma: no cover
-        pytest.skip("Skipping tests because custom operators are not available.")
+    module_name = metafunc.module.__name__
+    # skip distributed tests if qibojit or qibotf are not installed
+    if ((module_name in distributed_tests) and ("qibotf" not in backends) and
+        ("qibojit" not in backends)): # pragma: no cover
+        pytest.skip("Skipping distributed tests because are not supported by "
+                    "the available backends.")
+    # skip distributed tests on mac
+    if sys.platform == "darwin":  # pragma: no cover
+        accelerators = None
+        if module_name in distributed_tests:
+            pytest.skip("macos does not support distributed circuits.")
 
     # for `test_backends_agreement.py`
     if "tested_backend" in metafunc.fixturenames:
@@ -96,7 +101,8 @@ def pytest_generate_tests(metafunc):
 
     if "backend_name" in metafunc.fixturenames:
         if metafunc.module.__name__ in distributed_tests:
-            metafunc.parametrize("backend_name", ["qibotf"])
+            distributed_backends = list(set(backends) & {"qibotf", "qibojit"})
+            metafunc.parametrize("backend_name", distributed_backends)
             if "accelerators" in metafunc.fixturenames:
                 metafunc.parametrize("accelerators", accelerators)
 
@@ -109,6 +115,8 @@ def pytest_generate_tests(metafunc):
                 config = [(b, None) for b in backends]
                 if "qibotf" in backends:
                     config.extend(("qibotf", d) for d in accelerators)
+                if "qibojit" in backends:
+                    config.extend(("qibojit", d) for d in accelerators)
                 metafunc.parametrize("backend_name,accelerators", config)
 
         else:

@@ -31,7 +31,10 @@ class AbstractBackend(ABC):
         self.newaxis = None
         self.oom_error = None
         self.optimization = None
+        self.supports_multigpu = False
+        self.supports_gradients = False
 
+        self.is_hardware = False
         self.hardware_module = None
         self.hardware_circuit = None
         self.hardware_gates = None
@@ -353,14 +356,6 @@ class AbstractBackend(ABC):
         raise_error(NotImplementedError)
 
     @abstractmethod
-    def transpose_state(self, pieces, state, nqubits, order):  # pragma: no cover
-        """Transposes state pieces to the full state.
-
-        Used by :class:`qibo.core.states.DistributedState`.
-        """
-        raise_error(NotImplementedError)
-
-    @abstractmethod
     def random_uniform(self, shape, dtype='DTYPE'):  # pragma: no cover
         """Samples array of given shape from a uniform distribution in [0, 1]."""
         raise_error(NotImplementedError)
@@ -523,6 +518,57 @@ class AbstractBackend(ABC):
     @abstractmethod
     def density_matrix_collapse(self, gate, state, result):  # pragma: no cover
         """Collapses density matrix to a given result."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def on_cpu(self):  # pragma: no cover
+        """Used as `with K.on_cpu():` to perform following operations on CPU."""
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def cpu_tensor(self, x, dtype=None):  # pragma: no cover
+        """Creates backend tensors to be casted on CPU only.
+
+        Used by :class:`qibo.core.states.DistributedState` to save state pieces
+        on CPU instead of GPUs during a multi-GPU simulation.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def cpu_cast(self, x, dtype='DTYPECPX'):  # pragma: no cover
+        """Forces tensor casting on CPU.
+
+        In contrast to simply `K.cast` which uses the current default device.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def cpu_assign(self, state, i, piece):  # pragma: no cover
+        """Assigns updated piece to a state object by transfering from GPU to CPU.
+
+        Args:
+            state (:class:`qibo.core.states.DistributedState`): State object to
+                assign the updated piece to.
+            i (int): Index to assign the updated piece to.
+            piece (K.Tensor): GPU tensor to transfer to CPU and assign to the
+                piece of given index.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def transpose_state(self, pieces, state, nqubits, order):  # pragma: no cover
+        """Transposes distributed state pieces to obtain the full state vector.
+
+        Used by :meth:`qibo.backends.abstract.AbstractMultiGpu.calculate_tensor`.
+        """
+        raise_error(NotImplementedError)
+
+    @abstractmethod
+    def swap_pieces(self, piece0, piece1, new_global, nlocal):  # pragma: no cover
+        """Swaps two distributed state pieces in order to change the global qubits.
+
+        Useful to apply SWAP gates on distributed states.
+        """
         raise_error(NotImplementedError)
 
     @abstractmethod

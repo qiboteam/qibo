@@ -17,7 +17,7 @@ class BackendCallback(abstract_callbacks.Callback, ABC):
             return self._results[k]
         if isinstance(k, slice) or isinstance(k, list) or isinstance(k, tuple):
             from qibo import K
-            return K.stack(self._results[k])
+            return K.qnp.stack(self._results[k])
         raise_error(IndexError, "Unrecognized type for index {}.".format(k))
 
     @abstractmethod

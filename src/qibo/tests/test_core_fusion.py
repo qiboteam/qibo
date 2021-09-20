@@ -105,12 +105,12 @@ def test_fuse_circuit_two_qubit_only(backend):
 
 @pytest.mark.parametrize("nqubits", [4, 5, 10, 11])
 @pytest.mark.parametrize("nlayers", [1, 2])
-def test_variational_layer_fusion(backend, accelerators, nqubits, nlayers):
+def test_variational_layer_fusion(backend, nqubits, nlayers):
     """Check fused variational layer execution."""
     theta = 2 * np.pi * np.random.random((2 * nlayers * nqubits,))
     theta_iter = iter(theta)
 
-    c = Circuit(nqubits, accelerators=accelerators)
+    c = Circuit(nqubits)
     for _ in range(nlayers):
         c.add((gates.RY(i, next(theta_iter)) for i in range(nqubits)))
         c.add((gates.CZ(i, i + 1) for i in range(0, nqubits - 1, 2)))
@@ -124,12 +124,12 @@ def test_variational_layer_fusion(backend, accelerators, nqubits, nlayers):
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("ngates", [10, 20])
-def test_random_circuit_fusion(backend, accelerators, nqubits, ngates):
+def test_random_circuit_fusion(backend, nqubits, ngates):
     """Check gate fusion in randomly generated circuits."""
     one_qubit_gates = [gates.RX, gates.RY, gates.RZ]
     two_qubit_gates = [gates.CNOT, gates.CZ, gates.SWAP]
     thetas = np.pi * np.random.random((ngates,))
-    c = Circuit(nqubits, accelerators)
+    c = Circuit(nqubits)
     for i in range(ngates):
         gate = one_qubit_gates[int(np.random.randint(0, 3))]
         q0 = np.random.randint(0, nqubits)
@@ -157,11 +157,11 @@ def test_controlled_by_gates_fusion(backend):
     K.assert_allclose(fused_c(), c())
 
 
-def test_callbacks_fusion(backend, accelerators):
+def test_callbacks_fusion(backend):
     """Check entropy calculation in fused circuit."""
     from qibo import callbacks
     entropy = callbacks.EntanglementEntropy([0])
-    c = Circuit(5, accelerators)
+    c = Circuit(5)
     c.add(gates.H(0))
     c.add(gates.X(1))
     c.add(gates.CallbackGate(entropy))

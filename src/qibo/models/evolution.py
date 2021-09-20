@@ -31,9 +31,6 @@ class StateEvolution:
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
-        memory_device (str): Name of device where the full state will be saved.
-            Relevant only for distributed execution (when ``accelerators`` is
-            given).
 
     Example:
         ::
@@ -51,7 +48,7 @@ class StateEvolution:
     """
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],
-                 accelerators=None, memory_device="/CPU:0"):
+                 accelerators=None):
         hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
         if isinstance(hamiltonian, hamtypes):
             ham = hamiltonian
@@ -71,15 +68,14 @@ class StateEvolution:
                 raise_error(NotImplementedError, "Distributed evolution is only "
                                                  "implemented using the Trotter "
                                                  "exponential solver.")
-            ham.circuit(dt, accelerators, memory_device)
+            ham.circuit(dt, accelerators)
         self.solver = solvers.factory[solver](self.dt, hamiltonian)
 
         self.callbacks = callbacks
         self.accelerators = accelerators
         self.state_cls = states.VectorState
         self.normalize_state = self._create_normalize_state(solver)
-        self.calculate_callbacks = self._create_calculate_callbacks(
-            accelerators, memory_device)
+        self.calculate_callbacks = self._create_calculate_callbacks(accelerators)
 
     def _create_normalize_state(self, solver):
         if "rk" in solver:
@@ -89,7 +85,7 @@ class StateEvolution:
         else:
             return lambda s: s
 
-    def _create_calculate_callbacks(self, accelerators, memory_device):
+    def _create_calculate_callbacks(self, accelerators):
         def calculate_callbacks(state):
             for callback in self.callbacks:
                 callback.append(callback(state))
@@ -98,9 +94,10 @@ class StateEvolution:
             return calculate_callbacks
 
         def calculate_callbacks_distributed(state):
-            with K.device(memory_device):
+            with K.on_cpu():
                 if not isinstance(state, K.tensor_types):
                     state = state.tensor
+            with K.on_cpu():
                 calculate_callbacks(state)
 
         return calculate_callbacks_distributed
@@ -179,17 +176,14 @@ class AdiabaticEvolution(StateEvolution):
             execution. See :class:`qibo.core.distcircuit.DistributedCircuit`
             for more details. This option is available only when the Trotter
             decomposition is used for the time evolution.
-        memory_device (str): Name of device where the full state will be saved.
-            Relevant only for distributed execution (when ``accelerators`` is
-            given).
     """
     ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
 
     def __init__(self, h0, h1, s, dt, solver="exp", callbacks=[],
-                 accelerators=None, memory_device="/CPU:0"):
+                 accelerators=None):
         self.hamiltonian = adiabatic.AdiabaticHamiltonian(h0, h1) # pylint: disable=E0110
-        super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver, callbacks,
-                                                 accelerators, memory_device)
+        super(AdiabaticEvolution, self).__init__(self.hamiltonian, dt, solver,
+                                                 callbacks, accelerators)
 
         # Set evolution model to "Gap" callback if one exists
         for callback in self.callbacks:

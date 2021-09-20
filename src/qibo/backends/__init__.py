@@ -9,10 +9,23 @@ TF_MIN_VERSION = '2.2.0'
 class Backend:
 
     def __init__(self):
+
         self.available_backends = {}
         self.hardware_backends = {}
         self.remote_backends = {}
         active_backend = "numpy"
+
+        # load profile from default file
+        from pathlib import Path
+        profile_path = Path(os.environ.get(
+            'QIBO_PROFILE', Path(__file__).parent / "profiles.yml"))
+        try:
+            with open(profile_path) as f:
+                import yaml
+                profile = yaml.safe_load(f)
+        except FileNotFoundError:  # pragma: no cover
+            raise_error(FileNotFoundError,
+                        f"Profile file {profile_path} not found.")
 
         # check if numpy is installed
         if self.check_availability("numpy"):
@@ -23,34 +36,24 @@ class Backend:
                                              "Please install it using "
                                              "`pip install numpy`.")
 
-        # check if tensorflow is installed and use it as default backend.
-        if self.check_availability("tensorflow"):
-            os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(config.TF_LOG_LEVEL)
-            import tensorflow as tf  # pylint: disable=E0401
-            if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
-                raise_error(
-                    RuntimeError, f"TensorFlow version not supported, minimum is {TF_MIN_VERSION}.")
-            from qibo.backends.tensorflow import TensorflowBackend
-            self.available_backends["tensorflow"] = TensorflowBackend
-            active_backend = "tensorflow"
-            if self.check_availability("qibotf"):
-                from qibo.backends.tensorflow import TensorflowCustomBackend
-                self.available_backends["qibotf"] = TensorflowCustomBackend
-                active_backend = "qibotf"
-
-        # check if qibojit is installed and use it as default backend.
-        if self.check_availability("qibojit"):  # pragma: no cover
-            # qibojit backend is not tested until `qibojit` is available
-            from qibo.backends.numpy import JITCustomBackend
-            self.available_backends["qibojit"] = JITCustomBackend
-            active_backend = "qibojit"
-
-        # check if IcarusQ is installed
-        if self.check_availability("qiboicarusq"):  # pragma: no cover
-            # hardware backend is not tested until `qiboicarusq` is available
-            from qibo.backends.hardware import IcarusQBackend
-            self.available_backends["icarusq"] = IcarusQBackend
-            self.hardware_backends["icarusq"] = IcarusQBackend
+        for backend in profile.get('backends'):
+            name = backend.get('name')
+            if self.check_availability(name):
+                if name == 'tensorflow' or name == 'qibotf':
+                    os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(
+                        config.TF_LOG_LEVEL)
+                    import tensorflow as tf  # pylint: disable=E0401
+                    if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
+                        raise_error(
+                            RuntimeError, f"TensorFlow version not supported, minimum is {TF_MIN_VERSION}.")
+                import importlib
+                custom_backend = getattr(importlib.import_module(
+                    backend.get('from')), backend.get('class'))
+                self.available_backends[name] = custom_backend
+                if backend.get('is_hardware', False):  # pragma: no cover
+                    self.hardware_backends[name] = custom_backend
+                if profile.get('default') == name:
+                    active_backend = name
 
         # check if Qilimanjaro backend is installed
         if self.check_availability("qilimanjaroq"):  # pragma: no cover
@@ -65,7 +68,8 @@ class Backend:
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ:  # pragma: no cover
             self.active_backend = os.environ.get("QIBO_BACKEND")
-        self.active_backend = active_backend
+        else:
+            self.active_backend = active_backend
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()

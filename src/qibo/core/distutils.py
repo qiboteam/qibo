@@ -1,5 +1,4 @@
 import copy
-from qibo import K
 from qibo.abstractions import gates
 from qibo.config import raise_error
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -63,9 +62,9 @@ class DistributedQueues:
         For example ``queues[2][1]`` gives the gate queue of the second gate
         group to be run in the first device.
         If ``gate[i]`` is an empty list it means that this the i-th group
-        consists of a special gate to be run on ``memory_device``.
+        consists of a special gate to be run on CPU.
     * ``special_queue``: List with special gates than run on the full state vector
-        on ``memory_device``. Special gates have no target qubits and can be
+        on CPU. Special gates have no target qubits and can be
         ``CallbackGate``, ``Flatten`` or SWAPs between local and global qubits.
     """
 
@@ -172,7 +171,8 @@ class DistributedQueues:
             Array of integers with shape (nqubits,) with the number of gates
             for each qubit id.
         """
-        counter = K.np.zeros(nqubits, dtype=K.np.int64)
+        import numpy as np
+        counter = np.zeros(nqubits, dtype=np.int64)
         for gate in queue:
             for qubit in gate.target_qubits:
                 counter[qubit] += 1
