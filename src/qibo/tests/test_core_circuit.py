@@ -31,7 +31,7 @@ def test_circuit_add_layer(backend, nqubits, accelerators):
     for gate in c.queue:
         assert isinstance(gate, gates.Unitary)
 
-# :meth:`qibo.core.circuit.Circuit` is tested in `test_core_fusion.py`
+# :meth:`qibo.core.circuit.Circuit.fuse` is tested in `test_core_fusion.py`
 
 def test_eager_execute(backend, accelerators):
     c = Circuit(4, accelerators)

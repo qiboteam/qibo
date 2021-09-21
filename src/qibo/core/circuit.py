@@ -47,10 +47,10 @@ class Circuit(circuit.AbstractCircuit):
             self.queue.append(gate.additional_unitary)
 
     def fuse(self):
-        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
+        """Creates an equivalent :class:`qibo.core.circuit.Circuit` with gates fused up to two-qubits.
 
         Returns:
-            The equivalent ``Circuit`` object where the gates are fused.
+            The equivalent :class:`qibo.core.circuit.Circuit` object where the gates are fused.
 
         Example:
             ::

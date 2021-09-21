@@ -1553,6 +1553,14 @@ class _ThermalRelaxationChannelB(Gate):
 
 
 class FusedGate(Gate):
+    """Collection of gates that will be fused and applied as single gate during simulation.
+
+    This gate is constructed automatically by :meth:`qibo.core.circuits.Circuit.fuse`
+    and should not be used by user.
+    :class:`qibo.abstractions.gates.FusedGate` works with arbitrary number of
+    target qubits however the backend implementation
+    :class:`qibo.core.gates.FusedGate` assumes two target qubits.
+    """
 
     def __init__(self, *q):
         super().__init__()
