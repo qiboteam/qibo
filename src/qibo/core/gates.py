@@ -1102,7 +1102,7 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
         simulation instead of applying the fused gates one by one.
 
         Note that this method assumes maximum two target qubits and should be
-        update if the fusion algorithm is extended to gates of higher rank.
+        updated if the fusion algorithm is extended to gates of higher rank.
         """
         matrix = K.qnp.eye(2 ** len(self.target_qubits))
         for gate in self.gates:
