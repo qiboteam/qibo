@@ -211,7 +211,7 @@ def test_flatten():
     gate = gates.Flatten([1, 2, 3, 4])
     assert gate.coefficients == [1, 2, 3, 4]
     with pytest.raises(NotImplementedError):
-        gate.on_qubits(0, 2)
+        gate._on_qubits(0, 2)
 
 
 def test_kraus_channel_init():
@@ -332,7 +332,7 @@ def test_gates_commute():
 
 
 def test_on_qubits():
-    gate = gates.CNOT(0, 1).on_qubits(2, 3)
+    gate = gates.CNOT(0, 1)._on_qubits(2, 3)
     assert gate.target_qubits == (3,)
     assert gate.control_qubits == (2,)
     assert isinstance(gate, gates.CNOT)
@@ -356,7 +356,7 @@ def test_controlled_by():
 
 def test_on_qubits_controlled_by():
     gate = gates.H(0).controlled_by(1, 2)
-    gate = gate.on_qubits(5, 4, 6)
+    gate = gate._on_qubits(5, 4, 6)
     assert gate.target_qubits == (5,)
     assert gate.control_qubits == (4, 6)
     assert isinstance(gate, gates.H)
@@ -374,7 +374,7 @@ def test_special_gate():
     gate = abstract_gates.SpecialGate()
     assert not gate.commutes(gates.H(0))
     with pytest.raises(NotImplementedError):
-        gate.on_qubits(1)
+        gate._on_qubits(1)
 
 
 def test_fused_gate():

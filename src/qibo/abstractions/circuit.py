@@ -176,7 +176,7 @@ class AbstractCircuit(ABC):
                                     "the circuit contains {} qubits."
                                     "".format(len(q), self.nqubits))
         for gate in self.queue:
-            yield gate.on_qubits(*q)
+            yield gate._on_qubits(*q)
 
     def _shallow_copy(self):
         """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
