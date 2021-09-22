@@ -1,9 +1,9 @@
 """Tests methods defined in `qibo/core/terms.py`."""
 import pytest
 import numpy as np
-from qibo import K, models, gates
+from qibo import K, matrices, models, gates
 from qibo.core import terms
-from qibo.tests.utils import random_state
+from qibo.tests.utils import random_state, random_density_matrix
 
 
 def test_hamiltonian_term_initialization(backend):
@@ -73,3 +73,64 @@ def test_hamiltonian_term_merge(backend):
     K.assert_allclose(mterm.matrix, target_matrix)
     with pytest.raises(ValueError):
         term1.merge(term2)
+
+
+@pytest.mark.parametrize("use_symbols", [True, False])
+def test_symbolic_term_creation(use_symbols):
+    """Test creating ``SymbolicTerm`` from sympy expression."""
+    if use_symbols:
+        from qibo.symbols import X, Y
+        expression = X(0) * Y(1) * X(1)
+        symbol_map = None
+    else:
+        import sympy
+        x0, x1, y1 = sympy.symbols("X0 X1 Y1", commutative=False)
+        expression = x0 * y1 * x1
+        symbol_map = {x0: (0, matrices.X), x1: (1, matrices.X),
+                      y1: (1, matrices.Y)}
+    term = terms.SymbolicTerm.from_factors(2, expression, symbol_map)
+    assert term.target_qubits == (0, 1)
+    assert len(term.matrix_map) == 2
+    K.assert_allclose(term.matrix_map.get(0)[0], matrices.X)
+    K.assert_allclose(term.matrix_map.get(1)[0], matrices.Y)
+    K.assert_allclose(term.matrix_map.get(1)[1], matrices.X)
+
+
+def test_symbolic_term_matrix(backend):
+    """Test matrix calculation of ``SymbolicTerm``."""
+    from qibo.symbols import X, Y, Z
+    expression = X(0) * Y(1) * Z(2) * X(1)
+    term = terms.SymbolicTerm.from_factors(2, expression)
+    assert term.target_qubits == (0, 1, 2)
+    target_matrix = np.kron(matrices.X, matrices.Y @ matrices.X)
+    target_matrix = 2 * np.kron(target_matrix, matrices.Z)
+    K.assert_allclose(term.matrix, target_matrix)
+
+
+def test_symbolic_term_mul(backend):
+    """Test multiplying scalar to ``SymbolicTerm``."""
+    from qibo.symbols import X, Y, Z
+    expression = Y(2) * Z(3) * X(2) * X(3)
+    term = terms.SymbolicTerm.from_factors(1, expression)
+    assert term.target_qubits == (2, 3)
+    target_matrix = np.kron(matrices.Y @ matrices.X, matrices.Z @ matrices.X)
+    K.assert_allclose(term.matrix, target_matrix)
+    K.assert_allclose((2 * term).matrix, 2 * target_matrix)
+    K.assert_allclose((term * 3).matrix, 3 * target_matrix)
+
+
+@pytest.mark.parametrize("density_matrix", [False])
+def test_symbolic_term_call(backend, density_matrix):
+    """Test applying ``SymbolicTerm`` to state."""
+    from qibo.symbols import X, Y, Z
+    expression = Z(0) * X(1) * Y(2)
+    term = terms.SymbolicTerm.from_factors(2, expression)
+    matrixlist = [np.kron(matrices.Z, np.eye(4)),
+                  np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
+                  np.kron(np.eye(4), matrices.Y)]
+    initial_state = random_density_matrix(3) if density_matrix else random_state(3)
+    final_state = term(np.copy(initial_state), density_matrix=density_matrix)
+    target_state = 2 * np.copy(initial_state)
+    for matrix in matrixlist:
+        target_state = matrix @ target_state
+    K.assert_allclose(final_state, target_state)

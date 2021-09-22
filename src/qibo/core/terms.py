@@ -117,9 +117,9 @@ class SymbolicTerm(HamiltonianTerm):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (list): List of :class:`qibo.symbols.Symbol` that represent
-            each factor in the term.
-        matrix_map (dict): Dictionary that maps symbols to the corresponding
-            matrices.
+            the term factors.
+        matrix_map (dict): Dictionary that maps target qubit ids to a list of
+            matrices that act on each qubit.
     """
 
     def __init__(self, coefficient, factors=[], matrix_map={}):
@@ -151,6 +151,8 @@ class SymbolicTerm(HamiltonianTerm):
         _factors = []
         _matrix_map = {}
         for factor in factors.as_ordered_factors():
+            # check if factor has some power ``power`` so that the corresponding
+            # matrix is multiplied ``pow`` times
             if isinstance(factor, sympy.Pow):
                 factor, pow = factor.args
                 assert isinstance(pow, sympy.Integer)
@@ -159,6 +161,8 @@ class SymbolicTerm(HamiltonianTerm):
             else:
                 pow = 1
 
+            # if the user is using ``symbol_map`` instead of qibo symbols,
+            # create the corresponding symbols
             if symbol_map is not None and factor in symbol_map:
                 from qibo.symbols import Symbol
                 q, matrix = symbol_map.get(factor)
@@ -192,6 +196,12 @@ class SymbolicTerm(HamiltonianTerm):
         """
         if self._matrix is None:
             def matrices_product(matrices):
+                """Product of matrices that act on the same tuple of qubits.
+
+                Args:
+                    matrices (list): List of matrices to multiply, as exists in
+                        the values of ``SymbolicTerm.matrix_map``.
+                """
                 if len(matrices) == 1:
                     return matrices[0]
                 matrix = K.np.copy(matrices[0])
@@ -206,6 +216,7 @@ class SymbolicTerm(HamiltonianTerm):
         return self._matrix
 
     def __mul__(self, x):
+        """Multiplication of scalar to the Hamiltonian term."""
         new = self.__class__(self.coefficient, self.factors, self.matrix_map)
         new.coefficient *= x
         if self._matrix is not None:
