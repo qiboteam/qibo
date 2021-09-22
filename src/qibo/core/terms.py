@@ -4,10 +4,12 @@ from qibo.config import raise_error
 
 
 class HamiltonianTerm:
-    """Single term in a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    """Term of a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
 
-    This Hamiltonian is represented by a sum of such terms which are held in
-    its ``.terms`` attribute which is a list.
+    Symbolic Hamiltonians are represented by a list of
+    :class:`qibo.core.terms.HamiltonianTerm` objects storred in the
+    ``SymbolicHamiltonian.terms`` attribute. The mathematical expression of
+    the Hamiltonian is the sum of these terms.
 
     Args:
         matrix (np.ndarray): Full matrix corresponding to the term representation
@@ -38,11 +40,12 @@ class HamiltonianTerm:
 
     @property
     def matrix(self):
+        """Matrix representation of the term."""
         return self._matrix
 
     @property
     def gate(self):
-        """Qibo gate that implements the action of the term on states."""
+        """:class:`qibo.abstractions.gates.Unitary` gate that implements the action of the term on states."""
         if self._gate is None:
             self._gate = gates.Unitary(self.matrix, *self.target_qubits)
         return self._gate
@@ -52,12 +55,13 @@ class HamiltonianTerm:
         return K.qnp.expm(-1j * x * self.matrix)
 
     def expgate(self, x):
-        """Unitary gate implementing the matrix exponentiation of the term."""
+        """:class:`qibo.abstractions.gates.Unitary` gate implementing the action of exp(term) on states."""
         return gates.Unitary(self.exp(x), *self.target_qubits)
 
     def merge(self, term):
         """Creates a new term by merging the given term to the current one.
 
+        The resulting term corresponds to the sum of the two original terms.
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
@@ -98,7 +102,7 @@ class HamiltonianTerm:
 
 
 class SymbolicTerm(HamiltonianTerm):
-    """:class:`qibo.core.terms.HamiltonianTerm` constructed from ``sympy`` symbols.
+    """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
         ::
@@ -107,17 +111,15 @@ class SymbolicTerm(HamiltonianTerm):
             from qibo.core.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
-            sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
+            sterms = [SymbolicTerm.from_factors(c, f) for f, c in termsdict.items()]
 
     Args:
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
-        factors (sympy.Expr): Sympy expression for the underlying term.
-        matrix_map (dict): Dictionary that maps symbols in the given ``factors``
-            expression to tuples of (target qubit id, matrix).
-            This is required only if the expression is not created using Qibo
-            symbols and to keep compatibility with older versions where Qibo
-            symbols were not available.
+        factors (list): List of :class:`qibo.symbols.Symbol` that represent
+            each factor in the term.
+        matrix_map (dict): Dictionary that maps symbols to the corresponding
+            matrices.
     """
 
     def __init__(self, coefficient, factors=[], matrix_map={}):
@@ -131,6 +133,18 @@ class SymbolicTerm(HamiltonianTerm):
 
     @classmethod
     def from_factors(cls, coefficient, factors, symbol_map=None):
+        """Helper constructor using the ``sympy`` expression directly.
+
+        Args:
+            coefficient (complex): Complex number coefficient of the underlying
+                term in the Hamiltonian.
+            factors (sympy.Expr): Sympy expression for the underlying term.
+            symbol_map (dict): Dictionary that maps symbols in the given ``factors``
+                expression to tuples of (target qubit id, matrix).
+                This is required only if the expression is not created using Qibo
+                symbols and to keep compatibility with older versions where Qibo
+                symbols were not available.
+        """
         if factors == 1:
             return cls(coefficient)
 
