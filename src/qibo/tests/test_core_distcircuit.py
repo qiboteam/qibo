@@ -56,9 +56,8 @@ def test_distributed_circuit_various_errors(backend):
 def test_distributed_circuit_fusion(backend, accelerators):
     c = DistributedCircuit(4, accelerators)
     c.add((gates.H(i) for i in range(4)))
-    final_state = c()
-    with pytest.raises(RuntimeError):
-        fused_c = c.fuse()
+    with pytest.raises(NotImplementedError):
+        c.fuse()
 
 
 def test_distributed_circuit_set_gates(backend):

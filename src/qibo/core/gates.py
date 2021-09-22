@@ -44,6 +44,13 @@ class BackendGate(BaseBackendGate):
         part2 = K.concatenate([zeros, unitary], axis=0)
         return K.concatenate([part1, part2], axis=1)
 
+    def _reset_unitary(self):
+        super()._reset_unitary()
+        self._native_op_matrix = None
+        self._custom_op_matrix = None
+        for gate in self.device_gates:
+            gate._reset_unitary()
+
     @property
     def cache(self):
         if self._cache is None:
@@ -1072,3 +1079,53 @@ class _ThermalRelaxationChannelB(MatrixGate, abstract_gates._ThermalRelaxationCh
             self._target_qubits = original_targets
             return K.reshape(state, shape)
         return K._state_vector_call(self, state)
+
+
+class FusedGate(MatrixGate, abstract_gates.FusedGate):
+
+    def __init__(self, *q):
+        BackendGate.__init__(self)
+        abstract_gates.FusedGate.__init__(self, *q)
+        if self.gate_op:
+            # Custom kernels currently support up to two target qubits
+            if len(self.target_qubits) == 1:
+                self.gate_op = K.op.apply_gate
+            elif len(self.target_qubits) == 2:
+                self.gate_op = K.op.apply_two_qubit_gate
+            else:
+                raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
+
+    def _construct_unitary(self):
+        """Constructs a single unitary by multiplying the matrices of the gates that are fused.
+
+        This matrix is used to perform a single update in the state during
+        simulation instead of applying the fused gates one by one.
+
+        Note that this method assumes maximum two target qubits and should be
+        updated if the fusion algorithm is extended to gates of higher rank.
+        """
+        matrix = K.qnp.eye(2 ** len(self.target_qubits))
+        for gate in self.gates:
+            # transfer gate matrix to numpy as it is more efficient for
+            # small tensor calculations
+            gmatrix = K.to_numpy(gate.matrix)
+            if len(gate.qubits) < len(self.target_qubits):
+                # fuse one-qubit gate (2x2 matrix) to a two-qubit ``FusedGate``
+                # Kronecker product with identity is needed to make the
+                # original matrix 4x4.
+                if gate.qubits[0] == self.target_qubits[0]:
+                    # gate target qubit is the first ```FusedGate`` target
+                    gmatrix = K.qnp.kron(gmatrix, K.qnp.eye(2))
+                else:
+                    # gate target qubit is the second ``FusedGate`` target
+                    gmatrix = K.qnp.kron(K.qnp.eye(2), gmatrix)
+            elif gate.qubits != self.target_qubits:
+                # fuse two-qubit gate (4x4 matrix) for which the target qubits
+                # are in opposite order compared to the ``FusedGate`` and
+                # the corresponding matrix has to be transposed before fusion
+                gmatrix = K.qnp.reshape(gmatrix, 4 * (2,))
+                gmatrix = K.qnp.transpose(gmatrix, [1, 0, 3, 2])
+                gmatrix = K.qnp.reshape(gmatrix, (4, 4))
+            # fuse the individual gate matrix to the total ``FusedGate`` matrix
+            matrix = gmatrix @ matrix
+        return K.cast(matrix)
