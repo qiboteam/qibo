@@ -193,9 +193,9 @@ class SymbolicTerm(HamiltonianTerm):
 
     def __mul__(self, x):
         new = self.__class__(self.coefficient, self.factors, self.matrix_map)
-        new._matrix = self._matrix
-        new._gate = self._gate
         new.coefficient *= x
+        if self._matrix is not None:
+            new._matrix = x * self._matrix
         return new
 
     def __call__(self, state, density_matrix=False):
