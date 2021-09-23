@@ -187,10 +187,10 @@ def test_set_parameters_with_double_variationallayer(backend, nqubits, trainable
 
 
 @pytest.mark.parametrize("trainable", [True, False])
-def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
+def test_set_parameters_with_gate_fusion(backend, trainable):
     """Check updating parameters of fused circuit."""
     params = np.random.random(9)
-    c = Circuit(5, accelerators)
+    c = Circuit(5)
     c.add(gates.RX(0, theta=params[0], trainable=trainable))
     c.add(gates.RY(1, theta=params[1]))
     c.add(gates.CZ(0, 1))
@@ -202,7 +202,9 @@ def test_set_parameters_with_gate_fusion(backend, trainable, accelerators):
     c.add(gates.RZ(1, theta=params[8]))
 
     fused_c = c.fuse()
-    K.assert_allclose(c(), fused_c())
+    final_state = fused_c()
+    target_state = c()
+    K.assert_allclose(final_state, target_state)
 
     if trainable:
         new_params = np.random.random(9)

@@ -432,9 +432,7 @@ class ParametrizedGate(Gate):
         # ``circuit.set_parameters`` method works properly.
         # pylint: disable=E1101
         if isinstance(self, BaseBackendGate):
-            self._matrix = None
-            self._native_op_matrix = None
-            self._custom_op_matrix = None
+            self._reset_unitary()
             for devgate in self.device_gates:
                 devgate.parameters = x
 
@@ -518,6 +516,13 @@ class BaseBackendGate(Gate, ABC):
     def _construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
+
+    def _reset_unitary(self):
+        """Resets the gate matrices back to ``None``.
+
+        Useful when the gate matrix need to be recalculated.
+        """
+        self._matrix = None
 
     @property
     @abstractmethod

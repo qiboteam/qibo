@@ -76,14 +76,9 @@ class DistributedCircuit(circuit.Circuit):
                                     "circuits because they modify gate objects.")
         return super().copy(deep)
 
-    def _fuse_copy(self):
-        return self.copy(deep=True)
-
     def fuse(self):
-        if self.queues.queues:
-            raise_error(RuntimeError, "Cannot fuse distributed circuit after "
-                                      "its first execution.")
-        return super().fuse()
+        raise_error(NotImplementedError, "Fusion is not implemented for "
+                                         "distributed circuits.")
 
     def with_noise(self, noise_map, measurement_noise=None):
         raise_error(NotImplementedError, "Distributed circuit does not support "

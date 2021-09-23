@@ -18,13 +18,13 @@ class _ParametrizedGates(list):
     total number of parameters.
     """
 
-    def __init__(self):
-        super(_ParametrizedGates, self).__init__(self)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.set = set()
         self.nparams = 0
 
-    def append(self, gate: gates.ParametrizedGate):
-        super(_ParametrizedGates, self).append(gate)
+    def append(self, gate):
+        super().append(gate)
         self.set.add(gate)
         self.nparams += gate.nparams
 
@@ -93,8 +93,6 @@ class AbstractCircuit(ABC):
         self.measurement_tuples = dict()
         self.measurement_gate = None
         self.measurement_gate_result = None
-
-        self.fusion_groups = []
 
         self._final_state = None
         self.density_matrix = False
@@ -180,6 +178,16 @@ class AbstractCircuit(ABC):
         for gate in self.queue:
             yield gate._on_qubits(*q)
 
+    def _shallow_copy(self):
+        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.copy`
+        and :meth:`qibo.core.circuit.Circuit.fuse`."""
+        new_circuit = self.__class__(**self.init_kwargs)
+        new_circuit.parametrized_gates = _ParametrizedGates(self.parametrized_gates)
+        new_circuit.trainable_gates = _ParametrizedGates(self.trainable_gates)
+        new_circuit.measurement_gate = self.measurement_gate
+        new_circuit.measurement_tuples = dict(self.measurement_tuples)
+        return new_circuit
+
     def copy(self, deep: bool = False):
         """Creates a copy of the current ``circuit`` as a new ``Circuit`` model.
 
@@ -192,9 +200,14 @@ class AbstractCircuit(ABC):
             The copied circuit object.
         """
         import copy
-        new_circuit = self.__class__(**self.init_kwargs)
         if deep:
+            new_circuit = self.__class__(**self.init_kwargs)
             for gate in self.queue:
+                if isinstance(gate, gates.FusedGate): # pragma: no cover
+                    # impractical case
+                    raise_error(NotImplementedError, "Cannot create deep copy "
+                                                     "of fused circuit.")
+
                 new_gate = copy.copy(gate)
                 new_circuit.queue.append(new_gate)
                 if isinstance(gate, gates.ParametrizedGate):
@@ -202,17 +215,10 @@ class AbstractCircuit(ABC):
                     if gate.trainable:
                         new_circuit.trainable_gates.append(new_gate)
             new_circuit.measurement_gate = copy.copy(self.measurement_gate)
-            if self.fusion_groups: # pragma: no cover
-                # impractical case
-                raise_error(NotImplementedError, "Cannot create deep copy of fused "
-                                                 "circuit.")
+            new_circuit.measurement_tuples = dict(self.measurement_tuples)
         else:
+            new_circuit = self._shallow_copy()
             new_circuit.queue = copy.copy(self.queue)
-            new_circuit.parametrized_gates = list(self.parametrized_gates)
-            new_circuit.trainable_gates = list(self.trainable_gates)
-            new_circuit.measurement_gate = self.measurement_gate
-            new_circuit.fusion_groups = list(self.fusion_groups)
-        new_circuit.measurement_tuples = dict(self.measurement_tuples)
         return new_circuit
 
     def invert(self):
@@ -517,9 +523,6 @@ class AbstractCircuit(ABC):
                                     "the circuit contains {} parametrized gates."
                                     "".format(n, len(self.trainable_gates)))
 
-        for fusion_group in self.fusion_groups:
-            fusion_group.update()
-
     def set_parameters(self, parameters):
         """Updates the parameters of the circuit's parametrized gates.
 
@@ -569,9 +572,6 @@ class AbstractCircuit(ABC):
         elif isinstance(parameters, self.param_tensor_types):
             self._set_parameters_list(parameters, int(parameters.shape[0]))
         elif isinstance(parameters, dict):
-            if self.fusion_groups:
-                raise_error(TypeError, "Cannot accept new parameters as dictionary "
-                                       "for fused circuits. Use list, tuple or array.")
             diff = set(parameters.keys()) - self.trainable_gates.set
             if diff:
                 raise_error(KeyError, "Dictionary contains gates {} which are "
@@ -582,6 +582,11 @@ class AbstractCircuit(ABC):
         else:
             raise_error(TypeError, "Invalid type of parameters {}."
                                    "".format(type(parameters)))
+        # Reset ``FusedGate`` matrices so that they are recalculated with the
+        # updated parameters.
+        for gate in self.queue:
+            if isinstance(gate, gates.FusedGate):
+                gate._reset_unitary()
 
     def get_parameters(self, format: str = "list",
                        include_not_trainable: bool = False
