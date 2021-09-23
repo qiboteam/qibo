@@ -88,7 +88,7 @@ def test_symbolic_term_creation(use_symbols):
         expression = x0 * y1 * x1
         symbol_map = {x0: (0, matrices.X), x1: (1, matrices.X),
                       y1: (1, matrices.Y)}
-    term = terms.SymbolicTerm.from_factors(2, expression, symbol_map)
+    term = terms.SymbolicTerm(2, expression, symbol_map)
     assert term.target_qubits == (0, 1)
     assert len(term.matrix_map) == 2
     K.assert_allclose(term.matrix_map.get(0)[0], matrices.X)
@@ -100,7 +100,7 @@ def test_symbolic_term_matrix(backend):
     """Test matrix calculation of ``SymbolicTerm``."""
     from qibo.symbols import X, Y, Z
     expression = X(0) * Y(1) * Z(2) * X(1)
-    term = terms.SymbolicTerm.from_factors(2, expression)
+    term = terms.SymbolicTerm(2, expression)
     assert term.target_qubits == (0, 1, 2)
     target_matrix = np.kron(matrices.X, matrices.Y @ matrices.X)
     target_matrix = 2 * np.kron(target_matrix, matrices.Z)
@@ -111,7 +111,7 @@ def test_symbolic_term_mul(backend):
     """Test multiplying scalar to ``SymbolicTerm``."""
     from qibo.symbols import X, Y, Z
     expression = Y(2) * Z(3) * X(2) * X(3)
-    term = terms.SymbolicTerm.from_factors(1, expression)
+    term = terms.SymbolicTerm(1, expression)
     assert term.target_qubits == (2, 3)
     target_matrix = np.kron(matrices.Y @ matrices.X, matrices.Z @ matrices.X)
     K.assert_allclose(term.matrix, target_matrix)
@@ -124,7 +124,7 @@ def test_symbolic_term_call(backend, density_matrix):
     """Test applying ``SymbolicTerm`` to state."""
     from qibo.symbols import X, Y, Z
     expression = Z(0) * X(1) * Y(2)
-    term = terms.SymbolicTerm.from_factors(2, expression)
+    term = terms.SymbolicTerm(2, expression)
     matrixlist = [np.kron(matrices.Z, np.eye(4)),
                   np.kron(np.kron(np.eye(2), matrices.X), np.eye(2)),
                   np.kron(np.eye(4), matrices.Y)]
@@ -141,7 +141,7 @@ def test_symbolic_term_merge(backend):
     from qibo.symbols import X, Z
     matrix = np.random.random((4, 4))
     term1 = terms.HamiltonianTerm(matrix, 0, 1)
-    term2 = terms.SymbolicTerm.from_factors(1, X(0) * Z(1))
+    term2 = terms.SymbolicTerm(1, X(0) * Z(1))
     term = term1.merge(term2)
     target_matrix = matrix + np.kron(matrices.X, matrices.Z)
     K.assert_allclose(term.matrix, target_matrix)
@@ -167,8 +167,8 @@ def test_term_group_to_term(backend):
     from qibo.symbols import X, Z
     matrix = np.random.random((8, 8))
     term1 = terms.HamiltonianTerm(matrix, 0, 1, 3)
-    term2 = terms.SymbolicTerm.from_factors(1, X(0) * Z(3))
-    term3 = terms.SymbolicTerm.from_factors(2, X(1))
+    term2 = terms.SymbolicTerm(1, X(0) * Z(3))
+    term3 = terms.SymbolicTerm(2, X(1))
     group = terms.TermGroup(term1)
     group.append(term2)
     group.append(term3)

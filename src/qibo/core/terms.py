@@ -121,69 +121,62 @@ class SymbolicTerm(HamiltonianTerm):
         matrix_map (dict): Dictionary that maps target qubit ids to a list of
             matrices that act on each qubit.
     """
+    """Helper constructor using the ``sympy`` expression directly.
 
-    def __init__(self, coefficient, factors=[], matrix_map={}):
+    Args:
+        coefficient (complex): Complex number coefficient of the underlying
+            term in the Hamiltonian.
+        factors (sympy.Expr): Sympy expression for the underlying term.
+        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
+            expression to tuples of (target qubit id, matrix).
+            This is required only if the expression is not created using Qibo
+            symbols and to keep compatibility with older versions where Qibo
+            symbols were not available.
+    """
+
+    def __init__(self, coefficient, factors=1, symbol_map=None):
         self.coefficient = complex(coefficient)
-        self.factors = factors
-        self.matrix_map = matrix_map
         self._matrix = None
         self._gate = None
         self.hamiltonian = None
-        self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
-    @classmethod
-    def from_factors(cls, coefficient, factors, symbol_map=None):
-        """Helper constructor using the ``sympy`` expression directly.
-
-        Args:
-            coefficient (complex): Complex number coefficient of the underlying
-                term in the Hamiltonian.
-            factors (sympy.Expr): Sympy expression for the underlying term.
-            symbol_map (dict): Dictionary that maps symbols in the given ``factors``
-                expression to tuples of (target qubit id, matrix).
-                This is required only if the expression is not created using Qibo
-                symbols and to keep compatibility with older versions where Qibo
-                symbols were not available.
-        """
-        if factors == 1:
-            return cls(coefficient)
-
-        _factors = []
-        _matrix_map = {}
-        for factor in factors.as_ordered_factors():
-            # check if factor has some power ``power`` so that the corresponding
-            # matrix is multiplied ``pow`` times
-            if isinstance(factor, sympy.Pow):
-                factor, pow = factor.args
-                assert isinstance(pow, sympy.Integer)
-                assert isinstance(factor, sympy.Symbol)
-                pow = int(pow)
-            else:
-                pow = 1
-
-            # if the user is using ``symbol_map`` instead of qibo symbols,
-            # create the corresponding symbols
-            if symbol_map is not None and factor in symbol_map:
-                from qibo.symbols import Symbol
-                q, matrix = symbol_map.get(factor)
-                factor = Symbol(q, matrix, name=factor.name)
-
-            if isinstance(factor, sympy.Symbol):
-                if isinstance(factor.matrix, K.qnp.tensor_types):
-                    _factors.extend(pow * [factor])
-                    q = factor.target_qubit
-                    if q in _matrix_map:
-                        _matrix_map[q].extend(pow * [factor.matrix])
-                    else:
-                        _matrix_map[q] = pow * [factor.matrix]
+        self.factors = []
+        self.matrix_map = {}
+        if factors != 1:
+            for factor in factors.as_ordered_factors():
+                # check if factor has some power ``power`` so that the corresponding
+                # matrix is multiplied ``pow`` times
+                if isinstance(factor, sympy.Pow):
+                    factor, pow = factor.args
+                    assert isinstance(pow, sympy.Integer)
+                    assert isinstance(factor, sympy.Symbol)
+                    pow = int(pow)
                 else:
-                    coefficient *= factor.matrix
-            elif factor == sympy.I:
-                coefficient *= 1j
-            else: # pragma: no cover
-                raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+                    pow = 1
 
-        return cls(coefficient, _factors, _matrix_map)
+                # if the user is using ``symbol_map`` instead of qibo symbols,
+                # create the corresponding symbols
+                if symbol_map is not None and factor in symbol_map:
+                    from qibo.symbols import Symbol
+                    q, matrix = symbol_map.get(factor)
+                    factor = Symbol(q, matrix, name=factor.name)
+
+                if isinstance(factor, sympy.Symbol):
+                    if isinstance(factor.matrix, K.qnp.tensor_types):
+                        self.factors.extend(pow * [factor])
+                        q = factor.target_qubit
+                        if q in self.matrix_map:
+                            self.matrix_map[q].extend(pow * [factor.matrix])
+                        else:
+                            self.matrix_map[q] = pow * [factor.matrix]
+                    else:
+                        self.coefficient *= factor.matrix
+                elif factor == sympy.I:
+                    self.coefficient *= 1j
+                else: # pragma: no cover
+                    raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+
+        self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
     @property
     def matrix(self):
@@ -215,9 +208,17 @@ class SymbolicTerm(HamiltonianTerm):
                 self._matrix = K.np.kron(self._matrix, matrix)
         return self._matrix
 
+    def copy(self):
+        """Creates a shallow copy of the term with the same attributes."""
+        new = self.__class__(self.coefficient)
+        new.factors = self.factors
+        new.matrix_map = self.matrix_map
+        new.target_qubits = self.target_qubits
+        return new
+
     def __mul__(self, x):
         """Multiplication of scalar to the Hamiltonian term."""
-        new = self.__class__(self.coefficient, self.factors, self.matrix_map)
+        new = self.copy()
         new.coefficient *= x
         if self._matrix is not None:
             new._matrix = x * self._matrix
