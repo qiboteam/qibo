@@ -134,3 +134,45 @@ def test_symbolic_term_call(backend, density_matrix):
     for matrix in matrixlist:
         target_state = matrix @ target_state
     K.assert_allclose(final_state, target_state)
+
+
+def test_symbolic_term_merge(backend):
+    """Test merging ``SymbolicTerm`` to ``HamiltonianTerm``."""
+    from qibo.symbols import X, Z
+    matrix = np.random.random((4, 4))
+    term1 = terms.HamiltonianTerm(matrix, 0, 1)
+    term2 = terms.SymbolicTerm.from_factors(1, X(0) * Z(1))
+    term = term1.merge(term2)
+    target_matrix = matrix + np.kron(matrices.X, matrices.Z)
+    K.assert_allclose(term.matrix, target_matrix)
+
+
+def test_term_group_append():
+    """Test ``GroupTerm.can_append`` method."""
+    term1 = terms.HamiltonianTerm(np.random.random((8, 8)), 0, 1, 3)
+    term2 = terms.HamiltonianTerm(np.random.random((2, 2)), 0)
+    term3 = terms.HamiltonianTerm(np.random.random((2, 2)), 1)
+    term4 = terms.HamiltonianTerm(np.random.random((2, 2)), 2)
+    group = terms.TermGroup(term1)
+    assert group.can_append(term2)
+    assert group.can_append(term3)
+    assert not group.can_append(term4)
+    group.append(term2)
+    group.append(term3)
+    assert group.target_qubits == {0, 1, 3}
+
+
+def test_term_group_to_term(backend):
+    """Test ``GroupTerm.term`` property."""
+    from qibo.symbols import X, Z
+    matrix = np.random.random((8, 8))
+    term1 = terms.HamiltonianTerm(matrix, 0, 1, 3)
+    term2 = terms.SymbolicTerm.from_factors(1, X(0) * Z(3))
+    term3 = terms.SymbolicTerm.from_factors(2, X(1))
+    group = terms.TermGroup(term1)
+    group.append(term2)
+    group.append(term3)
+    matrix2 = np.kron(np.kron(matrices.X, np.eye(2)), matrices.Z)
+    matrix3 = np.kron(np.kron(np.eye(2), matrices.X), np.eye(2))
+    target_matrix = matrix + matrix2 + 2 * matrix3
+    K.assert_allclose(group.term.matrix, target_matrix)

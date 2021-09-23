@@ -236,7 +236,8 @@ class SymbolicTerm(HamiltonianTerm):
 class TermGroup(list):
     """Collection of multiple :class:`qibo.core.terms.HamiltonianTerm` objects.
 
-    Allows merging multiple terms to a single one for faster exponentiation.
+    Allows merging multiple terms to a single one for faster exponentiation
+    during Trotterized evolution.
 
     Args:
         term (:class:`qibo.core.terms.HamiltonianTerm`): Parent term of the group.
@@ -261,7 +262,9 @@ class TermGroup(list):
 
     @classmethod
     def from_terms(cls, terms):
-        """Groups a list of terms to multiple groups.
+        """Divides a list of terms to multiple :class:`qibo.core.terms.TermGroup`s.
+
+        Terms that target the same qubits are grouped to the same group.
 
         Args:
             terms (list): List of :class:`qibo.core.terms.HamiltonianTerm` objects.
@@ -270,6 +273,8 @@ class TermGroup(list):
             List of :class:`qibo.core.terms.TermGroup` objects that contain
             all the given terms.
         """
+        # split given terms according to their order
+        # order = len(term.target_qubits)
         orders = {}
         for term in terms:
             if len(term) in orders:
@@ -278,6 +283,8 @@ class TermGroup(list):
                 orders[len(term)] = [term]
 
         groups = []
+        # start creating groups with the higher order terms as parents and then
+        # append each term of lower order to the first compatible group
         for order in sorted(orders.keys())[::-1]:
             for child in orders[order]:
                 flag = True
