@@ -111,17 +111,7 @@ class SymbolicTerm(HamiltonianTerm):
             from qibo.core.terms import SymbolicTerm
             sham = X(0) * X(1) + 2 * Y(0) * Y(1)
             termsdict = sham.as_coefficients_dict()
-            sterms = [SymbolicTerm.from_factors(c, f) for f, c in termsdict.items()]
-
-    Args:
-        coefficient (complex): Complex number coefficient of the underlying
-            term in the Hamiltonian.
-        factors (list): List of :class:`qibo.symbols.Symbol` that represent
-            the term factors.
-        matrix_map (dict): Dictionary that maps target qubit ids to a list of
-            matrices that act on each qubit.
-    """
-    """Helper constructor using the ``sympy`` expression directly.
+            sterms = [SymbolicTerm(c, f) for f, c in termsdict.items()]
 
     Args:
         coefficient (complex): Complex number coefficient of the underlying
@@ -140,7 +130,9 @@ class SymbolicTerm(HamiltonianTerm):
         self._gate = None
         self.hamiltonian = None
 
+        # List of :class:`qibo.symbols.Symbol` that represent the term factors
         self.factors = []
+        # Dictionary that maps target qubit ids to a list of matrices that act on each qubit
         self.matrix_map = {}
         if factors != 1:
             for factor in factors.as_ordered_factors():
@@ -165,6 +157,12 @@ class SymbolicTerm(HamiltonianTerm):
                     if isinstance(factor.matrix, K.qnp.tensor_types):
                         self.factors.extend(pow * [factor])
                         q = factor.target_qubit
+                        # if pow > 1 the matrix should be multiplied multiple
+                        # when calculating the term's total matrix so we
+                        # repeat it in the corresponding list that will
+                        # be used during this calculation
+                        # see the ``SymbolicTerm.matrix`` property for the
+                        # full matrix calculation
                         if q in self.matrix_map:
                             self.matrix_map[q].extend(pow * [factor.matrix])
                         else:
