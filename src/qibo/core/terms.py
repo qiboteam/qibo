@@ -4,10 +4,12 @@ from qibo.config import raise_error
 
 
 class HamiltonianTerm:
-    """Single term in a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    """Term of a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
 
-    This Hamiltonian is represented by a sum of such terms which are held in
-    its ``.terms`` attribute which is a list.
+    Symbolic Hamiltonians are represented by a list of
+    :class:`qibo.core.terms.HamiltonianTerm` objects storred in the
+    ``SymbolicHamiltonian.terms`` attribute. The mathematical expression of
+    the Hamiltonian is the sum of these terms.
 
     Args:
         matrix (np.ndarray): Full matrix corresponding to the term representation
@@ -38,11 +40,12 @@ class HamiltonianTerm:
 
     @property
     def matrix(self):
+        """Matrix representation of the term."""
         return self._matrix
 
     @property
     def gate(self):
-        """Qibo gate that implements the action of the term on states."""
+        """:class:`qibo.abstractions.gates.Unitary` gate that implements the action of the term on states."""
         if self._gate is None:
             self._gate = gates.Unitary(self.matrix, *self.target_qubits)
         return self._gate
@@ -52,12 +55,13 @@ class HamiltonianTerm:
         return K.qnp.expm(-1j * x * self.matrix)
 
     def expgate(self, x):
-        """Unitary gate implementing the matrix exponentiation of the term."""
+        """:class:`qibo.abstractions.gates.Unitary` gate implementing the action of exp(term) on states."""
         return gates.Unitary(self.exp(x), *self.target_qubits)
 
     def merge(self, term):
         """Creates a new term by merging the given term to the current one.
 
+        The resulting term corresponds to the sum of the two original terms.
         The target qubits of the given term should be a subset of the target
         qubits of the current term.
         """
@@ -98,7 +102,7 @@ class HamiltonianTerm:
 
 
 class SymbolicTerm(HamiltonianTerm):
-    """:class:`qibo.core.terms.HamiltonianTerm` constructed from ``sympy`` symbols.
+    """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
         ::
@@ -113,59 +117,64 @@ class SymbolicTerm(HamiltonianTerm):
         coefficient (complex): Complex number coefficient of the underlying
             term in the Hamiltonian.
         factors (sympy.Expr): Sympy expression for the underlying term.
-        matrix_map (dict): Dictionary that maps symbols in the given ``factors``
+        symbol_map (dict): Dictionary that maps symbols in the given ``factors``
             expression to tuples of (target qubit id, matrix).
             This is required only if the expression is not created using Qibo
             symbols and to keep compatibility with older versions where Qibo
             symbols were not available.
     """
 
-    def __init__(self, coefficient, factors=[], matrix_map={}):
+    def __init__(self, coefficient, factors=1, symbol_map=None):
         self.coefficient = complex(coefficient)
-        self.factors = factors
-        self.matrix_map = matrix_map
         self._matrix = None
         self._gate = None
         self.hamiltonian = None
-        self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
-    @classmethod
-    def from_factors(cls, coefficient, factors, symbol_map=None):
-        if factors == 1:
-            return cls(coefficient)
-
-        _factors = []
-        _matrix_map = {}
-        for factor in factors.as_ordered_factors():
-            if isinstance(factor, sympy.Pow):
-                factor, pow = factor.args
-                assert isinstance(pow, sympy.Integer)
-                assert isinstance(factor, sympy.Symbol)
-                pow = int(pow)
-            else:
-                pow = 1
-
-            if symbol_map is not None and factor in symbol_map:
-                from qibo.symbols import Symbol
-                q, matrix = symbol_map.get(factor)
-                factor = Symbol(q, matrix, name=factor.name)
-
-            if isinstance(factor, sympy.Symbol):
-                if isinstance(factor.matrix, K.qnp.tensor_types):
-                    _factors.extend(pow * [factor])
-                    q = factor.target_qubit
-                    if q in _matrix_map:
-                        _matrix_map[q].extend(pow * [factor.matrix])
-                    else:
-                        _matrix_map[q] = pow * [factor.matrix]
+        # List of :class:`qibo.symbols.Symbol` that represent the term factors
+        self.factors = []
+        # Dictionary that maps target qubit ids to a list of matrices that act on each qubit
+        self.matrix_map = {}
+        if factors != 1:
+            for factor in factors.as_ordered_factors():
+                # check if factor has some power ``power`` so that the corresponding
+                # matrix is multiplied ``pow`` times
+                if isinstance(factor, sympy.Pow):
+                    factor, pow = factor.args
+                    assert isinstance(pow, sympy.Integer)
+                    assert isinstance(factor, sympy.Symbol)
+                    pow = int(pow)
                 else:
-                    coefficient *= factor.matrix
-            elif factor == sympy.I:
-                coefficient *= 1j
-            else: # pragma: no cover
-                raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+                    pow = 1
 
-        return cls(coefficient, _factors, _matrix_map)
+                # if the user is using ``symbol_map`` instead of qibo symbols,
+                # create the corresponding symbols
+                if symbol_map is not None and factor in symbol_map:
+                    from qibo.symbols import Symbol
+                    q, matrix = symbol_map.get(factor)
+                    factor = Symbol(q, matrix, name=factor.name)
+
+                if isinstance(factor, sympy.Symbol):
+                    if isinstance(factor.matrix, K.qnp.tensor_types):
+                        self.factors.extend(pow * [factor])
+                        q = factor.target_qubit
+                        # if pow > 1 the matrix should be multiplied multiple
+                        # when calculating the term's total matrix so we
+                        # repeat it in the corresponding list that will
+                        # be used during this calculation
+                        # see the ``SymbolicTerm.matrix`` property for the
+                        # full matrix calculation
+                        if q in self.matrix_map:
+                            self.matrix_map[q].extend(pow * [factor.matrix])
+                        else:
+                            self.matrix_map[q] = pow * [factor.matrix]
+                    else:
+                        self.coefficient *= factor.matrix
+                elif factor == sympy.I:
+                    self.coefficient *= 1j
+                else: # pragma: no cover
+                    raise_error(TypeError, "Cannot parse factor {}.".format(factor))
+
+        self.target_qubits = tuple(sorted(self.matrix_map.keys()))
 
     @property
     def matrix(self):
@@ -178,6 +187,12 @@ class SymbolicTerm(HamiltonianTerm):
         """
         if self._matrix is None:
             def matrices_product(matrices):
+                """Product of matrices that act on the same tuple of qubits.
+
+                Args:
+                    matrices (list): List of matrices to multiply, as exists in
+                        the values of ``SymbolicTerm.matrix_map``.
+                """
                 if len(matrices) == 1:
                     return matrices[0]
                 matrix = K.np.copy(matrices[0])
@@ -191,11 +206,20 @@ class SymbolicTerm(HamiltonianTerm):
                 self._matrix = K.np.kron(self._matrix, matrix)
         return self._matrix
 
+    def copy(self):
+        """Creates a shallow copy of the term with the same attributes."""
+        new = self.__class__(self.coefficient)
+        new.factors = self.factors
+        new.matrix_map = self.matrix_map
+        new.target_qubits = self.target_qubits
+        return new
+
     def __mul__(self, x):
-        new = self.__class__(self.coefficient, self.factors, self.matrix_map)
-        new._matrix = self._matrix
-        new._gate = self._gate
+        """Multiplication of scalar to the Hamiltonian term."""
+        new = self.copy()
         new.coefficient *= x
+        if self._matrix is not None:
+            new._matrix = x * self._matrix
         return new
 
     def __call__(self, state, density_matrix=False):
@@ -211,7 +235,8 @@ class SymbolicTerm(HamiltonianTerm):
 class TermGroup(list):
     """Collection of multiple :class:`qibo.core.terms.HamiltonianTerm` objects.
 
-    Allows merging multiple terms to a single one for faster exponentiation.
+    Allows merging multiple terms to a single one for faster exponentiation
+    during Trotterized evolution.
 
     Args:
         term (:class:`qibo.core.terms.HamiltonianTerm`): Parent term of the group.
@@ -236,7 +261,9 @@ class TermGroup(list):
 
     @classmethod
     def from_terms(cls, terms):
-        """Groups a list of terms to multiple groups.
+        """Divides a list of terms to multiple :class:`qibo.core.terms.TermGroup`s.
+
+        Terms that target the same qubits are grouped to the same group.
 
         Args:
             terms (list): List of :class:`qibo.core.terms.HamiltonianTerm` objects.
@@ -245,6 +272,8 @@ class TermGroup(list):
             List of :class:`qibo.core.terms.TermGroup` objects that contain
             all the given terms.
         """
+        # split given terms according to their order
+        # order = len(term.target_qubits)
         orders = {}
         for term in terms:
             if len(term) in orders:
@@ -253,6 +282,8 @@ class TermGroup(list):
                 orders[len(term)] = [term]
 
         groups = []
+        # start creating groups with the higher order terms as parents and then
+        # append each term of lower order to the first compatible group
         for order in sorted(orders.keys())[::-1]:
             for child in orders[order]:
                 flag = True
