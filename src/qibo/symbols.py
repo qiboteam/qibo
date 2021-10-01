@@ -15,11 +15,11 @@ class Symbol(sympy.Symbol):
             symbolic expressions.
     """
 
-    def __new__(cls, q, matrix=None, name="Symbol"):
+    def __new__(cls, q, matrix=None, name="Symbol", commutative=False):
         name = "{}{}".format(name, q)
-        return super().__new__(cls=cls, name=name, commutative=False)
+        return super().__new__(cls=cls, name=name, commutative=commutative)
 
-    def __init__(self, q, matrix=None, name="Symbol"):
+    def __init__(self, q, matrix=None, name="Symbol", commutative=False):
         self.target_qubit = q
         self._gate = None
         if not (matrix is None or isinstance(matrix, K.qnp.numeric_types) or
@@ -41,13 +41,14 @@ class Symbol(sympy.Symbol):
 
 class PauliSymbol(Symbol):
 
-    def __new__(cls, q):
-        return super().__new__(cls=cls, q=q, name=cls.__name__)
+    def __new__(cls, q, commutative=False):
+        matrix = getattr(matrices, cls.__name__)
+        return super().__new__(cls, q, matrix, cls.__name__, commutative)
 
-    def __init__(self, q):
-        self.target_qubit = q
-        self._gate = None
-        self.matrix = getattr(matrices, self.__class__.__name__)
+    def __init__(self, q, commutative=False):
+        name = self.__class__.__name__
+        matrix = getattr(matrices, name)
+        super().__init__(q, matrix, name, commutative)
 
     def calculate_gate(self):
         name = self.__class__.__name__
