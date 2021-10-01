@@ -223,43 +223,105 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             were not available and will be deprecated in the future.
             It is not required if the Hamiltonian is constructed using Qibo symbols.
     """
+    # TODO: Improve this docstring with more explanations on the `terms` and `form` representations.
 
     def __init__(self, form=None, symbol_map=None, ground_state=None):
         super().__init__(ground_state)
         self._dense = None
-        self.terms = None # list of :class:`qibo.core.terms.HamiltonianTerm` objects
+        self._terms = None
         self.constant = 0
-        self.form = None
+        self.form = form
+        self.symbol_map = symbol_map
+        # if ``self.symbol_map`` is ``None`` it means that the Hamiltonian form
+        # uses Qibo symbols, otherwise it uses plain ``sympy.MatrixSymbol``
         self.trotter_circuit = None
         if form is not None:
-            self.set_form(form, symbol_map)
+            import sympy
+            # Check that given form is a ``sympy`` expression
+            if not issubclass(form.__class__, sympy.Expr):
+                raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
+                                       "expression but is {}.".format(type(form)))
+            if symbol_map is None:
+                self.nqubits = self._check_form(form) + 1
+            else:
+                self.nqubits = self._check_form_with_symbol_map(form, symbol_map) + 1
+
+    @staticmethod
+    def _check_form(form):
+        """Checks symbols in the given Hamiltonian and calculates the number of qubits.
+
+        Helper method for initialization if a ``symbol_map`` is not provided and
+        Qibo symbols are used.
+        """
+        import sympy
+        from qibo import symbols
+        nqubits = 0
+        for symbol in form.free_symbols:
+            # Check that all symbols are Qibo symbols since a symbol
+            # map is not given
+            if not isinstance(symbol, sympy.Expr):
+                raise_error(TypeError, "Invalid symbol type {} found "
+                                       "in Hamiltonian form"
+                                       "".format(type(symbol)))
+            q = symbol.target_qubit
+            if q > nqubits:
+                nqubits = q
+        return nqubits
+
+    @staticmethod
+    def _check_form_with_symbol_map(form, symbol_map):
+        """Checks symbols in the given Hamiltonian and calculates the number of qubits.
+
+        Helper method for initialization if a ``symbol_map`` is provided.
+        """
+        nqubits = 0
+        for symbol in form.free_symbols:
+            # Check that all symbols are in the given symbol map
+            if symbol not in symbol_map:
+                raise_error(ValueError, "Symbol {} is not in the given "
+                                        "symbol map.".format(symbol))
+            q, matrix = symbol_map.get(symbol)
+            if isinstance(matrix, K.tensor_types) and q > nqubits:
+                nqubits = q
+        return nqubits
+
+    @property
+    def terms(self):
+        """List of :class:`qibo.core.terms.HamiltonianTerm` objects of which the Hamiltonian is a sum of."""
+        if self._terms is None:
+            if self.form is None:
+                raise_error(ValueError, "Cannot construct terms of ``SymbolicHamiltonian``"
+                                        "because its form was not specified.")
+            # Calculate terms based on the ``sympy`` form
+            import sympy
+            from qibo.core.terms import SymbolicTerm
+            form = sympy.expand(self.form)
+            terms = []
+            for f, c in form.as_coefficients_dict().items():
+                term = SymbolicTerm(c, f, self.symbol_map)
+                if term.target_qubits:
+                    terms.append(term)
+                else:
+                    self.constant += term.coefficient
+            assert self.nqubits == max(q for term in terms for q in term.target_qubits) + 1
+            self._terms = terms
+        return self._terms
+
+    @terms.setter
+    def terms(self, terms):
+        if self.form is not None:
+            raise_error(RuntimeError, "Cannot set the terms of ``SymbolicHamiltonian``"
+                                      "with defined form.")
+        self._terms = terms
+        self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
     @classmethod
     def from_terms(cls, terms, ground_state=None):
         """Constructs a symbolic Hamiltonian directly from a list of terms."""
+        # TODO: Remove this constructor as we can set terms directly
         ham = cls(ground_state=ground_state)
-        ham.set_terms(terms)
+        ham.terms = terms
         return ham
-
-    def set_terms(self, terms):
-        self.terms = terms
-        self.nqubits = max(q for term in self.terms for q in term.target_qubits) + 1
-
-    def set_form(self, form, symbol_map=None):
-        import sympy
-        from qibo.core.terms import SymbolicTerm
-        if not issubclass(form.__class__, sympy.Expr):
-            raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
-                                   "expression but is {}.".format(type(form)))
-        self.form = sympy.expand(form)
-        terms = []
-        for f, c in self.form.as_coefficients_dict().items():
-            term = SymbolicTerm(c, f, symbol_map)
-            if term.target_qubits:
-                terms.append(term)
-            else:
-                self.constant += term.coefficient
-        self.set_terms(terms)
 
     def calculate_dense(self):
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
