@@ -97,6 +97,142 @@ class VQE(object):
         return result, parameters, extra
 
 
+class AAVQE(object):
+    """This class implements the Adiabatically Assisted Variational Quantum Eigensolvers
+    algorithm. See https://arxiv.org/abs/1806.02287.
+
+    Args:
+        circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variaional ansatz.
+        easy_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): initial Hamiltonian object.
+        problem_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian object.
+        s (callable): scheduling function of time that defines the scheduling of the
+            adiabatic evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
+        nsteps (float): number of steps of the adiabatic evolution.
+        t_max (float): total time of time evolution.
+
+    Example:
+    ::
+        import numpy as np
+        from qibo import gates, models, hamiltonians
+        # create circuit ansatz for two qubits
+        circuit = models.Circuit(2)
+        circuit.add(gates.RY(0, theta=0))
+        circuit.add(gates.RY(1, theta=0))
+        # define the easy and the problem Hamiltonian.
+        easy_hamiltonian=hamiltonians.X(2)
+        problem_hamiltonian=hamiltonians.XXZ(2)
+        # define a scheduling function with only one parameter 
+        # and boundary conditions s(0) = 0, s(1) = 1
+        s = lambda t: t
+        # create AAVQE model 
+        aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
+                             s, nsteps = 10, Tmax = 1)
+        # optimize using random initial variational parameters
+        np.random.seed(0)
+        initial_parameters = np.random.uniform(0, 2*np.pi, 2)
+        ground_energy, params = aavqe.minimize(initial_parameters)
+    """
+
+    def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1):
+        from qibo.abstractions import hamiltonians
+
+        if not issubclass(type(easy_hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
+            raise_error(TypeError, "The easy Hamiltonian should be a hamiltonians.Hamiltonian "
+                                   "object but is {}.".format(type(easy_hamiltonian)))
+        if type(problem_hamiltonian) != type(easy_hamiltonian):
+            raise_error(TypeError, "The problem Hamiltonian should be of the same type of the easy Hamiltonian"
+                                    " ({}), but it is {}.".format(type(easy_hamiltonian), type(problem_hamiltonian)))
+        if easy_hamiltonian.nqubits != problem_hamiltonian.nqubits:
+            raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
+                                    "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
+
+        self.ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
+        self.ATOL_TIME = 1e-7 # Tolerance for checking if time is greater than t_max.
+
+        self._circuit = circuit
+        self._h0 = easy_hamiltonian
+        self._h1 = problem_hamiltonian
+        self._nsteps = nsteps
+        self._t_max = t_max
+        self._dt = 1./(nsteps-1)
+
+        self._schedule = None
+        nparams = s.__code__.co_argcount
+        if not nparams == 1:
+            raise_error(ValueError,"Scheduling function must take only one argument,"
+                                   "but the function proposed takes {}.".format(nparams))
+        self.set_schedule(s)
+    
+    def set_schedule(self, func):
+        """ Set scheduling function s(t) as func."""
+        #check boundary conditions
+        s0 = func(0)
+        if abs(s0) > self.ATOL:
+            raise_error(ValueError, "s(0) should be 0 but it is {}.".format(s0))
+        s1 = func(1)
+        if abs(s1 - 1) > self.ATOL:
+            raise_error(ValueError, "s(1) should be 1 but it is {}.".format(s1))
+
+        self._schedule = func
+
+    def schedule(self):
+        """Returns scheduling as a function of time."""
+        if self._schedule is None:
+            raise_error(ValueError, "Cannot access scheduling before it is set.")
+        return self._schedule
+
+    def schedule(self, t):
+        """ Returns scheduling function evaluated at time t: s(t/Tmax)."""
+        if self._schedule is None:
+            raise_error(ValueError, "Cannot access scheduling before it is set.")
+        if (t - self._t_max) > self.ATOL_TIME:
+            raise_error(ValueError, "t cannot be greater than {}, but it is {}.".format(self._t_max, t))
+
+        s = self._schedule(t / self._t_max)
+        if (abs(s) - 1) > self.ATOL:
+            raise_error(ValueError, "s cannot be greater than 1 but it is {}.".format(s))
+        return s
+
+    def hamiltonian(self, t):
+        """Returns the adiabatic evolution Hamiltonian at a given time."""
+        if (t - self._t_max) > self.ATOL:
+            raise_error(ValueError, "t cannot be greater than {}, but it is {}.".format(self._t_max, t))
+        # boundary conditions  s(0)=0, s(total_time)=1
+        st = self.schedule(t)
+        return self._h0 * (1 - st) + self._h1 * st
+
+
+    def minimize(self, params, method="BFGS", jac=None, hess=None,
+                 hessp=None, bounds=None, constraints=(), tol=None,
+                 options=None, compile=False, processes=None):
+        """
+        Performs minimization to find the ground state of the problem Hamiltonian.
+        Args:
+            params (np.ndarray or list): initial guess for the parameters of the variational circuit.
+            method (str): optimizer to employ. 
+            jac (dict): Method for computing the gradient vector for scipy optimizers.
+            hess (dict): Method for computing the hessian matrix for scipy optimizers.
+            hessp (callable): Hessian of objective function times an arbitrary
+                            vector for scipy optimizers.
+            bounds (sequence or Bounds): Bounds on variables for scipy optimizers.
+            constraints (dict): Constraints definition for scipy optimizers.
+            tol (float): Tolerance of termination for scipy optimizers.
+            options (dict): a dictionary with options for the different optimizers.
+            compile (bool): whether the TensorFlow graph should be compiled.
+            processes (int): number of processes when using the paralle BFGS method.
+        """
+        from qibo import models
+        t = 0.
+        while (t-self._t_max)<=self.ATOL_TIME:
+            H = self.hamiltonian(t)
+            vqe = models.VQE(self._circuit, H)
+            best, params, _ = vqe.minimize(params, method=method, jac=jac, hess=hess, hessp=hessp, 
+                                        bounds=bounds, constraints=constraints, tol=tol, 
+                                        options=options, compile=compile, processes=processes)
+            t += self._dt
+        return best, params
+
+
 class QAOA(object):
     """ Quantum Approximate Optimization Algorithm (QAOA) model.
 
