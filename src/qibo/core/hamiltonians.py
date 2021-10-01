@@ -1,4 +1,5 @@
 import itertools
+import sympy
 from qibo import K, gates
 from qibo.config import log, raise_error, EINSUM_CHARS
 from qibo.abstractions import hamiltonians, states
@@ -229,14 +230,13 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         super().__init__(ground_state)
         self._dense = None
         self._terms = None
-        self.constant = 0
+        self.constant = 0 # TODO: Rename this to `self._constant` and remember to update it when `_terms` is assigned
         self.form = form
         self.symbol_map = symbol_map
         # if ``self.symbol_map`` is ``None`` it means that the Hamiltonian form
         # uses Qibo symbols, otherwise it uses plain ``sympy.MatrixSymbol``
         self.trotter_circuit = None
         if form is not None:
-            import sympy
             # Check that given form is a ``sympy`` expression
             if not issubclass(form.__class__, sympy.Expr):
                 raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
@@ -253,7 +253,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         Helper method for initialization if a ``symbol_map`` is not provided and
         Qibo symbols are used.
         """
-        import sympy
         from qibo import symbols
         nqubits = 0
         for symbol in form.free_symbols:
@@ -293,7 +292,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 raise_error(ValueError, "Cannot construct terms of ``SymbolicHamiltonian``"
                                         "because its form was not specified.")
             # Calculate terms based on the ``sympy`` form
-            import sympy
             from qibo.core.terms import SymbolicTerm
             form = sympy.expand(self.form)
             terms = []
@@ -323,7 +321,51 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         ham.terms = terms
         return ham
 
-    def calculate_dense(self):
+    def _get_symbol_matrix(self, term):
+        """Helper method for ``_calculate_dense_from_form``."""
+        # TODO: Add comments here
+        if isinstance(term, sympy.Add):
+            result = sum(self._get_symbol_matrix(subterm)
+                         for subterm in term.as_ordered_terms())
+
+        elif isinstance(term, sympy.Mul):
+            factors = term.as_ordered_factors()
+            result = self._get_symbol_matrix(factors[0])
+            for subterm in factors[1:]:
+                result = result @ self._get_symbol_matrix(subterm)
+
+        elif isinstance(term, sympy.Pow):
+            base, exponent = term.as_base_exp()
+            matrix = self._get_symbol_matrix(base)
+            result = matrix
+            for _ in range(exponent - 1):
+                result = result @ matrix
+
+        elif isinstance(term, sympy.Symbol):
+            if self.symbol_map is not None:
+                from qibo.symbols import Symbol
+                term = Symbol(*self.symbol_map.get(term))
+            result = term.full_matrix(self.nqubits)
+
+        elif term.is_number:
+            result = complex(term) * K.qnp.eye(2 ** self.nqubits)
+
+        else:
+            raise_error(TypeError, "Cannot calculate matrix for symbolic term "
+                                   "of type {}.".format(type(term)))
+
+        return result
+
+    def _calculate_dense_from_form(self):
+        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using symbolic form.
+
+        Useful when the term representation is not available.
+        """
+        matrix = self._get_symbol_matrix(self.form)
+        return Hamiltonian(self.nqubits, matrix)
+
+    def _calculate_dense_from_terms(self):
+        """Calculates equivalent :class:`qibo.core.hamiltonians.Hamiltonian` using the term representation."""
         if 2 * self.nqubits > len(EINSUM_CHARS): # pragma: no cover
             # case not tested because it only happens in large examples
             raise_error(NotImplementedError, "Not enough einsum characters.")
@@ -341,6 +383,11 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             matrix += K.np.einsum(f"{tc},{ec}->{chars}", tmat, emat)
         matrix = K.np.reshape(matrix, 2 * (2 ** self.nqubits,))
         return Hamiltonian(self.nqubits, matrix) + self.constant
+
+    def calculate_dense(self):
+        if self._terms is None:
+            return self._calculate_dense_from_form()
+        return self._calculate_dense_from_terms()
 
     def expectation(self, state, normalize=False):
         return Hamiltonian.expectation(self, state, normalize)

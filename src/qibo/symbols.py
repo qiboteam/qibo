@@ -38,6 +38,23 @@ class Symbol(sympy.Symbol):
     def calculate_gate(self):
         return gates.Unitary(self.matrix, self.target_qubit)
 
+    def full_matrix(self, nqubits):
+        """Calculates the full dense matrix corresponding to the symbol as part of a bigger system.
+
+        Args:
+            nqubits (int): Total number of qubits in the system.
+
+        Returns:
+            Matrix of dimension (2^nqubits, 2^nqubits) composed of the Kronecker
+            product between identities and the symbol's single-qubit matrix.
+        """
+        from qibo.hamiltonians import multikron
+        matrix_list = self.target_qubit * [matrices.I]
+        matrix_list.append(self.matrix)
+        n = nqubits - self.target_qubit - 1
+        matrix_list.extend(matrices.I for _ in range(n))
+        return multikron(matrix_list)
+
 
 class PauliSymbol(Symbol):
 
