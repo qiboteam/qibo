@@ -233,56 +233,35 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         self.constant = 0 # TODO: Rename this to `self._constant` and remember to update it when `_terms` is assigned
         self.form = form
         self.symbol_map = symbol_map
-        # if ``self.symbol_map`` is ``None`` it means that the Hamiltonian form
-        # uses Qibo symbols, otherwise it uses plain ``sympy.MatrixSymbol``
+        # if a symbol in the given form is not a Qibo symbol it must be
+        # included in the ``symbol_map``
         self.trotter_circuit = None
+        from qibo.symbols import Symbol
+        self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
         if form is not None:
             # Check that given form is a ``sympy`` expression
             if not issubclass(form.__class__, sympy.Expr):
                 raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                        "expression but is {}.".format(type(form)))
-            if symbol_map is None:
-                self.nqubits = self._check_form(form) + 1
-            else:
-                self.nqubits = self._check_form_with_symbol_map(form, symbol_map) + 1
-
-    @staticmethod
-    def _check_form(form):
-        """Checks symbols in the given Hamiltonian and calculates the number of qubits.
-
-        Helper method for initialization if a ``symbol_map`` is not provided and
-        Qibo symbols are used.
-        """
-        from qibo import symbols
-        nqubits = 0
-        for symbol in form.free_symbols:
-            # Check that all symbols are Qibo symbols since a symbol
-            # map is not given
-            if not isinstance(symbol, sympy.Expr):
-                raise_error(TypeError, "Invalid symbol type {} found "
-                                       "in Hamiltonian form"
-                                       "".format(type(symbol)))
-            q = symbol.target_qubit
-            if q > nqubits:
-                nqubits = q
-        return nqubits
-
-    @staticmethod
-    def _check_form_with_symbol_map(form, symbol_map):
-        """Checks symbols in the given Hamiltonian and calculates the number of qubits.
-
-        Helper method for initialization if a ``symbol_map`` is provided.
-        """
-        nqubits = 0
-        for symbol in form.free_symbols:
-            # Check that all symbols are in the given symbol map
-            if symbol not in symbol_map:
-                raise_error(ValueError, "Symbol {} is not in the given "
-                                        "symbol map.".format(symbol))
-            q, matrix = symbol_map.get(symbol)
-            if isinstance(matrix, K.tensor_types) and q > nqubits:
-                nqubits = q
-        return nqubits
+            nqubits = 0
+            for symbol in form.free_symbols:
+                if isinstance(symbol, self._qiboSymbol):
+                    q = symbol.target_qubit
+                elif isinstance(symbol, sympy.Expr):
+                    if self.symbol_map is None or symbol not in self.symbol_map:
+                        raise_error(ValueError, "Symbol {} is not in symbol "
+                                                "map.".format(symbol))
+                    q, matrix = symbol_map.get(symbol)
+                    if not isinstance(matrix, K.tensor_types):
+                        # ignore symbols that do not correspond to quantum operators
+                        # for example parameters in the MaxCut Hamiltonian
+                        q = 0
+                else:
+                    raise_error(TypeError, "Invalid symbol type {} found in "
+                                           "Hamiltonian.".format(type(symbol)))
+                if q > nqubits:
+                    nqubits = q
+            self.nqubits = nqubits + 1
 
     @property
     def terms(self):
@@ -342,10 +321,16 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 result = result @ matrix
 
         elif isinstance(term, sympy.Symbol):
-            if self.symbol_map is not None:
-                from qibo.symbols import Symbol
-                term = Symbol(*self.symbol_map.get(term))
-            result = term.full_matrix(self.nqubits)
+            if isinstance(term, self._qiboSymbol):
+                result = term.full_matrix(self.nqubits)
+            else:
+                q, matrix = self.symbol_map.get(term)
+                if not isinstance(matrix, K.tensor_types):
+                    # symbols does not correspond to quantum operator
+                    # for example parameters in the MaxCut Hamiltonian
+                    result = complex(matrix) * K.qnp.eye(2 ** self.nqubits)
+                else:
+                    result = self._qiboSymbol(q, matrix).full_matrix(self.nqubits)
 
         elif term.is_number:
             result = complex(term) * K.qnp.eye(2 ** self.nqubits)
