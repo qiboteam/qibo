@@ -248,7 +248,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     @form.setter
     def form(self, form):
         # Check that given form is a ``sympy`` expression
-        if not issubclass(form.__class__, sympy.Expr):
+        if not isinstance(form, sympy.Expr):
             raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
                                    "expression but is {}.".format(type(form)))
         # Calculate number of qubits in the system described by the given
@@ -266,9 +266,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                     # ignore symbols that do not correspond to quantum operators
                     # for example parameters in the MaxCut Hamiltonian
                     q = 0
-            else:
-                raise_error(TypeError, "Invalid symbol type {} found in "
-                                       "Hamiltonian.".format(type(symbol)))
             if q > nqubits:
                 nqubits = q
 
