@@ -391,7 +391,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be added.")
-            new_ham = self.__class__(symbol_map=self.symbol_map)
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None and o._form is not None:
                 new_ham.form = self.form + o.form
                 new_ham.symbol_map.update(o.symbol_map)
@@ -402,7 +402,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 new_ham.dense = self.dense + o.dense
 
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__(symbol_map=self.symbol_map)
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None:
                 new_ham.form = self.form + o
             if self._terms is not None:
@@ -421,7 +421,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be subtracted.")
-            new_ham = self.__class__(symbol_map=self.symbol_map)
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None and o._form is not None:
                 new_ham.form = self.form - o.form
                 new_ham.symbol_map.update(o.symbol_map)
@@ -432,7 +432,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
                 new_ham.dense = self.dense - o.dense
 
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__(symbol_map=self.symbol_map)
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None:
                 new_ham.form = self.form - o
             if self._terms is not None:
@@ -448,7 +448,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def __rsub__(self, o):
         if isinstance(o, K.numeric_types):
-            new_ham = self.__class__(symbol_map=self.symbol_map)
+            new_ham = self.__class__(symbol_map=dict(self.symbol_map))
             if self._form is not None:
                 new_ham.form = o - self.form
             if self._terms is not None:
@@ -466,7 +466,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             raise_error(NotImplementedError, "Hamiltonian multiplication to {} "
                                              "not implemented.".format(type(o)))
         o = complex(o)
-        new_ham = self.__class__(symbol_map=self.symbol_map)
+        new_ham = self.__class__(symbol_map=dict(self.symbol_map))
         if self._form is not None:
             new_ham.form = o * self.form
         if self._terms is not None:
@@ -491,11 +491,13 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     def __matmul__(self, o):
         """Matrix multiplication with other Hamiltonians or state vectors."""
         if isinstance(o, self.__class__):
-            if self.form is None or o.form is None:
+            if self._form is None or o._form is None:
                 raise_error(NotImplementedError, "Multiplication of symbolic Hamiltonians "
                                                  "without symbolic form is not implemented.")
             new_form = self.form * o.form
-            new_ham = self.__class__(new_form)
+            new_symbol_map = dict(self.symbol_map)
+            new_symbol_map.update(o.symbol_map)
+            new_ham = self.__class__(new_form, symbol_map=new_symbol_map)
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense @ o.dense
             return new_ham
