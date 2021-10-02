@@ -312,9 +312,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     @terms.setter
     def terms(self, terms):
-        if self.form is not None:
-            raise_error(RuntimeError, "Cannot set the terms of ``SymbolicHamiltonian``"
-                                      "with defined form.")
         self._terms = terms
         self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
