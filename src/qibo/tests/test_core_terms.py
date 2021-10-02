@@ -81,7 +81,7 @@ def test_symbolic_term_creation(use_symbols):
     if use_symbols:
         from qibo.symbols import X, Y
         expression = X(0) * Y(1) * X(1)
-        symbol_map = None
+        symbol_map = {}
     else:
         import sympy
         x0, x1, y1 = sympy.symbols("X0 X1 Y1", commutative=False)
