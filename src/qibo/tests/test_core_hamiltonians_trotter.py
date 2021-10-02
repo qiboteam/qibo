@@ -104,7 +104,8 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
 
     terms = [HamiltonianTerm(m1, 0, 1, 2), HamiltonianTerm(m2, 2, 3),
              HamiltonianTerm(m3, 1)]
-    ham = hamiltonians.SymbolicHamiltonian.from_terms(terms)
+    ham = hamiltonians.SymbolicHamiltonian()
+    ham.terms = terms
 
     # Test that the `TrotterHamiltonian` dense matrix is correct
     eye = np.eye(2, dtype=m1.dtype)

@@ -301,14 +301,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         self._terms = terms
         self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
-    @classmethod
-    def from_terms(cls, terms, ground_state=None):
-        """Constructs a symbolic Hamiltonian directly from a list of terms."""
-        # TODO: Remove this constructor as we can set terms directly
-        ham = cls(ground_state=ground_state)
-        ham.terms = terms
-        return ham
-
     def _get_symbol_matrix(self, term):
         """Helper method for ``_calculate_dense_from_form``."""
         # TODO: Add comments here
