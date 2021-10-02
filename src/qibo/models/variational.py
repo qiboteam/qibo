@@ -109,6 +109,8 @@ class AAVQE(object):
             adiabatic evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
         nsteps (float): number of steps of the adiabatic evolution.
         t_max (float): total time of time evolution.
+        bounds_tolerance (float): tolerance for checking s(0) = 0 and s(T) = 1.
+        time_tolerance (float): tolerance for checking if time is greater than t_max.
 
     Example:
     ::
@@ -133,7 +135,7 @@ class AAVQE(object):
         ground_energy, params = aavqe.minimize(initial_parameters)
     """
 
-    def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1):
+    def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1, bounds_tolerance = 1e-7, time_tolerance = 1e-7):
         from qibo.abstractions import hamiltonians
 
         if not issubclass(type(easy_hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
@@ -146,8 +148,8 @@ class AAVQE(object):
             raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
                                     "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
 
-        self.ATOL = 1e-7 # Tolerance for checking s(0) = 0 and s(T) = 1.
-        self.ATOL_TIME = 1e-7 # Tolerance for checking if time is greater than t_max.
+        self.ATOL = bounds_tolerance 
+        self.ATOL_TIME = time_tolerance 
 
         self._circuit = circuit
         self._h0 = easy_hamiltonian
@@ -172,7 +174,6 @@ class AAVQE(object):
         s1 = func(1)
         if abs(s1 - 1) > self.ATOL:
             raise_error(ValueError, "s(1) should be 1 but it is {}.".format(s1))
-
         self._schedule = func
 
     def schedule(self):
@@ -200,7 +201,6 @@ class AAVQE(object):
         # boundary conditions  s(0)=0, s(total_time)=1
         st = self.schedule(t)
         return self._h0 * (1 - st) + self._h1 * st
-
 
     def minimize(self, params, method="BFGS", jac=None, hess=None,
                  hessp=None, bounds=None, constraints=(), tol=None,
