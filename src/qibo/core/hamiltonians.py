@@ -213,16 +213,36 @@ class TrotterCircuit:
 class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     """Backend implementation of :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
 
+    Calculations using symbolic Hamiltonians are either done directly using
+    the given ``sympy`` expression as it is (``form``) or by parsing the
+    corresponding ``terms`` (which are :class:`qibo.core.terms.SymbolicTerm`
+    objects). The latter approach is more computationally costly as it uses
+    a ``sympy.expand`` call on the given form before parsing the terms.
+    For this reason the ``terms`` are calculated only when needed, for example
+    during Trotterization.
+    The dense matrix of the symbolic Hamiltonian can be calculated directly
+    from ``form`` without requiring ``terms`` calculation (see
+    :meth:`qibo.core.hamiltonians.SymbolicHamiltonian.calculate_dense` for details).
+
     Args:
-        form (sympy.Expr): Hamiltonian form as a ``sympy.Expr``. The Hamiltonian
-            should be created using Qibo symbols.
+        form (sympy.Expr): Hamiltonian form as a ``sympy.Expr``. Ideally the
+            Hamiltonian should be written using Qibo symbols.
             See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
             example for more details.
-        symbol_map (dict): Dictionary that maps each ``sympy.Symbol`` to the
-            corresponding target qubit and matrix representation. This feature
-            is kept for compatibility with older versions where Qibo symbols
-            were not available and will be deprecated in the future.
+        symbol_map (dict): Dictionary that maps each ``sympy.Symbol`` to a tuple
+            of (target qubit, matrix representation). This feature is kept for
+            compatibility with older versions where Qibo symbols were not available
+            and may be deprecated in the future.
             It is not required if the Hamiltonian is constructed using Qibo symbols.
+            The symbol_map can also be used to pass non-quantum operator arguments
+            to the symbolic Hamiltonian, such as the parameters in the
+            :meth:`qibo.hamiltonians.MaxCut` Hamiltonian.
+        ground_state (Callable): Function with no arguments that returns the
+            ground state of this Hamiltonian. This is useful in cases where
+            the ground state is trivial and is used for initialization,
+            for example the easy Hamiltonian in adiabatic evolution,
+            however we would like to avoid constructing and diagonalizing the
+            full Hamiltonian matrix only to find the ground state.
     """
     # TODO: Improve this docstring with more explanations on the `terms` and `form` representations.
 
@@ -230,7 +250,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         super().__init__(ground_state)
         self._form = None
         self._terms = None
-        self.constant = 0
+        self.constant = 0 # used only when we perform calculations using ``_terms``
         self._dense = None
         self.symbol_map = symbol_map
         # if a symbol in the given form is not a Qibo symbol it must be
@@ -299,38 +319,67 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         self.nqubits = max(q for term in self._terms for q in term.target_qubits) + 1
 
     def _get_symbol_matrix(self, term):
-        """Helper method for ``_calculate_dense_from_form``."""
-        # TODO: Add comments here
+        """Calculates numerical matrix corresponding to symbolic expression.
+
+        This is partly equivalent to sympy's ``.subs``, which does not work
+        in our case as it does not allow us to substitute ``sympy.Symbol``
+        with numpy arrays and there are different complication when switching
+        to ``sympy.MatrixSymbol``. Here we calculate the full numerical matrix
+        given the symbolic expression using recursion.
+        Helper method for ``_calculate_dense_from_form``.
+
+        Args:
+            term (sympy.Expr): Symbolic expression containing local operators.
+
+        Returns:
+            Numerical matrix corresponding to the given expression as a numpy
+            array of size ``(2 ** self.nqubits, 2 ** self.nqubits).
+        """
         if isinstance(term, sympy.Add):
+            # symbolic op for addition
             result = sum(self._get_symbol_matrix(subterm)
                          for subterm in term.as_ordered_terms())
 
         elif isinstance(term, sympy.Mul):
+            # symbolic op for multiplication
+            # note that we need to use matrix multiplication even though
+            # we use scalar symbols for convenience
             factors = term.as_ordered_factors()
             result = self._get_symbol_matrix(factors[0])
             for subterm in factors[1:]:
                 result = result @ self._get_symbol_matrix(subterm)
 
         elif isinstance(term, sympy.Pow):
+            # symbolic op for power
             base, exponent = term.as_base_exp()
             matrix = self._get_symbol_matrix(base)
+            # multiply ``base`` matrix ``exponent`` times to itself
             result = matrix
             for _ in range(exponent - 1):
                 result = result @ matrix
 
         elif isinstance(term, sympy.Symbol):
+            # if the term is a ``Symbol`` then it corresponds to a quantum
+            # operator for which we can construct the full matrix directly
             if isinstance(term, self._qiboSymbol):
+                # if we have a Qibo symbol the matrix construction is
+                # implemented in :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
                 result = term.full_matrix(self.nqubits)
             else:
                 q, matrix = self.symbol_map.get(term)
                 if not isinstance(matrix, K.tensor_types):
-                    # symbols does not correspond to quantum operator
+                    # symbols that do not correspond to quantum operators
                     # for example parameters in the MaxCut Hamiltonian
                     result = complex(matrix) * K.qnp.eye(2 ** self.nqubits)
                 else:
+                    # if we do not have a Qibo symbol we construct one and use
+                    # :meth:`qibo.core.terms.SymbolicTerm.full_matrix`.
                     result = self._qiboSymbol(q, matrix).full_matrix(self.nqubits)
 
         elif term.is_number:
+            # if the term is number we should return in the form of identity
+            # matrix because in expressions like `1 + Z`, `1` is not correspond
+            # to the float 1 but the identity operator (matrix)
             result = complex(term) * K.qnp.eye(2 ** self.nqubits)
 
         else:
@@ -369,6 +418,8 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
 
     def calculate_dense(self):
         if self._terms is None:
+            # calculate dense matrix directly using the form to avoid the
+            # costly ``sympy.expand`` call
             return self._calculate_dense_from_form()
         return self._calculate_dense_from_terms()
 
