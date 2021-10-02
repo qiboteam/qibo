@@ -171,6 +171,8 @@ class SymbolicTerm(HamiltonianTerm):
                         self.coefficient *= factor.matrix
                 elif factor == sympy.I:
                     self.coefficient *= 1j
+                elif factor.is_number:
+                    self.coefficient *= complex(factor)
                 else: # pragma: no cover
                     raise_error(TypeError, "Cannot parse factor {}.".format(factor))
 
