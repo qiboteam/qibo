@@ -18,6 +18,24 @@ def test_hamiltonian_term_initialization(backend):
     K.assert_allclose(term.matrix, matrix)
 
 
+def test_hamiltonian_term_initialization_errors():
+    """Test initializing ``HamiltonianTerm`` with wrong parameters."""
+    # Wrong HamiltonianTerm matrix
+    with pytest.raises(TypeError):
+        t = terms.HamiltonianTerm("test", 0, 1)
+    # Passing negative target qubits in HamiltonianTerm
+    with pytest.raises(ValueError):
+        t = terms.HamiltonianTerm("test", 0, -1)
+    # Passing matrix shape incompatible with number of qubits
+    with pytest.raises(ValueError):
+        t = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
+    # Merging terms with invalid qubits
+    t1 = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1)
+    t2 = terms.HamiltonianTerm(np.random.random((4, 4)), 1, 2)
+    with pytest.raises(ValueError):
+        t = t1.merge(t2)
+
+
 def test_hamiltonian_term_gates(backend):
     """Test gate application of ``HamiltonianTerm``."""
     matrix = np.random.random((4, 4))

@@ -16,29 +16,24 @@ def symbolic_tfim(nqubits, h=1.0):
     return sham
 
 
-def test_symbolic_hamiltonian_init():
-    # Wrong type of symbolic expression
-    with pytest.raises(TypeError):
-        ham = hamiltonians.SymbolicHamiltonian("test")
+def test_symbolic_hamiltonian_errors():
     # Wrong type of Symbol matrix
     from qibo.symbols import Symbol
     with pytest.raises(TypeError):
         s = Symbol(0, "test")
-    # Wrong HamiltonianTerm matrix
-    from qibo.core.terms import HamiltonianTerm
+    # Wrong type of symbolic expression
     with pytest.raises(TypeError):
-        t = HamiltonianTerm("test", 0, 1)
-    # Passing negative target qubits in HamiltonianTerm
+        ham = hamiltonians.SymbolicHamiltonian("test")
+    # Passing form with symbol that is not in ``symbol_map``
+    from qibo import matrices
+    Z, X = sympy.Symbol("Z"), sympy.Symbol("X")
+    symbol_map = {Z: (0, matrices.Z)}
     with pytest.raises(ValueError):
-        t = HamiltonianTerm("test", 0, -1)
-    # Passing matrix shape incompatible with number of qubits
-    with pytest.raises(ValueError):
-        t = HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
-    # Merging terms with invalid qubits
-    t1 = HamiltonianTerm(np.random.random((4, 4)), 0, 1)
-    t2 = HamiltonianTerm(np.random.random((4, 4)), 1, 2)
-    with pytest.raises(ValueError):
-        t = t1.merge(t2)
+        ham = hamiltonians.SymbolicHamiltonian(Z * X, symbol_map)
+    # Invalid operation in Hamiltonian expresion
+    ham = hamiltonians.SymbolicHamiltonian(sympy.cos(Z), symbol_map)
+    with pytest.raises(TypeError):
+        dense = ham.dense
 
 
 @pytest.mark.parametrize("nqubits", [3, 4])

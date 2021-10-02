@@ -244,7 +244,6 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             however we would like to avoid constructing and diagonalizing the
             full Hamiltonian matrix only to find the ground state.
     """
-    # TODO: Improve this docstring with more explanations on the `terms` and `form` representations.
 
     def __init__(self, form=None, symbol_map={}, ground_state=None):
         super().__init__(ground_state)
