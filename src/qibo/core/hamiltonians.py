@@ -226,12 +226,12 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
     """
     # TODO: Improve this docstring with more explanations on the `terms` and `form` representations.
 
-    def __init__(self, form=None, symbol_map=None, ground_state=None):
+    def __init__(self, form=None, symbol_map={}, ground_state=None):
         super().__init__(ground_state)
-        self._dense = None
+        self._form = None
         self._terms = None
-        self.constant = 0 # TODO: Rename this to `self._constant` and remember to update it when `_terms` is assigned
-        self.form = form
+        self.constant = 0
+        self._dense = None
         self.symbol_map = symbol_map
         # if a symbol in the given form is not a Qibo symbol it must be
         # included in the ``symbol_map``
@@ -239,38 +239,47 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         from qibo.symbols import Symbol
         self._qiboSymbol = Symbol # also used in ``self._get_symbol_matrix``
         if form is not None:
-            # Check that given form is a ``sympy`` expression
-            if not issubclass(form.__class__, sympy.Expr):
-                raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
-                                       "expression but is {}.".format(type(form)))
-            nqubits = 0
-            for symbol in form.free_symbols:
-                if isinstance(symbol, self._qiboSymbol):
-                    q = symbol.target_qubit
-                elif isinstance(symbol, sympy.Expr):
-                    if self.symbol_map is None or symbol not in self.symbol_map:
-                        raise_error(ValueError, "Symbol {} is not in symbol "
-                                                "map.".format(symbol))
-                    q, matrix = symbol_map.get(symbol)
-                    if not isinstance(matrix, K.tensor_types):
-                        # ignore symbols that do not correspond to quantum operators
-                        # for example parameters in the MaxCut Hamiltonian
-                        q = 0
-                else:
-                    raise_error(TypeError, "Invalid symbol type {} found in "
-                                           "Hamiltonian.".format(type(symbol)))
-                if q > nqubits:
-                    nqubits = q
-            self.nqubits = nqubits + 1
+            self.form = form
+
+    @property
+    def form(self):
+        return self._form
+
+    @form.setter
+    def form(self, form):
+        # Check that given form is a ``sympy`` expression
+        if not issubclass(form.__class__, sympy.Expr):
+            raise_error(TypeError, "Symbolic Hamiltonian should be a ``sympy`` "
+                                   "expression but is {}.".format(type(form)))
+        # Calculate number of qubits in the system described by the given
+        # Hamiltonian formula
+        nqubits = 0
+        for symbol in form.free_symbols:
+            if isinstance(symbol, self._qiboSymbol):
+                q = symbol.target_qubit
+            elif isinstance(symbol, sympy.Expr):
+                if symbol not in self.symbol_map:
+                    raise_error(ValueError, "Symbol {} is not in symbol "
+                                            "map.".format(symbol))
+                q, matrix = self.symbol_map.get(symbol)
+                if not isinstance(matrix, K.tensor_types):
+                    # ignore symbols that do not correspond to quantum operators
+                    # for example parameters in the MaxCut Hamiltonian
+                    q = 0
+            else:
+                raise_error(TypeError, "Invalid symbol type {} found in "
+                                       "Hamiltonian.".format(type(symbol)))
+            if q > nqubits:
+                nqubits = q
+
+        self._form = form
+        self.nqubits = nqubits + 1
 
     @property
     def terms(self):
         """List of :class:`qibo.core.terms.HamiltonianTerm` objects of which the Hamiltonian is a sum of."""
         if self._terms is None:
-            if self.form is None:
-                raise_error(ValueError, "Cannot construct terms of ``SymbolicHamiltonian``"
-                                        "because its form was not specified.")
-            # Calculate terms based on the ``sympy`` form
+            # Calculate terms based on ``self.form``
             from qibo.core.terms import SymbolicTerm
             form = sympy.expand(self.form)
             terms = []
@@ -382,17 +391,23 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be added.")
-            new_ham = self.__class__.from_terms(self.terms + o.terms)
+            new_ham = self.__class__(symbol_map=self.symbol_map)
             if self.form is not None and o.form is not None:
                 new_ham.form = self.form + o.form
+                new_ham.symbol_map.update(o.symbol_map)
+            if self._terms is not None and o._terms is not None:
+                new_ham.terms = self.terms + o.terms
+                new_ham.constant = self.constant + o.constant
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense + o.dense
 
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__.from_terms(self.terms)
-            new_ham.constant = self.constant + o
+            new_ham = self.__class__(symbol_map=self.symbol_map)
             if self.form is not None:
                 new_ham.form = self.form + o
+            if self._terms is not None:
+                new_ham.terms = self.terms
+                new_ham.constant = self.constant + o
             if self._dense is not None:
                 new_ham.dense = self.dense + o
 
@@ -406,18 +421,23 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
             if self.nqubits != o.nqubits:
                 raise_error(RuntimeError, "Only hamiltonians with the same "
                                           "number of qubits can be subtracted.")
-            new_terms = self.terms + [-1 * x for x in o.terms]
-            new_ham = self.__class__.from_terms(new_terms)
+            new_ham = self.__class__(symbol_map=self.symbol_map)
             if self.form is not None and o.form is not None:
                 new_ham.form = self.form - o.form
+                new_ham.symbol_map.update(o.symbol_map)
+            if self._terms is not None and o._terms is not None:
+                new_ham.terms = self.terms + [-1 * x for x in o.terms]
+                new_ham.constant = self.constant - o.constant
             if self._dense is not None and o._dense is not None:
                 new_ham.dense = self.dense - o.dense
 
         elif isinstance(o, K.numeric_types):
-            new_ham = self.__class__.from_terms(self.terms)
-            new_ham.constant = self.constant - o
+            new_ham = self.__class__(symbol_map=self.symbol_map)
             if self.form is not None:
                 new_ham.form = self.form - o
+            if self._terms is not None:
+                new_ham.terms = self.terms
+                new_ham.constant = self.constant - o
             if self._dense is not None:
                 new_ham.dense = self.dense - o
 

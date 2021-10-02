@@ -124,7 +124,7 @@ class SymbolicTerm(HamiltonianTerm):
             symbols were not available.
     """
 
-    def __init__(self, coefficient, factors=1, symbol_map=None):
+    def __init__(self, coefficient, factors=1, symbol_map={}):
         self.coefficient = complex(coefficient)
         self._matrix = None
         self._gate = None
@@ -148,7 +148,7 @@ class SymbolicTerm(HamiltonianTerm):
 
                 # if the user is using ``symbol_map`` instead of qibo symbols,
                 # create the corresponding symbols
-                if symbol_map is not None and factor in symbol_map:
+                if factor in symbol_map:
                     from qibo.symbols import Symbol
                     q, matrix = symbol_map.get(factor)
                     factor = Symbol(q, matrix, name=factor.name)
