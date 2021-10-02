@@ -8,7 +8,8 @@ from qibo.tests.utils import random_hermitian
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-def test_tfim_hamiltonian_from_symbols(nqubits, hamtype):
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_tfim_hamiltonian_from_symbols(nqubits, hamtype, calcterms):
     """Check creating TFIM Hamiltonian using sympy."""
     if hamtype == "symbolic":
         from qibo.symbols import X, Z
@@ -29,13 +30,16 @@ def test_tfim_hamiltonian_from_symbols(nqubits, hamtype):
         symmap.update({x: (i, matrices.X) for i, x in enumerate(x_symbols)})
         ham = hamiltonians.Hamiltonian.from_symbolic(-symham, symmap)
 
+    if calcterms:
+        _ = ham.terms
     final_matrix = ham.matrix
     target_matrix = hamiltonians.TFIM(nqubits, h=h).matrix
     K.assert_allclose(final_matrix, target_matrix)
 
 
 @pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-def test_from_symbolic_with_power(hamtype):
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_from_symbolic_with_power(hamtype, calcterms):
     """Check ``from_symbolic`` when the expression contains powers."""
     if hamtype == "symbolic":
         from qibo.symbols import Symbol
@@ -50,6 +54,8 @@ def test_from_symbolic_with_power(hamtype):
         symmap = {x: (i, matrix) for i, x in enumerate(z)}
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
 
+    if calcterms:
+        _ = ham.terms
     final_matrix = ham.matrix
     matrix2 = matrix.dot(matrix)
     eye = np.eye(2, dtype=matrix.dtype)
@@ -62,7 +68,8 @@ def test_from_symbolic_with_power(hamtype):
 
 
 @pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-def test_from_symbolic_with_complex_numbers(hamtype):
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_from_symbolic_with_complex_numbers(hamtype, calcterms):
     """Check ``from_symbolic`` when the expression contains imaginary unit."""
     if hamtype == "symbolic":
         from qibo.symbols import X, Y
@@ -76,6 +83,8 @@ def test_from_symbolic_with_complex_numbers(hamtype):
         symmap.update({s: (i, matrices.Y) for i, s in enumerate(y)})
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
 
+    if calcterms:
+        _ = ham.terms
     final_matrix = ham.matrix
     target_matrix = (1 + 2j) * np.kron(matrices.X, matrices.X)
     target_matrix += 2 * np.kron(matrices.Y, matrices.Y)
@@ -84,7 +93,8 @@ def test_from_symbolic_with_complex_numbers(hamtype):
     K.assert_allclose(final_matrix, target_matrix)
 
 
-def test_from_symbolic_application_hamiltonian():
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_from_symbolic_application_hamiltonian(calcterms):
     """Check ``from_symbolic`` for a specific four-qubit Hamiltonian."""
     z1, z2, z3, z4 = sympy.symbols("z1 z2 z3 z4")
     symmap = {z: (i, matrices.Z) for i, z in enumerate([z1, z2, z3, z4])}
@@ -96,12 +106,15 @@ def test_from_symbolic_application_hamiltonian():
     symham = (Z(0) * Z(1) - 0.5 * Z(0) * Z(2) + 2 * Z(1) * Z(2) + 0.35 * Z(1)
               + 0.25 * Z(2) * Z(3) + 0.5 * Z(2) + Z(3) - Z(0))
     sham = hamiltonians.SymbolicHamiltonian(symham)
+    if calcterms:
+        _ = sham.terms
     K.assert_allclose(sham.matrix, fham.matrix)
 
 
 @pytest.mark.parametrize("nqubits", [4, 5])
 @pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-def test_x_hamiltonian_from_symbols(nqubits, hamtype):
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_x_hamiltonian_from_symbols(nqubits, hamtype, calcterms):
     """Check creating sum(X) Hamiltonian using sympy."""
     if hamtype == "symbolic":
         from qibo.symbols import X
@@ -112,13 +125,16 @@ def test_x_hamiltonian_from_symbols(nqubits, hamtype):
         symham =  -sum(x_symbols)
         symmap = {x: (i, matrices.X) for i, x in enumerate(x_symbols)}
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
+    if calcterms:
+        _ = ham.terms
     final_matrix = ham.matrix
     target_matrix = hamiltonians.X(nqubits).matrix
     K.assert_allclose(final_matrix, target_matrix)
 
 
 @pytest.mark.parametrize("hamtype", ["normal", "symbolic"])
-def test_three_qubit_term_hamiltonian_from_symbols(hamtype):
+@pytest.mark.parametrize("calcterms", [False, True])
+def test_three_qubit_term_hamiltonian_from_symbols(hamtype, calcterms):
     """Check creating Hamiltonian with three-qubit interaction using sympy."""
     if hamtype == "symbolic":
         from qibo.symbols import X, Y, Z
@@ -142,8 +158,9 @@ def test_three_qubit_term_hamiltonian_from_symbols(hamtype):
         symham -= 2
         ham = hamiltonians.Hamiltonian.from_symbolic(symham, symmap)
 
+    if calcterms:
+        _ = ham.terms
     final_matrix = ham.matrix
-
     target_matrix = np.kron(np.kron(matrices.X, matrices.Y),
                             np.kron(matrices.Z, matrices.I))
     target_matrix += 0.5 * np.kron(np.kron(matrices.Y, matrices.Z),
