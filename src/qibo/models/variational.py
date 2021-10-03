@@ -120,7 +120,7 @@ class AAVQE(object):
         circuit = models.Circuit(2)
         circuit.add(gates.RY(0, theta=0))
         circuit.add(gates.RY(1, theta=0))
-        # define the easy and the problem Hamiltonian.
+        # define the easy and the problem Hamiltonians.
         easy_hamiltonian=hamiltonians.X(2)
         problem_hamiltonian=hamiltonians.XXZ(2)
         # define a scheduling function with only one parameter 
