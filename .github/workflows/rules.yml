@@ -1,7 +1,7 @@
 # A single CI script with github workflow
 name: Tests
 
-on: [push]
+on: [push, pull_request_target]
 
 jobs:
   build:
