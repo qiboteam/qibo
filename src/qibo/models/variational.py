@@ -98,7 +98,7 @@ class VQE(object):
 
 
 class AAVQE(object):
-    """This class implements the Adiabatically Assisted Variational Quantum Eigensolvers
+    """This class implements the Adiabatically Assisted Variational Quantum Eigensolver
     algorithm. See https://arxiv.org/abs/1806.02287.
 
     Args:
