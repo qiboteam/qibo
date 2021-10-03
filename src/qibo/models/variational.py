@@ -105,8 +105,7 @@ class AAVQE(object):
         circuit (:class:`qibo.abstractions.circuit.AbstractCircuit`): variaional ansatz.
         easy_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): initial Hamiltonian object.
         problem_hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): problem Hamiltonian object.
-        s (callable): scheduling function of time that defines the scheduling of the
-            s (callable): scheduling function of time that defines the adiabatic
+        s (callable): scheduling function of time that defines the adiabatic
             evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
         nsteps (float): number of steps of the adiabatic evolution.
         t_max (float): total time evolution.
