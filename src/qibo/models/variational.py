@@ -109,7 +109,7 @@ class AAVQE(object):
             s (callable): scheduling function of time that defines the adiabatic
             evolution. It must verify boundary contitions: s(0) = 0 and s(1) = 1.
         nsteps (float): number of steps of the adiabatic evolution.
-        t_max (float): total time of time evolution.
+        t_max (float): total time evolution.
         bounds_tolerance (float): tolerance for checking s(0) = 0 and s(T) = 1.
         time_tolerance (float): tolerance for checking if time is greater than t_max.
 
