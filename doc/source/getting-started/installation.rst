@@ -20,8 +20,9 @@ distributed with pypi* for the packages listed above.
 .. note::
       All packages are supported for Python >= 3.6.
 
-Detailed instructions
----------------------
+
+Backend installation
+--------------------
 
 .. _installing-qibo:
 

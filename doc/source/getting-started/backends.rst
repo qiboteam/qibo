@@ -24,7 +24,7 @@ _______________________
 Base package
 ^^^^^^^^^^^^
 
-* :ref:`installing-qibo` is the base package for coding and using the API. This package contains all primitives and algorithms for start coding quantum circuits, adiabatic evolution and more (see :ref:`Components`). This package comes with a lightweight quantum simulator which works on multiple CPU architectures such as x86 and arm64.
+* :ref:`installing-qibo` is the base package for coding and using the API. This package contains all primitives and algorithms for start coding quantum circuits, adiabatic evolution and more (see :ref:`Components`). This package comes with a lightweight quantum simulator based on :ref:`installing-numpy` which works on multiple CPU architectures such as x86 and arm64.
 
 .. _simulation-backends:
 
