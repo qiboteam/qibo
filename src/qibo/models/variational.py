@@ -61,10 +61,9 @@ class VQE(object):
         Return:
             The final expectation value.
             The corresponding best parameters.
-            The optimization result object. For scipy methods it
-                returns the ``OptimizeResult``, for ``'cma'`` the
-                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
-                the options used during the optimization.
+            The optimization result object. For scipy methods it returns
+            the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
+            and for ``'sgd'`` the options used during the optimization.
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
@@ -260,9 +259,9 @@ class QAOA(object):
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
             The optimization result object. For scipy methods it
-                returns the ``OptimizeResult``, for ``'cma'`` the
-                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
-                the options used during the optimization.
+            returns the ``OptimizeResult``, for ``'cma'`` the
+            ``CMAEvolutionStrategy.result``, and for ``'sgd'``
+            the options used during the optimization.
         """
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "

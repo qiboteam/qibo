@@ -284,7 +284,7 @@ class Circuit(circuit.AbstractCircuit):
             initial_state (array): Initial state vector as a numpy array of shape ``(2 ** nqubits,)``.
                 A Tensorflow tensor with shape ``nqubits * (2,)`` is also allowed
                 allowed as an initial state but must have the `dtype` of the circuit.
-                If ``initial_state`` is ``None`` the |000...0> state will be used.
+                If ``initial_state`` is ``None`` the ``|000...0>`` state will be used.
             nshots (int): Number of shots to sample if the circuit contains
                 measurement gates.
                 If ``nshots`` is ``None`` the measurement gates will be ignored.

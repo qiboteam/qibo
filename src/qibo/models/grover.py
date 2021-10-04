@@ -19,7 +19,7 @@ class Grover(object):
             takes an initial state to a superposition. Expected to use the first
             set of qubits to store the relevant superposition.
         initial_state_circuit (:class:`qibo.core.circuit.Circuit`): quantum circuit
-            that initializes the state. If empty defaults to |000..00>
+            that initializes the state. If empty defaults to ``|000..00>``
         superposition_qubits (int): number of qubits that store the relevant superposition.
             Leave empty if superposition does not use ancillas.
         superposition_size (int): how many states are in a superposition.

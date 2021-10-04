@@ -910,7 +910,7 @@ class fSim(ParametrizedGate):
         q0 (int): the first qubit to be swapped id number.
         q1 (int): the second qubit to be swapped id number.
         theta (float): Angle for the one-qubit rotation.
-        phi (float): Angle for the |11> phase.
+        phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
@@ -952,7 +952,7 @@ class GeneralizedfSim(ParametrizedGate):
         q0 (int): the first qubit to be swapped id number.
         q1 (int): the second qubit to be swapped id number.
         unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
-        phi (float): Angle for the |11> phase.
+        phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
@@ -1013,7 +1013,7 @@ class TOFFOLI(Gate):
         The congruent representation is based on Sec. 6.2 of
         `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
         The sequence of the gates produced here has the same effect as ``TOFFOLI``
-        with the phase of the |101> state reversed.
+        with the phase of the ``|101>`` state reversed.
 
         Args:
             use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.

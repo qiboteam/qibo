@@ -46,17 +46,18 @@ terminal will run on CPU even if ``tf.device`` is not used.
 
 In most cases the GPU accelerates execution compared to CPU, however the
 following limitations should be noted:
-  * For small circuits (less than 10 qubits) the overhead from casting tensors
-    on GPU may be larger than executing the circuit on CPU, making CPU execution
-    preferrable. In such cases disabling CPU multi-threading may also increase
-    performance (see next subsection).
-  * A standard GPU has 12-16GB of memory and thus can simulate up to 30 qubits on
-    single-precision or 29 qubits with double-precision when Qibo's default gates
-    are used. For larger circuits one should either use the CPU (assuming it has
-    more memory) or a distributed circuit configuration. The latter allows splitting
-    the state vector on multiple devices and is useful both when multiple GPUs
-    are available in the system or even for re-using a single GPU
-    (see relevant subsection bellow).
+
+* For small circuits (less than 10 qubits) the overhead from casting tensors on
+  GPU may be larger than executing the circuit on CPU, making CPU execution
+  preferable. In such cases disabling CPU multi-threading may also increase
+  performance (see next subsection).
+* A standard GPU has 12-16GB of memory and thus can simulate up to 30 qubits on
+  single-precision or 29 qubits with double-precision when Qibo's default gates
+  are used. For larger circuits one should either use the CPU (assuming it has
+  more memory) or a distributed circuit configuration. The latter allows splitting
+  the state vector on multiple devices and is useful both when multiple GPUs are
+  available in the system or even for re-using a single GPU (see relevant
+  subsection bellow).
 
 Note that if the used device runs out of memory during a circuit execution an error will be
 raised prompting the user to switch the default device using ``qibo.set_device``.
@@ -238,6 +239,7 @@ For example
 will print ``tf.Tensor(1.0)``.
 
 .. _params-examples:
+
 How to use parametrized gates?
 ------------------------------
 
@@ -358,7 +360,7 @@ As mentioned in the :ref:`How to perform measurements? <measurement-examples>`
 measurement can by default be used only in the end of the circuit and they do
 not have any effect on the state. In this section we describe how to collapse
 the state during measurements and re-use measured qubits in the circuit.
-Collapsing the state means projecting to the |0> or |1> subspace according to
+Collapsing the state means projecting to the ``|0>`` or ``|1>`` subspace according to
 the sampled result for each measured qubit.
 
 The state is collapsed when the ``collapse=True`` is used during instantiation
@@ -378,8 +380,8 @@ of the :class:`qibo.abstractions.gates.M` gate. For example
     # prints [0.7071, 0.7071] if 0 is measured
     # or [0.7071, -0.7071] if 1 is measured
 
-In this example the single qubit is measured while in the state (|0> + |1>) and
-is collapsed to either |0> or |1>. The qubit can then be re-used by adding more
+In this example the single qubit is measured while in the state (``|0> + |1>``) and
+is collapsed to either ``|0>`` or ``|1>``. The qubit can then be re-used by adding more
 gates that act to this. The outcomes of ``collapse=True`` measurements is not
 contained in the final result object but is accessible from the `output` object
 returned when adding the gate to the circuit. ``output`` supports the
@@ -668,11 +670,11 @@ using :meth:`qibo.models.QAOA.set_parameters`.
 Similarly to the VQE, we refer to :ref:`Optimizers <Optimizers>` for more
 information on the available options of the ``qaoa.minimize``.
 
-QAOA uses the |++...+> as the default initial state on which the variational
+QAOA uses the ``|++...+>`` as the default initial state on which the variational
 operators are applied. The user may specify a different initial state when
 executing or optimizing by passing the ``initial_state`` argument.
 
-The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
+The QAOA model uses :ref:`Solvers <Optimizers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>` section.
 When a :class:`qibo.abstractions.hamiltonians.Hamiltonian` is used then solvers will
@@ -1125,7 +1127,7 @@ exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. The solvers that are
 currently implemented are the default exponential solver (``"exp"``) and two
 Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
-For more information we refer to the :ref:`Solvers <Solvers>` section.
+For more information we refer to the :ref:`Solvers <Optimizers>` section.
 
 
 .. _trotterdecomp-example:
@@ -1246,7 +1248,7 @@ If the initial state is not specified, the ground state of the easy Hamiltonian
 will be used, which is common for adiabatic evolution. A distributed execution
 can be used by passing an ``accelerators`` dictionary during the initialization
 of the ``AdiabaticEvolution`` model. In this case the default initial state is
-|++...+> (full superposition in the computational basis).
+``|++...+>`` (full superposition in the computational basis).
 
 Callbacks may also be used as in the previous example. An additional callback
 (:class:`qibo.abstractions.callbacks.Gap`) is available for calculating the

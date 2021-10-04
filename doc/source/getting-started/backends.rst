@@ -59,5 +59,5 @@ Hardware backends
 
 We provide the following hardware control backends for Qibo:
 
-* :ref:`installing-qiboicarusq` (*experimental under development*): a module for laboratories, containing the specifics to operate Qibo on chips based on superconducting qubits, designed specifically for the IcarusQ experiment at `CQT <https://www.quantumlah.org/>`_.
+* qiboicarusq (*experimental under development*): a module for laboratories, containing the specifics to operate Qibo on chips based on superconducting qubits, designed specifically for the IcarusQ experiment at `CQT <https://www.quantumlah.org/>`_.
 

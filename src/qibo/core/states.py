@@ -310,7 +310,7 @@ class DistributedState(VectorState):
 
     @classmethod
     def zero_state(cls, circuit):
-        """Creates |00...0> as a distributed state."""
+        """Creates ``|00...0>`` as a distributed state."""
         state = cls(circuit)
         state.create_pieces()
         with K.on_cpu():
@@ -320,7 +320,7 @@ class DistributedState(VectorState):
 
     @classmethod
     def plus_state(cls, circuit):
-        """Creates |++...+> as a distributed state."""
+        """Creates ``|++...+>`` as a distributed state."""
         state = cls(circuit)
         with K.on_cpu():
             n = K.cast(2 ** state.nlocal, dtype=K.dtypes('DTYPEINT'))

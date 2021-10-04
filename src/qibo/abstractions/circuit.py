@@ -70,6 +70,7 @@ class AbstractCircuit(ABC):
       :class:`qibo.core.circuit.DensityMatrixCircuit`.
     * A circuit that distributes state vector simulation on multiple devices:
       :class:`qibo.core.distcircuit.DistributedCircuit`.
+
     All circuits use core as the computation backend.
 
     Args:
