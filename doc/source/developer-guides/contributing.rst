@@ -46,6 +46,9 @@ The current code standards that are applied to any new changes:
 - **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
 - **Pylint**: Test code for anomalies, such as bad coding practices, missing documentation, unused variables.
 
+Besides the linter, further custom rules are applied e.g. checks for ``print`` statements that bypass the logging system
+(such check can be excluded line by line with the ``# CodeText:skip`` flag).
+
 Documentation
 -------------
 

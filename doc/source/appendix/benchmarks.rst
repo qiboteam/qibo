@@ -199,7 +199,7 @@ supports the following options:
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz. The parameters are initialized according to uniform distribution in [0, 0.1].
 * ``--trotter`` (``bool``): If ``True`` it uses the Trotter decomposition to apply the exponential operators.
-* ``--solver`` (``str``): :ref:`Solver <Solvers>` to use for applying the exponential operators.
+* ``--solver`` (``str``): :ref:`Solver <Optimizers>` to use for applying the exponential operators.
 * ``--method`` (``str``): Optimization method.
 * ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
 

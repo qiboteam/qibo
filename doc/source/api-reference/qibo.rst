@@ -1,20 +1,3 @@
-.. _Components:
-
-Components
-==========
-
-The Qibo package comes with the following modules:
-
-* Models_
-* Gates_
-* Hamiltonians_
-* Callbacks_
-* Optimizers_
-* Parallel_
-* Backends_
-
-_______________________
-
 .. _Models:
 
 Models
@@ -143,6 +126,8 @@ Distributed circuit
 .. autoclass:: qibo.core.distcircuit.DistributedCircuit
     :members:
     :member-order: bysource
+
+.. _applicationspecific:
 
 Quantum Fourier Transform (QFT)
 """""""""""""""""""""""""""""""
