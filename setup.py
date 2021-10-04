@@ -58,7 +58,7 @@ setup(
     ],
     install_requires=requirements,
     extras_require={
-        "docs": ["sphinx", "sphinx_book_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
+        "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
         "tests": ["pytest", "cirq", "ply", "sklearn"],
         # Backends dependencies
         "qibotf": ["qibotf"],

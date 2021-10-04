@@ -10,7 +10,7 @@ To quickly install Qibo, open a terminal with python > 3.6 and type:
 This will install the basic primitives to start coding quantum applications.
 
 
-Here a simple of Quantum Fourier Transform (QFT) to test your installation:
+Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
 .. code-block:: python
 
