@@ -47,12 +47,14 @@ class Circuit(circuit.AbstractCircuit):
             self.queue.append(gate.additional_unitary)
 
     def fuse(self):
-        """Creates an equivalent :class:`qibo.core.circuit.Circuit` with gates fused up to two-qubits.
-
-        The current fusion algorithm with create up to two-qubit fused gates.
+        """Creates an equivalent circuit with the gates fused up to two-qubits.
 
         Returns:
-            The equivalent :class:`qibo.core.circuit.Circuit` object where the gates are fused.
+            A :class:`qibo.core.circuit.Circuit` object containing
+            :class:`qibo.abstractions.gates.FusedGate` gates, each of which
+            corresponds to a group of some original gates.
+            For more details on the fusion algorithm we refer to the
+            :ref:`Circuit fusion <circuit-fusion>` section.
 
         Example:
             ::
@@ -64,8 +66,8 @@ class Circuit(circuit.AbstractCircuit):
                 c.add([gates.Y(0), gates.Y(1)])
                 # create circuit with fused gates
                 fused_c = c.fuse()
-                # now ``fused_c`` contains a single gate that is equivalent
-                # to applying the five gates of the original circuit.
+                # now ``fused_c`` contains a single ``FusedGate`` that is
+                # equivalent to applying the five original gates
         """
         from qibo import gates
         from qibo.abstractions.circuit import _Queue

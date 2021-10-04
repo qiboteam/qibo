@@ -64,15 +64,68 @@ Circuit addition
 will create a circuit that performs the Quantum Fourier Transform on four qubits
 followed by Rotation-Z gates.
 
+
+.. _circuit-fusion:
+
 Circuit fusion
 """"""""""""""
 
 The gates contained in a circuit can be fused up to two-qubits using the
-:meth:`qibo.abstractions.circuit.AbstractCircuit.fuse` method. This returns a new circuit
-that contains :class:`qibo.abstractions.gates.Unitary` gates that are less in number
-than the gates in the original circuit but have equivalent action.
-For some circuits (such as variational), if the number of qubits is large it is
-more efficient to execute the fused instead of the original circuit.
+:meth:`qibo.core.circuit.Circuit.fuse` method. This returns a new circuit
+for which the total number of gates is less than the gates in the original
+circuit as groups of gates have been fused to a single
+:class:`qibo.abstractions.gates.Unitary` gate. Simulating the new new circuit
+is equivalent to simulating the original one but in most cases more efficient
+since less gates need to be applied to the state vector.
+
+The fusion algorithm starts by keeping track of the gates that act on each
+qubit. All one-qubit gates acting on the same qubit in a row are fused together.
+Once a two-qubit gate acting on a specific pair (q0, q1) is found then it is
+fused together with the existing fused one-qubit gates on q0 and q1.
+If a new two-qubit gate is found which acts on either q0 or q1 but not both then
+the fusion round for the pair (q0, q1) stops and a new fusion round starts for
+the target qubits of the new two-qubit gate.
+
+For example the following:
+
+.. code-block::  python
+
+    from qibo import models, gates
+
+    c = models.Circuit(2)
+    c.add([gates.H(0), gates.H(1)])
+    c.add(gates.CZ(0, 1))
+    c.add([gates.X(0), gates.Y(1)])
+    fused_c = c.fuse()
+
+will create a new circuit with a single :class:`qibo.abstractions.gates.FusedGate`
+acting on ``(0, 1)``, while the following:
+
+.. code-block::  python
+
+    from qibo import models, gates
+
+    c = models.Circuit(3)
+    c.add([gates.H(0), gates.H(1), gates.H(2)])
+    c.add(gates.CZ(0, 1))
+    c.add([gates.X(0), gates.Y(1), gates.Z(2)])
+    c.add(gates.CNOT(1, 2))
+    c.add([gates.H(0), gates.H(1), gates.H(2)])
+    fused_c = c.fuse()
+
+will give a circuit with two fused gates, the first of which will act on
+``(0, 1)`` corresponding to
+
+.. code-block::  python
+
+    [H(0), H(1), CZ(0, 1), X(0), H(0)]
+
+and the second will act to ``(1, 2)`` corresponding to
+
+.. code-block::  python
+
+    [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
+
 
 The fusion algorithm starts by creating a :class:`qibo.abstractions.fusion.FusionGroup`.
 The first available gates in the circuit's gate queue are added in the group
@@ -422,6 +475,13 @@ Callback gate
 """""""""""""
 
 .. autoclass:: qibo.abstractions.gates.CallbackGate
+    :members:
+    :member-order: bysource
+
+Fusion gate
+"""""""""""
+
+.. autoclass:: qibo.abstractions.gates.FusedGate
     :members:
     :member-order: bysource
 
