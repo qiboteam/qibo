@@ -1,7 +1,7 @@
 Quick start
 -----------
 
-However, if you are in a hurry, just open a terminal with python > 3.6 and type:
+To quickly install Qibo, open a terminal with python > 3.6 and type:
 
 .. code-block:: bash
 
