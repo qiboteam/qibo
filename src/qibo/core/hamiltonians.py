@@ -254,7 +254,7 @@ class SymbolicHamiltonian(hamiltonians.SymbolicHamiltonian):
         self.form = sympy.expand(form)
         terms = []
         for f, c in self.form.as_coefficients_dict().items():
-            term = SymbolicTerm.from_factors(c, f, symbol_map)
+            term = SymbolicTerm(c, f, symbol_map)
             if term.target_qubits:
                 terms.append(term)
             else:

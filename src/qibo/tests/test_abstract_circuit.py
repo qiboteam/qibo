@@ -470,9 +470,6 @@ def test_circuit_set_parameters_errors():
         c.set_parameters({0.3568})
     with pytest.raises(ValueError):
         c.queue[2].parameters = [0.1234, 0.4321, 0.156]
-    c.fusion_groups = ["test"]
-    with pytest.raises(TypeError):
-        c.set_parameters({gates.RX(0, theta=1.0): 0.568})
 
 
 def test_circuit_draw():

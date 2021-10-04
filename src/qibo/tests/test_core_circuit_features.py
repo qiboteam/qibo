@@ -78,7 +78,11 @@ def test_inverse_circuit_execution(backend, accelerators, fuse):
     c.add(gates.fSim(0, 2, theta=0.1, phi=0.3))
     c.add(gates.CU2(0, 1, phi=0.1, lam=0.1))
     if fuse:
-        c = c.fuse()
+        if accelerators:
+            with pytest.raises(NotImplementedError):
+                c = c.fuse()
+        else:
+            c = c.fuse()
     invc = c.invert()
     target_state = np.ones(2 ** 4) / 4
     final_state = invc(c(np.copy(target_state)))

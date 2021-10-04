@@ -91,7 +91,7 @@ class Gate:
 
     @target_qubits.setter
     def target_qubits(self, qubits: Sequence[int]):
-        """Sets control qubits tuple."""
+        """Sets target qubits tuple."""
         self._set_target_qubits(qubits)
         self._check_control_target_overlap()
 
@@ -195,15 +195,36 @@ class Gate:
         b = not (t1 & set(gate.qubits) or t2 & set(self.qubits))
         return a or b
 
-    def on_qubits(self, *q) -> "Gate":
-        """Creates the same gate targeting different qubits.
+    def _on_qubits(self, *q) -> "Gate":
+        """Helper method for :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`.
+
+        Creates the same gate targeting different qubits.
 
         Args:
             q (int): Qubit index (or indeces) that the new gate should act on.
+                Note that q is interpreted as a map from the original qubit ids
+                to the new ones. It is required for `len(q)` to be greater than
+                the max qubit id of the original gate.
 
         Returns:
             A :class:`qibo.abstractions.gates.Gate` object of the original gate
             type targeting the given qubits.
+
+        Example:
+            ::
+
+                from qibo import models, gates
+                c = models.Circuit(4)
+                # Add some CNOT gates
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
+                c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                print(c.draw())
+                # q0: ───X─────
+                # q1: ───|─o─X─
+                # q2: ─o─|─|─o─
+                # q3: ─X─o─X───
         """
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
@@ -292,7 +313,7 @@ class SpecialGate(Gate):
     def commutes(self, gate):
         return False
 
-    def on_qubits(self, *q):
+    def _on_qubits(self, *q):
         raise_error(NotImplementedError,
                     "Cannot use special gates on subroutines.")
 
@@ -346,10 +367,10 @@ class Channel(Gate):
         """"""
         raise_error(ValueError, "Noise channel cannot be controlled on qubits.")
 
-    def on_qubits(self, *q): # pragma: no cover
+    def _on_qubits(self, *q): # pragma: no cover
         # future TODO
-        raise_error(NotImplementedError, "`on_qubits` method is not available "
-                                         "for the `GeneralChannel` gate.")
+        raise_error(NotImplementedError, "`_on_qubits` method is not available "
+                                         "for the `Channel` gate.")
 
 
 class ParametrizedGate(Gate):
@@ -411,9 +432,7 @@ class ParametrizedGate(Gate):
         # ``circuit.set_parameters`` method works properly.
         # pylint: disable=E1101
         if isinstance(self, BaseBackendGate):
-            self._matrix = None
-            self._native_op_matrix = None
-            self._custom_op_matrix = None
+            self._reset_unitary()
             for devgate in self.device_gates:
                 devgate.parameters = x
 
@@ -497,6 +516,13 @@ class BaseBackendGate(Gate, ABC):
     def _construct_unitary(self): # pragma: no cover
         """Constructs the gate's unitary matrix."""
         return raise_error(NotImplementedError)
+
+    def _reset_unitary(self):
+        """Resets the gate matrices back to ``None``.
+
+        Useful when the gate matrix need to be recalculated.
+        """
+        self._matrix = None
 
     @property
     @abstractmethod

@@ -1,4 +1,4 @@
-"""Test gates defined in `qibo/core/cgates.py` and `qibo/core/gates.py`."""
+"""Test gates defined in `qibo/core/gates.py`."""
 import pytest
 import numpy as np
 from qibo import gates, K
@@ -522,3 +522,22 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
     with pytest.raises(ValueError):
         gate = gates.ThermalRelaxationChannel(
             0, t1, t2, time, excited_population=excpop)
+
+
+def test_fused_gate_init(backend):
+    gate = gates.FusedGate(0)
+    gate = gates.FusedGate(0, 1)
+    if K.op is not None:
+        with pytest.raises(NotImplementedError):
+            gate = gates.FusedGate(0, 1, 2)
+
+
+def test_fused_gate_construct_unitary(backend):
+    gate = gates.FusedGate(0, 1)
+    gate.add(gates.H(0))
+    gate.add(gates.H(1))
+    gate.add(gates.CZ(0, 1))
+    hmatrix = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    czmatrix = np.diag([1, 1, 1, -1])
+    target_matrix = czmatrix @ np.kron(hmatrix, hmatrix)
+    K.assert_allclose(gate.matrix, target_matrix)

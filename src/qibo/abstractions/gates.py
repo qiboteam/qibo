@@ -624,7 +624,7 @@ class CZ(Gate):
 
 
 class _CRn_(ParametrizedGate):
-    """Abstract method for defining the CU1, CU2 and CU3 gates.
+    """Abstract method for defining the CRX, CRY and CRZ gates.
 
     Args:
         q0 (int): the control qubit id number.
@@ -1067,7 +1067,7 @@ class Unitary(ParametrizedGate):
     def rank(self) -> int:
         return len(self.target_qubits)
 
-    def on_qubits(self, *q) -> "Gate":
+    def _on_qubits(self, *q) -> "Gate":
         args = [self.init_args[0]]
         args.extend((q[i] for i in self.target_qubits))
         gate = self.__class__(*args, **self.init_kwargs)
@@ -1550,3 +1550,41 @@ class _ThermalRelaxationChannelB(Gate):
             seed=seed)
         # this case can only be applied to density matrices
         self.density_matrix = True
+
+
+class FusedGate(Gate):
+    """Collection of gates that will be fused and applied as single gate during simulation.
+
+    This gate is constructed automatically by :meth:`qibo.core.circuits.Circuit.fuse`
+    and should not be used by user.
+    :class:`qibo.abstractions.gates.FusedGate` works with arbitrary number of
+    target qubits however the backend implementation
+    :class:`qibo.core.gates.FusedGate` assumes two target qubits.
+    """
+
+    def __init__(self, *q):
+        super().__init__()
+        self.name = "fused"
+        self.target_qubits = tuple(q)
+        self.init_args = list(q)
+        self.qubit_set = set(q)
+        self.gates = []
+
+    def add(self, gate):
+        if not set(gate.qubits).issubset(self.qubit_set):
+            raise_error(ValueError, "Cannot add gate that targets {} "
+                                    "in fused gate acting on {}."
+                                    "".format(gate.qubits, self.qubits))
+        if isinstance(gate, self.__class__):
+            self.gates.extend(gate.gates)
+        else:
+            self.gates.append(gate)
+
+    def __iter__(self):
+        return iter(self.gates)
+
+    def _dagger(self):
+        dagger = self.__class__(*self.init_args)
+        for gate in self.gates[::-1]:
+            dagger.add(gate.dagger())
+        return dagger
