@@ -74,7 +74,7 @@ The gates contained in a circuit can be fused up to two-qubits using the
 :meth:`qibo.core.circuit.Circuit.fuse` method. This returns a new circuit
 for which the total number of gates is less than the gates in the original
 circuit as groups of gates have been fused to a single
-:class:`qibo.abstractions.gates.FusedGate` gate. Simulating the new new circuit
+:class:`qibo.abstractions.gates.FusedGate` gate. Simulating the new circuit
 is equivalent to simulating the original one but in most cases more efficient
 since less gates need to be applied to the state vector.
 
