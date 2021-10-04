@@ -100,6 +100,6 @@ def setup(app):
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
 
-html_logo = "qibo_logo.svg"
+html_logo = "logo.png"
 
-html_show_sourcelink = True
+html_show_sourcelink = False

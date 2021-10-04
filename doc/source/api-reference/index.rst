@@ -1,11 +1,11 @@
 API reference
 =============
 
-In this section we present the basic aspects of Qibo design and provide
-installation instructions.
+In this section we present the main Qibo components and primitives included in
+the public API.
 
 .. toctree::
-    :maxdepth: 1
+    :maxdepth: 3
 
     qibo
     hep

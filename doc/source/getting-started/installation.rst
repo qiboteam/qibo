@@ -1,6 +1,28 @@
 Installation instructions
 =========================
 
+Operating systems support
+-------------------------
+
+In the table below we summarize the status of *pre-compiled binaries
+distributed with pypi* for the packages listed above.
+
++------------------+------+---------+--------+------------+
+| Operating System | qibo | qibojit | qibotf | tensorflow |
++==================+======+=========+========+============+
+| Linux x86        | Yes  | Yes     | Yes    | Yes        |
++------------------+------+---------+--------+------------+
+| MacOS >= 10.15   | Yes  | Yes     | Yes    | Yes        |
++------------------+------+---------+--------+------------+
+| Windows          | Yes  | Yes     | No     | Yes        |
++------------------+------+---------+--------+------------+
+
+.. note::
+      All packages are supported for Python >= 3.6.
+
+Detailed instructions
+---------------------
+
 .. _installing-qibo:
 
 qibo
@@ -266,54 +288,3 @@ please do:
 
       import qibo
       qibo.set_backend("numpy")
-
-_______________________
-
-.. _installing-qiboicarusq:
-
-qiboicarusq
-^^^^^^^^^^^
-
-The ``qiboicarusq`` package contains the hardware control drivers for chips
-based on superconducting qubits. More details are available at the code
-`repository <https://github.com/qiboteam/qiboicarusq.git>`_.
-
-This backend is designed for laboratories, in order to switch to the ``qiboicarusq``
-backend please do:
-
-.. code-block:: python
-
-      import qibo
-      qibo.set_backend("qiboicarusq")
-
-Installing from source
-""""""""""""""""""""""
-
-The installation procedure presented in this section is useful if you have to
-install and develop the code from source.
-
-In order to install the package perform the following steps:
-
-.. code-block::
-
-      git clone https://github.com/qiboteam/qiboicarusq.git
-      cd qiboicarusq
-
-then proceed with the installation of requirements with:
-
-.. code-block::
-
-      pip install -r requirements.txt
-
-Then proceed with the ``qiboicarusq`` installation using ``pip``
-
-.. code-block::
-
-      pip install .
-
-or if you prefer to manually execute all installation steps:
-
-.. code-block::
-
-      # builds binaries
-      python setup.py develop
