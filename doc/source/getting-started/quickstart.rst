@@ -22,7 +22,7 @@ Here a simple of Quantum Fourier Transform (QFT) to test your installation:
     # Simulate final state wavefunction default initial state is |00>
     final_state = circuit()
 
-Here another example with more gates and shots simulation:
+Here an example of adding gates and measurements:
 
 .. code-block:: python
 
