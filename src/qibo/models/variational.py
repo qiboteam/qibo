@@ -136,14 +136,17 @@ class AAVQE(object):
     """
 
     def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1, bounds_tolerance = 1e-7, time_tolerance = 1e-7):
+        
         from qibo.abstractions import hamiltonians
+        hamtypes = (hamiltonians.AbstractHamiltonian, adiabatic.BaseAdiabaticHamiltonian)
 
-        if not issubclass(type(easy_hamiltonian), hamiltonians.HAMILTONIAN_TYPES):
-            raise_error(TypeError, "The easy Hamiltonian should be a hamiltonians.Hamiltonian "
-                                   "object but is {}.".format(type(easy_hamiltonian)))
-        if type(problem_hamiltonian) != type(easy_hamiltonian):
-            raise_error(TypeError, "The problem Hamiltonian should be of the same type of the easy Hamiltonian"
-                                    " ({}), but it is {}.".format(type(easy_hamiltonian), type(problem_hamiltonian)))
+        if not isinstance(easy_hamiltonian, hamtypes):
+            raise TypeError("Hamiltonian type {} not understood."
+                            "".format(type(ham)))
+        if nsteps <= 0:
+            raise_error(ValueError, f"Number of steps nsteps should be positive but is {}.".format(nsteps))
+        if t_max <= 0:
+            raise_error(ValueError, f"Maximum time t_max should be positive but is {}.".format(t_max))
         if easy_hamiltonian.nqubits != problem_hamiltonian.nqubits:
             raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
                                     "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
