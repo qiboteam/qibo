@@ -176,12 +176,6 @@ class AAVQE(object):
             raise_error(ValueError, "s(1) should be 1 but it is {}.".format(s1))
         self._schedule = func
 
-    def schedule(self):
-        """Returns scheduling as a function of time."""
-        if self._schedule is None:
-            raise_error(ValueError, "Cannot access scheduling before it is set.")
-        return self._schedule
-
     def schedule(self, t):
         """ Returns scheduling function evaluated at time t: s(t/Tmax)."""
         if self._schedule is None:
