@@ -44,7 +44,7 @@ Circuit
 Circuit addition
 """"""""""""""""
 
-``Circuit`` objects also support addition. For example
+:class:`qibo.abstractions.circuit.AbstractCircuit` objects support addition. For example
 
 .. code-block::  python
 
@@ -74,17 +74,16 @@ The gates contained in a circuit can be fused up to two-qubits using the
 :meth:`qibo.core.circuit.Circuit.fuse` method. This returns a new circuit
 for which the total number of gates is less than the gates in the original
 circuit as groups of gates have been fused to a single
-:class:`qibo.abstractions.gates.Unitary` gate. Simulating the new new circuit
+:class:`qibo.abstractions.gates.FusedGate` gate. Simulating the new new circuit
 is equivalent to simulating the original one but in most cases more efficient
 since less gates need to be applied to the state vector.
 
-The fusion algorithm starts by keeping track of the gates that act on each
-qubit. All one-qubit gates acting on the same qubit in a row are fused together.
-Once a two-qubit gate acting on a specific pair (q0, q1) is found then it is
-fused together with the existing fused one-qubit gates on q0 and q1.
-If a new two-qubit gate is found which acts on either q0 or q1 but not both then
-the fusion round for the pair (q0, q1) stops and a new fusion round starts for
-the target qubits of the new two-qubit gate.
+All one-qubit gates acting on the same qubit in a row are fused together.
+Once a two-qubit gate acting on a specific pair ``(q0, q1)`` is found then it is
+fused together with the existing fused one-qubit gates on ``q0`` and ``q1``.
+If a new two-qubit gate is found which acts on either ``q0`` or ``q1`` but not
+both then the fusion round for the pair ``(q0, q1)`` stops and a new fusion
+round starts for the target qubits of the new two-qubit gate.
 
 For example the following:
 
@@ -126,45 +125,16 @@ and the second will act to ``(1, 2)`` corresponding to
 
     [Y(1), Z(2), CNOT(1, 2), H(1), H(2)]
 
+Currently the maximum number of qubits in a fused gate is two. If a gate acting
+on more qubits is found it is applied as it is without participating in the
+fusion and new fusion groups are created for the gates that follow and act on
+its target qubits.
 
-The fusion algorithm starts by creating a :class:`qibo.abstractions.fusion.FusionGroup`.
-The first available gates in the circuit's gate queue are added in the group
-until the two qubits of the group are identified. Any subsequent one-qubit gate
-applied in one of these qubits or two-qubit gates applied to these two qubits
-are added in the group. Gates that affect more than two qubits or target
-different qubits are left for the next round of fusion. Once all compatible gates
-are added in the group the fusion round finishes and a new ``FusionGroup`` is
-created for the next round. The algorithm terminates once all gates are assigned
-to a group.
+The fusion algorithm fuses gates in the original order given by user. There
+are no additional simplifications performed such as commuting gates acting
+on the same qubit or canceling gates even when such simplifications are
+mathematically possible.
 
-A ``FusionGroup`` can either start with any one- or two-qubit gate
-except ``CNOT``, ``CZ``, ``SWAP`` and ``CU1`` because it is more efficient
-to apply such gates on their own rather than fusing them with others. These gates
-are fused only when "sandwiched" between one-qubit gates. For example
-
-.. code-block::  python
-
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.CZ(0, 1))
-    c.add([gates.X(0), gates.Y(1)])
-
-will be fused to a single ``Unitary(0, 1)`` gate, while
-
-.. code-block::  python
-
-    c.add([gates.H(0), gates.H(1)])
-    c.add(gates.CZ(0, 1))
-
-will remain as it is.
-
-Once groups are identified, all gates belonging to a ``FusionGroup`` are fused
-by multiplying their respective unitary matrices. This way each group results
-to a new :class:`qibo.abstractions.gates.Unitary` gate that is equivalent to applying
-all the gates in the group.
-
-.. autoclass:: qibo.core.fusion.FusionGroup
-    :members:
-    :member-order: bysource
 
 Density matrix circuit
 """"""""""""""""""""""
