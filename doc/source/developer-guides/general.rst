@@ -12,7 +12,7 @@ engine is located in ``qibo/core``. This simulation engine uses an abstract
 backend object ``K`` to perform calculation the structure of which is defined in
 ``qibo/backends/abstract.py``.
 
-* :class:`qibo.abstractions.circuit.AbstractCircuit` base class with attributes and abstract methods for circuit execution.
+* :class:`qibo.abstractions.circuit.AbstractCircuit`: base class with attributes and abstract methods for circuit execution.
 * :class:`qibo.abstractions.states.AbstractState`: data structure with tensor representation and state properties.
 * :class:`qibo.abstractions.gates.Gate`: implementation of standard gates and respective class attributes, virtual methods for gate matrix construction and operation.
 * :class:`qibo.backends.abstract.AbstractBackend`: virtual methods for the most common linear algebra operations.
