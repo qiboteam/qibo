@@ -7,12 +7,31 @@ class Symbol(sympy.Symbol):
     """Qibo specialization for ``sympy`` symbols.
 
     These symbols can be used to create :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
+    See :ref:`How to define custom Hamiltonians using symbols? <symbolicham-example>`
+    for more details.
+
+    Example:
+        ::
+
+            from qibo import hamiltonians
+            from qibo.symbols import X, Y, Z
+            # consturct an XYZ Hamiltonian on two qubits using Qibo symbols
+            form = X(0) * X(1) + Y(0) * Y(1) + Z(0) * Z(1)
+            ham = hamiltonians.SymbolicHamiltonian(form)
 
     Args:
         q (int): Target qubit id.
         matrix (np.ndarray): 2x2 matrix represented by this symbol.
         name (str): Name of the symbol which defines how it is represented in
             symbolic expressions.
+        commutative (bool): If ``True`` the constructed symbols commute with
+            each other. Default is ``False``.
+            This argument should be used with caution because quantum operators
+            are not commutative objects and therefore switching this to ``True``
+            may lead to wrong results. It is useful for improving performance
+            in symbolic calculations in cases where the user is sure that
+            the operators participating in the Hamiltonian form are commuting
+            (for example when the Hamiltonian consists of Z terms only).
     """
 
     def __new__(cls, q, matrix=None, name="Symbol", commutative=False):
