@@ -6,3 +6,4 @@ Developer guides
     :maxdepth: 1
 
     general
+    contributing

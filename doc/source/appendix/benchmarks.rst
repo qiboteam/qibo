@@ -138,13 +138,15 @@ using the ``--type`` flag. This accepts one of the following options:
     Contains layer of parametrized ``RY`` gates followed by a layer of entangling
     ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly from 0 to 2pi.
     Supports the following options:
-        - ``--nlayers``: Total number of layers.
+
+    - ``--nlayers``: Total number of layers.
 
 * ``opt-variational``: Same as ``variational`` using the :class:`qibo.abstractions.gates.VariationalLayer`.
     This gate optimizes execution by fusing the parametrized with the entangling
     gates before applying them to the state vector.
     Supports the following options:
-        - ``--nlayers``: Total number of layers.
+
+    - ``--nlayers``: Total number of layers.
 
 * ``one-qubit-gate``: Single one-qubit gate applied to all qubits.
     Supports the following options:
@@ -159,14 +161,14 @@ using the ``--type`` flag. This accepts one of the following options:
         - ``--theta`` (and/or ``--phi``): Value of the free parameter (for parametrized gates).
 
 * ``ghz``: Circuit that prepares the `GHZ state <https://en.wikipedia.org/wiki/Greenberger%E2%80%93Horne%E2%80%93Zeilinger_state>`_.
-    .
 
 * ``supremacy``: Circuit inspired by the `Quantum supremacy experiment <https://www.nature.com/articles/s41586-019-1666-5>`_.
     Contains alternating layers of random one-qubit gates and ``CU1`` gates.
     One-qubit gates are randomly selected from the set ``{RX, RY, RZ}`` and
     have random phases. The total number of layers is controlled using ``--nlayers``.
     Supports the following options:
-        - ``--nlayers``: Total number of layers.
+
+    - ``--nlayers``: Total number of layers.
 
 
 How to run VQE benchmarks?

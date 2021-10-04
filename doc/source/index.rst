@@ -41,7 +41,6 @@ Contents
 
     getting-started/index
     code-examples/index
-    why
 
 .. toctree::
     :maxdepth: 2
@@ -49,13 +48,12 @@ Contents
 
     api-reference/index
     developer-guides/index
-    contributing
 
 .. toctree::
     :maxdepth: 2
     :caption: Appendix
 
-    benchmarks
+    appendix/benchmarks
 
 
 Indices and tables
