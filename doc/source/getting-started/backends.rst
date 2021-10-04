@@ -4,7 +4,7 @@
 Backend drivers
 ===============
 
-As mentioned above, we provide backends for quantum simulation on classical
+Qibo provides backends for quantum simulation on classical
 hardware and quantum hardware management and control. In the image below we
 present a schematic view of the currently supported backends.
 
