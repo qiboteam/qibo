@@ -59,7 +59,7 @@ Here you have an example for the structure of the  ``profile.yml`` file:
 When including a new backend, you should include its:
 
 * **name:** The name of the new backend.
-* **class:** The class which performs the inheritance from `AbstractBackend`.
+* **class:** The class which performs the inheritance from ``AbstractBackend``.
 * **from:** The python module containing the value pointed by the ``class`` key.
 
 Finally, the default backend which is loaded when importing Qibo can be updated
