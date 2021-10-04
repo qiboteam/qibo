@@ -1429,3 +1429,20 @@ form is very close to the form of the Hamiltonian on paper. Note that when a
 :class:`qibo.core.hamiltonians.SymbolicHamiltonian` is used for time evolution,
 Qibo handles automatically automatically the Trotter decomposition by splitting
 to the appropriate terms.
+
+Qibo symbols support an additional ``commutative`` argument which is set to
+``False`` by default since quantum operators are non-commuting objects.
+When the user knows that the Hamiltonian consists of commuting terms only, such
+as products of Z operators, switching ``commutative`` to ``True`` may speed-up
+some symbolic calculations, such as the ``sympy.expand`` used when calculating
+the Trotter decomposition for the Hamiltonian. This option can be used when
+constructing each symbol:
+
+
+.. code-block::  python
+
+    from qibo import hamiltonians
+    from qibo.symbols import Z
+
+    form = Z(0, commutative=True) * Z(1, commutative=True) + Z(1, commutative=True) * Z(2, commutative=True)
+    ham = hamiltonians.SymbolicHamiltonian(form)
