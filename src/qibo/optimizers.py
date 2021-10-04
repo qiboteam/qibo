@@ -35,7 +35,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         processes (int): number of processes when using the parallel BFGS method.
 
     Returns:
-        (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer specific return object containing. For scipy methods it
+        (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer-specific return object. For scipy methods it
         returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
         and for ``'sgd'`` the options used during the optimization.
 
