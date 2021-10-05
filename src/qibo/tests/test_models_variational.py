@@ -342,7 +342,7 @@ def test_aavqe(backend, method, options, compile, filename):
                         s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
-    best, params, _ = aavqe.minimize(params=initial_parameters, method=method,
+    best, params = aavqe.minimize(params=initial_parameters, method=method,
                                  options=options, compile=compile)
     if method == "cma":
         # remove `outcmaes` folder
