@@ -75,7 +75,7 @@ if args.get("backend") in {"qibotf", "tensorflow"}:
 
 import qibo
 import circuits
-from logger import BenchmarkLogger
+from utils import BenchmarkLogger, parse_accelerators
 
 
 def get_active_branch_name():
@@ -88,36 +88,6 @@ def get_active_branch_name():
     for line in content:
         if line[0:4] == "ref:":
             return line.partition("refs/heads/")[2]
-
-
-def parse_accelerators(accelerators):
-    """Transforms string that specifies accelerators to dictionary.
-
-    The string that is parsed has the following format:
-        n1device1,n2device2,n3device3,...
-    and is transformed to the dictionary:
-        {'device1': n1, 'device2': n2, 'device3': n3, ...}
-
-    Example:
-        2/GPU:0,2/GPU:1 --> {'/GPU:0': 2, '/GPU:1': 2}
-    """
-    if accelerators is None:
-        return None
-
-    def read_digit(x):
-        i = 0
-        while x[i].isdigit():
-            i += 1
-        return x[i:], int(x[:i])
-
-    acc_dict = {}
-    for entry in accelerators.split(","):
-        device, n = read_digit(entry)
-        if device in acc_dict:
-            acc_dict[device] += n
-        else:
-            acc_dict[device] = n
-    return acc_dict
 
 
 def main(nqubits, circuit, backend="custom", precision="double",

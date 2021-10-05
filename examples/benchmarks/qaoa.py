@@ -6,7 +6,7 @@ import time
 import numpy as np
 import qibo
 from qibo import models, hamiltonians, K
-from logger import BenchmarkLogger
+from utils import BenchmarkLogger
 
 
 parser = argparse.ArgumentParser()

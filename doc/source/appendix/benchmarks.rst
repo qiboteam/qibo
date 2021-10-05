@@ -217,3 +217,28 @@ supports the following options:
 The script will perform the QAOA minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
 show the total execution time.
+
+
+How to run time evolution benchmarks?
+-------------------------------------
+
+Time evolution benchmarks can be run using ``evolution.py``. This performs an
+adiabatic evolution with :meth:`qibo.hamiltonians.X` as the easy Hamiltonian
+and :meth:`qibo.hamiltonians.TFIM` as the problem Hamiltonian and supports the
+following options:
+
+* ``--nqubits`` (``int``): Number of qubits in the circuit.
+* ``--dt`` (``float``): Time step for the evolution algorithm.
+* ``--solver`` (``str``): :ref:`Solvers <Solvers>` to use for evolving the state.
+* ``--dense`` (``bool``): If ``True`` it uses the full Hamiltonian matrix to
+  evolve the system, otherwise it will perform the Trotter decomposition.
+  Default is ``False``.
+* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
+  See :class:`qibo.core.distcircuit.DistributedCircuit` for more details on the
+  distributed implementation.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
+
+The script will perform the QAOA minimization and will print the optimal energy
+found and its difference with the exact ground state energy. It will also
+show the total execution time.
