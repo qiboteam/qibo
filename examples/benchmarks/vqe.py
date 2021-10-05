@@ -15,7 +15,7 @@ parser.add_argument("--nqubits", default=6, help="Number of qubits.", type=int)
 parser.add_argument("--nlayers", default=4, help="Number of layers.", type=int)
 parser.add_argument("--method", default="Powell", help="Optimization method.", type=str)
 parser.add_argument("--maxiter", default=None, help="Maximum optimization iterations.", type=int)
-parser.add_argument("--backend", default="qibotf", help="Qibo backend to use.", type=str)
+parser.add_argument("--backend", default="qibojit", help="Qibo backend to use.", type=str)
 parser.add_argument("--varlayer", action="store_true", help="Use VariationalLayer gate.")
 parser.add_argument("--filename", default=None, help="Name of file to save logs.", type=str)
 

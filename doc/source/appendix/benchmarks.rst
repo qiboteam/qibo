@@ -182,11 +182,16 @@ supports the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nlayers`` (``int``): Total number of layers in the circuit.
-* ``--method`` (``str``): Optimization method.
+* ``--method`` (``str``): Optimization method. Default is scipy's Powell method.
 * ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
-* ``--varlayer``: If used the circuit will be created using the
-  :class:`qibo.abstractions.gates.VariationalLayer` gate which fuses one and two qubits
-  for efficiency.
+  Default is ``None``.
+* ``--backend`` (``str``): Qibo backend to use.
+  See :ref:`Simulation backends <simulation-backends>` for more information on the
+  calculation backends. Default is ``qibojit``.
+* ``--varlayer`` (``bool``): If ``True`` the :class:`qibo.abstractions.gates.VariationalLayer`
+  will be used to construct the circuit, otherwise plain ``RY`` and ``CZ`` gates
+  will be used. Default is ``False``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
 
 The script will perform the VQE minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
