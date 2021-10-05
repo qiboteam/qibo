@@ -50,8 +50,8 @@ def main(nqubits, nangles, dense=True, solver="exp",
                                     options=options)
     logs[-1]["minimization_time"] = time.time() - start_time
 
-    logs[-1]["best_energy"] = best
-    logs[-1]["target_energy"] = target
+    logs[-1]["best_energy"] = float(best)
+    logs[-1]["target_energy"] = float(target)
     logs[-1]["epsilon"] = np.log10(1/np.abs(best - target))
     print("Found state =", best)
     print("Final eps =", logs[-1]["epsilon"])
