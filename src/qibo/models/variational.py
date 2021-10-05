@@ -126,7 +126,7 @@ class QAOA(object):
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
-            best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+            best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers
     from qibo.core import states
@@ -318,6 +318,7 @@ class FALQON(QAOA):
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01
+            max_layers = 3
             best_energy, final_parameters, extra = falqon.minimize(delta_t, max_layers)
     """
 
