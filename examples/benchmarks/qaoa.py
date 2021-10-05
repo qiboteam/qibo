@@ -1,5 +1,5 @@
 """
-Testing Quantum Approximate Optimization Algorithm model.
+Benchmark Quantum Approximate Optimization Algorithm model.
 """
 import argparse
 import time

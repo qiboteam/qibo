@@ -142,34 +142,36 @@ As explained above, the circuit to be used in the benchmarks can be selected
 using the ``--type`` flag. This accepts one of the following options:
 
 * ``qft``: Circuit for `Quantum Fourier Transform <https://en.wikipedia.org/wiki/Quantum_Fourier_transform>`_.
-    The circuit contains SWAP gates that rearrange output qubits to their
-    original input order.
+  The circuit contains SWAP gates that rearrange output qubits to their
+  original input order.
 
 * ``variational``: Example of a variational circuit.
-    Contains layer of parametrized ``RY`` gates followed by a layer of entangling
-    ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly from 0 to 2pi.
-    Supports the following options:
+  Contains layer of parametrized ``RY`` gates followed by a layer of entangling
+  ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly from 0 to 2pi.
+  Supports the following options:
 
     - ``--nlayers``: Total number of layers.
 
 * ``opt-variational``: Same as ``variational`` using the :class:`qibo.abstractions.gates.VariationalLayer`.
-    This gate optimizes execution by fusing the parametrized with the entangling
-    gates before applying them to the state vector.
-    Supports the following options:
+  This gate optimizes execution by fusing the parametrized with the entangling
+  gates before applying them to the state vector.
+  Supports the following options:
 
     - ``--nlayers``: Total number of layers.
 
 * ``one-qubit-gate``: Single one-qubit gate applied to all qubits.
-    Supports the following options:
-        - ``--gate-type``: Which one-qubit gate to use.
-        - ``--nlayers``: Total number of layers.
-        - ``--theta``: Value of the free parameter (for parametrized gates).
+  Supports the following options:
+
+    - ``--gate-type``: Which one-qubit gate to use.
+    - ``--nlayers``: Total number of layers.
+    - ``--theta``: Value of the free parameter (for parametrized gates).
 
 * ``two-qubit-gate``: Single two-qubit gate applied to all qubits.
-    Supports the following options:
-        - ``--gate-type``: Which two-qubit gate to use.
-        - ``--nlayers``: Total number of layers.
-        - ``--theta`` (and/or ``--phi``): Value of the free parameter (for parametrized gates).
+  Supports the following options:
+
+    - ``--gate-type``: Which two-qubit gate to use.
+    - ``--nlayers``: Total number of layers.
+    - ``--theta`` (and/or ``--phi``): Value of the free parameter (for parametrized gates).
 
 * ``ghz``: Circuit that prepares the `GHZ state <https://en.wikipedia.org/wiki/Greenberger%E2%80%93Horne%E2%80%93Zeilinger_state>`_.
 
@@ -178,7 +180,9 @@ How to run VQE benchmarks?
 --------------------------
 
 It is possible to run a VQE optimization benchmark using ``vqe.py``. This
-supports the following options:
+attempts to find the ground state of the :class:`qibo.hamiltonians.XXZ`
+Hamiltonian using a variational circuit ansatz consisting of RY and CZ gates
+and supports the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nlayers`` (``int``): Total number of layers in the circuit.
@@ -201,7 +205,9 @@ How to run QAOA benchmarks?
 ---------------------------
 
 It is possible to run a QAOA optimization benchmark using ``qaoa.py``. This
-supports the following options:
+attempts to find the ground state of the :class:`qibo.hamiltonians.XXZ`
+Hamiltonian using the Quantum Approximate Optimization algorithm and supports
+the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz.
