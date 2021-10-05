@@ -305,3 +305,52 @@ def test_falqon_optimization_callback(backend):
     falqon = models.FALQON(h)
     best, params, extra = falqon.minimize(0.1, 5, callback=callback)
     assert len(extra["callbacks"]) == 5
+
+
+test_names = "method,options,compile,filename"
+test_values = [("Powell", {'maxiter': 1}, True, 'aavqe_powell.out'),
+               ("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
+               ("BFGS", {'maxiter': 1}, True, 'aavqe_bfgs.out'),
+               ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
+               ("cma", {"maxfevals": 2}, False, None),
+               ("sgd", {"nepochs": 5}, False, None),
+               ("sgd", {"nepochs": 5}, True, None)]
+@pytest.mark.parametrize(test_names, test_values)
+def test_aavqe(backend, method, options, compile, filename):
+    """Performs a VQE circuit minimization test."""
+    original_threads = qibo.get_threads()
+    if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
+        pytest.skip("Skipping SGD test for unsupported backend.")
+    nqubits = 6
+    layers  = 4
+    circuit = models.Circuit(nqubits)
+
+    for l in range(layers):
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(0, nqubits-1, 2):
+            circuit.add(gates.CZ(q, q+1))
+        for q in range(nqubits):
+            circuit.add(gates.RY(q, theta=1.0))
+        for q in range(1, nqubits-2, 2):
+            circuit.add(gates.CZ(q, q+1))
+        circuit.add(gates.CZ(0, nqubits-1))
+    for q in range(nqubits):
+        circuit.add(gates.RY(q, theta=1.0))
+
+    easy_hamiltonian=hamiltonians.X(nqubits)
+    problem_hamiltonian=hamiltonians.XXZ(nqubits)
+    s = lambda t: t
+    aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
+                        s, nsteps=10, Tmax=1)
+    np.random.seed(0)
+    initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
+    best, params, _ = aavqe.minimize(params=initial_parameters, method=method,
+                                 options=options, compile=compile)
+    if method == "cma":
+        # remove `outcmaes` folder
+        import shutil
+        shutil.rmtree("outcmaes")
+    if filename is not None:
+        assert_regression_fixture(params, filename)
+    qibo.set_threads(original_threads)
