@@ -183,8 +183,7 @@ supports the following options:
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nlayers`` (``int``): Total number of layers in the circuit.
 * ``--method`` (``str``): Optimization method. Default is scipy's Powell method.
-* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
-  Default is ``None``.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
 * ``--backend`` (``str``): Qibo backend to use.
   See :ref:`Simulation backends <simulation-backends>` for more information on the
   calculation backends. Default is ``qibojit``.
@@ -205,11 +204,15 @@ It is possible to run a QAOA optimization benchmark using ``qaoa.py``. This
 supports the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
-* ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz. The parameters are initialized according to uniform distribution in [0, 0.1].
-* ``--trotter`` (``bool``): If ``True`` it uses the Trotter decomposition to apply the exponential operators.
+* ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz.
+  The parameters are initialized according to uniform distribution in [0, 0.1].
+* ``--dense`` (``bool``): If ``True`` it uses the full Hamiltonian matrix to
+  perform the unitaries, otherwise it will use the Trotter decomposition
+  of the operators. Default is ``False``.
 * ``--solver`` (``str``): :ref:`Solvers <Solvers>` to use for applying the exponential operators.
-* ``--method`` (``str``): Optimization method.
-* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
+* ``--method`` (``str``): Optimization method. Default is scipy's Powell method.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
 
 The script will perform the QAOA minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also

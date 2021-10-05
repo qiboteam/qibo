@@ -8,6 +8,7 @@ import time
 import numpy as np
 import qibo
 from qibo import gates, models, hamiltonians, K
+from logger import BenchmarkLogger
 
 
 parser = argparse.ArgumentParser()
@@ -52,18 +53,7 @@ def main(nqubits, nlayers, backend, varlayer=False, method="Powell",
          maxiter=None, filename=None):
     """Performs a VQE circuit minimization test."""
     qibo.set_backend(backend)
-
-    if filename is not None:
-        if os.path.isfile(filename):
-            with open(filename, "r") as file:
-                logs = json.load(file)
-            print("Extending existing logs from {}.".format(filename))
-        else:
-            print("Creating new logs in {}.".format(filename))
-            logs = []
-    else:
-        logs = []
-
+    logs = BenchmarkLogger(filename)
     logs.append({
         "nqubits": nqubits, "nlayers": nlayers, "varlayer": varlayer,
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
@@ -105,10 +95,7 @@ def main(nqubits, nlayers, backend, varlayer=False, method="Powell",
     print("\nCreation time =", logs[-1]["creation_time"])
     print("Minimization time =", logs[-1]["minimization_time"])
     print("Total time =", logs[-1]["minimization_time"] + logs[-1]["creation_time"])
-
-    if filename is not None:
-        with open(filename, "w") as file:
-            json.dump(logs, file)
+    logs.dump()
 
 
 if __name__ == "__main__":

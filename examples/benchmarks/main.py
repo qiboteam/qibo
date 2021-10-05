@@ -6,7 +6,6 @@ The type of the circuit is selected using the ``--type`` flag.
 import argparse
 import os
 import time
-import json
 import numpy as np
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 
@@ -76,6 +75,7 @@ if args.get("backend") in {"qibotf", "tensorflow"}:
 
 import qibo
 import circuits
+from logger import BenchmarkLogger
 
 
 def get_active_branch_name():
@@ -134,17 +134,7 @@ def main(nqubits, circuit, backend="custom", precision="double",
     if device is not None:
         qibo.set_device(device)
 
-    if filename is not None:
-        if os.path.isfile(filename):
-            with open(filename, "r") as file:
-                logs = json.load(file)
-            print("Extending existing logs from {}.".format(filename))
-        else:
-            print("Creating new logs in {}.".format(filename))
-            logs = []
-    else:
-        logs = []
-
+    logs = BenchmarkLogger(filename)
     # Create log dict
     logs.append({
         "nqubits": nqubits, "circuit_type": circuit, "threading": "",
@@ -223,13 +213,9 @@ def main(nqubits, circuit, backend="custom", precision="double",
         logs[-1]["threading"] = threading_layer()
 
     print()
-    for k, v in logs[-1].items():
-        print("{}: {}".format(k, v))
+    print(logs)
     print()
-
-    if filename is not None:
-        with open(filename, "w") as file:
-            json.dump(logs, file)
+    logs.dump()
 
 
 if __name__ == "__main__":
