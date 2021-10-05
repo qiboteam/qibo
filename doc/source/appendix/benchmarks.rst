@@ -173,14 +173,6 @@ using the ``--type`` flag. This accepts one of the following options:
 
 * ``ghz``: Circuit that prepares the `GHZ state <https://en.wikipedia.org/wiki/Greenberger%E2%80%93Horne%E2%80%93Zeilinger_state>`_.
 
-* ``supremacy``: Circuit inspired by the `Quantum supremacy experiment <https://www.nature.com/articles/s41586-019-1666-5>`_.
-    Contains alternating layers of random one-qubit gates and ``CU1`` gates.
-    One-qubit gates are randomly selected from the set ``{RX, RY, RZ}`` and
-    have random phases. The total number of layers is controlled using ``--nlayers``.
-    Supports the following options:
-
-    - ``--nlayers``: Total number of layers.
-
 
 How to run VQE benchmarks?
 --------------------------
