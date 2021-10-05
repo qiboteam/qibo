@@ -674,7 +674,7 @@ QAOA uses the ``|++...+>`` as the default initial state on which the variational
 operators are applied. The user may specify a different initial state when
 executing or optimizing by passing the ``initial_state`` argument.
 
-The QAOA model uses :ref:`Solvers <Optimizers>` to apply the exponential operators
+The QAOA model uses :ref:`Solvers <Solvers>` to apply the exponential operators
 to the state vector. For more information on how solvers work we refer to the
 :ref:`How to simulate time evolution? <timeevol-example>` section.
 When a :class:`qibo.abstractions.hamiltonians.Hamiltonian` is used then solvers will
@@ -1127,7 +1127,7 @@ exponentiation repeated for each time step. The integration method can
 be changed using the ``solver`` argument when executing. The solvers that are
 currently implemented are the default exponential solver (``"exp"``) and two
 Runge-Kutta solvers: fourth-order (``"rk4"``) and fifth-order (``"rk45"``).
-For more information we refer to the :ref:`Solvers <Optimizers>` section.
+For more information we refer to the :ref:`Solvers <Solvers>` section.
 
 
 .. _trotterdecomp-example:
