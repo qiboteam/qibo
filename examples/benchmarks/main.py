@@ -13,21 +13,20 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3" # disable Tensorflow warnings
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--nqubits", default=20, type=int)
-parser.add_argument("--type", default="qft", type=str)
+parser.add_argument("--circuit", default="qft", type=str)
 parser.add_argument("--backend", default="qibojit", type=str)
 parser.add_argument("--precision", default="double", type=str)
+parser.add_argument("--nreps", default=1, type=int)
+parser.add_argument("--nshots", default=None, type=int)
+parser.add_argument("--transfer", action="store_true")
+parser.add_argument("--fuse", action="store_true")
 
 parser.add_argument("--device", default=None, type=str)
 parser.add_argument("--accelerators", default=None, type=str)
 parser.add_argument("--memory", default=None, type=int)
 parser.add_argument("--threading", default=None, type=str)
-
-parser.add_argument("--nreps", default=1, type=int)
-parser.add_argument("--nshots", default=None, type=int)
-
-parser.add_argument("--transfer", action="store_true")
-parser.add_argument("--fuse", action="store_true")
 parser.add_argument("--compile", action="store_true")
+
 parser.add_argument("--nlayers", default=None, type=int)
 parser.add_argument("--gate-type", default=None, type=str)
 
@@ -121,43 +120,14 @@ def parse_accelerators(accelerators):
     return acc_dict
 
 
-def main(nqubits, type,
-         backend="custom", precision="double",
+def main(nqubits, circuit, backend="custom", precision="double",
+         nreps=1, nshots=None, transfer=False, fuse=False,
          device=None, accelerators=None, threadsafe=False,
-         nreps=1, nshots=None,
-         transfer=False, fuse=False, compile=False, get_branch=True,
-         nlayers=None, gate_type=None, params={},
-         filename=None):
-    """Runs benchmarks for different circuit types.
+         compile=False, get_branch=True, nlayers=None, gate_type=None,
+         params={}, filename=None):
+    """Runs circuit simulation benchmarks for different circuits.
 
-    Args:
-        nqubits (int): Number of qubits in the circuit.
-        type (str): Type of Circuit to use.
-            See ``benchmark_models.py`` for available types.
-        device (str): Tensorflow logical device to use for the benchmark.
-            If ``None`` the first available device is used.
-        accelerators (dict): Dictionary that specifies the accelarator devices
-            for multi-GPU setups.
-        nreps (int): Number of repetitions of circuit execution.
-            Dry run is not included. Default is 1.
-        nshots (int): Number of measurement shots.
-            Logs the time required to sample frequencies (no samples).
-            If ``None`` no measurements are performed.
-        transfer (bool): If ``True`` it transfers the array from GPU to CPU.
-            Makes execution and dry run times similar
-            (otherwise execution is much faster).
-        fuse (bool): If ``True`` gate fusion is used for faster circuit execution.
-        compile: If ``True`` then the Tensorflow graph is compiled using
-            ``circuit.compile()``. Compilation time is logged in this case.
-        get_branch (bool): If ``True`` it logs the name of the enabled git branch.
-        nlayers (int): Number of layers for supremacy-like or gate circuits.
-            If a different circuit is used ``nlayers`` is ignored.
-        gate_type (str): Type of gate for gate circuits.
-            If a different circuit is used ``gate_type`` is ignored.
-        params (dict): Gate parameter for gate circuits.
-            If a non-parametrized circuit is used then ``params`` is ignored.
-        filename (str): Name of file to write logs.
-            If ``None`` logs will not be saved.
+    See benchmark documentation for a description of arguments.
     """
     qibo.set_backend(backend)
     qibo.set_precision(precision)
@@ -177,7 +147,7 @@ def main(nqubits, type,
 
     # Create log dict
     logs.append({
-        "nqubits": nqubits, "circuit_type": type, "threading": "",
+        "nqubits": nqubits, "circuit_type": circuit, "threading": "",
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
         "device": qibo.get_device(), "accelerators": accelerators,
         "nshots": nshots, "transfer": transfer,
@@ -187,7 +157,7 @@ def main(nqubits, type,
         logs[-1]["branch"] = get_active_branch_name()
 
     params = {k: v for k, v in params.items() if v is not None}
-    kwargs = {"nqubits": nqubits, "circuit_type": type}
+    kwargs = {"nqubits": nqubits, "circuit_type": circuit}
     if params: kwargs["params"] = params
     if nlayers is not None: kwargs["nlayers"] = nlayers
     if gate_type is not None: kwargs["gate_type"] = gate_type

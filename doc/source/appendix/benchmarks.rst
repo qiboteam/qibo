@@ -81,40 +81,51 @@ following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 
-* ``--type`` (``str``): Type of benchmark circuit.
-  Available circuit types are shown in the next section. Some circuit types
-  support additional options which are described below.
+* ``--circuit`` (``str``): Circuit to execute. Read the next section for a list
+  of available circuits. Some circuit types support additional options which
+  are described below. Quantum Fourier Transform is the default benchmark circuit.
 
 * ``--backend`` (``str``): Qibo backend to use for the calculation.
-  Available backends are ``"custom"``, ``"matmuleinsum"``, ``"defaulteinsum"``,
-  ``"numpy_defaulteinsum"`` and ``"numpy_matmuleinsum"``.
-  ``"custom"`` is the default backend.
+  See :ref:`Simulation backends <simulation-backends>` for more information on the
+  calculation backends. ``qibojit`` is the default backend.
 
 * ``--precision`` (``str``): Complex number precision to use for the benchmark.
-    Available options are ``'single'`` and ``'double'``.
+  Available options are single and double precision. Default is double.
 
-* ``--device`` (``str``): Tensorflow device to use for the benchmarks.
-  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
-
-* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
-  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
-  on two GPUs. The coefficient of each device denotes the number of times to
-  reuse this device.
-
-* ``--memory`` (``int``): Limits GPU memory used for execution. If no limiter is used,
-  Tensorflow uses all available by default.
+* ``--nreps`` (``int``): Number of repetitions for the circuit execution.
 
 * ``--nshots`` (``int``): Number of measurement shots.
   This will benchmark the sampling of frequencies, not individual shot samples.
   If not given no measurements will be performed and the benchmark will
   terminate once the final state vector is found.
 
-* ``--compile`` (``bool``): If used, the circuit will be compiled using ``tf.function``.
-  Note that custom operators do not support compilation.
-  Default is ``False``.
+* ``--fuse`` (``bool``): Use :ref:`Circuit fusion <circuit-fusion>` to reduce
+  the number of gates in the circuit. Default is ``False``.
 
-* ``--fuse`` (``bool``): Circuit gates will be fused for faster execution of some circuit
-  types. Default is ``False``.
+* ``--transfer`` (``bool``): Transfer the final state vector from GPU to CPU
+  and measure the required time.
+
+* ``--device`` (``str``): Device to use for the benchmarks.
+  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
+  Note that GPU is not supported by all backends. If a GPU and a supporting
+  backend is available it will be the default choice.
+
+* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
+  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
+  on two GPUs. The coefficient of each device denotes the number of times to
+  reuse this device. See :class:`qibo.core.distcircuit.DistributedCircuit` for
+  more details in the distributed implementation.
+
+* ``--memory`` (``int``): Limits GPU memory used for execution. Relevant only
+  for Tensorflow backends, as Tensorflow uses the full GPU memory by default.
+
+* ``--threading`` (``str``): Selects numba threading layer. Relevant for the
+  qibojit backend on CPU only. See `Numba threading layers <https://numba.pydata.org/numba-doc/latest/user/threading-layer.html>`_
+  for more details.
+
+* ``--compile`` (``bool``): Compile the circuit using ``tf.function``.
+  Available only when using the tensorflow backend. Default is ``False``.
+
 
 When a benchmark is executed, the total simulation time will be printed in the
 terminal once the simulation finishes. Optionally execution times can be saved
