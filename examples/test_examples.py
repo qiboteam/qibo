@@ -134,8 +134,8 @@ def test_unary(data, bins, M=10, shots=1000):
 
 
 @pytest.mark.parametrize("nqubits", [3, 6])
-@pytest.mark.parametrize("type", ["qft", "variational"])
-def test_benchmarks(nqubits, type):
+@pytest.mark.parametrize("circuit", ["qft", "variational"])
+def test_benchmarks(nqubits, circuit):
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
@@ -143,8 +143,9 @@ def test_benchmarks(nqubits, type):
     start = code.find("def main")
     end = code.find("\nif __name__ ==")
     header = ("import argparse\nimport os\nimport time\nimport numpy as np"
-              "\nimport qibo\nimport circuits\n\n")
-    args = {"nqubits": nqubits, "type": type,
+              "\nimport qibo\nimport circuits\nfrom utils import "
+              "BenchmarkLogger, parse_accelerators\n\n")
+    args = {"nqubits": nqubits, "circuit": circuit,
             "backend": "qibojit", "precision": "double",
             "device": None, "accelerators": None, "get_branch": False,
             "nshots": None, "fuse": False, "compile": False,
@@ -177,6 +178,19 @@ def test_qaoa_benchmarks(nqubits, nangles, dense, solver, method="Powell"):
     sys.path[-1] = path
     os.chdir(path)
     run_script(args, script_name="qaoa.py")
+
+
+@pytest.mark.parametrize("nqubits", [3, 4])
+@pytest.mark.parametrize("dt", [0.1, 0.01])
+@pytest.mark.parametrize("dense", [False, True])
+@pytest.mark.parametrize("solver", ["exp", "rk4"])
+@pytest.mark.parametrize("backend", ["qibojit", "qibotf"])
+def test_evolution_benchmarks(nqubits, dt, dense, solver, backend):
+    args = locals()
+    path = os.path.join(base_dir, "benchmarks")
+    sys.path[-1] = path
+    os.chdir(path)
+    run_script(args, script_name="evolution.py")
 
 
 @pytest.mark.parametrize("nclasses", [3])
