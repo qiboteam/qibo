@@ -128,7 +128,7 @@ class AAVQE(object):
         s = lambda t: t
         # create AAVQE model 
         aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
-                             s, nsteps=10, Tmax=1)
+                             s, nsteps=10, t_max=1)
         # optimize using random initial variational parameters
         np.random.seed(0)
         initial_parameters = np.random.uniform(0, 2*np.pi, 2)

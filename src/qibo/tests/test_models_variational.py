@@ -312,15 +312,12 @@ test_values = [("Powell", {'maxiter': 1}, True, 'aavqe_powell.out'),
                ("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("BFGS", {'maxiter': 1}, True, 'aavqe_bfgs.out'),
                ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
-               ("cma", {"maxfevals": 2}, False, None),
-               ("sgd", {"nepochs": 5}, False, None),
-               ("sgd", {"nepochs": 5}, True, None)]
+               ("cma", {"maxfevals": 2}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_aavqe(backend, method, options, compile, filename):
-    """Performs a VQE circuit minimization test."""
+    """Performs a AAVQE circuit minimization test."""
     original_threads = qibo.get_threads()
-    if (method == "sgd" or compile) and qibo.get_backend() != "tensorflow":
-        pytest.skip("Skipping SGD test for unsupported backend.")
+
     nqubits = 6
     layers  = 4
     circuit = models.Circuit(nqubits)
@@ -342,7 +339,7 @@ def test_aavqe(backend, method, options, compile, filename):
     problem_hamiltonian=hamiltonians.XXZ(nqubits)
     s = lambda t: t
     aavqe = models.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, 
-                        s, nsteps=10, Tmax=1)
+                        s, nsteps=10, t_max=1)
     np.random.seed(0)
     initial_parameters = np.random.uniform(0, 2*np.pi, 2*nqubits*layers + nqubits)
     best, params, _ = aavqe.minimize(params=initial_parameters, method=method,
