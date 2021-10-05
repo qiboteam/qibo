@@ -1,0 +1,21 @@
+# Download base image ubuntu latest
+FROM ubuntu:latest
+
+# LABEL about the custom image
+LABEL maintainer="Qibo"
+LABEL description="Image with Qibo tagged code."
+
+# Disable Prompt During Packages Installation
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Update Ubuntu Software repository
+RUN apt update
+
+# Install wget
+RUN apt install -y python3-pip
+
+# Install the qibo framework
+RUN pip3 install qibo
+
+# run bash as entrypoint
+ENTRYPOINT bash
