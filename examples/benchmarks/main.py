@@ -90,7 +90,7 @@ def get_active_branch_name():
             return line.partition("refs/heads/")[2]
 
 
-def main(nqubits, circuit, backend="custom", precision="double",
+def main(nqubits, circuit_name, backend="custom", precision="double",
          nreps=1, nshots=None, transfer=False, fuse=False,
          device=None, accelerators=None, threadsafe=False,
          compile=False, get_branch=True, nlayers=None, gate_type=None,
@@ -107,7 +107,7 @@ def main(nqubits, circuit, backend="custom", precision="double",
     logs = BenchmarkLogger(filename)
     # Create log dict
     logs.append({
-        "nqubits": nqubits, "circuit_type": circuit, "threading": "",
+        "nqubits": nqubits, "circuit_name": circuit_name, "threading": "",
         "backend": qibo.get_backend(), "precision": qibo.get_precision(),
         "device": qibo.get_device(), "accelerators": accelerators,
         "nshots": nshots, "transfer": transfer,
@@ -117,7 +117,7 @@ def main(nqubits, circuit, backend="custom", precision="double",
         logs[-1]["branch"] = get_active_branch_name()
 
     params = {k: v for k, v in params.items() if v is not None}
-    kwargs = {"nqubits": nqubits, "circuit_type": circuit}
+    kwargs = {"nqubits": nqubits, "circuit_name": circuit_name}
     if params: kwargs["params"] = params
     if nlayers is not None: kwargs["nlayers"] = nlayers
     if gate_type is not None: kwargs["gate_type"] = gate_type
@@ -189,6 +189,7 @@ def main(nqubits, circuit, backend="custom", precision="double",
 
 
 if __name__ == "__main__":
+    args["circuit_name"] = args.pop("circuit")
     args["accelerators"] = parse_accelerators(args.pop("accelerators"))
     args["params"] = {k: args.pop(k) for k in _PARAM_NAMES}
     main(**args)

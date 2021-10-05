@@ -76,13 +76,13 @@ _CIRCUITS = {"variational": VariationalCircuit,
              "ghz": PrepareGHZ}
 
 
-def CircuitFactory(nqubits, circuit_type, accelerators=None, **kwargs):
-    if circuit_type == "qft":
+def CircuitFactory(nqubits, circuit_name, accelerators=None, **kwargs):
+    if circuit_name == "qft":
         circuit = models.QFT(nqubits, accelerators=accelerators)
     else:
-        if circuit_type not in _CIRCUITS:
-            raise TypeError("Unknown benchmark circuit type {}."
-                            "".format(circuit_type))
+        if circuit_name not in _CIRCUITS:
+            raise KeyError("Unknown benchmark circuit type {}."
+                           "".format(circuit_type))
         circuit = models.Circuit(nqubits, accelerators=accelerators)
-        circuit.add(_CIRCUITS[circuit_type](nqubits, **kwargs))
+        circuit.add(_CIRCUITS.get(circuit_type)(nqubits, **kwargs))
     return circuit

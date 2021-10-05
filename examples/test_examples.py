@@ -134,8 +134,8 @@ def test_unary(data, bins, M=10, shots=1000):
 
 
 @pytest.mark.parametrize("nqubits", [3, 6])
-@pytest.mark.parametrize("circuit", ["qft", "variational"])
-def test_benchmarks(nqubits, circuit):
+@pytest.mark.parametrize("circuit_name", ["qft", "variational"])
+def test_benchmarks(nqubits, circuit_name):
     path = os.path.join(base_dir, "benchmarks")
     sys.path[-1] = path
     os.chdir(path)
@@ -145,7 +145,7 @@ def test_benchmarks(nqubits, circuit):
     header = ("import argparse\nimport os\nimport time\nimport numpy as np"
               "\nimport qibo\nimport circuits\nfrom utils import "
               "BenchmarkLogger, parse_accelerators\n\n")
-    args = {"nqubits": nqubits, "circuit": circuit,
+    args = {"nqubits": nqubits, "circuit_name": circuit_name,
             "backend": "qibojit", "precision": "double",
             "device": None, "accelerators": None, "get_branch": False,
             "nshots": None, "fuse": False, "compile": False,
