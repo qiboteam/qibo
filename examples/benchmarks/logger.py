@@ -18,7 +18,7 @@ class BenchmarkLogger(list):
     def dump(self):
         if self.filename is not None:
             with open(self.filename, "w") as file:
-                json.dump(logs, file)
+                json.dump(list(self), file)
 
     def __str__(self):
         return "\n".join("{}: {}".format(k, v) for k, v in self[-1].items())

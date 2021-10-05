@@ -3,7 +3,6 @@ Testing Variational Quantum Eigensolver.
 """
 import os
 import argparse
-import json
 import time
 import numpy as np
 import qibo
