@@ -81,40 +81,51 @@ following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 
-* ``--type`` (``str``): Type of benchmark circuit.
-  Available circuit types are shown in the next section. Some circuit types
-  support additional options which are described below.
+* ``--circuit`` (``str``): Circuit to execute. Read the next section for a list
+  of available circuits. Some circuit types support additional options which
+  are described below. Quantum Fourier Transform is the default benchmark circuit.
 
 * ``--backend`` (``str``): Qibo backend to use for the calculation.
-  Available backends are ``"custom"``, ``"matmuleinsum"``, ``"defaulteinsum"``,
-  ``"numpy_defaulteinsum"`` and ``"numpy_matmuleinsum"``.
-  ``"custom"`` is the default backend.
+  See :ref:`Simulation backends <simulation-backends>` for more information on the
+  calculation backends. ``qibojit`` is the default backend.
 
 * ``--precision`` (``str``): Complex number precision to use for the benchmark.
-    Available options are ``'single'`` and ``'double'``.
+  Available options are single and double precision. Default is double.
 
-* ``--device`` (``str``): Tensorflow device to use for the benchmarks.
-  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
-
-* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
-  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
-  on two GPUs. The coefficient of each device denotes the number of times to
-  reuse this device.
-
-* ``--memory`` (``int``): Limits GPU memory used for execution. If no limiter is used,
-  Tensorflow uses all available by default.
+* ``--nreps`` (``int``): Number of repetitions for the circuit execution.
 
 * ``--nshots`` (``int``): Number of measurement shots.
   This will benchmark the sampling of frequencies, not individual shot samples.
   If not given no measurements will be performed and the benchmark will
   terminate once the final state vector is found.
 
-* ``--compile`` (``bool``): If used, the circuit will be compiled using ``tf.function``.
-  Note that custom operators do not support compilation.
-  Default is ``False``.
+* ``--fuse`` (``bool``): Use :ref:`Circuit fusion <circuit-fusion>` to reduce
+  the number of gates in the circuit. Default is ``False``.
 
-* ``--fuse`` (``bool``): Circuit gates will be fused for faster execution of some circuit
-  types. Default is ``False``.
+* ``--transfer`` (``bool``): Transfer the final state vector from GPU to CPU
+  and measure the required time.
+
+* ``--device`` (``str``): Device to use for the benchmarks.
+  Example: ``--device /GPU:0`` or ``--device /CPU:0``.
+  Note that GPU is not supported by all backends. If a GPU and a supporting
+  backend is available it will be the default choice.
+
+* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
+  Example: ``--accelerators 1/GPU:0,1/GPU:1`` will distribute the execution
+  on two GPUs. The coefficient of each device denotes the number of times to
+  reuse this device. See :class:`qibo.core.distcircuit.DistributedCircuit` for
+  more details in the distributed implementation.
+
+* ``--memory`` (``int``): Limits GPU memory used for execution. Relevant only
+  for Tensorflow backends, as Tensorflow uses the full GPU memory by default.
+
+* ``--threading`` (``str``): Selects numba threading layer. Relevant for the
+  qibojit backend on CPU only. See `Numba threading layers <https://numba.pydata.org/numba-doc/latest/user/threading-layer.html>`_
+  for more details.
+
+* ``--compile`` (``bool``): Compile the circuit using ``tf.function``.
+  Available only when using the tensorflow backend. Default is ``False``.
+
 
 When a benchmark is executed, the total simulation time will be printed in the
 terminal once the simulation finishes. Optionally execution times can be saved
@@ -131,59 +142,59 @@ As explained above, the circuit to be used in the benchmarks can be selected
 using the ``--type`` flag. This accepts one of the following options:
 
 * ``qft``: Circuit for `Quantum Fourier Transform <https://en.wikipedia.org/wiki/Quantum_Fourier_transform>`_.
-    The circuit contains SWAP gates that rearrange output qubits to their
-    original input order.
+  The circuit contains SWAP gates that rearrange output qubits to their
+  original input order.
 
 * ``variational``: Example of a variational circuit.
-    Contains layer of parametrized ``RY`` gates followed by a layer of entangling
-    ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly from 0 to 2pi.
-    Supports the following options:
+  Contains layer of parametrized ``RY`` gates followed by a layer of entangling
+  ``CZ`` gates. The parameters of ``RY`` gates are sampled randomly from 0 to 2pi.
+  Supports the following options:
 
     - ``--nlayers``: Total number of layers.
 
 * ``opt-variational``: Same as ``variational`` using the :class:`qibo.abstractions.gates.VariationalLayer`.
-    This gate optimizes execution by fusing the parametrized with the entangling
-    gates before applying them to the state vector.
-    Supports the following options:
+  This gate optimizes execution by fusing the parametrized with the entangling
+  gates before applying them to the state vector.
+  Supports the following options:
 
     - ``--nlayers``: Total number of layers.
 
 * ``one-qubit-gate``: Single one-qubit gate applied to all qubits.
-    Supports the following options:
-        - ``--gate-type``: Which one-qubit gate to use.
-        - ``--nlayers``: Total number of layers.
-        - ``--theta``: Value of the free parameter (for parametrized gates).
+  Supports the following options:
+
+    - ``--gate-type``: Which one-qubit gate to use.
+    - ``--nlayers``: Total number of layers.
+    - ``--theta``: Value of the free parameter (for parametrized gates).
 
 * ``two-qubit-gate``: Single two-qubit gate applied to all qubits.
-    Supports the following options:
-        - ``--gate-type``: Which two-qubit gate to use.
-        - ``--nlayers``: Total number of layers.
-        - ``--theta`` (and/or ``--phi``): Value of the free parameter (for parametrized gates).
+  Supports the following options:
+
+    - ``--gate-type``: Which two-qubit gate to use.
+    - ``--nlayers``: Total number of layers.
+    - ``--theta`` (and/or ``--phi``): Value of the free parameter (for parametrized gates).
 
 * ``ghz``: Circuit that prepares the `GHZ state <https://en.wikipedia.org/wiki/Greenberger%E2%80%93Horne%E2%80%93Zeilinger_state>`_.
-
-* ``supremacy``: Circuit inspired by the `Quantum supremacy experiment <https://www.nature.com/articles/s41586-019-1666-5>`_.
-    Contains alternating layers of random one-qubit gates and ``CU1`` gates.
-    One-qubit gates are randomly selected from the set ``{RX, RY, RZ}`` and
-    have random phases. The total number of layers is controlled using ``--nlayers``.
-    Supports the following options:
-
-    - ``--nlayers``: Total number of layers.
 
 
 How to run VQE benchmarks?
 --------------------------
 
 It is possible to run a VQE optimization benchmark using ``vqe.py``. This
-supports the following options:
+attempts to find the ground state of the :class:`qibo.hamiltonians.XXZ`
+Hamiltonian using a variational circuit ansatz consisting of RY and CZ gates
+and supports the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
 * ``--nlayers`` (``int``): Total number of layers in the circuit.
-* ``--method`` (``str``): Optimization method.
-* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
-* ``--varlayer``: If used the circuit will be created using the
-  :class:`qibo.abstractions.gates.VariationalLayer` gate which fuses one and two qubits
-  for efficiency.
+* ``--method`` (``str``): Optimization method. Default is scipy's Powell method.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
+* ``--backend`` (``str``): Qibo backend to use.
+  See :ref:`Simulation backends <simulation-backends>` for more information on the
+  calculation backends. Default is ``qibojit``.
+* ``--varlayer`` (``bool``): If ``True`` the :class:`qibo.abstractions.gates.VariationalLayer`
+  will be used to construct the circuit, otherwise plain ``RY`` and ``CZ`` gates
+  will be used. Default is ``False``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
 
 The script will perform the VQE minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
@@ -194,14 +205,45 @@ How to run QAOA benchmarks?
 ---------------------------
 
 It is possible to run a QAOA optimization benchmark using ``qaoa.py``. This
-supports the following options:
+attempts to find the ground state of the :class:`qibo.hamiltonians.XXZ`
+Hamiltonian using the Quantum Approximate Optimization algorithm and supports
+the following options:
 
 * ``--nqubits`` (``int``): Number of qubits in the circuit.
-* ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz. The parameters are initialized according to uniform distribution in [0, 0.1].
-* ``--trotter`` (``bool``): If ``True`` it uses the Trotter decomposition to apply the exponential operators.
+* ``--nangles`` (``int``): Number of variational parameters in the QAOA ansatz.
+  The parameters are initialized according to uniform distribution in [0, 0.1].
+* ``--dense`` (``bool``): If ``True`` it uses the full Hamiltonian matrix to
+  perform the unitaries, otherwise it will use the Trotter decomposition
+  of the operators. Default is ``False``.
 * ``--solver`` (``str``): :ref:`Solvers <Solvers>` to use for applying the exponential operators.
-* ``--method`` (``str``): Optimization method.
-* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer.
+* ``--method`` (``str``): Optimization method. Default is scipy's Powell method.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
+
+The script will perform the QAOA minimization and will print the optimal energy
+found and its difference with the exact ground state energy. It will also
+show the total execution time.
+
+
+How to run time evolution benchmarks?
+-------------------------------------
+
+Time evolution benchmarks can be run using ``evolution.py``. This performs an
+adiabatic evolution with :meth:`qibo.hamiltonians.X` as the easy Hamiltonian
+and :meth:`qibo.hamiltonians.TFIM` as the problem Hamiltonian and supports the
+following options:
+
+* ``--nqubits`` (``int``): Number of qubits in the circuit.
+* ``--dt`` (``float``): Time step for the evolution algorithm.
+* ``--solver`` (``str``): :ref:`Solvers <Solvers>` to use for evolving the state.
+* ``--dense`` (``bool``): If ``True`` it uses the full Hamiltonian matrix to
+  evolve the system, otherwise it will perform the Trotter decomposition.
+  Default is ``False``.
+* ``--accelerators`` (``str``): Devices to use for distributed execution of the circuit.
+  See :class:`qibo.core.distcircuit.DistributedCircuit` for more details on the
+  distributed implementation.
+* ``--maxiter`` (``int``): Maximum number of iterations for the optimizer. Default is ``None``.
+* ``--filename`` (``str``): Name of the file to save benchmark logs.
 
 The script will perform the QAOA minimization and will print the optimal energy
 found and its difference with the exact ground state energy. It will also
