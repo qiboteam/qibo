@@ -308,9 +308,7 @@ def test_falqon_optimization_callback(backend):
 
 
 test_names = "method,options,compile,filename"
-test_values = [("Powell", {'maxiter': 1}, True, 'aavqe_powell.out'),
-               ("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
-               ("BFGS", {'maxiter': 1}, True, 'aavqe_bfgs.out'),
+test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
                ("cma", {"maxfevals": 2}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
