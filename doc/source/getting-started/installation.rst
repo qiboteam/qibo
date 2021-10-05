@@ -289,3 +289,28 @@ please do:
 
       import qibo
       qibo.set_backend("numpy")
+
+_______________________
+
+.. _docker:
+
+Using the code with docker
+--------------------------
+
+We provide docker images for tag release of the code using GitHub Packages. The
+docker images contain a pre-configured linux environment with the Qibo
+framework installed with the specific tag version.
+
+Please refer to the download and authentication instructions from the `Qibo GitHub Packages`_.
+
+In order to start the docker image in interactive mode please use docker
+standard syntax, for example:
+
+.. code::
+
+    docker run -it ghcr.io/qiboteam/qibo:<tag_version> bash
+
+This will open a bash shell with the Qibo environment already activated, with
+all binaries and scripts from the Qibo framework.
+
+.. _Qibo GitHub Packages: https://github.com/qiboteam/qibo/pkgs/container/qibo
