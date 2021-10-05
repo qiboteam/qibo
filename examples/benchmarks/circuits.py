@@ -82,7 +82,7 @@ def CircuitFactory(nqubits, circuit_name, accelerators=None, **kwargs):
     else:
         if circuit_name not in _CIRCUITS:
             raise KeyError("Unknown benchmark circuit type {}."
-                           "".format(circuit_type))
+                           "".format(circuit_name))
         circuit = models.Circuit(nqubits, accelerators=accelerators)
-        circuit.add(_CIRCUITS.get(circuit_type)(nqubits, **kwargs))
+        circuit.add(_CIRCUITS.get(circuit_name)(nqubits, **kwargs))
     return circuit
