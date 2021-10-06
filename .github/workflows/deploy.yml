@@ -73,8 +73,8 @@ jobs:
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.PYPI_TOKEN }}
+    - uses: actions/checkout@v1
     - name: Build docker image and upload to ghcr
-      uses: actions/checkout@v1
       run: |
         IMAGE_NAME=qibo
         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
