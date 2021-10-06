@@ -314,3 +314,9 @@ This will open a bash shell with the Qibo environment already activated, with
 all binaries and scripts from the Qibo framework.
 
 .. _Qibo GitHub Packages: https://github.com/qiboteam/qibo/pkgs/container/qibo
+
+
+.. note::
+      The docker image contains the basic ``qibo`` package with the lightweight
+      ``numpy`` backend for simulation.
+
