@@ -19,11 +19,6 @@ def get_version():
             return mo.group(1)
 
 
-# Read in requirements
-requirements = open('requirements.txt').readlines()
-requirements = [r.strip() for r in requirements]
-
-
 # load long description from README
 this_directory = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
@@ -56,7 +51,15 @@ setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    install_requires=requirements,
+    install_requires=[
+        "scipy",
+        "sympy",
+        "cma",
+        "joblib",
+        "matplotlib",
+        "psutil",
+        "pyyaml"
+    ],
     extras_require={
         "docs": ["sphinx", "sphinx_rtd_theme", "recommonmark", "sphinxcontrib-bibtex", "sphinx_markdown_tables", "nbsphinx", "IPython"],
         "tests": ["pytest", "cirq", "ply", "sklearn"],
