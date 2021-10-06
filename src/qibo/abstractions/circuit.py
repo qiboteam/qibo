@@ -944,7 +944,7 @@ class AbstractCircuit(ABC):
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
                   "id": "I", "measure": "M", "fsim": "f",
-                  "generalizedfsim": "gf"}
+                  "generalizedfsim": "gf", "Unitary": "U"}
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
