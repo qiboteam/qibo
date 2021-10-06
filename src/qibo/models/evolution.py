@@ -44,7 +44,7 @@ class StateEvolution:
             # initialize state to |+++>
             initial_state = np.ones(8) / np.sqrt(8)
             # execute evolution for total time T=2
-            final_state2 = evolve(T=2, initial_state)
+            final_state2 = evolve(final_time=2, initial_state=initial_state)
     """
 
     def __init__(self, hamiltonian, dt, solver="exp", callbacks=[],

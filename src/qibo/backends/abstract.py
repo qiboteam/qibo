@@ -347,7 +347,7 @@ class AbstractBackend(ABC):
 
     @abstractmethod
     def initial_state(self, nqubits, is_matrix=False): # pragma: no cover
-        """Creates the default initial state |00...0> as a tensor."""
+        """Creates the default initial state ``|00...0>`` as a tensor."""
         raise_error(NotImplementedError)
 
     @abstractmethod

@@ -1,1 +1,0 @@
-../../../../examples/grover3sat/README.md

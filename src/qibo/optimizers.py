@@ -35,11 +35,10 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
         processes (int): number of processes when using the parallel BFGS method.
 
     Returns:
-        loss (float): final best loss value.
-        xbest (float): best parameters obtained by the optimizer.
-        extra: optimizer specific return object containing. For scipy methods it
-            returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
-            and for ``'sgd'`` the options used during the optimization.
+        (float, float, custom): Final best loss value; best parameters obtained by the optimizer;         extra: optimizer-specific return object. For scipy methods it
+        returns the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
+        and for ``'sgd'`` the options used during the optimization.
+
 
     Example:
         ::
@@ -158,11 +157,12 @@ def sgd(loss, initial_parameters, args=(), options=None, compile=False):
         args (tuple): optional arguments for the loss function.
         options (dict): Dictionary with options for the SGD optimizer. Supports
             the following keys:
-              - ``'optimizer'`` (str, default: ``'Adagrad'``): Name of optimizer.
-              - ``'learning_rate'`` (float, default: ``'1e-3'``): Learning rate.
-              - ``'nepochs'`` (int, default: ``1e6``): Number of epochs for optimization.
-              - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
-                a message of the loss function.
+
+            - ``'optimizer'`` (str, default: ``'Adagrad'``): Name of optimizer.
+            - ``'learning_rate'`` (float, default: ``'1e-3'``): Learning rate.
+            - ``'nepochs'`` (int, default: ``1e6``): Number of epochs for optimization.
+            - ``'nmessage'`` (int, default: ``1e3``): Every how many epochs to print
+              a message of the loss function.
     """
     from qibo import K
     from qibo.config import log, raise_error

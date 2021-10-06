@@ -61,10 +61,9 @@ class VQE(object):
         Return:
             The final expectation value.
             The corresponding best parameters.
-            The optimization result object. For scipy methods it
-                returns the ``OptimizeResult``, for ``'cma'`` the
-                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
-                the options used during the optimization.
+            The optimization result object. For scipy methods it returns
+            the ``OptimizeResult``, for ``'cma'`` the ``CMAEvolutionStrategy.result``,
+            and for ``'sgd'`` the options used during the optimization.
         """
         def _loss(params, circuit, hamiltonian):
             circuit.set_parameters(params)
@@ -127,7 +126,7 @@ class QAOA(object):
             # optimize using random initial variational parameters
             # and default options and initial state
             initial_parameters = 0.01 * np.random.random(4)
-            best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+            best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
     """
     from qibo import hamiltonians, optimizers
     from qibo.core import states
@@ -260,9 +259,9 @@ class QAOA(object):
             The final energy (expectation value of the ``hamiltonian``).
             The corresponding best parameters.
             The optimization result object. For scipy methods it
-                returns the ``OptimizeResult``, for ``'cma'`` the
-                ``CMAEvolutionStrategy.result``, and for ``'sgd'``
-                the options used during the optimization.
+            returns the ``OptimizeResult``, for ``'cma'`` the
+            ``CMAEvolutionStrategy.result``, and for ``'sgd'``
+            the options used during the optimization.
         """
         if len(initial_p) % 2 != 0:
             raise_error(ValueError, "Initial guess for the parameters must "
@@ -319,6 +318,7 @@ class FALQON(QAOA):
             # optimize using random initial variational parameters
             # and default options and initial state
             delta_t = 0.01
+            max_layers = 3
             best_energy, final_parameters, extra = falqon.minimize(delta_t, max_layers)
     """
 

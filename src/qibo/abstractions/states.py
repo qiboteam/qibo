@@ -112,7 +112,7 @@ class AbstractState(ABC):
     @classmethod
     @abstractmethod
     def zero_state(cls, nqubits): # pragma: no cover
-        """Constructs the |00...0> state.
+        """Constructs the ``|00...0>`` state.
 
         Args:
             nqubits (int): Number of qubits in the state.
@@ -122,7 +122,7 @@ class AbstractState(ABC):
     @classmethod
     @abstractmethod
     def plus_state(cls, nqubits): # pragma: no cover
-        """Constructs the |++...+> state.
+        """Constructs the ``|++...+>`` state.
 
         Args:
             nqubits (int): Number of qubits in the state.
