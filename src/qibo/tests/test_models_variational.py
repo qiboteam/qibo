@@ -310,12 +310,22 @@ def test_falqon_optimization_callback(backend):
 test_names = "method,options,compile,filename"
 test_values = [("Powell", {'maxiter': 1}, False, 'aavqe_powell.out'),
                ("BFGS", {'maxiter': 1}, False, 'aavqe_bfgs.out'),
-               ("cma", {"maxfevals": 2}, False, None)]
+               ("cma", {"maxfevals": 2}, False, None),
+               ("parallel_L-BFGS-B", {'maxiter': 1}, False, None)]
 @pytest.mark.parametrize(test_names, test_values)
 def test_aavqe(backend, method, options, compile, filename):
     """Performs a AAVQE circuit minimization test."""
     original_threads = qibo.get_threads()
 
+    if method == 'parallel_L-BFGS-B':
+        device = qibo.get_device()
+        backend = qibo.get_backend()
+        if backend == "tensorflow" or backend == "qibojit" or "GPU" in device:
+            pytest.skip("unsupported configuration")
+        import sys
+        if sys.platform == 'win32' or sys.platform == 'darwin': # pragma: no cover
+            pytest.skip("Parallel L-BFGS-B only supported on linux.")
+        qibo.set_threads(1)
     nqubits = 6
     layers  = 4
     circuit = models.Circuit(nqubits)
@@ -347,5 +357,5 @@ def test_aavqe(backend, method, options, compile, filename):
         import shutil
         shutil.rmtree("outcmaes")
     if filename is not None:
-        assert_regression_fixture(params, filename)
+        assert_regression_fixture(params, filename, rtol=1e-2)
     qibo.set_threads(original_threads)
