@@ -65,14 +65,10 @@ When including a new backend, you should include its:
 Finally, the default backend which is loaded when importing Qibo can be updated
 by changing the value of the ``default:`` key.
 
-Code checks
------------
-
-Regression tests, which are run by the continuous integration workflow are stored
-in ``qibo/tests``. These tests contain several examples about how to use Qibo.
 
 Examples and tutorials
 ----------------------
 
-The ``examples/benchmarks`` folder contains benchmark code that has been
-implemented so far for specific applications.
+The ``examples`` folder contains benchmark code for applications/tutorials
+described in :ref:`Applications <applications>` while ``examples/benchmarks``
+contains some code for benchmarking only.

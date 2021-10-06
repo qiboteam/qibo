@@ -42,7 +42,7 @@ not break Qibo functionalities and meets our coding standards.
 
 The current code standards that are applied to any new changes:
 
-- **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code.
+- **Tests**: We use pytest to run our tests that must continue to pass when new changes are integrated in the code. Regression tests, which are run by the continuous integration workflow are stored in ``qibo/tests``. These tests contain several examples about how to use Qibo.
 - **Coverage**: Test coverage should be maintained / be at least at the same level when new features are implemented.
 - **Pylint**: Test code for anomalies, such as bad coding practices, missing documentation, unused variables.
 
