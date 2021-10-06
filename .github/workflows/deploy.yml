@@ -74,6 +74,7 @@ jobs:
       with:
         password: ${{ secrets.PYPI_TOKEN }}
     - name: Build docker image and upload to ghcr
+      uses: actions/checkout@v1
       run: |
         IMAGE_NAME=qibo
         VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
