@@ -18,6 +18,24 @@ def test_hamiltonian_term_initialization(backend):
     K.assert_allclose(term.matrix, matrix)
 
 
+def test_hamiltonian_term_initialization_errors():
+    """Test initializing ``HamiltonianTerm`` with wrong parameters."""
+    # Wrong HamiltonianTerm matrix
+    with pytest.raises(TypeError):
+        t = terms.HamiltonianTerm("test", 0, 1)
+    # Passing negative target qubits in HamiltonianTerm
+    with pytest.raises(ValueError):
+        t = terms.HamiltonianTerm("test", 0, -1)
+    # Passing matrix shape incompatible with number of qubits
+    with pytest.raises(ValueError):
+        t = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1, 2)
+    # Merging terms with invalid qubits
+    t1 = terms.HamiltonianTerm(np.random.random((4, 4)), 0, 1)
+    t2 = terms.HamiltonianTerm(np.random.random((4, 4)), 1, 2)
+    with pytest.raises(ValueError):
+        t = t1.merge(t2)
+
+
 def test_hamiltonian_term_gates(backend):
     """Test gate application of ``HamiltonianTerm``."""
     matrix = np.random.random((4, 4))
@@ -81,7 +99,7 @@ def test_symbolic_term_creation(use_symbols):
     if use_symbols:
         from qibo.symbols import X, Y
         expression = X(0) * Y(1) * X(1)
-        symbol_map = None
+        symbol_map = {}
     else:
         import sympy
         x0, x1, y1 = sympy.symbols("X0 X1 Y1", commutative=False)
@@ -94,6 +112,28 @@ def test_symbolic_term_creation(use_symbols):
     K.assert_allclose(term.matrix_map.get(0)[0], matrices.X)
     K.assert_allclose(term.matrix_map.get(1)[0], matrices.Y)
     K.assert_allclose(term.matrix_map.get(1)[1], matrices.X)
+
+
+def test_symbolic_term_with_power_creation():
+    """Test creating ``SymbolicTerm`` from sympy expression that contains powers."""
+    from qibo.symbols import X, Z
+    expression = X(0) ** 4 * Z(1) ** 2 * X(2)
+    term = terms.SymbolicTerm(2, expression)
+    assert term.target_qubits == (0, 1, 2)
+    assert len(term.matrix_map) == 3
+    assert term.coefficient == 2
+    K.assert_allclose(term.matrix_map.get(0), 4 * [matrices.X])
+    K.assert_allclose(term.matrix_map.get(1), 2 * [matrices.Z])
+    K.assert_allclose(term.matrix_map.get(2), [matrices.X])
+
+
+def test_symbolic_term_with_imag_creation():
+    """Test creating ``SymbolicTerm`` from sympy expression that contains imaginary coefficients."""
+    from qibo.symbols import Y
+    expression = 3j * Y(0)
+    term = terms.SymbolicTerm(2, expression)
+    assert term.target_qubits == (0,)
+    assert term.coefficient == 6j
 
 
 def test_symbolic_term_matrix(backend):

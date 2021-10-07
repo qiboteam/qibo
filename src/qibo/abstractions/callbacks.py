@@ -166,7 +166,8 @@ class Gap(Callback):
     Example:
         ::
 
-            from qibo import models, callbacks
+            from qibo import callbacks, hamiltonians
+            from qibo.models import AdiabaticEvolution
             # define easy and hard Hamiltonians for adiabatic evolution
             h0 = hamiltonians.X(3)
             h1 = hamiltonians.TFIM(3, h=1.0)

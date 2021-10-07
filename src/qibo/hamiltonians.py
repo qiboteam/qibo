@@ -61,7 +61,9 @@ def XXZ(nqubits, delta=0.5, dense=True):
     matrix = hx + hy + delta * hz
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    return SymbolicHamiltonian.from_terms(terms)
+    ham = SymbolicHamiltonian()
+    ham.terms = terms
+    return ham
 
 
 def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None):
@@ -73,7 +75,9 @@ def _OneBodyPauli(nqubits, matrix, dense=True, ground_state=None):
 
     matrix = - matrix
     terms = [HamiltonianTerm(matrix, i) for i in range(nqubits)]
-    return SymbolicHamiltonian.from_terms(terms, ground_state)
+    ham = SymbolicHamiltonian(ground_state=ground_state)
+    ham.terms = terms
+    return ham
 
 
 def X(nqubits, dense=True):
@@ -150,7 +154,9 @@ def TFIM(nqubits, h=0.0, dense=True):
     matrix = -(K.np.kron(matrices.Z, matrices.Z) + h * K.np.kron(matrices.X, matrices.I))
     terms = [HamiltonianTerm(matrix, i, i + 1) for i in range(nqubits - 1)]
     terms.append(HamiltonianTerm(matrix, nqubits - 1, 0))
-    return SymbolicHamiltonian.from_terms(terms)
+    ham = SymbolicHamiltonian()
+    ham.terms = terms
+    return ham
 
 
 def MaxCut(nqubits, dense=True):

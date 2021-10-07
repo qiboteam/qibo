@@ -910,7 +910,7 @@ class fSim(ParametrizedGate):
         q0 (int): the first qubit to be swapped id number.
         q1 (int): the second qubit to be swapped id number.
         theta (float): Angle for the one-qubit rotation.
-        phi (float): Angle for the |11> phase.
+        phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
@@ -952,7 +952,7 @@ class GeneralizedfSim(ParametrizedGate):
         q0 (int): the first qubit to be swapped id number.
         q1 (int): the second qubit to be swapped id number.
         unitary (np.ndarray): Unitary that corresponds to the one-qubit rotation.
-        phi (float): Angle for the |11> phase.
+        phi (float): Angle for the ``|11>`` phase.
         trainable (bool): whether gate parameters can be updated using
             :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
             (default is ``True``).
@@ -1013,7 +1013,7 @@ class TOFFOLI(Gate):
         The congruent representation is based on Sec. 6.2 of
         `arXiv:9503016 <https://arxiv.org/abs/quant-ph/9503016>`_.
         The sequence of the gates produced here has the same effect as ``TOFFOLI``
-        with the phase of the |101> state reversed.
+        with the phase of the ``|101>`` state reversed.
 
         Args:
             use_toffolis: If ``True`` a single ``TOFFOLI`` gate is returned.
@@ -1114,14 +1114,11 @@ class VariationalLayer(ParametrizedGate):
             from qibo import gates
             # generate an array of variational parameters for 8 qubits
             theta = 2 * np.pi * np.random.random(8)
-
             # define qubit pairs that two qubit gates will act
             pairs = [(i, i + 1) for i in range(0, 7, 2)]
-            # map variational parameters to qubit IDs
-            theta_map = {i: th for i, th in enumerate(theta}
             # define a circuit of 8 qubits and add the variational layer
             c = Circuit(8)
-            c.add(gates.VariationalLayer(pairs, gates.RY, gates.CZ, theta_map))
+            c.add(gates.VariationalLayer(range(8), pairs, gates.RY, gates.CZ, theta))
             # this will create an optimized version of the following circuit
             c2 = Circuit(8)
             c.add((gates.RY(i, th) for i, th in enumerate(theta)))
@@ -1272,17 +1269,18 @@ class KrausChannel(Channel):
     Example:
         ::
 
+            import numpy as np
             from qibo.models import Circuit
             from qibo import gates
             # initialize circuit with 3 qubits
-            c = Circuit(3)
+            c = Circuit(3, density_matrix=True)
             # define a sqrt(0.4) * X gate
             a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
             # define a sqrt(0.6) * CNOT gate
             a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                           [0, 0, 0, 1], [0, 0, 1, 0]])
             # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            channel = gates.GeneralChannel([((1,), a1), ((0, 2), a2)])
+            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
             # add the channel to the circuit
             c.add(channel)
     """
@@ -1555,7 +1553,7 @@ class _ThermalRelaxationChannelB(Gate):
 class FusedGate(Gate):
     """Collection of gates that will be fused and applied as single gate during simulation.
 
-    This gate is constructed automatically by :meth:`qibo.core.circuits.Circuit.fuse`
+    This gate is constructed automatically by :meth:`qibo.core.circuit.Circuit.fuse`
     and should not be used by user.
     :class:`qibo.abstractions.gates.FusedGate` works with arbitrary number of
     target qubits however the backend implementation

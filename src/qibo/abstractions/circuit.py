@@ -70,6 +70,7 @@ class AbstractCircuit(ABC):
       :class:`qibo.core.circuit.DensityMatrixCircuit`.
     * A circuit that distributes state vector simulation on multiple devices:
       :class:`qibo.core.distcircuit.DistributedCircuit`.
+
     All circuits use core as the computation backend.
 
     Args:
@@ -674,25 +675,6 @@ class AbstractCircuit(ABC):
 
     @abstractmethod
     def fuse(self): # pragma: no cover
-        """Creates an equivalent ``Circuit`` with gates fused up to two-qubits.
-
-        Returns:
-            The equivalent ``Circuit`` object where the gates are fused.
-
-        Example:
-            ::
-
-                from qibo import models, gates
-                c = models.Circuit(2)
-                c.add([gates.H(0), gates.H(1)])
-                c.add(gates.CNOT(0, 1))
-                c.add([gates.Y(0), gates.Y(1)])
-                # create circuit with fused gates
-                fused_c = c.fuse()
-                # now ``fused_c`` contains only one ``gates.Unitary`` gate
-                # that is equivalent to applying the five gates of the original
-                # circuit.
-        """
         raise_error(NotImplementedError)
 
     @property
@@ -962,7 +944,7 @@ class AbstractCircuit(ABC):
                   "crx": "RX", "cry": "RY", "crz": "RZ",
                   "cu1": "U1", "cu3": "U3", "ccx": "X",
                   "id": "I", "measure": "M", "fsim": "f",
-                  "generalizedfsim": "gf"}
+                  "generalizedfsim": "gf", "Unitary": "U"}
 
         # build string representation of gates
         matrix = [[] for _ in range(self.nqubits)]
