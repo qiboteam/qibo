@@ -16,10 +16,6 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install OS requirements
-      uses: mstksg/get-package@v2
-      with:
-        brew: libomp
     - name: Set numba version for macos
       if: startsWith(matrix.os, 'macos')
       run: |
