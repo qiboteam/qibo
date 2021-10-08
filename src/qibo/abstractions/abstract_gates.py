@@ -213,18 +213,19 @@ class Gate:
         Example:
             ::
 
-                from qibo import models, gates
-                c = models.Circuit(4)
+                >>> from qibo import models, gates
+                >>> c = models.Circuit(4)
+
                 # Add some CNOT gates
-                c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
-                c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
-                c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
-                c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
-                print(c.draw())
-                # q0: ───X─────
-                # q1: ───|─o─X─
-                # q2: ─o─|─|─o─
-                # q3: ─X─o─X───
+                >>> c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
+                >>> c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
+                >>> c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
+                >>> c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                >>> print(c.draw())
+                q0: ───X─────
+                q1: ───|─o─X─
+                q2: ─o─|─|─o─
+                q3: ─X─o─X───
         """
         if self.is_controlled_by:
             targets = (q[i] for i in self.target_qubits)
