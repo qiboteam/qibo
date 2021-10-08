@@ -49,6 +49,7 @@ jobs:
     - name: Test documentation examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
       run: |
+        sudo apt install pandoc
         make -C doc doctest
     - name: Test examples
       if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
