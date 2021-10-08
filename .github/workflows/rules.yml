@@ -47,6 +47,7 @@ jobs:
       run: |
         pytest --cov=qibo --cov-report=xml --pyargs qibo
     - name: Test documentation examples
+      if: startsWith(matrix.os, 'ubuntu') && matrix.python-version == '3.9'
       run: |
         make -C doc doctest
     - name: Test examples
