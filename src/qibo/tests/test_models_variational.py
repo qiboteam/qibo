@@ -359,3 +359,4 @@ def test_aavqe(backend, method, options, compile, filename):
     if filename is not None:
         assert_regression_fixture(params, filename, rtol=1e-2)
     qibo.set_threads(original_threads)
+    
