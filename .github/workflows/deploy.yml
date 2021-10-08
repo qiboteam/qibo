@@ -15,9 +15,9 @@ jobs:
         python-version: [3.6, 3.7, 3.8, 3.9]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Build wheels
@@ -36,17 +36,17 @@ jobs:
     if: github.event_name == 'release' && github.event.action == 'published'
     steps:
     - name: Download wheels from artifact storage
-      uses: actions/download-artifact@v1
+      uses: actions/download-artifact@v2
       with:
         name: wheels
         path: dist
     - name: Setup Python
-      uses: actions/setup-python@v1
+      uses: actions/setup-python@v2
     - name: Publish distribution to PyPI
       uses: pypa/gh-action-pypi-publish@master
       with:
         password: ${{ secrets.PYPI_TOKEN }}
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
     - name: Build docker image and upload to ghcr
       run: |
         IMAGE_NAME=qibo
