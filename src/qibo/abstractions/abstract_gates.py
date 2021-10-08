@@ -211,17 +211,19 @@ class Gate:
             type targeting the given qubits.
 
         Example:
-            ::
 
-                >>> from qibo import models, gates
-                >>> c = models.Circuit(4)
+            .. testcode::
 
+                from qibo import models, gates
+                c = models.Circuit(4)
                 # Add some CNOT gates
-                >>> c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
-                >>> c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
-                >>> c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
-                >>> c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
-                >>> print(c.draw())
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 1, 2, 3)) # equivalent to gates.CNOT(2, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(1, 2, 3, 0)) # equivalent to gates.CNOT(3, 0)
+                c.add(gates.CNOT(2, 3)._on_qubits(2, 0, 1, 3)) # equivalent to gates.CNOT(1, 3)
+                c.add(gates.CNOT(2, 3)._on_qubits(0, 3, 2, 1)) # equivalent to gates.CNOT(2, 1)
+                print(c.draw())
+            .. testoutput::
+            
                 q0: ───X─────
                 q1: ───|─o─X─
                 q2: ─o─|─|─o─

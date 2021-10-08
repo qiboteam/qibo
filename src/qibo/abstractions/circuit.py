@@ -159,21 +159,19 @@ class AbstractCircuit(ABC):
             q (int): Qubit ids that the gates should act.
 
         Example:
-            ::
+            
+            ..testcode::
 
-                >>> from qibo import gates, models
-
+                from qibo import gates, models
                 # create small circuit on 4 qubits
-                >>> smallc = models.Circuit(4)
-                >>> smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
-                >>> smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
-
+                smallc = models.Circuit(4)
+                smallc.add((gates.RX(i, theta=0.1) for i in range(4)))
+                smallc.add((gates.CNOT(0, 1), gates.CNOT(2, 3)))
                 # create large circuit on 8 qubits
-                >>> largec = models.Circuit(8)
-                >>> largec.add((gates.RY(i, theta=0.1) for i in range(8)))
-
+                largec = models.Circuit(8)
+                largec.add((gates.RY(i, theta=0.1) for i in range(8)))
                 # add the small circuit to the even qubits of the large one
-                >>> largec.add(smallc.on_qubits(*range(0, 8, 2)))
+                largec.add(smallc.on_qubits(*range(0, 8, 2)))
         """
         if len(q) != self.nqubits:
             raise_error(ValueError, "Cannot return gates on {} qubits because "
@@ -303,26 +301,24 @@ class AbstractCircuit(ABC):
             and additional noise channels on all qubits after every gate.
 
         Example:
-            ::
+            ..testcode::
 
-                >>> from qibo.models import Circuit
-                >>> from qibo import gates
-
+                from qibo.models import Circuit
+                from qibo import gates
                 # use density matrices for noise simulation
-                >>> c = Circuit(2, density_matrix=True)
-                >>> c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
-                >>> noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
-                >>> noisy_c = c.with_noise(noise_map)
-
+                c = Circuit(2, density_matrix=True)
+                c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
+                noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
+                noisy_c = c.with_noise(noise_map)
                 # ``noisy_c`` will be equivalent to the following circuit
-                >>> c2 = Circuit(2, density_matrix=True)
-                >>> c2.add(gates.H(0))
-                >>> c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-                >>> c2.add(gates.H(1))
-                >>> c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
-                >>> c2.add(gates.CNOT(0, 1))
-                >>> c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
-                >>> c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2 = Circuit(2, density_matrix=True)
+                c2.add(gates.H(0))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.H(1))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
+                c2.add(gates.CNOT(0, 1))
+                c2.add(gates.PauliNoiseChannel(0, 0.1, 0.0, 0.2))
+                c2.add(gates.PauliNoiseChannel(1, 0.0, 0.2, 0.1))
         """
         noise_map = self._check_noise_map(noise_map)
         # Generate noise gates
@@ -549,32 +545,29 @@ class AbstractCircuit(ABC):
 
 
         Example:
-            ::
+            .. testcode::
 
-                >>> from qibo.models import Circuit
-                >>> from qibo import gates
-
+                from qibo.models import Circuit
+                from qibo import gates
                 # create a circuit with all parameters set to 0.
                 # ERROR: Circuit(3, accelerators) does not work since accelerators is not defined
-                >>> c = Circuit(3) 
-                >>> c.add(gates.RX(0, theta=0))
-                >>> c.add(gates.RY(1, theta=0))
-                >>> c.add(gates.CZ(1, 2))
-                >>> c.add(gates.fSim(0, 2, theta=0, phi=0))
-                >>> c.add(gates.H(2))
+                c = Circuit(3)
+                c.add(gates.RX(0, theta=0))
+                c.add(gates.RY(1, theta=0))
+                c.add(gates.CZ(1, 2))
+                c.add(gates.fSim(0, 2, theta=0, phi=0))
+                c.add(gates.H(2))
 
                 # set new values to the circuit's parameters using list
-                >>> params = [0.123, 0.456, (0.789, 0.321)]
-                >>> c.set_parameters(params)
-
+                params = [0.123, 0.456, (0.789, 0.321)]
+                c.set_parameters(params)
                 # or using dictionary
-                >>> params = {c.queue[0]: 0.123, c.queue[1]: 0.456, \
+                params = {c.queue[0]: 0.123, c.queue[1]: 0.456,
                           c.queue[3]: (0.789, 0.321)}
-                >>> c.set_parameters(params)
-
+                c.set_parameters(params)
                 # or using flat list (or an equivalent `np.array`/`tf.Tensor`)
-                >>> params = [0.123, 0.456, 0.789, 0.321]
-                >>> c.set_parameters(params)
+                params = [0.123, 0.456, 0.789, 0.321]
+                c.set_parameters(params)
         """
         if isinstance(parameters, (list, tuple)):
             self._set_parameters_list(parameters, len(parameters))
@@ -650,18 +643,21 @@ class AbstractCircuit(ABC):
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            ::
+            ..testcode::
 
-                >>> from qibo.models import Circuit
-                >>> from qibo import gates
-                >>> c = Circuit(3)
-                >>> c.add(gates.H(0))
-                >>> c.add(gates.H(1))
-                >>> c.add(gates.CNOT(0, 2))
-                >>> c.add(gates.CNOT(1, 2))
-                >>> c.add(gates.H(2))
-                >>> c.add(gates.TOFFOLI(0, 1, 2))
-                >>> print(c.summary())
+                from qibo.models import Circuit
+                from qibo import gates
+                c = Circuit(3)
+                c.add(gates.H(0))
+                c.add(gates.H(1))
+                c.add(gates.CNOT(0, 2))
+                c.add(gates.CNOT(1, 2))
+                c.add(gates.H(2))
+                c.add(gates.TOFFOLI(0, 1, 2))
+                print(c.summary())
+        
+            ..testoutput::
+
                 Circuit depth = 5
                 Total number of gates = 6
                 Number of qubits = 3
@@ -761,23 +757,22 @@ class AbstractCircuit(ABC):
             specified by the given QASM script.
 
         Example:
-            ::
+            
+            ..testcode::
 
-                >>> from qibo import models, gates
-
-                >>> qasm_code = '''OPENQASM 2.0; \
-                include "qelib1.inc"; \
-                qreg q[2]; \
-                h q[0]; \
-                h q[1]; \
+                from qibo import models, gates
+                qasm_code = '''OPENQASM 2.0;
+                include "qelib1.inc";
+                qreg q[2];
+                h q[0];
+                h q[1];
                 cx q[0],q[1];'''
-                >>> c = models.Circuit.from_qasm(qasm_code)
-
+                c = models.Circuit.from_qasm(qasm_code)
                 # is equivalent to creating the following circuit
-                >>> c2 = models.Circuit(2)
-                >>> c2.add(gates.H(0))
-                >>> c2.add(gates.H(1))
-                >>> c2.add(gates.CNOT(0, 1))
+                c2 = models.Circuit(2)
+                c2.add(gates.H(0))
+                c2.add(gates.H(1))
+                c2.add(gates.CNOT(0, 1))
         """
         kwargs["nqubits"], gate_list = cls._parse_qasm(qasm_code)
         circuit = cls(**kwargs)

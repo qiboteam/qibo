@@ -1107,26 +1107,22 @@ class VariationalLayer(ParametrizedGate):
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
     Example:
-        ::
+        ..testcode::
 
-            >>> import numpy as np
-            >>> from qibo.models import Circuit
-            >>> from qibo import gates
-
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
             # generate an array of variational parameters for 8 qubits
-            >>> theta = 2 * np.pi * np.random.random(8)
-
+            theta = 2 * np.pi * np.random.random(8)
             # define qubit pairs that two qubit gates will act
-            >>> pairs = [(i, i + 1) for i in range(0, 7, 2)]
-
+            pairs = [(i, i + 1) for i in range(0, 7, 2)]
             # define a circuit of 8 qubits and add the variational layer
-            >>> c = Circuit(8)
-            >>> c.add(gates.VariationalLayer(range(8), pairs, gates.RY, gates.CZ, theta))
-
+            c = Circuit(8)
+            c.add(gates.VariationalLayer(range(8), pairs, gates.RY, gates.CZ, theta))
             # this will create an optimized version of the following circuit
-            >>> c2 = Circuit(8)
-            >>> c.add((gates.RY(i, th) for i, th in enumerate(theta)))
-            >>> c.add((gates.CZ(i, i + 1) for i in range(7)))
+            c2 = Circuit(8)
+            c.add((gates.RY(i, th) for i, th in enumerate(theta)))
+            c.add((gates.CZ(i, i + 1) for i in range(7)))
     """
 
     def __init__(self, qubits: List[int], pairs: List[Tuple[int, int]],
@@ -1271,27 +1267,22 @@ class KrausChannel(Channel):
           the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
 
     Example:
-        ::
+        ..testcode::
 
-            >>> import numpy as np
-            >>> from qibo.models import Circuit
-            >>> from qibo import gates
-
+            import numpy as np
+            from qibo.models import Circuit
+            from qibo import gates
             # initialize circuit with 3 qubits
-            >>> c = Circuit(3, density_matrix=True)
-
+            c = Circuit(3, density_matrix=True)
             # define a sqrt(0.4) * X gate
-            >>> a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
-
+            a1 = np.sqrt(0.4) * np.array([[0, 1], [1, 0]])
             # define a sqrt(0.6) * CNOT gate
-            >>> a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0], \
+            a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                           [0, 0, 0, 1], [0, 0, 1, 0]])
-
-            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
-            >>> channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
-
+            define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
             # add the channel to the circuit
-            >>> c.add(channel)
+            c.add(channel)
     """
 
     def __init__(self, ops):

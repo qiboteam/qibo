@@ -64,32 +64,27 @@ class EntanglementEntropy(Callback):
             half of the qubits.
         compute_spectrum (bool): Compute the entanglement spectrum. Default is False.
 
-    Example:
-        ::
+    Example: 
+        .. testcode::
 
-            >>> from qibo import models, gates, callbacks
-
+            from qibo import models, gates, callbacks
             # create entropy callback where qubit 0 is the first subsystem
-            >>> entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
-
+            entropy = callbacks.EntanglementEntropy([0], compute_spectrum=True)
             # initialize circuit with 2 qubits and add gates
-            >>> c = models.Circuit(2)
-
+            c = models.Circuit(2)
             # add callback gates between normal gates
-            >>> c.add(gates.CallbackGate(entropy))
-            >>> c.add(gates.H(0))
-            >>> c.add(gates.CallbackGate(entropy))
-            >>> c.add(gates.CNOT(0, 1))
-            >>> c.add(gates.CallbackGate(entropy))
-
+            c.add(gates.CallbackGate(entropy))
+            c.add(gates.H(0))
+            c.add(gates.CallbackGate(entropy))
+            c.add(gates.CNOT(0, 1))
+            c.add(gates.CallbackGate(entropy))
             # execute the circuit
-            >>> final_state = c()
-
+            final_state = c()
             # WARNING: doctest cannot test printed tensors trivially
-            print(entropy[:])
+            # print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
-            print(entropy.spectrum)
+            # print(entropy.spectrum)
             # Print the entanglement spectrum.
     """
 
@@ -170,31 +165,28 @@ class Gap(Callback):
             Default is ``True``.
 
     Example:
-        ::
+        
+        .. testcode::
 
-            >>> from qibo import callbacks, hamiltonians
-            >>> from qibo.models import AdiabaticEvolution
-
+            from qibo import callbacks, hamiltonians
+            from qibo.models import AdiabaticEvolution
             # define easy and hard Hamiltonians for adiabatic evolution
-            >>> h0 = hamiltonians.X(3)
-            >>> h1 = hamiltonians.TFIM(3, h=1.0)
-
+            h0 = hamiltonians.X(3)
+            h1 = hamiltonians.TFIM(3, h=1.0)
             # define callbacks for logging the ground state, first excited
             # and gap energy
-            >>> ground = callbacks.Gap(0)
-            >>> excited = callbacks.Gap(1)
-            >>> gap = callbacks.Gap()
-
+            ground = callbacks.Gap(0)
+            excited = callbacks.Gap(1)
+            gap = callbacks.Gap()
             # define and execute the ``AdiabaticEvolution`` model
-            >>> evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1, \
+            evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                            callbacks=[gap, ground, excited])
-            >>> final_state = evolution(final_time=1.0)
-
+            final_state = evolution(final_time=1.0)
             # WARNING: doctest cannot test printed tensors trivially
             # print results
-            print(ground[:])
-            print(excited[:])
-            print(gap[:])
+            # print(ground[:])
+            # print(excited[:])
+            # print(gap[:])
     """
 
     def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):
