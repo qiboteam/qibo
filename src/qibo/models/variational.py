@@ -136,13 +136,13 @@ class AAVQE(object):
 
     def __init__(self, circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=10, t_max = 1, bounds_tolerance = 1e-7, time_tolerance = 1e-7):
 
-        if nsteps <= 0:
+        if nsteps <= 0: # pragma: no cover
             raise_error(ValueError, "Number of steps nsteps should be positive but is {}."
                                     "".format(nsteps))
-        if t_max <= 0:
+        if t_max <= 0: # pragma: no cover
             raise_error(ValueError, "Maximum time t_max should be positive but is {}."
                                     "".format(t_max))
-        if easy_hamiltonian.nqubits != problem_hamiltonian.nqubits:
+        if easy_hamiltonian.nqubits != problem_hamiltonian.nqubits: # pragma: no cover
             raise_error(ValueError, "The easy Hamiltonian has {} qubits while problem Hamiltonian has {}."
                                     "".format(easy_hamiltonian.nqubits, problem_hamiltonian.nqubits))
 
@@ -158,7 +158,7 @@ class AAVQE(object):
 
         self._schedule = None
         nparams = s.__code__.co_argcount
-        if not nparams == 1:
+        if not nparams == 1: # pragma: no cover
             raise_error(ValueError,"Scheduling function must take only one argument,"
                                    "but the function proposed takes {}.".format(nparams))
         self.set_schedule(s)
@@ -167,28 +167,28 @@ class AAVQE(object):
         """ Set scheduling function s(t) as func."""
         #check boundary conditions
         s0 = func(0)
-        if abs(s0) > self.ATOL:
+        if abs(s0) > self.ATOL: # pragma: no cover
             raise_error(ValueError, "s(0) should be 0 but it is {}.".format(s0))
         s1 = func(1)
-        if abs(s1 - 1) > self.ATOL:
+        if abs(s1 - 1) > self.ATOL: # pragma: no cover
             raise_error(ValueError, "s(1) should be 1 but it is {}.".format(s1))
         self._schedule = func
 
     def schedule(self, t):
         """ Returns scheduling function evaluated at time t: s(t/Tmax)."""
-        if self._schedule is None:
+        if self._schedule is None: # pragma: no cover
             raise_error(ValueError, "Cannot access scheduling before it is set.")
-        if (t - self._t_max) > self.ATOL_TIME:
+        if (t - self._t_max) > self.ATOL_TIME: # pragma: no cover
             raise_error(ValueError, "t cannot be greater than {}, but it is {}.".format(self._t_max, t))
 
         s = self._schedule(t / self._t_max)
-        if (abs(s) - 1) > self.ATOL:
+        if (abs(s) - 1) > self.ATOL: # pragma: no cover
             raise_error(ValueError, "s cannot be greater than 1 but it is {}.".format(s))
         return s
 
     def hamiltonian(self, t):
         """Returns the adiabatic evolution Hamiltonian at a given time."""
-        if (t - self._t_max) > self.ATOL:
+        if (t - self._t_max) > self.ATOL: # pragma: no cover
             raise_error(ValueError, "t cannot be greater than {}, but it is {}.".format(self._t_max, t))
         # boundary conditions  s(0)=0, s(total_time)=1
         st = self.schedule(t)
