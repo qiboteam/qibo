@@ -1,10 +1,11 @@
+#!/usr/bin/env python
 import numpy as np
 from qibo import gates, models, hamiltonians
 import argparse
 
-def main(nqubits, nlayers, maxsteps, T_max):
+def main(nqubits, layers, maxsteps, T_max):
     circuit = models.Circuit(nqubits)
-    for l in range(nlayers):
+    for l in range(layers):
         circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
         circuit.add((gates.CZ(q, q + 1) for q in range(0, nqubits - 1, 2)))
         circuit.add((gates.RY(q, theta=0) for q in range(nqubits)))
@@ -17,7 +18,7 @@ def main(nqubits, nlayers, maxsteps, T_max):
     aavqe = models.variational.AAVQE(circuit, easy_hamiltonian, problem_hamiltonian, s, nsteps=maxsteps, t_max=T_max)
 
     initial_parameters = np.random.uniform(0, 2 * np.pi*0.1,
-                                           2 * nqubits * nlayers + nqubits)
+                                           2 * nqubits * layers + nqubits)
     best, params = aavqe.minimize(initial_parameters)
 
     print('Final parameters: ', params)
@@ -32,7 +33,7 @@ def main(nqubits, nlayers, maxsteps, T_max):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--nqubits", default=6, type=int)
-    parser.add_argument("--nlayers", default=5, type=int)
+    parser.add_argument("--layers", default=5, type=int)
     parser.add_argument("--maxsteps", default=10, type=int)
     parser.add_argument("--T_max", default=5, type=int)
     args = parser.parse_args()
