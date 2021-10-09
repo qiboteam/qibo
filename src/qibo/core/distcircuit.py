@@ -33,11 +33,10 @@ class DistributedCircuit(circuit.Circuit):
             from qibo.models import Circuit
             # The system has two GPUs and we would like to use each GPU twice
             # resulting to four total logical accelerators
-            #accelerators = {'/GPU:0': 2, '/GPU:1': 2}
+            accelerators = {'/GPU:0': 2, '/GPU:1': 2}
             # Define a circuit on 32 qubits to be run in the above GPUs keeping
             # the full state vector in the CPU memory.
-            #c = Circuit(32, accelerators)
-            c = Circuit(32)
+            c = Circuit(32, accelerators)
 
     Args:
         nqubits (int): Total number of qubits in the circuit.

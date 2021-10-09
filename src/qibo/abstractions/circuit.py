@@ -550,7 +550,6 @@ class AbstractCircuit(ABC):
                 from qibo.models import Circuit
                 from qibo import gates
                 # create a circuit with all parameters set to 0.
-                # ERROR: Circuit(3, accelerators) does not work since accelerators is not defined
                 c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
                 c.add(gates.RY(1, theta=0))
@@ -757,7 +756,7 @@ class AbstractCircuit(ABC):
             specified by the given QASM script.
 
         Example:
-            
+         
             .. testcode::
 
                 from qibo import models, gates
