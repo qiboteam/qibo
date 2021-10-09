@@ -166,8 +166,8 @@ Variational Quantum Eigensolver (VQE)
     :members:
     :member-order: bysource
 
-Variational Quantum Eigensolver (VQE)
-"""""""""""""""""""""""""""""""""""""
+Adiabatically Assisted Variational Quantum Eigensolver (AAVQE)
+""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 .. autoclass:: qibo.models.variational.AAVQE
     :members:
