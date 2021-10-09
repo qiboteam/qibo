@@ -105,7 +105,7 @@ class SymbolicTerm(HamiltonianTerm):
     """:class:`qibo.core.terms.HamiltonianTerm` constructed using ``sympy`` expression.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo.symbols import X, Y
             from qibo.core.terms import SymbolicTerm

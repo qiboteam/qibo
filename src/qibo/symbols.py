@@ -11,7 +11,7 @@ class Symbol(sympy.Symbol):
     for more details.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import hamiltonians
             from qibo.symbols import X, Y, Z

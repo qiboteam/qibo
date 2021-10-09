@@ -41,7 +41,7 @@ def optimize(loss, initial_parameters, args=(), method='Powell',
 
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import gates, models

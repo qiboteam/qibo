@@ -80,7 +80,7 @@ def parallel_execution(circuit, states, processes=None):
     """Execute circuit for multiple states.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import models, set_threads
             from qibo.parallel import parallel_execution
@@ -128,7 +128,7 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import models, gates, set_threads
             from qibo.parallel import parallel_parametrized_execution
