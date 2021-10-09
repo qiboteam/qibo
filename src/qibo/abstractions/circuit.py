@@ -160,7 +160,7 @@ class AbstractCircuit(ABC):
 
         Example:
             
-            ..testcode::
+            .. testcode::
 
                 from qibo import gates, models
                 # create small circuit on 4 qubits
@@ -301,7 +301,7 @@ class AbstractCircuit(ABC):
             and additional noise channels on all qubits after every gate.
 
         Example:
-            ..testcode::
+            .. testcode::
 
                 from qibo.models import Circuit
                 from qibo import gates
@@ -643,7 +643,7 @@ class AbstractCircuit(ABC):
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            ..testcode::
+            .. testcode::
 
                 from qibo.models import Circuit
                 from qibo import gates
@@ -656,7 +656,7 @@ class AbstractCircuit(ABC):
                 c.add(gates.TOFFOLI(0, 1, 2))
                 print(c.summary())
         
-            ..testoutput::
+            .. testoutput::
 
                 Circuit depth = 5
                 Total number of gates = 6
@@ -758,7 +758,7 @@ class AbstractCircuit(ABC):
 
         Example:
             
-            ..testcode::
+            .. testcode::
 
                 from qibo import models, gates
                 qasm_code = '''OPENQASM 2.0;

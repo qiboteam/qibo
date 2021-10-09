@@ -64,7 +64,7 @@ class EntanglementEntropy(Callback):
             half of the qubits.
         compute_spectrum (bool): Compute the entanglement spectrum. Default is False.
 
-    Example: 
+    Example:
         .. testcode::
 
             from qibo import models, gates, callbacks

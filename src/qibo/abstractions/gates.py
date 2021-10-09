@@ -1107,7 +1107,7 @@ class VariationalLayer(ParametrizedGate):
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
     Example:
-        ..testcode::
+        .. testcode::
 
             import numpy as np
             from qibo.models import Circuit
@@ -1267,7 +1267,7 @@ class KrausChannel(Channel):
           the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
 
     Example:
-        ..testcode::
+        .. testcode::
 
             import numpy as np
             from qibo.models import Circuit
@@ -1279,7 +1279,7 @@ class KrausChannel(Channel):
             # define a sqrt(0.6) * CNOT gate
             a2 = np.sqrt(0.6) * np.array([[1, 0, 0, 0], [0, 1, 0, 0],
                                           [0, 0, 0, 1], [0, 0, 1, 0]])
-            define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
+            # define the channel rho -> 0.4 X{1} rho X{1} + 0.6 CNOT{0, 2} rho CNOT{0, 2}
             channel = gates.KrausChannel([((1,), a1), ((0, 2), a2)])
             # add the channel to the circuit
             c.add(channel)
