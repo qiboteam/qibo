@@ -9,6 +9,10 @@ To quickly install Qibo, open a terminal with python > 3.6 and type:
 
 This will install the basic primitives to start coding quantum applications.
 
+.. note::
+    The ``qibo`` package includes a lightweight ``numpy`` simulator for
+    single-thread CPU. Please visit the `backends <backend-drivers>`_
+    documentation in order to install more advanced simulators.
 
 Here an example of Quantum Fourier Transform (QFT) to test your installation:
 

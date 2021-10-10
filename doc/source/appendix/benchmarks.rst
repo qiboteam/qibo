@@ -45,7 +45,7 @@ respective default simulation precision and supported hardware configurations.
    * - `PyQuil 2.20.0 <https://github.com/rigetti/pyquil>`_
      - double
      - single-thread CPU
-   * - `IntelQS 0.14.2 <https://github.com/iqusoft/intel-qs>`_
+   * - `IntelQS 2.0.0 <https://github.com/iqusoft/intel-qs>`_
      - double
      - multi-thread CPU
    * - `QCGPU 0.1.1 <https://github.com/libtangle/qcgpu>`_

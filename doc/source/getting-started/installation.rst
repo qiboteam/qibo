@@ -51,15 +51,17 @@ dependencies for Qibo.
 Installing from source
 """"""""""""""""""""""
 
-The installation procedure presented in this section is useful when you have to develop the code from source.
+The installation procedure presented in this section is useful when you have to
+develop the code from source.
 
-In order to install Qibo from source, you can simply clone the GitHub repository with
+In order to install Qibo from source, you can simply clone the GitHub repository
+with
 
 .. code-block::
 
       git clone https://github.com/qiboteam/qibo.git
       cd qibo
-      pip install . # or pip install -e .
+      pip install .
 
 _______________________
 
@@ -113,24 +115,11 @@ In order to install the package perform the following steps:
       git clone https://github.com/qiboteam/qibojit.git
       cd qibojit
 
-then proceed with the installation of requirements with:
-
-.. code-block::
-
-      pip install -r requirements.txt
-
 Then proceed with the ``qibojit`` installation using ``pip``
 
 .. code-block::
 
       pip install .
-
-or if you prefer to manually execute all installation steps:
-
-.. code-block::
-
-      # builds binaries
-      python setup.py deve
 
 _______________________
 
@@ -289,6 +278,28 @@ please do:
 
       import qibo
       qibo.set_backend("numpy")
+
+_______________________
+
+.. _conda:
+
+Installing with conda
+---------------------
+
+We provide conda packages for ``qibo`` and ``qibojit`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install the ``qibo`` package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibo
+
+Similarly, in order to install the ``qibojit`` package do:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibojit
 
 _______________________
 
