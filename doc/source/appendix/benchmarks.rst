@@ -39,7 +39,7 @@ respective default simulation precision and supported hardware configurations.
    * - `TFQ 0.3.0 <https://github.com/tensorflow/quantum>`_
      - single
      - single-thread CPU
-   * - `Qiskit 0.14.2 <https://github.com/Qiskit>`_
+   * - `Qiskit 0.16.1 <https://github.com/Qiskit>`_
      - double
      - single-thread CPU
    * - `PyQuil 2.20.0 <https://github.com/rigetti/pyquil>`_
