@@ -8,7 +8,7 @@ How to write and execute a circuit?
 
 Here is an example of a circuit with 2 qubits:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo.models import Circuit
@@ -23,16 +23,16 @@ Here is an example of a circuit with 2 qubits:
     initial_state = np.ones(4) / 2.0
     # Execute the circuit and obtain the final state
     result = c(initial_state) # c.execute(initial_state) also works
-    print(result.state())
+    # print(result.state())
     # should print `tf.Tensor([1, 0, 0, 0])`
-    print(result.state(numpy=True))
+    # print(result.state(numpy=True))
     # should print `np.array([1, 0, 0, 0])`
 
 If you are planning to freeze the circuit and just query for different initial
 states then you can use the ``Circuit.compile()`` method which will improve
 evaluation performance, e.g.:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     # switch backend to "tensorflow"
@@ -47,10 +47,11 @@ evaluation performance, e.g.:
     c.add(gates.CU1(0, 1, 0.1234))
     c.compile()
 
-    for i in range(100):
-        init_state = np.ones(4) / 2.0 + i
-        c(init_state)
-
+    #for i in range(100):
+    #    init_state = np.ones(4) / 2.0 + i
+    #    c(init_state)
+    # DOCTEST ERROR: RuntimeError: Unable to cast Python instance to C++ type (compile in debug mode for details)
+    
 Note that compiling is only supported when the native ``tensorflow`` backend
 is used. This backend is much slower than ``qibotf`` which uses custom
 tensorflow operators to apply gates.
@@ -65,7 +66,7 @@ total number of qubits and all gates in order of the number of times they appear
 The QASM name is used as identifier of gates.
 For example
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -88,13 +89,37 @@ For example
     cx: 2
     ccx: 1
     '''
+.. testoutput::
+    :hide:
+
+    Circuit depth = 5
+    Total number of gates = 6
+    Number of qubits = 3
+    Most common gates:
+    h: 3
+    cx: 2
+    ccx: 1
+    
 
 The circuit property ``circuit.gate_types`` will also return a ``collections.Counter``
 that contains the gate types and the corresponding numbers of appearance. The
 method ``circuit.gates_of_type()`` can be used to access gate objects of specific type.
 For example for the circuit of the previous example:
 
-.. code-block:: python
+.. testsetup::
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(3)
+    c.add(gates.H(0))
+    c.add(gates.H(1))
+    c.add(gates.CNOT(0, 2))
+    c.add(gates.CNOT(1, 2))
+    c.add(gates.H(2))
+    c.add(gates.TOFFOLI(0, 1, 2))
+
+.. testcode::
 
     common_gates = c.gate_types.most_common()
     # returns the list [("h", 3), ("cx", 2), ("ccx", 1)]
@@ -103,7 +128,7 @@ For example for the circuit of the previous example:
     # returns "h"
 
     all_h_gates = c.gates_of_type("h")
-    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))]
+    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))
 
 A circuit may contain multi-controlled or other gates that are not supported by
 OpenQASM. The ``circuit.decompose(*free)`` method decomposes such gates to
@@ -125,7 +150,7 @@ when executing the circuit. In this case the returned
 :class:`qibo.abstractions.states.AbstractState` will contain all the
 information about the measured samples. For example
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -149,7 +174,7 @@ In addition to the functionality described above, it is possible to collect
 measurement results grouped according to registers. The registers are defined
 during the addition of measurement gates in the circuit. For example
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -203,13 +228,18 @@ for increase performance. The user can change the threshold for which this
 algorithm is used using the ``qibo.set_metropolis_threshold()`` method,
 for example:
 
-.. code-block:: python
+.. testcode::
 
     import qibo
 
     print(qibo.get_metropolis_threshold()) # prints 100000
     qibo.set_metropolis_threshold(int(1e8))
     print(qibo.get_metropolis_threshold()) # prints 10^8
+.. testoutput::
+    :hide:
+
+    100000
+    100000000
 
 
 If the Metropolis algorithm is not used and the user asks for frequencies with
@@ -224,7 +254,7 @@ How to write a Quantum Fourier Transform?
 
 A simple Quantum Fourier Transform (QFT) example to test your installation:
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import QFT
 
@@ -250,7 +280,7 @@ By default the simulation is performed in ``double`` precision (``complex128``).
 We provide the ``qibo.set_precision`` function to modify the default behaviour.
 Note that `qibo.set_precision` must be called before allocating circuits:
 
-.. code-block:: python
+.. testcode::
 
         import qibo
         qibo.set_precision("single") # enables complex64
@@ -270,7 +300,7 @@ This will print an unicode text based representation of the circuit, including g
 and qubits lines.
 For example
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import QFT
 
@@ -284,3 +314,12 @@ For example
     q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
     q4: ────────────o──────────o───────o────o──H─x───
     '''
+.. testoutput::
+    :hide:
+
+    q0: ─H─U1─U1─U1─U1───────────────────────────x───
+    q1: ───o──|──|──|──H─U1─U1─U1────────────────|─x─
+    q2: ──────o──|──|────o──|──|──H─U1─U1────────|─|─
+    q3: ─────────o──|───────o──|────o──|──H─U1───|─x─
+    q4: ────────────o──────────o───────o────o──H─x───
+    

@@ -12,7 +12,7 @@ This will install the basic primitives to start coding quantum applications.
 
 Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import QFT
 
@@ -24,7 +24,7 @@ Here an example of Quantum Fourier Transform (QFT) to test your installation:
 
 Here an example of adding gates and measurements:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo.models import Circuit
