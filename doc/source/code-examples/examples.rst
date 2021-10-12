@@ -54,7 +54,6 @@ evaluation performance, e.g.:
     for i in range(100):
         init_state = np.ones(4) / 2.0 + i
         c(init_state)
-    
 Note that compiling is only supported when the native ``tensorflow`` backend
 is used. This backend is much slower than ``qibotf`` which uses custom
 tensorflow operators to apply gates.
@@ -131,7 +130,7 @@ For example for the circuit of the previous example:
     # returns "h"
 
     all_h_gates = c.gates_of_type("h")
-    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))
+    # returns the list [(0, ref to H(0)), (1, ref to H(1)), (4, ref to H(2))]
 
 A circuit may contain multi-controlled or other gates that are not supported by
 OpenQASM. The ``circuit.decompose(*free)`` method decomposes such gates to
