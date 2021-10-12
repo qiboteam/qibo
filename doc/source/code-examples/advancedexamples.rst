@@ -241,7 +241,11 @@ circuit. For example
     final_state = c()
 
     # print result
-    # print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
+    print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
+.. testoutput::
+    :hide:
+
+    ...
 
 The callback for entanglement entropy can also be used on state vectors directly.
 For example
@@ -257,7 +261,11 @@ For example
     # create an `EntanglementEntropy` callback object
     entropy = callbacks.EntanglementEntropy([0])
     # call the object on the state
-    # print(entropy(state))
+    print(entropy(state))
+.. testoutput::
+    :hide:
+
+    ...
 
 will print ``tf.Tensor(1.0)``.
 
@@ -413,9 +421,13 @@ of the :class:`qibo.abstractions.gates.M` gate. For example
     output = c.add(gates.M(0, collapse=True))
     c.add(gates.H(0))
     result = c()
-    # print(result.state())
+    print(result.state())
     # prints [0.7071, 0.7071] if 0 is measured
     # or [0.7071, -0.7071] if 1 is measured
+.. testoutput::
+    :hide:
+
+    ...
 
 In this example the single qubit is measured while in the state (``|0> + |1>``) and
 is collapsed to either ``|0>`` or ``|1>``. The qubit can then be re-used by adding more
@@ -1168,8 +1180,12 @@ can track how <X> changes as follows:
     initial_state = np.ones(2 ** nqubits) / np.sqrt(2 ** nqubits)
     final_state = evolve(final_time=1, initial_state=initial_state)
 
-    # print(observable[:])
+    print(observable[:])
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
+.. testoutput::
+    :hide:
+
+    ...
 
 
 Note that the time step ``dt=1e-3`` defines how often we calculate <X> during
@@ -1344,10 +1360,14 @@ similar to other callbacks:
     # define and execute the ``AdiabaticEvolution`` model
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                           callbacks=[gap, ground])
-    # DOCTEST ERROR: prints optimization parameters                                     
-    # final_state = evolution(final_time=1.0)
+                                   
+    final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
-    # print(gap[:])
+    print(gap[:])
+.. testoutput::
+    :hide:
+
+    ...
 
 
 The scheduling function ``s`` should be a callable that accepts one (s(t)) or
@@ -1411,10 +1431,13 @@ done as follows:
     evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    # DOCTEST ERROR: prints results from simulation.
     # best, params, extra = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
-    # print(best) # prints the best energy <H1> found from the final state
-    # print(params) # prints the optimal values for the parameters.
+    print(best) # prints the best energy <H1> found from the final state
+    print(params) # prints the optimal values for the parameters.
+.. testoutput::
+    :hide:
+
+    ...
 
 Note that the ``minimize`` method optimizes both the free parameters ``p`` of
 the scheduling function as well as the total evolution time. The initial guess

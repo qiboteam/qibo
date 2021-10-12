@@ -80,12 +80,15 @@ class EntanglementEntropy(Callback):
             c.add(gates.CallbackGate(entropy))
             # execute the circuit
             final_state = c()
-            # WARNING: doctest cannot test printed tensors trivially
-            # print(entropy[:])
+            print(entropy[:])
             # Should print [0, 0, 1] which is the entanglement entropy
             # after every gate in the calculation.
-            # print(entropy.spectrum)
+            print(entropy.spectrum)
             # Print the entanglement spectrum.
+        .. testoutput::
+            :hide:
+
+            ...
     """
 
     def __init__(self, partition: Optional[List[int]] = None,
@@ -182,11 +185,14 @@ class Gap(Callback):
             evolution = AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                            callbacks=[gap, ground, excited])
             final_state = evolution(final_time=1.0)
-            # WARNING: doctest cannot test printed tensors trivially
             # print results
-            # print(ground[:])
-            # print(excited[:])
-            # print(gap[:])
+            print(ground[:])
+            print(excited[:])
+            print(gap[:])
+        .. testoutput::
+            :hide:
+
+            ...
     """
 
     def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):

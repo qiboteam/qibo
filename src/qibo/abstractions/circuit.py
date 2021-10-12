@@ -654,8 +654,19 @@ class AbstractCircuit(ABC):
                 c.add(gates.H(2))
                 c.add(gates.TOFFOLI(0, 1, 2))
                 print(c.summary())
+                # Prints
+                '''
+                Circuit depth = 5
+                Total number of gates = 6
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
+                '''
         
             .. testoutput::
+                :hide:
 
                 Circuit depth = 5
                 Total number of gates = 6
