@@ -837,6 +837,7 @@ For example:
     for _ in range(nepochs):
         optimize(params)
 
+
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
 `custom Keras layers <https://www.tensorflow.org/guide/keras/custom_layers_and_models>`_
@@ -1469,6 +1470,7 @@ corresponding 16x16 matrix:
 
     import numpy as np
     from qibo import hamiltonians, matrices
+
     # ZZ terms
     matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.Z), np.kron(matrices.Z, matrices.I))
@@ -1481,6 +1483,7 @@ corresponding 16x16 matrix:
     matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
     # Create Hamiltonian object
     ham = hamiltonians.Hamiltonian(4, matrix)
+
 
 Although it is possible to generalize the above construction to arbitrary number
 of qubits this procedure may be more complex for other Hamiltonians. Moreover
