@@ -823,7 +823,7 @@ For example:
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
     params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
 
-    @tf_function
+    @tf.function
     def optimize(params):
         with tf.GradientTape() as tape:
             c = models.Circuit(2)
