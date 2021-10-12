@@ -47,10 +47,9 @@ evaluation performance, e.g.:
     c.add(gates.CU1(0, 1, 0.1234))
     c.compile()
 
-    #for i in range(100):
-    #    init_state = np.ones(4) / 2.0 + i
-    #    c(init_state)
-    # DOCTEST ERROR: RuntimeError: Unable to cast Python instance to C++ type (compile in debug mode for details)
+    for i in range(100):
+        init_state = np.ones(4) / 2.0 + i
+        c(init_state)
     
 Note that compiling is only supported when the native ``tensorflow`` backend
 is used. This backend is much slower than ``qibotf`` which uses custom
