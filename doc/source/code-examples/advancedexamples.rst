@@ -811,7 +811,7 @@ possible to use :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters`
 circuit needs to be defined inside the compiled ``tf.GradientTape()``.
 For example:
 
-.. testcode::
+.. code-block:: python
 
     import qibo
     qibo.set_backend("tensorflow")
@@ -823,6 +823,7 @@ For example:
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
     params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
 
+    @tf_function
     def optimize(params):
         with tf.GradientTape() as tape:
             c = models.Circuit(2)
