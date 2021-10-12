@@ -92,7 +92,7 @@ On the other hand, when using the ``tensorflow`` backend Qibo inherits
 Tensorflow's defaults for CPU thread configuration.
 Tensorflow allows restricting the number of threads as follows:
 
-.. testcode::
+.. code-block:: python
 
     import tensorflow as tf
     tf.config.threading.set_inter_op_parallelism_threads(1)
@@ -118,8 +118,7 @@ be used as follows:
     # this will use the first GPU three times and the second one time
     # leading to four total logical devices
     # construct the distributed circuit for 32 qubits
-    # DOCTEST ERROR: TypeError: __new__() got an unexpected keyword argument 'memory_device'
-    # c = Circuit(32, accelerators, memory_device="/CPU:0")
+    # c = Circuit(32, accelerators)
 
 Gates can then be added normally using ``c.add`` and the circuit can be executed
 using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
@@ -662,10 +661,11 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        return 1 - np.abs(np.conj(target).dot(circuit()))
+        final_state = circuit().numpy()
+        return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
-    nlayers  = 4
+    nlayers  = 2
 
     # Create variational circuit
     c = models.Circuit(nqubits)
@@ -681,11 +681,11 @@ Here is a simple example using a custom loss function:
     x0 = np.random.uniform(0, 2*np.pi, 2*nqubits*nlayers + nqubits)
     data = np.random.normal(0, 1, size=2**nqubits)
 
-    # perform optimization: DOCTEST ERROR TypeError: __array__() takes 1 positional argument but 2 were given
-    # best, params, extra = optimize(myloss, x0, args=(c, data), method='BFGS')
+    # perform optimization
+    best, params, extra = optimize(myloss, x0, args=(c, data), method='BFGS')
 
     # set final solution to circuit instance
-    # c.set_parameters(params)
+    c.set_parameters(params)
 
 
 .. _qaoa-example:
@@ -784,9 +784,10 @@ function.
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
             c.set_parameters(params)
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            final_state = c().state()
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-        grads = tape.gradient(loss, params)
+            grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -806,27 +807,24 @@ For example:
     from qibo import gates, models
 
     nepochs = 1000
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
     params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
 
-
-    @tf.function
     def optimize(params):
         with tf.GradientTape() as tape:
             c = models.Circuit(2)
             c.add(gates.RX(0, theta=params[0]))
             c.add(gates.RY(1, theta=params[1]))
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            final_state = c().state()
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-        grads = tape.gradient(loss, params)
+            grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
-
-    #for _ in range(nepochs):
-    #    optimize(params)
-    # DOCTEST ERROR: RuntimeError: Unable to cast Python instance to C++ type (compile in debug mode for details)
+    for _ in range(nepochs):
+        optimize(params)
+    
 
 The user may also use ``tf.Variable`` and parametrized gates in any other way
 that is supported by Tensorflow, such as defining
@@ -1449,20 +1447,20 @@ corresponding 16x16 matrix:
 
     import numpy as np
     from qibo import hamiltonians, matrices
-
+    
     # ZZ terms
-    # matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
-    # matrix += np.kron(np.kron(matrices.I, matrices.Z), np.kron(matrices.Z, matrices.I))
-    # matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.Z, matrices.Z))
-    # matrix += np.kron(np.kron(matrices.Z, matrices.I), np.kron(matrices.I, matrices.Ζ))
+    matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.Z), np.kron(matrices.Z, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.Z, matrices.Z))
+    matrix += np.kron(np.kron(matrices.Z, matrices.I), np.kron(matrices.I, matrices.Z))
     # X terms
-    # matrix += np.kron(np.kron(matrices.X, matrices.I), np.kron(matrices.I, matrices.I))
-    # matrix += np.kron(np.kron(matrices.I, matrices.X), np.kron(matrices.I, matrices.I))
-    # matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.Ι))
-    # matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
+    matrix += np.kron(np.kron(matrices.X, matrices.I), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.X), np.kron(matrices.I, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.I))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
     # Create Hamiltonian object
-    # ham = hamiltonians.Hamiltonian(4, matrix)
-    # DOCTEST ERROR: AttributeError: 'Matrices' object has no attribute 'Ζ'
+    ham = hamiltonians.Hamiltonian(4, matrix)
+    
 
 Although it is possible to generalize the above construction to arbitrary number
 of qubits this procedure may be more complex for other Hamiltonians. Moreover
