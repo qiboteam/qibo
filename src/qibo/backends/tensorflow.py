@@ -1,6 +1,6 @@
 import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, log, TF_LOG_LEVEL
+from qibo.config import raise_error, log, TF_LOG_LEVEL, TF_MIN_VERSION
 
 
 class Optimization:
@@ -16,16 +16,14 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
-    # versions requirements
-    TF_MIN_VERSION = '2.2.0'
 
     def __init__(self):
         super().__init__()
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf  # pylint: disable=E0401
-        if tf.__version__ < self.TF_MIN_VERSION:  # pragma: no cover
+        if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
             raise_error(RuntimeError, "TensorFlow version not supported, "
-                                      f"minimum is {self.TF_MIN_VERSION}.")
+                                      f"minimum is {TF_MIN_VERSION}.")
         self.backend = tf
         self.name = "tensorflow"
 

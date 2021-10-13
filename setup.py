@@ -25,8 +25,8 @@ with open(os.path.join(this_directory, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 
-# read backend versions
-BACKENDFILE = os.path.join("src", PACKAGE, "backends", "__init__.py")
+# read Tensorflow version requirement
+BACKENDFILE = os.path.join("src", PACKAGE, "config.py")
 with open(BACKENDFILE, 'r') as f:
     content = f.readlines()
     for line in content:
