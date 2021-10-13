@@ -14,13 +14,6 @@ TF_LOG_LEVEL = 3
 if "TF_LOG_LEVEL" in os.environ: # pragma: no cover
     TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
 
-# Choose the least significant qubit
-LEAST_SIGNIFICANT_QUBIT = 0
-
-if LEAST_SIGNIFICANT_QUBIT != 0: # pragma: no cover
-    # case not tested because least significant qubit is preset to 0
-    raise_error(NotImplementedError, "The least significant qubit should be 0.")
-
 # characters used in einsum strings
 EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
