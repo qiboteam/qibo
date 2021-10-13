@@ -22,7 +22,7 @@ class Backend:
         self.available_backends = {
             "numpy": {
                 "name": "numpy",
-                "class": "NumpyCustomBackend",
+                "class": "NumpyBackend",
                 "from": "qibo.backends.numpy"
                 }
             }
@@ -41,9 +41,7 @@ class Backend:
 
         # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
-            from qibo.backends.numpy import NumpyBackend
-            self.qnp = NumpyBackend()
-            self.constructed_backends["numpy"] = self.qnp
+            self.qnp = self.construct_backend("numpy")
         else:  # pragma: no cover
             raise_error(ModuleNotFoundError, "Numpy is not installed. "
                                              "Please install it using "
