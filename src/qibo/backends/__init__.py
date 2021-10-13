@@ -17,40 +17,35 @@ class Backend:
         except FileNotFoundError:  # pragma: no cover
             raise_error(FileNotFoundError, f"Profile file {profile_path} not found.")
 
-        self._active_backend = None
-        self.constructed_backends = {}
-        self.available_backends = {
-            "numpy": {
-                "name": "numpy",
-                "class": "NumpyBackend",
-                "from": "qibo.backends.numpy"
-                }
-            }
-        self.hardware_backends = {}
-        default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
-        # read names of backends in given profile
-        for backend in self.profile.get('backends'):
-            name = backend.get('name')
-            if self.check_availability(name):
-                self.available_backends[name] = backend
-                # find the default backend name
-                if not self.check_availability(default_backend):
-                    default_backend = name
-            if backend.get('is_hardware', False):  # pragma: no cover
-                self.hardware_backends[name] = backend
-
         # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
-            self.qnp = self.construct_backend("numpy")
+            from qibo.backends.numpy import NumpyBackend
+            self.qnp = NumpyBackend()
         else:  # pragma: no cover
             raise_error(ModuleNotFoundError, "Numpy is not installed. "
                                              "Please install it using "
                                              "`pip install numpy`.")
 
-        # create the default backend
+        # find the default backend name
+        default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
         if not self.check_availability(default_backend):
-            default_backend = "numpy"
-        self.active_backend = default_backend
+            default_backend = None
+        if default_backend is None:
+            # find the default backend
+            for backend in self.profile.get('backends'):
+                name = backend.get('name')
+                if self.check_availability(name):
+                    default_backend = name
+                    break
+
+        self.active_backend = None
+        self.constructed_backends = {"numpy": self.qnp}
+        self.hardware_backends = {}
+        # set default backend as active
+        if default_backend is None:
+            self.active_backend = self.qnp
+        else:
+            self.active_backend = self.construct_backend(default_backend)
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()
@@ -65,14 +60,6 @@ class Backend:
                         "high performance custom operators for TensorFlow "
                         "please use `pip install qibotf`. Alternatively, "
                         "consider installing the qibojit backend.")
-
-    @property
-    def active_backend(self):
-        return self._active_backend
-
-    @active_backend.setter
-    def active_backend(self, name):
-        self._active_backend = self.construct_backend(name)
 
     @staticmethod
     def _get_backend_class(backend):
@@ -94,13 +81,19 @@ class Backend:
             Backend object.
         """
         if name not in self.constructed_backends:
-            if name in self.available_backends and self.check_availability(name):
-                backend_conf = self.available_backends.get(name)
-                backend_cls = self._get_backend_class(backend_conf)
-                backend_instance = backend_cls()
+            is_available = self.check_availability(name)
+            if is_available:
+                for backend in self.profile.get('backends'):
+                    if backend.get('name') == name:
+                        break
+
+            if is_available and backend.get('name') == name:
+                backend_instance = self._get_backend_class(backend)()
                 if self.active_backend is not None:
                     backend_instance.set_precision(self.active_backend.precision)
                 self.constructed_backends[name] = backend_instance
+                if backend.get('is_hardware', False):  # pragma: no cover
+                    self.hardware_backends[name] = backend
 
             else:
                 available = []
@@ -127,7 +120,7 @@ class Backend:
 
     def show_config(self):
         log.info(
-            f"Using {self.active_backend.name} backend on {self.active_backend.default_device}")
+            f"Using {self} backend on {self.active_backend.default_device}")
 
     @staticmethod
     def check_availability(module_name):
@@ -161,7 +154,7 @@ def set_backend(backend="qibojit"):
     """
     if not config.ALLOW_SWITCHERS and backend != K.name:
         log.warning("Backend should not be changed after allocating gates.")
-    K.active_backend = backend
+    K.active_backend = K.construct_backend(backend)
     K.show_config()
 
 

@@ -7,7 +7,10 @@ import sys
 import pytest
 import qibo
 
-_available_backends = set(qibo.K.available_backends.keys()) - set(qibo.K.hardware_backends.keys())
+_available_backends = set(b.get('name') for b in qibo.K.profile.get('backends')
+                          if (not b.get('is_hardware', False) and
+                          qibo.K.check_availability(b.get('name'))))
+_available_backends.add("numpy")
 _ACCELERATORS = None
 for bkd in _available_backends:
     if qibo.K.construct_backend(bkd).supports_multigpu:
