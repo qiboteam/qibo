@@ -21,6 +21,10 @@ has to be used. The main ``Circuit`` used for simulation is defined in
 :class:`qibo.core.circuit.Circuit`. This uses an abstract backend object ``K``
 to perform calculation which can be one of the backends defined in ``qibo/backends``.
 
+Qibo uses big-endian byte order, which means that the most significant qubit
+is the one with index 0, while the least significant qubit is the one with
+the highest index.
+
 .. _generalpurpose:
 
 Circuit models
