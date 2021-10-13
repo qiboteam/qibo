@@ -47,6 +47,18 @@ Make sure you have Python 3.6 or greater, then use ``pip`` to install ``qibo`` w
 The ``pip`` program will download and install all the required
 dependencies for Qibo.
 
+Installing with conda
+"""""""""""""""""""""
+
+We provide conda packages for ``qibo`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install both packages ``qibo`` package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibo
+
 
 Installing from source
 """"""""""""""""""""""
@@ -101,6 +113,25 @@ In order to install the package use the following command:
       instructions from the `official website
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
 
+Installing with conda
+"""""""""""""""""""""
+
+We provide conda packages for ``qibo`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install both packages ``qibo`` package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibojit
+
+.. note::
+      The ``conda`` program will download and install all the required
+      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
+      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      instructions from the `official website
+      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware or
+      use the respective conda package.
 
 Installing from source
 """"""""""""""""""""""
@@ -278,28 +309,6 @@ please do:
 
       import qibo
       qibo.set_backend("numpy")
-
-_______________________
-
-.. _conda:
-
-Installing with conda
----------------------
-
-We provide conda packages for ``qibo`` and ``qibojit`` through the `conda-forge
-<https://anaconda.org/conda-forge>`_ channel.
-
-To install the ``qibo`` package with conda run:
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibo
-
-Similarly, in order to install the ``qibojit`` package do:
-
-.. code-block:: bash
-
-      conda install -c conda-forge qibojit
 
 _______________________
 
