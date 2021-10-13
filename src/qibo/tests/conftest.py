@@ -26,9 +26,7 @@ def pytest_runtest_setup(item):
 
 
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "linux: mark test to run only on linux"
-    )
+    config.addinivalue_line("markers", "linux: mark test to run only on linux")
 
 
 def pytest_addoption(parser):

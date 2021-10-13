@@ -19,12 +19,23 @@ class Backend:
 
         self._active_backend = None
         self.constructed_backends = {}
-        self.available_backends = {}
+        self.available_backends = {
+            "numpy": {
+                "name": "numpy",
+                "class": "NumpyCustomBackend",
+                "from": "qibo.backends.numpy"
+                }
+            }
         self.hardware_backends = {}
+        default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
         # read names of backends in given profile
         for backend in self.profile.get('backends'):
             name = backend.get('name')
-            self.available_backends[name] = backend
+            if self.check_availability(name):
+                self.available_backends[name] = backend
+                # find the default backend name
+                if not self.check_availability(default_backend):
+                    default_backend = name
             if backend.get('is_hardware', False):  # pragma: no cover
                 self.hardware_backends[name] = backend
 
@@ -38,11 +49,10 @@ class Backend:
                                              "Please install it using "
                                              "`pip install numpy`.")
 
-        # Create the default active backend
-        if "QIBO_BACKEND" in os.environ:  # pragma: no cover
-            self.active_backend = os.environ.get("QIBO_BACKEND")
-        else:
-            self.active_backend = self.profile.get('default')
+        # create the default backend
+        if not self.check_availability(default_backend):
+            default_backend = "numpy"
+        self.active_backend = default_backend
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()
@@ -97,12 +107,13 @@ class Backend:
             else:
                 available = []
                 for backend in self.profile.get('backends'):
-                    name = backend.get('name')
-                    description = self._get_backend_class(backend).description
-                    available.append(f" - {name}: {description}")
+                    n = backend.get('name')
+                    d = self._get_backend_class(backend).description
+                    available.append(f" - {n}: {d}")
+                available.append(f" - numpy: {self.qnp.description}")
                 available = "\n".join(available)
                 raise_error(ValueError, "Unknown backend {}. Please select one "
-                                        "of the available backends:\n{}."
+                                        "of the available backends:\n{}"
                                         "".format(name, available))
 
         return self.constructed_backends.get(name)
