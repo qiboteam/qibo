@@ -82,11 +82,12 @@ class Backend:
             Backend object.
         """
         if name not in self.constructed_backends:
+            backend = None
             if self.check_availability(name):
                 for backend in self.profile.get('backends'):
                     if backend.get('name') == name:
                         break
-            if self.check_availability(name) and backend.get('name') == name:
+            if backend is not None and backend.get('name') == name:
                 backend_instance = self._get_backend_class(backend)()
                 if self.active_backend is not None:
                     backend_instance.set_precision(self.active_backend.precision)
