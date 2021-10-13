@@ -6,10 +6,6 @@ from qibo.config import raise_error, log
 class Backend:
 
     def __init__(self):
-        self.available_backends = {}
-        self.hardware_backends = {}
-        active_backend = "numpy"
-
         # load profile from default file
         from pathlib import Path
         profile_path = Path(os.environ.get(
@@ -17,48 +13,44 @@ class Backend:
         try:
             with open(profile_path) as f:
                 import yaml
-                profile = yaml.safe_load(f)
+                self.profile = yaml.safe_load(f)
         except FileNotFoundError:  # pragma: no cover
-            raise_error(FileNotFoundError,
-                        f"Profile file {profile_path} not found.")
+            raise_error(FileNotFoundError, f"Profile file {profile_path} not found.")
 
-        # check if numpy is installed
+        self._active_backend = None
+        self.constructed_backends = {}
+        self.available_backends = {}
+        self.hardware_backends = {}
+        # read names of backends in given profile
+        for backend in self.profile.get('backends'):
+            name = backend.get('name')
+            self.available_backends[name] = backend
+            if backend.get('is_hardware', False):  # pragma: no cover
+                self.hardware_backends[name] = backend
+
+        # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
-            self.available_backends["numpy"] = NumpyBackend
+            self.qnp = NumpyBackend()
+            self.constructed_backends["numpy"] = self.qnp
         else:  # pragma: no cover
             raise_error(ModuleNotFoundError, "Numpy is not installed. "
                                              "Please install it using "
                                              "`pip install numpy`.")
 
-        for backend in profile.get('backends'):
-            name = backend.get('name')
-            if self.check_availability(name):
-                import importlib
-                custom_backend = getattr(importlib.import_module(
-                    backend.get('from')), backend.get('class'))
-                self.available_backends[name] = custom_backend
-                if backend.get('is_hardware', False):  # pragma: no cover
-                    self.hardware_backends[name] = custom_backend
-                if profile.get('default') == name:
-                    active_backend = name
-
-        self.constructed_backends = {}
-        self._active_backend = None
-        self.qnp = self.construct_backend("numpy")
         # Create the default active backend
         if "QIBO_BACKEND" in os.environ:  # pragma: no cover
             self.active_backend = os.environ.get("QIBO_BACKEND")
         else:
-            self.active_backend = active_backend
+            self.active_backend = self.profile.get('default')
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()
-        if active_backend == "numpy":  # pragma: no cover
+        if str(self) == "numpy":  # pragma: no cover
             log.warning("numpy backend uses `np.einsum` and supports CPU only. "
                         "Consider installing the qibojit or qibotf backends for "
                         "increased performance and to enable GPU acceleration.")
-        elif active_backend == "tensorflow":  # pragma: no cover
+        elif str(self) == "tensorflow":  # pragma: no cover
             # case not tested because CI has tf installed
             log.warning("qibotf library was not found. `tf.einsum` will be "
                         "used to apply gates. In order to install Qibo's "
@@ -74,6 +66,12 @@ class Backend:
     def active_backend(self, name):
         self._active_backend = self.construct_backend(name)
 
+    @staticmethod
+    def _get_backend_class(backend):
+        import importlib
+        backend_module = importlib.import_module(backend.get('from'))
+        return getattr(backend_module, backend.get('class'))
+
     def construct_backend(self, name):
         """Constructs and returns a backend.
 
@@ -88,17 +86,25 @@ class Backend:
             Backend object.
         """
         if name not in self.constructed_backends:
-            if name not in self.available_backends:
-                available = [" - {}: {}".format(n, b.description)
-                             for n, b in self.available_backends.items()]
+            if name in self.available_backends and self.check_availability(name):
+                backend_conf = self.available_backends.get(name)
+                backend_cls = self._get_backend_class(backend_conf)
+                backend_instance = backend_cls()
+                if self.active_backend is not None:
+                    backend_instance.set_precision(self.active_backend.precision)
+                self.constructed_backends[name] = backend_instance
+
+            else:
+                available = []
+                for backend in self.profile.get('backends'):
+                    name = backend.get('name')
+                    description = self._get_backend_class(backend).description
+                    available.append(f" - {name}: {description}")
                 available = "\n".join(available)
-                raise_error(ValueError, "Unknown backend {}. Please select one of "
-                                        "the available backends:\n{}."
+                raise_error(ValueError, "Unknown backend {}. Please select one "
+                                        "of the available backends:\n{}."
                                         "".format(name, available))
-            new_backend = self.available_backends.get(name)()
-            if self.active_backend is not None:
-                new_backend.set_precision(self.active_backend.precision)
-            self.constructed_backends[name] = new_backend
+
         return self.constructed_backends.get(name)
 
     def __getattr__(self, x):
