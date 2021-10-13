@@ -2,14 +2,10 @@ import os
 from qibo import config
 from qibo.config import raise_error, log
 
-# versions requirements
-TF_MIN_VERSION = '2.2.0'
-
 
 class Backend:
 
     def __init__(self):
-
         self.available_backends = {}
         self.hardware_backends = {}
         active_backend = "numpy"
@@ -38,13 +34,6 @@ class Backend:
         for backend in profile.get('backends'):
             name = backend.get('name')
             if self.check_availability(name):
-                if name == 'tensorflow' or name == 'qibotf':
-                    os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(
-                        config.TF_LOG_LEVEL)
-                    import tensorflow as tf  # pylint: disable=E0401
-                    if tf.__version__ < TF_MIN_VERSION:  # pragma: no cover
-                        raise_error(
-                            RuntimeError, f"TensorFlow version not supported, minimum is {TF_MIN_VERSION}.")
                 import importlib
                 custom_backend = getattr(importlib.import_module(
                     backend.get('from')), backend.get('class'))

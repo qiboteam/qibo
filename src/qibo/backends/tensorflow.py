@@ -1,5 +1,6 @@
+import os
 from qibo.backends import abstract, numpy
-from qibo.config import raise_error, log
+from qibo.config import raise_error, log, TF_LOG_LEVEL
 
 
 class Optimization:
@@ -15,10 +16,16 @@ class TensorflowBackend(numpy.NumpyBackend):
 
     description = "Uses `tf.einsum` to apply gates to states via matrix " \
                   "multiplication."
+    # versions requirements
+    TF_MIN_VERSION = '2.2.0'
 
     def __init__(self):
         super().__init__()
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(TF_LOG_LEVEL)
         import tensorflow as tf  # pylint: disable=E0401
+        if tf.__version__ < self.TF_MIN_VERSION:  # pragma: no cover
+            raise_error(RuntimeError, "TensorFlow version not supported, "
+                                      f"minimum is {self.TF_MIN_VERSION}.")
         self.backend = tf
         self.name = "tensorflow"
 
@@ -232,11 +239,10 @@ class TensorflowCustomBackend(TensorflowBackend):
             raise_error(RuntimeError, "Cannot initialize Tensorflow custom "
                                       "backend if custom operators are not "
                                       "compiled.")
-        from qibotf import custom_operators as op  # pylint: disable=E0401
         super().__init__()
+        from qibotf import custom_operators as op  # pylint: disable=E0401
         self.name = "qibotf"
         self.op = op
-        import os
         if "OMP_NUM_THREADS" in os.environ: # pragma: no cover
             self.set_threads(int(os.environ.get("OMP_NUM_THREADS")))
 
