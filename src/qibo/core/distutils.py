@@ -116,15 +116,13 @@ class DistributedQueues:
         This method also creates the ``DistributedQubits`` object holding the
         global qubits list.
         """
-        if not queue:
-            raise_error(RuntimeError, "No gates available to set for distributed run.")
-
         counter = self.count(queue, self.nqubits)
         if self.qubits is None:
             self.qubits = DistributedQubits(counter.argsort()[:self.nglobal],
                                             self.nqubits)
-        transformed_queue = self.transform(queue, counter)
-        self.create(transformed_queue)
+        if queue:
+            transformed_queue = self.transform(queue, counter)
+            self.create(transformed_queue)
 
     def _ids(self, calc_devices: Dict[str, int]) -> Tuple[str, List[int]]:
         """Generator of device piece indices."""

@@ -219,7 +219,7 @@ class DistributedCircuit(circuit.Circuit):
 
     def get_initial_state(self, state=None):
         """"""
-        if not self.queues.queues and self.queue:
+        if not self.queues.queues:
             self.queues.set(self.queue)
 
         if state is None:
