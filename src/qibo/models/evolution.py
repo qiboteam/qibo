@@ -33,7 +33,7 @@ class StateEvolution:
             decomposition is used for the time evolution.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import models, hamiltonians

@@ -14,7 +14,7 @@ class Circuit(circuit.AbstractCircuit):
     Performs simulation using state vectors.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import models, gates
             c = models.Circuit(3) # initialized circuit with 3 qubits
@@ -57,7 +57,7 @@ class Circuit(circuit.AbstractCircuit):
             :ref:`Circuit fusion <circuit-fusion>` section.
 
         Example:
-            ::
+            .. testcode::
 
                 from qibo import models, gates
                 c = models.Circuit(2)
@@ -340,7 +340,7 @@ class DensityMatrixCircuit(Circuit):
     :ref:`Using density matrices? <densitymatrix-example>` example.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import models, gates
             c = models.Circuit(2, density_matrix=True)
