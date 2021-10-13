@@ -42,7 +42,7 @@ def XXZ(nqubits, delta=0.5, dense=True):
             a :class:`qibo.core.hamiltonians.SymbolicHamiltonian`.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo.hamiltonians import XXZ
             h = XXZ(3) # initialized XXZ model with 3 qubits

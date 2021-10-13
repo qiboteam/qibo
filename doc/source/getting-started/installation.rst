@@ -75,7 +75,7 @@ and `cupy <https://cupy.dev/>`_.
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("qibojit")
@@ -144,7 +144,7 @@ TensorFlow and custom operators in CUDA/C++.
 
 If needed, in order to switch to the ``qibotf`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("qibotf")
@@ -256,7 +256,7 @@ backend.
 This backend is used by default if ``qibotf`` is not installed, however, if
 needed, in order to switch to the ``tensorflow`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("tensorflow")
@@ -285,7 +285,7 @@ This backend is used by default if ``qibotf`` or ``tensorflow`` are not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("numpy")

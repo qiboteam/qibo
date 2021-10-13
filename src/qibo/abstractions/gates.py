@@ -1107,7 +1107,7 @@ class VariationalLayer(ParametrizedGate):
             If ``None`` the name ``"VariationalLayer"`` will be used.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo.models import Circuit
@@ -1267,7 +1267,7 @@ class KrausChannel(Channel):
           the corresponding matrix as a ``np.ndarray`` or ``tf.Tensor``.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo.models import Circuit

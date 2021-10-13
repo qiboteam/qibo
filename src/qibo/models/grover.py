@@ -36,7 +36,7 @@ class Grover(object):
         iterative (bool): force the use of the iterative Grover
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import gates
