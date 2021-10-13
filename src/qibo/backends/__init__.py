@@ -17,6 +17,7 @@ class Backend:
         except FileNotFoundError:  # pragma: no cover
             raise_error(FileNotFoundError, f"Profile file {profile_path} not found.")
 
+        self._availability = {}
         # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
@@ -81,13 +82,11 @@ class Backend:
             Backend object.
         """
         if name not in self.constructed_backends:
-            is_available = self.check_availability(name)
-            if is_available:
+            if self.check_availability(name):
                 for backend in self.profile.get('backends'):
                     if backend.get('name') == name:
                         break
-
-            if is_available and backend.get('name') == name:
+            if self.check_availability(name) and backend.get('name') == name:
                 backend_instance = self._get_backend_class(backend)()
                 if self.active_backend is not None:
                     backend_instance.set_precision(self.active_backend.precision)
@@ -122,18 +121,20 @@ class Backend:
         log.info(
             f"Using {self} backend on {self.active_backend.default_device}")
 
-    @staticmethod
-    def check_availability(module_name):
+    def check_availability(self, module_name):
         """Check if module is installed.
 
         Args:
             module_name (str): module name.
 
         Returns:
-            True if the module is installed, False otherwise.
+            ``True`` if the module is installed, ``False`` otherwise.
         """
-        from pkgutil import iter_modules
-        return module_name in (name for _, name, _ in iter_modules())
+        if module_name not in self._availability:
+            from pkgutil import iter_modules
+            is_available = module_name in (name for _, name, _ in iter_modules())
+            self._availability[module_name] = is_available
+        return self._availability.get(module_name)
 
 
 K = Backend()
