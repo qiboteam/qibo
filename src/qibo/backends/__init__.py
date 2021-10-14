@@ -17,7 +17,10 @@ class Backend:
         except FileNotFoundError:  # pragma: no cover
             raise_error(FileNotFoundError, f"Profile file {profile_path} not found.")
 
+        # dictionary to cache if backends are available
+        # used by ``self.check_availability``
         self._availability = {}
+        
         # create numpy backend (is always available as numpy is a requirement)
         if self.check_availability("numpy"):
             from qibo.backends.numpy import NumpyBackend
@@ -29,24 +32,21 @@ class Backend:
 
         # find the default backend name
         default_backend = os.environ.get('QIBO_BACKEND', self.profile.get('default'))
-        if not self.check_availability(default_backend):
-            default_backend = None
-        if default_backend is None:
-            # find the default backend
+        # change the default backend if it is not available
+        if not self.check_availability(default_backend):  # pragma: no cover
             for backend in self.profile.get('backends'):
                 name = backend.get('name')
                 if self.check_availability(name):
                     default_backend = name
                     break
+                # make numpy default if no other backend is available
+                default_backend = "numpy"
 
         self.active_backend = None
         self.constructed_backends = {"numpy": self.qnp}
         self.hardware_backends = {}
         # set default backend as active
-        if default_backend is None:
-            self.active_backend = self.qnp
-        else:
-            self.active_backend = self.construct_backend(default_backend)
+        self.active_backend = self.construct_backend(default_backend)
 
         # raise performance warning if qibojit and qibotf are not available
         self.show_config()
