@@ -21,6 +21,10 @@ has to be used. The main ``Circuit`` used for simulation is defined in
 :class:`qibo.core.circuit.Circuit`. This uses an abstract backend object ``K``
 to perform calculation which can be one of the backends defined in ``qibo/backends``.
 
+Qibo uses big-endian byte order, which means that the most significant qubit
+is the one with index 0, while the least significant qubit is the one with
+the highest index.
+
 .. _generalpurpose:
 
 Circuit models
@@ -46,7 +50,12 @@ Circuit addition
 
 :class:`qibo.abstractions.circuit.AbstractCircuit` objects support addition. For example
 
-.. code-block::  python
+.. testsetup::
+    
+    import qibo
+    qibo.set_backend("qibojit")
+
+.. testcode::
 
     from qibo import models
     from qibo import gates
@@ -87,7 +96,7 @@ round starts for the target qubits of the new two-qubit gate.
 
 For example the following:
 
-.. code-block::  python
+.. testcode::
 
     from qibo import models, gates
 
@@ -100,7 +109,7 @@ For example the following:
 will create a new circuit with a single :class:`qibo.abstractions.gates.FusedGate`
 acting on ``(0, 1)``, while the following:
 
-.. code-block::  python
+.. testcode::
 
     from qibo import models, gates
 
@@ -846,7 +855,7 @@ only supported by the native ``tensorflow`` backend.
 
 The user can switch backends using
 
-.. code-block::  python
+.. testcode::
 
     import qibo
     qibo.set_backend("qibotf")

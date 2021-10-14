@@ -80,8 +80,11 @@ def parallel_execution(circuit, states, processes=None):
     """Execute circuit for multiple states.
 
     Example:
-        ::
+        .. testcode::
 
+            import qibo
+            original_backend = qibo.get_backend()
+            qibo.set_backend("qibotf")
             from qibo import models, set_threads
             from qibo.parallel import parallel_execution
             import numpy as np
@@ -94,6 +97,7 @@ def parallel_execution(circuit, states, processes=None):
             set_threads(1)
             # execute in parallel
             results = parallel_execution(circuit, states, processes=2)
+            qibo.set_backend(original_backend)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.
@@ -128,8 +132,11 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
     """Execute circuit for multiple parameters and fixed initial_state.
 
     Example:
-        ::
-
+        .. testcode::
+            
+            import qibo
+            original_backend = qibo.get_backend()
+            qibo.set_backend("qibotf")
             from qibo import models, gates, set_threads
             from qibo.parallel import parallel_parametrized_execution
             import numpy as np
@@ -151,6 +158,7 @@ def parallel_parametrized_execution(circuit, parameters, initial_state=None, pro
             set_threads(1)
             # execute in parallel
             results = parallel_parametrized_execution(circuit, parameters, processes=2)
+            qibo.set_backend(original_backend)
 
     Args:
         circuit (qibo.models.Circuit): the input circuit.

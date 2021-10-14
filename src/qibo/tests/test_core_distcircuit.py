@@ -72,11 +72,6 @@ def test_distributed_circuit_set_gates(backend):
     for queues in c.queues.queues[0]:
         assert len(queues) == 4
 
-    # Attempt to set gates before adding any gate
-    c = DistributedCircuit(6, devices)
-    with pytest.raises(RuntimeError):
-        c.queues.set(c.queue)
-
 
 def test_distributed_circuit_set_gates_controlled(backend):
     devices = {"/GPU:0": 2, "/GPU:1": 2}

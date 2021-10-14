@@ -28,7 +28,7 @@ class DistributedCircuit(circuit.Circuit):
     compilation and callbacks.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo.models import Circuit
             # The system has two GPUs and we would like to use each GPU twice
@@ -47,8 +47,8 @@ class DistributedCircuit(circuit.Circuit):
 
     def __init__(self, nqubits: int, accelerators: Dict[str, int]):
         if not K.supports_multigpu:  # pragma: no cover
-            raise_error(NotImplementedError, f"Distributed circuit is not supported "
-                                              "by the {K.name} backend.")
+            raise_error(NotImplementedError, "Distributed circuit is not supported "
+                                            f"by the {K.name} backend.")
         super().__init__(nqubits)
         self.init_kwargs["accelerators"] = accelerators
         self.ndevices = sum(accelerators.values())
@@ -219,7 +219,7 @@ class DistributedCircuit(circuit.Circuit):
 
     def get_initial_state(self, state=None):
         """"""
-        if not self.queues.queues and self.queue:
+        if not self.queues.queues:
             self.queues.set(self.queue)
 
         if state is None:

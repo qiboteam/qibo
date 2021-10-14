@@ -81,7 +81,7 @@ def QFT(nqubits: int, with_swaps: bool = True,
         A qibo.models.Circuit that implements the Quantum Fourier Transform.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo.models import QFT

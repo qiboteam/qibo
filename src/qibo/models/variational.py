@@ -13,7 +13,7 @@ class VQE(object):
         hamiltonian (:class:`qibo.hamiltonians.Hamiltonian`): Hamiltonian object.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import gates, models, hamiltonians
@@ -244,7 +244,7 @@ class QAOA(object):
             is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import models, hamiltonians
@@ -436,7 +436,7 @@ class FALQON(QAOA):
             is a :class:`qibo.abstractions.hamiltonians.SymbolicHamiltonian`.
 
     Example:
-        ::
+        .. testcode::
 
             import numpy as np
             from qibo import models, hamiltonians

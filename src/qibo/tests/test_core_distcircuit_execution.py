@@ -1,7 +1,7 @@
 """Test functions defined in `qibo/core/distcircuit.py`."""
 import pytest
 import numpy as np
-from qibo import gates
+from qibo import K, gates
 from qibo.models import Circuit
 from qibo.core.distcircuit import DistributedCircuit
 from qibo.tests.utils import random_state
@@ -22,7 +22,7 @@ def test_distributed_circuit_execution(backend, accelerators, use_global_qubits)
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state)
 
 
 def test_distributed_circuit_execution_pretransformed(backend, accelerators):
@@ -39,7 +39,7 @@ def test_distributed_circuit_execution_pretransformed(backend, accelerators):
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state)
 
 
 def test_distributed_circuit_execution_with_swap(backend, accelerators):
@@ -55,7 +55,7 @@ def test_distributed_circuit_execution_with_swap(backend, accelerators):
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state)
 
 
 def test_distributed_circuit_execution_special_gate(backend, accelerators):
@@ -67,7 +67,7 @@ def test_distributed_circuit_execution_special_gate(backend, accelerators):
     c = Circuit(6)
     c.add(gates.Flatten(np.copy(initial_state)))
     c.add((gates.H(i) for i in range(dist_c.nlocal)))
-    np.testing.assert_allclose(dist_c(), c())
+    K.assert_allclose(dist_c(), c())
 
 
 def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
@@ -81,7 +81,7 @@ def test_distributed_circuit_execution_controlled_gate(backend, accelerators):
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state)
 
 
 def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators):
@@ -102,7 +102,7 @@ def test_distributed_circuit_execution_controlled_by_gates(backend, accelerators
     initial_state = random_state(c.nqubits)
     final_state = dist_c(np.copy(initial_state))
     target_state = c(np.copy(initial_state))
-    np.testing.assert_allclose(target_state, final_state)
+    K.assert_allclose(target_state, final_state)
 
 
 def test_distributed_circuit_execution_addition(backend, accelerators):
@@ -124,4 +124,22 @@ def test_distributed_circuit_execution_addition(backend, accelerators):
     c.add([gates.CNOT(i, i + 1) for i in range(5)])
     c.add([gates.Z(i) for i in range(6)])
     assert c.depth == dist_c.depth
-    np.testing.assert_allclose(dist_c(), c())
+    K.assert_allclose(dist_c(), c())
+
+
+def test_distributed_circuit_empty_execution(backend, accelerators):
+    # test executing a circuit with the default initial state
+    c = DistributedCircuit(5, accelerators)
+    final_state = c().state()
+    target_state = np.zeros_like(final_state)
+    target_state[0] = 1
+    K.assert_allclose(final_state, target_state)
+    # test re-executing the circuit with a given initial state
+    initial_state = random_state(c.nqubits)
+    K.assert_allclose(c(initial_state), initial_state)
+    # test executing a new circuit with a given initial state
+    c = DistributedCircuit(5, accelerators)
+    initial_state = random_state(c.nqubits)
+    K.assert_allclose(c(initial_state), initial_state)
+    # test re-executing the circuit with the default initial state
+    K.assert_allclose(c(), target_state)

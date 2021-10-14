@@ -47,19 +47,33 @@ Make sure you have Python 3.6 or greater, then use ``pip`` to install ``qibo`` w
 The ``pip`` program will download and install all the required
 dependencies for Qibo.
 
+Installing with conda
+"""""""""""""""""""""
+
+We provide conda packages for ``qibo`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install both packages ``qibo`` package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibo
+
 
 Installing from source
 """"""""""""""""""""""
 
-The installation procedure presented in this section is useful when you have to develop the code from source.
+The installation procedure presented in this section is useful when you have to
+develop the code from source.
 
-In order to install Qibo from source, you can simply clone the GitHub repository with
+In order to install Qibo from source, you can simply clone the GitHub repository
+with
 
 .. code-block::
 
       git clone https://github.com/qiboteam/qibo.git
       cd qibo
-      pip install . # or pip install -e .
+      pip install .
 
 _______________________
 
@@ -75,7 +89,7 @@ and `cupy <https://cupy.dev/>`_.
 This backend is used by default, however, if needed, in order to switch to the
 ``qibojit`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("qibojit")
@@ -99,6 +113,25 @@ In order to install the package use the following command:
       instructions from the `official website
       <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware.
 
+Installing with conda
+"""""""""""""""""""""
+
+We provide conda packages for ``qibo`` through the `conda-forge
+<https://anaconda.org/conda-forge>`_ channel.
+
+To install both packages ``qibo`` package with conda run:
+
+.. code-block:: bash
+
+      conda install -c conda-forge qibojit
+
+.. note::
+      The ``conda`` program will download and install all the required
+      dependencies except `cupy <https://cupy.dev/>`_ which is required for GPU
+      acceleration. Please install `cupy <https://cupy.dev/>`_ by following the
+      instructions from the `official website
+      <https://docs.cupy.dev/en/stable/install.html>`_ for your GPU hardware or
+      use the respective conda package.
 
 Installing from source
 """"""""""""""""""""""
@@ -113,24 +146,11 @@ In order to install the package perform the following steps:
       git clone https://github.com/qiboteam/qibojit.git
       cd qibojit
 
-then proceed with the installation of requirements with:
-
-.. code-block::
-
-      pip install -r requirements.txt
-
 Then proceed with the ``qibojit`` installation using ``pip``
 
 .. code-block::
 
       pip install .
-
-or if you prefer to manually execute all installation steps:
-
-.. code-block::
-
-      # builds binaries
-      python setup.py deve
 
 _______________________
 
@@ -144,7 +164,7 @@ TensorFlow and custom operators in CUDA/C++.
 
 If needed, in order to switch to the ``qibotf`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("qibotf")
@@ -256,7 +276,7 @@ backend.
 This backend is used by default if ``qibotf`` is not installed, however, if
 needed, in order to switch to the ``tensorflow`` backend please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("tensorflow")
@@ -285,7 +305,7 @@ This backend is used by default if ``qibotf`` or ``tensorflow`` are not
 installed, however, if needed, in order to switch to the ``numpy`` backend
 please do:
 
-.. code-block:: python
+.. testcode::
 
       import qibo
       qibo.set_backend("numpy")

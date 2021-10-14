@@ -1,9 +1,0 @@
-# Runtime requirements for qibo
-
-scipy
-sympy
-cma
-joblib
-matplotlib
-psutil
-pyyaml

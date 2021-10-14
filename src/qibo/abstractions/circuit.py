@@ -159,7 +159,8 @@ class AbstractCircuit(ABC):
             q (int): Qubit ids that the gates should act.
 
         Example:
-            ::
+            
+            .. testcode::
 
                 from qibo import gates, models
                 # create small circuit on 4 qubits
@@ -300,7 +301,7 @@ class AbstractCircuit(ABC):
             and additional noise channels on all qubits after every gate.
 
         Example:
-            ::
+            .. testcode::
 
                 from qibo.models import Circuit
                 from qibo import gates
@@ -309,7 +310,6 @@ class AbstractCircuit(ABC):
                 c.add([gates.H(0), gates.H(1), gates.CNOT(0, 1)])
                 noise_map = {0: (0.1, 0.0, 0.2), 1: (0.0, 0.2, 0.1)}
                 noisy_c = c.with_noise(noise_map)
-
                 # ``noisy_c`` will be equivalent to the following circuit
                 c2 = Circuit(2, density_matrix=True)
                 c2.add(gates.H(0))
@@ -545,12 +545,12 @@ class AbstractCircuit(ABC):
 
 
         Example:
-            ::
+            .. testcode::
 
                 from qibo.models import Circuit
                 from qibo import gates
                 # create a circuit with all parameters set to 0.
-                c = Circuit(3, accelerators)
+                c = Circuit(3)
                 c.add(gates.RX(0, theta=0))
                 c.add(gates.RY(1, theta=0))
                 c.add(gates.CZ(1, 2))
@@ -561,7 +561,7 @@ class AbstractCircuit(ABC):
                 params = [0.123, 0.456, (0.789, 0.321)]
                 c.set_parameters(params)
                 # or using dictionary
-                params = {c.queue[0]: 0.123, c.queue[1]: 0.456
+                params = {c.queue[0]: 0.123, c.queue[1]: 0.456,
                           c.queue[3]: (0.789, 0.321)}
                 c.set_parameters(params)
                 # or using flat list (or an equivalent `np.array`/`tf.Tensor`)
@@ -642,7 +642,7 @@ class AbstractCircuit(ABC):
         the all gates sorted in decreasing number of appearance.
 
         Example:
-            ::
+            .. testcode::
 
                 from qibo.models import Circuit
                 from qibo import gates
@@ -657,13 +657,24 @@ class AbstractCircuit(ABC):
                 # Prints
                 '''
                 Circuit depth = 5
-                Total number of gates = 7
+                Total number of gates = 6
                 Number of qubits = 3
                 Most common gates:
                 h: 3
                 cx: 2
                 ccx: 1
                 '''
+        
+            .. testoutput::
+                :hide:
+
+                Circuit depth = 5
+                Total number of gates = 6
+                Number of qubits = 3
+                Most common gates:
+                h: 3
+                cx: 2
+                ccx: 1
         """
         logs = [f"Circuit depth = {self.depth}",
                 f"Total number of gates = {self.ngates}",
@@ -756,10 +767,10 @@ class AbstractCircuit(ABC):
             specified by the given QASM script.
 
         Example:
-            ::
+         
+            .. testcode::
 
                 from qibo import models, gates
-
                 qasm_code = '''OPENQASM 2.0;
                 include "qelib1.inc";
                 qreg q[2];
@@ -767,7 +778,6 @@ class AbstractCircuit(ABC):
                 h q[1];
                 cx q[0],q[1];'''
                 c = models.Circuit.from_qasm(qasm_code)
-
                 # is equivalent to creating the following circuit
                 c2 = models.Circuit(2)
                 c2.add(gates.H(0))

@@ -65,7 +65,7 @@ class EntanglementEntropy(Callback):
         compute_spectrum (bool): Compute the entanglement spectrum. Default is False.
 
     Example:
-        ::
+        .. testcode::
 
             from qibo import models, gates, callbacks
             # create entropy callback where qubit 0 is the first subsystem
@@ -85,6 +85,10 @@ class EntanglementEntropy(Callback):
             # after every gate in the calculation.
             print(entropy.spectrum)
             # Print the entanglement spectrum.
+        .. testoutput::
+            :hide:
+
+            ...
     """
 
     def __init__(self, partition: Optional[List[int]] = None,
@@ -164,7 +168,8 @@ class Gap(Callback):
             Default is ``True``.
 
     Example:
-        ::
+        
+        .. testcode::
 
             from qibo import callbacks, hamiltonians
             from qibo.models import AdiabaticEvolution
@@ -184,6 +189,10 @@ class Gap(Callback):
             print(ground[:])
             print(excited[:])
             print(gap[:])
+        .. testoutput::
+            :hide:
+
+            ...
     """
 
     def __init__(self, mode: Union[str, int] = "gap", check_degenerate: bool = True):

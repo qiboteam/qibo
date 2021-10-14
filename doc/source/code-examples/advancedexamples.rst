@@ -75,7 +75,12 @@ You can restrict the number of threads by exporting the ``OMP_NUM_THREADS``
 environment variable with the requested number of threads before launching Qibo,
 or programmatically, during runtime, as follows:
 
-.. code-block::  python
+.. testsetup::
+
+    import qibo
+    qibo.set_backend("qibojit")
+
+.. testcode::
 
     import qibo
     # set the number of threads to 1
@@ -87,7 +92,7 @@ On the other hand, when using the ``tensorflow`` backend Qibo inherits
 Tensorflow's defaults for CPU thread configuration.
 Tensorflow allows restricting the number of threads as follows:
 
-.. code-block::  python
+.. code-block:: python
 
     import tensorflow as tf
     tf.config.threading.set_inter_op_parallelism_threads(1)
@@ -103,7 +108,7 @@ Using multiple GPUs
 Qibo supports distributed circuit execution on multiple GPUs. This feature can
 be used as follows:
 
-.. code-block::  python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -113,7 +118,7 @@ be used as follows:
     # this will use the first GPU three times and the second one time
     # leading to four total logical devices
     # construct the distributed circuit for 32 qubits
-    c = Circuit(32, accelerators, memory_device="/CPU:0")
+    # c = Circuit(32, accelerators)
 
 Gates can then be added normally using ``c.add`` and the circuit can be executed
 using ``c()``. Note that a ``memory_device`` is passed in the distributed circuit
@@ -184,7 +189,7 @@ entanglement entropy as the state propagates through a circuit. This can be
 implemented easily using :class:`qibo.abstractions.callbacks.EntanglementEntropy`
 and the :class:`qibo.abstractions.gates.CallbackGate` gate. For example:
 
-.. code-block::  python
+.. testcode::
 
     from qibo import models, gates, callbacks
 
@@ -209,7 +214,25 @@ values of entropy after every gate in the circuit.
 The same callback object can be used in a second execution of this or a different
 circuit. For example
 
-.. code-block::  python
+.. testsetup::
+
+    from qibo import models, gates, callbacks
+
+    # create entropy callback where qubit 0 is the first subsystem
+    entropy = callbacks.EntanglementEntropy([0])
+
+    # initialize circuit with 2 qubits and add gates
+    c = models.Circuit(2) # state is |00> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation in the initial state
+    c.add(gates.H(0)) # state is |+0> (entropy = 0)
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after H
+    c.add(gates.CNOT(0, 1)) # state is |00> + |11> (entropy = 1))
+    c.add(gates.CallbackGate(entropy)) # performs entropy calculation after CNOT
+
+    # execute the circuit using the callback
+    final_state = c()
+
+.. testcode::
 
     # c is the same circuit as above
     # execute the circuit
@@ -219,11 +242,15 @@ circuit. For example
 
     # print result
     print(entropy[:]) # tf.Tensor([0, 0, 1, 0, 0, 1])
+.. testoutput::
+    :hide:
+
+    ...
 
 The callback for entanglement entropy can also be used on state vectors directly.
 For example
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import callbacks
@@ -235,6 +262,10 @@ For example
     entropy = callbacks.EntanglementEntropy([0])
     # call the object on the state
     print(entropy(state))
+.. testoutput::
+    :hide:
+
+    ...
 
 will print ``tf.Tensor(1.0)``.
 
@@ -247,7 +278,7 @@ Some Qibo gates such as rotations accept values for their free parameter. Once
 such gates are added in a circuit their parameters can be updated using the
 :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` method. For example:
 
-.. code-block::  python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -269,7 +300,12 @@ user can use ``circuit.set_parameters()`` with a dictionary or a flat list.
 The keys of the dictionary should be references to the gate objects of
 the circuit. For example:
 
-.. code-block::  python
+.. testsetup::
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+.. testcode::
 
     c = Circuit(3)
     g0 = gates.RX(0, theta=0)
@@ -304,7 +340,7 @@ The following gates support parameter setting:
   parameters with length compatible to the number of one qubit rotations implemented
   by the layer, for example:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo.models import Circuit
@@ -335,7 +371,12 @@ It is possible to hide a parametrized gate from the action of
 :meth:`qibo.abstractions.circuit.AbstractCircuit.set_parameters` by setting
 the ``trainable=False`` during gate creation. For example:
 
-.. code-block::  python
+.. testsetup::
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+.. testcode::
 
     c = Circuit(3)
     c.add(gates.RX(0, theta=0.123))
@@ -344,6 +385,10 @@ the ``trainable=False`` during gate creation. For example:
 
     print(c.get_parameters())
     # prints [0.123, (0.789, 0.567)] ignoring the parameters of the RY gate
+
+.. testoutput::
+
+    [0.123, (0.789, 0.567)]
 
 
 This is useful when the user wants to freeze the parameters of specific
@@ -366,7 +411,7 @@ the sampled result for each measured qubit.
 The state is collapsed when the ``collapse=True`` is used during instantiation
 of the :class:`qibo.abstractions.gates.M` gate. For example
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -379,6 +424,10 @@ of the :class:`qibo.abstractions.gates.M` gate. For example
     print(result.state())
     # prints [0.7071, 0.7071] if 0 is measured
     # or [0.7071, -0.7071] if 1 is measured
+.. testoutput::
+    :hide:
+
+    ...
 
 In this example the single qubit is measured while in the state (``|0> + |1>``) and
 is collapsed to either ``|0>`` or ``|1>``. The qubit can then be re-used by adding more
@@ -394,7 +443,18 @@ during the circuit execution (eg. ``result = c(nshots=100)`` in the above
 example), then the circuit execution will be repeated ``nshots`` times using
 a loop:
 
-.. code-block:: python
+.. testsetup::
+
+    from qibo.models import Circuit
+    from qibo import gates
+
+    c = Circuit(1)
+    c.add(gates.H(0))
+    output = c.add(gates.M(0, collapse=True))
+    c.add(gates.H(0))
+    nshots = 100
+
+.. testcode::
 
     for _ in range(nshots):
         result = c()
@@ -408,7 +468,7 @@ the outcomes are still accessible using ``output.samples()`` and
 Using normal measurements and collapse measurements in the same circuit is
 also possible:
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -430,7 +490,7 @@ Conditioning gates on measurement outcomes
 The output of ``collapse=True`` measurements can be used as a parameter in
 any parametrized gate as follows:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo.models import Circuit
@@ -452,7 +512,7 @@ given during circuit execution the execution is repeated using a loop.
 If more than one qubits are used in a ``collapse=True`` measurement gate the
 ``output`` can be indexed accordingly:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo.models import Circuit
@@ -476,7 +536,7 @@ the inverse of a circuit by taking the dagger of all gates in reverse order. It
 can be used with circuit addition to simplify the construction of algorithms,
 for example:
 
-.. code-block:: python
+.. testcode::
 
     from qibo.models import Circuit
     from qibo import gates
@@ -499,7 +559,7 @@ of qubits. It is often useful to add subroutines only on a subset of qubits of t
 large circuit. This is possible using the :meth:`qibo.abstractions.circuit.AbstractCircuit.on_qubits`
 method. For example:
 
-.. code-block:: python
+.. testcode::
 
     from qibo import models, gates
 
@@ -530,7 +590,7 @@ There are examples of VQE optimization in ``examples/benchmarks``:
 
 Here is a simple example using the Heisenberg XXZ model Hamiltonian:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo import models, gates, hamiltonians
@@ -556,7 +616,8 @@ Here is a simple example using the Heisenberg XXZ model Hamiltonian:
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = np.random.uniform(0, 2*np.pi,
                                             2*nqubits*nlayers + nqubits)
-    best, params = vqe.minimize(initial_parameters, method='BFGS', compile=False)
+    best, params, extra = vqe.minimize(initial_parameters, method='BFGS', compile=False)
+
 
 
 For more information on the available options of the ``vqe.minimize`` call we
@@ -574,7 +635,12 @@ the layer of two-qubit entangling gates and applying both as a single layer of
 general two-qubit gates (as 4x4 matrices). The ansatz from the above example can
 be written using :class:`qibo.abstractions.gates.VariationalLayer` as follows:
 
-.. code-block:: python
+.. testsetup::
+    
+    import numpy as np
+    from qibo import models, gates, hamiltonians
+
+.. testcode::
 
     circuit = models.Circuit(nqubits)
     pairs = [(i, i + 1) for i in range(0, nqubits - 1, 2)]
@@ -598,7 +664,7 @@ Similarly to the VQE, a custom implementation of a Variational Quantum Circuit
 
 Here is a simple example using a custom loss function:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo import models, gates
@@ -607,10 +673,11 @@ Here is a simple example using a custom loss function:
     # custom loss function, computes fidelity
     def myloss(parameters, circuit, target):
         circuit.set_parameters(parameters)
-        return 1 - np.abs(np.conj(target).dot(circuit()))
+        final_state = circuit().numpy()
+        return 1 - np.abs(np.conj(target).dot(final_state))
 
     nqubits = 6
-    nlayers  = 4
+    nlayers  = 2
 
     # Create variational circuit
     c = models.Circuit(nqubits)
@@ -627,7 +694,7 @@ Here is a simple example using a custom loss function:
     data = np.random.normal(0, 1, size=2**nqubits)
 
     # perform optimization
-    best, params = optimize(myloss, x0, args=(c, data), method='BFGS')
+    best, params, extra = optimize(myloss, x0, args=(c, data), method='BFGS')
 
     # set final solution to circuit instance
     c.set_parameters(params)
@@ -646,7 +713,7 @@ that can be defined using a :class:`qibo.abstractions.hamiltonians.Hamiltonian`.
 properly optimized, the QAOA ansatz will approximate the ground state of this
 Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo import models, hamiltonians
@@ -658,7 +725,7 @@ Hamiltonian. Here is a simple example using the Heisenberg XXZ Hamiltonian:
 
     # Optimize starting from a random guess for the variational parameters
     initial_parameters = 0.01 * np.random.uniform(0,1,4)
-    best_energy, final_parameters = qaoa.minimize(initial_parameters, method="BFGS")
+    best_energy, final_parameters, extra = qaoa.minimize(initial_parameters, method="BFGS")
 
 In the above example the initial guess for parameters has length four and
 therefore the QAOA ansatz consists of four operators, two using the
@@ -688,7 +755,7 @@ When Trotter decomposition is used, it is possible to execute the QAOA circuit
 on multiple devices, by passing an ``accelerators`` dictionary when defining
 the model. For example the previous example would have to be modified as:
 
-.. code-block:: python
+.. testcode::
 
     from qibo import models, hamiltonians
 
@@ -708,7 +775,7 @@ the following script optimizes the parameters of two rotations so that the circu
 output matches a target state using the fidelity as the corresponding loss
 function.
 
-.. code-block:: python
+.. testcode::
 
     import qibo
     qibo.set_backend("tensorflow")
@@ -729,9 +796,10 @@ function.
     for _ in range(nepochs):
         with tf.GradientTape() as tape:
             c.set_parameters(params)
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            final_state = c().state()
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-        grads = tape.gradient(loss, params)
+            grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
 
 
@@ -751,11 +819,9 @@ For example:
     from qibo import gates, models
 
     nepochs = 1000
-    params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
     optimizer = tf.keras.optimizers.Adam()
     target_state = tf.ones(4, dtype=tf.complex128) / 2.0
     params = tf.Variable(tf.random.uniform((2,), dtype=tf.float64))
-
 
     @tf.function
     def optimize(params):
@@ -763,11 +829,11 @@ For example:
             c = models.Circuit(2)
             c.add(gates.RX(0, theta=params[0]))
             c.add(gates.RY(1, theta=params[1]))
-            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * c()))
+            final_state = c().state()
+            fidelity = tf.math.abs(tf.reduce_sum(tf.math.conj(target_state) * final_state))
             loss = 1 - fidelity
-        grads = tape.gradient(loss, params)
+            grads = tape.gradient(loss, params)
         optimizer.apply_gradients(zip([grads], [params]))
-
 
     for _ in range(nepochs):
         optimize(params)
@@ -804,7 +870,12 @@ Using density matrices
 Qibo circuits can evolve density matrices if they are initialized using the
 ``density_matrix=True`` flag, for example:
 
-.. code-block:: python
+.. testsetup::
+
+    import qibo
+    qibo.set_backend("qibojit")
+
+.. testcode::
 
     from qibo import models, gates
 
@@ -832,7 +903,7 @@ be used during a density matrix simulation. We refer to the
 the available channels. Noise can be simulated using these channels,
 for example:
 
-.. code-block:: python
+.. testcode::
 
     from qibo import models, gates
 
@@ -868,7 +939,7 @@ vectors and repeated circuit execution with sampling. Noise can be simulated
 by creating a normal (non-density matrix) circuit and repeating its execution
 as follows:
 
-.. code-block:: python
+.. testcode::
 
     import numpy as np
     from qibo import models, gates
@@ -927,7 +998,7 @@ The user can control the probabilities of the noise channel using a noise map,
 which is a dictionary that maps qubits to the corresponding probability
 triplets. For example, the following script
 
-.. code-block:: python
+.. testcode::
 
       from qibo import models, gates
 
@@ -940,7 +1011,7 @@ triplets. For example, the following script
 
 will create a new circuit ``noisy_c`` that is equivalent to:
 
-.. code-block:: python
+.. testcode::
 
       noisy_c2 = models.Circuit(2)
       noisy_c2.add(gates.H(0))
@@ -979,7 +1050,7 @@ the :meth:`qibo.abstractions.states.AbstractState.apply_bitflips` method which
 allows adding bit-flip errors to the sampled bit-strings without having to
 re-execute the simulation. For example:
 
-.. code-block:: python
+.. testcode::
 
       import numpy as np
       from qibo import models, gates
@@ -1004,7 +1075,23 @@ original noiseless measurement samples are no longer accessible. It is possible
 to keep the original samples by creating a copy of the states before applying
 the bitflips:
 
-.. code-block:: python
+.. testsetup::
+
+      import numpy as np
+      from qibo import models, gates
+
+      thetas = np.random.random(4)
+      c = models.Circuit(4)
+      c.add((gates.RX(i, theta=t) for i, t in enumerate(thetas)))
+      c.add([gates.M(0, 1), gates.M(2, 3)])
+      result = c(nshots=100)
+      # add bit-flip errors with probability 0.2 for all qubits
+      result.apply_bitflips(0.2)
+      # add bit-flip errors with different probabilities for each qubit
+      error_map = {0: 0.2, 1: 0.1, 2: 0.3, 3: 0.1}
+      result.apply_bitflips(error_map)
+
+.. testcode::
 
       # create a copy of the state containing the noiseless samples
       noisy_result = result.copy()
@@ -1018,7 +1105,7 @@ same tensor in memory.
 Alternatively, the user may specify a bit-flip error map when defining
 measurement gates:
 
-.. code-block:: python
+.. testcode::
 
       import numpy as np
       from qibo import models, gates
@@ -1059,7 +1146,7 @@ physics applications including the simulation of adiabatic quantum computation.
 Qibo provides the :class:`qibo.models.StateEvolution` model that simulates
 unitary evolution using the full state vector. For example:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models
@@ -1079,7 +1166,7 @@ vector but also in observing how physical quantities change during the time
 evolution. This is possible using callbacks. For example, in the above case we
 can track how <X> changes as follows:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models, callbacks
@@ -1096,6 +1183,10 @@ can track how <X> changes as follows:
 
     print(observable[:])
     # will print a ``tf.Tensor`` of shape ``(1001,)`` that holds <X>(t) values
+.. testoutput::
+    :hide:
+
+    ...
 
 
 Note that the time step ``dt=1e-3`` defines how often we calculate <X> during
@@ -1108,7 +1199,7 @@ simulate time-dependent Hamiltonians by passing a function of time instead of
 a :class:`qibo.abstractions.hamiltonians.Hamiltonian` in the
 :class:`qibo.models.StateEvolution` model. For example:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models
@@ -1147,7 +1238,7 @@ The implementation of Trotter decomposition is based on Sec.
 4.1 of `arXiv:1901.05824 <https://arxiv.org/abs/1901.05824>`_.
 Below is an example of how to use this object in practice:
 
-.. code-block::  python
+.. testcode::
 
     from qibo import hamiltonians
 
@@ -1185,7 +1276,7 @@ simulate time evolution. This can be done by passing the Hamiltonian to a
 :class:`qibo.evolution.StateEvolution` model and using the exponential solver.
 For example:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import models, hamiltonians
@@ -1222,7 +1313,7 @@ where the evolution Hamiltonian is interpolated between an initial "easy"
 Hamiltonian and a "hard" Hamiltonian that usually solves an optimization problem.
 Here is an example of adiabatic evolution simulation:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models
@@ -1255,7 +1346,7 @@ Callbacks may also be used as in the previous example. An additional callback
 energies and the gap of the adiabatic evolution Hamiltonian. Its usage is
 similar to other callbacks:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models, callbacks
@@ -1270,9 +1361,14 @@ similar to other callbacks:
     # define and execute the ``AdiabaticEvolution`` model
     evolution = models.AdiabaticEvolution(h0, h1, lambda t: t, dt=1e-1,
                                           callbacks=[gap, ground])
+                                   
     final_state = evolution(final_time=1.0)
     # print the values of the gap at each evolution time step
     print(gap[:])
+.. testoutput::
+    :hide:
+
+    ...
 
 
 The scheduling function ``s`` should be a callable that accepts one (s(t)) or
@@ -1290,7 +1386,7 @@ decomposition will be used automatically if ``h0`` and ``h1`` are defined
 using as :class:`qibo.core.hamiltonians.SymbolicHamiltonian` objects. For
 pre-coded Hamiltonians this can be done simply as:
 
-.. code-block::  python
+.. testcode::
 
     from qibo import hamiltonians, models
 
@@ -1322,7 +1418,7 @@ the ground state of the "hard" Hamiltonian. Optimization is similar to what is
 described in the :ref:`How to write a VQE? <vqe-example>` example and can be
 done as follows:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, models
@@ -1336,9 +1432,13 @@ done as follows:
     evolution = models.AdiabaticEvolution(h0, h1, sp, dt=1e-2)
     # Find the optimal value for ``p`` starting from ``p = 0.5`` and ``T=1``.
     initial_guess = [0.5, 1]
-    best, params = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
+    # best, params, extra = evolution.minimize(initial_guess, method="BFGS", options={'disp': True})
     print(best) # prints the best energy <H1> found from the final state
     print(params) # prints the optimal values for the parameters.
+.. testoutput::
+    :hide:
+
+    ...
 
 Note that the ``minimize`` method optimizes both the free parameters ``p`` of
 the scheduling function as well as the total evolution time. The initial guess
@@ -1367,7 +1467,7 @@ representation. For example the following code generates the TFIM Hamiltonian
 with periodic boundary conditions for four qubits by constructing the
 corresponding 16x16 matrix:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians, matrices
@@ -1376,11 +1476,11 @@ corresponding 16x16 matrix:
     matrix = np.kron(np.kron(matrices.Z, matrices.Z), np.kron(matrices.I, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.Z), np.kron(matrices.Z, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.Z, matrices.Z))
-    matrix += np.kron(np.kron(matrices.Z, matrices.I), np.kron(matrices.I, matrices.Ζ))
+    matrix += np.kron(np.kron(matrices.Z, matrices.I), np.kron(matrices.I, matrices.Z))
     # X terms
     matrix += np.kron(np.kron(matrices.X, matrices.I), np.kron(matrices.I, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.X), np.kron(matrices.I, matrices.I))
-    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.Ι))
+    matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.X, matrices.I))
     matrix += np.kron(np.kron(matrices.I, matrices.I), np.kron(matrices.I, matrices.X))
     # Create Hamiltonian object
     ham = hamiltonians.Hamiltonian(4, matrix)
@@ -1400,7 +1500,7 @@ form using ``sympy`` symbols. Moreover Qibo provides quantum-computation specifi
 symbols (:class:`qibo.symbols.Symbol`) such as the Pauli operators.
 For example, the TFIM on four qubits could be constructed as:
 
-.. code-block::  python
+.. testcode::
 
     import numpy as np
     from qibo import hamiltonians
@@ -1412,7 +1512,7 @@ For example, the TFIM on four qubits could be constructed as:
     # periodic boundary condition term
     symbolic_ham += Z(0) * Z(3)
     # X terms
-    symbolic_ham += sum(X(i) for in range(4))
+    symbolic_ham += sum(X(i) for i in range(4))
 
     # Define a Hamiltonian using the above form
     ham = hamiltonians.SymbolicHamiltonian(symbolic_ham)
@@ -1439,7 +1539,7 @@ the Trotter decomposition for the Hamiltonian. This option can be used when
 constructing each symbol:
 
 
-.. code-block::  python
+.. testcode::
 
     from qibo import hamiltonians
     from qibo.symbols import Z
