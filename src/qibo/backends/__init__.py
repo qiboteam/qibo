@@ -64,6 +64,16 @@ class Backend:
 
     @staticmethod
     def _get_backend_class(backend):
+        """Loads class associated with the given backend.
+
+        Helper method for ``construct_backend``.
+
+        Args:
+            backend (dict): The backend dictionary as read from ``profiles.yml``.
+
+        Returns:
+            Class that is used to initialize the given backend.
+        """
         import importlib
         backend_module = importlib.import_module(backend.get('from'))
         return getattr(backend_module, backend.get('class'))
@@ -119,8 +129,7 @@ class Backend:
         return str(self)
 
     def show_config(self):
-        log.info(
-            f"Using {self} backend on {self.active_backend.default_device}")
+        log.info(f"Using {self} backend on {self.active_backend.default_device}")
 
     def check_availability(self, module_name):
         """Check if module is installed.
