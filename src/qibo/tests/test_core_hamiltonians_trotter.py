@@ -117,7 +117,7 @@ def test_trotter_hamiltonian_three_qubit_term(backend):
 
     dt = 1e-2
     initial_state = random_state(4)
-    if K.op is not None:
+    if K.name == "qibotf":
         with pytest.raises(NotImplementedError):
             circuit = ham.circuit(dt=dt)
     else:
