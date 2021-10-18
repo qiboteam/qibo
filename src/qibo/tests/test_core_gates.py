@@ -320,6 +320,28 @@ def test_unitary_common_gates(backend):
     K.assert_allclose(final_state, target_state)
 
 
+def test_unitary_multiqubit(backend):
+    gatelist = [gates.H(i) for i in range(4)]
+    gatelist.append(gates.CNOT(0, 1))
+    gatelist.append(gates.CNOT(2, 3))
+    gatelist.extend(gates.X(i) for i in range(4))
+
+    h = np.array([[1, 1], [1, -1]]) / np.sqrt(2)
+    x = np.array([[0, 1], [1, 0]])
+    cnot = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])
+    matrix = np.kron(np.kron(x, x), np.kron(x, x))
+    matrix = matrix @ np.kron(cnot, cnot)
+    matrix = matrix @ np.kron(np.kron(h, h), np.kron(h, h))
+    if K.name == "qibotf":
+        with pytest.raises(NotImplementedError):
+            unitary = gates.Unitary(matrix, 0, 1, 2, 3)
+    else:
+        unitary = gates.Unitary(matrix, 0, 1, 2, 3)
+        target_state = apply_gates(gatelist, nqubits=4)
+        final_state = apply_gates([unitary], nqubits=4)
+        K.assert_allclose(final_state, target_state)
+
+
 @pytest.mark.parametrize("nqubits", [5, 6])
 def test_variational_layer(backend, nqubits):
     theta = 2 * np.pi * np.random.random(nqubits)

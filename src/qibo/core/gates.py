@@ -633,8 +633,8 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
             else:
                 if K.name == "qibotf":
                     raise_error(NotImplementedError,
-                                "qibotf supports up to two target qubits but "
-                                "{} were given. Please switch to a different "
+                                "qibotf supports up to two-qubit gates but {} "
+                                "targets were given. Please switch to another "
                                 "backend to execute this operation.".format(n))
                 self.gate_op = K.op.apply_multiqubit_gate
 
