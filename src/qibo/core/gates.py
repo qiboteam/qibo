@@ -1109,23 +1109,22 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
             gmatrix = K.to_numpy(gate.matrix)
-            if len(gate.qubits) < len(self.target_qubits):
-                # fuse one-qubit gate (2x2 matrix) to a two-qubit ``FusedGate``
-                # Kronecker product with identity is needed to make the
-                # original matrix 4x4.
-                if gate.qubits[0] == self.target_qubits[0]:
-                    # gate target qubit is the first ```FusedGate`` target
-                    gmatrix = K.qnp.kron(gmatrix, K.qnp.eye(2))
-                else:
-                    # gate target qubit is the second ``FusedGate`` target
-                    gmatrix = K.qnp.kron(K.qnp.eye(2), gmatrix)
-            elif gate.qubits != self.target_qubits:
-                # fuse two-qubit gate (4x4 matrix) for which the target qubits
-                # are in opposite order compared to the ``FusedGate`` and
-                # the corresponding matrix has to be transposed before fusion
-                gmatrix = K.qnp.reshape(gmatrix, 4 * (2,))
-                gmatrix = K.qnp.transpose(gmatrix, [1, 0, 3, 2])
-                gmatrix = K.qnp.reshape(gmatrix, (4, 4))
+            rank = len(self.target_qubits)
+            # Kronecker product with identity is needed to make the
+            # original matrix have shape (2**rank x 2**rank)
+            eye = K.qnp.eye(2 ** (rank - len(gate.qubits)))
+            gmatrix = K.qnp.kron(gmatrix, eye)
+            # Transpose the new matrix indices so that it targets the
+            # target qubits of the original gate
+            original_shape = gmatrix.shape
+            gmatrix = K.qnp.reshape(gmatrix, 2 * rank * (2,))
+            qubits = list(gate.qubits)
+            indices = qubits + [q for q in self.target_qubits if q not in qubits]
+            indices = K.np.argsort(indices)
+            transpose_indices = list(indices)
+            transpose_indices.extend(rank + indices)
+            gmatrix = K.qnp.transpose(gmatrix, transpose_indices)
+            gmatrix = K.qnp.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
             matrix = gmatrix @ matrix
         return K.cast(matrix)
