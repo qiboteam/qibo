@@ -549,7 +549,7 @@ def test_thermal_relaxation_channel_errors(backend, t1, t2, time, excpop):
 def test_fused_gate_init(backend):
     gate = gates.FusedGate(0)
     gate = gates.FusedGate(0, 1)
-    if K.op is not None:
+    if K.name == "qibotf":
         with pytest.raises(NotImplementedError):
             gate = gates.FusedGate(0, 1, 2)
 
