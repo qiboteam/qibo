@@ -1567,6 +1567,9 @@ class FusedGate(Gate):
         self.init_args = list(q)
         self.qubit_set = set(q)
         self.gates = []
+        # set with gates belonging to this ``FusedGate`` so that we do not
+        # add the same gate more than once
+        self.gates_set = set()
 
     def add(self, gate):
         if not set(gate.qubits).issubset(self.qubit_set):
@@ -1574,9 +1577,14 @@ class FusedGate(Gate):
                                     "in fused gate acting on {}."
                                     "".format(gate.qubits, self.qubits))
         if isinstance(gate, self.__class__):
-            self.gates.extend(gate.gates)
-        else:
+            # add all gates belonging to the given ``FusedGate`` if they
+            # do not already exist in the set
+            self.gates.extend(g for g in gate.gates if g not in self.gates_set)
+            self.gates_set |= gate.gates_set
+        elif gate not in self.gates_set:
+            # add gate if it does not already exist in the set
             self.gates.append(gate)
+            self.gates_set.add(gate)
 
     def __iter__(self):
         return iter(self.gates)
