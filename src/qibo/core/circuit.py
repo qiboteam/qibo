@@ -131,14 +131,15 @@ class Circuit(circuit.AbstractCircuit):
                         if q in fused_gates:
                             # qubit has existing active gate
                             ogate = fused_gates.pop(q)
-                            if len(ogate.target_qubits) == 1:
-                                # existing active gate is one-qubit so we just add
-                                # it to the new ``FusedGate``
-                                fgate.add(ogate)
-                            else:
-                                # existing active gate is two-qubit so we need to
-                                # add it to the new queue
-                                fused_queue.append(ogate)
+                            if ogate not in fused_queue.set:
+                                if set(ogate.qubits).issubset(fgate.qubit_set):
+                                    # existing active gate is one-qubit so we just add
+                                    # it to the new ``FusedGate``
+                                    fgate.add(ogate)
+                                else:
+                                    # existing active gate is two-qubit so we need to
+                                    # add it to the new queue
+                                    fused_queue.append(ogate)
                         # and update the active ``FusedGate``s on all target qubits
                         fused_gates[q] = fgate
                     # add the two-qubit gate to the newly created ``FusedGate``
