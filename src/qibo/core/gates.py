@@ -1088,12 +1088,19 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
         abstract_gates.FusedGate.__init__(self, *q)
         if self.gate_op:
             # Custom kernels currently support up to two target qubits
-            if len(self.target_qubits) == 1:
+            n = len(self.target_qubits)
+            if n == 1:
                 self.gate_op = K.op.apply_gate
-            elif len(self.target_qubits) == 2:
+            elif n == 2:
                 self.gate_op = K.op.apply_two_qubit_gate
             else:
-                raise_error(NotImplementedError, "Fused gates can target up to two qubits.")
+                if K.name == "qibotf":
+                    raise_error(NotImplementedError,
+                                "qibotf supports up to two-qubit gates but "
+                                "fusion with {} qubits was requested. Please "
+                                "switch to a different backend to execute "
+                                "this operation.".format(n))
+                self.gate_op = K.op.apply_multiqubit_gate
 
     def _construct_unitary(self):
         """Constructs a single unitary by multiplying the matrices of the gates that are fused.
