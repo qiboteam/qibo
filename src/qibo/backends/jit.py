@@ -202,19 +202,19 @@ class JITCustomBackend(NumpyBackend):
         return cache
 
     def _state_vector_call(self, gate, state):
-        return gate.gate_op(state, gate.nqubits, *gate.target_qubits,
+        return gate.gate_op(state, gate.nqubits, gate.target_qubits,
                             gate.cache.qubits_tensor)
 
     def state_vector_matrix_call(self, gate, state):
-        return gate.gate_op(state, gate.custom_op_matrix, gate.nqubits, *gate.target_qubits,
+        return gate.gate_op(state, gate.custom_op_matrix, gate.nqubits, gate.target_qubits,
                             gate.cache.qubits_tensor)
 
     def _density_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
-                             *gate.target_qubits, qubits)
-        state = gate.gate_op(state, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
+                             gate.target_qubits, qubits)
+        state = gate.gate_op(state, 2 * gate.nqubits, gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
         return self.reshape(state, shape)
 
@@ -222,9 +222,9 @@ class JITCustomBackend(NumpyBackend):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), gate.custom_op_matrix, 2 * gate.nqubits,
-                             *gate.target_qubits, qubits)
+                             gate.target_qubits, qubits)
         adjmatrix = self.conj(gate.custom_op_matrix)
-        state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, *gate.cache.target_qubits_dm,
+        state = gate.gate_op(state, adjmatrix, 2 * gate.nqubits, gate.cache.target_qubits_dm,
                              gate.cache.qubits_tensor)
         return self.reshape(state, shape)
 
@@ -232,14 +232,14 @@ class JITCustomBackend(NumpyBackend):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
-                             *gate.target_qubits, qubits)
+                             gate.target_qubits, qubits)
         return self.reshape(state, shape)
 
     def density_matrix_half_matrix_call(self, gate, state):
         qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
         shape = state.shape
         state = gate.gate_op(state.flatten(), gate.custom_op_matrix, 2 * gate.nqubits,
-                             *gate.target_qubits, qubits)
+                             gate.target_qubits, qubits)
         return self.reshape(state, shape)
 
     def _result_tensor(self, result):

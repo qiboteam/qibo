@@ -624,20 +624,20 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
                                    "".format(type(unitary)))
         MatrixGate.__init__(self)
         abstract_gates.Unitary.__init__(self, unitary, *q, trainable=trainable, name=name)
-        rank = self.rank
+        n = len(self.target_qubits)
         if self.gate_op:
-            if rank == 1:
+            if n == 1:
                 self.gate_op = K.op.apply_gate
-            elif rank == 2:
+            elif n == 2:
                 self.gate_op = K.op.apply_two_qubit_gate
             else:
-                n = len(self.target_qubits)
-                raise_error(NotImplementedError, "Unitary gate supports one or two-"
-                                                 "qubit gates when using custom "
-                                                 "operators, but {} target qubits "
-                                                 "were given. Please switch to a "
-                                                 "different backend to execute "
-                                                 "this operation.".format(n))
+                if K.name == "qibotf":
+                    raise_error(NotImplementedError,
+                                "qibotf supports up to two-qubit gates but {} "
+                                "targets were given. Please switch to another "
+                                "backend to execute this operation.".format(n))
+                self.gate_op = K.op.apply_multiqubit_gate
+
 
     def _construct_unitary(self):
         return self.parameters
