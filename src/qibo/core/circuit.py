@@ -46,7 +46,7 @@ class Circuit(circuit.AbstractCircuit):
             self._set_nqubits(gate.additional_unitary)
             self.queue.append(gate.additional_unitary)
 
-    def fuse(self):
+    def fuse(self, max_qubits=2):
         """Creates an equivalent circuit with the gates fused up to two-qubits.
 
         Returns:
@@ -109,16 +109,8 @@ class Circuit(circuit.AbstractCircuit):
                 fused_gates = collections.OrderedDict()
                 fused_queue.append(gate)
 
-            elif len(qubits) == 1:
-                # add one-qubit gates to the active ``FusedGate`` of this qubit
-                # or create a new one if it does not exist
-                q = qubits[0]
-                if q not in fused_gates:
-                    fused_gates[q] = gates.FusedGate(q)
-                fused_gates.get(q).add(gate)
-
-            elif len(qubits) == 2:
-                # fuse two-qubit gates
+            elif len(qubits) <= max_qubits:
+                # check if all target qubits are mapped to the same ``FusedGate``
                 target_gate = None
                 if qubits[0] in fused_gates:
                     target_gate = fused_gates.get(qubits[0])
