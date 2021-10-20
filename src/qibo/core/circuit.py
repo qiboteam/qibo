@@ -111,16 +111,14 @@ class Circuit(circuit.AbstractCircuit):
 
             elif len(qubits) <= max_qubits:
                 # check if all target qubits are mapped to the same ``FusedGate``
-                target_gate = None
-                if qubits[0] in fused_gates:
-                    target_gate = fused_gates.get(qubits[0])
-                    for q in qubits:
-                        if fused_gates.get(q) != target_gate:
-                            target_gate = None
-                            break
-                if target_gate:
-                    # if the target qubit pair is compatible with the active
-                    # ``FusedGate`` of both qubits then add it to the ``FusedGate``
+                target_gate = fused_gates.get(qubits[0])
+                for q in qubits:
+                    if fused_gates.get(q) != target_gate:
+                        target_gate = None
+                        break
+                if target_gate is not None:
+                    # check if all target qubits are mapped to the same ``FusedGate``
+                    # we just add the new gate to that one
                     target_gate.add(gate)
                 else:
                     # otherwise we need to create a new ``FusedGate`` and
