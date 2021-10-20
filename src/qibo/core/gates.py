@@ -1107,16 +1107,13 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
 
         This matrix is used to perform a single update in the state during
         simulation instead of applying the fused gates one by one.
-
-        Note that this method assumes maximum two target qubits and should be
-        updated if the fusion algorithm is extended to gates of higher rank.
         """
-        matrix = K.qnp.eye(2 ** len(self.target_qubits))
+        rank = len(self.target_qubits)
+        matrix = K.qnp.eye(2 ** rank)
         for gate in self.gates:
             # transfer gate matrix to numpy as it is more efficient for
             # small tensor calculations
             gmatrix = K.to_numpy(gate.matrix)
-            rank = len(self.target_qubits)
             # Kronecker product with identity is needed to make the
             # original matrix have shape (2**rank x 2**rank)
             eye = K.qnp.eye(2 ** (rank - len(gate.qubits)))
@@ -1129,7 +1126,7 @@ class FusedGate(MatrixGate, abstract_gates.FusedGate):
             indices = qubits + [q for q in self.target_qubits if q not in qubits]
             indices = K.np.argsort(indices)
             transpose_indices = list(indices)
-            transpose_indices.extend(rank + indices)
+            transpose_indices.extend(indices + rank)
             gmatrix = K.qnp.transpose(gmatrix, transpose_indices)
             gmatrix = K.qnp.reshape(gmatrix, original_shape)
             # fuse the individual gate matrix to the total ``FusedGate`` matrix
