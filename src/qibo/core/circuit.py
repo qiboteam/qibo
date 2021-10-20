@@ -115,24 +115,20 @@ class Circuit(circuit.AbstractCircuit):
 
             elif len(qubits) <= max_qubits:
                 # check if all target qubits are mapped to the same ``FusedGate``
-                target_gate = fused_gates.get(qubits[0])
+                fgate = fused_gates.get(qubits[0])
                 for q in qubits:
-                    if fused_gates.get(q) != target_gate:
-                        target_gate = None
+                    if fused_gates.get(q) != fgate:
+                        fgate = None
                         break
-                if target_gate is not None:
-                    # check if all target qubits are mapped to the same ``FusedGate``
-                    # we just add the new gate to that one
-                    fused_queue.add(gate)
-                    target_gate.add(gate)
-                else:
-                    # otherwise we need to create a new ``FusedGate`` and
-                    # update the active gates of all target qubits
+                if fgate is None:
+                    # if not all target qubits are mapped to the same ``FusedGate``
+                    # we need to create a new ``FusedGate`` and update the
+                    # active gates of all target qubits
                     # first we find the target qubits of the new ``FusedGate``
                     # scan active ``FusedGates`` and sort them in decreasing
                     # order of sizes
-                    active_groups = [fused_gates.get(q).qubit_set for q in qubits
-                                     if q in fused_gates]
+                    active_groups = [fused_gates.get(q).qubit_set
+                                     for q in qubits if q in fused_gates]
                     group_order = K.np.argsort([len(g) for g in active_groups])
                     # the current gate's active qubits should definitely be targets
                     target_qubits = set(qubits)
@@ -159,9 +155,9 @@ class Circuit(circuit.AbstractCircuit):
                                     fused_queue.append(ogate)
                         # and update the active ``FusedGate``s on all target qubits
                         fused_gates[q] = fgate
-                    # add the current gate to the newly created ``FusedGate``
-                    fused_queue.add(gate)
-                    fgate.add(gate)
+                # add the current gate to the newly created ``FusedGate``
+                fused_queue.add(gate)
+                fgate.add(gate)
 
             else:
                 # gate has more than two target qubits so it cannot be included
