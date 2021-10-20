@@ -135,7 +135,9 @@ def test_vqe(backend, method, options, compile, filename):
 
 def test_vqe_custom_gates_errors():
     """Check that ``RuntimeError``s is raised when using custom gates."""
-    if "qibotf" not in qibo.K.available_backends: # pragma: no cover
+    try:
+        qibo.set_backend("qibotf")
+    except ValueError:  # pragma: no cover
         pytest.skip("Custom backend not available.")
 
     original_backend = qibo.get_backend()

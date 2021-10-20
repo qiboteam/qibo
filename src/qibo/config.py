@@ -14,6 +14,9 @@ TF_LOG_LEVEL = 3
 if "TF_LOG_LEVEL" in os.environ: # pragma: no cover
     TF_LOG_LEVEL = int(os.environ.get("TF_LOG_LEVEL"))
 
+# Tensorflow version requirement
+TF_MIN_VERSION = '2.2.0'
+
 # characters used in einsum strings
 EINSUM_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
