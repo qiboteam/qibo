@@ -122,9 +122,22 @@ class Circuit(circuit.AbstractCircuit):
                     target_gate.add(gate)
                 else:
                     # otherwise we need to create a new ``FusedGate`` and
-                    # update the active gates of both target qubits
-                    qubits = tuple(sorted(qubits))
-                    fgate = gates.FusedGate(*qubits)
+                    # update the active gates of all target qubits
+                    # first we find the target qubits of the new ``FusedGate``
+                    # scan active ``FusedGates`` and sort them in decreasing
+                    # order of sizes
+                    active_groups = [fused_gates.get(q).qubit_set for q in qubits
+                                     if q in fused_gates]
+                    group_order = K.np.argsort([len(g) for g in active_groups])
+                    # the current gate's active qubits should definitely be targets
+                    target_qubits = set(qubits)
+                    # iterate ``active_groups`` and add as many qubits as
+                    # possible to the new targets
+                    for i in group_order:
+                        if len(active_groups[i] | target_qubits) <= max_qubits:
+                            target_qubits |= active_groups[i]
+                    # create a new ``FusedGate`` targeting the qubits we found
+                    fgate = gates.FusedGate(*sorted(target_qubits))
                     for q in qubits:
                         if q in fused_gates:
                             # qubit has existing active gate
