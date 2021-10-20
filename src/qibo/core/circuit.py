@@ -82,6 +82,10 @@ class Circuit(circuit.AbstractCircuit):
                 super().__init__(*args, **kwargs)
                 self.set = set()
 
+            def add(self, gate):
+                """Adds a gate to the gate set to avoid adding in the queue later."""
+                self.set.add(gate)
+
             def append(self, gate):
                 """Appends a gate in queue only if it is not already in."""
                 # Use a ``set`` instead of the original ``list`` to check if
@@ -119,6 +123,7 @@ class Circuit(circuit.AbstractCircuit):
                 if target_gate is not None:
                     # check if all target qubits are mapped to the same ``FusedGate``
                     # we just add the new gate to that one
+                    fused_queue.add(gate)
                     target_gate.add(gate)
                 else:
                     # otherwise we need to create a new ``FusedGate`` and
@@ -145,6 +150,7 @@ class Circuit(circuit.AbstractCircuit):
                             if ogate not in fused_queue.set:
                                 if set(ogate.qubits).issubset(fgate.qubit_set):
                                     # add existing active gate to the new ``FusedGate``
+                                    fused_queue.add(ogate)
                                     fgate.add(ogate)
                                 else:
                                     # existing active gate cannot be added to
@@ -153,7 +159,8 @@ class Circuit(circuit.AbstractCircuit):
                                     fused_queue.append(ogate)
                         # and update the active ``FusedGate``s on all target qubits
                         fused_gates[q] = fgate
-                    # add the two-qubit gate to the newly created ``FusedGate``
+                    # add the current gate to the newly created ``FusedGate``
+                    fused_queue.add(gate)
                     fgate.add(gate)
 
             else:
