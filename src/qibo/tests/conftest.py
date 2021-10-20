@@ -7,10 +7,13 @@ import sys
 import pytest
 import qibo
 
-_available_backends = set(qibo.K.available_backends.keys()) - set(qibo.K.hardware_backends.keys())
+_available_backends = set(b.get('name') for b in qibo.K.profile.get('backends')
+                          if (not b.get('is_hardware', False) and
+                          qibo.K.check_availability(b.get('name'))))
+_available_backends.add("numpy")
 _ACCELERATORS = None
 for bkd in _available_backends:
-    if qibo.K.available_backends[bkd]().supports_multigpu:
+    if qibo.K.construct_backend(bkd).supports_multigpu:
         _ACCELERATORS = "2/GPU:0,1/GPU:0+1/GPU:1,2/GPU:0+1/GPU:1+1/GPU:2"
 _BACKENDS = ",".join(_available_backends)
 
@@ -26,9 +29,7 @@ def pytest_runtest_setup(item):
 
 
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "linux: mark test to run only on linux"
-    )
+    config.addinivalue_line("markers", "linux: mark test to run only on linux")
 
 
 def pytest_addoption(parser):

@@ -23,11 +23,6 @@ class JITCustomBackend(NumpyBackend):
                   "custom CUDA kernels loaded with cupy GPU."
 
     def __init__(self):
-        from qibo.backends import Backend
-        if not Backend.check_availability("qibojit"): # pragma: no cover
-            # CI can compile custom operators so this case is not tested
-            raise_error(RuntimeError, "Cannot initialize qibojit "
-                                      "if the qibojit is not installed.")
         from qibojit import custom_operators as op # pylint: disable=E0401
         super().__init__()
         self.name = "qibojit"
