@@ -52,7 +52,7 @@ class qGAN(object):
             s3 = np.reshape(z, (samples,1))
             reference_distribution = np.hstack((s1,s2,s3))
             # Train qGAN with your particular setup
-            train_qGAN = qGAN(s, 1, 3)
+            train_qGAN = qGAN(reference_distribution, 1, 3)
             train_qGAN()
     """
 
