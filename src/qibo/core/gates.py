@@ -374,7 +374,7 @@ class U1(MatrixGate, abstract_gates.U1):
     @property
     def custom_op_matrix(self):
         if self._custom_op_matrix is None:
-            self._custom_op_matrix = K.cast(K.qnp.exp(1j * self.parameters))
+            self._custom_op_matrix = K.qnp.exp(1j * self.parameters)
         return self._custom_op_matrix
 
     def _construct_unitary(self):
@@ -497,7 +497,7 @@ class CU1(_CUn_, abstract_gates.CU1):
     @property
     def custom_op_matrix(self):
         if self._custom_op_matrix is None:
-            self._custom_op_matrix = K.cast(K.qnp.exp(1j * self.parameters))
+            self._custom_op_matrix = K.qnp.exp(1j * self.parameters)
         return self._custom_op_matrix
 
 
@@ -648,8 +648,7 @@ class Unitary(MatrixGate, abstract_gates.Unitary):
 
     @ParametrizedGate.parameters.setter
     def parameters(self, x):
-        if not isinstance(x, K.Tensor):
-            x = K.cast(x)
+        x = K.cast(x)
         shape = tuple(x.shape)
         if len(shape) > 2 and shape[0] == 1:
             shape = shape[1:]

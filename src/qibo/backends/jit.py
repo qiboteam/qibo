@@ -191,7 +191,7 @@ class JITCustomBackend(NumpyBackend):
         cache = self.GateCache()
         qubits = [gate.nqubits - q - 1 for q in gate.control_qubits]
         qubits.extend(gate.nqubits - q - 1 for q in gate.target_qubits)
-        cache.qubits_tensor = tuple(sorted(qubits))
+        cache.qubits_tensor = self.cast(sorted(qubits), dtype="int32")
         if gate.density_matrix:
             cache.target_qubits_dm = [q + gate.nqubits for q in gate.target_qubits]
         return cache
@@ -205,7 +205,7 @@ class JITCustomBackend(NumpyBackend):
                             gate.cache.qubits_tensor)
 
     def _density_matrix_call(self, gate, state):
-        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        qubits = gate.cache.qubits_tensor + gate.nqubits
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
                              gate.target_qubits, qubits)
@@ -214,7 +214,7 @@ class JITCustomBackend(NumpyBackend):
         return self.reshape(state, shape)
 
     def density_matrix_matrix_call(self, gate, state):
-        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        qubits = gate.cache.qubits_tensor + gate.nqubits
         shape = state.shape
         state = gate.gate_op(state.flatten(), gate.custom_op_matrix, 2 * gate.nqubits,
                              gate.target_qubits, qubits)
@@ -224,14 +224,14 @@ class JITCustomBackend(NumpyBackend):
         return self.reshape(state, shape)
 
     def _density_matrix_half_call(self, gate, state):
-        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        qubits = gate.cache.qubits_tensor + gate.nqubits
         shape = state.shape
         state = gate.gate_op(state.flatten(), 2 * gate.nqubits,
                              gate.target_qubits, qubits)
         return self.reshape(state, shape)
 
     def density_matrix_half_matrix_call(self, gate, state):
-        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        qubits = gate.cache.qubits_tensor + gate.nqubits
         shape = state.shape
         state = gate.gate_op(state.flatten(), gate.custom_op_matrix, 2 * gate.nqubits,
                              gate.target_qubits, qubits)
@@ -247,7 +247,7 @@ class JITCustomBackend(NumpyBackend):
 
     def density_matrix_collapse(self, gate, state, result):
         result = self._result_tensor(result)
-        qubits = tuple(x + gate.nqubits for x in gate.cache.qubits_tensor)
+        qubits = gate.cache.qubits_tensor + gate.nqubits
         shape = state.shape
         state = gate.gate_op(state.flatten(), qubits, result, 2 * gate.nqubits, False)
         state = gate.gate_op(state, gate.cache.qubits_tensor, result,
